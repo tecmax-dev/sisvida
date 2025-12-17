@@ -6,6 +6,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/layout/Logo";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { 
   Loader2, 
   LogOut, 
@@ -19,6 +33,11 @@ import {
   AlertCircle,
   XCircle,
   RefreshCw,
+  FileText,
+  ClipboardList,
+  Pill,
+  History,
+  Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -52,6 +71,16 @@ interface Appointment {
   };
 }
 
+interface MedicalRecord {
+  id: string;
+  record_date: string;
+  chief_complaint: string | null;
+  diagnosis: string | null;
+  treatment_plan: string | null;
+  prescription: string | null;
+  notes: string | null;
+}
+
 const statusConfig: Record<string, { icon: any; color: string; bgColor: string; label: string }> = {
   scheduled: { icon: AlertCircle, color: "text-warning", bgColor: "bg-warning/10", label: "Agendado" },
   confirmed: { icon: CheckCircle2, color: "text-success", bgColor: "bg-success/10", label: "Confirmado" },
@@ -73,6 +102,20 @@ export default function ProfessionalDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  
+  // Medical records state
+  const [recordsDialogOpen, setRecordsDialogOpen] = useState(false);
+  const [selectedAppointmentForRecords, setSelectedAppointmentForRecords] = useState<Appointment | null>(null);
+  const [patientHistory, setPatientHistory] = useState<MedicalRecord[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+  const [savingRecord, setSavingRecord] = useState(false);
+  const [recordForm, setRecordForm] = useState({
+    chief_complaint: "",
+    diagnosis: "",
+    treatment_plan: "",
+    prescription: "",
+    notes: "",
+  });
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -227,6 +270,79 @@ export default function ProfessionalDashboard() {
     setLoading(false);
   };
 
+  const openMedicalRecords = async (appointment: Appointment) => {
+    setSelectedAppointmentForRecords(appointment);
+    setRecordsDialogOpen(true);
+    setRecordForm({
+      chief_complaint: "",
+      diagnosis: "",
+      treatment_plan: "",
+      prescription: "",
+      notes: "",
+    });
+    
+    // Load patient history
+    await loadPatientHistory(appointment.patient_id);
+  };
+
+  const loadPatientHistory = async (patientId: string) => {
+    if (!professional) return;
+    
+    setLoadingRecords(true);
+    
+    const { data, error } = await supabase
+      .from('medical_records')
+      .select('id, record_date, chief_complaint, diagnosis, treatment_plan, prescription, notes')
+      .eq('patient_id', patientId)
+      .eq('clinic_id', professional.clinic_id)
+      .order('record_date', { ascending: false })
+      .limit(10);
+
+    if (!error && data) {
+      setPatientHistory(data);
+    }
+    
+    setLoadingRecords(false);
+  };
+
+  const handleSaveRecord = async () => {
+    if (!professional || !selectedAppointmentForRecords) return;
+    
+    setSavingRecord(true);
+    
+    const { error } = await supabase
+      .from('medical_records')
+      .insert({
+        clinic_id: professional.clinic_id,
+        patient_id: selectedAppointmentForRecords.patient_id,
+        professional_id: professional.id,
+        appointment_id: selectedAppointmentForRecords.id,
+        record_date: today,
+        chief_complaint: recordForm.chief_complaint || null,
+        diagnosis: recordForm.diagnosis || null,
+        treatment_plan: recordForm.treatment_plan || null,
+        prescription: recordForm.prescription || null,
+        notes: recordForm.notes || null,
+      });
+
+    if (error) {
+      toast({
+        title: "Erro ao salvar prontuário",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Prontuário salvo",
+        description: "Registro médico salvo com sucesso!",
+      });
+      setRecordsDialogOpen(false);
+      await loadPatientHistory(selectedAppointmentForRecords.patient_id);
+    }
+    
+    setSavingRecord(false);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -353,19 +469,28 @@ export default function ProfessionalDashboard() {
                   </Badge>
                 </div>
                 
-                <Button 
-                  size="lg"
-                  onClick={() => handleEndAppointment(inProgressAppointment.id)}
-                  disabled={actionLoading === inProgressAppointment.id}
-                  className="bg-success hover:bg-success/90"
-                >
-                  {actionLoading === inProgressAppointment.id ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                  )}
-                  Finalizar Atendimento
-                </Button>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => openMedicalRecords(inProgressAppointment)}
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Prontuário
+                  </Button>
+                  <Button 
+                    size="lg"
+                    onClick={() => handleEndAppointment(inProgressAppointment.id)}
+                    disabled={actionLoading === inProgressAppointment.id}
+                    className="bg-success hover:bg-success/90"
+                  >
+                    {actionLoading === inProgressAppointment.id ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Finalizar Atendimento
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -490,6 +615,155 @@ export default function ProfessionalDashboard() {
           </div>
         )}
       </main>
+
+      {/* Medical Records Dialog */}
+      <Dialog open={recordsDialogOpen} onOpenChange={setRecordsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Prontuário - {selectedAppointmentForRecords?.patient.name}
+            </DialogTitle>
+          </DialogHeader>
+
+          <Tabs defaultValue="novo" className="mt-4">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="novo" className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4" />
+                Novo Registro
+              </TabsTrigger>
+              <TabsTrigger value="historico" className="flex items-center gap-2">
+                <History className="h-4 w-4" />
+                Histórico ({patientHistory.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="novo" className="space-y-4 mt-4">
+              <div>
+                <Label htmlFor="chief_complaint">Queixa Principal</Label>
+                <Textarea
+                  id="chief_complaint"
+                  value={recordForm.chief_complaint}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, chief_complaint: e.target.value }))}
+                  placeholder="Descreva a queixa principal do paciente..."
+                  className="mt-1.5"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="diagnosis">Diagnóstico</Label>
+                <Textarea
+                  id="diagnosis"
+                  value={recordForm.diagnosis}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, diagnosis: e.target.value }))}
+                  placeholder="Hipótese diagnóstica ou diagnóstico..."
+                  className="mt-1.5"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="treatment_plan">Plano de Tratamento</Label>
+                <Textarea
+                  id="treatment_plan"
+                  value={recordForm.treatment_plan}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, treatment_plan: e.target.value }))}
+                  placeholder="Orientações e plano terapêutico..."
+                  className="mt-1.5"
+                  rows={2}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="prescription" className="flex items-center gap-2">
+                  <Pill className="h-4 w-4" />
+                  Prescrição
+                </Label>
+                <Textarea
+                  id="prescription"
+                  value={recordForm.prescription}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, prescription: e.target.value }))}
+                  placeholder="Medicamentos prescritos..."
+                  className="mt-1.5"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="notes">Observações</Label>
+                <Textarea
+                  id="notes"
+                  value={recordForm.notes}
+                  onChange={(e) => setRecordForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Observações adicionais..."
+                  className="mt-1.5"
+                  rows={2}
+                />
+              </div>
+
+              <div className="flex justify-end pt-4">
+                <Button onClick={handleSaveRecord} disabled={savingRecord}>
+                  {savingRecord ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Save className="h-4 w-4 mr-2" />
+                  )}
+                  Salvar Prontuário
+                </Button>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="historico" className="mt-4">
+              {loadingRecords ? (
+                <div className="py-8 text-center">
+                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
+                </div>
+              ) : patientHistory.length === 0 ? (
+                <div className="py-8 text-center text-muted-foreground">
+                  <History className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p>Nenhum registro anterior encontrado</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {patientHistory.map((record) => (
+                    <Card key={record.id}>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          {new Date(record.record_date).toLocaleDateString('pt-BR')}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-sm space-y-2">
+                        {record.chief_complaint && (
+                          <div>
+                            <span className="font-medium">Queixa:</span> {record.chief_complaint}
+                          </div>
+                        )}
+                        {record.diagnosis && (
+                          <div>
+                            <span className="font-medium">Diagnóstico:</span> {record.diagnosis}
+                          </div>
+                        )}
+                        {record.treatment_plan && (
+                          <div>
+                            <span className="font-medium">Tratamento:</span> {record.treatment_plan}
+                          </div>
+                        )}
+                        {record.prescription && (
+                          <div>
+                            <span className="font-medium">Prescrição:</span> {record.prescription}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
