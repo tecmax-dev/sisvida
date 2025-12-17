@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,11 +46,13 @@ export default function ClinicsManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { setCurrentClinic } = useAuth();
+  const { logAction } = useAuditLog();
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchClinics();
+    logAction({ action: 'view_clinics_list', entityType: 'clinic' });
   }, []);
 
   const fetchClinics = async () => {
@@ -93,6 +96,13 @@ export default function ClinicsManagement() {
   };
 
   const handleAccessClinic = (clinic: Clinic) => {
+    logAction({ 
+      action: 'access_clinic', 
+      entityType: 'clinic', 
+      entityId: clinic.id,
+      details: { clinic_name: clinic.name }
+    });
+    
     setCurrentClinic({
       id: clinic.id,
       name: clinic.name,

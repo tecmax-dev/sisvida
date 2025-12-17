@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuditLog } from "@/hooks/useAuditLog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,14 +34,15 @@ export default function UsersManagement() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const { logAction } = useAuditLog();
 
   useEffect(() => {
     fetchUsers();
+    logAction({ action: 'view_users_list', entityType: 'user' });
   }, []);
 
   const fetchUsers = async () => {
     try {
-      // Fetch all profiles
       const { data: profiles, error } = await supabase
         .from('profiles')
         .select('*')
@@ -49,7 +51,6 @@ export default function UsersManagement() {
       if (error) throw error;
 
       if (profiles) {
-        // Fetch super admin status and clinic counts
         const { data: superAdmins } = await supabase
           .from('super_admins')
           .select('user_id');
@@ -87,7 +88,6 @@ export default function UsersManagement() {
 
   return (
     <div className="p-6 space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Gerenciar Usuários</h1>
         <p className="text-muted-foreground mt-1">
@@ -95,7 +95,6 @@ export default function UsersManagement() {
         </p>
       </div>
 
-      {/* Search */}
       <Card>
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
@@ -115,7 +114,6 @@ export default function UsersManagement() {
         </CardContent>
       </Card>
 
-      {/* Users Table */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
