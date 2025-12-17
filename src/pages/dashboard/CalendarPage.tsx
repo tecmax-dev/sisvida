@@ -10,18 +10,33 @@ import {
   CheckCircle2,
   AlertCircle,
   XCircle,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
@@ -81,6 +96,9 @@ interface Appointment {
   end_time: string;
   type: string;
   status: string;
+  notes: string | null;
+  patient_id: string;
+  professional_id: string;
   patient: {
     name: string;
   };
@@ -101,6 +119,15 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  
+  // Edit state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  
+  // Cancel state
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancellingAppointment, setCancellingAppointment] = useState<Appointment | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
   
   // Form state
   const [formPatient, setFormPatient] = useState("");
@@ -125,7 +152,6 @@ export default function CalendarPage() {
     if (!currentClinic) return;
     
     try {
-      // Fetch patients
       const { data: patientsData } = await supabase
         .from('patients')
         .select('id, name, phone')
@@ -134,7 +160,6 @@ export default function CalendarPage() {
       
       if (patientsData) setPatients(patientsData);
 
-      // Fetch professionals
       const { data: professionalsData } = await supabase
         .from('professionals')
         .select('id, name, specialty')
@@ -164,6 +189,9 @@ export default function CalendarPage() {
           end_time,
           type,
           status,
+          notes,
+          patient_id,
+          professional_id,
           patient:patients (name),
           professional:professionals (name)
         `)
@@ -239,6 +267,113 @@ export default function CalendarPage() {
     }
   };
 
+  const handleEditAppointment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formPatient || !formProfessional || !formTime || !editingAppointment) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const [hours, minutes] = formTime.split(':');
+      const endHours = parseInt(hours) + (parseInt(minutes) + 30 >= 60 ? 1 : 0);
+      const endMinutes = (parseInt(minutes) + 30) % 60;
+      const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          patient_id: formPatient,
+          professional_id: formProfessional,
+          start_time: formTime,
+          end_time: endTime,
+          type: formType as "first_visit" | "return" | "exam" | "procedure",
+          notes: formNotes.trim() || null,
+        })
+        .eq('id', editingAppointment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Agendamento atualizado",
+        description: "As alterações foram salvas com sucesso.",
+      });
+
+      setEditDialogOpen(false);
+      setEditingAppointment(null);
+      resetForm();
+      fetchAppointments();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelAppointment = async () => {
+    if (!cancellingAppointment) return;
+
+    setSaving(true);
+
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          status: "cancelled" as const,
+          cancellation_reason: cancelReason.trim() || null,
+          cancelled_at: new Date().toISOString(),
+        })
+        .eq('id', cancellingAppointment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Agendamento cancelado",
+        description: "A consulta foi cancelada com sucesso.",
+      });
+
+      setCancelDialogOpen(false);
+      setCancellingAppointment(null);
+      setCancelReason("");
+      fetchAppointments();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao cancelar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openEditDialog = (appointment: Appointment) => {
+    setEditingAppointment(appointment);
+    setFormPatient(appointment.patient_id);
+    setFormProfessional(appointment.professional_id);
+    setFormTime(appointment.start_time.slice(0, 5));
+    setFormType(appointment.type);
+    setFormNotes(appointment.notes || "");
+    setEditDialogOpen(true);
+  };
+
+  const openCancelDialog = (appointment: Appointment) => {
+    setCancellingAppointment(appointment);
+    setCancelReason("");
+    setCancelDialogOpen(true);
+  };
+
   const resetForm = () => {
     setFormPatient("");
     setFormProfessional("");
@@ -310,6 +445,107 @@ export default function CalendarPage() {
     procedure: "Procedimento",
   };
 
+  const AppointmentFormFields = () => (
+    <>
+      <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
+        <CalendarIcon className="h-5 w-5 text-primary" />
+        <span className="font-medium text-foreground">
+          {selectedDate.toLocaleDateString("pt-BR", {
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          })}
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Paciente *</Label>
+        <Select value={formPatient} onValueChange={setFormPatient}>
+          <SelectTrigger className="bg-background">
+            <SelectValue placeholder="Selecione o paciente" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover border border-border shadow-lg z-50">
+            {patients.length > 0 ? (
+              patients.map((patient) => (
+                <SelectItem key={patient.id} value={patient.id}>
+                  {patient.name}
+                </SelectItem>
+              ))
+            ) : (
+              <div className="p-2 text-sm text-muted-foreground text-center">
+                Nenhum paciente cadastrado
+              </div>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Profissional *</Label>
+        <Select value={formProfessional} onValueChange={setFormProfessional}>
+          <SelectTrigger className="bg-background">
+            <SelectValue placeholder="Selecione o profissional" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover border border-border shadow-lg z-50">
+            {professionals.length > 0 ? (
+              professionals.map((prof) => (
+                <SelectItem key={prof.id} value={prof.id}>
+                  {prof.name} {prof.specialty && `- ${prof.specialty}`}
+                </SelectItem>
+              ))
+            ) : (
+              <div className="p-2 text-sm text-muted-foreground text-center">
+                Nenhum profissional cadastrado
+              </div>
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Horário *</Label>
+        <Select value={formTime} onValueChange={setFormTime}>
+          <SelectTrigger className="bg-background">
+            <SelectValue placeholder="Selecione o horário" />
+          </SelectTrigger>
+          <SelectContent className="bg-popover border border-border shadow-lg z-50 max-h-60">
+            {timeSlots.map((time) => (
+              <SelectItem key={time} value={time}>
+                {time}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Tipo de Consulta</Label>
+        <Select value={formType} onValueChange={setFormType}>
+          <SelectTrigger className="bg-background">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="bg-popover border border-border shadow-lg z-50">
+            {appointmentTypes.map((type) => (
+              <SelectItem key={type.value} value={type.value}>
+                {type.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Observações</Label>
+        <Input
+          value={formNotes}
+          onChange={(e) => setFormNotes(e.target.value)}
+          placeholder="Anotações sobre o agendamento (opcional)"
+        />
+      </div>
+    </>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -334,109 +570,7 @@ export default function CalendarPage() {
               <DialogTitle>Novo Agendamento</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreateAppointment} className="space-y-4">
-              {/* Selected Date Display */}
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
-                <CalendarIcon className="h-5 w-5 text-primary" />
-                <span className="font-medium text-foreground">
-                  {selectedDate.toLocaleDateString("pt-BR", {
-                    weekday: "long",
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </span>
-              </div>
-
-              {/* Patient Selection */}
-              <div className="space-y-2">
-                <Label>Paciente *</Label>
-                <Select value={formPatient} onValueChange={setFormPatient}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Selecione o paciente" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border border-border shadow-lg z-50">
-                    {patients.length > 0 ? (
-                      patients.map((patient) => (
-                        <SelectItem key={patient.id} value={patient.id}>
-                          {patient.name}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="p-2 text-sm text-muted-foreground text-center">
-                        Nenhum paciente cadastrado
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Professional Selection */}
-              <div className="space-y-2">
-                <Label>Profissional *</Label>
-                <Select value={formProfessional} onValueChange={setFormProfessional}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Selecione o profissional" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border border-border shadow-lg z-50">
-                    {professionals.length > 0 ? (
-                      professionals.map((prof) => (
-                        <SelectItem key={prof.id} value={prof.id}>
-                          {prof.name} {prof.specialty && `- ${prof.specialty}`}
-                        </SelectItem>
-                      ))
-                    ) : (
-                      <div className="p-2 text-sm text-muted-foreground text-center">
-                        Nenhum profissional cadastrado
-                      </div>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Time Selection */}
-              <div className="space-y-2">
-                <Label>Horário *</Label>
-                <Select value={formTime} onValueChange={setFormTime}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue placeholder="Selecione o horário" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border border-border shadow-lg z-50 max-h-60">
-                    {timeSlots.map((time) => (
-                      <SelectItem key={time} value={time}>
-                        {time}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Appointment Type */}
-              <div className="space-y-2">
-                <Label>Tipo de Consulta</Label>
-                <Select value={formType} onValueChange={setFormType}>
-                  <SelectTrigger className="bg-background">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover border border-border shadow-lg z-50">
-                    {appointmentTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Input
-                  value={formNotes}
-                  onChange={(e) => setFormNotes(e.target.value)}
-                  placeholder="Anotações sobre o agendamento (opcional)"
-                />
-              </div>
-
+              <AppointmentFormFields />
               <div className="flex justify-end gap-3 pt-4">
                 <Button
                   type="button"
@@ -454,6 +588,79 @@ export default function CalendarPage() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={(open) => {
+        setEditDialogOpen(open);
+        if (!open) {
+          setEditingAppointment(null);
+          resetForm();
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Agendamento</DialogTitle>
+            <DialogDescription>
+              Altere as informações do agendamento
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditAppointment} className="space-y-4">
+            <AppointmentFormFields />
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar Alterações
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar Agendamento</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label htmlFor="cancel-reason">Motivo do cancelamento (opcional)</Label>
+            <Textarea
+              id="cancel-reason"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Informe o motivo do cancelamento..."
+              className="mt-2"
+              rows={3}
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setCancellingAppointment(null);
+              setCancelReason("");
+            }}>
+              Voltar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelAppointment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={saving}
+            >
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Confirmar Cancelamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Calendar */}
@@ -536,13 +743,16 @@ export default function CalendarPage() {
                 {appointments.map((appointment) => {
                   const status = statusConfig[appointment.status as keyof typeof statusConfig] || statusConfig.scheduled;
                   const StatusIcon = status.icon;
+                  const isCancelled = appointment.status === "cancelled";
+                  const isCompleted = appointment.status === "completed";
+                  const canModify = !isCancelled && !isCompleted;
                   
                   return (
                     <div
                       key={appointment.id}
                       className={cn(
-                        "flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all cursor-pointer group",
-                        appointment.status === "cancelled" && "opacity-60"
+                        "flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group",
+                        isCancelled && "opacity-60"
                       )}
                     >
                       <div className="w-20 text-center py-2 rounded-lg bg-primary/10">
@@ -571,6 +781,26 @@ export default function CalendarPage() {
                           {status.label}
                         </span>
                       </div>
+                      {canModify && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => openEditDialog(appointment)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive"
+                            onClick={() => openCancelDialog(appointment)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   );
                 })}
