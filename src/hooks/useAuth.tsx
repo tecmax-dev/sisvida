@@ -32,6 +32,7 @@ interface AuthContextType {
   profile: Profile | null;
   currentClinic: Clinic | null;
   userRoles: UserRole[];
+  isSuperAdmin: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
   setCurrentClinic: (clinic: Clinic | null) => void;
@@ -46,6 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [currentClinic, setCurrentClinic] = useState<Clinic | null>(null);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
@@ -58,6 +60,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (data) {
       setProfile(data as Profile);
     }
+  };
+
+  const fetchSuperAdminStatus = async (userId: string) => {
+    const { data } = await supabase
+      .from('super_admins')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    setIsSuperAdmin(!!data);
   };
 
   const fetchUserRoles = async (userId: string) => {
@@ -100,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user) {
       await fetchProfile(user.id);
       await fetchUserRoles(user.id);
+      await fetchSuperAdminStatus(user.id);
     }
   };
 
@@ -114,11 +127,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setTimeout(() => {
             fetchProfile(session.user.id);
             fetchUserRoles(session.user.id);
+            fetchSuperAdminStatus(session.user.id);
           }, 0);
         } else {
           setProfile(null);
           setUserRoles([]);
           setCurrentClinic(null);
+          setIsSuperAdmin(false);
         }
         
         setLoading(false);
@@ -132,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         fetchProfile(session.user.id);
         fetchUserRoles(session.user.id);
+        fetchSuperAdminStatus(session.user.id);
       }
       
       setLoading(false);
@@ -145,6 +161,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(null);
     setUserRoles([]);
     setCurrentClinic(null);
+    setIsSuperAdmin(false);
   };
 
   return (
@@ -154,6 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       profile, 
       currentClinic, 
       userRoles, 
+      isSuperAdmin,
       loading, 
       signOut,
       setCurrentClinic,

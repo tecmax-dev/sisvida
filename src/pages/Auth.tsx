@@ -26,15 +26,32 @@ export default function Auth() {
   const { toast } = useToast();
 
   useEffect(() => {
+    const checkSuperAdminAndRedirect = async (userId: string) => {
+      const { data } = await supabase
+        .from('super_admins')
+        .select('id')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (data) {
+        navigate("/admin");
+      } else {
+        navigate("/dashboard");
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        navigate("/dashboard");
+        // Defer to avoid deadlock
+        setTimeout(() => {
+          checkSuperAdminAndRedirect(session.user.id);
+        }, 0);
       }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        navigate("/dashboard");
+        checkSuperAdminAndRedirect(session.user.id);
       }
     });
 
