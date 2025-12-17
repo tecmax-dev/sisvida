@@ -225,6 +225,74 @@ export type Database = {
         }
         Relationships: []
       }
+      document_settings: {
+        Row: {
+          attendance_template: string | null
+          attendance_title: string | null
+          certificate_template: string | null
+          certificate_title: string | null
+          clinic_id: string
+          created_at: string
+          custom_header_text: string | null
+          footer_text: string | null
+          id: string
+          prescription_template: string | null
+          prescription_title: string | null
+          show_address: boolean | null
+          show_cnpj: boolean | null
+          show_footer: boolean | null
+          show_logo: boolean | null
+          show_phone: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          attendance_template?: string | null
+          attendance_title?: string | null
+          certificate_template?: string | null
+          certificate_title?: string | null
+          clinic_id: string
+          created_at?: string
+          custom_header_text?: string | null
+          footer_text?: string | null
+          id?: string
+          prescription_template?: string | null
+          prescription_title?: string | null
+          show_address?: boolean | null
+          show_cnpj?: boolean | null
+          show_footer?: boolean | null
+          show_logo?: boolean | null
+          show_phone?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          attendance_template?: string | null
+          attendance_title?: string | null
+          certificate_template?: string | null
+          certificate_title?: string | null
+          clinic_id?: string
+          created_at?: string
+          custom_header_text?: string | null
+          footer_text?: string | null
+          id?: string
+          prescription_template?: string | null
+          prescription_title?: string | null
+          show_address?: boolean | null
+          show_cnpj?: boolean | null
+          show_footer?: boolean | null
+          show_logo?: boolean | null
+          show_phone?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insurance_plans: {
         Row: {
           clinic_id: string
