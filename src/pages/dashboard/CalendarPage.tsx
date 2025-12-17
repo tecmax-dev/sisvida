@@ -1105,6 +1105,7 @@ export default function CalendarPage() {
                     onClick={() => {
                       setFilterProfessional("all");
                       setFilterType("all");
+                      setSearchQuery("");
                     }}
                   >
                     Limpar filtros
