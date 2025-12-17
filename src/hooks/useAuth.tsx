@@ -14,6 +14,10 @@ interface Clinic {
   id: string;
   name: string;
   slug: string;
+  address: string | null;
+  phone: string | null;
+  cnpj: string | null;
+  logo_url: string | null;
 }
 
 interface UserRole {
@@ -65,7 +69,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clinic:clinics (
           id,
           name,
-          slug
+          slug,
+          address,
+          phone,
+          cnpj,
+          logo_url
         )
       `)
       .eq('user_id', userId);
