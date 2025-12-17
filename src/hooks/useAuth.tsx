@@ -117,6 +117,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
+    const loadUserData = async (userId: string) => {
+      try {
+        await Promise.all([
+          fetchProfile(userId),
+          fetchUserRoles(userId),
+          fetchSuperAdminStatus(userId),
+        ]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
@@ -125,18 +137,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (session?.user) {
           // Defer data fetching to avoid deadlock
           setTimeout(() => {
-            fetchProfile(session.user.id);
-            fetchUserRoles(session.user.id);
-            fetchSuperAdminStatus(session.user.id);
+            loadUserData(session.user.id);
           }, 0);
         } else {
           setProfile(null);
           setUserRoles([]);
           setCurrentClinic(null);
           setIsSuperAdmin(false);
+          setLoading(false);
         }
-        
-        setLoading(false);
       }
     );
 
@@ -145,12 +154,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       
       if (session?.user) {
-        fetchProfile(session.user.id);
-        fetchUserRoles(session.user.id);
-        fetchSuperAdminStatus(session.user.id);
+        loadUserData(session.user.id);
+      } else {
+        setLoading(false);
       }
-      
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
