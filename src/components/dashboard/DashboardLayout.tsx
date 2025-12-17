@@ -15,7 +15,14 @@ import {
   Home,
   Bell,
   CreditCard,
+  ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
 const navItems = [
@@ -31,7 +38,7 @@ const navItems = [
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const { user, signOut } = useAuth();
+  const { user, profile, currentClinic, userRoles, signOut, setCurrentClinic } = useAuth();
 
   const isActive = (href: string) => {
     if (href === "/dashboard") {
@@ -39,6 +46,8 @@ export function DashboardLayout() {
     }
     return location.pathname.startsWith(href);
   };
+
+  const displayName = profile?.name || user?.user_metadata?.name || "Usuário";
 
   return (
     <div className="min-h-screen flex bg-background">
@@ -70,6 +79,42 @@ export function DashboardLayout() {
             </Button>
           </div>
 
+          {/* Clinic Selector */}
+          {userRoles.length > 0 && currentClinic && (
+            <div className="p-4 border-b border-sidebar-border">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-sidebar-accent hover:bg-sidebar-accent/80 transition-colors">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="w-8 h-8 rounded-lg bg-sidebar-primary/20 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-sidebar-primary">
+                          {currentClinic.name.charAt(0)}
+                        </span>
+                      </div>
+                      <span className="text-sm font-medium text-sidebar-foreground truncate">
+                        {currentClinic.name}
+                      </span>
+                    </div>
+                    <ChevronDown className="h-4 w-4 text-sidebar-foreground/60 shrink-0" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-56">
+                  {userRoles.map((role) => (
+                    <DropdownMenuItem
+                      key={role.clinic_id}
+                      onClick={() => setCurrentClinic(role.clinic)}
+                      className={cn(
+                        currentClinic.id === role.clinic_id && "bg-accent"
+                      )}
+                    >
+                      {role.clinic.name}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+
           <nav className="flex-1 p-4 space-y-1">
             {navItems.map((item) => (
               <Link
@@ -93,12 +138,12 @@ export function DashboardLayout() {
             <div className="flex items-center gap-3 mb-4 px-3">
               <div className="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center">
                 <span className="text-sm font-medium text-sidebar-foreground">
-                  {user?.email?.charAt(0).toUpperCase()}
+                  {displayName.charAt(0).toUpperCase()}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-sidebar-foreground truncate">
-                  {user?.user_metadata?.name || "Usuário"}
+                  {displayName}
                 </p>
                 <p className="text-xs text-sidebar-foreground/60 truncate">
                   {user?.email}
