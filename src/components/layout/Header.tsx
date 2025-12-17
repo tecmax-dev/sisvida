@@ -36,6 +36,9 @@ export function Header() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-3">
+          <Button variant="ghost" size="sm" asChild>
+            <Link to="/profissional">Sou profissional</Link>
+          </Button>
           <Button variant="ghost" asChild>
             <Link to="/auth">Entrar</Link>
           </Button>
@@ -74,6 +77,11 @@ export function Header() {
               </nav>
             )}
             <div className="flex flex-col gap-2 pt-2">
+              <Button variant="ghost" size="sm" asChild className="w-full">
+                <Link to="/profissional" onClick={() => setIsMenuOpen(false)}>
+                  Sou profissional
+                </Link>
+              </Button>
               <Button variant="ghost" asChild className="w-full">
                 <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
                   Entrar

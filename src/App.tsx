@@ -7,6 +7,8 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ProfessionalAuth from "./pages/ProfessionalAuth";
+import ProfessionalDashboard from "./pages/ProfessionalDashboard";
 import ClinicSetup from "./pages/ClinicSetup";
 import PublicBooking from "./pages/PublicBooking";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -42,6 +44,9 @@ const App = () => (
             {/* Public booking (both legacy and current URLs) */}
             <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />
             <Route path="/booking/:clinicSlug" element={<PublicBooking />} />
+            {/* Professional Portal */}
+            <Route path="/profissional" element={<ProfessionalAuth />} />
+            <Route path="/profissional/painel" element={<ProfessionalDashboard />} />
             <Route
               path="/clinic-setup"
               element={

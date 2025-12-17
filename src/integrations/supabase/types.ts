@@ -98,6 +98,7 @@ export type Database = {
           cancellation_reason: string | null
           cancelled_at: string | null
           clinic_id: string
+          completed_at: string | null
           confirmed_at: string | null
           created_at: string
           created_by: string | null
@@ -108,6 +109,7 @@ export type Database = {
           professional_id: string
           reminder_sent: boolean | null
           start_time: string
+          started_at: string | null
           status: Database["public"]["Enums"]["appointment_status"]
           type: Database["public"]["Enums"]["appointment_type"]
           updated_at: string
@@ -117,6 +119,7 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           clinic_id: string
+          completed_at?: string | null
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -127,6 +130,7 @@ export type Database = {
           professional_id: string
           reminder_sent?: boolean | null
           start_time: string
+          started_at?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
           type?: Database["public"]["Enums"]["appointment_type"]
           updated_at?: string
@@ -136,6 +140,7 @@ export type Database = {
           cancellation_reason?: string | null
           cancelled_at?: string | null
           clinic_id?: string
+          completed_at?: string | null
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -146,6 +151,7 @@ export type Database = {
           professional_id?: string
           reminder_sent?: boolean | null
           start_time?: string
+          started_at?: string | null
           status?: Database["public"]["Enums"]["appointment_status"]
           type?: Database["public"]["Enums"]["appointment_type"]
           updated_at?: string
@@ -740,6 +746,7 @@ export type Database = {
         | "cancelled"
         | "completed"
         | "no_show"
+        | "in_progress"
       appointment_type: "first_visit" | "return" | "exam" | "procedure"
     }
     CompositeTypes: {
@@ -875,6 +882,7 @@ export const Constants = {
         "cancelled",
         "completed",
         "no_show",
+        "in_progress",
       ],
       appointment_type: ["first_visit", "return", "exam", "procedure"],
     },
