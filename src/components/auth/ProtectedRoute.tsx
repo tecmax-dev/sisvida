@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading } = useAuth();
+  const { user, loading, userRoles } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -20,6 +20,11 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
 
   if (!user) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
+  }
+
+  // If user has no clinic, redirect to setup
+  if (userRoles.length === 0 && location.pathname !== "/clinic-setup") {
+    return <Navigate to="/clinic-setup" replace />;
   }
 
   return <>{children}</>;
