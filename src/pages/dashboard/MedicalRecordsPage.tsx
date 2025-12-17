@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
 import { 
   FileText, 
   Plus, 
@@ -11,6 +10,7 @@ import {
   Stethoscope,
   Pill,
   ClipboardList,
+  Printer,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { PrintDialog } from "@/components/medical/PrintDialog";
 
 interface Patient {
   id: string;
@@ -49,7 +50,7 @@ interface MedicalRecord {
   diagnosis: string | null;
   treatment_plan: string | null;
   prescription: string | null;
-  professional: { name: string } | null;
+  professional: { name: string; specialty: string | null; registration_number: string | null } | null;
 }
 
 interface Appointment {
@@ -72,6 +73,8 @@ export default function MedicalRecordsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<string>("");
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -122,7 +125,7 @@ export default function MedicalRecordsPage() {
         diagnosis,
         treatment_plan,
         prescription,
-        professional:professionals (name)
+        professional:professionals (name, specialty, registration_number)
       `)
       .eq('clinic_id', currentClinic.id)
       .eq('patient_id', selectedPatient.id)
@@ -199,7 +202,12 @@ export default function MedicalRecordsPage() {
     }
   };
 
-  const filteredPatients = patients.filter(p => 
+  const handlePrintRecord = (record: MedicalRecord) => {
+    setSelectedRecord(record);
+    setPrintDialogOpen(true);
+  };
+
+  const filteredPatients = patients.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.phone.includes(searchQuery)
   );
@@ -310,7 +318,17 @@ export default function MedicalRecordsPage() {
                           {record.professional?.name || "Profissional não informado"}
                         </p>
                       </div>
-                      <Badge variant="outline">Prontuário</Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePrintRecord(record)}
+                        >
+                          <Printer className="h-4 w-4 mr-1" />
+                          Imprimir
+                        </Button>
+                        <Badge variant="outline">Prontuário</Badge>
+                      </div>
                     </div>
                     {record.chief_complaint && (
                       <div className="mb-2">
@@ -480,6 +498,29 @@ export default function MedicalRecordsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Print Dialog */}
+      {selectedPatient && currentClinic && selectedRecord && (
+        <PrintDialog
+          open={printDialogOpen}
+          onOpenChange={setPrintDialogOpen}
+          clinic={{
+            name: currentClinic.name,
+            address: currentClinic.address || undefined,
+            phone: currentClinic.phone || undefined,
+            cnpj: currentClinic.cnpj || undefined,
+            logo_url: currentClinic.logo_url || undefined,
+          }}
+          patient={{ name: selectedPatient.name }}
+          professional={selectedRecord.professional ? {
+            name: selectedRecord.professional.name,
+            specialty: selectedRecord.professional.specialty || undefined,
+            registration_number: selectedRecord.professional.registration_number || undefined,
+          } : undefined}
+          initialPrescription={selectedRecord.prescription || ""}
+          date={selectedRecord.record_date}
+        />
+      )}
     </div>
   );
 }
