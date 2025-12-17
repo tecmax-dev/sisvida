@@ -21,6 +21,10 @@ import MedicalRecordsPage from "./pages/dashboard/MedicalRecordsPage";
 import WaitingListPage from "./pages/dashboard/WaitingListPage";
 import AnamnesisPage from "./pages/dashboard/AnamnesisPage";
 import NotFound from "./pages/NotFound";
+import { AdminLayout } from "./components/admin/AdminLayout";
+import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
+import ClinicsManagement from "./pages/admin/ClinicsManagement";
+import UsersManagement from "./pages/admin/UsersManagement";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +47,20 @@ const App = () => (
                 </ProtectedRoute>
               }
             />
+            {/* Admin Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requireSuperAdmin>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<SuperAdminDashboard />} />
+              <Route path="clinics" element={<ClinicsManagement />} />
+              <Route path="users" element={<UsersManagement />} />
+            </Route>
+            {/* Dashboard Routes */}
             <Route
               path="/dashboard"
               element={

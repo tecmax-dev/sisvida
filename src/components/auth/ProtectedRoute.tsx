@@ -4,10 +4,11 @@ import { Loader2 } from "lucide-react";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requireSuperAdmin?: boolean;
 }
 
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { user, loading, userRoles } = useAuth();
+export function ProtectedRoute({ children, requireSuperAdmin = false }: ProtectedRouteProps) {
+  const { user, loading, userRoles, isSuperAdmin } = useAuth();
   const location = useLocation();
 
   if (loading) {
@@ -22,8 +23,18 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
     return <Navigate to="/auth" state={{ from: location }} replace />;
   }
 
-  // If user has no clinic, redirect to setup
-  if (userRoles.length === 0 && location.pathname !== "/clinic-setup") {
+  // If route requires super admin and user is not super admin
+  if (requireSuperAdmin && !isSuperAdmin) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // Super admins can access admin routes without clinic
+  if (isSuperAdmin && location.pathname.startsWith("/admin")) {
+    return <>{children}</>;
+  }
+
+  // If user has no clinic, redirect to setup (unless super admin)
+  if (userRoles.length === 0 && !isSuperAdmin && location.pathname !== "/clinic-setup") {
     return <Navigate to="/clinic-setup" replace />;
   }
 
