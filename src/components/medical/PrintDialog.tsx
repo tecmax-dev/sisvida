@@ -1,5 +1,5 @@
-import { useState, useRef } from "react";
-import { Printer, FileText, Award, ClipboardCheck } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Printer, FileText, Award, ClipboardCheck, Settings } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,6 +14,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PrescriptionPrint } from "./PrescriptionPrint";
 import { MedicalCertificatePrint } from "./MedicalCertificatePrint";
 import { AttendanceDeclarationPrint } from "./AttendanceDeclarationPrint";
+import { DocumentSettingsDialog } from "./DocumentSettingsDialog";
+import { useDocumentSettings } from "@/hooks/useDocumentSettings";
 
 interface PrintDialogProps {
   open: boolean;
@@ -25,6 +27,7 @@ interface PrintDialogProps {
     cnpj?: string;
     logo_url?: string;
   };
+  clinicId: string;
   patient: {
     name: string;
   };
@@ -50,21 +53,31 @@ export function PrintDialog({
   open,
   onOpenChange,
   clinic,
+  clinicId,
   patient,
   professional,
   initialPrescription = "",
   date,
 }: PrintDialogProps) {
+  const { settings } = useDocumentSettings(clinicId);
   const [prescription, setPrescription] = useState(initialPrescription);
   const [certificateDays, setCertificateDays] = useState(1);
   const [certificateReason, setCertificateReason] = useState("");
   const [attendanceStartTime, setAttendanceStartTime] = useState("08:00");
   const [attendanceEndTime, setAttendanceEndTime] = useState("09:00");
   const [activeTab, setActiveTab] = useState("receituario");
+  const [settingsOpen, setSettingsOpen] = useState(false);
   
   const prescriptionRef = useRef<HTMLDivElement>(null);
   const certificateRef = useRef<HTMLDivElement>(null);
   const attendanceRef = useRef<HTMLDivElement>(null);
+
+  // Use prescription template if available and no initial prescription
+  useEffect(() => {
+    if (settings?.prescription_template && !initialPrescription) {
+      setPrescription(settings.prescription_template);
+    }
+  }, [settings?.prescription_template, initialPrescription]);
 
   const getPrintContent = () => {
     switch (activeTab) {
@@ -177,155 +190,177 @@ export function PrintDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Printer className="h-5 w-5" />
-            Impressão de Documentos - {patient.name}
-          </DialogTitle>
-        </DialogHeader>
-
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="receituario" className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Receituário</span>
-            </TabsTrigger>
-            <TabsTrigger value="atestado" className="flex items-center gap-2">
-              <Award className="h-4 w-4" />
-              <span className="hidden sm:inline">Atestado</span>
-            </TabsTrigger>
-            <TabsTrigger value="comparecimento" className="flex items-center gap-2">
-              <ClipboardCheck className="h-4 w-4" />
-              <span className="hidden sm:inline">Comparecimento</span>
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="receituario" className="mt-4 space-y-4">
-            <div>
-              <Label>Prescrição</Label>
-              <Textarea
-                value={prescription}
-                onChange={(e) => setPrescription(e.target.value)}
-                placeholder="Digite a prescrição médica..."
-                className="mt-1.5 min-h-[200px] font-mono"
-              />
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="flex items-center gap-2">
+                <Printer className="h-5 w-5" />
+                Impressão de Documentos - {patient.name}
+              </DialogTitle>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setSettingsOpen(true)}
+                className="text-muted-foreground"
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                Configurar
+              </Button>
             </div>
+          </DialogHeader>
 
-            {/* Preview */}
-            <div className="border border-border rounded-lg overflow-hidden">
-              <div className="bg-muted px-4 py-2 text-sm font-medium">Pré-visualização</div>
-              <div className="overflow-auto max-h-[400px] bg-gray-100">
-                <div className="transform scale-50 origin-top-left">
-                  <PrescriptionPrint
-                    ref={prescriptionRef}
-                    clinic={clinic}
-                    patient={patient}
-                    professional={professional}
-                    prescription={prescription}
-                    date={date}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="receituario" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Receituário</span>
+              </TabsTrigger>
+              <TabsTrigger value="atestado" className="flex items-center gap-2">
+                <Award className="h-4 w-4" />
+                <span className="hidden sm:inline">Atestado</span>
+              </TabsTrigger>
+              <TabsTrigger value="comparecimento" className="flex items-center gap-2">
+                <ClipboardCheck className="h-4 w-4" />
+                <span className="hidden sm:inline">Comparecimento</span>
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="receituario" className="mt-4 space-y-4">
+              <div>
+                <Label>Prescrição</Label>
+                <Textarea
+                  value={prescription}
+                  onChange={(e) => setPrescription(e.target.value)}
+                  placeholder="Digite a prescrição médica..."
+                  className="mt-1.5 min-h-[200px] font-mono"
+                />
+              </div>
+
+              {/* Preview */}
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted px-4 py-2 text-sm font-medium">Pré-visualização</div>
+                <div className="overflow-auto max-h-[400px] bg-gray-100">
+                  <div className="transform scale-50 origin-top-left">
+                    <PrescriptionPrint
+                      ref={prescriptionRef}
+                      clinic={clinic}
+                      patient={patient}
+                      professional={professional}
+                      prescription={prescription}
+                      date={date}
+                      settings={settings}
+                    />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="atestado" className="mt-4 space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Dias de Afastamento</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={certificateDays}
+                    onChange={(e) => setCertificateDays(parseInt(e.target.value) || 1)}
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label>CID (opcional)</Label>
+                  <Input
+                    value={certificateReason}
+                    onChange={(e) => setCertificateReason(e.target.value)}
+                    placeholder="Ex: J11 - Gripe"
+                    className="mt-1.5"
                   />
                 </div>
               </div>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="atestado" className="mt-4 space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <Label>Dias de Afastamento</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={365}
-                  value={certificateDays}
-                  onChange={(e) => setCertificateDays(parseInt(e.target.value) || 1)}
-                  className="mt-1.5"
-                />
+              {/* Preview */}
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted px-4 py-2 text-sm font-medium">Pré-visualização</div>
+                <div className="overflow-auto max-h-[400px] bg-gray-100">
+                  <div className="transform scale-50 origin-top-left">
+                    <MedicalCertificatePrint
+                      ref={certificateRef}
+                      clinic={clinic}
+                      patient={patient}
+                      professional={professional}
+                      date={date}
+                      days={certificateDays}
+                      reason={certificateReason}
+                      settings={settings}
+                    />
+                  </div>
+                </div>
               </div>
-              <div>
-                <Label>CID (opcional)</Label>
-                <Input
-                  value={certificateReason}
-                  onChange={(e) => setCertificateReason(e.target.value)}
-                  placeholder="Ex: J11 - Gripe"
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
+            </TabsContent>
 
-            {/* Preview */}
-            <div className="border border-border rounded-lg overflow-hidden">
-              <div className="bg-muted px-4 py-2 text-sm font-medium">Pré-visualização</div>
-              <div className="overflow-auto max-h-[400px] bg-gray-100">
-                <div className="transform scale-50 origin-top-left">
-                  <MedicalCertificatePrint
-                    ref={certificateRef}
-                    clinic={clinic}
-                    patient={patient}
-                    professional={professional}
-                    date={date}
-                    days={certificateDays}
-                    reason={certificateReason}
+            <TabsContent value="comparecimento" className="mt-4 space-y-4">
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>Horário de Entrada</Label>
+                  <Input
+                    type="time"
+                    value={attendanceStartTime}
+                    onChange={(e) => setAttendanceStartTime(e.target.value)}
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label>Horário de Saída</Label>
+                  <Input
+                    type="time"
+                    value={attendanceEndTime}
+                    onChange={(e) => setAttendanceEndTime(e.target.value)}
+                    className="mt-1.5"
                   />
                 </div>
               </div>
-            </div>
-          </TabsContent>
 
-          <TabsContent value="comparecimento" className="mt-4 space-y-4">
-            <div className="grid sm:grid-cols-2 gap-4">
-              <div>
-                <Label>Horário de Entrada</Label>
-                <Input
-                  type="time"
-                  value={attendanceStartTime}
-                  onChange={(e) => setAttendanceStartTime(e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label>Horário de Saída</Label>
-                <Input
-                  type="time"
-                  value={attendanceEndTime}
-                  onChange={(e) => setAttendanceEndTime(e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-            </div>
-
-            {/* Preview */}
-            <div className="border border-border rounded-lg overflow-hidden">
-              <div className="bg-muted px-4 py-2 text-sm font-medium">Pré-visualização</div>
-              <div className="overflow-auto max-h-[400px] bg-gray-100">
-                <div className="transform scale-50 origin-top-left">
-                  <AttendanceDeclarationPrint
-                    ref={attendanceRef}
-                    clinic={clinic}
-                    patient={patient}
-                    professional={professional}
-                    date={date}
-                    startTime={attendanceStartTime}
-                    endTime={attendanceEndTime}
-                  />
+              {/* Preview */}
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted px-4 py-2 text-sm font-medium">Pré-visualização</div>
+                <div className="overflow-auto max-h-[400px] bg-gray-100">
+                  <div className="transform scale-50 origin-top-left">
+                    <AttendanceDeclarationPrint
+                      ref={attendanceRef}
+                      clinic={clinic}
+                      patient={patient}
+                      professional={professional}
+                      date={date}
+                      startTime={attendanceStartTime}
+                      endTime={attendanceEndTime}
+                      settings={settings}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+          </Tabs>
 
-        <div className="flex justify-end gap-3 pt-4 border-t border-border">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Imprimir {getTabTitle(activeTab)}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Imprimir {getTabTitle(activeTab)}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <DocumentSettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        clinicId={clinicId}
+      />
+    </>
   );
 }

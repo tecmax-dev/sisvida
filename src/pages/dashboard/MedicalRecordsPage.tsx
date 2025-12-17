@@ -511,6 +511,7 @@ export default function MedicalRecordsPage() {
             cnpj: currentClinic.cnpj || undefined,
             logo_url: currentClinic.logo_url || undefined,
           }}
+          clinicId={currentClinic.id}
           patient={{ name: selectedPatient.name }}
           professional={selectedRecord.professional ? {
             name: selectedRecord.professional.name,
