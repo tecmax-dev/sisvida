@@ -5,6 +5,7 @@ import {
   Clock,
   Calendar,
   Loader2,
+  Settings,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { ScheduleDialog } from "@/components/professionals/ScheduleDialog";
+import { Json } from "@/integrations/supabase/types";
 
 interface Professional {
   id: string;
@@ -36,6 +39,7 @@ interface Professional {
   registration_number: string | null;
   phone: string | null;
   is_active: boolean;
+  schedule: Json;
 }
 
 const professionalSchema = z.object({
@@ -52,6 +56,8 @@ export default function ProfessionalsPage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
   
   // Form state
   const [formName, setFormName] = useState("");
@@ -144,6 +150,23 @@ export default function ProfessionalsPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const openScheduleDialog = (professional: Professional) => {
+    setSelectedProfessional(professional);
+    setScheduleDialogOpen(true);
+  };
+
+  const getScheduleSummary = (schedule: Json) => {
+    if (!schedule || typeof schedule !== 'object') return "Não configurado";
+    
+    const scheduleObj = schedule as Record<string, { enabled: boolean; slots: { start: string; end: string }[] }>;
+    const activeDays = Object.entries(scheduleObj)
+      .filter(([_, day]) => day?.enabled)
+      .length;
+    
+    if (activeDays === 0) return "Não configurado";
+    return `${activeDays} dias/semana`;
   };
 
   return (
@@ -271,7 +294,10 @@ export default function ProfessionalsPage() {
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem>Ver agenda</DropdownMenuItem>
                       <DropdownMenuItem>Editar</DropdownMenuItem>
-                      <DropdownMenuItem>Configurar horários</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openScheduleDialog(professional)}>
+                        <Settings className="h-4 w-4 mr-2" />
+                        Configurar horários
+                      </DropdownMenuItem>
                       <DropdownMenuItem className="text-destructive">
                         Desativar
                       </DropdownMenuItem>
@@ -280,12 +306,10 @@ export default function ProfessionalsPage() {
                 </div>
 
                 <div className="mt-4 pt-4 border-t border-border flex items-center justify-between">
-                  {professional.phone && (
-                    <span className="text-sm text-muted-foreground flex items-center gap-1.5">
-                      <Clock className="h-4 w-4" />
-                      {professional.phone}
-                    </span>
-                  )}
+                  <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Clock className="h-4 w-4" />
+                    {getScheduleSummary(professional.schedule)}
+                  </span>
                   <Badge variant={professional.is_active ? "default" : "outline"}>
                     {professional.is_active ? "Ativo" : "Inativo"}
                   </Badge>
@@ -305,6 +329,19 @@ export default function ProfessionalsPage() {
             </Button>
           </CardContent>
         </Card>
+      )}
+
+      {selectedProfessional && (
+        <ScheduleDialog
+          open={scheduleDialogOpen}
+          onOpenChange={setScheduleDialogOpen}
+          professional={{
+            id: selectedProfessional.id,
+            name: selectedProfessional.name,
+            schedule: selectedProfessional.schedule as Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null,
+          }}
+          onUpdate={fetchProfessionals}
+        />
       )}
     </div>
   );

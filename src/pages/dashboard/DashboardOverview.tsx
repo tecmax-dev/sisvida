@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { 
   Calendar, 
   Users, 
@@ -8,17 +8,22 @@ import {
   CheckCircle2,
   XCircle,
   Plus,
+  Bell,
+  RefreshCw,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface DashboardStats {
   todayAppointments: number;
   totalPatients: number;
   completionRate: number;
+  pendingConfirmations: number;
 }
 
 interface Appointment {
@@ -48,19 +53,93 @@ const typeLabels: Record<string, string> = {
 
 export default function DashboardOverview() {
   const { currentClinic, profile } = useAuth();
+  const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats>({
     todayAppointments: 0,
     totalPatients: 0,
     completionRate: 0,
+    pendingConfirmations: 0,
   });
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [newAppointments, setNewAppointments] = useState<string[]>([]);
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
   useEffect(() => {
     if (currentClinic) {
       fetchDashboardData();
+      setupRealtimeSubscription();
     }
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+      }
+    };
   }, [currentClinic]);
+
+  const setupRealtimeSubscription = () => {
+    if (!currentClinic) return;
+
+    channelRef.current = supabase
+      .channel('dashboard-appointments')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'appointments',
+          filter: `clinic_id=eq.${currentClinic.id}`,
+        },
+        async (payload) => {
+          console.log('New appointment:', payload);
+          
+          // Fetch patient name for the new appointment
+          const { data: patient } = await supabase
+            .from('patients')
+            .select('name')
+            .eq('id', payload.new.patient_id)
+            .single();
+
+          toast({
+            title: "Novo agendamento!",
+            description: `${patient?.name || 'Paciente'} agendou para ${new Date(payload.new.appointment_date).toLocaleDateString('pt-BR')} às ${payload.new.start_time.slice(0, 5)}`,
+          });
+
+          // Highlight new appointment
+          setNewAppointments(prev => [...prev, payload.new.id]);
+          setTimeout(() => {
+            setNewAppointments(prev => prev.filter(id => id !== payload.new.id));
+          }, 5000);
+
+          // Refresh data
+          fetchDashboardData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'appointments',
+          filter: `clinic_id=eq.${currentClinic.id}`,
+        },
+        (payload) => {
+          console.log('Updated appointment:', payload);
+          
+          // Check if status changed to confirmed
+          if (payload.old.status !== 'confirmed' && payload.new.status === 'confirmed') {
+            toast({
+              title: "Consulta confirmada!",
+              description: "Uma consulta foi confirmada pelo paciente.",
+            });
+          }
+          
+          fetchDashboardData();
+        }
+      )
+      .subscribe();
+  };
 
   const fetchDashboardData = async () => {
     if (!currentClinic) return;
@@ -88,7 +167,11 @@ export default function DashboardOverview() {
 
       if (appointments) {
         setTodayAppointments(appointments as unknown as Appointment[]);
-        setStats(prev => ({ ...prev, todayAppointments: appointments.length }));
+        setStats(prev => ({ 
+          ...prev, 
+          todayAppointments: appointments.length,
+          pendingConfirmations: appointments.filter(a => a.status === 'scheduled').length,
+        }));
       }
 
       // Fetch total patients
@@ -150,9 +233,9 @@ export default function DashboardOverview() {
       bgColor: "bg-success/10",
     },
     {
-      title: "Tempo Médio",
-      value: "30min",
-      icon: Clock,
+      title: "Aguardando Confirmação",
+      value: stats.pendingConfirmations.toString(),
+      icon: Bell,
       color: "text-warning",
       bgColor: "bg-warning/10",
     },
@@ -167,12 +250,26 @@ export default function DashboardOverview() {
             Olá, {profile?.name || "Usuário"}! Aqui está o resumo da sua clínica.
           </p>
         </div>
-        <Button variant="hero" asChild>
-          <Link to="/dashboard/calendar">
-            <Calendar className="h-4 w-4 mr-2" />
-            Nova Consulta
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={fetchDashboardData} title="Atualizar">
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button variant="hero" asChild>
+            <Link to="/dashboard/calendar">
+              <Calendar className="h-4 w-4 mr-2" />
+              Nova Consulta
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Realtime indicator */}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <span className="relative flex h-2 w-2">
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+        </span>
+        Atualizações em tempo real ativas
       </div>
 
       {/* Stats Grid */}
@@ -215,11 +312,16 @@ export default function DashboardOverview() {
                 const status = statusConfig[appointment.status as keyof typeof statusConfig] || statusConfig.scheduled;
                 const StatusIcon = status.icon;
                 const timeStr = appointment.start_time.slice(0, 5);
+                const isNew = newAppointments.includes(appointment.id);
                 
                 return (
                   <div
                     key={appointment.id}
-                    className={`flex items-center gap-4 p-3 rounded-lg border border-border hover:bg-muted/50 transition-colors ${
+                    className={`flex items-center gap-4 p-3 rounded-lg border transition-all ${
+                      isNew 
+                        ? "border-success bg-success/5 animate-pulse" 
+                        : "border-border hover:bg-muted/50"
+                    } ${
                       appointment.status === "cancelled" ? "opacity-60" : ""
                     }`}
                   >
@@ -229,9 +331,16 @@ export default function DashboardOverview() {
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-foreground truncate">
-                        {appointment.patient?.name || "Paciente"}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-foreground truncate">
+                          {appointment.patient?.name || "Paciente"}
+                        </p>
+                        {isNew && (
+                          <Badge variant="secondary" className="text-xs bg-success/20 text-success">
+                            Novo
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         {typeLabels[appointment.type] || appointment.type}
                       </p>
