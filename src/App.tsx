@@ -39,7 +39,9 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            {/* Public booking (both legacy and current URLs) */}
             <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />
+            <Route path="/booking/:clinicSlug" element={<PublicBooking />} />
             <Route
               path="/clinic-setup"
               element={

@@ -9,11 +9,14 @@ import { useToast } from "@/hooks/use-toast";
 import { Building2, Bell, Clock, Globe } from "lucide-react";
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, currentClinic } = useAuth();
   const { toast } = useToast();
   const [clinicName, setClinicName] = useState("Clínica Saúde Total");
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [reminderTime, setReminderTime] = useState("24");
+
+  const bookingPath = currentClinic?.slug ? `/agendar/${currentClinic.slug}` : "/agendar";
+  const bookingLink = `${window.location.origin}${bookingPath}`;
 
   const handleSave = () => {
     toast({
@@ -167,12 +170,27 @@ export default function SettingsPage() {
               Compartilhe este link com seus pacientes
             </p>
             <div className="flex gap-2">
-              <Input
-                readOnly
-                value={`${window.location.origin}/booking/clinica-saude`}
-                className="bg-background"
-              />
-              <Button variant="outline">Copiar</Button>
+              <Input readOnly value={bookingLink} className="bg-background" />
+              <Button
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(bookingLink);
+                    toast({
+                      title: "Link copiado!",
+                      description: "Agora é só colar e compartilhar com seus pacientes.",
+                    });
+                  } catch {
+                    toast({
+                      title: "Não foi possível copiar",
+                      description: "Copie manualmente o link.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Copiar
+              </Button>
             </div>
           </div>
         </CardContent>
