@@ -65,6 +65,7 @@ interface Professional {
   name: string;
   specialty: string | null;
   appointment_duration: number | null;
+  schedule: Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null;
 }
 
 interface InsurancePlan {
@@ -132,14 +133,14 @@ export default function PublicBooking() {
 
       setClinic(clinicData);
 
-      // Fetch professionals
+      // Fetch professionals with schedules
       const { data: professionalsData } = await supabase
         .from('professionals')
-        .select('id, name, specialty, appointment_duration')
+        .select('id, name, specialty, appointment_duration, schedule')
         .eq('clinic_id', clinicData.id)
         .eq('is_active', true);
 
-      setProfessionals(professionalsData || []);
+      setProfessionals(professionalsData as Professional[] || []);
 
       // Fetch insurance plans
       const { data: insuranceData } = await supabase
@@ -172,9 +173,61 @@ export default function PublicBooking() {
     setExistingAppointments(data?.map(a => a.start_time.substring(0, 5)) || []);
   };
 
+  // Get available time slots based on professional schedule and existing appointments
   const availableTimeSlots = useMemo(() => {
-    return timeSlots.filter(slot => !existingAppointments.includes(slot));
-  }, [existingAppointments]);
+    if (!selectedDate || !selectedProfessional) return [];
+    
+    const professional = professionals.find(p => p.id === selectedProfessional);
+    if (!professional) return [];
+    
+    // Get day of week
+    const dayIndex = selectedDate.getDay();
+    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayKey = dayKeys[dayIndex];
+    
+    // Check if professional has schedule configured
+    const schedule = professional.schedule;
+    if (!schedule || !schedule[dayKey] || !schedule[dayKey].enabled) {
+      return [];
+    }
+    
+    // Generate time slots from professional's schedule
+    const daySchedule = schedule[dayKey];
+    const duration = professional.appointment_duration || 30;
+    const slots: string[] = [];
+    
+    daySchedule.slots.forEach(slot => {
+      const [startHour, startMin] = slot.start.split(':').map(Number);
+      const [endHour, endMin] = slot.end.split(':').map(Number);
+      
+      let current = startHour * 60 + startMin;
+      const end = endHour * 60 + endMin;
+      
+      while (current + duration <= end) {
+        const hour = Math.floor(current / 60);
+        const min = current % 60;
+        slots.push(`${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`);
+        current += duration;
+      }
+    });
+    
+    // Filter out existing appointments
+    return slots.filter(slot => !existingAppointments.includes(slot));
+  }, [selectedDate, selectedProfessional, professionals, existingAppointments]);
+
+  // Check if day has availability based on professional schedule
+  const isDayAvailable = (date: Date) => {
+    if (!selectedProfessional) return true; // If no professional selected, show all days
+    
+    const professional = professionals.find(p => p.id === selectedProfessional);
+    if (!professional?.schedule) return true; // No schedule = use default
+    
+    const dayIndex = date.getDay();
+    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayKey = dayKeys[dayIndex];
+    
+    return professional.schedule[dayKey]?.enabled || false;
+  };
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -197,7 +250,9 @@ export default function PublicBooking() {
   const isDateDisabled = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    return date < today || date.getDay() === 0; // No Sundays
+    if (date < today) return true;
+    if (!isDayAvailable(date)) return true;
+    return false;
   };
 
   const formatPhone = (value: string) => {

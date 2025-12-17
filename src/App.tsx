@@ -17,6 +17,9 @@ import ProfessionalsPage from "./pages/dashboard/ProfessionalsPage";
 import InsurancePage from "./pages/dashboard/InsurancePage";
 import ReportsPage from "./pages/dashboard/ReportsPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
+import MedicalRecordsPage from "./pages/dashboard/MedicalRecordsPage";
+import WaitingListPage from "./pages/dashboard/WaitingListPage";
+import AnamnesisPage from "./pages/dashboard/AnamnesisPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -53,6 +56,9 @@ const App = () => (
               <Route path="patients" element={<PatientsPage />} />
               <Route path="professionals" element={<ProfessionalsPage />} />
               <Route path="insurance" element={<InsurancePage />} />
+              <Route path="medical-records" element={<MedicalRecordsPage />} />
+              <Route path="anamnesis" element={<AnamnesisPage />} />
+              <Route path="waiting-list" element={<WaitingListPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>

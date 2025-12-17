@@ -16,6 +16,9 @@ import {
   Bell,
   CreditCard,
   ChevronDown,
+  FileText,
+  ClipboardList,
+  Clock,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -30,6 +33,9 @@ const navItems = [
   { href: "/dashboard/calendar", icon: Calendar, label: "Agenda" },
   { href: "/dashboard/patients", icon: Users, label: "Pacientes" },
   { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais" },
+  { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário" },
+  { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese" },
+  { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera" },
   { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios" },
   { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios" },
   { href: "/dashboard/settings", icon: Settings, label: "Configurações" },
