@@ -25,6 +25,7 @@ import { AdminLayout } from "./components/admin/AdminLayout";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
 import UsersManagement from "./pages/admin/UsersManagement";
+import AuditLogsPage from "./pages/admin/AuditLogsPage";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,7 @@ const App = () => (
               <Route index element={<SuperAdminDashboard />} />
               <Route path="clinics" element={<ClinicsManagement />} />
               <Route path="users" element={<UsersManagement />} />
+              <Route path="audit" element={<AuditLogsPage />} />
             </Route>
             {/* Dashboard Routes */}
             <Route
