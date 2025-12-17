@@ -16,6 +16,8 @@ import {
   CalendarDays,
   LayoutGrid,
   Check,
+  Search,
+  Send,
   UserCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -145,9 +147,13 @@ export default function CalendarPage() {
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>("day");
   
-  // Filters
+  // Filters and Search
   const [filterProfessional, setFilterProfessional] = useState<string>("all");
   const [filterType, setFilterType] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // WhatsApp state
+  const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
   
   // Edit state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -269,14 +275,21 @@ export default function CalendarPage() {
     }
   };
 
-  // Filter appointments
+  // Filter and search appointments
   const filteredAppointments = useMemo(() => {
+    const query = searchQuery.toLowerCase().trim();
     return appointments.filter(apt => {
       if (filterProfessional !== "all" && apt.professional_id !== filterProfessional) return false;
       if (filterType !== "all" && apt.type !== filterType) return false;
+      if (query) {
+        const patientName = apt.patient?.name?.toLowerCase() || "";
+        const patient = patients.find(p => p.id === apt.patient_id);
+        const patientPhone = patient?.phone?.toLowerCase() || "";
+        if (!patientName.includes(query) && !patientPhone.includes(query)) return false;
+      }
       return true;
     });
-  }, [appointments, filterProfessional, filterType]);
+  }, [appointments, filterProfessional, filterType, searchQuery, patients]);
 
   // Get appointments for a specific date
   const getAppointmentsForDate = (date: Date) => {
@@ -621,7 +634,54 @@ export default function CalendarPage() {
     procedure: "Procedimento",
   };
 
-  const hasActiveFilters = filterProfessional !== "all" || filterType !== "all";
+  const hasActiveFilters = filterProfessional !== "all" || filterType !== "all" || searchQuery.trim() !== "";
+
+  const handleSendWhatsAppReminder = async (appointment: Appointment) => {
+    const patient = patients.find(p => p.id === appointment.patient_id);
+    if (!patient?.phone) {
+      toast({
+        title: "Erro",
+        description: "Paciente não possui telefone cadastrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingWhatsApp(appointment.id);
+
+    try {
+      const appointmentDate = new Date(appointment.appointment_date + 'T12:00:00');
+      const formattedDate = appointmentDate.toLocaleDateString('pt-BR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long' 
+      });
+      const message = `Olá ${patient.name}! 👋\n\nLembramos que você tem uma consulta agendada para ${formattedDate} às ${appointment.start_time.slice(0, 5)}.\n\nPor favor, confirme sua presença respondendo esta mensagem.\n\nAtenciosamente,\n${currentClinic?.name || 'Clínica'}`;
+
+      const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+        body: { phone: patient.phone, message, clinicId: currentClinic?.id },
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Lembrete enviado",
+          description: `Mensagem enviada para ${patient.name}.`,
+        });
+      } else {
+        throw new Error(data?.error || 'Erro ao enviar mensagem');
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar WhatsApp",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingWhatsApp(null);
+    }
+  };
 
   const AppointmentFormFields = () => (
     <>
@@ -798,6 +858,20 @@ export default function CalendarPage() {
             <Button
               variant="ghost"
               size="icon"
+              className="h-8 w-8 text-success hover:text-success"
+              onClick={() => handleSendWhatsAppReminder(appointment)}
+              disabled={sendingWhatsApp === appointment.id}
+              title="Enviar lembrete WhatsApp"
+            >
+              {sendingWhatsApp === appointment.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-8 w-8"
               onClick={() => openRescheduleDialog(appointment)}
               title="Reagendar"
@@ -967,6 +1041,17 @@ export default function CalendarPage() {
             </TabsList>
           </Tabs>
 
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar paciente por nome ou telefone..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 w-64"
+            />
+          </div>
+
           {/* Filters */}
           <Popover>
             <PopoverTrigger asChild>
@@ -1066,8 +1151,15 @@ export default function CalendarPage() {
 
       {/* Active Filters */}
       {hasActiveFilters && (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="text-sm text-muted-foreground">Filtros ativos:</span>
+          {searchQuery.trim() && (
+            <Badge variant="secondary" className="gap-1">
+              <Search className="h-3 w-3" />
+              "{searchQuery}"
+              <button onClick={() => setSearchQuery("")} className="ml-1 hover:text-foreground">×</button>
+            </Badge>
+          )}
           {filterProfessional !== "all" && (
             <Badge variant="secondary" className="gap-1">
               <UserCheck className="h-3 w-3" />
