@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import ClinicSetup from "./pages/ClinicSetup";
+import PublicBooking from "./pages/PublicBooking";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import DashboardOverview from "./pages/dashboard/DashboardOverview";
 import CalendarPage from "./pages/dashboard/CalendarPage";
@@ -30,6 +31,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />
             <Route
               path="/clinic-setup"
               element={
