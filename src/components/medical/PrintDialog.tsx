@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Printer, FileText, Award } from "lucide-react";
+import { Printer, FileText, Award, ClipboardCheck } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PrescriptionPrint } from "./PrescriptionPrint";
 import { MedicalCertificatePrint } from "./MedicalCertificatePrint";
+import { AttendanceDeclarationPrint } from "./AttendanceDeclarationPrint";
 
 interface PrintDialogProps {
   open: boolean;
@@ -36,6 +37,15 @@ interface PrintDialogProps {
   date: string;
 }
 
+const getTabTitle = (tab: string) => {
+  switch (tab) {
+    case "receituario": return "Receituário";
+    case "atestado": return "Atestado";
+    case "comparecimento": return "Declaração de Comparecimento";
+    default: return "Documento";
+  }
+};
+
 export function PrintDialog({
   open,
   onOpenChange,
@@ -48,13 +58,25 @@ export function PrintDialog({
   const [prescription, setPrescription] = useState(initialPrescription);
   const [certificateDays, setCertificateDays] = useState(1);
   const [certificateReason, setCertificateReason] = useState("");
+  const [attendanceStartTime, setAttendanceStartTime] = useState("08:00");
+  const [attendanceEndTime, setAttendanceEndTime] = useState("09:00");
   const [activeTab, setActiveTab] = useState("receituario");
   
   const prescriptionRef = useRef<HTMLDivElement>(null);
   const certificateRef = useRef<HTMLDivElement>(null);
+  const attendanceRef = useRef<HTMLDivElement>(null);
+
+  const getPrintContent = () => {
+    switch (activeTab) {
+      case "receituario": return prescriptionRef.current;
+      case "atestado": return certificateRef.current;
+      case "comparecimento": return attendanceRef.current;
+      default: return null;
+    }
+  };
 
   const handlePrint = () => {
-    const printContent = activeTab === "receituario" ? prescriptionRef.current : certificateRef.current;
+    const printContent = getPrintContent();
     
     if (!printContent) return;
 
@@ -65,7 +87,7 @@ export function PrintDialog({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${activeTab === "receituario" ? "Receituário" : "Atestado"} - ${patient.name}</title>
+          <title>${getTabTitle(activeTab)} - ${patient.name}</title>
           <style>
             * {
               margin: 0;
@@ -112,9 +134,12 @@ export function PrintDialog({
             .mt-auto { margin-top: auto; }
             .flex { display: flex; }
             .items-center { align-items: center; }
+            .items-start { align-items: flex-start; }
             .justify-between { justify-content: space-between; }
+            .gap-4 { gap: 1rem; }
             .text-right { text-align: right; }
             .text-center { text-align: center; }
+            .text-justify { text-align: justify; }
             .text-xl { font-size: 1.25rem; }
             .text-2xl { font-size: 1.5rem; }
             .text-lg { font-size: 1.125rem; }
@@ -132,6 +157,7 @@ export function PrintDialog({
             .min-h-\\[400px\\] { min-height: 400px; }
             .w-64 { width: 16rem; }
             .h-16 { height: 4rem; }
+            .object-contain { object-fit: contain; }
             strong { font-weight: bold; }
           </style>
         </head>
@@ -161,14 +187,18 @@ export function PrintDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="receituario" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Receituário
+              <span className="hidden sm:inline">Receituário</span>
             </TabsTrigger>
             <TabsTrigger value="atestado" className="flex items-center gap-2">
               <Award className="h-4 w-4" />
-              Atestado
+              <span className="hidden sm:inline">Atestado</span>
+            </TabsTrigger>
+            <TabsTrigger value="comparecimento" className="flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4" />
+              <span className="hidden sm:inline">Comparecimento</span>
             </TabsTrigger>
           </TabsList>
 
@@ -243,6 +273,47 @@ export function PrintDialog({
               </div>
             </div>
           </TabsContent>
+
+          <TabsContent value="comparecimento" className="mt-4 space-y-4">
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <Label>Horário de Entrada</Label>
+                <Input
+                  type="time"
+                  value={attendanceStartTime}
+                  onChange={(e) => setAttendanceStartTime(e.target.value)}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label>Horário de Saída</Label>
+                <Input
+                  type="time"
+                  value={attendanceEndTime}
+                  onChange={(e) => setAttendanceEndTime(e.target.value)}
+                  className="mt-1.5"
+                />
+              </div>
+            </div>
+
+            {/* Preview */}
+            <div className="border border-border rounded-lg overflow-hidden">
+              <div className="bg-muted px-4 py-2 text-sm font-medium">Pré-visualização</div>
+              <div className="overflow-auto max-h-[400px] bg-gray-100">
+                <div className="transform scale-50 origin-top-left">
+                  <AttendanceDeclarationPrint
+                    ref={attendanceRef}
+                    clinic={clinic}
+                    patient={patient}
+                    professional={professional}
+                    date={date}
+                    startTime={attendanceStartTime}
+                    endTime={attendanceEndTime}
+                  />
+                </div>
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
 
         <div className="flex justify-end gap-3 pt-4 border-t border-border">
@@ -251,7 +322,7 @@ export function PrintDialog({
           </Button>
           <Button onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
-            Imprimir {activeTab === "receituario" ? "Receituário" : "Atestado"}
+            Imprimir {getTabTitle(activeTab)}
           </Button>
         </div>
       </DialogContent>
