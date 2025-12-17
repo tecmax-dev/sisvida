@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
   TrendingUp, 
-  TrendingDown,
   Calendar,
   Users,
   XCircle,
-  DollarSign,
   Loader2,
+  Download,
+  FileSpreadsheet,
+  FileText,
 } from "lucide-react";
 import {
   Select,
@@ -17,6 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   BarChart,
   Bar,
@@ -34,6 +41,8 @@ import {
 } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
+import { useToast } from "@/hooks/use-toast";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
@@ -52,6 +61,7 @@ interface ReportData {
 
 export default function ReportsPage() {
   const { currentClinic } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("month");
   const [data, setData] = useState<ReportData>({
@@ -265,24 +275,58 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Relatórios</h1>
           <p className="text-muted-foreground">
             Acompanhe as métricas da sua clínica
           </p>
         </div>
-        <Select value={period} onValueChange={setPeriod}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="week">Última semana</SelectItem>
-            <SelectItem value="month">Último mês</SelectItem>
-            <SelectItem value="quarter">Último trimestre</SelectItem>
-            <SelectItem value="year">Último ano</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={period} onValueChange={setPeriod}>
+            <SelectTrigger className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="week">Última semana</SelectItem>
+              <SelectItem value="month">Último mês</SelectItem>
+              <SelectItem value="quarter">Último trimestre</SelectItem>
+              <SelectItem value="year">Último ano</SelectItem>
+            </SelectContent>
+          </Select>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                onClick={() => {
+                  if (!currentClinic) return;
+                  exportToPDF({ clinicName: currentClinic.name, period, data });
+                  toast({ title: "PDF gerado com sucesso!" });
+                }}
+                className="gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Exportar PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => {
+                  if (!currentClinic) return;
+                  exportToExcel({ clinicName: currentClinic.name, period, data });
+                  toast({ title: "Excel gerado com sucesso!" });
+                }}
+                className="gap-2"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Exportar Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Key Metrics */}
