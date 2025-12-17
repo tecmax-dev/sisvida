@@ -94,7 +94,8 @@ const timeSlots = [
 const statusConfig = {
   scheduled: { icon: AlertCircle, color: "text-warning", bgColor: "bg-warning/10", label: "Agendado" },
   confirmed: { icon: CheckCircle2, color: "text-success", bgColor: "bg-success/10", label: "Confirmado" },
-  completed: { icon: CheckCircle2, color: "text-info", bgColor: "bg-info/10", label: "Concluído" },
+  in_progress: { icon: Clock, color: "text-info", bgColor: "bg-info/10", label: "Em atendimento" },
+  completed: { icon: CheckCircle2, color: "text-muted-foreground", bgColor: "bg-muted", label: "Concluído" },
   cancelled: { icon: XCircle, color: "text-destructive", bgColor: "bg-destructive/10", label: "Cancelado" },
   no_show: { icon: XCircle, color: "text-destructive", bgColor: "bg-destructive/10", label: "Não compareceu" },
 };
