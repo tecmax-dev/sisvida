@@ -14,6 +14,84 @@ export type Database = {
   }
   public: {
     Tables: {
+      anamnesis: {
+        Row: {
+          additional_notes: string | null
+          alcohol: boolean | null
+          allergies: string | null
+          blood_type: string | null
+          chronic_diseases: string | null
+          clinic_id: string
+          created_at: string
+          current_medications: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          family_history: string | null
+          filled_at: string
+          id: string
+          patient_id: string
+          physical_activity: boolean | null
+          previous_surgeries: string | null
+          smoking: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          additional_notes?: string | null
+          alcohol?: boolean | null
+          allergies?: string | null
+          blood_type?: string | null
+          chronic_diseases?: string | null
+          clinic_id: string
+          created_at?: string
+          current_medications?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          family_history?: string | null
+          filled_at?: string
+          id?: string
+          patient_id: string
+          physical_activity?: boolean | null
+          previous_surgeries?: string | null
+          smoking?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          additional_notes?: string | null
+          alcohol?: boolean | null
+          allergies?: string | null
+          blood_type?: string | null
+          chronic_diseases?: string | null
+          clinic_id?: string
+          created_at?: string
+          current_medications?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          family_history?: string | null
+          filled_at?: string
+          id?: string
+          patient_id?: string
+          physical_activity?: boolean | null
+          previous_surgeries?: string | null
+          smoking?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnesis_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anamnesis_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           appointment_date: string
@@ -184,6 +262,89 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_records: {
+        Row: {
+          appointment_id: string | null
+          chief_complaint: string | null
+          clinic_id: string
+          created_at: string
+          diagnosis: string | null
+          history_present_illness: string | null
+          id: string
+          notes: string | null
+          patient_id: string
+          physical_examination: string | null
+          prescription: string | null
+          professional_id: string | null
+          record_date: string
+          treatment_plan: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          chief_complaint?: string | null
+          clinic_id: string
+          created_at?: string
+          diagnosis?: string | null
+          history_present_illness?: string | null
+          id?: string
+          notes?: string | null
+          patient_id: string
+          physical_examination?: string | null
+          prescription?: string | null
+          professional_id?: string | null
+          record_date?: string
+          treatment_plan?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          chief_complaint?: string | null
+          clinic_id?: string
+          created_at?: string
+          diagnosis?: string | null
+          history_present_illness?: string | null
+          id?: string
+          notes?: string | null
+          patient_id?: string
+          physical_examination?: string | null
+          prescription?: string | null
+          professional_id?: string | null
+          record_date?: string
+          treatment_plan?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_records_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_records_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_records_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_records_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
