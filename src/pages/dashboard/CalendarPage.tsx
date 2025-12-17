@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -12,12 +12,18 @@ import {
   XCircle,
   Pencil,
   Trash2,
+  Filter,
+  CalendarDays,
+  LayoutGrid,
+  Check,
+  UserCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +31,6 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogDescription,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -44,12 +49,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+const weekDaysFull = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 
 const monthNames = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -71,12 +90,14 @@ const timeSlots = [
 ];
 
 const statusConfig = {
-  scheduled: { icon: AlertCircle, color: "text-warning", label: "Agendado" },
-  confirmed: { icon: CheckCircle2, color: "text-success", label: "Confirmado" },
-  completed: { icon: CheckCircle2, color: "text-info", label: "Concluído" },
-  cancelled: { icon: XCircle, color: "text-destructive", label: "Cancelado" },
-  no_show: { icon: XCircle, color: "text-destructive", label: "Não compareceu" },
+  scheduled: { icon: AlertCircle, color: "text-warning", bgColor: "bg-warning/10", label: "Agendado" },
+  confirmed: { icon: CheckCircle2, color: "text-success", bgColor: "bg-success/10", label: "Confirmado" },
+  completed: { icon: CheckCircle2, color: "text-info", bgColor: "bg-info/10", label: "Concluído" },
+  cancelled: { icon: XCircle, color: "text-destructive", bgColor: "bg-destructive/10", label: "Cancelado" },
+  no_show: { icon: XCircle, color: "text-destructive", bgColor: "bg-destructive/10", label: "Não compareceu" },
 };
+
+type ViewMode = "day" | "week" | "month";
 
 interface Patient {
   id: string;
@@ -92,6 +113,7 @@ interface Professional {
 
 interface Appointment {
   id: string;
+  appointment_date: string;
   start_time: string;
   end_time: string;
   type: string;
@@ -120,6 +142,13 @@ export default function CalendarPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   
+  // View mode
+  const [viewMode, setViewMode] = useState<ViewMode>("day");
+  
+  // Filters
+  const [filterProfessional, setFilterProfessional] = useState<string>("all");
+  const [filterType, setFilterType] = useState<string>("all");
+  
   // Edit state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
@@ -128,6 +157,12 @@ export default function CalendarPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancellingAppointment, setCancellingAppointment] = useState<Appointment | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  
+  // Reschedule state (for drag-drop simulation)
+  const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
+  const [reschedulingAppointment, setReschedulingAppointment] = useState<Appointment | null>(null);
+  const [newDate, setNewDate] = useState("");
+  const [newTime, setNewTime] = useState("");
   
   // Form state
   const [formPatient, setFormPatient] = useState("");
@@ -146,7 +181,7 @@ export default function CalendarPage() {
     if (currentClinic) {
       fetchAppointments();
     }
-  }, [currentClinic, selectedDate]);
+  }, [currentClinic, selectedDate, viewMode]);
 
   const fetchData = async () => {
     if (!currentClinic) return;
@@ -173,18 +208,42 @@ export default function CalendarPage() {
     }
   };
 
+  const getDateRange = () => {
+    if (viewMode === "day") {
+      const dateStr = selectedDate.toISOString().split('T')[0];
+      return { startDate: dateStr, endDate: dateStr };
+    } else if (viewMode === "week") {
+      const start = new Date(selectedDate);
+      start.setDate(start.getDate() - start.getDay());
+      const end = new Date(start);
+      end.setDate(end.getDate() + 6);
+      return { 
+        startDate: start.toISOString().split('T')[0], 
+        endDate: end.toISOString().split('T')[0] 
+      };
+    } else {
+      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      return { 
+        startDate: start.toISOString().split('T')[0], 
+        endDate: end.toISOString().split('T')[0] 
+      };
+    }
+  };
+
   const fetchAppointments = async () => {
     if (!currentClinic) return;
     
     setLoading(true);
     
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const { startDate, endDate } = getDateRange();
       
       const { data, error } = await supabase
         .from('appointments')
         .select(`
           id,
+          appointment_date,
           start_time,
           end_time,
           type,
@@ -196,7 +255,9 @@ export default function CalendarPage() {
           professional:professionals (name)
         `)
         .eq('clinic_id', currentClinic.id)
-        .eq('appointment_date', dateStr)
+        .gte('appointment_date', startDate)
+        .lte('appointment_date', endDate)
+        .order('appointment_date')
         .order('start_time');
 
       if (error) throw error;
@@ -206,6 +267,21 @@ export default function CalendarPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Filter appointments
+  const filteredAppointments = useMemo(() => {
+    return appointments.filter(apt => {
+      if (filterProfessional !== "all" && apt.professional_id !== filterProfessional) return false;
+      if (filterType !== "all" && apt.type !== filterType) return false;
+      return true;
+    });
+  }, [appointments, filterProfessional, filterType]);
+
+  // Get appointments for a specific date
+  const getAppointmentsForDate = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return filteredAppointments.filter(apt => apt.appointment_date === dateStr);
   };
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
@@ -358,6 +434,81 @@ export default function CalendarPage() {
     }
   };
 
+  const handleUpdateStatus = async (appointment: Appointment, newStatus: string) => {
+    try {
+      const updateData: Record<string, any> = {
+        status: newStatus as "scheduled" | "confirmed" | "completed" | "cancelled" | "no_show",
+      };
+
+      if (newStatus === "confirmed") {
+        updateData.confirmed_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from('appointments')
+        .update(updateData)
+        .eq('id', appointment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Status atualizado",
+        description: `Agendamento marcado como ${statusConfig[newStatus as keyof typeof statusConfig]?.label || newStatus}.`,
+      });
+
+      fetchAppointments();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReschedule = async () => {
+    if (!reschedulingAppointment || !newDate || !newTime) return;
+
+    setSaving(true);
+
+    try {
+      const [hours, minutes] = newTime.split(':');
+      const endHours = parseInt(hours) + (parseInt(minutes) + 30 >= 60 ? 1 : 0);
+      const endMinutes = (parseInt(minutes) + 30) % 60;
+      const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          appointment_date: newDate,
+          start_time: newTime,
+          end_time: endTime,
+        })
+        .eq('id', reschedulingAppointment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Agendamento reagendado",
+        description: "A consulta foi reagendada com sucesso.",
+      });
+
+      setRescheduleDialogOpen(false);
+      setReschedulingAppointment(null);
+      setNewDate("");
+      setNewTime("");
+      fetchAppointments();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao reagendar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const openEditDialog = (appointment: Appointment) => {
     setEditingAppointment(appointment);
     setFormPatient(appointment.patient_id);
@@ -372,6 +523,13 @@ export default function CalendarPage() {
     setCancellingAppointment(appointment);
     setCancelReason("");
     setCancelDialogOpen(true);
+  };
+
+  const openRescheduleDialog = (appointment: Appointment) => {
+    setReschedulingAppointment(appointment);
+    setNewDate(appointment.appointment_date);
+    setNewTime(appointment.start_time.slice(0, 5));
+    setRescheduleDialogOpen(true);
   };
 
   const resetForm = () => {
@@ -394,18 +552,30 @@ export default function CalendarPage() {
     
     const prevMonthLastDay = new Date(year, month, 0).getDate();
     for (let i = startingDay - 1; i >= 0; i--) {
-      days.push({ day: prevMonthLastDay - i, isCurrentMonth: false });
+      days.push({ day: prevMonthLastDay - i, isCurrentMonth: false, date: new Date(year, month - 1, prevMonthLastDay - i) });
     }
     
     for (let i = 1; i <= daysInMonth; i++) {
-      days.push({ day: i, isCurrentMonth: true });
+      days.push({ day: i, isCurrentMonth: true, date: new Date(year, month, i) });
     }
     
     const remainingDays = 42 - days.length;
     for (let i = 1; i <= remainingDays; i++) {
-      days.push({ day: i, isCurrentMonth: false });
+      days.push({ day: i, isCurrentMonth: false, date: new Date(year, month + 1, i) });
     }
     
+    return days;
+  };
+
+  const getWeekDays = () => {
+    const start = new Date(selectedDate);
+    start.setDate(start.getDate() - start.getDay());
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(start);
+      day.setDate(start.getDate() + i);
+      days.push(day);
+    }
     return days;
   };
 
@@ -413,28 +583,34 @@ export default function CalendarPage() {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + direction, 1));
   };
 
-  const isToday = (day: number, isCurrentMonth: boolean) => {
+  const navigateWeek = (direction: number) => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(newDate.getDate() + (direction * 7));
+    setSelectedDate(newDate);
+    setCurrentDate(newDate);
+  };
+
+  const isToday = (date: Date) => {
     const today = new Date();
     return (
-      isCurrentMonth &&
-      day === today.getDate() &&
-      currentDate.getMonth() === today.getMonth() &&
-      currentDate.getFullYear() === today.getFullYear()
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
     );
   };
 
-  const isSelected = (day: number, isCurrentMonth: boolean) => {
+  const isSelected = (date: Date) => {
     return (
-      isCurrentMonth &&
-      day === selectedDate.getDate() &&
-      currentDate.getMonth() === selectedDate.getMonth() &&
-      currentDate.getFullYear() === selectedDate.getFullYear()
+      date.getDate() === selectedDate.getDate() &&
+      date.getMonth() === selectedDate.getMonth() &&
+      date.getFullYear() === selectedDate.getFullYear()
     );
   };
 
-  const handleDayClick = (day: number, isCurrentMonth: boolean) => {
-    if (isCurrentMonth) {
-      setSelectedDate(new Date(currentDate.getFullYear(), currentDate.getMonth(), day));
+  const handleDayClick = (date: Date) => {
+    setSelectedDate(date);
+    if (viewMode === "month") {
+      setViewMode("day");
     }
   };
 
@@ -444,6 +620,8 @@ export default function CalendarPage() {
     exam: "Exame",
     procedure: "Procedimento",
   };
+
+  const hasActiveFilters = filterProfessional !== "all" || filterType !== "all";
 
   const AppointmentFormFields = () => (
     <>
@@ -546,8 +724,223 @@ export default function CalendarPage() {
     </>
   );
 
+  const AppointmentCard = ({ appointment }: { appointment: Appointment }) => {
+    const status = statusConfig[appointment.status as keyof typeof statusConfig] || statusConfig.scheduled;
+    const StatusIcon = status.icon;
+    const isCancelled = appointment.status === "cancelled";
+    const isCompleted = appointment.status === "completed";
+    const canModify = !isCancelled && !isCompleted;
+    
+    return (
+      <div
+        className={cn(
+          "flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group",
+          isCancelled && "opacity-60"
+        )}
+      >
+        <div className="w-20 text-center py-2 rounded-lg bg-primary/10">
+          <span className="text-sm font-semibold text-primary">
+            {appointment.start_time.slice(0, 5)}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-medium text-foreground">
+            {appointment.patient?.name || "Paciente"}
+          </p>
+          <div className="flex items-center gap-4 mt-1">
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {typeLabels[appointment.type] || appointment.type}
+            </span>
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <User className="h-3.5 w-3.5" />
+              {appointment.professional?.name || "Profissional"}
+            </span>
+          </div>
+        </div>
+        
+        {/* Status dropdown */}
+        {canModify ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className={cn("gap-2", status.color)}>
+                <StatusIcon className="h-4 w-4" />
+                {status.label}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-popover">
+              <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "confirmed")}>
+                <CheckCircle2 className="h-4 w-4 mr-2 text-success" />
+                Confirmar
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "completed")}>
+                <Check className="h-4 w-4 mr-2 text-info" />
+                Concluir
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "no_show")}>
+                <XCircle className="h-4 w-4 mr-2 text-destructive" />
+                Não compareceu
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="flex items-center gap-2">
+            <StatusIcon className={`h-4 w-4 ${status.color}`} />
+            <span className={`text-sm ${status.color}`}>
+              {status.label}
+            </span>
+          </div>
+        )}
+        
+        {/* Actions */}
+        {canModify && (
+          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => openRescheduleDialog(appointment)}
+              title="Reagendar"
+            >
+              <CalendarDays className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => openEditDialog(appointment)}
+              title="Editar"
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive hover:text-destructive"
+              onClick={() => openCancelDialog(appointment)}
+              title="Cancelar"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const WeekView = () => {
+    const weekDaysData = getWeekDays();
+
+    return (
+      <div className="grid grid-cols-7 gap-2">
+        {weekDaysData.map((date, i) => {
+          const dayAppointments = getAppointmentsForDate(date);
+          const isTodayDate = isToday(date);
+          const isSelectedDate = isSelected(date);
+
+          return (
+            <div key={i} className="min-h-[300px]">
+              <button
+                onClick={() => handleDayClick(date)}
+                className={cn(
+                  "w-full p-2 rounded-lg text-center mb-2 transition-colors",
+                  isTodayDate && "bg-primary/10",
+                  isSelectedDate && "bg-primary text-primary-foreground"
+                )}
+              >
+                <div className="text-xs text-muted-foreground">{weekDaysFull[i]}</div>
+                <div className="text-lg font-semibold">{date.getDate()}</div>
+              </button>
+              <div className="space-y-1">
+                {dayAppointments.slice(0, 4).map((apt) => {
+                  const status = statusConfig[apt.status as keyof typeof statusConfig] || statusConfig.scheduled;
+                  return (
+                    <div
+                      key={apt.id}
+                      onClick={() => openRescheduleDialog(apt)}
+                      className={cn(
+                        "p-2 rounded-lg text-xs cursor-pointer hover:opacity-80 transition-opacity",
+                        status.bgColor,
+                        apt.status === "cancelled" && "opacity-50"
+                      )}
+                    >
+                      <div className="font-medium truncate">{apt.start_time.slice(0, 5)}</div>
+                      <div className="truncate text-muted-foreground">{apt.patient?.name}</div>
+                    </div>
+                  );
+                })}
+                {dayAppointments.length > 4 && (
+                  <div className="text-xs text-center text-muted-foreground">
+                    +{dayAppointments.length - 4} mais
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const MonthView = () => {
+    const days = getDaysInMonth(currentDate);
+
+    return (
+      <div>
+        <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+          {weekDays.map((day) => (
+            <div key={day} className="py-2 text-muted-foreground font-medium">
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((item, i) => {
+            const dayAppointments = getAppointmentsForDate(item.date);
+            const isTodayDate = isToday(item.date);
+            
+            return (
+              <button
+                key={i}
+                onClick={() => handleDayClick(item.date)}
+                className={cn(
+                  "aspect-square p-1 flex flex-col items-center justify-start text-sm rounded-lg transition-colors relative",
+                  item.isCurrentMonth
+                    ? "text-foreground hover:bg-muted"
+                    : "text-muted-foreground/40",
+                  isTodayDate && "bg-primary/10 text-primary font-semibold"
+                )}
+              >
+                <span>{item.day}</span>
+                {dayAppointments.length > 0 && (
+                  <div className="flex gap-0.5 mt-1">
+                    {dayAppointments.slice(0, 3).map((apt, j) => (
+                      <div
+                        key={j}
+                        className={cn(
+                          "w-1.5 h-1.5 rounded-full",
+                          apt.status === "cancelled" ? "bg-destructive" :
+                          apt.status === "confirmed" ? "bg-success" :
+                          apt.status === "completed" ? "bg-info" : "bg-warning"
+                        )}
+                      />
+                    ))}
+                    {dayAppointments.length > 3 && (
+                      <span className="text-[8px] text-muted-foreground">+{dayAppointments.length - 3}</span>
+                    )}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
@@ -555,39 +948,141 @@ export default function CalendarPage() {
             Gerencie os agendamentos da clínica
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          setDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button variant="hero">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Agendamento
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Novo Agendamento</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreateAppointment} className="space-y-4">
-              <AppointmentFormFields />
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Agendar
-                </Button>
+        <div className="flex items-center gap-2">
+          {/* View Mode Toggle */}
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+            <TabsList>
+              <TabsTrigger value="day" className="gap-1">
+                <CalendarIcon className="h-4 w-4" />
+                Dia
+              </TabsTrigger>
+              <TabsTrigger value="week" className="gap-1">
+                <CalendarDays className="h-4 w-4" />
+                Semana
+              </TabsTrigger>
+              <TabsTrigger value="month" className="gap-1">
+                <LayoutGrid className="h-4 w-4" />
+                Mês
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Filters */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="icon" className="relative">
+                <Filter className="h-4 w-4" />
+                {hasActiveFilters && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-72" align="end">
+              <div className="space-y-4">
+                <h4 className="font-medium">Filtros</h4>
+                <div className="space-y-2">
+                  <Label>Profissional</Label>
+                  <Select value={filterProfessional} onValueChange={setFilterProfessional}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {professionals.map((prof) => (
+                        <SelectItem key={prof.id} value={prof.id}>
+                          {prof.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Tipo de Consulta</Label>
+                  <Select value={filterType} onValueChange={setFilterType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {appointmentTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      setFilterProfessional("all");
+                      setFilterType("all");
+                    }}
+                  >
+                    Limpar filtros
+                  </Button>
+                )}
               </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+            </PopoverContent>
+          </Popover>
+
+          <Dialog open={dialogOpen} onOpenChange={(open) => {
+            setDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button variant="hero">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Agendamento
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>Novo Agendamento</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleCreateAppointment} className="space-y-4">
+                <AppointmentFormFields />
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={saving}>
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Agendar
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
+
+      {/* Active Filters */}
+      {hasActiveFilters && (
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Filtros ativos:</span>
+          {filterProfessional !== "all" && (
+            <Badge variant="secondary" className="gap-1">
+              <UserCheck className="h-3 w-3" />
+              {professionals.find(p => p.id === filterProfessional)?.name}
+              <button onClick={() => setFilterProfessional("all")} className="ml-1 hover:text-foreground">×</button>
+            </Badge>
+          )}
+          {filterType !== "all" && (
+            <Badge variant="secondary" className="gap-1">
+              {typeLabels[filterType]}
+              <button onClick={() => setFilterType("all")} className="ml-1 hover:text-foreground">×</button>
+            </Badge>
+          )}
+        </div>
+      )}
 
       {/* Edit Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={(open) => {
@@ -620,6 +1115,71 @@ export default function CalendarPage() {
               </Button>
             </div>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Reschedule Dialog */}
+      <Dialog open={rescheduleDialogOpen} onOpenChange={(open) => {
+        setRescheduleDialogOpen(open);
+        if (!open) {
+          setReschedulingAppointment(null);
+          setNewDate("");
+          setNewTime("");
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reagendar Consulta</DialogTitle>
+            <DialogDescription>
+              Selecione a nova data e horário para a consulta
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            {reschedulingAppointment && (
+              <div className="p-3 rounded-lg bg-muted/50">
+                <p className="font-medium">{reschedulingAppointment.patient?.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {typeLabels[reschedulingAppointment.type]} com {reschedulingAppointment.professional?.name}
+                </p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>Nova Data</Label>
+              <Input
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Novo Horário</Label>
+              <Select value={newTime} onValueChange={setNewTime}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o horário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {timeSlots.map((time) => (
+                    <SelectItem key={time} value={time}>
+                      {time}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRescheduleDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleReschedule} disabled={saving || !newDate || !newTime}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Reagendar
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -662,75 +1222,112 @@ export default function CalendarPage() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Calendar */}
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
-                {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
-              </CardTitle>
-              <div className="flex gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => navigateMonth(-1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => navigateMonth(1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-              {weekDays.map((day) => (
-                <div key={day} className="py-2 text-muted-foreground font-medium">
-                  {day}
+        {/* Mini Calendar (only in day view) */}
+        {viewMode === "day" && (
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-base">
+                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+                </CardTitle>
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => navigateMonth(-1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => navigateMonth(1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
                 </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {getDaysInMonth(currentDate).map((item, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleDayClick(item.day, item.isCurrentMonth)}
-                  className={cn(
-                    "aspect-square flex items-center justify-center text-sm rounded-lg transition-colors",
-                    item.isCurrentMonth
-                      ? "text-foreground hover:bg-muted"
-                      : "text-muted-foreground/40",
-                    isToday(item.day, item.isCurrentMonth) &&
-                      "bg-primary/10 text-primary font-semibold",
-                    isSelected(item.day, item.isCurrentMonth) &&
-                      "bg-primary text-primary-foreground font-semibold"
-                  )}
-                >
-                  {item.day}
-                </button>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+                {weekDays.map((day) => (
+                  <div key={day} className="py-2 text-muted-foreground font-medium">
+                    {day}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {getDaysInMonth(currentDate).map((item, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handleDayClick(item.date)}
+                    className={cn(
+                      "aspect-square flex items-center justify-center text-sm rounded-lg transition-colors",
+                      item.isCurrentMonth
+                        ? "text-foreground hover:bg-muted"
+                        : "text-muted-foreground/40",
+                      isToday(item.date) &&
+                        "bg-primary/10 text-primary font-semibold",
+                      isSelected(item.date) &&
+                        "bg-primary text-primary-foreground font-semibold"
+                    )}
+                  >
+                    {item.day}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Appointments List */}
-        <Card className="lg:col-span-2">
+        {/* Appointments List / Week View / Month View */}
+        <Card className={viewMode === "day" ? "lg:col-span-2" : "lg:col-span-3"}>
           <CardHeader>
-            <CardTitle className="text-lg">
-              Agendamentos - {selectedDate.toLocaleDateString("pt-BR", { 
-                weekday: "long",
-                day: "numeric",
-                month: "long"
-              })}
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-lg">
+                {viewMode === "day" && `Agendamentos - ${selectedDate.toLocaleDateString("pt-BR", { 
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long"
+                })}`}
+                {viewMode === "week" && `Semana de ${getWeekDays()[0].toLocaleDateString("pt-BR", { day: "numeric", month: "short" })} - ${getWeekDays()[6].toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}`}
+                {viewMode === "month" && `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
+              </CardTitle>
+              {(viewMode === "week" || viewMode === "month") && (
+                <div className="flex gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => viewMode === "week" ? navigateWeek(-1) : navigateMonth(-1)}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedDate(new Date());
+                      setCurrentDate(new Date());
+                    }}
+                  >
+                    Hoje
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => viewMode === "week" ? navigateWeek(1) : navigateMonth(1)}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {loading ? (
@@ -738,82 +1335,27 @@ export default function CalendarPage() {
                 <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
                 Carregando agendamentos...
               </div>
-            ) : appointments.length > 0 ? (
-              <div className="space-y-3">
-                {appointments.map((appointment) => {
-                  const status = statusConfig[appointment.status as keyof typeof statusConfig] || statusConfig.scheduled;
-                  const StatusIcon = status.icon;
-                  const isCancelled = appointment.status === "cancelled";
-                  const isCompleted = appointment.status === "completed";
-                  const canModify = !isCancelled && !isCompleted;
-                  
-                  return (
-                    <div
-                      key={appointment.id}
-                      className={cn(
-                        "flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group",
-                        isCancelled && "opacity-60"
-                      )}
-                    >
-                      <div className="w-20 text-center py-2 rounded-lg bg-primary/10">
-                        <span className="text-sm font-semibold text-primary">
-                          {appointment.start_time.slice(0, 5)}
-                        </span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-foreground">
-                          {appointment.patient?.name || "Paciente"}
-                        </p>
-                        <div className="flex items-center gap-4 mt-1">
-                          <span className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Clock className="h-3.5 w-3.5" />
-                            {typeLabels[appointment.type] || appointment.type}
-                          </span>
-                          <span className="text-sm text-muted-foreground flex items-center gap-1">
-                            <User className="h-3.5 w-3.5" />
-                            {appointment.professional?.name || "Profissional"}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <StatusIcon className={`h-4 w-4 ${status.color}`} />
-                        <span className={`text-sm ${status.color}`}>
-                          {status.label}
-                        </span>
-                      </div>
-                      {canModify && (
-                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => openEditDialog(appointment)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive hover:text-destructive"
-                            onClick={() => openCancelDialog(appointment)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+            ) : viewMode === "day" ? (
+              getAppointmentsForDate(selectedDate).length > 0 ? (
+                <div className="space-y-3">
+                  {getAppointmentsForDate(selectedDate).map((appointment) => (
+                    <AppointmentCard key={appointment.id} appointment={appointment} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="mb-4">Nenhum agendamento para este dia</p>
+                  <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar agendamento
+                  </Button>
+                </div>
+              )
+            ) : viewMode === "week" ? (
+              <WeekView />
             ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                <p className="mb-4">Nenhum agendamento para este dia</p>
-                <Button variant="outline" onClick={() => setDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Adicionar agendamento
-                </Button>
-              </div>
+              <MonthView />
             )}
           </CardContent>
         </Card>
