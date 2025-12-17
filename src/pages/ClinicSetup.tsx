@@ -36,6 +36,36 @@ export default function ClinicSetup() {
       .replace(/^-|-$/g, "");
   };
 
+  const getUniqueSlug = async (baseSlug: string): Promise<string> => {
+    // Check if base slug is available
+    const { data: existing } = await supabase
+      .from('clinics')
+      .select('slug')
+      .eq('slug', baseSlug)
+      .maybeSingle();
+
+    if (!existing) return baseSlug;
+
+    // Find next available number
+    const { data: similarSlugs } = await supabase
+      .from('clinics')
+      .select('slug')
+      .like('slug', `${baseSlug}%`);
+
+    if (!similarSlugs || similarSlugs.length === 0) return baseSlug;
+
+    // Extract numbers from similar slugs and find next available
+    let maxNum = 0;
+    similarSlugs.forEach(s => {
+      const match = s.slug.match(new RegExp(`^${baseSlug}-(\\d+)$`));
+      if (match) {
+        maxNum = Math.max(maxNum, parseInt(match[1]));
+      }
+    });
+
+    return `${baseSlug}-${maxNum + 1}`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -55,8 +85,9 @@ export default function ClinicSetup() {
     setErrors({});
 
     try {
-      // Create clinic
-      const slug = generateSlug(name) + "-" + Date.now().toString(36);
+      // Create clinic with unique slug
+      const baseSlug = generateSlug(name);
+      const slug = await getUniqueSlug(baseSlug);
       
       const { data: clinic, error: clinicError } = await supabase
         .from('clinics')
