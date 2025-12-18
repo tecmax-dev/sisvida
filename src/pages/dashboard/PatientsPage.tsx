@@ -7,6 +7,10 @@ import {
   MoreVertical,
   Calendar,
   Loader2,
+  User,
+  MapPin,
+  CreditCard,
+  FileText,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,22 +27,54 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { z } from "zod";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Patient {
   id: string;
   name: string;
   email: string | null;
   phone: string;
+  cpf: string | null;
+  address: string | null;
+  birth_date: string | null;
+  notes: string | null;
+  insurance_plan_id: string | null;
   insurance_plan?: {
     name: string;
   } | null;
   created_at: string;
+}
+
+interface InsurancePlan {
+  id: string;
+  name: string;
 }
 
 const patientSchema = z.object({
@@ -50,21 +86,43 @@ const patientSchema = z.object({
 export default function PatientsPage() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [patients, setPatients] = useState<Patient[]>([]);
+  const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  // Form state
+  // Selected patient for actions
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  
+  // Dialog states
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  
+  // Form state for create
   const [formName, setFormName] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formEmail, setFormEmail] = useState("");
   const [formErrors, setFormErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
 
+  // Form state for edit
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editCpf, setEditCpf] = useState("");
+  const [editAddress, setEditAddress] = useState("");
+  const [editBirthDate, setEditBirthDate] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [editInsurancePlanId, setEditInsurancePlanId] = useState("");
+  const [editErrors, setEditErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
+
   useEffect(() => {
     if (currentClinic) {
       fetchPatients();
+      fetchInsurancePlans();
     }
   }, [currentClinic]);
 
@@ -81,6 +139,11 @@ export default function PatientsPage() {
           name,
           email,
           phone,
+          cpf,
+          address,
+          birth_date,
+          notes,
+          insurance_plan_id,
           created_at,
           insurance_plan:insurance_plans (
             name
@@ -95,6 +158,24 @@ export default function PatientsPage() {
       console.error("Error fetching patients:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchInsurancePlans = async () => {
+    if (!currentClinic) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('insurance_plans')
+        .select('id, name')
+        .eq('clinic_id', currentClinic.id)
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      setInsurancePlans(data || []);
+    } catch (error) {
+      console.error("Error fetching insurance plans:", error);
     }
   };
 
@@ -147,6 +228,145 @@ export default function PatientsPage() {
     } catch (error: any) {
       toast({
         title: "Erro ao cadastrar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleViewProfile = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setProfileDialogOpen(true);
+  };
+
+  const handleScheduleAppointment = (patient: Patient) => {
+    // Navigate to calendar page with patient pre-selected
+    navigate(`/dashboard/agenda?patient=${patient.id}`);
+  };
+
+  const handleOpenEdit = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setEditName(patient.name);
+    setEditPhone(patient.phone);
+    setEditEmail(patient.email || "");
+    setEditCpf(patient.cpf || "");
+    setEditAddress(patient.address || "");
+    setEditBirthDate(patient.birth_date || "");
+    setEditNotes(patient.notes || "");
+    setEditInsurancePlanId(patient.insurance_plan_id || "");
+    setEditErrors({});
+    setEditDialogOpen(true);
+  };
+
+  const handleEditPatient = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedPatient || !currentClinic) return;
+
+    const validation = patientSchema.safeParse({
+      name: editName,
+      phone: editPhone,
+      email: editEmail || undefined,
+    });
+    
+    if (!validation.success) {
+      const errors: typeof editErrors = {};
+      validation.error.errors.forEach((err) => {
+        const field = err.path[0] as keyof typeof errors;
+        errors[field] = err.message;
+      });
+      setEditErrors(errors);
+      return;
+    }
+
+    setSaving(true);
+    setEditErrors({});
+
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .update({
+          name: editName.trim(),
+          phone: editPhone.trim(),
+          email: editEmail.trim() || null,
+          cpf: editCpf.trim() || null,
+          address: editAddress.trim() || null,
+          birth_date: editBirthDate || null,
+          notes: editNotes.trim() || null,
+          insurance_plan_id: editInsurancePlanId || null,
+        })
+        .eq('id', selectedPatient.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Paciente atualizado",
+        description: "As informações foram salvas com sucesso.",
+      });
+
+      setEditDialogOpen(false);
+      fetchPatients();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleOpenDelete = (patient: Patient) => {
+    setSelectedPatient(patient);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeletePatient = async () => {
+    if (!selectedPatient) return;
+
+    setSaving(true);
+
+    try {
+      // Check for scheduled appointments
+      const { data: appointments, error: checkError } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('patient_id', selectedPatient.id)
+        .in('status', ['scheduled', 'confirmed'])
+        .limit(1);
+
+      if (checkError) throw checkError;
+
+      if (appointments && appointments.length > 0) {
+        toast({
+          title: "Não é possível excluir",
+          description: "Este paciente possui consultas agendadas. Cancele as consultas antes de excluir.",
+          variant: "destructive",
+        });
+        setSaving(false);
+        setDeleteDialogOpen(false);
+        return;
+      }
+
+      const { error } = await supabase
+        .from('patients')
+        .delete()
+        .eq('id', selectedPatient.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Paciente excluído",
+        description: "O paciente foi removido com sucesso.",
+      });
+
+      setDeleteDialogOpen(false);
+      fetchPatients();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir",
         description: error.message || "Tente novamente.",
         variant: "destructive",
       });
@@ -310,11 +530,23 @@ export default function PatientsPage() {
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Ver perfil</DropdownMenuItem>
-                      <DropdownMenuItem>Agendar consulta</DropdownMenuItem>
-                      <DropdownMenuItem>Editar</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
+                    <DropdownMenuContent align="end" className="bg-popover">
+                      <DropdownMenuItem onClick={() => handleViewProfile(patient)}>
+                        <User className="h-4 w-4 mr-2" />
+                        Ver perfil
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleScheduleAppointment(patient)}>
+                        <Calendar className="h-4 w-4 mr-2" />
+                        Agendar consulta
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleOpenEdit(patient)}>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="text-destructive"
+                        onClick={() => handleOpenDelete(patient)}
+                      >
                         Excluir
                       </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -333,6 +565,235 @@ export default function PatientsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Profile Dialog */}
+      <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Perfil do Paciente</DialogTitle>
+          </DialogHeader>
+          {selectedPatient && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                  <span className="text-2xl font-semibold text-primary">
+                    {selectedPatient.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">{selectedPatient.name}</h3>
+                  {selectedPatient.insurance_plan && (
+                    <span className="text-sm text-muted-foreground">
+                      {selectedPatient.insurance_plan.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-4 border-t">
+                <div className="flex items-center gap-3">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span>{selectedPatient.phone}</span>
+                </div>
+                {selectedPatient.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedPatient.email}</span>
+                  </div>
+                )}
+                {selectedPatient.cpf && (
+                  <div className="flex items-center gap-3">
+                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    <span>CPF: {selectedPatient.cpf}</span>
+                  </div>
+                )}
+                {selectedPatient.birth_date && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span>Nascimento: {format(new Date(selectedPatient.birth_date), "dd/MM/yyyy")}</span>
+                  </div>
+                )}
+                {selectedPatient.address && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span>{selectedPatient.address}</span>
+                  </div>
+                )}
+              </div>
+
+              {selectedPatient.notes && (
+                <div className="pt-4 border-t">
+                  <p className="text-sm text-muted-foreground mb-1">Observações:</p>
+                  <p className="text-sm">{selectedPatient.notes}</p>
+                </div>
+              )}
+
+              <div className="pt-4 border-t text-xs text-muted-foreground">
+                Cadastrado em: {format(new Date(selectedPatient.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => {
+                    setProfileDialogOpen(false);
+                    handleOpenEdit(selectedPatient);
+                  }}
+                >
+                  Editar
+                </Button>
+                <Button 
+                  className="flex-1"
+                  onClick={() => {
+                    setProfileDialogOpen(false);
+                    handleScheduleAppointment(selectedPatient);
+                  }}
+                >
+                  Agendar consulta
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Paciente</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditPatient} className="space-y-4">
+            <div>
+              <Label htmlFor="editName">Nome *</Label>
+              <Input
+                id="editName"
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                className={`mt-1.5 ${editErrors.name ? "border-destructive" : ""}`}
+              />
+              {editErrors.name && (
+                <p className="mt-1 text-sm text-destructive">{editErrors.name}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="editPhone">Telefone *</Label>
+              <Input
+                id="editPhone"
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                className={`mt-1.5 ${editErrors.phone ? "border-destructive" : ""}`}
+              />
+              {editErrors.phone && (
+                <p className="mt-1 text-sm text-destructive">{editErrors.phone}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="editEmail">Email</Label>
+              <Input
+                id="editEmail"
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                className={`mt-1.5 ${editErrors.email ? "border-destructive" : ""}`}
+              />
+            </div>
+            <div>
+              <Label htmlFor="editCpf">CPF</Label>
+              <Input
+                id="editCpf"
+                value={editCpf}
+                onChange={(e) => setEditCpf(e.target.value)}
+                placeholder="000.000.000-00"
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editBirthDate">Data de Nascimento</Label>
+              <Input
+                id="editBirthDate"
+                type="date"
+                value={editBirthDate}
+                onChange={(e) => setEditBirthDate(e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editAddress">Endereço</Label>
+              <Input
+                id="editAddress"
+                value={editAddress}
+                onChange={(e) => setEditAddress(e.target.value)}
+                className="mt-1.5"
+              />
+            </div>
+            <div>
+              <Label htmlFor="editInsurance">Plano de Saúde</Label>
+              <Select value={editInsurancePlanId} onValueChange={setEditInsurancePlanId}>
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="Selecione (opcional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
+                  {insurancePlans.map((plan) => (
+                    <SelectItem key={plan.id} value={plan.id}>
+                      {plan.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="editNotes">Observações</Label>
+              <Textarea
+                id="editNotes"
+                value={editNotes}
+                onChange={(e) => setEditNotes(e.target.value)}
+                className="mt-1.5"
+                rows={3}
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Salvar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir paciente?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir <strong>{selectedPatient?.name}</strong>? 
+              Esta ação não pode ser desfeita e todos os dados do paciente serão removidos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeletePatient}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={saving}
+            >
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
