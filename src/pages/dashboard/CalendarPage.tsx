@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { sendWhatsAppMessage, formatAppointmentConfirmation } from "@/lib/whatsapp";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -464,6 +465,32 @@ export default function CalendarPage() {
         .eq('id', appointment.id);
 
       if (error) throw error;
+
+      // Send WhatsApp confirmation when status is confirmed
+      if (newStatus === "confirmed" && currentClinic) {
+        const patient = patients.find(p => p.id === appointment.patient_id);
+        const professional = professionals.find(p => p.id === appointment.professional_id);
+        
+        if (patient?.phone) {
+          const formattedDate = new Date(appointment.appointment_date + 'T12:00:00').toLocaleDateString('pt-BR');
+          const message = formatAppointmentConfirmation(
+            patient.name,
+            currentClinic.name,
+            formattedDate,
+            appointment.start_time,
+            professional?.name
+          );
+          
+          sendWhatsAppMessage({
+            phone: patient.phone,
+            message,
+            clinicId: currentClinic.id,
+            type: 'confirmation',
+          }).catch(err => {
+            console.error('Error sending WhatsApp confirmation:', err);
+          });
+        }
+      }
 
       toast({
         title: "Status atualizado",
