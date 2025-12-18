@@ -10,6 +10,14 @@ interface WhatsAppRequest {
   phone: string;
   message: string;
   clinicId: string;
+  type?: 'reminder' | 'confirmation' | 'custom';
+}
+
+interface EvolutionConfig {
+  api_url: string;
+  api_key: string;
+  instance_name: string;
+  is_connected: boolean;
 }
 
 serve(async (req) => {
@@ -18,29 +26,64 @@ serve(async (req) => {
   }
 
   try {
-    const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
-    const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
-    const EVOLUTION_INSTANCE = Deno.env.get('EVOLUTION_INSTANCE');
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE) {
-      console.error('Evolution API credentials not configured');
+    const { phone, message, clinicId, type = 'custom' }: WhatsAppRequest = await req.json();
+
+    if (!phone || !message || !clinicId) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'WhatsApp não configurado. Configure as credenciais da Evolution API.' 
+          error: 'Telefone, mensagem e ID da clínica são obrigatórios' 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const { phone, message, clinicId }: WhatsAppRequest = await req.json();
+    // Fetch clinic's Evolution API configuration
+    const { data: evolutionConfig, error: configError } = await supabase
+      .from('evolution_configs')
+      .select('api_url, api_key, instance_name, is_connected')
+      .eq('clinic_id', clinicId)
+      .maybeSingle();
 
-    if (!phone || !message) {
+    if (configError) {
+      console.error('Error fetching evolution config:', configError);
       return new Response(
-        JSON.stringify({ success: false, error: 'Telefone e mensagem são obrigatórios' }),
+        JSON.stringify({ 
+          success: false, 
+          error: 'Erro ao buscar configuração da Evolution API' 
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!evolutionConfig) {
+      console.log(`No Evolution API configured for clinic ${clinicId}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'WhatsApp não configurado para esta clínica. Configure a Evolution API nas configurações.' 
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    if (!evolutionConfig.is_connected) {
+      console.log(`Evolution API not connected for clinic ${clinicId}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'WhatsApp não está conectado. Escaneie o QR Code nas configurações.' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { api_url, api_key, instance_name } = evolutionConfig as EvolutionConfig;
 
     // Format phone number (remove non-digits and add country code if needed)
     let formattedPhone = phone.replace(/\D/g, '');
@@ -48,13 +91,13 @@ serve(async (req) => {
       formattedPhone = '55' + formattedPhone;
     }
 
-    console.log(`Sending WhatsApp message to ${formattedPhone}`);
+    console.log(`[Clinic ${clinicId}] Sending WhatsApp message to ${formattedPhone} via instance ${instance_name}`);
 
-    const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+    const response = await fetch(`${api_url}/message/sendText/${instance_name}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': EVOLUTION_API_KEY,
+        'apikey': api_key,
       },
       body: JSON.stringify({
         number: formattedPhone,
@@ -72,7 +115,7 @@ serve(async (req) => {
       );
     }
 
-    console.log('Message sent successfully:', result);
+    console.log(`[Clinic ${clinicId}] Message sent successfully:`, result);
 
     return new Response(
       JSON.stringify({ success: true, data: result }),

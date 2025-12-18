@@ -6,6 +6,43 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface EvolutionConfig {
+  api_url: string;
+  api_key: string;
+  instance_name: string;
+  is_connected: boolean;
+}
+
+async function sendWhatsAppViaEvolution(
+  config: EvolutionConfig,
+  phone: string,
+  message: string
+): Promise<boolean> {
+  try {
+    let formattedPhone = phone.replace(/\D/g, '');
+    if (!formattedPhone.startsWith('55')) {
+      formattedPhone = '55' + formattedPhone;
+    }
+
+    const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.api_key,
+      },
+      body: JSON.stringify({
+        number: formattedPhone,
+        text: message,
+      }),
+    });
+
+    return response.ok;
+  } catch (error) {
+    console.error('Error sending WhatsApp:', error);
+    return false;
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -15,18 +52,6 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-    const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
-    const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
-    const EVOLUTION_INSTANCE = Deno.env.get('EVOLUTION_INSTANCE');
-
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE) {
-      console.error('Evolution API credentials not configured');
-      return new Response(
-        JSON.stringify({ success: false, error: 'Evolution API not configured' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Calculate tomorrow's date
     const tomorrow = new Date();
@@ -50,8 +75,22 @@ serve(async (req) => {
 
     let sentCount = 0;
     let errorCount = 0;
+    let skippedCount = 0;
 
     for (const clinic of clinics || []) {
+      // Fetch clinic's Evolution API config
+      const { data: evolutionConfig } = await supabase
+        .from('evolution_configs')
+        .select('api_url, api_key, instance_name, is_connected')
+        .eq('clinic_id', clinic.id)
+        .maybeSingle();
+
+      if (!evolutionConfig || !evolutionConfig.is_connected) {
+        console.log(`Clinic ${clinic.name} has no connected WhatsApp, skipping`);
+        skippedCount++;
+        continue;
+      }
+
       // Get appointments for tomorrow that haven't been reminded yet
       const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
@@ -89,59 +128,45 @@ serve(async (req) => {
           continue;
         }
 
-        // Format phone number
-        let formattedPhone = patient.phone.replace(/\D/g, '');
-        if (!formattedPhone.startsWith('55')) {
-          formattedPhone = '55' + formattedPhone;
-        }
-
         // Format time
         const time = appointment.start_time.substring(0, 5);
 
         // Create message
         const message = `Olá ${patient.name}! 👋\n\nLembramos que você tem consulta agendada para *amanhã* às *${time}* com ${professional?.name || 'nosso profissional'}.\n\nClínica: ${clinic.name}\n\nPor favor, confirme sua presença respondendo esta mensagem.\n\nCaso precise reagendar, entre em contato conosco.`;
 
-        try {
-          const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': EVOLUTION_API_KEY,
-            },
-            body: JSON.stringify({
-              number: formattedPhone,
-              text: message,
-            }),
-          });
+        const success = await sendWhatsAppViaEvolution(
+          evolutionConfig as EvolutionConfig,
+          patient.phone,
+          message
+        );
 
-          if (response.ok) {
-            // Mark as sent
-            await supabase
-              .from('appointments')
-              .update({ reminder_sent: true })
-              .eq('id', appointment.id);
-            
-            sentCount++;
-            console.log(`Reminder sent to ${patient.name} (${formattedPhone})`);
-          } else {
-            const errorResult = await response.json();
-            console.error(`Failed to send reminder to ${patient.name}:`, errorResult);
-            errorCount++;
-          }
-        } catch (error) {
-          console.error(`Error sending reminder to ${patient.name}:`, error);
+        if (success) {
+          // Mark as sent
+          await supabase
+            .from('appointments')
+            .update({ reminder_sent: true })
+            .eq('id', appointment.id);
+          
+          sentCount++;
+          console.log(`Reminder sent to ${patient.name}`);
+        } else {
           errorCount++;
+          console.error(`Failed to send reminder to ${patient.name}`);
         }
+
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
 
-    console.log(`Reminders sent: ${sentCount}, Errors: ${errorCount}`);
+    console.log(`Reminders sent: ${sentCount}, Errors: ${errorCount}, Skipped clinics: ${skippedCount}`);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         sent: sentCount, 
         errors: errorCount,
+        skipped: skippedCount,
         date: tomorrowDate 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
