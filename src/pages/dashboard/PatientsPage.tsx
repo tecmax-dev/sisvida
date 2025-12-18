@@ -730,12 +730,12 @@ export default function PatientsPage() {
             </div>
             <div>
               <Label htmlFor="editInsurance">Plano de Saúde</Label>
-              <Select value={editInsurancePlanId} onValueChange={setEditInsurancePlanId}>
+              <Select value={editInsurancePlanId || "none"} onValueChange={(val) => setEditInsurancePlanId(val === "none" ? "" : val)}>
                 <SelectTrigger className="mt-1.5">
                   <SelectValue placeholder="Selecione (opcional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {insurancePlans.map((plan) => (
                     <SelectItem key={plan.id} value={plan.id}>
                       {plan.name}
