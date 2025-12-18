@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { Activity } from "lucide-react";
 
 interface LogoProps {
   variant?: "light" | "dark";
@@ -19,40 +20,13 @@ export function Logo({ variant = "dark", size = "md", showText = true }: LogoPro
   };
 
   return (
-    <Link to="/" className="flex items-center gap-2.5 group">
-      <div className={`${sizes[size].icon} relative`}>
-        <svg
-          viewBox="0 0 40 40"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="w-full h-full transition-transform duration-300 group-hover:scale-105"
-        >
-          <rect
-            x="2"
-            y="2"
-            width="36"
-            height="36"
-            rx="10"
-            className="fill-primary"
-          />
-          <path
-            d="M12 20H28M20 12V28"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            className="text-primary-foreground"
-          />
-          <circle
-            cx="20"
-            cy="20"
-            r="6"
-            className="fill-primary-foreground/20"
-          />
-        </svg>
+    <Link to="/" className="flex items-center gap-2 group">
+      <div className={`${sizes[size].icon} rounded-full bg-primary flex items-center justify-center`}>
+        <Activity className="w-5 h-5 text-primary-foreground" />
       </div>
       {showText && (
         <span
-          className={`font-bold tracking-tight ${sizes[size].text} ${colors[variant]} transition-colors`}
+          className={`font-bold tracking-tight ${sizes[size].text} ${colors[variant]} group-hover:text-primary transition-colors`}
         >
           Eclini
         </span>
