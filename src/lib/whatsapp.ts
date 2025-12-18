@@ -37,7 +37,8 @@ export function formatAppointmentReminder(
   clinicName: string,
   date: string,
   time: string,
-  professionalName?: string
+  professionalName: string,
+  confirmationLink?: string
 ): string {
   const lines = [
     `Olá ${patientName}! 👋`,
@@ -46,10 +47,11 @@ export function formatAppointmentReminder(
     ``,
     `📅 *Data:* ${date}`,
     `🕐 *Horário:* ${time}`,
-    professionalName ? `👨‍⚕️ *Profissional:* ${professionalName}` : null,
-    `🏥 *Local:* ${clinicName}`,
+    `👨‍⚕️ *Profissional:* ${professionalName}`,
+    `🏥 *Clínica:* ${clinicName}`,
     ``,
-    `Por favor, confirme sua presença respondendo esta mensagem.`,
+    confirmationLink ? `Para confirmar ou cancelar sua consulta, acesse:` : `Por favor, confirme sua presença respondendo esta mensagem.`,
+    confirmationLink ? confirmationLink : null,
     ``,
     `Atenciosamente,`,
     `Equipe ${clinicName}`,
