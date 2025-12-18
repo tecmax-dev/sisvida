@@ -518,12 +518,12 @@ export default function ProfessionalsPage() {
               {clinicUsers.length > 0 && (
                 <div>
                   <Label htmlFor="profUser">Vincular usuário (Portal do Profissional)</Label>
-                  <Select value={formUserId} onValueChange={setFormUserId}>
+                  <Select value={formUserId || "none"} onValueChange={(val) => setFormUserId(val === "none" ? "" : val)}>
                     <SelectTrigger className="mt-1.5">
                       <SelectValue placeholder="Selecione um usuário (opcional)" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhum</SelectItem>
+                      <SelectItem value="none">Nenhum</SelectItem>
                       {clinicUsers
                         .filter(u => !professionals.some(p => p.user_id === u.user_id))
                         .map((user) => (
@@ -791,12 +791,12 @@ export default function ProfessionalsPage() {
             {clinicUsers.length > 0 && (
               <div>
                 <Label htmlFor="editProfUser">Vincular usuário</Label>
-                <Select value={editUserId} onValueChange={setEditUserId}>
+                <Select value={editUserId || "none"} onValueChange={(val) => setEditUserId(val === "none" ? "" : val)}>
                   <SelectTrigger className="mt-1.5">
                     <SelectValue placeholder="Selecione um usuário (opcional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum</SelectItem>
+                    <SelectItem value="none">Nenhum</SelectItem>
                     {clinicUsers
                       .filter(u => 
                         !professionals.some(p => p.user_id === u.user_id && p.id !== selectedProfessional?.id)
