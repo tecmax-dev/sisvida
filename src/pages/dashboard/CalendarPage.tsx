@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { sendWhatsAppMessage, formatAppointmentConfirmation } from "@/lib/whatsapp";
+import { ToastAction } from "@/components/ui/toast";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { 
   ChevronLeft, 
@@ -149,6 +151,7 @@ interface Appointment {
 export default function CalendarPage() {
   const { currentClinic, user } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -506,6 +509,23 @@ export default function CalendarPage() {
             message,
             clinicId: currentClinic.id,
             type: 'confirmation',
+          }).then(result => {
+            if (!result.success) {
+              const isNotConnected = result.error?.includes("não está conectado") || 
+                                     result.error?.includes("não configurado");
+              toast({
+                title: isNotConnected ? "WhatsApp não conectado" : "Erro ao enviar confirmação",
+                description: isNotConnected 
+                  ? "Configure o WhatsApp nas Configurações → Integração WhatsApp" 
+                  : result.error,
+                variant: "destructive",
+                action: isNotConnected ? (
+                  <ToastAction altText="Configurar" onClick={() => navigate("/dashboard/settings")}>
+                    Configurar
+                  </ToastAction>
+                ) : undefined,
+              });
+            }
           }).catch(err => {
             console.error('Error sending WhatsApp confirmation:', err);
           });
@@ -726,10 +746,22 @@ export default function CalendarPage() {
         throw new Error(data?.error || 'Erro ao enviar mensagem');
       }
     } catch (error: any) {
+      const errorMessage = error.message || "";
+      const isNotConnected = errorMessage.includes("não está conectado") || 
+                             errorMessage.includes("não configurado") ||
+                             errorMessage.includes("Edge Function returned a non-2xx");
+      
       toast({
-        title: "Erro ao enviar WhatsApp",
-        description: error.message || "Tente novamente.",
+        title: isNotConnected ? "WhatsApp não conectado" : "Erro ao enviar WhatsApp",
+        description: isNotConnected 
+          ? "Configure e conecte o WhatsApp nas Configurações → Integração WhatsApp" 
+          : (errorMessage || "Tente novamente."),
         variant: "destructive",
+        action: isNotConnected ? (
+          <ToastAction altText="Ir para configurações" onClick={() => navigate("/dashboard/settings")}>
+            Configurar
+          </ToastAction>
+        ) : undefined,
       });
     } finally {
       setSendingWhatsApp(null);
