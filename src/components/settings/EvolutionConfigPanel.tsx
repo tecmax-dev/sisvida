@@ -135,21 +135,24 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
     setChecking(true);
 
     try {
-      const response = await fetch(`${config.api_url}/instance/connectionState/${config.instance_name}`, {
-        headers: {
-          "apikey": config.api_key,
-        },
+      const { data: result, error } = await supabase.functions.invoke('evolution-api', {
+        body: { clinicId, action: 'connectionState' },
       });
 
-      const data = await response.json();
-      const isConnected = data?.instance?.state === "open";
+      if (error) throw error;
+      
+      if (!result?.success) {
+        throw new Error(result?.error || 'Erro ao verificar conexão');
+      }
+
+      const isConnected = result?.data?.instance?.state === "open";
 
       await supabase
         .from("evolution_configs")
         .update({
           is_connected: isConnected,
           connected_at: isConnected ? new Date().toISOString() : null,
-          phone_number: data?.instance?.phoneNumber || null,
+          phone_number: result?.data?.instance?.phoneNumber || null,
         })
         .eq("id", config.id);
 
@@ -157,20 +160,20 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
         ...config,
         is_connected: isConnected,
         connected_at: isConnected ? new Date().toISOString() : null,
-        phone_number: data?.instance?.phoneNumber || null,
+        phone_number: result?.data?.instance?.phoneNumber || null,
       });
 
       toast({
         title: isConnected ? "Conectado" : "Desconectado",
         description: isConnected 
-          ? `WhatsApp conectado: ${data?.instance?.phoneNumber || ""}` 
+          ? `WhatsApp conectado: ${result?.data?.instance?.phoneNumber || ""}` 
           : "WhatsApp não está conectado",
         variant: isConnected ? "default" : "destructive",
       });
     } catch (error: any) {
       toast({
         title: "Erro ao verificar",
-        description: "Não foi possível verificar a conexão.",
+        description: error.message || "Não foi possível verificar a conexão.",
         variant: "destructive",
       });
     } finally {
@@ -185,37 +188,37 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
 
     try {
       // First try to get instance, if not exists, create it
-      const checkResponse = await fetch(`${config.api_url}/instance/fetchInstances?instanceName=${config.instance_name}`, {
-        headers: {
-          "apikey": config.api_key,
-        },
+      const { data: checkResult, error: checkError } = await supabase.functions.invoke('evolution-api', {
+        body: { clinicId, action: 'fetchInstances' },
       });
 
-      const instances = await checkResponse.json();
+      if (checkError) throw checkError;
+      
+      const instances = checkResult?.data;
       
       if (!instances || instances.length === 0) {
         // Create instance
-        await fetch(`${config.api_url}/instance/create`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "apikey": config.api_key,
-          },
-          body: JSON.stringify({
-            instanceName: config.instance_name,
-            qrcode: true,
-          }),
+        const { data: createResult, error: createError } = await supabase.functions.invoke('evolution-api', {
+          body: { clinicId, action: 'create' },
         });
+        
+        if (createError) throw createError;
+        if (!createResult?.success) {
+          throw new Error(createResult?.error || 'Erro ao criar instância');
+        }
       }
 
       // Get QR Code
-      const qrResponse = await fetch(`${config.api_url}/instance/connect/${config.instance_name}`, {
-        headers: {
-          "apikey": config.api_key,
-        },
+      const { data: qrResult, error: qrError } = await supabase.functions.invoke('evolution-api', {
+        body: { clinicId, action: 'connect' },
       });
-
-      const qrData = await qrResponse.json();
+      
+      if (qrError) throw qrError;
+      if (!qrResult?.success) {
+        throw new Error(qrResult?.error || 'Erro ao gerar QR Code');
+      }
+      
+      const qrData = qrResult?.data;
       
       if (qrData?.base64) {
         await supabase
@@ -241,7 +244,7 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
     } catch (error: any) {
       toast({
         title: "Erro ao gerar QR Code",
-        description: error.message,
+        description: error.message || "Verifique as configurações da API.",
         variant: "destructive",
       });
     } finally {
@@ -255,12 +258,14 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
     setChecking(true);
 
     try {
-      await fetch(`${config.api_url}/instance/logout/${config.instance_name}`, {
-        method: "DELETE",
-        headers: {
-          "apikey": config.api_key,
-        },
+      const { data: result, error } = await supabase.functions.invoke('evolution-api', {
+        body: { clinicId, action: 'logout' },
       });
+
+      if (error) throw error;
+      if (!result?.success) {
+        throw new Error(result?.error || 'Erro ao desconectar');
+      }
 
       await supabase
         .from("evolution_configs")
@@ -287,7 +292,7 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
     } catch (error: any) {
       toast({
         title: "Erro ao desconectar",
-        description: error.message,
+        description: error.message || "Tente novamente.",
         variant: "destructive",
       });
     } finally {
