@@ -19,6 +19,7 @@ import {
   FileText,
   ClipboardList,
   Clock,
+  UserCog,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -41,10 +42,18 @@ const navItems = [
   { href: "/dashboard/settings", icon: Settings, label: "Configurações" },
 ];
 
+const adminNavItems = [
+  { href: "/dashboard/users", icon: UserCog, label: "Usuários" },
+];
+
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { user, profile, currentClinic, userRoles, signOut, setCurrentClinic } = useAuth();
+
+  // Check if current user is admin of the clinic
+  const currentUserRole = userRoles.find(r => r.clinic_id === currentClinic?.id);
+  const isAdmin = currentUserRole?.role === 'owner' || currentUserRole?.role === 'admin';
 
   const isActive = (href: string) => {
     if (href === "/dashboard") {
@@ -123,6 +132,24 @@ export function DashboardLayout() {
 
           <nav className="flex-1 p-4 space-y-1">
             {navItems.map((item) => (
+              <Link
+                key={item.href}
+                to={item.href}
+                onClick={() => setSidebarOpen(false)}
+                className={cn(
+                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  isActive(item.href)
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
+                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                )}
+              >
+                <item.icon className="h-5 w-5" />
+                {item.label}
+              </Link>
+            ))}
+            
+            {/* Admin only navigation items */}
+            {isAdmin && adminNavItems.map((item) => (
               <Link
                 key={item.href}
                 to={item.href}

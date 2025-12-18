@@ -24,7 +24,7 @@ interface Clinic {
 
 interface UserRole {
   clinic_id: string;
-  role: 'owner' | 'admin' | 'receptionist' | 'professional';
+  role: 'owner' | 'admin' | 'receptionist' | 'professional' | 'administrative';
   clinic: Clinic;
 }
 
