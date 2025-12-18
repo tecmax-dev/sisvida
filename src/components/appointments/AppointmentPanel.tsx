@@ -33,6 +33,21 @@ import {
   Timer,
   Lock,
 } from "lucide-react";
+import { Odontogram } from "@/components/medical/Odontogram";
+
+// Dental specialty keywords for conditional odontogram display
+const DENTAL_SPECIALTIES = [
+  "dentist",
+  "dentista",
+  "odonto",
+  "odontologia",
+  "dental",
+  "ortodont",
+  "endodont",
+  "periodont",
+  "cirurgião dentista",
+  "implantodont",
+];
 
 interface Patient {
   id: string;
@@ -90,6 +105,7 @@ interface AppointmentPanelProps {
   onClose: () => void;
   onUpdate: () => void;
   isOpen: boolean;
+  professionalSpecialty?: string | null;
 }
 
 const typeLabels: Record<string, string> = {
@@ -106,6 +122,7 @@ export function AppointmentPanel({
   onClose,
   onUpdate,
   isOpen,
+  professionalSpecialty,
 }: AppointmentPanelProps) {
   const { toast } = useToast();
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00");
@@ -114,6 +131,7 @@ export function AppointmentPanel({
   const [anamnesis, setAnamnesis] = useState<Anamnesis | null>(null);
   const [medicalHistory, setMedicalHistory] = useState<MedicalRecord[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [specialty, setSpecialty] = useState<string | null>(professionalSpecialty || null);
   const [recordForm, setRecordForm] = useState({
     chief_complaint: "",
     diagnosis: "",
@@ -124,6 +142,13 @@ export function AppointmentPanel({
 
   const isCompleted = appointment.status === "completed";
   const isInProgress = appointment.status === "in_progress";
+
+  // Check if the specialty is dental-related
+  const isDentalSpecialty = useMemo(() => {
+    if (!specialty) return false;
+    const specialtyLower = specialty.toLowerCase();
+    return DENTAL_SPECIALTIES.some(term => specialtyLower.includes(term));
+  }, [specialty]);
 
   // Real-time timer based on started_at
   useEffect(() => {
@@ -159,6 +184,19 @@ export function AppointmentPanel({
     setLoadingData(true);
     
     try {
+      // Load professional specialty if not provided
+      if (!professionalSpecialty) {
+        const { data: profData } = await supabase
+          .from("professionals")
+          .select("specialty")
+          .eq("id", professionalId)
+          .maybeSingle();
+
+        if (profData?.specialty) {
+          setSpecialty(profData.specialty);
+        }
+      }
+
       // Load anamnesis
       const { data: anamnesisData } = await supabase
         .from("anamnesis")
@@ -385,11 +423,17 @@ export function AppointmentPanel({
         {/* Main Content */}
         <ScrollArea className="flex-1">
           <Tabs defaultValue="prontuario" className="w-full">
-            <TabsList className="w-full grid grid-cols-4">
+            <TabsList className={`w-full grid ${isDentalSpecialty ? 'grid-cols-5' : 'grid-cols-4'}`}>
               <TabsTrigger value="prontuario">
                 <FileText className="h-4 w-4 mr-1.5" />
                 Prontuário
               </TabsTrigger>
+              {isDentalSpecialty && (
+                <TabsTrigger value="odontograma">
+                  <Stethoscope className="h-4 w-4 mr-1.5" />
+                  Odontograma
+                </TabsTrigger>
+              )}
               <TabsTrigger value="anamnese">
                 <ClipboardList className="h-4 w-4 mr-1.5" />
                 Anamnese
@@ -464,6 +508,19 @@ export function AppointmentPanel({
                 </Button>
               )}
             </TabsContent>
+
+            {/* Odontograma Tab - Only for Dental Specialty */}
+            {isDentalSpecialty && (
+              <TabsContent value="odontograma" className="mt-4">
+                <Odontogram
+                  patientId={appointment.patient_id}
+                  clinicId={clinicId}
+                  professionalId={professionalId}
+                  appointmentId={appointment.id}
+                  readOnly={isCompleted}
+                />
+              </TabsContent>
+            )}
 
             {/* Anamnese Tab */}
             <TabsContent value="anamnese" className="mt-4">
