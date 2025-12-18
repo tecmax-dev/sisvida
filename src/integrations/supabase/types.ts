@@ -99,6 +99,7 @@ export type Database = {
           cancelled_at: string | null
           clinic_id: string
           completed_at: string | null
+          confirmation_token: string | null
           confirmed_at: string | null
           created_at: string
           created_by: string | null
@@ -121,6 +122,7 @@ export type Database = {
           cancelled_at?: string | null
           clinic_id: string
           completed_at?: string | null
+          confirmation_token?: string | null
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -143,6 +145,7 @@ export type Database = {
           cancelled_at?: string | null
           clinic_id?: string
           completed_at?: string | null
+          confirmation_token?: string | null
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null

@@ -11,6 +11,7 @@ import ProfessionalAuth from "./pages/ProfessionalAuth";
 import ProfessionalDashboard from "./pages/ProfessionalDashboard";
 import ClinicSetup from "./pages/ClinicSetup";
 import PublicBooking from "./pages/PublicBooking";
+import AppointmentConfirmation from "./pages/AppointmentConfirmation";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import DashboardOverview from "./pages/dashboard/DashboardOverview";
 import CalendarPage from "./pages/dashboard/CalendarPage";
@@ -45,6 +46,8 @@ const App = () => (
             {/* Public booking (both legacy and current URLs) */}
             <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />
             <Route path="/booking/:clinicSlug" element={<PublicBooking />} />
+            {/* Appointment confirmation via token */}
+            <Route path="/consulta/:token" element={<AppointmentConfirmation />} />
             {/* Professional Portal */}
             <Route path="/profissional" element={<ProfessionalAuth />} />
             <Route path="/profissional/painel" element={<ProfessionalDashboard />} />

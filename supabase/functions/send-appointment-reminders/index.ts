@@ -43,6 +43,34 @@ async function sendWhatsAppViaEvolution(
   }
 }
 
+function formatAppointmentReminder(
+  patientName: string,
+  clinicName: string,
+  date: string,
+  time: string,
+  professionalName: string,
+  confirmationLink?: string
+): string {
+  const lines = [
+    `Olá ${patientName}! 👋`,
+    ``,
+    `Lembramos que você tem uma consulta agendada:`,
+    ``,
+    `📅 *Data:* ${date}`,
+    `🕐 *Horário:* ${time}`,
+    `👨‍⚕️ *Profissional:* ${professionalName}`,
+    `🏥 *Clínica:* ${clinicName}`,
+    ``,
+    confirmationLink ? `Para confirmar ou cancelar sua consulta, acesse:` : `Por favor, confirme sua presença respondendo esta mensagem.`,
+    confirmationLink ? confirmationLink : null,
+    ``,
+    `Atenciosamente,`,
+    `Equipe ${clinicName}`,
+  ].filter(Boolean);
+
+  return lines.join('\n');
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -58,12 +86,19 @@ serve(async (req) => {
     tomorrow.setDate(tomorrow.getDate() + 1);
     const tomorrowDate = tomorrow.toISOString().split('T')[0];
 
+    // Format tomorrow's date for message
+    const tomorrowFormatted = new Date(tomorrow).toLocaleDateString('pt-BR', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    });
+
     console.log(`Looking for appointments on ${tomorrowDate}`);
 
     // Get clinics with reminders enabled
     const { data: clinics, error: clinicsError } = await supabase
       .from('clinics')
-      .select('id, name, reminder_enabled, reminder_hours')
+      .select('id, name, slug, reminder_enabled, reminder_hours')
       .eq('reminder_enabled', true);
 
     if (clinicsError) {
@@ -76,6 +111,9 @@ serve(async (req) => {
     let sentCount = 0;
     let errorCount = 0;
     let skippedCount = 0;
+
+    // Get the base URL from environment or use default
+    const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://eclini.lovable.app';
 
     for (const clinic of clinics || []) {
       // Fetch clinic's Evolution API config
@@ -99,6 +137,7 @@ serve(async (req) => {
           appointment_date,
           start_time,
           reminder_sent,
+          confirmation_token,
           patient:patients (
             name,
             phone
@@ -131,8 +170,20 @@ serve(async (req) => {
         // Format time
         const time = appointment.start_time.substring(0, 5);
 
-        // Create message
-        const message = `Olá ${patient.name}! 👋\n\nLembramos que você tem consulta agendada para *amanhã* às *${time}* com ${professional?.name || 'nosso profissional'}.\n\nClínica: ${clinic.name}\n\nPor favor, confirme sua presença respondendo esta mensagem.\n\nCaso precise reagendar, entre em contato conosco.`;
+        // Build confirmation link
+        const confirmationLink = appointment.confirmation_token 
+          ? `${baseUrl}/consulta/${appointment.confirmation_token}`
+          : undefined;
+
+        // Create message using the formatter
+        const message = formatAppointmentReminder(
+          patient.name,
+          clinic.name,
+          tomorrowFormatted,
+          time,
+          professional?.name || 'Profissional',
+          confirmationLink
+        );
 
         const success = await sendWhatsAppViaEvolution(
           evolutionConfig as EvolutionConfig,

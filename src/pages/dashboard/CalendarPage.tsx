@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { sendWhatsAppMessage, formatAppointmentConfirmation } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder } from "@/lib/whatsapp";
 import { ToastAction } from "@/components/ui/toast";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { 
@@ -135,6 +135,7 @@ interface Appointment {
   started_at: string | null;
   completed_at: string | null;
   duration_minutes: number | null;
+  confirmation_token: string | null;
   patient: {
     id: string;
     name: string;
@@ -282,6 +283,7 @@ export default function CalendarPage() {
           started_at,
           completed_at,
           duration_minutes,
+          confirmation_token,
           patient:patients (id, name, phone, email, birth_date),
           professional:professionals (id, name)
         `)
@@ -729,7 +731,21 @@ export default function CalendarPage() {
         day: 'numeric', 
         month: 'long' 
       });
-      const message = `Olá ${patient.name}! 👋\n\nLembramos que você tem uma consulta agendada para ${formattedDate} às ${appointment.start_time.slice(0, 5)}.\n\nPor favor, confirme sua presença respondendo esta mensagem.\n\nAtenciosamente,\n${currentClinic?.name || 'Clínica'}`;
+      
+      // Build confirmation link
+      const baseUrl = window.location.origin;
+      const confirmationLink = appointment.confirmation_token 
+        ? `${baseUrl}/consulta/${appointment.confirmation_token}`
+        : undefined;
+      
+      const message = formatAppointmentReminder(
+        patient.name,
+        currentClinic?.name || 'Clínica',
+        formattedDate,
+        appointment.start_time.slice(0, 5),
+        appointment.professional?.name || 'Profissional',
+        confirmationLink
+      );
 
       const { data, error } = await supabase.functions.invoke('send-whatsapp', {
         body: { phone: patient.phone, message, clinicId: currentClinic?.id },
