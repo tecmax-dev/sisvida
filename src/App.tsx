@@ -22,6 +22,7 @@ import SettingsPage from "./pages/dashboard/SettingsPage";
 import MedicalRecordsPage from "./pages/dashboard/MedicalRecordsPage";
 import WaitingListPage from "./pages/dashboard/WaitingListPage";
 import AnamnesisPage from "./pages/dashboard/AnamnesisPage";
+import UsersManagementPage from "./pages/dashboard/UsersManagementPage";
 import NotFound from "./pages/NotFound";
 import { AdminLayout } from "./components/admin/AdminLayout";
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
@@ -88,6 +89,7 @@ const App = () => (
               <Route path="waiting-list" element={<WaitingListPage />} />
               <Route path="reports" element={<ReportsPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="users" element={<UsersManagementPage />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
