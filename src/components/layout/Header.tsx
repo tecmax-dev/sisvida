@@ -1,12 +1,13 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./Logo";
-import { Menu, X } from "lucide-react";
+import { Menu, X, LogIn } from "lucide-react";
 import { useState } from "react";
 
 const navLinks = [
-  { href: "/#features", label: "Funcionalidades" },
-  { href: "/#pricing", label: "Planos" },
+  { href: "/", label: "Home" },
+  { href: "/#features", label: "Recursos" },
+  { href: "/#pricing", label: "Preço" },
   { href: "/#contact", label: "Contato" },
 ];
 
@@ -16,34 +17,38 @@ export function Header() {
   const isLanding = location.pathname === "/";
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full bg-white border-b border-border/40">
       <div className="container flex h-16 items-center justify-between">
         <Logo />
 
-        {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-6">
-          {isLanding &&
-            navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                {link.label}
-              </a>
-            ))}
+        {/* Desktop Navigation - Center */}
+        <nav className="hidden md:flex items-center gap-8">
+          {navLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                location.pathname === link.href 
+                  ? "text-foreground border-b-2 border-primary pb-0.5" 
+                  : "text-muted-foreground"
+              }`}
+            >
+              {link.label}
+            </a>
+          ))}
         </nav>
 
-        {/* Desktop Actions */}
+        {/* Desktop Actions - Right */}
         <div className="hidden md:flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/profissional">Sou profissional</Link>
-          </Button>
-          <Button variant="ghost" asChild>
-            <Link to="/auth">Entrar</Link>
-          </Button>
-          <Button variant="hero" asChild>
-            <Link to="/auth?tab=signup">Começar grátis</Link>
+          <Button 
+            variant="default" 
+            className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-6"
+            asChild
+          >
+            <Link to="/auth" className="flex items-center gap-2">
+              Sou Cliente (Entrar)
+              <LogIn className="h-4 w-4" />
+            </Link>
           </Button>
         </div>
 
@@ -60,36 +65,29 @@ export function Header() {
 
       {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden border-t border-border bg-background animate-slide-in-from-top">
+        <div className="md:hidden border-t border-border bg-white animate-slide-in-from-top">
           <div className="container py-4 space-y-4">
-            {isLanding && (
-              <nav className="flex flex-col gap-3">
-                {navLinks.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {link.label}
-                  </a>
-                ))}
-              </nav>
-            )}
+            <nav className="flex flex-col gap-3">
+              {navLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {link.label}
+                </a>
+              ))}
+            </nav>
             <div className="flex flex-col gap-2 pt-2">
-              <Button variant="ghost" size="sm" asChild className="w-full">
-                <Link to="/profissional" onClick={() => setIsMenuOpen(false)}>
-                  Sou profissional
-                </Link>
-              </Button>
-              <Button variant="ghost" asChild className="w-full">
-                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                  Entrar
-                </Link>
-              </Button>
-              <Button variant="hero" asChild className="w-full">
-                <Link to="/auth?tab=signup" onClick={() => setIsMenuOpen(false)}>
-                  Começar grátis
+              <Button 
+                variant="default" 
+                className="bg-primary hover:bg-primary/90 w-full rounded-full"
+                asChild
+              >
+                <Link to="/auth" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center gap-2">
+                  Sou Cliente (Entrar)
+                  <LogIn className="h-4 w-4" />
                 </Link>
               </Button>
             </div>
