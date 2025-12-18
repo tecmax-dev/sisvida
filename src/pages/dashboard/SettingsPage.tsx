@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Bell, Clock, Globe } from "lucide-react";
+import { Building2, Bell, Clock, Globe, MessageSquare } from "lucide-react";
+import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 
 export default function SettingsPage() {
   const { user, currentClinic } = useAuth();
@@ -195,6 +196,11 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* WhatsApp Integration */}
+      {currentClinic && (
+        <EvolutionConfigPanel clinicId={currentClinic.id} />
+      )}
 
       <div className="flex justify-end">
         <Button variant="hero" onClick={handleSave}>

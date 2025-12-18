@@ -102,6 +102,7 @@ export type Database = {
           confirmed_at: string | null
           created_at: string
           created_by: string | null
+          duration_minutes: number | null
           end_time: string
           id: string
           notes: string | null
@@ -123,6 +124,7 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
+          duration_minutes?: number | null
           end_time: string
           id?: string
           notes?: string | null
@@ -144,6 +146,7 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
+          duration_minutes?: number | null
           end_time?: string
           id?: string
           notes?: string | null
@@ -219,11 +222,15 @@ export type Database = {
       clinics: {
         Row: {
           address: string | null
+          blocked_at: string | null
+          blocked_by: string | null
+          blocked_reason: string | null
           closing_time: string | null
           cnpj: string | null
           created_at: string
           email: string | null
           id: string
+          is_blocked: boolean | null
           logo_url: string | null
           name: string
           opening_time: string | null
@@ -235,11 +242,15 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           closing_time?: string | null
           cnpj?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          is_blocked?: boolean | null
           logo_url?: string | null
           name: string
           opening_time?: string | null
@@ -251,11 +262,15 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          blocked_at?: string | null
+          blocked_by?: string | null
+          blocked_reason?: string | null
           closing_time?: string | null
           cnpj?: string | null
           created_at?: string
           email?: string | null
           id?: string
+          is_blocked?: boolean | null
           logo_url?: string | null
           name?: string
           opening_time?: string | null
@@ -328,6 +343,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "document_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      evolution_configs: {
+        Row: {
+          api_key: string
+          api_url: string
+          clinic_id: string
+          connected_at: string | null
+          created_at: string
+          id: string
+          instance_name: string
+          is_connected: boolean | null
+          phone_number: string | null
+          qr_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          api_key: string
+          api_url: string
+          clinic_id: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_name: string
+          is_connected?: boolean | null
+          phone_number?: string | null
+          qr_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          api_key?: string
+          api_url?: string
+          clinic_id?: string
+          connected_at?: string | null
+          created_at?: string
+          id?: string
+          instance_name?: string
+          is_connected?: boolean | null
+          phone_number?: string | null
+          qr_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "evolution_configs_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: true
             referencedRelation: "clinics"
