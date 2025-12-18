@@ -524,6 +524,83 @@ export type Database = {
           },
         ]
       }
+      odontogram_records: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string
+          condition: string
+          created_at: string
+          id: string
+          material: string | null
+          notes: string | null
+          patient_id: string
+          professional_id: string | null
+          recorded_at: string
+          tooth_face: string | null
+          tooth_number: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id: string
+          condition: string
+          created_at?: string
+          id?: string
+          material?: string | null
+          notes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          recorded_at?: string
+          tooth_face?: string | null
+          tooth_number: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string
+          condition?: string
+          created_at?: string
+          id?: string
+          material?: string | null
+          notes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          recorded_at?: string
+          tooth_face?: string | null
+          tooth_number?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "odontogram_records_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "odontogram_records_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "odontogram_records_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "odontogram_records_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patients: {
         Row: {
           address: string | null
