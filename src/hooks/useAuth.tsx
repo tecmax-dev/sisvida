@@ -18,6 +18,8 @@ interface Clinic {
   phone: string | null;
   cnpj: string | null;
   logo_url: string | null;
+  is_blocked?: boolean;
+  blocked_reason?: string | null;
 }
 
 interface UserRole {
@@ -85,7 +87,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           address,
           phone,
           cnpj,
-          logo_url
+          logo_url,
+          is_blocked,
+          blocked_reason
         )
       `)
       .eq('user_id', userId);

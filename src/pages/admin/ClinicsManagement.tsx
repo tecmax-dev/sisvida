@@ -6,6 +6,8 @@ import { useAuditLog } from "@/hooks/useAuditLog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -16,12 +18,34 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Building2, 
   Search, 
   ExternalLink,
   Users,
-  Calendar
+  Calendar,
+  Ban,
+  CheckCircle,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -34,6 +58,10 @@ interface Clinic {
   address: string | null;
   cnpj: string | null;
   created_at: string;
+  is_blocked: boolean;
+  blocked_at: string | null;
+  blocked_reason: string | null;
+  blocked_by: string | null;
 }
 
 interface ClinicWithCounts extends Clinic {
@@ -45,7 +73,12 @@ export default function ClinicsManagement() {
   const [clinics, setClinics] = useState<ClinicWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const { setCurrentClinic } = useAuth();
+  const [blockDialogOpen, setBlockDialogOpen] = useState(false);
+  const [unblockDialogOpen, setUnblockDialogOpen] = useState(false);
+  const [selectedClinic, setSelectedClinic] = useState<ClinicWithCounts | null>(null);
+  const [blockReason, setBlockReason] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const { setCurrentClinic, user } = useAuth();
   const { logAction } = useAuditLog();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -75,6 +108,7 @@ export default function ClinicsManagement() {
 
             return {
               ...clinic,
+              is_blocked: clinic.is_blocked || false,
               patientsCount: patientsRes.count || 0,
               appointmentsCount: appointmentsRes.count || 0,
             };
@@ -111,6 +145,8 @@ export default function ClinicsManagement() {
       phone: clinic.phone,
       cnpj: clinic.cnpj,
       logo_url: null,
+      is_blocked: clinic.is_blocked,
+      blocked_reason: clinic.blocked_reason,
     });
     
     toast({
@@ -119,6 +155,106 @@ export default function ClinicsManagement() {
     });
     
     navigate("/dashboard");
+  };
+
+  const handleOpenBlockDialog = (clinic: ClinicWithCounts) => {
+    setSelectedClinic(clinic);
+    setBlockReason("");
+    setBlockDialogOpen(true);
+  };
+
+  const handleOpenUnblockDialog = (clinic: ClinicWithCounts) => {
+    setSelectedClinic(clinic);
+    setUnblockDialogOpen(true);
+  };
+
+  const handleBlockClinic = async () => {
+    if (!selectedClinic || !user) return;
+    
+    setActionLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from('clinics')
+        .update({
+          is_blocked: true,
+          blocked_at: new Date().toISOString(),
+          blocked_reason: blockReason.trim() || "Inadimplência",
+          blocked_by: user.id,
+        })
+        .eq('id', selectedClinic.id);
+
+      if (error) throw error;
+
+      await logAction({
+        action: 'block_clinic',
+        entityType: 'clinic',
+        entityId: selectedClinic.id,
+        details: { 
+          clinic_name: selectedClinic.name,
+          reason: blockReason.trim() || "Inadimplência" 
+        }
+      });
+
+      toast({
+        title: "Clínica bloqueada",
+        description: `A clínica "${selectedClinic.name}" foi bloqueada.`,
+      });
+
+      setBlockDialogOpen(false);
+      fetchClinics();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao bloquear",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUnblockClinic = async () => {
+    if (!selectedClinic) return;
+    
+    setActionLoading(true);
+
+    try {
+      const { error } = await supabase
+        .from('clinics')
+        .update({
+          is_blocked: false,
+          blocked_at: null,
+          blocked_reason: null,
+          blocked_by: null,
+        })
+        .eq('id', selectedClinic.id);
+
+      if (error) throw error;
+
+      await logAction({
+        action: 'unblock_clinic',
+        entityType: 'clinic',
+        entityId: selectedClinic.id,
+        details: { clinic_name: selectedClinic.name }
+      });
+
+      toast({
+        title: "Clínica desbloqueada",
+        description: `A clínica "${selectedClinic.name}" foi desbloqueada.`,
+      });
+
+      setUnblockDialogOpen(false);
+      fetchClinics();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao desbloquear",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const filteredClinics = clinics.filter((clinic) =>
@@ -184,7 +320,7 @@ export default function ClinicsManagement() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Clínica</TableHead>
-                  <TableHead>Slug</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead className="text-center">Pacientes</TableHead>
                   <TableHead className="text-center">Agendamentos</TableHead>
                   <TableHead>Criada em</TableHead>
@@ -193,24 +329,36 @@ export default function ClinicsManagement() {
               </TableHeader>
               <TableBody>
                 {filteredClinics.map((clinic) => (
-                  <TableRow key={clinic.id}>
+                  <TableRow key={clinic.id} className={clinic.is_blocked ? "bg-destructive/5" : ""}>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                          <Building2 className="h-4 w-4 text-primary" />
+                        <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${
+                          clinic.is_blocked ? "bg-destructive/10" : "bg-primary/10"
+                        }`}>
+                          {clinic.is_blocked ? (
+                            <Ban className="h-4 w-4 text-destructive" />
+                          ) : (
+                            <Building2 className="h-4 w-4 text-primary" />
+                          )}
                         </div>
                         <div>
                           <p className="font-medium">{clinic.name}</p>
-                          {clinic.email && (
-                            <p className="text-xs text-muted-foreground">{clinic.email}</p>
-                          )}
+                          <code className="text-xs text-muted-foreground">/{clinic.slug}</code>
                         </div>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <code className="text-xs bg-muted px-2 py-1 rounded">
-                        /{clinic.slug}
-                      </code>
+                      {clinic.is_blocked ? (
+                        <Badge variant="destructive" className="gap-1">
+                          <Ban className="h-3 w-3" />
+                          Bloqueada
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-success border-success gap-1">
+                          <CheckCircle className="h-3 w-3" />
+                          Ativa
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell className="text-center">
                       <div className="flex items-center justify-center gap-1.5">
@@ -228,13 +376,36 @@ export default function ClinicsManagement() {
                       {new Date(clinic.created_at).toLocaleDateString('pt-BR')}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        onClick={() => handleAccessClinic(clinic)}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                        Acessar
-                      </Button>
+                      <div className="flex items-center justify-end gap-2">
+                        {clinic.is_blocked ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-success border-success hover:bg-success/10"
+                            onClick={() => handleOpenUnblockDialog(clinic)}
+                          >
+                            <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
+                            Desbloquear
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive border-destructive hover:bg-destructive/10"
+                            onClick={() => handleOpenBlockDialog(clinic)}
+                          >
+                            <Ban className="h-3.5 w-3.5 mr-1.5" />
+                            Bloquear
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          onClick={() => handleAccessClinic(clinic)}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                          Acessar
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -243,6 +414,81 @@ export default function ClinicsManagement() {
           )}
         </CardContent>
       </Card>
+
+      {/* Block Dialog */}
+      <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Bloquear Clínica
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação irá bloquear o acesso de todos os usuários da clínica "{selectedClinic?.name}".
+              Eles verão uma mensagem informando que o sistema está indisponível.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="blockReason">Motivo do bloqueio</Label>
+              <Textarea
+                id="blockReason"
+                placeholder="Ex: Inadimplência, pagamento pendente..."
+                value={blockReason}
+                onChange={(e) => setBlockReason(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBlockDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleBlockClinic}
+              disabled={actionLoading}
+            >
+              {actionLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Ban className="h-4 w-4 mr-2" />
+              )}
+              Confirmar Bloqueio
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unblock Dialog */}
+      <AlertDialog open={unblockDialogOpen} onOpenChange={setUnblockDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Desbloquear Clínica</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja realmente desbloquear a clínica "{selectedClinic?.name}"?
+              Todos os usuários terão acesso novamente ao sistema.
+              {selectedClinic?.blocked_reason && (
+                <span className="block mt-2 p-2 bg-muted rounded text-sm">
+                  <strong>Motivo do bloqueio:</strong> {selectedClinic.blocked_reason}
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleUnblockClinic}
+              disabled={actionLoading}
+              className="bg-success hover:bg-success/90"
+            >
+              {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Desbloquear
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

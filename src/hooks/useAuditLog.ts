@@ -10,7 +10,9 @@ type AuditAction =
   | 'login'
   | 'logout'
   | 'create_super_admin'
-  | 'remove_super_admin';
+  | 'remove_super_admin'
+  | 'block_clinic'
+  | 'unblock_clinic';
 
 type EntityType = 'clinic' | 'user' | 'super_admin' | 'system';
 
