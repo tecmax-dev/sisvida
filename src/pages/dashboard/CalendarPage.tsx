@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { sendWhatsAppMessage, formatAppointmentConfirmation } from "@/lib/whatsapp";
+import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -20,6 +21,8 @@ import {
   Search,
   Send,
   UserCheck,
+  Stethoscope,
+  Play,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -107,6 +110,8 @@ interface Patient {
   id: string;
   name: string;
   phone: string;
+  email?: string | null;
+  birth_date?: string | null;
 }
 
 interface Professional {
@@ -125,10 +130,18 @@ interface Appointment {
   notes: string | null;
   patient_id: string;
   professional_id: string;
+  started_at: string | null;
+  completed_at: string | null;
+  duration_minutes: number | null;
   patient: {
+    id: string;
     name: string;
+    phone: string;
+    email: string | null;
+    birth_date: string | null;
   };
   professional: {
+    id: string;
     name: string;
   };
 }
@@ -172,6 +185,10 @@ export default function CalendarPage() {
   const [newDate, setNewDate] = useState("");
   const [newTime, setNewTime] = useState("");
   
+  // Appointment Panel state
+  const [appointmentPanelOpen, setAppointmentPanelOpen] = useState(false);
+  const [selectedAppointmentForPanel, setSelectedAppointmentForPanel] = useState<Appointment | null>(null);
+  
   // Form state
   const [formPatient, setFormPatient] = useState("");
   const [formProfessional, setFormProfessional] = useState("");
@@ -197,7 +214,7 @@ export default function CalendarPage() {
     try {
       const { data: patientsData } = await supabase
         .from('patients')
-        .select('id, name, phone')
+        .select('id, name, phone, email, birth_date')
         .eq('clinic_id', currentClinic.id)
         .order('name');
       
@@ -259,8 +276,11 @@ export default function CalendarPage() {
           notes,
           patient_id,
           professional_id,
-          patient:patients (name),
-          professional:professionals (name)
+          started_at,
+          completed_at,
+          duration_minutes,
+          patient:patients (id, name, phone, email, birth_date),
+          professional:professionals (id, name)
         `)
         .eq('clinic_id', currentClinic.id)
         .gte('appointment_date', startDate)
@@ -581,6 +601,11 @@ export default function CalendarPage() {
     setFormNotes("");
   };
 
+  const openAppointmentPanel = (appointment: Appointment) => {
+    setSelectedAppointmentForPanel(appointment);
+    setAppointmentPanelOpen(true);
+  };
+
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -817,19 +842,34 @@ export default function CalendarPage() {
     const StatusIcon = status.icon;
     const isCancelled = appointment.status === "cancelled";
     const isCompleted = appointment.status === "completed";
+    const isInProgress = appointment.status === "in_progress";
     const canModify = !isCancelled && !isCompleted;
+    const canAttend = appointment.status === "scheduled" || appointment.status === "confirmed" || isInProgress;
     
     return (
       <div
         className={cn(
           "flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group",
-          isCancelled && "opacity-60"
+          isCancelled && "opacity-60",
+          isInProgress && "border-info bg-info/5"
         )}
       >
-        <div className="w-20 text-center py-2 rounded-lg bg-primary/10">
-          <span className="text-sm font-semibold text-primary">
+        <div className={cn(
+          "w-20 text-center py-2 rounded-lg",
+          isInProgress ? "bg-info/20" : "bg-primary/10"
+        )}>
+          <span className={cn(
+            "text-sm font-semibold",
+            isInProgress ? "text-info" : "text-primary"
+          )}>
             {appointment.start_time.slice(0, 5)}
           </span>
+          {isInProgress && (
+            <div className="text-xs text-info mt-0.5 flex items-center justify-center gap-1">
+              <Play className="h-3 w-3" />
+              Em atend.
+            </div>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-foreground">
@@ -846,6 +886,22 @@ export default function CalendarPage() {
             </span>
           </div>
         </div>
+        
+        {/* Attend button */}
+        {canAttend && (
+          <Button
+            variant={isInProgress ? "default" : "outline"}
+            size="sm"
+            onClick={() => openAppointmentPanel(appointment)}
+            className={cn(
+              "gap-1.5",
+              isInProgress && "bg-info hover:bg-info/90"
+            )}
+          >
+            <Stethoscope className="h-4 w-4" />
+            {isInProgress ? "Continuar" : "Atender"}
+          </Button>
+        )}
         
         {/* Status dropdown */}
         {canModify ? (
@@ -1481,6 +1537,30 @@ export default function CalendarPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Appointment Panel */}
+      {selectedAppointmentForPanel && currentClinic && (
+        <AppointmentPanel
+          isOpen={appointmentPanelOpen}
+          appointment={{
+            ...selectedAppointmentForPanel,
+            patient: selectedAppointmentForPanel.patient as {
+              id: string;
+              name: string;
+              phone: string;
+              email: string | null;
+              birth_date: string | null;
+            }
+          }}
+          professionalId={selectedAppointmentForPanel.professional_id}
+          clinicId={currentClinic.id}
+          onClose={() => {
+            setAppointmentPanelOpen(false);
+            setSelectedAppointmentForPanel(null);
+          }}
+          onUpdate={fetchAppointments}
+        />
+      )}
     </div>
   );
 }

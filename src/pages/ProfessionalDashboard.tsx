@@ -2,24 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/layout/Logo";
 import { useToast } from "@/hooks/use-toast";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { 
   Loader2, 
   LogOut, 
@@ -33,11 +20,6 @@ import {
   AlertCircle,
   XCircle,
   RefreshCw,
-  FileText,
-  ClipboardList,
-  Pill,
-  History,
-  Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -63,22 +45,14 @@ interface Appointment {
   notes: string | null;
   started_at: string | null;
   completed_at: string | null;
+  duration_minutes: number | null;
   patient: {
     id: string;
     name: string;
     phone: string;
     email: string | null;
+    birth_date: string | null;
   };
-}
-
-interface MedicalRecord {
-  id: string;
-  record_date: string;
-  chief_complaint: string | null;
-  diagnosis: string | null;
-  treatment_plan: string | null;
-  prescription: string | null;
-  notes: string | null;
 }
 
 const statusConfig: Record<string, { icon: any; color: string; bgColor: string; label: string }> = {
@@ -101,21 +75,10 @@ export default function ProfessionalDashboard() {
   const [professional, setProfessional] = useState<Professional | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
   
-  // Medical records state
-  const [recordsDialogOpen, setRecordsDialogOpen] = useState(false);
-  const [selectedAppointmentForRecords, setSelectedAppointmentForRecords] = useState<Appointment | null>(null);
-  const [patientHistory, setPatientHistory] = useState<MedicalRecord[]>([]);
-  const [loadingRecords, setLoadingRecords] = useState(false);
-  const [savingRecord, setSavingRecord] = useState(false);
-  const [recordForm, setRecordForm] = useState({
-    chief_complaint: "",
-    diagnosis: "",
-    treatment_plan: "",
-    prescription: "",
-    notes: "",
-  });
+  // Appointment Panel state
+  const [appointmentPanelOpen, setAppointmentPanelOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -182,7 +145,8 @@ export default function ProfessionalDashboard() {
         notes,
         started_at,
         completed_at,
-        patient:patients (id, name, phone, email)
+        duration_minutes,
+        patient:patients (id, name, phone, email, birth_date)
       `)
       .eq('professional_id', professionalId)
       .eq('clinic_id', clinicId)
@@ -193,69 +157,9 @@ export default function ProfessionalDashboard() {
     if (!error && data) {
       setAppointments(data.map(apt => ({
         ...apt,
-        patient: apt.patient as { id: string; name: string; phone: string; email: string | null }
+        patient: apt.patient as { id: string; name: string; phone: string; email: string | null; birth_date: string | null }
       })));
     }
-  };
-
-  const handleStartAppointment = async (appointmentId: string) => {
-    if (!professional) return;
-    
-    setActionLoading(appointmentId);
-    
-    const { error } = await supabase
-      .from('appointments')
-      .update({ 
-        status: 'in_progress',
-        started_at: new Date().toISOString()
-      })
-      .eq('id', appointmentId);
-
-    if (error) {
-      toast({
-        title: "Erro ao iniciar atendimento",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Atendimento iniciado",
-        description: "Bom atendimento!",
-      });
-      await loadAppointments(professional.id, professional.clinic_id);
-    }
-    
-    setActionLoading(null);
-  };
-
-  const handleEndAppointment = async (appointmentId: string) => {
-    if (!professional) return;
-    
-    setActionLoading(appointmentId);
-    
-    const { error } = await supabase
-      .from('appointments')
-      .update({ 
-        status: 'completed',
-        completed_at: new Date().toISOString()
-      })
-      .eq('id', appointmentId);
-
-    if (error) {
-      toast({
-        title: "Erro ao finalizar atendimento",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Atendimento finalizado",
-        description: "Consulta concluída com sucesso!",
-      });
-      await loadAppointments(professional.id, professional.clinic_id);
-    }
-    
-    setActionLoading(null);
   };
 
   const handleSignOut = async () => {
@@ -270,77 +174,14 @@ export default function ProfessionalDashboard() {
     setLoading(false);
   };
 
-  const openMedicalRecords = async (appointment: Appointment) => {
-    setSelectedAppointmentForRecords(appointment);
-    setRecordsDialogOpen(true);
-    setRecordForm({
-      chief_complaint: "",
-      diagnosis: "",
-      treatment_plan: "",
-      prescription: "",
-      notes: "",
-    });
-    
-    // Load patient history
-    await loadPatientHistory(appointment.patient_id);
+  const openAppointmentPanel = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setAppointmentPanelOpen(true);
   };
 
-  const loadPatientHistory = async (patientId: string) => {
+  const handleAppointmentUpdate = async () => {
     if (!professional) return;
-    
-    setLoadingRecords(true);
-    
-    const { data, error } = await supabase
-      .from('medical_records')
-      .select('id, record_date, chief_complaint, diagnosis, treatment_plan, prescription, notes')
-      .eq('patient_id', patientId)
-      .eq('clinic_id', professional.clinic_id)
-      .order('record_date', { ascending: false })
-      .limit(10);
-
-    if (!error && data) {
-      setPatientHistory(data);
-    }
-    
-    setLoadingRecords(false);
-  };
-
-  const handleSaveRecord = async () => {
-    if (!professional || !selectedAppointmentForRecords) return;
-    
-    setSavingRecord(true);
-    
-    const { error } = await supabase
-      .from('medical_records')
-      .insert({
-        clinic_id: professional.clinic_id,
-        patient_id: selectedAppointmentForRecords.patient_id,
-        professional_id: professional.id,
-        appointment_id: selectedAppointmentForRecords.id,
-        record_date: today,
-        chief_complaint: recordForm.chief_complaint || null,
-        diagnosis: recordForm.diagnosis || null,
-        treatment_plan: recordForm.treatment_plan || null,
-        prescription: recordForm.prescription || null,
-        notes: recordForm.notes || null,
-      });
-
-    if (error) {
-      toast({
-        title: "Erro ao salvar prontuário",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Prontuário salvo",
-        description: "Registro médico salvo com sucesso!",
-      });
-      setRecordsDialogOpen(false);
-      await loadPatientHistory(selectedAppointmentForRecords.patient_id);
-    }
-    
-    setSavingRecord(false);
+    await loadAppointments(professional.id, professional.clinic_id);
   };
 
   if (loading) {
@@ -469,28 +310,14 @@ export default function ProfessionalDashboard() {
                   </Badge>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Button 
-                    variant="outline"
-                    onClick={() => openMedicalRecords(inProgressAppointment)}
-                  >
-                    <FileText className="h-4 w-4 mr-2" />
-                    Prontuário
-                  </Button>
-                  <Button 
-                    size="lg"
-                    onClick={() => handleEndAppointment(inProgressAppointment.id)}
-                    disabled={actionLoading === inProgressAppointment.id}
-                    className="bg-success hover:bg-success/90"
-                  >
-                    {actionLoading === inProgressAppointment.id ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                    )}
-                    Finalizar Atendimento
-                  </Button>
-                </div>
+                <Button 
+                  size="lg"
+                  onClick={() => openAppointmentPanel(inProgressAppointment)}
+                  className="bg-info hover:bg-info/90"
+                >
+                  <Stethoscope className="h-4 w-4 mr-2" />
+                  Continuar Atendimento
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -557,15 +384,11 @@ export default function ProfessionalDashboard() {
                         </div>
                         
                         <Button 
-                          onClick={() => handleStartAppointment(appointment.id)}
-                          disabled={actionLoading === appointment.id || !!inProgressAppointment}
+                          onClick={() => openAppointmentPanel(appointment)}
+                          disabled={!!inProgressAppointment}
                           className="flex-shrink-0"
                         >
-                          {actionLoading === appointment.id ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Play className="h-4 w-4 mr-2" />
-                          )}
+                          <Play className="h-4 w-4 mr-2" />
                           Iniciar Atendimento
                         </Button>
                       </div>
@@ -587,7 +410,7 @@ export default function ProfessionalDashboard() {
             
             <div className="space-y-2">
               {completedAppointments.map((appointment) => (
-                <Card key={appointment.id} className="opacity-70">
+                <Card key={appointment.id} className="opacity-70 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => openAppointmentPanel(appointment)}>
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -600,6 +423,7 @@ export default function ProfessionalDashboard() {
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {appointment.start_time.substring(0, 5)} - {typeLabels[appointment.type]}
+                            {appointment.duration_minutes && ` • ${appointment.duration_minutes}min`}
                           </p>
                         </div>
                       </div>
@@ -616,154 +440,20 @@ export default function ProfessionalDashboard() {
         )}
       </main>
 
-      {/* Medical Records Dialog */}
-      <Dialog open={recordsDialogOpen} onOpenChange={setRecordsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Prontuário - {selectedAppointmentForRecords?.patient.name}
-            </DialogTitle>
-          </DialogHeader>
-
-          <Tabs defaultValue="novo" className="mt-4">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="novo" className="flex items-center gap-2">
-                <ClipboardList className="h-4 w-4" />
-                Novo Registro
-              </TabsTrigger>
-              <TabsTrigger value="historico" className="flex items-center gap-2">
-                <History className="h-4 w-4" />
-                Histórico ({patientHistory.length})
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="novo" className="space-y-4 mt-4">
-              <div>
-                <Label htmlFor="chief_complaint">Queixa Principal</Label>
-                <Textarea
-                  id="chief_complaint"
-                  value={recordForm.chief_complaint}
-                  onChange={(e) => setRecordForm(prev => ({ ...prev, chief_complaint: e.target.value }))}
-                  placeholder="Descreva a queixa principal do paciente..."
-                  className="mt-1.5"
-                  rows={2}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="diagnosis">Diagnóstico</Label>
-                <Textarea
-                  id="diagnosis"
-                  value={recordForm.diagnosis}
-                  onChange={(e) => setRecordForm(prev => ({ ...prev, diagnosis: e.target.value }))}
-                  placeholder="Hipótese diagnóstica ou diagnóstico..."
-                  className="mt-1.5"
-                  rows={2}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="treatment_plan">Plano de Tratamento</Label>
-                <Textarea
-                  id="treatment_plan"
-                  value={recordForm.treatment_plan}
-                  onChange={(e) => setRecordForm(prev => ({ ...prev, treatment_plan: e.target.value }))}
-                  placeholder="Orientações e plano terapêutico..."
-                  className="mt-1.5"
-                  rows={2}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="prescription" className="flex items-center gap-2">
-                  <Pill className="h-4 w-4" />
-                  Prescrição
-                </Label>
-                <Textarea
-                  id="prescription"
-                  value={recordForm.prescription}
-                  onChange={(e) => setRecordForm(prev => ({ ...prev, prescription: e.target.value }))}
-                  placeholder="Medicamentos prescritos..."
-                  className="mt-1.5"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea
-                  id="notes"
-                  value={recordForm.notes}
-                  onChange={(e) => setRecordForm(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Observações adicionais..."
-                  className="mt-1.5"
-                  rows={2}
-                />
-              </div>
-
-              <div className="flex justify-end pt-4">
-                <Button onClick={handleSaveRecord} disabled={savingRecord}>
-                  {savingRecord ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Save className="h-4 w-4 mr-2" />
-                  )}
-                  Salvar Prontuário
-                </Button>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="historico" className="mt-4">
-              {loadingRecords ? (
-                <div className="py-8 text-center">
-                  <Loader2 className="h-6 w-6 animate-spin mx-auto text-muted-foreground" />
-                </div>
-              ) : patientHistory.length === 0 ? (
-                <div className="py-8 text-center text-muted-foreground">
-                  <History className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Nenhum registro anterior encontrado</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {patientHistory.map((record) => (
-                    <Card key={record.id}>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm flex items-center gap-2">
-                          <Calendar className="h-4 w-4" />
-                          {new Date(record.record_date).toLocaleDateString('pt-BR')}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="text-sm space-y-2">
-                        {record.chief_complaint && (
-                          <div>
-                            <span className="font-medium">Queixa:</span> {record.chief_complaint}
-                          </div>
-                        )}
-                        {record.diagnosis && (
-                          <div>
-                            <span className="font-medium">Diagnóstico:</span> {record.diagnosis}
-                          </div>
-                        )}
-                        {record.treatment_plan && (
-                          <div>
-                            <span className="font-medium">Tratamento:</span> {record.treatment_plan}
-                          </div>
-                        )}
-                        {record.prescription && (
-                          <div>
-                            <span className="font-medium">Prescrição:</span> {record.prescription}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
+      {/* Appointment Panel */}
+      {selectedAppointment && professional && (
+        <AppointmentPanel
+          isOpen={appointmentPanelOpen}
+          appointment={selectedAppointment}
+          professionalId={professional.id}
+          clinicId={professional.clinic_id}
+          onClose={() => {
+            setAppointmentPanelOpen(false);
+            setSelectedAppointment(null);
+          }}
+          onUpdate={handleAppointmentUpdate}
+        />
+      )}
     </div>
   );
 }
