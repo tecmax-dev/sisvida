@@ -122,9 +122,17 @@ export default function ClinicSetup() {
       navigate("/dashboard");
     } catch (error: any) {
       console.error("Error creating clinic:", error);
+      
+      let errorMessage = "Tente novamente.";
+      if (error.code === "42501" || error.message?.includes("row-level security")) {
+        errorMessage = "Erro de permissão. Por favor, faça logout e login novamente.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       toast({
         title: "Erro ao criar clínica",
-        description: error.message || "Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
