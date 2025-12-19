@@ -164,12 +164,34 @@ export function AppointmentPanel({
     
     try {
       // Check if professional has any dental specialty
-      const { data: profSpecialties } = await supabase
+      console.log('[DEBUG Odontogram] Professional ID:', professionalId);
+      console.log('[DEBUG Odontogram] Professional Specialty Prop:', professionalSpecialty);
+      
+      const { data: profSpecialties, error: specError } = await supabase
         .from('professional_specialties')
-        .select('specialty:specialties(is_dental)')
+        .select('specialty:specialties(is_dental, category)')
         .eq('professional_id', professionalId);
 
-      const hasDental = (profSpecialties || []).some((ps: any) => ps.specialty?.is_dental === true);
+      if (specError) {
+        console.error('[ERROR Odontogram] Failed to check dental specialty:', specError);
+      }
+
+      console.log('[DEBUG Odontogram] profSpecialties result:', profSpecialties);
+
+      // Check is_dental flag OR category === 'dental'
+      const hasDentalFromDB = (profSpecialties || []).some((ps: any) => 
+        ps.specialty?.is_dental === true || ps.specialty?.category === 'dental'
+      );
+      
+      // Fallback: check professionalSpecialty prop for dental keywords
+      const dentalKeywords = ['dental', 'odonto', 'dentist', 'ortodont', 'endodont', 'periodont', 'implant'];
+      const hasDentalFromProp = professionalSpecialty && dentalKeywords.some(keyword => 
+        professionalSpecialty.toLowerCase().includes(keyword)
+      );
+      
+      const hasDental = hasDentalFromDB || !!hasDentalFromProp;
+      console.log('[DEBUG Odontogram] hasDentalFromDB:', hasDentalFromDB, 'hasDentalFromProp:', hasDentalFromProp, 'Final hasDental:', hasDental);
+      
       setIsDentalSpecialty(hasDental);
 
       // Load anamnesis
