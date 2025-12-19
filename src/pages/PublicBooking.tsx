@@ -336,9 +336,21 @@ export default function PublicBooking() {
       });
     } catch (error: any) {
       console.error('Error creating appointment:', error);
+      
+      // Check for schedule validation errors
+      const errorMessage = error?.message || "";
+      let title = "Erro ao agendar";
+      let description = error.message || "Tente novamente";
+      
+      if (errorMessage.includes("HORARIO_INVALIDO")) {
+        title = "Horário indisponível";
+        const match = errorMessage.match(/HORARIO_INVALIDO:\s*(.+)/);
+        description = match ? match[1].trim() : "O profissional não atende neste horário.";
+      }
+      
       toast({
-        title: "Erro ao agendar",
-        description: error.message || "Tente novamente",
+        title,
+        description,
         variant: "destructive",
       });
     } finally {
