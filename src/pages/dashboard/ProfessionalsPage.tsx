@@ -103,13 +103,12 @@ export default function ProfessionalsPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const {
-    specialties,
     loading: loadingSpecialties,
+    groupedSpecialties,
     saveProfessionalSpecialties,
     fetchProfessionalSpecialties,
     getSpecialtyById,
     getRegistrationPrefix,
-    getSpecialtiesByCategory,
   } = useSpecialties();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [clinicUsers, setClinicUsers] = useState<ClinicUser[]>([]);
@@ -544,9 +543,8 @@ export default function ProfessionalsPage() {
               <SpecialtySelector
                 selectedIds={formSpecialtyIds}
                 onChange={setFormSpecialtyIds}
-                specialties={specialties}
+                groupedSpecialties={groupedSpecialties}
                 loading={loadingSpecialties}
-                getSpecialtiesByCategory={getSpecialtiesByCategory}
                 getSpecialtyById={getSpecialtyById}
               />
               <div>
@@ -819,9 +817,8 @@ export default function ProfessionalsPage() {
             <SpecialtySelector
               selectedIds={editSpecialtyIds}
               onChange={setEditSpecialtyIds}
-              specialties={specialties}
+              groupedSpecialties={groupedSpecialties}
               loading={loadingSpecialties}
-              getSpecialtiesByCategory={getSpecialtiesByCategory}
               getSpecialtyById={getSpecialtyById}
             />
             <div>
