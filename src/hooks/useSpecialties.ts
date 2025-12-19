@@ -94,7 +94,7 @@ export function useSpecialties() {
   const saveProfessionalSpecialties = async (
     professionalId: string,
     specialtyIds: string[]
-  ): Promise<boolean> => {
+  ): Promise<{ success: boolean; error?: string }> => {
     try {
       // Delete existing specialties
       const { error: deleteError } = await supabase
@@ -102,7 +102,10 @@ export function useSpecialties() {
         .delete()
         .eq('professional_id', professionalId);
 
-      if (deleteError) throw deleteError;
+      if (deleteError) {
+        console.error('Error deleting professional specialties:', deleteError);
+        return { success: false, error: deleteError.message };
+      }
 
       // Insert new specialties
       if (specialtyIds.length > 0) {
@@ -115,13 +118,16 @@ export function useSpecialties() {
             }))
           );
 
-        if (insertError) throw insertError;
+        if (insertError) {
+          console.error('Error inserting professional specialties:', insertError);
+          return { success: false, error: insertError.message };
+        }
       }
 
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('Error saving professional specialties:', error);
-      return false;
+      return { success: false, error: error?.message || 'Erro desconhecido' };
     }
   };
 
