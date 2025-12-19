@@ -59,13 +59,25 @@ export function SpecialtySelector({
   const getSelectedSpecialties = () => {
     return selectedIds
       .map((id) => getSpecialtyById(id))
-      .filter((s): s is Specialty => s !== undefined);
+      .filter((s): s is Specialty => s !== undefined && s.category !== undefined);
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-4">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Fallback if no specialties loaded
+  if (!specialties || specialties.length === 0) {
+    return (
+      <div className="space-y-3">
+        <Label>Especialidades</Label>
+        <div className="text-sm text-muted-foreground p-4 border rounded-md text-center">
+          Nenhuma especialidade disponível
+        </div>
       </div>
     );
   }
@@ -77,20 +89,23 @@ export function SpecialtySelector({
       {/* Selected badges */}
       {selectedIds.length > 0 && (
         <div className="flex flex-wrap gap-1.5 p-2 bg-muted/50 rounded-md">
-          {getSelectedSpecialties().map((specialty) => (
-            <Badge
-              key={specialty.id}
-              variant="outline"
-              className={cn(
-                "text-xs cursor-pointer hover:opacity-80",
-                CATEGORY_COLORS[specialty.category]
-              )}
-              onClick={() => handleToggle(specialty.id)}
-            >
-              {specialty.name}
-              {!disabled && <span className="ml-1">×</span>}
-            </Badge>
-          ))}
+          {getSelectedSpecialties().map((specialty) => {
+            const categoryColor = specialty.category ? CATEGORY_COLORS[specialty.category] : "";
+            return (
+              <Badge
+                key={specialty.id}
+                variant="outline"
+                className={cn(
+                  "text-xs cursor-pointer hover:opacity-80",
+                  categoryColor
+                )}
+                onClick={() => handleToggle(specialty.id)}
+              >
+                {specialty.name}
+                {!disabled && <span className="ml-1">×</span>}
+              </Badge>
+            );
+          })}
         </div>
       )}
 
