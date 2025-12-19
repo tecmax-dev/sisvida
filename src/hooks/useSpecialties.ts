@@ -8,8 +8,8 @@ export interface Specialty {
   name: string;
   category: SpecialtyCategory;
   registration_prefix: string | null;
-  is_dental: boolean;
-  is_active: boolean;
+  is_dental: boolean | null;
+  is_active: boolean | null;
 }
 
 export interface ProfessionalSpecialty {
@@ -64,8 +64,10 @@ export function useSpecialties() {
     };
 
     specialties.forEach((specialty) => {
-      if (grouped[specialty.category]) {
-        grouped[specialty.category].push(specialty);
+      // Validate category exists and is a valid category before grouping
+      const category = specialty?.category;
+      if (category && CATEGORY_ORDER.includes(category) && grouped[category]) {
+        grouped[category].push(specialty);
       }
     });
 
