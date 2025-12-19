@@ -303,11 +303,20 @@ export default function PatientsPage() {
       setFormNotes("");
       fetchPatients();
     } catch (error: any) {
-      toast({
-        title: "Erro ao cadastrar",
-        description: error.message || "Tente novamente.",
-        variant: "destructive",
-      });
+      if (error.message?.includes('CPF_DUPLICADO') || error.message?.includes('idx_patients_cpf_clinic')) {
+        setFormErrors({ cpf: "Este CPF já está cadastrado no sistema." });
+        toast({
+          title: "CPF duplicado",
+          description: "Este CPF já está cadastrado no sistema.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao cadastrar",
+          description: error.message || "Tente novamente.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setSaving(false);
     }
@@ -390,11 +399,20 @@ export default function PatientsPage() {
       setEditDialogOpen(false);
       fetchPatients();
     } catch (error: any) {
-      toast({
-        title: "Erro ao atualizar",
-        description: error.message || "Tente novamente.",
-        variant: "destructive",
-      });
+      if (error.message?.includes('CPF_DUPLICADO') || error.message?.includes('idx_patients_cpf_clinic')) {
+        setEditErrors({ cpf: "Este CPF já está cadastrado no sistema." });
+        toast({
+          title: "CPF duplicado",
+          description: "Este CPF já está cadastrado no sistema.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Erro ao atualizar",
+          description: error.message || "Tente novamente.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setSaving(false);
     }
