@@ -441,6 +441,7 @@ export type Database = {
           cnpj: string | null
           created_at: string
           email: string | null
+          enforce_schedule_validation: boolean | null
           id: string
           is_blocked: boolean | null
           logo_url: string | null
@@ -461,6 +462,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string
           email?: string | null
+          enforce_schedule_validation?: boolean | null
           id?: string
           is_blocked?: boolean | null
           logo_url?: string | null
@@ -481,6 +483,7 @@ export type Database = {
           cnpj?: string | null
           created_at?: string
           email?: string | null
+          enforce_schedule_validation?: boolean | null
           id?: string
           is_blocked?: boolean | null
           logo_url?: string | null

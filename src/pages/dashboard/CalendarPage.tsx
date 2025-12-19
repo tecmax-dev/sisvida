@@ -74,6 +74,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { handleScheduleValidationError } from "@/lib/scheduleValidation";
 
 const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const weekDaysFull = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -373,9 +374,10 @@ export default function CalendarPage() {
       resetForm();
       fetchAppointments();
     } catch (error: any) {
+      const { isScheduleError, message } = handleScheduleValidationError(error);
       toast({
-        title: "Erro ao agendar",
-        description: error.message || "Tente novamente.",
+        title: isScheduleError ? "Horário indisponível" : "Erro ao agendar",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -427,9 +429,10 @@ export default function CalendarPage() {
       resetForm();
       fetchAppointments();
     } catch (error: any) {
+      const { isScheduleError, message } = handleScheduleValidationError(error);
       toast({
-        title: "Erro ao atualizar",
-        description: error.message || "Tente novamente.",
+        title: isScheduleError ? "Horário indisponível" : "Erro ao atualizar",
+        description: message,
         variant: "destructive",
       });
     } finally {
@@ -582,9 +585,10 @@ export default function CalendarPage() {
       setNewTime("");
       fetchAppointments();
     } catch (error: any) {
+      const { isScheduleError, message } = handleScheduleValidationError(error);
       toast({
-        title: "Erro ao reagendar",
-        description: error.message || "Tente novamente.",
+        title: isScheduleError ? "Horário indisponível" : "Erro ao reagendar",
+        description: message,
         variant: "destructive",
       });
     } finally {

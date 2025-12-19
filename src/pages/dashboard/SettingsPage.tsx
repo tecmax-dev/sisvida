@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { Building2, Bell, Clock, Globe, MessageSquare } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Building2, Bell, Clock, Globe, ShieldCheck } from "lucide-react";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 
 export default function SettingsPage() {
@@ -15,6 +16,61 @@ export default function SettingsPage() {
   const [clinicName, setClinicName] = useState("Clínica Saúde Total");
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [reminderTime, setReminderTime] = useState("24");
+  const [enforceScheduleValidation, setEnforceScheduleValidation] = useState(true);
+  const [loadingValidation, setLoadingValidation] = useState(false);
+
+  // Load clinic settings
+  useEffect(() => {
+    const loadClinicSettings = async () => {
+      if (!currentClinic?.id) return;
+      
+      const { data, error } = await supabase
+        .from('clinics')
+        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours')
+        .eq('id', currentClinic.id)
+        .single();
+      
+      if (!error && data) {
+        setEnforceScheduleValidation(data.enforce_schedule_validation ?? true);
+        setClinicName(data.name || "Clínica");
+        setReminderEnabled(data.reminder_enabled ?? true);
+        setReminderTime(String(data.reminder_hours || 24));
+      }
+    };
+    
+    loadClinicSettings();
+  }, [currentClinic?.id]);
+
+  const handleToggleScheduleValidation = async (enabled: boolean) => {
+    if (!currentClinic?.id) return;
+    
+    setLoadingValidation(true);
+    
+    try {
+      const { error } = await supabase
+        .from('clinics')
+        .update({ enforce_schedule_validation: enabled })
+        .eq('id', currentClinic.id);
+      
+      if (error) throw error;
+      
+      setEnforceScheduleValidation(enabled);
+      toast({
+        title: enabled ? "Validação ativada" : "Validação desativada",
+        description: enabled 
+          ? "Agendamentos fora do horário do profissional serão bloqueados."
+          : "Agendamentos serão permitidos em qualquer horário.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message || "Não foi possível atualizar a configuração.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingValidation(false);
+    }
+  };
 
   const bookingPath = currentClinic?.slug ? `/agendar/${currentClinic.slug}` : "/agendar";
   const bookingLink = `${window.location.origin}${bookingPath}`;
@@ -147,6 +203,47 @@ export default function SettingsPage() {
               <Input id="closeTime" type="time" defaultValue="18:00" />
             </div>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Schedule Validation */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <ShieldCheck className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Validação de Horários</CardTitle>
+              <CardDescription>
+                Controle de agendamentos fora do expediente
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-foreground">Bloquear agendamentos fora do horário</p>
+              <p className="text-sm text-muted-foreground">
+                Quando ativado, impede agendamentos fora dos dias e horários configurados para cada profissional
+              </p>
+            </div>
+            <Switch
+              checked={enforceScheduleValidation}
+              onCheckedChange={handleToggleScheduleValidation}
+              disabled={loadingValidation}
+            />
+          </div>
+          
+          {enforceScheduleValidation && (
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
+              <p className="text-sm text-amber-800 dark:text-amber-200">
+                ⚠️ <strong>Atenção:</strong> Esta regra se aplica a todos os usuários, 
+                incluindo profissionais, atendentes e administradores.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
