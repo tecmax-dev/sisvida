@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 export type SpecialtyCategory = 'medical' | 'dental' | 'aesthetic' | 'therapy' | 'massage';
@@ -16,6 +16,12 @@ export interface ProfessionalSpecialty {
   id: string;
   specialty_id: string;
   specialty: Specialty;
+}
+
+export interface GroupedSpecialties {
+  category: SpecialtyCategory;
+  label: string;
+  specialties: Specialty[];
 }
 
 const CATEGORY_LABELS: Record<SpecialtyCategory, string> = {
@@ -54,7 +60,8 @@ export function useSpecialties() {
     }
   };
 
-  const getSpecialtiesByCategory = () => {
+  // Memoized grouped specialties - stable reference
+  const groupedSpecialties = useMemo((): GroupedSpecialties[] => {
     const grouped: Record<SpecialtyCategory, Specialty[]> = {
       medical: [],
       dental: [],
@@ -64,7 +71,6 @@ export function useSpecialties() {
     };
 
     specialties.forEach((specialty) => {
-      // Validate category exists and is a valid category before grouping
       const category = specialty?.category;
       if (category && CATEGORY_ORDER.includes(category) && grouped[category]) {
         grouped[category].push(specialty);
@@ -76,7 +82,12 @@ export function useSpecialties() {
       label: CATEGORY_LABELS[category],
       specialties: grouped[category],
     }));
-  };
+  }, [specialties]);
+
+  // Keep the function for backwards compatibility
+  const getSpecialtiesByCategory = useCallback((): GroupedSpecialties[] => {
+    return groupedSpecialties;
+  }, [groupedSpecialties]);
 
   const fetchProfessionalSpecialties = async (professionalId: string): Promise<string[]> => {
     try {
@@ -149,23 +160,24 @@ export function useSpecialties() {
     }
   };
 
-  const getSpecialtyById = (id: string): Specialty | undefined => {
+  const getSpecialtyById = useCallback((id: string): Specialty | undefined => {
     return specialties.find((s) => s.id === id);
-  };
+  }, [specialties]);
 
-  const getRegistrationPrefix = (specialtyIds: string[]): string | null => {
+  const getRegistrationPrefix = useCallback((specialtyIds: string[]): string | null => {
     for (const id of specialtyIds) {
-      const specialty = getSpecialtyById(id);
+      const specialty = specialties.find((s) => s.id === id);
       if (specialty?.registration_prefix) {
         return specialty.registration_prefix;
       }
     }
     return null;
-  };
+  }, [specialties]);
 
   return {
     specialties,
     loading,
+    groupedSpecialties,
     getSpecialtiesByCategory,
     fetchProfessionalSpecialties,
     saveProfessionalSpecialties,
