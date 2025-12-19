@@ -1031,6 +1031,108 @@ export type Database = {
         }
         Relationships: []
       }
+      subscription_plans: {
+        Row: {
+          created_at: string
+          description: string | null
+          external_plan_id: string | null
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          is_default_trial: boolean | null
+          is_public: boolean | null
+          max_professionals: number
+          monthly_price: number
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          external_plan_id?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_default_trial?: boolean | null
+          is_public?: boolean | null
+          max_professionals?: number
+          monthly_price?: number
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          external_plan_id?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          is_default_trial?: boolean | null
+          is_public?: boolean | null
+          max_professionals?: number
+          monthly_price?: number
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          canceled_at: string | null
+          clinic_id: string
+          created_at: string
+          current_period_end: string | null
+          current_period_start: string | null
+          external_subscription_id: string | null
+          id: string
+          plan_id: string
+          status: string
+          trial_ends_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          canceled_at?: string | null
+          clinic_id: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          external_subscription_id?: string | null
+          id?: string
+          plan_id: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          canceled_at?: string | null
+          clinic_id?: string
+          created_at?: string
+          current_period_end?: string | null
+          current_period_start?: string | null
+          external_subscription_id?: string | null
+          id?: string
+          plan_id?: string
+          status?: string
+          trial_ends_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       super_admins: {
         Row: {
           created_at: string

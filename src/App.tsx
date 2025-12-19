@@ -33,6 +33,8 @@ import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
 import UsersManagement from "./pages/admin/UsersManagement";
 import AuditLogsPage from "./pages/admin/AuditLogsPage";
+import PlansManagement from "./pages/admin/PlansManagement";
+import SubscriptionPage from "./pages/dashboard/SubscriptionPage";
 import { Button } from "./components/ui/button";
 
 const queryClient = new QueryClient();
@@ -117,6 +119,7 @@ const App = () => (
                 <Route index element={<SuperAdminDashboard />} />
                 <Route path="clinics" element={<ClinicsManagement />} />
                 <Route path="users" element={<UsersManagement />} />
+                <Route path="plans" element={<PlansManagement />} />
                 <Route path="audit" element={<AuditLogsPage />} />
               </Route>
               {/* Dashboard Routes */}
@@ -139,6 +142,7 @@ const App = () => (
                 <Route path="anamnesis-dynamic" element={<DynamicAnamnesisPage />} />
                 <Route path="waiting-list" element={<WaitingListPage />} />
                 <Route path="reports" element={<ReportsPage />} />
+                <Route path="subscription" element={<SubscriptionPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="users" element={<UsersManagementPage />} />
               </Route>

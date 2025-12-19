@@ -9,7 +9,8 @@ import {
   LogOut, 
   Shield,
   ChevronRight,
-  ScrollText
+  ScrollText,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -17,6 +18,7 @@ const adminNavItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/clinics", label: "Clínicas", icon: Building2 },
   { path: "/admin/users", label: "Usuários", icon: Users },
+  { path: "/admin/plans", label: "Planos", icon: CreditCard },
   { path: "/admin/audit", label: "Auditoria", icon: ScrollText },
 ];
 
