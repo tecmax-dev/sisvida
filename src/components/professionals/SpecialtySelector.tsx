@@ -181,32 +181,29 @@ export function SpecialtySelector({
                       <div
                         key={specialty.id}
                         className={cn(
-                          "flex items-center gap-2 p-1.5 rounded-md cursor-pointer hover:bg-muted transition-colors",
+                          "flex items-center gap-2 p-1.5 rounded-md hover:bg-muted transition-colors",
                           isSelected && "bg-muted",
                           disabled && "cursor-not-allowed opacity-60"
                         )}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggle(specialty.id);
-                        }}
                       >
                         <Checkbox
                           id={specialty.id}
                           checked={isSelected}
                           disabled={disabled}
                           onCheckedChange={() => {
-                            // Handler is on parent div, prevent double toggle
+                            handleToggle(specialty.id);
                           }}
                           onClick={(e) => e.stopPropagation()}
-                          className="pointer-events-none"
                         />
-                        <label 
-                          htmlFor={specialty.id} 
-                          className="flex-1 text-sm cursor-pointer"
-                          onClick={(e) => e.stopPropagation()}
+                        <span 
+                          className="flex-1 text-sm cursor-pointer select-none"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggle(specialty.id);
+                          }}
                         >
                           {specialty.name}
-                        </label>
+                        </span>
                         {specialty.registration_prefix && (
                           <span className="text-xs text-muted-foreground">
                             {specialty.registration_prefix}
