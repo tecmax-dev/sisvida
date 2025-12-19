@@ -52,6 +52,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { ScheduleDialog } from "@/components/professionals/ScheduleDialog";
+import { SpecialtySelector } from "@/components/professionals/SpecialtySelector";
+import { useSpecialties } from "@/hooks/useSpecialties";
 import { Json } from "@/integrations/supabase/types";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -66,6 +68,11 @@ interface Professional {
   schedule: Json;
   user_id: string | null;
   email: string | null;
+  specialtyNames?: string[];
+}
+
+interface ProfessionalSpecialtyData {
+  specialty: { id: string; name: string } | null;
 }
 
 interface ClinicUser {
@@ -95,6 +102,7 @@ export default function ProfessionalsPage() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { saveProfessionalSpecialties, fetchProfessionalSpecialties, getSpecialtyById, getRegistrationPrefix } = useSpecialties();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [clinicUsers, setClinicUsers] = useState<ClinicUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,7 +120,7 @@ export default function ProfessionalsPage() {
   
   // Form state for create
   const [formName, setFormName] = useState("");
-  const [formSpecialty, setFormSpecialty] = useState("");
+  const [formSpecialtyIds, setFormSpecialtyIds] = useState<string[]>([]);
   const [formCRM, setFormCRM] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formEmail, setFormEmail] = useState("");
@@ -121,7 +129,7 @@ export default function ProfessionalsPage() {
 
   // Form state for edit
   const [editName, setEditName] = useState("");
-  const [editSpecialty, setEditSpecialty] = useState("");
+  const [editSpecialtyIds, setEditSpecialtyIds] = useState<string[]>([]);
   const [editCRM, setEditCRM] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -148,7 +156,24 @@ export default function ProfessionalsPage() {
         .order('name');
 
       if (error) throw error;
-      setProfessionals(data || []);
+      
+      // Fetch specialties for each professional
+      const professionalsWithSpecialties = await Promise.all(
+        (data || []).map(async (prof) => {
+          const { data: specData } = await supabase
+            .from('professional_specialties')
+            .select('specialty:specialties(id, name)')
+            .eq('professional_id', prof.id);
+          
+          const specialtyNames = (specData || [])
+            .map((s: ProfessionalSpecialtyData) => s.specialty?.name)
+            .filter((n): n is string => !!n);
+          
+          return { ...prof, specialtyNames };
+        })
+      );
+      
+      setProfessionals(professionalsWithSpecialties);
     } catch (error) {
       console.error("Error fetching professionals:", error);
     } finally {
@@ -231,7 +256,6 @@ export default function ProfessionalsPage() {
     
     const validation = professionalSchema.safeParse({
       name: formName,
-      specialty: formSpecialty || undefined,
       registration_number: formCRM || undefined,
       phone: formPhone || undefined,
       email: formEmail || undefined,
@@ -253,19 +277,32 @@ export default function ProfessionalsPage() {
     setFormErrors({});
 
     try {
-      const { error } = await supabase
+      // Get display name from selected specialties
+      const specialtyNames = formSpecialtyIds
+        .map(id => getSpecialtyById(id)?.name)
+        .filter((n): n is string => !!n);
+      const specialtyDisplay = specialtyNames.join(', ') || null;
+      
+      const { data: newProfessional, error } = await supabase
         .from('professionals')
         .insert({
           clinic_id: currentClinic.id,
           name: formName.trim(),
-          specialty: formSpecialty.trim() || null,
+          specialty: specialtyDisplay,
           registration_number: formCRM.trim() || null,
           phone: formPhone.trim() || null,
           email: formEmail.trim() || null,
           user_id: formUserId || null,
-        });
+        })
+        .select('id')
+        .single();
 
       if (error) throw error;
+
+      // Save professional specialties
+      if (newProfessional && formSpecialtyIds.length > 0) {
+        await saveProfessionalSpecialties(newProfessional.id, formSpecialtyIds);
+      }
 
       toast({
         title: "Profissional cadastrado",
@@ -290,7 +327,7 @@ export default function ProfessionalsPage() {
 
   const resetForm = () => {
     setFormName("");
-    setFormSpecialty("");
+    setFormSpecialtyIds([]);
     setFormCRM("");
     setFormPhone("");
     setFormEmail("");
@@ -309,15 +346,19 @@ export default function ProfessionalsPage() {
     setScheduleViewDialogOpen(true);
   };
 
-  const handleOpenEdit = (professional: Professional) => {
+  const handleOpenEdit = async (professional: Professional) => {
     setSelectedProfessional(professional);
     setEditName(professional.name);
-    setEditSpecialty(professional.specialty || "");
     setEditCRM(professional.registration_number || "");
     setEditPhone(professional.phone || "");
     setEditEmail(professional.email || "");
     setEditUserId(professional.user_id || "");
     setEditErrors({});
+    
+    // Load existing specialties
+    const existingSpecialtyIds = await fetchProfessionalSpecialties(professional.id);
+    setEditSpecialtyIds(existingSpecialtyIds);
+    
     setEditDialogOpen(true);
   };
 
@@ -327,7 +368,6 @@ export default function ProfessionalsPage() {
 
     const validation = professionalSchema.safeParse({
       name: editName,
-      specialty: editSpecialty || undefined,
       registration_number: editCRM || undefined,
       phone: editPhone || undefined,
       email: editEmail || undefined,
@@ -347,11 +387,17 @@ export default function ProfessionalsPage() {
     setEditErrors({});
 
     try {
+      // Get display name from selected specialties
+      const specialtyNames = editSpecialtyIds
+        .map(id => getSpecialtyById(id)?.name)
+        .filter((n): n is string => !!n);
+      const specialtyDisplay = specialtyNames.join(', ') || null;
+      
       const { error } = await supabase
         .from('professionals')
         .update({
           name: editName.trim(),
-          specialty: editSpecialty.trim() || null,
+          specialty: specialtyDisplay,
           registration_number: editCRM.trim() || null,
           phone: editPhone.trim() || null,
           email: editEmail.trim() || null,
@@ -360,6 +406,9 @@ export default function ProfessionalsPage() {
         .eq('id', selectedProfessional.id);
 
       if (error) throw error;
+
+      // Save professional specialties
+      await saveProfessionalSpecialties(selectedProfessional.id, editSpecialtyIds);
 
       toast({
         title: "Profissional atualizado",
@@ -470,16 +519,10 @@ export default function ProfessionalsPage() {
                   <p className="mt-1 text-sm text-destructive">{formErrors.name}</p>
                 )}
               </div>
-              <div>
-                <Label htmlFor="profSpecialty">Especialidade</Label>
-                <Input
-                  id="profSpecialty"
-                  value={formSpecialty}
-                  onChange={(e) => setFormSpecialty(e.target.value)}
-                  placeholder="Clínico Geral"
-                  className="mt-1.5"
-                />
-              </div>
+              <SpecialtySelector
+                selectedIds={formSpecialtyIds}
+                onChange={setFormSpecialtyIds}
+              />
               <div>
                 <Label htmlFor="profCRM">CRM / Registro</Label>
                 <Input
@@ -747,15 +790,10 @@ export default function ProfessionalsPage() {
                 <p className="mt-1 text-sm text-destructive">{editErrors.name}</p>
               )}
             </div>
-            <div>
-              <Label htmlFor="editProfSpecialty">Especialidade</Label>
-              <Input
-                id="editProfSpecialty"
-                value={editSpecialty}
-                onChange={(e) => setEditSpecialty(e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
+            <SpecialtySelector
+              selectedIds={editSpecialtyIds}
+              onChange={setEditSpecialtyIds}
+            />
             <div>
               <Label htmlFor="editProfCRM">CRM / Registro</Label>
               <Input

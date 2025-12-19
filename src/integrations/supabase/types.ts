@@ -664,6 +664,42 @@ export type Database = {
           },
         ]
       }
+      professional_specialties: {
+        Row: {
+          created_at: string | null
+          id: string
+          professional_id: string
+          specialty_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          professional_id: string
+          specialty_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          professional_id?: string
+          specialty_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_specialties_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_specialties_specialty_id_fkey"
+            columns: ["specialty_id"]
+            isOneToOne: false
+            referencedRelation: "specialties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professionals: {
         Row: {
           appointment_duration: number | null
@@ -750,6 +786,36 @@ export type Database = {
           phone?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      specialties: {
+        Row: {
+          category: Database["public"]["Enums"]["specialty_category"]
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_dental: boolean | null
+          name: string
+          registration_prefix: string | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["specialty_category"]
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_dental?: boolean | null
+          name: string
+          registration_prefix?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["specialty_category"]
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_dental?: boolean | null
+          name?: string
+          registration_prefix?: string | null
         }
         Relationships: []
       }
@@ -898,6 +964,12 @@ export type Database = {
         | "no_show"
         | "in_progress"
       appointment_type: "first_visit" | "return" | "exam" | "procedure"
+      specialty_category:
+        | "medical"
+        | "dental"
+        | "aesthetic"
+        | "therapy"
+        | "massage"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1041,6 +1113,13 @@ export const Constants = {
         "in_progress",
       ],
       appointment_type: ["first_visit", "return", "exam", "procedure"],
+      specialty_category: [
+        "medical",
+        "dental",
+        "aesthetic",
+        "therapy",
+        "massage",
+      ],
     },
   },
 } as const
