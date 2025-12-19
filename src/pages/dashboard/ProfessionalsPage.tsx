@@ -10,6 +10,8 @@ import {
   Edit,
   CalendarDays,
   UserX,
+  AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +48,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +58,7 @@ import { z } from "zod";
 import { ScheduleDialog } from "@/components/professionals/ScheduleDialog";
 import { SpecialtySelector } from "@/components/professionals/SpecialtySelector";
 import { useSpecialties } from "@/hooks/useSpecialties";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Json } from "@/integrations/supabase/types";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -110,6 +115,14 @@ export default function ProfessionalsPage() {
     getSpecialtyById,
     getRegistrationPrefix,
   } = useSpecialties();
+  const {
+    subscription,
+    loading: loadingSubscription,
+    canAddProfessional,
+    isAtLimit,
+    professionalCount: subProfessionalCount,
+    refetch: refetchSubscription,
+  } = useSubscription();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [clinicUsers, setClinicUsers] = useState<ClinicUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -328,7 +341,27 @@ export default function ProfessionalsPage() {
       setDialogOpen(false);
       resetForm();
       fetchProfessionals();
+      refetchSubscription();
     } catch (error: any) {
+      // Handle professional limit error
+      if (error.message?.includes('LIMITE_PROFISSIONAIS')) {
+        const match = error.message.match(/LIMITE_PROFISSIONAIS: (.+)/);
+        toast({
+          title: "Limite de profissionais atingido",
+          description: match ? match[1] : "Você atingiu o limite de profissionais do seu plano. Faça upgrade para adicionar mais.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (error.message?.includes('ASSINATURA_INVALIDA')) {
+        const match = error.message.match(/ASSINATURA_INVALIDA: (.+)/);
+        toast({
+          title: "Assinatura inválida",
+          description: match ? match[1] : "Sua assinatura não está ativa.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
         title: "Erro ao cadastrar",
         description: error.message || "Tente novamente.",
@@ -506,18 +539,46 @@ export default function ProfessionalsPage() {
     return format(date, "dd/MM", { locale: ptBR });
   };
 
+  const maxProfessionals = subscription?.plan?.max_professionals || 999;
+  const activeProfessionals = professionals.filter(p => p.is_active).length;
+  const usagePercentage = subscription ? (activeProfessionals / maxProfessionals) * 100 : 0;
+
   return (
     <div className="space-y-6">
+      {/* Limit Alert */}
+      {subscription && isAtLimit && (
+        <Alert className="border-yellow-200 bg-yellow-50 dark:bg-yellow-950 dark:border-yellow-800">
+          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+          <AlertDescription className="flex items-center justify-between">
+            <span className="text-yellow-800 dark:text-yellow-200">
+              Você atingiu o limite de {maxProfessionals} profissional(is) do plano {subscription.plan.name}.
+            </span>
+            <Button size="sm" variant="outline" onClick={() => navigate('/dashboard/subscription')}>
+              <Sparkles className="h-4 w-4 mr-1" />
+              Fazer upgrade
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Profissionais</h1>
           <p className="text-muted-foreground">
             Gerencie os profissionais da clínica
           </p>
+          {subscription && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">
+                {activeProfessionals}/{maxProfessionals} profissionais
+              </span>
+              <Progress value={usagePercentage} className="h-2 w-24" />
+            </div>
+          )}
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
-            <Button variant="hero">
+            <Button variant="hero" disabled={!canAddProfessional && !!subscription}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Profissional
             </Button>

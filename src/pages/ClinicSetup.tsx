@@ -113,6 +113,27 @@ export default function ClinicSetup() {
 
       if (roleError) throw roleError;
 
+      // Create trial subscription automatically
+      const { data: trialPlan } = await supabase
+        .from('subscription_plans')
+        .select('id')
+        .eq('is_default_trial', true)
+        .single();
+
+      if (trialPlan) {
+        const trialEndsAt = new Date();
+        trialEndsAt.setDate(trialEndsAt.getDate() + 14); // 14 days trial
+
+        await supabase.from('subscriptions').insert({
+          clinic_id: clinic.id,
+          plan_id: trialPlan.id,
+          status: 'trial',
+          trial_ends_at: trialEndsAt.toISOString(),
+          current_period_start: new Date().toISOString(),
+          current_period_end: trialEndsAt.toISOString(),
+        });
+      }
+
       toast({
         title: "Clínica criada com sucesso!",
         description: "Você já pode começar a usar o sistema.",

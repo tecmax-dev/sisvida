@@ -43,6 +43,7 @@ const navItems = [
   { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera" },
   { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios" },
   { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios" },
+  { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano" },
   { href: "/dashboard/settings", icon: Settings, label: "Configurações" },
 ];
 
