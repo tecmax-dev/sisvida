@@ -77,10 +77,67 @@ interface InsurancePlan {
   name: string;
 }
 
+// Validação de CPF brasileiro
+const isValidCPF = (cpf: string): boolean => {
+  const cleaned = cpf.replace(/\D/g, '');
+  
+  if (cleaned.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(cleaned)) return false; // CPFs com todos dígitos iguais
+  
+  // Validação do primeiro dígito verificador
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(cleaned.charAt(i)) * (10 - i);
+  }
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10) remainder = 0;
+  if (remainder !== parseInt(cleaned.charAt(9))) return false;
+  
+  // Validação do segundo dígito verificador
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(cleaned.charAt(i)) * (11 - i);
+  }
+  remainder = (sum * 10) % 11;
+  if (remainder === 10) remainder = 0;
+  if (remainder !== parseInt(cleaned.charAt(10))) return false;
+  
+  return true;
+};
+
+// Formatação de CPF: 000.000.000-00
+const formatCPF = (value: string): string => {
+  const cleaned = value.replace(/\D/g, '');
+  return cleaned
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+    .substring(0, 14);
+};
+
+// Formatação de telefone: (00) 00000-0000
+const formatPhone = (value: string): string => {
+  const cleaned = value.replace(/\D/g, '');
+  return cleaned
+    .replace(/(\d{2})(\d)/, '($1) $2')
+    .replace(/(\d{5})(\d)/, '$1-$2')
+    .substring(0, 15);
+};
+
 const patientSchema = z.object({
   name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
   phone: z.string().min(10, "Telefone inválido").max(20),
   email: z.string().email("Email inválido").optional().or(z.literal("")),
+  cpf: z.string()
+    .optional()
+    .or(z.literal(""))
+    .refine((val) => !val || val.replace(/\D/g, '').length === 0 || isValidCPF(val), {
+      message: "CPF inválido"
+    }),
+  birth_date: z.string().optional().or(z.literal("")),
+  address: z.string().max(200, "Endereço deve ter no máximo 200 caracteres").optional().or(z.literal("")),
+  insurance_plan_id: z.string().optional().or(z.literal("")),
+  notes: z.string().max(500, "Observações deve ter no máximo 500 caracteres").optional().or(z.literal("")),
 });
 
 export default function PatientsPage() {
@@ -106,7 +163,12 @@ export default function PatientsPage() {
   const [formName, setFormName] = useState("");
   const [formPhone, setFormPhone] = useState("");
   const [formEmail, setFormEmail] = useState("");
-  const [formErrors, setFormErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
+  const [formCpf, setFormCpf] = useState("");
+  const [formBirthDate, setFormBirthDate] = useState("");
+  const [formAddress, setFormAddress] = useState("");
+  const [formInsurancePlanId, setFormInsurancePlanId] = useState("");
+  const [formNotes, setFormNotes] = useState("");
+  const [formErrors, setFormErrors] = useState<{ name?: string; phone?: string; email?: string; cpf?: string; address?: string; notes?: string }>({});
 
   // Form state for edit
   const [editName, setEditName] = useState("");
@@ -117,7 +179,7 @@ export default function PatientsPage() {
   const [editBirthDate, setEditBirthDate] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [editInsurancePlanId, setEditInsurancePlanId] = useState("");
-  const [editErrors, setEditErrors] = useState<{ name?: string; phone?: string; email?: string }>({});
+  const [editErrors, setEditErrors] = useState<{ name?: string; phone?: string; email?: string; cpf?: string; address?: string; notes?: string }>({});
 
   useEffect(() => {
     if (currentClinic) {
@@ -186,6 +248,11 @@ export default function PatientsPage() {
       name: formName,
       phone: formPhone,
       email: formEmail || undefined,
+      cpf: formCpf || undefined,
+      birth_date: formBirthDate || undefined,
+      address: formAddress || undefined,
+      insurance_plan_id: formInsurancePlanId || undefined,
+      notes: formNotes || undefined,
     });
     
     if (!validation.success) {
@@ -209,8 +276,13 @@ export default function PatientsPage() {
         .insert({
           clinic_id: currentClinic.id,
           name: formName.trim(),
-          phone: formPhone.trim(),
+          phone: formPhone.replace(/\D/g, '').trim(),
           email: formEmail.trim() || null,
+          cpf: formCpf.replace(/\D/g, '').trim() || null,
+          birth_date: formBirthDate || null,
+          address: formAddress.trim() || null,
+          insurance_plan_id: formInsurancePlanId || null,
+          notes: formNotes.trim() || null,
         });
 
       if (error) throw error;
@@ -224,6 +296,11 @@ export default function PatientsPage() {
       setFormName("");
       setFormPhone("");
       setFormEmail("");
+      setFormCpf("");
+      setFormBirthDate("");
+      setFormAddress("");
+      setFormInsurancePlanId("");
+      setFormNotes("");
       fetchPatients();
     } catch (error: any) {
       toast({
@@ -268,6 +345,11 @@ export default function PatientsPage() {
       name: editName,
       phone: editPhone,
       email: editEmail || undefined,
+      cpf: editCpf || undefined,
+      birth_date: editBirthDate || undefined,
+      address: editAddress || undefined,
+      insurance_plan_id: editInsurancePlanId || undefined,
+      notes: editNotes || undefined,
     });
     
     if (!validation.success) {
@@ -288,9 +370,9 @@ export default function PatientsPage() {
         .from('patients')
         .update({
           name: editName.trim(),
-          phone: editPhone.trim(),
+          phone: editPhone.replace(/\D/g, '').trim(),
           email: editEmail.trim() || null,
-          cpf: editCpf.trim() || null,
+          cpf: editCpf.replace(/\D/g, '').trim() || null,
           address: editAddress.trim() || null,
           birth_date: editBirthDate || null,
           notes: editNotes.trim() || null,
@@ -398,50 +480,118 @@ export default function PatientsPage() {
               Novo Paciente
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Cadastrar Paciente</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreatePatient} className="space-y-4">
-              <div>
-                <Label htmlFor="patientName">Nome *</Label>
-                <Input
-                  id="patientName"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Nome completo"
-                  className={`mt-1.5 ${formErrors.name ? "border-destructive" : ""}`}
-                />
-                {formErrors.name && (
-                  <p className="mt-1 text-sm text-destructive">{formErrors.name}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="patientPhone">Telefone *</Label>
-                <Input
-                  id="patientPhone"
-                  value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
-                  placeholder="(11) 99999-9999"
-                  className={`mt-1.5 ${formErrors.phone ? "border-destructive" : ""}`}
-                />
-                {formErrors.phone && (
-                  <p className="mt-1 text-sm text-destructive">{formErrors.phone}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="patientEmail">Email</Label>
-                <Input
-                  id="patientEmail"
-                  type="email"
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                  placeholder="email@exemplo.com"
-                  className={`mt-1.5 ${formErrors.email ? "border-destructive" : ""}`}
-                />
-                {formErrors.email && (
-                  <p className="mt-1 text-sm text-destructive">{formErrors.email}</p>
-                )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="sm:col-span-2">
+                  <Label htmlFor="patientName">Nome *</Label>
+                  <Input
+                    id="patientName"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="Nome completo"
+                    className={`mt-1.5 ${formErrors.name ? "border-destructive" : ""}`}
+                  />
+                  {formErrors.name && (
+                    <p className="mt-1 text-sm text-destructive">{formErrors.name}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="patientPhone">Telefone *</Label>
+                  <Input
+                    id="patientPhone"
+                    value={formPhone}
+                    onChange={(e) => setFormPhone(formatPhone(e.target.value))}
+                    placeholder="(11) 99999-9999"
+                    className={`mt-1.5 ${formErrors.phone ? "border-destructive" : ""}`}
+                  />
+                  {formErrors.phone && (
+                    <p className="mt-1 text-sm text-destructive">{formErrors.phone}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="patientCpf">CPF</Label>
+                  <Input
+                    id="patientCpf"
+                    value={formCpf}
+                    onChange={(e) => setFormCpf(formatCPF(e.target.value))}
+                    placeholder="000.000.000-00"
+                    className={`mt-1.5 ${formErrors.cpf ? "border-destructive" : ""}`}
+                  />
+                  {formErrors.cpf && (
+                    <p className="mt-1 text-sm text-destructive">{formErrors.cpf}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="patientEmail">Email</Label>
+                  <Input
+                    id="patientEmail"
+                    type="email"
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                    className={`mt-1.5 ${formErrors.email ? "border-destructive" : ""}`}
+                  />
+                  {formErrors.email && (
+                    <p className="mt-1 text-sm text-destructive">{formErrors.email}</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="patientBirthDate">Data de Nascimento</Label>
+                  <Input
+                    id="patientBirthDate"
+                    type="date"
+                    value={formBirthDate}
+                    onChange={(e) => setFormBirthDate(e.target.value)}
+                    className="mt-1.5"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="patientAddress">Endereço</Label>
+                  <Input
+                    id="patientAddress"
+                    value={formAddress}
+                    onChange={(e) => setFormAddress(e.target.value)}
+                    placeholder="Rua, número, bairro, cidade"
+                    className={`mt-1.5 ${formErrors.address ? "border-destructive" : ""}`}
+                  />
+                  {formErrors.address && (
+                    <p className="mt-1 text-sm text-destructive">{formErrors.address}</p>
+                  )}
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="patientInsurance">Plano de Saúde</Label>
+                  <Select value={formInsurancePlanId || "none"} onValueChange={(val) => setFormInsurancePlanId(val === "none" ? "" : val)}>
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue placeholder="Selecione (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {insurancePlans.map((plan) => (
+                        <SelectItem key={plan.id} value={plan.id}>
+                          {plan.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="sm:col-span-2">
+                  <Label htmlFor="patientNotes">Observações</Label>
+                  <Textarea
+                    id="patientNotes"
+                    value={formNotes}
+                    onChange={(e) => setFormNotes(e.target.value)}
+                    placeholder="Informações adicionais sobre o paciente"
+                    className={`mt-1.5 ${formErrors.notes ? "border-destructive" : ""}`}
+                    rows={3}
+                  />
+                  {formErrors.notes && (
+                    <p className="mt-1 text-sm text-destructive">{formErrors.notes}</p>
+                  )}
+                </div>
               </div>
               <div className="flex justify-end gap-3 pt-4">
                 <Button
@@ -682,7 +832,7 @@ export default function PatientsPage() {
               <Input
                 id="editPhone"
                 value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
+                onChange={(e) => setEditPhone(formatPhone(e.target.value))}
                 className={`mt-1.5 ${editErrors.phone ? "border-destructive" : ""}`}
               />
               {editErrors.phone && (
@@ -704,10 +854,13 @@ export default function PatientsPage() {
               <Input
                 id="editCpf"
                 value={editCpf}
-                onChange={(e) => setEditCpf(e.target.value)}
+                onChange={(e) => setEditCpf(formatCPF(e.target.value))}
                 placeholder="000.000.000-00"
-                className="mt-1.5"
+                className={`mt-1.5 ${editErrors.cpf ? "border-destructive" : ""}`}
               />
+              {editErrors.cpf && (
+                <p className="mt-1 text-sm text-destructive">{editErrors.cpf}</p>
+              )}
             </div>
             <div>
               <Label htmlFor="editBirthDate">Data de Nascimento</Label>
