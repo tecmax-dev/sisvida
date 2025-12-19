@@ -20,6 +20,8 @@ import {
   ClipboardList,
   Clock,
   UserCog,
+  FileEdit,
+  FilePlus2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -36,6 +38,8 @@ const navItems = [
   { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais" },
   { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário" },
   { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese" },
+  { href: "/dashboard/dynamic-anamnesis", icon: FilePlus2, label: "Anamnese Dinâmica" },
+  { href: "/dashboard/anamnese-templates", icon: FileEdit, label: "Templates de Anamnese" },
   { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera" },
   { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios" },
   { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios" },
