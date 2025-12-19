@@ -1,7 +1,6 @@
-import { useState, useEffect } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -10,13 +9,23 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronRight } from "lucide-react";
-import { useSpecialties, Specialty, SpecialtyCategory } from "@/hooks/useSpecialties";
+import {
+  Specialty,
+  SpecialtyCategory,
+} from "@/hooks/useSpecialties";
 import { cn } from "@/lib/utils";
 
 interface SpecialtySelectorProps {
   selectedIds: string[];
   onChange: (ids: string[]) => void;
+  specialties: Specialty[];
+  loading: boolean;
+  getSpecialtiesByCategory: () => {
+    category: SpecialtyCategory;
+    label: string;
+    specialties: Specialty[];
+  }[];
+  getSpecialtyById: (id: string) => Specialty | undefined;
   disabled?: boolean;
 }
 
@@ -31,16 +40,27 @@ const CATEGORY_COLORS: Record<SpecialtyCategory, string> = {
 export function SpecialtySelector({
   selectedIds,
   onChange,
+  specialties,
+  loading,
+  getSpecialtiesByCategory,
+  getSpecialtyById,
   disabled = false,
 }: SpecialtySelectorProps) {
-  const { specialties, loading, getSpecialtiesByCategory, getSpecialtyById } = useSpecialties();
   const [expandedCategories, setExpandedCategories] = useState<SpecialtyCategory[]>([]);
 
-  const groupedSpecialties = getSpecialtiesByCategory();
+  const groupedSpecialties = useMemo(() => {
+    try {
+      const grouped = getSpecialtiesByCategory?.();
+      return Array.isArray(grouped) ? grouped : [];
+    } catch (err) {
+      console.error("Erro ao agrupar especialidades:", err);
+      return [];
+    }
+  }, [getSpecialtiesByCategory]);
 
   const handleToggle = (specialtyId: string) => {
     if (disabled) return;
-    
+
     if (selectedIds.includes(specialtyId)) {
       onChange(selectedIds.filter((id) => id !== specialtyId));
     } else {
@@ -49,17 +69,15 @@ export function SpecialtySelector({
   };
 
   const toggleCategory = (category: SpecialtyCategory) => {
-    if (expandedCategories.includes(category)) {
-      setExpandedCategories(expandedCategories.filter((c) => c !== category));
-    } else {
-      setExpandedCategories([...expandedCategories, category]);
-    }
+    setExpandedCategories((prev) =>
+      prev.includes(category) ? prev.filter((c) => c !== category) : [...prev, category]
+    );
   };
 
   const getSelectedSpecialties = () => {
     return selectedIds
       .map((id) => getSpecialtyById(id))
-      .filter((s): s is Specialty => s !== undefined && s.category !== undefined);
+      .filter((s): s is Specialty => !!s && !!s.category);
   };
 
   if (loading) {
@@ -70,7 +88,6 @@ export function SpecialtySelector({
     );
   }
 
-  // Fallback if no specialties loaded
   if (!specialties || specialties.length === 0) {
     return (
       <div className="space-y-3">
@@ -82,11 +99,22 @@ export function SpecialtySelector({
     );
   }
 
+  // Defensive: if grouping fails, show a non-crashing UI instead of blank page
+  if (!groupedSpecialties || groupedSpecialties.length === 0) {
+    return (
+      <div className="space-y-3">
+        <Label>Especialidades</Label>
+        <div className="text-sm text-muted-foreground p-4 border rounded-md text-center">
+          Não foi possível carregar as especialidades.
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-3">
       <Label>Especialidades</Label>
-      
-      {/* Selected badges */}
+
       {selectedIds.length > 0 && (
         <div className="flex flex-wrap gap-1.5 p-2 bg-muted/50 rounded-md">
           {getSelectedSpecialties().map((specialty) => {
@@ -95,10 +123,7 @@ export function SpecialtySelector({
               <Badge
                 key={specialty.id}
                 variant="outline"
-                className={cn(
-                  "text-xs cursor-pointer hover:opacity-80",
-                  categoryColor
-                )}
+                className={cn("text-xs cursor-pointer hover:opacity-80", categoryColor)}
                 onClick={() => handleToggle(specialty.id)}
               >
                 {specialty.name}
@@ -109,7 +134,6 @@ export function SpecialtySelector({
         </div>
       )}
 
-      {/* Category list */}
       <ScrollArea className="h-[200px] border rounded-md p-2">
         <div className="space-y-1">
           {groupedSpecialties.map(({ category, label, specialties: catSpecialties }) => (
@@ -118,27 +142,30 @@ export function SpecialtySelector({
               open={expandedCategories.includes(category)}
               onOpenChange={() => toggleCategory(category)}
             >
-              <CollapsibleTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-between px-2 h-8"
-                  disabled={disabled}
-                >
-                  <span className="flex items-center gap-2">
-                    {expandedCategories.includes(category) ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronRight className="h-4 w-4" />
-                    )}
-                    {label}
-                  </span>
-                  <Badge variant="secondary" className="text-xs">
-                    {catSpecialties.filter((s) => selectedIds.includes(s.id)).length}/
-                    {catSpecialties.length}
-                  </Badge>
-                </Button>
+              <CollapsibleTrigger
+                disabled={disabled}
+                className={cn(
+                  "w-full",
+                  "flex items-center justify-between gap-2 rounded-md px-2 h-8",
+                  "text-sm text-foreground",
+                  "transition-colors hover:bg-muted",
+                  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  disabled && "cursor-not-allowed opacity-60"
+                )}
+              >
+                <span className="flex items-center gap-2">
+                  {expandedCategories.includes(category) ? (
+                    <ChevronDown className="h-4 w-4" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4" />
+                  )}
+                  {label}
+                </span>
+                <Badge variant="secondary" className="text-xs">
+                  {catSpecialties.filter((s) => selectedIds.includes(s.id)).length}/{catSpecialties.length}
+                </Badge>
               </CollapsibleTrigger>
+
               <CollapsibleContent className="pl-6 space-y-1 mt-1">
                 {catSpecialties.map((specialty) => (
                   <div
@@ -157,10 +184,7 @@ export function SpecialtySelector({
                       onCheckedChange={() => handleToggle(specialty.id)}
                       className="pointer-events-none"
                     />
-                    <label
-                      htmlFor={specialty.id}
-                      className="flex-1 text-sm cursor-pointer"
-                    >
+                    <label htmlFor={specialty.id} className="flex-1 text-sm cursor-pointer">
                       {specialty.name}
                     </label>
                     {specialty.registration_prefix && (
