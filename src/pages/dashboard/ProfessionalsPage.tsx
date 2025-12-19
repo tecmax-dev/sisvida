@@ -102,7 +102,15 @@ export default function ProfessionalsPage() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const { saveProfessionalSpecialties, fetchProfessionalSpecialties, getSpecialtyById, getRegistrationPrefix } = useSpecialties();
+  const {
+    specialties,
+    loading: loadingSpecialties,
+    saveProfessionalSpecialties,
+    fetchProfessionalSpecialties,
+    getSpecialtyById,
+    getRegistrationPrefix,
+    getSpecialtiesByCategory,
+  } = useSpecialties();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [clinicUsers, setClinicUsers] = useState<ClinicUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -536,6 +544,10 @@ export default function ProfessionalsPage() {
               <SpecialtySelector
                 selectedIds={formSpecialtyIds}
                 onChange={setFormSpecialtyIds}
+                specialties={specialties}
+                loading={loadingSpecialties}
+                getSpecialtiesByCategory={getSpecialtiesByCategory}
+                getSpecialtyById={getSpecialtyById}
               />
               <div>
                 <Label htmlFor="profCRM">CRM / Registro</Label>
@@ -807,6 +819,10 @@ export default function ProfessionalsPage() {
             <SpecialtySelector
               selectedIds={editSpecialtyIds}
               onChange={setEditSpecialtyIds}
+              specialties={specialties}
+              loading={loadingSpecialties}
+              getSpecialtiesByCategory={getSpecialtiesByCategory}
+              getSpecialtyById={getSpecialtyById}
             />
             <div>
               <Label htmlFor="editProfCRM">CRM / Registro</Label>
