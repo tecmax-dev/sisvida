@@ -1,0 +1,566 @@
+import { useState, useEffect } from "react";
+import {
+  ClipboardList,
+  Plus,
+  Search,
+  User,
+  Loader2,
+  FileText,
+  ChevronRight,
+  Clock,
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AnamneseResponseForm,
+  Answer,
+  Question,
+  validateAnswers,
+} from "@/components/anamnesis/AnamneseResponseForm";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface Patient {
+  id: string;
+  name: string;
+  phone: string;
+}
+
+interface Template {
+  id: string;
+  title: string;
+  description: string | null;
+}
+
+interface Response {
+  id: string;
+  template_id: string;
+  template_title: string;
+  created_at: string;
+}
+
+export default function DynamicAnamnesisPage() {
+  const { currentClinic, user } = useAuth();
+  const { toast } = useToast();
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  const [patientResponses, setPatientResponses] = useState<Response[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Dialog states
+  const [newResponseDialogOpen, setNewResponseDialogOpen] = useState(false);
+  const [viewResponseDialogOpen, setViewResponseDialogOpen] = useState(false);
+
+  // Form state
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  // View state
+  const [viewingResponse, setViewingResponse] = useState<Response | null>(null);
+  const [viewQuestions, setViewQuestions] = useState<Question[]>([]);
+  const [viewAnswers, setViewAnswers] = useState<Answer[]>([]);
+
+  useEffect(() => {
+    if (currentClinic) {
+      fetchPatients();
+      fetchTemplates();
+    }
+  }, [currentClinic]);
+
+  useEffect(() => {
+    if (selectedPatient) {
+      fetchPatientResponses();
+    }
+  }, [selectedPatient]);
+
+  useEffect(() => {
+    if (selectedTemplateId) {
+      fetchTemplateQuestions(selectedTemplateId);
+    }
+  }, [selectedTemplateId]);
+
+  const fetchPatients = async () => {
+    if (!currentClinic) return;
+
+    const { data } = await supabase
+      .from("patients")
+      .select("id, name, phone")
+      .eq("clinic_id", currentClinic.id)
+      .order("name");
+
+    setPatients(data || []);
+    setLoading(false);
+  };
+
+  const fetchTemplates = async () => {
+    if (!currentClinic) return;
+
+    const { data } = await supabase
+      .from("anamnese_templates")
+      .select("id, title, description")
+      .eq("clinic_id", currentClinic.id)
+      .eq("is_active", true)
+      .order("title");
+
+    setTemplates(data || []);
+  };
+
+  const fetchPatientResponses = async () => {
+    if (!currentClinic || !selectedPatient) return;
+
+    const { data } = await supabase
+      .from("anamnese_responses")
+      .select(`
+        id,
+        template_id,
+        created_at,
+        anamnese_templates (
+          title
+        )
+      `)
+      .eq("clinic_id", currentClinic.id)
+      .eq("patient_id", selectedPatient.id)
+      .order("created_at", { ascending: false });
+
+    const responses: Response[] = (data || []).map((r: any) => ({
+      id: r.id,
+      template_id: r.template_id,
+      template_title: r.anamnese_templates?.title || "Template removido",
+      created_at: r.created_at,
+    }));
+
+    setPatientResponses(responses);
+  };
+
+  const fetchTemplateQuestions = async (templateId: string) => {
+    setLoadingQuestions(true);
+    try {
+      const { data: questionsData } = await supabase
+        .from("anamnese_questions")
+        .select("*")
+        .eq("template_id", templateId)
+        .order("order_index");
+
+      const questionsWithOptions = await Promise.all(
+        (questionsData || []).map(async (q) => {
+          const { data: optionsData } = await supabase
+            .from("anamnese_question_options")
+            .select("*")
+            .eq("question_id", q.id)
+            .order("order_index");
+
+          return {
+            id: q.id,
+            question_text: q.question_text,
+            question_type: q.question_type as Question["question_type"],
+            is_required: q.is_required,
+            order_index: q.order_index,
+            options: (optionsData || []).map((o) => ({
+              id: o.id,
+              option_text: o.option_text,
+              order_index: o.order_index,
+            })),
+          };
+        })
+      );
+
+      setQuestions(questionsWithOptions);
+      setAnswers([]);
+      setErrors({});
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  const fetchResponseAnswers = async (responseId: string, templateId: string) => {
+    setLoadingQuestions(true);
+    try {
+      // Fetch questions
+      const { data: questionsData } = await supabase
+        .from("anamnese_questions")
+        .select("*")
+        .eq("template_id", templateId)
+        .order("order_index");
+
+      const questionsWithOptions = await Promise.all(
+        (questionsData || []).map(async (q) => {
+          const { data: optionsData } = await supabase
+            .from("anamnese_question_options")
+            .select("*")
+            .eq("question_id", q.id)
+            .order("order_index");
+
+          return {
+            id: q.id,
+            question_text: q.question_text,
+            question_type: q.question_type as Question["question_type"],
+            is_required: q.is_required,
+            order_index: q.order_index,
+            options: (optionsData || []).map((o) => ({
+              id: o.id,
+              option_text: o.option_text,
+              order_index: o.order_index,
+            })),
+          };
+        })
+      );
+
+      // Fetch answers
+      const { data: answersData } = await supabase
+        .from("anamnese_answers")
+        .select("*")
+        .eq("response_id", responseId);
+
+      const answers: Answer[] = (answersData || []).map((a) => ({
+        question_id: a.question_id,
+        answer_text: a.answer_text,
+        answer_option_ids: a.answer_option_ids,
+      }));
+
+      setViewQuestions(questionsWithOptions);
+      setViewAnswers(answers);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
+  const handleOpenNewResponse = () => {
+    setSelectedTemplateId("");
+    setQuestions([]);
+    setAnswers([]);
+    setErrors({});
+    setNewResponseDialogOpen(true);
+  };
+
+  const handleOpenViewResponse = async (response: Response) => {
+    setViewingResponse(response);
+    await fetchResponseAnswers(response.id, response.template_id);
+    setViewResponseDialogOpen(true);
+  };
+
+  const handleSaveResponse = async () => {
+    if (!currentClinic || !selectedPatient || !selectedTemplateId) return;
+
+    // Validate
+    const validationErrors = validateAnswers(questions, answers);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha todas as perguntas obrigatórias",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Create response
+      const { data: response, error: responseError } = await supabase
+        .from("anamnese_responses")
+        .insert({
+          clinic_id: currentClinic.id,
+          patient_id: selectedPatient.id,
+          template_id: selectedTemplateId,
+          professional_id: null, // Could be set if needed
+        })
+        .select()
+        .single();
+
+      if (responseError) throw responseError;
+
+      // Create answers
+      const answersToInsert = answers
+        .filter((a) => a.answer_text || (a.answer_option_ids && a.answer_option_ids.length > 0))
+        .map((a) => ({
+          response_id: response.id,
+          question_id: a.question_id,
+          answer_text: a.answer_text,
+          answer_option_ids: a.answer_option_ids,
+        }));
+
+      if (answersToInsert.length > 0) {
+        const { error: answersError } = await supabase
+          .from("anamnese_answers")
+          .insert(answersToInsert);
+
+        if (answersError) throw answersError;
+      }
+
+      toast({ title: "Anamnese salva com sucesso!" });
+      setNewResponseDialogOpen(false);
+      fetchPatientResponses();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const filteredPatients = patients.filter(
+    (p) =>
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.phone.includes(searchQuery)
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Anamnese Dinâmica</h1>
+          <p className="text-muted-foreground">
+            Aplique formulários personalizados aos pacientes
+          </p>
+        </div>
+      </div>
+
+      <div className="grid lg:grid-cols-3 gap-6">
+        {/* Patient List */}
+        <Card className="lg:col-span-1">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Pacientes
+            </CardTitle>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar paciente..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="max-h-[500px] overflow-y-auto space-y-2">
+            {loading ? (
+              <div className="text-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+              </div>
+            ) : filteredPatients.length > 0 ? (
+              filteredPatients.map((patient) => (
+                <div
+                  key={patient.id}
+                  onClick={() => setSelectedPatient(patient)}
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedPatient?.id === patient.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <p className="font-medium text-foreground">{patient.name}</p>
+                  <p className="text-sm text-muted-foreground">{patient.phone}</p>
+                </div>
+              ))
+            ) : (
+              <p className="text-center text-muted-foreground py-4">
+                Nenhum paciente encontrado
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Responses Card */}
+        <Card className="lg:col-span-2">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <ClipboardList className="h-5 w-5" />
+                {selectedPatient
+                  ? `Anamneses - ${selectedPatient.name}`
+                  : "Selecione um paciente"}
+              </CardTitle>
+              {selectedPatient && (
+                <CardDescription>
+                  {patientResponses.length} anamnese(s) registrada(s)
+                </CardDescription>
+              )}
+            </div>
+            {selectedPatient && templates.length > 0 && (
+              <Button onClick={handleOpenNewResponse}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Anamnese
+              </Button>
+            )}
+          </CardHeader>
+          <CardContent>
+            {!selectedPatient ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Selecione um paciente para ver as anamneses</p>
+              </div>
+            ) : templates.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="mb-2">Nenhum template de anamnese ativo</p>
+                <p className="text-sm">
+                  Crie templates na página de gerenciamento
+                </p>
+              </div>
+            ) : patientResponses.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p className="mb-4">Nenhuma anamnese registrada</p>
+                <Button onClick={handleOpenNewResponse}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar Anamnese
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {patientResponses.map((response) => (
+                  <div
+                    key={response.id}
+                    onClick={() => handleOpenViewResponse(response)}
+                    className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {response.template_title}
+                        </p>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          {format(new Date(response.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                            locale: ptBR,
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* New Response Dialog */}
+      <Dialog open={newResponseDialogOpen} onOpenChange={setNewResponseDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nova Anamnese - {selectedPatient?.name}</DialogTitle>
+            <DialogDescription>
+              Selecione um template e preencha as informações
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6">
+            <div>
+              <Label>Template *</Label>
+              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="Selecione um template" />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {loadingQuestions ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin" />
+              </div>
+            ) : selectedTemplateId && questions.length > 0 ? (
+              <AnamneseResponseForm
+                questions={questions}
+                answers={answers}
+                onAnswersChange={setAnswers}
+                errors={errors}
+              />
+            ) : selectedTemplateId ? (
+              <div className="text-center py-8 text-muted-foreground">
+                Este template não possui perguntas
+              </div>
+            ) : null}
+          </div>
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setNewResponseDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveResponse}
+              disabled={saving || !selectedTemplateId}
+            >
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Salvar Anamnese
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Response Dialog */}
+      <Dialog open={viewResponseDialogOpen} onOpenChange={setViewResponseDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{viewingResponse?.template_title}</DialogTitle>
+            <DialogDescription>
+              Preenchida em{" "}
+              {viewingResponse &&
+                format(new Date(viewingResponse.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                  locale: ptBR,
+                })}
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingQuestions ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : (
+            <AnamneseResponseForm
+              questions={viewQuestions}
+              answers={viewAnswers}
+              onAnswersChange={() => {}}
+              readOnly
+            />
+          )}
+
+          <div className="flex justify-end pt-4 border-t">
+            <Button onClick={() => setViewResponseDialogOpen(false)}>Fechar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

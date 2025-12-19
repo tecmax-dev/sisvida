@@ -24,6 +24,8 @@ import SettingsPage from "./pages/dashboard/SettingsPage";
 import MedicalRecordsPage from "./pages/dashboard/MedicalRecordsPage";
 import WaitingListPage from "./pages/dashboard/WaitingListPage";
 import AnamnesisPage from "./pages/dashboard/AnamnesisPage";
+import AnamneseTemplatesPage from "./pages/dashboard/AnamneseTemplatesPage";
+import DynamicAnamnesisPage from "./pages/dashboard/DynamicAnamnesisPage";
 import UsersManagementPage from "./pages/dashboard/UsersManagementPage";
 import NotFound from "./pages/NotFound";
 import { AdminLayout } from "./components/admin/AdminLayout";
@@ -133,6 +135,8 @@ const App = () => (
                 <Route path="insurance" element={<InsurancePage />} />
                 <Route path="medical-records" element={<MedicalRecordsPage />} />
                 <Route path="anamnesis" element={<AnamnesisPage />} />
+                <Route path="anamnesis-templates" element={<AnamneseTemplatesPage />} />
+                <Route path="anamnesis-dynamic" element={<DynamicAnamnesisPage />} />
                 <Route path="waiting-list" element={<WaitingListPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="settings" element={<SettingsPage />} />

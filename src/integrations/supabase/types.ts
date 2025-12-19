@@ -14,6 +14,215 @@ export type Database = {
   }
   public: {
     Tables: {
+      anamnese_answers: {
+        Row: {
+          answer_option_ids: string[] | null
+          answer_text: string | null
+          created_at: string
+          id: string
+          question_id: string
+          response_id: string
+        }
+        Insert: {
+          answer_option_ids?: string[] | null
+          answer_text?: string | null
+          created_at?: string
+          id?: string
+          question_id: string
+          response_id: string
+        }
+        Update: {
+          answer_option_ids?: string[] | null
+          answer_text?: string | null
+          created_at?: string
+          id?: string
+          question_id?: string
+          response_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnese_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "anamnese_questions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anamnese_answers_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "anamnese_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anamnese_question_options: {
+        Row: {
+          id: string
+          option_text: string
+          order_index: number
+          question_id: string
+        }
+        Insert: {
+          id?: string
+          option_text: string
+          order_index?: number
+          question_id: string
+        }
+        Update: {
+          id?: string
+          option_text?: string
+          order_index?: number
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnese_question_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "anamnese_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anamnese_questions: {
+        Row: {
+          created_at: string
+          id: string
+          is_required: boolean | null
+          order_index: number
+          question_text: string
+          question_type: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_required?: boolean | null
+          order_index?: number
+          question_text: string
+          question_type: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_required?: boolean | null
+          order_index?: number
+          question_text?: string
+          question_type?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnese_questions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "anamnese_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anamnese_responses: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          patient_id: string
+          professional_id: string | null
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          patient_id: string
+          professional_id?: string | null
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          patient_id?: string
+          professional_id?: string | null
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnese_responses_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anamnese_responses_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anamnese_responses_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anamnese_responses_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "anamnese_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anamnese_templates: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anamnese_templates_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anamnesis: {
         Row: {
           additional_notes: string | null
