@@ -12,9 +12,11 @@ type AuditAction =
   | 'create_super_admin'
   | 'remove_super_admin'
   | 'block_clinic'
-  | 'unblock_clinic';
+  | 'unblock_clinic'
+  | 'manage_clinic_plan'
+  | 'delete_clinic';
 
-type EntityType = 'clinic' | 'user' | 'super_admin' | 'system';
+type EntityType = 'clinic' | 'user' | 'super_admin' | 'system' | 'subscription';
 
 interface AuditLogParams {
   action: AuditAction;
