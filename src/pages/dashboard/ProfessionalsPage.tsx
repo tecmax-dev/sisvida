@@ -301,7 +301,14 @@ export default function ProfessionalsPage() {
 
       // Save professional specialties
       if (newProfessional && formSpecialtyIds.length > 0) {
-        await saveProfessionalSpecialties(newProfessional.id, formSpecialtyIds);
+        const result = await saveProfessionalSpecialties(newProfessional.id, formSpecialtyIds);
+        if (!result.success) {
+          toast({
+            title: "Aviso",
+            description: "Profissional criado, mas houve um problema ao salvar especialidades: " + result.error,
+            variant: "destructive",
+          });
+        }
       }
 
       toast({
@@ -408,7 +415,14 @@ export default function ProfessionalsPage() {
       if (error) throw error;
 
       // Save professional specialties
-      await saveProfessionalSpecialties(selectedProfessional.id, editSpecialtyIds);
+      const result = await saveProfessionalSpecialties(selectedProfessional.id, editSpecialtyIds);
+      if (!result.success) {
+        toast({
+          title: "Aviso",
+          description: "Profissional atualizado, mas houve um problema ao salvar especialidades: " + result.error,
+          variant: "destructive",
+        });
+      }
 
       toast({
         title: "Profissional atualizado",
