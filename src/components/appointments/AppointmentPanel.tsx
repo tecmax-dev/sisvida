@@ -43,6 +43,12 @@ interface Patient {
   birth_date: string | null;
 }
 
+interface Procedure {
+  id: string;
+  name: string;
+  price: number;
+}
+
 interface Appointment {
   id: string;
   patient_id: string;
@@ -55,6 +61,8 @@ interface Appointment {
   started_at: string | null;
   completed_at: string | null;
   duration_minutes: number | null;
+  procedure_id: string | null;
+  procedure?: Procedure | null;
   patient: Patient;
 }
 
@@ -278,6 +286,28 @@ export function AppointmentPanel({
         variant: "destructive",
       });
     } else {
+      // Create financial transaction if procedure is linked
+      if (appointment.procedure_id && appointment.procedure) {
+        const { error: transactionError } = await supabase
+          .from("financial_transactions")
+          .insert({
+            clinic_id: clinicId,
+            type: "income",
+            description: `${appointment.procedure.name} - ${appointment.patient.name}`,
+            amount: appointment.procedure.price,
+            patient_id: appointment.patient_id,
+            procedure_id: appointment.procedure_id,
+            appointment_id: appointment.id,
+            professional_id: professionalId,
+            status: "pending",
+            due_date: new Date().toISOString().split("T")[0],
+          });
+
+        if (transactionError) {
+          console.error("Error creating transaction:", transactionError);
+        }
+      }
+
       toast({
         title: "Atendimento finalizado",
         description: `Duração: ${durationMinutes} minutos`,

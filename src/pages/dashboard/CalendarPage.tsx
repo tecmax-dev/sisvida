@@ -138,6 +138,8 @@ interface Appointment {
   completed_at: string | null;
   duration_minutes: number | null;
   confirmation_token: string | null;
+  procedure_id: string | null;
+  procedure?: { id: string; name: string; price: number } | null;
   patient: {
     id: string;
     name: string;
@@ -311,6 +313,8 @@ export default function CalendarPage() {
           completed_at,
           duration_minutes,
           confirmation_token,
+          procedure_id,
+          procedure:procedures (id, name, price),
           patient:patients (id, name, phone, email, birth_date),
           professional:professionals (id, name)
         `)

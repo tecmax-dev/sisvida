@@ -24,6 +24,7 @@ import {
   FileEdit,
   FilePlus2,
   DollarSign,
+  Stethoscope,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -51,6 +52,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates de Anamnese", permission: "manage_anamnesis_templates" },
   { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "manage_waiting_list" },
   { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "manage_insurance" },
+  { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
   { href: "/dashboard/financials", icon: DollarSign, label: "Financeiro", permission: "view_financials" },
   { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios", permission: "view_reports" },
   { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano", permission: "manage_subscription" },
