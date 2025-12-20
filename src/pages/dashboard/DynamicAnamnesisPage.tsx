@@ -66,15 +66,20 @@ interface Response {
 
 // Helper function to display answer based on question type
 const getAnswerDisplay = (question: Question, answer: Answer | undefined): string => {
+  // Para booleanos, tratar ausência de resposta como "Não"
+  if (question.question_type === "boolean") {
+    if (!answer || answer.answer_text === null || answer.answer_text === undefined || answer.answer_text === "false") {
+      return "Não";
+    }
+    if (answer.answer_text === "true") {
+      return "Sim";
+    }
+    return answer.answer_text;
+  }
+  
   if (!answer) return "";
   
   if (question.question_type === "text" || question.question_type === "textarea" || question.question_type === "date" || question.question_type === "number") {
-    return answer.answer_text || "";
-  }
-  
-  if (question.question_type === "boolean") {
-    if (answer.answer_text === "true") return "Sim";
-    if (answer.answer_text === "false") return "Não";
     return answer.answer_text || "";
   }
   
@@ -222,8 +227,17 @@ export default function DynamicAnamnesisPage() {
         })
       );
 
+      // Inicializar respostas booleanas com "false" por padrão
+      const initialAnswers: Answer[] = questionsWithOptions
+        .filter(q => q.question_type === "boolean")
+        .map(q => ({
+          question_id: q.id,
+          answer_text: "false",
+          answer_option_ids: null,
+        }));
+
       setQuestions(questionsWithOptions);
-      setAnswers([]);
+      setAnswers(initialAnswers);
       setErrors({});
     } finally {
       setLoadingQuestions(false);

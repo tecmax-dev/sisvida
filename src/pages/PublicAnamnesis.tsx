@@ -101,11 +101,28 @@ export default function PublicAnamnesis() {
         .order('order_index');
 
       if (questionsData) {
-        setQuestions(questionsData.map(q => ({
+        const mappedQuestions = questionsData.map(q => ({
           ...q,
           is_required: q.is_required ?? false,
           options: (q.options || []).sort((a, b) => a.order_index - b.order_index)
-        })));
+        }));
+        setQuestions(mappedQuestions);
+        
+        // Inicializar respostas booleanas com "false" por padrão
+        const booleanAnswers: Answer[] = mappedQuestions
+          .filter(q => q.question_type === "boolean")
+          .map(q => ({
+            question_id: q.id,
+            answer_text: "false",
+            answer_option_ids: null,
+          }));
+        
+        // Mesclar com respostas existentes
+        setAnswers(prev => {
+          const existingIds = prev.map(a => a.question_id);
+          const newBooleanAnswers = booleanAnswers.filter(a => !existingIds.includes(a.question_id));
+          return [...prev, ...newBooleanAnswers];
+        });
       }
 
       // Fetch existing answers
