@@ -39,6 +39,7 @@ import PublicAnamnesis from "./pages/PublicAnamnesis";
 import PrescriptionPage from "./pages/dashboard/PrescriptionPage";
 import FinancialsPage from "./pages/dashboard/FinancialsPage";
 import ProceduresPage from "./pages/dashboard/ProceduresPage";
+import InstallPage from "./pages/InstallPage";
 import { Button } from "./components/ui/button";
 
 const queryClient = new QueryClient();
@@ -94,6 +95,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/instalar" element={<InstallPage />} />
               <Route path="/auth" element={<Auth />} />
               {/* Public booking (both legacy and current URLs) */}
               <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />

@@ -1,9 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Calendar,
   Users,
@@ -25,6 +30,8 @@ import {
   FilePlus2,
   DollarSign,
   Stethoscope,
+  PanelLeftClose,
+  PanelLeft,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -65,9 +72,19 @@ const adminNavItems: NavItem[] = [
 
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sidebar-collapsed") === "true";
+    }
+    return false;
+  });
   const location = useLocation();
   const { user, profile, currentClinic, userRoles, signOut, setCurrentClinic } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
+
+  useEffect(() => {
+    localStorage.setItem("sidebar-collapsed", String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   // Filter navigation items based on permissions
   const filteredNavItems = navItems.filter((item) =>
@@ -87,6 +104,38 @@ export function DashboardLayout() {
 
   const displayName = profile?.name || user?.user_metadata?.name || "Usuário";
 
+  const NavItemLink = ({ item }: { item: NavItem }) => {
+    const linkContent = (
+      <Link
+        to={item.href}
+        onClick={() => setSidebarOpen(false)}
+        className={cn(
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+          isActive(item.href)
+            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+          sidebarCollapsed && "justify-center px-2"
+        )}
+      >
+        <item.icon className="h-5 w-5 shrink-0" />
+        {!sidebarCollapsed && item.label}
+      </Link>
+    );
+
+    if (sidebarCollapsed) {
+      return (
+        <Tooltip delayDuration={0}>
+          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+          <TooltipContent side="right" className="font-medium">
+            {item.label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+
+    return linkContent;
+  };
+
   return (
     <div className="min-h-screen flex bg-background">
       {/* Mobile sidebar overlay */}
@@ -100,13 +149,21 @@ export function DashboardLayout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 lg:translate-x-0 lg:static",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed inset-y-0 left-0 z-50 bg-sidebar border-r border-sidebar-border transform transition-all duration-300 lg:translate-x-0 lg:static",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
+          sidebarCollapsed ? "w-16" : "w-64"
         )}
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-            <Logo variant="light" size="md" />
+            {!sidebarCollapsed && <Logo variant="light" size="md" />}
+            {sidebarCollapsed && (
+              <div className="w-full flex justify-center">
+                <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
+                  <span className="text-sidebar-primary-foreground font-bold text-sm">E</span>
+                </div>
+              </div>
+            )}
             <Button
               variant="ghost"
               size="icon"
@@ -117,8 +174,24 @@ export function DashboardLayout() {
             </Button>
           </div>
 
+          {/* Collapse Toggle Button - Desktop only */}
+          <div className="hidden lg:flex justify-end px-2 py-2 border-b border-sidebar-border">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-sidebar-foreground hover:bg-sidebar-accent"
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            >
+              {sidebarCollapsed ? (
+                <PanelLeft className="h-4 w-4" />
+              ) : (
+                <PanelLeftClose className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+
           {/* Clinic Selector */}
-          {userRoles.length > 0 && currentClinic && (
+          {userRoles.length > 0 && currentClinic && !sidebarCollapsed && (
             <div className="p-4 border-b border-sidebar-border">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -153,67 +226,76 @@ export function DashboardLayout() {
             </div>
           )}
 
-          <nav className="flex-1 p-4 space-y-1">
+          {/* Collapsed Clinic Icon */}
+          {userRoles.length > 0 && currentClinic && sidebarCollapsed && (
+            <div className="p-2 border-b border-sidebar-border flex justify-center">
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <div className="w-10 h-10 rounded-lg bg-sidebar-accent flex items-center justify-center cursor-default">
+                    <span className="text-sm font-semibold text-sidebar-foreground">
+                      {currentClinic.name.charAt(0)}
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right">{currentClinic.name}</TooltipContent>
+              </Tooltip>
+            </div>
+          )}
+
+          <nav className={cn("flex-1 p-4 space-y-1 overflow-y-auto", sidebarCollapsed && "p-2")}>
             {filteredNavItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  isActive(item.href)
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.label}
-              </Link>
+              <NavItemLink key={item.href} item={item} />
             ))}
             
             {/* Admin only navigation items */}
             {isAdmin && filteredAdminNavItems.map((item) => (
-              <Link
-                key={item.href}
-                to={item.href}
-                onClick={() => setSidebarOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                  isActive(item.href)
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                )}
-              >
-                <item.icon className="h-5 w-5" />
-                {item.label}
-              </Link>
+              <NavItemLink key={item.href} item={item} />
             ))}
           </nav>
 
-          <div className="p-4 border-t border-sidebar-border">
-            <div className="flex items-center gap-3 mb-4 px-3">
-              <div className="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center">
-                <span className="text-sm font-medium text-sidebar-foreground">
-                  {displayName.charAt(0).toUpperCase()}
-                </span>
+          <div className={cn("p-4 border-t border-sidebar-border", sidebarCollapsed && "p-2")}>
+            {!sidebarCollapsed && (
+              <div className="flex items-center gap-3 mb-4 px-3">
+                <div className="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center">
+                  <span className="text-sm font-medium text-sidebar-foreground">
+                    {displayName.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-sidebar-foreground truncate">
+                    {displayName}
+                  </p>
+                  <p className="text-xs text-sidebar-foreground/60 truncate">
+                    {user?.email}
+                  </p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-sidebar-foreground truncate">
-                  {displayName}
-                </p>
-                <p className="text-xs text-sidebar-foreground/60 truncate">
-                  {user?.email}
-                </p>
-              </div>
-            </div>
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-              onClick={signOut}
-            >
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
+            )}
+            
+            {sidebarCollapsed ? (
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="w-full text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    onClick={signOut}
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Sair</TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                onClick={signOut}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sair
+              </Button>
+            )}
           </div>
         </div>
       </aside>
