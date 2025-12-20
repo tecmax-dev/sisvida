@@ -7,6 +7,14 @@ interface SendWhatsAppParams {
   type?: 'reminder' | 'confirmation' | 'custom';
 }
 
+interface SendWhatsAppDocumentParams {
+  phone: string;
+  clinicId: string;
+  pdfBase64: string;
+  fileName: string;
+  caption?: string;
+}
+
 interface WhatsAppResponse {
   success: boolean;
   error?: string;
@@ -28,6 +36,25 @@ export async function sendWhatsAppMessage(params: SendWhatsAppParams): Promise<W
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     console.error('Error sending WhatsApp:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+export async function sendWhatsAppDocument(params: SendWhatsAppDocumentParams): Promise<WhatsAppResponse> {
+  try {
+    const { data, error } = await supabase.functions.invoke('send-whatsapp-document', {
+      body: params,
+    });
+
+    if (error) {
+      console.error('Error invoking send-whatsapp-document function:', error);
+      return { success: false, error: error.message };
+    }
+
+    return data as WhatsAppResponse;
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error('Error sending WhatsApp document:', errorMessage);
     return { success: false, error: errorMessage };
   }
 }

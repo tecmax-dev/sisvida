@@ -73,7 +73,8 @@ const getAnswerDisplay = (question: Question, answer: Answer | undefined): strin
   return answer.answer_text || "Não respondido";
 };
 
-export async function exportAnamnesisToPDF({
+// Internal function to generate PDF document
+async function generatePDFDocument({
   clinic,
   patient,
   template,
@@ -81,7 +82,7 @@ export async function exportAnamnesisToPDF({
   answers,
   response,
   signatureUrl,
-}: ExportAnamnesisOptions): Promise<void> {
+}: ExportAnamnesisOptions): Promise<{ doc: jsPDF; fileName: string }> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   let yPos = 20;
@@ -289,10 +290,30 @@ export async function exportAnamnesisToPDF({
     }
   }
 
-  // Generate filename and save
+  // Generate filename
   const sanitizedPatientName = patient.name.replace(/[^a-zA-Z0-9]/g, "-").toLowerCase();
   const dateStr = format(new Date(response.created_at), "yyyy-MM-dd");
-  const filename = `anamnese-${sanitizedPatientName}-${dateStr}.pdf`;
+  const fileName = `anamnese-${sanitizedPatientName}-${dateStr}.pdf`;
+
+  return { doc, fileName };
+}
+
+// Export to PDF and download
+export async function exportAnamnesisToPDF(options: ExportAnamnesisOptions): Promise<void> {
+  const { doc, fileName } = await generatePDFDocument(options);
+  doc.save(fileName);
+}
+
+// Generate PDF as base64 for WhatsApp sending
+export async function generateAnamnesisPDFBase64(options: ExportAnamnesisOptions): Promise<{
+  base64: string;
+  fileName: string;
+}> {
+  const { doc, fileName } = await generatePDFDocument(options);
   
-  doc.save(filename);
+  // Get base64 string (remove the data:application/pdf;base64, prefix)
+  const pdfDataUri = doc.output('datauristring');
+  const base64 = pdfDataUri.split(',')[1];
+  
+  return { base64, fileName };
 }
