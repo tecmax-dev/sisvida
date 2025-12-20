@@ -11,10 +11,12 @@ import {
   MapPin,
   CreditCard,
   FileText,
+  MessageCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,6 +57,8 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { calculateAge } from "@/lib/utils";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 interface Patient {
   id: string;
@@ -158,6 +162,10 @@ export default function PatientsPage() {
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [anamnesisDialogOpen, setAnamnesisDialogOpen] = useState(false);
+  const [anamnesisTemplates, setAnamnesisTemplates] = useState<{ id: string; title: string }[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [sendingAnamnesis, setSendingAnamnesis] = useState(false);
   
   // Form state for create
   const [formName, setFormName] = useState("");
@@ -239,6 +247,61 @@ export default function PatientsPage() {
     } catch (error) {
       console.error("Error fetching insurance plans:", error);
     }
+  };
+
+  const fetchAnamnesisTemplates = async () => {
+    if (!currentClinic) return;
+    const { data } = await supabase
+      .from('anamnese_templates')
+      .select('id, title')
+      .eq('clinic_id', currentClinic.id)
+      .eq('is_active', true)
+      .order('title');
+    setAnamnesisTemplates(data || []);
+  };
+
+  const handleSendAnamnesisLink = async () => {
+    if (!selectedPatient || !selectedTemplateId || !currentClinic) return;
+    
+    setSendingAnamnesis(true);
+    try {
+      // Create anamnese response with public token
+      const { data: response, error } = await supabase
+        .from('anamnese_responses')
+        .insert({
+          clinic_id: currentClinic.id,
+          patient_id: selectedPatient.id,
+          template_id: selectedTemplateId,
+        })
+        .select('public_token')
+        .single();
+
+      if (error) throw error;
+
+      const anamnesisUrl = `${window.location.origin}/anamnese/${response.public_token}`;
+      const message = `Olá ${selectedPatient.name}! 👋\n\nPor favor, preencha seu formulário de anamnese através do link abaixo:\n\n${anamnesisUrl}\n\nAtenciosamente,\n${currentClinic.name}`;
+
+      await sendWhatsAppMessage({
+        phone: selectedPatient.phone,
+        message,
+        clinicId: currentClinic.id,
+        type: 'custom',
+      });
+
+      toast({ title: "Link enviado!", description: "A anamnese foi enviada via WhatsApp." });
+      setAnamnesisDialogOpen(false);
+      setSelectedTemplateId("");
+    } catch (error: any) {
+      toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
+    } finally {
+      setSendingAnamnesis(false);
+    }
+  };
+
+  const openAnamnesisDialog = (patient: Patient) => {
+    setSelectedPatient(patient);
+    fetchAnamnesisTemplates();
+    setAnamnesisDialogOpen(true);
   };
 
   const handleCreatePatient = async (e: React.FormEvent) => {
@@ -329,7 +392,7 @@ export default function PatientsPage() {
 
   const handleScheduleAppointment = (patient: Patient) => {
     // Navigate to calendar page with patient pre-selected
-    navigate(`/dashboard/agenda?patient=${patient.id}`);
+    navigate(`/dashboard/calendar?patient=${patient.id}`);
   };
 
   const handleOpenEdit = (patient: Patient) => {
@@ -671,7 +734,14 @@ export default function PatientsPage() {
                   </div>
                   
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-foreground">{patient.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-foreground">{patient.name}</p>
+                      {patient.birth_date && (
+                        <Badge variant="outline" className="text-xs">
+                          {calculateAge(patient.birth_date)} anos
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex flex-wrap items-center gap-3 mt-1">
                       {patient.email && (
                         <span className="text-sm text-muted-foreground flex items-center gap-1">
@@ -710,6 +780,10 @@ export default function PatientsPage() {
                       <DropdownMenuItem onClick={() => handleOpenEdit(patient)}>
                         <FileText className="h-4 w-4 mr-2" />
                         Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openAnamnesisDialog(patient)}>
+                        <MessageCircle className="h-4 w-4 mr-2" />
+                        Enviar Anamnese
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         className="text-destructive"
@@ -965,6 +1039,45 @@ export default function PatientsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Anamnesis Dialog */}
+      <Dialog open={anamnesisDialogOpen} onOpenChange={setAnamnesisDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar Anamnese via WhatsApp</DialogTitle>
+            <DialogDescription>
+              Selecione o modelo de anamnese para enviar ao paciente {selectedPatient?.name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Modelo de Anamnese</Label>
+              <Select value={selectedTemplateId} onValueChange={setSelectedTemplateId}>
+                <SelectTrigger className="mt-1.5">
+                  <SelectValue placeholder="Selecione um modelo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {anamnesisTemplates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setAnamnesisDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button onClick={handleSendAnamnesisLink} disabled={!selectedTemplateId || sendingAnamnesis}>
+                {sendingAnamnesis && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <MessageCircle className="mr-2 h-4 w-4" />
+                Enviar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

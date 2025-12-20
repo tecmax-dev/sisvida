@@ -127,27 +127,33 @@ export type Database = {
         Row: {
           clinic_id: string
           created_at: string
+          filled_by_patient: boolean | null
           id: string
           patient_id: string
           professional_id: string | null
+          public_token: string | null
           template_id: string
           updated_at: string
         }
         Insert: {
           clinic_id: string
           created_at?: string
+          filled_by_patient?: boolean | null
           id?: string
           patient_id: string
           professional_id?: string | null
+          public_token?: string | null
           template_id: string
           updated_at?: string
         }
         Update: {
           clinic_id?: string
           created_at?: string
+          filled_by_patient?: boolean | null
           id?: string
           patient_id?: string
           professional_id?: string | null
+          public_token?: string | null
           template_id?: string
           updated_at?: string
         }
@@ -872,6 +878,77 @@ export type Database = {
             columns: ["insurance_plan_id"]
             isOneToOne: false
             referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      prescriptions: {
+        Row: {
+          clinic_id: string
+          content: string
+          created_at: string | null
+          id: string
+          is_signed: boolean | null
+          medical_record_id: string | null
+          patient_id: string
+          professional_id: string | null
+          signature_data: string | null
+          signed_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          content: string
+          created_at?: string | null
+          id?: string
+          is_signed?: boolean | null
+          medical_record_id?: string | null
+          patient_id: string
+          professional_id?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_signed?: boolean | null
+          medical_record_id?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          signature_data?: string | null
+          signed_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "prescriptions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_medical_record_id_fkey"
+            columns: ["medical_record_id"]
+            isOneToOne: false
+            referencedRelation: "medical_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "prescriptions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
