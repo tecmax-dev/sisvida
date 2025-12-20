@@ -10,11 +10,12 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requireSuperAdmin = false }: ProtectedRouteProps) {
-  const { user, loading, userRoles, isSuperAdmin, currentClinic } = useAuth();
+  const { user, loading, userRoles, isSuperAdmin, currentClinic, rolesLoaded } = useAuth();
   const { isProfessionalOnly } = usePermissions();
   const location = useLocation();
 
-  if (loading) {
+  // Wait for both auth loading AND roles to be loaded before making decisions
+  if (loading || (!rolesLoaded && user)) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

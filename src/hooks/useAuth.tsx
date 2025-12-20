@@ -36,6 +36,7 @@ interface AuthContextType {
   userRoles: UserRole[];
   isSuperAdmin: boolean;
   loading: boolean;
+  rolesLoaded: boolean;
   signOut: () => Promise<void>;
   setCurrentClinic: (clinic: Clinic | null) => void;
   refreshProfile: () => Promise<void>;
@@ -51,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -110,6 +112,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUserRoles([]);
       setCurrentClinic(null);
     }
+    setRolesLoaded(true);
   };
 
   const refreshProfile = async () => {
@@ -139,6 +142,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          setLoading(true);
+          setRolesLoaded(false);
           // Defer data fetching to avoid deadlock
           setTimeout(() => {
             loadUserData(session.user.id);
@@ -148,6 +153,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUserRoles([]);
           setCurrentClinic(null);
           setIsSuperAdmin(false);
+          setRolesLoaded(false);
           setLoading(false);
         }
       }
@@ -173,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUserRoles([]);
     setCurrentClinic(null);
     setIsSuperAdmin(false);
+    setRolesLoaded(false);
   };
 
   return (
@@ -183,7 +190,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       currentClinic, 
       userRoles, 
       isSuperAdmin,
-      loading, 
+      loading,
+      rolesLoaded,
       signOut,
       setCurrentClinic,
       refreshProfile
