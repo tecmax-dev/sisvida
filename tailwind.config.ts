@@ -27,6 +27,12 @@ export default {
           foreground: "hsl(var(--primary-foreground))",
           soft: "hsl(var(--primary-soft))",
           glow: "hsl(var(--primary-glow))",
+          dark: "hsl(var(--primary-dark))",
+        },
+        cta: {
+          DEFAULT: "hsl(var(--cta))",
+          foreground: "hsl(var(--cta-foreground))",
+          hover: "hsl(var(--cta-hover))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -87,12 +93,14 @@ export default {
         xl: "var(--shadow-xl)",
         glow: "var(--shadow-glow)",
         card: "var(--shadow-card)",
+        float: "var(--shadow-float)",
       },
       backgroundImage: {
         "gradient-primary": "var(--gradient-primary)",
         "gradient-hero": "var(--gradient-hero)",
         "gradient-card": "var(--gradient-card)",
         "gradient-soft": "var(--gradient-soft)",
+        "gradient-stats": "var(--gradient-stats)",
       },
       keyframes: {
         "accordion-down": {

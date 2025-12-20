@@ -1,109 +1,123 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { 
-  Calendar, 
-  MessageCircle, 
-  FileText, 
-  Video, 
-  CreditCard, 
-  BarChart3,
-  Package,
-  Bot,
-  FileCheck,
-  Users,
-  Presentation,
-  Network,
-  ChevronRight,
-  CheckCircle2,
-} from "lucide-react";
+import { ArrowRight, Check, Star } from "lucide-react";
 import heroMockup from "@/assets/hero-mockup.png";
 
-const features = [
-  { icon: Calendar, label: "Agenda Online" },
-  { icon: MessageCircle, label: "WhatsApp" },
-  { icon: FileText, label: "Prontuário Eletrônico" },
-  { icon: FileCheck, label: "Assinatura Digital" },
-  { icon: Video, label: "Telemedicina" },
-  { icon: CreditCard, label: "Convênios" },
-  { icon: BarChart3, label: "Gestão financeira" },
-  { icon: Package, label: "Estoque" },
-  { icon: Bot, label: "Agente de IA" },
-  { icon: Users, label: "Marketing e CRM" },
-  { icon: Presentation, label: "Relatórios" },
-  { icon: Network, label: "+20 recursos" },
+const highlights = [
+  "Agenda online 24h",
+  "Lembretes WhatsApp",
+  "Prontuário digital",
+  "Assinatura digital",
 ];
 
 export function HeroSection() {
   return (
-    <section className="relative bg-white py-12 lg:py-20 overflow-hidden">
+    <section className="relative bg-card py-12 lg:py-16 overflow-hidden">
       <div className="container">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
-          {/* Left Column - Content */}
-          <div className="order-2 lg:order-1">
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold leading-tight">
-              <span className="text-primary">Sistema para clínicas</span>
+        <div className="grid lg:grid-cols-12 gap-8 lg:gap-6 items-center">
+          {/* Left Column - Content (5 cols) */}
+          <div className="lg:col-span-5 order-2 lg:order-1">
+            <h1 className="text-3xl sm:text-4xl lg:text-[2.75rem] font-bold leading-tight text-foreground">
+              Sistema para clínicas
               <br />
               <span className="text-primary">de multi especialidades</span>
             </h1>
 
-            <p className="mt-6 text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed">
+            <p className="mt-5 text-base lg:text-lg text-muted-foreground leading-relaxed">
               Junte-se a profissionais da saúde de todo o Brasil e melhore sua gestão com o{" "}
-              <Link to="/" className="text-foreground underline hover:text-primary transition-colors">
+              <Link to="/" className="text-primary font-medium hover:underline">
                 Eclini
               </Link>
-              . Ganhe tempo ao organizar sua agenda e economize gerenciando melhor sua clínica com o software 
-              para controle e gestão mais completo e fácil de usar.
+              . Ganhe tempo ao organizar sua agenda e economize gerenciando melhor sua clínica.
             </p>
 
-            {/* Feature Tags */}
-            <div className="mt-8 flex flex-wrap gap-x-4 gap-y-2">
-              {features.map((feature, i) => (
-                <div 
-                  key={i} 
-                  className="flex items-center gap-1.5 text-sm text-muted-foreground"
-                >
-                  <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
-                  <span>{feature.label}</span>
+            {/* Highlights */}
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {highlights.map((item, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm text-foreground">
+                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Check className="h-3 w-3 text-primary" />
+                  </div>
+                  <span>{item}</span>
                 </div>
               ))}
             </div>
 
-            {/* CTA Buttons */}
-            <div className="mt-10 flex flex-col sm:flex-row gap-4">
+            {/* CTA Button */}
+            <div className="mt-8">
               <Button 
                 size="lg" 
-                className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full px-8 h-12"
+                className="bg-cta hover:bg-cta-hover text-cta-foreground rounded-full px-8 h-12 shadow-lg"
                 asChild
               >
                 <Link to="/auth?tab=signup" className="flex items-center gap-2">
                   Quero testar agora
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg"
-                className="border-primary text-primary hover:bg-primary/5 rounded-full px-8 h-12"
-                asChild
-              >
-                <Link to="/#pricing" className="flex items-center gap-2">
-                  Conheça os planos
-                  <ChevronRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
             </div>
           </div>
 
-          {/* Right Column - Mockup Image */}
-          <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
+          {/* Center Column - Mockup Image (4 cols) */}
+          <div className="lg:col-span-4 order-1 lg:order-2 flex justify-center">
             <div className="relative">
               <img 
                 src={heroMockup} 
                 alt="Eclini - Sistema de gestão para clínicas" 
-                className="w-full max-w-lg lg:max-w-xl xl:max-w-2xl h-auto object-contain drop-shadow-2xl"
+                className="w-full max-w-sm lg:max-w-md h-auto object-contain drop-shadow-2xl"
               />
               {/* Decorative gradient */}
               <div className="absolute -z-10 inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 rounded-3xl blur-3xl scale-110" />
+            </div>
+          </div>
+
+          {/* Right Column - Price Card (3 cols) */}
+          <div className="lg:col-span-3 order-3 flex justify-center lg:justify-end">
+            <div className="relative w-full max-w-xs">
+              {/* Badge */}
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                <div className="bg-cta text-cta-foreground text-xs font-semibold px-4 py-1.5 rounded-full flex items-center gap-1 shadow-md">
+                  <Star className="h-3 w-3 fill-current" />
+                  Mais vendido
+                </div>
+              </div>
+
+              {/* Card */}
+              <div className="bg-card border-2 border-primary/30 rounded-2xl p-6 shadow-float">
+                <div className="text-center pt-4">
+                  <p className="text-sm text-muted-foreground mb-1">A partir de</p>
+                  <div className="flex items-baseline justify-center gap-1">
+                    <span className="text-sm text-muted-foreground">R$</span>
+                    <span className="text-4xl font-bold text-foreground">99</span>
+                    <span className="text-sm text-muted-foreground">/mês</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Até 3 profissionais
+                  </p>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  {["Agenda ilimitada", "WhatsApp integrado", "Prontuário digital", "Suporte dedicado"].map((feature, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm text-foreground">
+                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <Button 
+                  className="w-full mt-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full"
+                  asChild
+                >
+                  <Link to="/auth?tab=signup">
+                    Começar teste grátis
+                  </Link>
+                </Button>
+
+                <p className="text-xs text-center text-muted-foreground mt-3">
+                  7 dias grátis • Sem cartão
+                </p>
+              </div>
             </div>
           </div>
         </div>
