@@ -944,7 +944,7 @@ export default function ProfessionalsPage() {
                 variant="outline"
                 onClick={() => {
                   setScheduleViewDialogOpen(false);
-                  navigate(`/dashboard/agenda?professional=${selectedProfessional?.id}`);
+                  navigate(`/dashboard/calendar?professional=${selectedProfessional?.id}`);
                 }}
               >
                 <Calendar className="h-4 w-4 mr-2" />
