@@ -7,6 +7,7 @@ import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { DraggableAppointment } from "@/components/appointments/DraggableAppointment";
 import { DroppableTimeSlot } from "@/components/appointments/DroppableTimeSlot";
 import { DragOverlayContent } from "@/components/appointments/DragOverlayContent";
+import { DragInstructions } from "@/components/appointments/DragInstructions";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -728,6 +729,22 @@ export default function CalendarPage() {
       return; // No change needed
     }
 
+    // Check if the target slot is occupied
+    const targetDateObj = new Date(newDate + 'T12:00:00');
+    const targetAppointments = getAppointmentsForDate(targetDateObj);
+    const isOccupied = targetAppointments.some(
+      apt => apt.start_time.slice(0, 5) === newTime && apt.status !== 'cancelled' && apt.id !== appointment.id
+    );
+
+    if (isOccupied) {
+      toast({
+        title: "Horário ocupado",
+        description: "Este horário já possui um agendamento. Escolha outro horário.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Calculate end time based on duration (default 30 minutes)
     const duration = appointment.duration_minutes || 30;
     const [hours, minutes] = newTime.split(':').map(Number);
@@ -735,6 +752,11 @@ export default function CalendarPage() {
     const endHours = Math.floor(totalMinutes / 60);
     const endMinutes = totalMinutes % 60;
     const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+
+    // Store original values for undo
+    const originalAppointmentDate = appointment.appointment_date;
+    const originalStartTime = appointment.start_time;
+    const originalEndTime = appointment.end_time;
 
     // Update in database
     try {
@@ -749,9 +771,44 @@ export default function CalendarPage() {
 
       if (error) throw error;
 
+      const formattedOldDate = new Date(originalAppointmentDate + 'T12:00:00').toLocaleDateString('pt-BR');
+      const formattedNewDate = new Date(newDate + 'T12:00:00').toLocaleDateString('pt-BR');
+
       toast({
-        title: "Agendamento reagendado",
-        description: `Movido para ${new Date(newDate + 'T12:00:00').toLocaleDateString('pt-BR')} às ${newTime}`,
+        title: "✓ Agendamento reagendado",
+        description: `${appointment.patient?.name || 'Paciente'}: ${formattedOldDate} ${originalStartTime.slice(0, 5)} → ${formattedNewDate} ${newTime}`,
+        action: (
+          <ToastAction 
+            altText="Desfazer" 
+            onClick={async () => {
+              try {
+                await supabase
+                  .from('appointments')
+                  .update({
+                    appointment_date: originalAppointmentDate,
+                    start_time: originalStartTime,
+                    end_time: originalEndTime,
+                  })
+                  .eq('id', appointment.id);
+                
+                toast({
+                  title: "Reagendamento desfeito",
+                  description: `Voltou para ${formattedOldDate} às ${originalStartTime.slice(0, 5)}`,
+                });
+                
+                fetchAppointments();
+              } catch (undoError) {
+                toast({
+                  title: "Erro ao desfazer",
+                  description: "Não foi possível desfazer o reagendamento.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            Desfazer
+          </ToastAction>
+        ),
       });
 
       fetchAppointments();
@@ -1267,39 +1324,50 @@ export default function CalendarPage() {
           {days.map((item, i) => {
             const dayAppointments = getAppointmentsForDate(item.date);
             const isTodayDate = isToday(item.date);
+            const dateStr = item.date.toISOString().split('T')[0];
+            const isOccupied = dayAppointments.filter(a => a.status !== 'cancelled').length >= 10;
             
             return (
-              <button
+              <DroppableTimeSlot
                 key={i}
-                onClick={() => handleDayClick(item.date)}
-                className={cn(
-                  "aspect-square p-1 flex flex-col items-center justify-start text-sm rounded-lg transition-colors relative",
-                  item.isCurrentMonth
-                    ? "text-foreground hover:bg-muted"
-                    : "text-muted-foreground/40",
-                  isTodayDate && "bg-primary/10 text-primary font-semibold"
-                )}
+                date={dateStr}
+                time="08:00"
+                showTime={false}
+                isOccupied={isOccupied}
+                disabled={!item.isCurrentMonth}
+                className="p-0"
               >
-                <span>{item.day}</span>
-                {dayAppointments.length > 0 && (
-                  <div className="flex gap-0.5 mt-1">
-                    {dayAppointments.slice(0, 3).map((apt, j) => (
-                      <div
-                        key={j}
-                        className={cn(
-                          "w-1.5 h-1.5 rounded-full",
-                          apt.status === "cancelled" ? "bg-destructive" :
-                          apt.status === "confirmed" ? "bg-success" :
-                          apt.status === "completed" ? "bg-info" : "bg-warning"
-                        )}
-                      />
-                    ))}
-                    {dayAppointments.length > 3 && (
-                      <span className="text-[8px] text-muted-foreground">+{dayAppointments.length - 3}</span>
-                    )}
-                  </div>
-                )}
-              </button>
+                <button
+                  onClick={() => handleDayClick(item.date)}
+                  className={cn(
+                    "w-full aspect-square p-1 flex flex-col items-center justify-start text-sm rounded-lg transition-colors relative",
+                    item.isCurrentMonth
+                      ? "text-foreground hover:bg-muted"
+                      : "text-muted-foreground/40",
+                    isTodayDate && "bg-primary/10 text-primary font-semibold"
+                  )}
+                >
+                  <span>{item.day}</span>
+                  {dayAppointments.length > 0 && (
+                    <div className="flex gap-0.5 mt-1">
+                      {dayAppointments.slice(0, 3).map((apt, j) => (
+                        <div
+                          key={j}
+                          className={cn(
+                            "w-1.5 h-1.5 rounded-full",
+                            apt.status === "cancelled" ? "bg-destructive" :
+                            apt.status === "confirmed" ? "bg-success" :
+                            apt.status === "completed" ? "bg-info" : "bg-warning"
+                          )}
+                        />
+                      ))}
+                      {dayAppointments.length > 3 && (
+                        <span className="text-[8px] text-muted-foreground">+{dayAppointments.length - 3}</span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              </DroppableTimeSlot>
             );
           })}
         </div>
@@ -1825,6 +1893,12 @@ export default function CalendarPage() {
           onUpdate={fetchAppointments}
         />
       )}
+
+      {/* Drag Instructions */}
+      <DragInstructions 
+        isVisible={!!activeAppointment} 
+        patientName={activeAppointment?.patient?.name}
+      />
 
       {/* Drag Overlay */}
       <DragOverlay>
