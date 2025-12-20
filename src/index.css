@@ -215,6 +215,15 @@
   .animate-scale-in {
     animation: scale-in 0.3s ease-out;
   }
+  
+  /* Staggered entrance animations */
+  .animate-on-load {
+    opacity: 0;
+  }
+  
+  .hover-lift {
+    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
+  }
 }
 
 @keyframes float {
