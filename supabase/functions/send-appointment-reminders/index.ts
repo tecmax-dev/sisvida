@@ -13,6 +13,14 @@ interface EvolutionConfig {
   is_connected: boolean;
 }
 
+interface ClinicWithReminder {
+  id: string;
+  name: string;
+  slug: string;
+  reminder_enabled: boolean;
+  reminder_hours: number;
+}
+
 async function sendWhatsAppViaEvolution(
   config: EvolutionConfig,
   phone: string,
@@ -23,6 +31,8 @@ async function sendWhatsAppViaEvolution(
     if (!formattedPhone.startsWith('55')) {
       formattedPhone = '55' + formattedPhone;
     }
+
+    console.log(`Sending WhatsApp to ${formattedPhone}`);
 
     const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
       method: 'POST',
@@ -36,11 +46,25 @@ async function sendWhatsAppViaEvolution(
       }),
     });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('WhatsApp API error:', errorText);
+    }
+
     return response.ok;
   } catch (error) {
     console.error('Error sending WhatsApp:', error);
     return false;
   }
+}
+
+function formatDateTime(date: Date, time: string): string {
+  const dateStr = date.toLocaleDateString('pt-BR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  });
+  return dateStr;
 }
 
 function formatAppointmentReminder(
@@ -81,19 +105,8 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Calculate tomorrow's date
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowDate = tomorrow.toISOString().split('T')[0];
-
-    // Format tomorrow's date for message
-    const tomorrowFormatted = new Date(tomorrow).toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long'
-    });
-
-    console.log(`Looking for appointments on ${tomorrowDate}`);
+    const now = new Date();
+    console.log(`[${now.toISOString()}] Starting automatic reminder check`);
 
     // Get clinics with reminders enabled
     const { data: clinics, error: clinicsError } = await supabase
@@ -112,10 +125,22 @@ serve(async (req) => {
     let errorCount = 0;
     let skippedCount = 0;
 
-    // Get the base URL from environment or use default
     const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://eclini.lovable.app';
 
-    for (const clinic of clinics || []) {
+    for (const clinic of (clinics || []) as ClinicWithReminder[]) {
+      const reminderHours = clinic.reminder_hours || 24;
+      
+      // Calculate the target time window for this clinic
+      // We want appointments that are exactly reminder_hours away (within a 1-hour window)
+      const targetStart = new Date(now.getTime() + reminderHours * 60 * 60 * 1000);
+      const targetEnd = new Date(targetStart.getTime() + 60 * 60 * 1000); // +1 hour window
+      
+      const targetDate = targetStart.toISOString().split('T')[0];
+      const targetStartTime = targetStart.toTimeString().substring(0, 5);
+      const targetEndTime = targetEnd.toTimeString().substring(0, 5);
+      
+      console.log(`Clinic ${clinic.name}: checking appointments for ${targetDate} between ${targetStartTime} and ${targetEndTime} (${reminderHours}h before)`);
+
       // Fetch clinic's Evolution API config
       const { data: evolutionConfig } = await supabase
         .from('evolution_configs')
@@ -129,7 +154,7 @@ serve(async (req) => {
         continue;
       }
 
-      // Get appointments for tomorrow that haven't been reminded yet
+      // Get appointments in the target window that haven't been reminded yet
       const { data: appointments, error: appointmentsError } = await supabase
         .from('appointments')
         .select(`
@@ -147,7 +172,9 @@ serve(async (req) => {
           )
         `)
         .eq('clinic_id', clinic.id)
-        .eq('appointment_date', tomorrowDate)
+        .eq('appointment_date', targetDate)
+        .gte('start_time', targetStartTime)
+        .lt('start_time', targetEndTime)
         .in('status', ['scheduled', 'confirmed'])
         .eq('reminder_sent', false);
 
@@ -167,7 +194,9 @@ serve(async (req) => {
           continue;
         }
 
-        // Format time
+        // Format date for message
+        const appointmentDate = new Date(appointment.appointment_date + 'T00:00:00');
+        const dateFormatted = formatDateTime(appointmentDate, appointment.start_time);
         const time = appointment.start_time.substring(0, 5);
 
         // Build confirmation link
@@ -175,11 +204,11 @@ serve(async (req) => {
           ? `${baseUrl}/consulta/${appointment.confirmation_token}`
           : undefined;
 
-        // Create message using the formatter
+        // Create message
         const message = formatAppointmentReminder(
           patient.name,
           clinic.name,
-          tomorrowFormatted,
+          dateFormatted,
           time,
           professional?.name || 'Profissional',
           confirmationLink
@@ -199,10 +228,10 @@ serve(async (req) => {
             .eq('id', appointment.id);
           
           sentCount++;
-          console.log(`Reminder sent to ${patient.name}`);
+          console.log(`✓ Reminder sent to ${patient.name} for appointment on ${targetDate} at ${time}`);
         } else {
           errorCount++;
-          console.error(`Failed to send reminder to ${patient.name}`);
+          console.error(`✗ Failed to send reminder to ${patient.name}`);
         }
 
         // Small delay to avoid rate limiting
@@ -210,16 +239,18 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Reminders sent: ${sentCount}, Errors: ${errorCount}, Skipped clinics: ${skippedCount}`);
+    const summary = {
+      success: true,
+      sent: sentCount,
+      errors: errorCount,
+      skipped: skippedCount,
+      timestamp: now.toISOString()
+    };
+
+    console.log(`Summary:`, summary);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        sent: sentCount, 
-        errors: errorCount,
-        skipped: skippedCount,
-        date: tomorrowDate 
-      }),
+      JSON.stringify(summary),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
