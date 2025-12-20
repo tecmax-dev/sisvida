@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   ClipboardList,
   Plus,
@@ -9,6 +9,8 @@ import {
   Clock,
   ShieldCheck,
   PenTool,
+  Printer,
+  Download,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +46,8 @@ import {
   Question,
   validateAnswers,
 } from "@/components/anamnesis/AnamneseResponseForm";
+import { AnamnesisPrint } from "@/components/anamnesis/AnamnesisPrint";
+import { exportAnamnesisToPDF } from "@/lib/anamnesisExportUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -128,6 +132,9 @@ export default function DynamicAnamnesisPage() {
   const [viewingResponse, setViewingResponse] = useState<Response | null>(null);
   const [viewQuestions, setViewQuestions] = useState<Question[]>([]);
   const [viewAnswers, setViewAnswers] = useState<Answer[]>([]);
+  
+  // Print ref
+  const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (currentClinic) {
@@ -403,6 +410,92 @@ export default function DynamicAnamnesisPage() {
     }
   };
 
+  const handlePrintAnamnesis = () => {
+    if (!printRef.current) return;
+    
+    const printContent = printRef.current.innerHTML;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível abrir a janela de impressão. Verifique se pop-ups estão bloqueados.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Anamnese - ${selectedPatient?.name}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; }
+            @media print {
+              body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+            }
+          </style>
+          <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+        </head>
+        <body>
+          ${printContent}
+          <script>
+            window.onload = function() {
+              setTimeout(function() {
+                window.print();
+                window.close();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  };
+
+  const handleExportAnamnesis = async (responseToExport: Response) => {
+    if (!selectedPatient || !currentClinic) return;
+    
+    try {
+      const signatureUrl = getSignatureUrl(responseToExport.signature_data);
+      
+      await exportAnamnesisToPDF({
+        clinic: {
+          name: currentClinic.name,
+          address: currentClinic.address,
+          phone: currentClinic.phone,
+          cnpj: currentClinic.cnpj,
+        },
+        patient: {
+          name: selectedPatient.name,
+          phone: selectedPatient.phone,
+        },
+        template: {
+          title: responseToExport.template_title,
+        },
+        questions: viewQuestions,
+        answers: viewAnswers,
+        response: {
+          created_at: responseToExport.created_at,
+          filled_by_patient: responseToExport.filled_by_patient,
+          signature_data: responseToExport.signature_data,
+          signed_at: responseToExport.signed_at,
+          responsibility_accepted: responseToExport.responsibility_accepted,
+        },
+        signatureUrl,
+      });
+      
+      toast({ title: "PDF exportado com sucesso!" });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao exportar",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const filteredPatients = patients.filter(
     (p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -623,6 +716,29 @@ export default function DynamicAnamnesisPage() {
                               </Card>
                             </div>
                           )}
+
+                          {/* Botões de Ação */}
+                          <div className="flex gap-2 justify-end mt-6 pt-4 border-t">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setViewingResponse(response);
+                                setTimeout(() => handlePrintAnamnesis(), 100);
+                              }}
+                            >
+                              <Printer className="h-4 w-4 mr-2" />
+                              Imprimir
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleExportAnamnesis(response)}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Exportar PDF
+                            </Button>
+                          </div>
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">
@@ -730,6 +846,39 @@ export default function DynamicAnamnesisPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Hidden Print Component */}
+      <div className="hidden">
+        {viewingResponse && selectedPatient && currentClinic && (
+          <AnamnesisPrint
+            ref={printRef}
+            clinic={{
+              name: currentClinic.name,
+              address: currentClinic.address,
+              phone: currentClinic.phone,
+              logo_url: currentClinic.logo_url,
+              cnpj: currentClinic.cnpj,
+            }}
+            patient={{
+              name: selectedPatient.name,
+              phone: selectedPatient.phone,
+            }}
+            template={{
+              title: viewingResponse.template_title,
+            }}
+            questions={viewQuestions}
+            answers={viewAnswers}
+            response={{
+              created_at: viewingResponse.created_at,
+              filled_by_patient: viewingResponse.filled_by_patient,
+              signature_data: viewingResponse.signature_data,
+              signed_at: viewingResponse.signed_at,
+              responsibility_accepted: viewingResponse.responsibility_accepted,
+            }}
+            signatureUrl={getSignatureUrl(viewingResponse.signature_data)}
+          />
+        )}
+      </div>
     </div>
   );
 }
