@@ -8,6 +8,7 @@ interface DroppableTimeSlotProps {
   className?: string;
   showTime?: boolean;
   disabled?: boolean;
+  isOccupied?: boolean;
 }
 
 export function DroppableTimeSlot({ 
@@ -17,6 +18,7 @@ export function DroppableTimeSlot({
   className,
   showTime = true,
   disabled = false,
+  isOccupied = false,
 }: DroppableTimeSlotProps) {
   const { isOver, setNodeRef, active } = useDroppable({
     id: `${date}_${time}`,
@@ -31,8 +33,13 @@ export function DroppableTimeSlot({
       ref={setNodeRef}
       className={cn(
         "min-h-[40px] rounded-lg transition-all duration-200",
-        isActive && !disabled && "border-2 border-dashed border-primary/30",
-        isOver && !disabled && "bg-primary/10 border-primary border-solid scale-[1.02]",
+        // Estado padrão durante arraste
+        isActive && !disabled && !isOccupied && "border-2 border-dashed border-green-400/50 bg-green-50/30",
+        isActive && isOccupied && "border-2 border-dashed border-red-300/50 bg-red-50/30",
+        // Hover sobre slot disponível
+        isOver && !disabled && !isOccupied && "bg-green-100 border-green-500 border-solid scale-[1.02]",
+        // Hover sobre slot ocupado
+        isOver && isOccupied && "bg-red-100 border-red-400 border-solid cursor-not-allowed",
         disabled && "opacity-50",
         className
       )}
@@ -40,7 +47,7 @@ export function DroppableTimeSlot({
       {showTime && (
         <span className={cn(
           "text-xs font-medium",
-          isOver ? "text-primary" : "text-muted-foreground"
+          isOver && !isOccupied ? "text-green-700" : isOver && isOccupied ? "text-red-600" : "text-muted-foreground"
         )}>
           {time}
         </span>

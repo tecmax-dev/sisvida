@@ -1214,6 +1214,7 @@ export default function CalendarPage() {
                 date={dateStr} 
                 time="08:00" 
                 showTime={false}
+                isOccupied={dayAppointments.length >= 8}
                 className="space-y-1 min-h-[200px] p-1"
               >
                 {dayAppointments.slice(0, 4).map((apt) => {
@@ -1757,6 +1758,7 @@ export default function CalendarPage() {
                           date={dateStr}
                           time={time}
                           disabled={hasAppointment}
+                          isOccupied={hasAppointment}
                           className={cn(
                             "p-2 text-center rounded-md border border-transparent",
                             hasAppointment 
