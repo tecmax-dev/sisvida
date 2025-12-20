@@ -32,7 +32,12 @@ import {
   Stethoscope,
   Timer,
   Lock,
+  Send,
 } from "lucide-react";
+import { sendWhatsAppDocument } from "@/lib/whatsapp";
+import { generatePrescriptionPDF } from "@/lib/prescriptionExportUtils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Odontogram } from "@/components/medical/Odontogram";
 
 interface Patient {
@@ -92,6 +97,19 @@ interface Anamnesis {
   filled_at: string;
 }
 
+interface Clinic {
+  name: string;
+  address?: string | null;
+  phone?: string | null;
+  cnpj?: string | null;
+}
+
+interface Professional {
+  name: string;
+  specialty?: string | null;
+  registration_number?: string | null;
+}
+
 interface AppointmentPanelProps {
   appointment: Appointment;
   professionalId: string;
@@ -133,6 +151,9 @@ export function AppointmentPanel({
     prescription: "",
     notes: "",
   });
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [clinic, setClinic] = useState<Clinic | null>(null);
+  const [professional, setProfessional] = useState<Professional | null>(null);
 
   const isCompleted = appointment.status === "completed";
   const isInProgress = appointment.status === "in_progress";
@@ -171,10 +192,29 @@ export function AppointmentPanel({
     setLoadingData(true);
     
     try {
+      // Load clinic data
+      const { data: clinicData } = await supabase
+        .from("clinics")
+        .select("name, address, phone, cnpj")
+        .eq("id", clinicId)
+        .maybeSingle();
+
+      if (clinicData) {
+        setClinic(clinicData);
+      }
+
+      // Load professional data
+      const { data: profData } = await supabase
+        .from("professionals")
+        .select("name, specialty, registration_number")
+        .eq("id", professionalId)
+        .maybeSingle();
+
+      if (profData) {
+        setProfessional(profData);
+      }
+
       // Check if professional has any dental specialty
-      console.log('[DEBUG Odontogram] Professional ID:', professionalId);
-      console.log('[DEBUG Odontogram] Professional Specialty Prop:', professionalSpecialty);
-      
       const { data: profSpecialties, error: specError } = await supabase
         .from('professional_specialties')
         .select('specialty:specialties(is_dental, category)')
@@ -183,8 +223,6 @@ export function AppointmentPanel({
       if (specError) {
         console.error('[ERROR Odontogram] Failed to check dental specialty:', specError);
       }
-
-      console.log('[DEBUG Odontogram] profSpecialties result:', profSpecialties);
 
       // Check is_dental flag OR category === 'dental'
       const hasDentalFromDB = (profSpecialties || []).some((ps: any) => 
@@ -198,8 +236,6 @@ export function AppointmentPanel({
       );
       
       const hasDental = hasDentalFromDB || !!hasDentalFromProp;
-      console.log('[DEBUG Odontogram] hasDentalFromDB:', hasDentalFromDB, 'hasDentalFromProp:', hasDentalFromProp, 'Final hasDental:', hasDental);
-      
       setIsDentalSpecialty(hasDental);
 
       // Load anamnesis
@@ -227,6 +263,22 @@ export function AppointmentPanel({
 
       if (historyData) {
         setMedicalHistory(historyData);
+      }
+
+      // Load prescription from this appointment if completed
+      if (isCompleted) {
+        const { data: recordData } = await supabase
+          .from("medical_records")
+          .select("prescription")
+          .eq("appointment_id", appointment.id)
+          .maybeSingle();
+
+        if (recordData?.prescription) {
+          setRecordForm(prev => ({
+            ...prev,
+            prescription: recordData.prescription || "",
+          }));
+        }
       }
     } catch (error) {
       console.error("Error loading patient data:", error);
@@ -368,6 +420,81 @@ export function AppointmentPanel({
       return `${hours}h ${mins}min`;
     }
     return `${mins}min`;
+  };
+
+  const handleSendPrescriptionWhatsApp = async () => {
+    const prescriptionContent = recordForm.prescription?.trim();
+    
+    if (!prescriptionContent) {
+      toast({
+        title: "Erro",
+        description: "Não há prescrição para enviar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!appointment.patient.phone) {
+      toast({
+        title: "Erro",
+        description: "Paciente sem telefone cadastrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingWhatsApp(true);
+    
+    try {
+      const { base64, fileName } = await generatePrescriptionPDF({
+        clinic: {
+          name: clinic?.name || "Clínica",
+          address: clinic?.address,
+          phone: clinic?.phone,
+          cnpj: clinic?.cnpj,
+        },
+        patient: {
+          name: appointment.patient.name,
+          birth_date: appointment.patient.birth_date,
+        },
+        professional: professional ? {
+          name: professional.name,
+          specialty: professional.specialty,
+          registration_number: professional.registration_number,
+        } : undefined,
+        prescription: {
+          content: prescriptionContent,
+          created_at: new Date().toISOString(),
+          signature_data: null,
+          is_signed: false,
+        },
+      });
+
+      const result = await sendWhatsAppDocument({
+        phone: appointment.patient.phone,
+        clinicId: clinicId,
+        pdfBase64: base64,
+        fileName,
+        caption: `📋 Receituário - ${appointment.patient.name}\n\nData: ${format(new Date(), "dd/MM/yyyy", { locale: ptBR })}\n\n${clinic?.name || "Clínica"}`,
+      });
+
+      if (result.success) {
+        toast({
+          title: "Receituário enviado!",
+          description: `PDF enviado via WhatsApp para ${appointment.patient.phone}`,
+        });
+      } else {
+        throw new Error(result.error || "Erro ao enviar");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingWhatsApp(false);
+    }
   };
 
   return (
@@ -682,19 +809,43 @@ export function AppointmentPanel({
                   disabled={isCompleted}
                 />
               </div>
-              {!isCompleted && (
+              
+              <div className="flex gap-2 mt-4">
+                {!isCompleted && (
+                  <Button 
+                    onClick={handleSaveRecord} 
+                    disabled={savingRecord}
+                    className="flex-1"
+                  >
+                    {savingRecord ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-2" />
+                    )}
+                    Salvar Receituário
+                  </Button>
+                )}
+                
                 <Button 
-                  onClick={handleSaveRecord} 
-                  disabled={savingRecord}
-                  className="w-full mt-4"
+                  variant={isCompleted ? "default" : "outline"}
+                  onClick={handleSendPrescriptionWhatsApp}
+                  disabled={sendingWhatsApp || !recordForm.prescription?.trim() || !appointment.patient.phone}
+                  title={!appointment.patient.phone ? "Paciente sem telefone" : "Enviar via WhatsApp"}
+                  className={isCompleted ? "flex-1" : ""}
                 >
-                  {savingRecord ? (
+                  {sendingWhatsApp ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   ) : (
-                    <Save className="h-4 w-4 mr-2" />
+                    <Send className="h-4 w-4 mr-2" />
                   )}
-                  Salvar Receituário
+                  Enviar WhatsApp
                 </Button>
+              </div>
+              
+              {isCompleted && recordForm.prescription && (
+                <p className="text-sm text-muted-foreground mt-2">
+                  O atendimento foi finalizado, mas você ainda pode enviar o receituário via WhatsApp.
+                </p>
               )}
             </TabsContent>
           </Tabs>
