@@ -48,8 +48,8 @@ import {
   validateAnswers,
 } from "@/components/anamnesis/AnamneseResponseForm";
 import { AnamnesisPrint } from "@/components/anamnesis/AnamnesisPrint";
-import { exportAnamnesisToPDF } from "@/lib/anamnesisExportUtils";
-import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { exportAnamnesisToPDF, generateAnamnesisPDFBase64 } from "@/lib/anamnesisExportUtils";
+import { sendWhatsAppMessage, sendWhatsAppDocument } from "@/lib/whatsapp";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -506,44 +506,53 @@ export default function DynamicAnamnesisPage() {
     setSendingWhatsApp(true);
     
     try {
-      // Format anamnesis content for WhatsApp
-      const dateFormatted = format(new Date(responseToSend.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+      const signatureUrl = getSignatureUrl(responseToSend.signature_data);
+      const dateFormatted = format(new Date(responseToSend.created_at), "dd/MM/yyyy", { locale: ptBR });
       
-      let message = `📋 *ANAMNESE - ${responseToSend.template_title.toUpperCase()}*\n`;
-      message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
-      message += `👤 *Paciente:* ${selectedPatient.name}\n`;
-      message += `📅 *Data:* ${dateFormatted}\n`;
-      message += `🏥 *Clínica:* ${currentClinic.name}\n\n`;
-      message += `━━━━━━━━━━━━━━━━━━━━\n`;
-      message += `*RESPOSTAS:*\n\n`;
+      // Generate PDF as base64
+      const { base64, fileName } = await generateAnamnesisPDFBase64({
+        clinic: {
+          name: currentClinic.name,
+          address: currentClinic.address,
+          phone: currentClinic.phone,
+          cnpj: currentClinic.cnpj,
+        },
+        patient: {
+          name: selectedPatient.name,
+          phone: selectedPatient.phone,
+        },
+        template: {
+          title: responseToSend.template_title,
+        },
+        questions: viewQuestions,
+        answers: viewAnswers,
+        response: {
+          created_at: responseToSend.created_at,
+          filled_by_patient: responseToSend.filled_by_patient,
+          signature_data: responseToSend.signature_data,
+          signed_at: responseToSend.signed_at,
+          responsibility_accepted: responseToSend.responsibility_accepted,
+        },
+        signatureUrl,
+      });
       
-      // Add questions and answers
-      for (const question of viewQuestions) {
-        const answer = viewAnswers.find(a => a.question_id === question.id);
-        const answerDisplay = getAnswerDisplay(question, answer);
-        
-        message += `📌 *${question.question_text}*\n`;
-        message += `${answerDisplay || "Não respondido"}\n\n`;
-      }
+      // Caption for the document
+      const caption = `📋 *Anamnese - ${responseToSend.template_title}*\n` +
+                     `👤 Paciente: ${selectedPatient.name}\n` +
+                     `📅 Data: ${dateFormatted}\n` +
+                     `🏥 ${currentClinic.name}`;
       
-      message += `━━━━━━━━━━━━━━━━━━━━\n`;
-      
-      if (responseToSend.filled_by_patient && responseToSend.signed_at) {
-        const signedDate = format(new Date(responseToSend.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-        message += `✅ *Preenchido e assinado pelo paciente em:* ${signedDate}\n`;
-      }
-      
-      message += `\n_Documento gerado por ${currentClinic.name}_`;
-      
-      const result = await sendWhatsAppMessage({
+      // Send PDF via WhatsApp
+      const result = await sendWhatsAppDocument({
         phone: selectedPatient.phone,
-        message,
         clinicId: currentClinic.id,
-        type: 'custom',
+        pdfBase64: base64,
+        fileName,
+        caption,
       });
       
       if (result.success) {
-        toast({ title: "Anamnese enviada por WhatsApp!" });
+        toast({ title: "PDF da anamnese enviado por WhatsApp!" });
       } else {
         toast({
           title: "Erro ao enviar",

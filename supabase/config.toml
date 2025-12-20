@@ -3,6 +3,9 @@ project_id = "eahhszmbyxapxzilfdlo"
 [functions.send-whatsapp]
 verify_jwt = true
 
+[functions.send-whatsapp-document]
+verify_jwt = true
+
 [functions.send-appointment-reminders]
 verify_jwt = false
 
