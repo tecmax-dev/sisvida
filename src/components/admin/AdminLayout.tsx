@@ -11,6 +11,8 @@ import {
   ChevronRight,
   ScrollText,
   CreditCard,
+  Layers,
+  ArrowUpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +21,8 @@ const adminNavItems = [
   { path: "/admin/clinics", label: "Clínicas", icon: Building2 },
   { path: "/admin/users", label: "Usuários", icon: Users },
   { path: "/admin/plans", label: "Planos", icon: CreditCard },
+  { path: "/admin/features", label: "Recursos", icon: Layers },
+  { path: "/admin/upgrades", label: "Upgrades", icon: ArrowUpCircle },
   { path: "/admin/audit", label: "Auditoria", icon: ScrollText },
 ];
 
