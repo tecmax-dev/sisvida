@@ -132,6 +132,9 @@ export type Database = {
           patient_id: string
           professional_id: string | null
           public_token: string | null
+          responsibility_accepted: boolean | null
+          signature_data: string | null
+          signed_at: string | null
           template_id: string
           updated_at: string
         }
@@ -143,6 +146,9 @@ export type Database = {
           patient_id: string
           professional_id?: string | null
           public_token?: string | null
+          responsibility_accepted?: boolean | null
+          signature_data?: string | null
+          signed_at?: string | null
           template_id: string
           updated_at?: string
         }
@@ -154,6 +160,9 @@ export type Database = {
           patient_id?: string
           professional_id?: string | null
           public_token?: string | null
+          responsibility_accepted?: boolean | null
+          signature_data?: string | null
+          signed_at?: string | null
           template_id?: string
           updated_at?: string
         }

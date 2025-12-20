@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, CheckCircle2, FileText, AlertCircle } from "lucide-react";
+import { Loader2, CheckCircle2, FileText, AlertCircle, ShieldCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { AnamneseResponseForm, validateAnswers } from "@/components/anamnesis/AnamneseResponseForm";
+import { DigitalSignature } from "@/components/medical/DigitalSignature";
 
 interface Question {
   id: string;
@@ -46,6 +48,8 @@ export default function PublicAnamnesis() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [acceptedResponsibility, setAcceptedResponsibility] = useState(false);
+  const [signatureData, setSignatureData] = useState<string | null>(null);
 
   useEffect(() => {
     if (token) {
@@ -157,8 +161,44 @@ export default function PublicAnamnesis() {
       return;
     }
 
+    // Validate responsibility term
+    if (!acceptedResponsibility) {
+      toast({
+        title: "Termo obrigatório",
+        description: "Você precisa aceitar o termo de responsabilidade para continuar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate signature
+    if (!signatureData) {
+      toast({
+        title: "Assinatura obrigatória",
+        description: "Por favor, assine o documento para confirmar suas informações.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
+      // Upload signature to storage
+      const signatureBlob = await fetch(signatureData).then(r => r.blob());
+      const signaturePath = `${responseData.id}/signature-${Date.now()}.png`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('anamnesis-signatures')
+        .upload(signaturePath, signatureBlob, {
+          contentType: 'image/png',
+          upsert: true
+        });
+
+      if (uploadError) {
+        console.error("Signature upload error:", uploadError);
+        // Continue even if upload fails - save base64 as fallback
+      }
+
       // Delete existing answers
       await supabase
         .from('anamnese_answers')
@@ -181,12 +221,15 @@ export default function PublicAnamnesis() {
         if (insertError) throw insertError;
       }
 
-      // Mark as filled by patient
+      // Mark as filled by patient with signature data
       const { error: updateError } = await supabase
         .from('anamnese_responses')
         .update({ 
           filled_by_patient: true,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          signature_data: uploadError ? signatureData : signaturePath,
+          signed_at: new Date().toISOString(),
+          responsibility_accepted: true
         })
         .eq('id', responseData.id);
 
@@ -288,8 +331,54 @@ export default function PublicAnamnesis() {
                   errors={validationErrors}
                   readOnly={false}
                 />
+
+                {/* Termo de Responsabilidade */}
+                <div className="mt-8 pt-6 border-t space-y-6">
+                  <Card className="bg-muted/30 border-primary/20">
+                    <CardContent className="pt-4">
+                      <div className="flex items-start gap-3">
+                        <Checkbox 
+                          id="responsibility-term"
+                          checked={acceptedResponsibility}
+                          onCheckedChange={(checked) => setAcceptedResponsibility(checked === true)}
+                          className="mt-1"
+                        />
+                        <label htmlFor="responsibility-term" className="text-sm leading-relaxed cursor-pointer">
+                          <div className="flex items-center gap-2 mb-2">
+                            <ShieldCheck className="h-4 w-4 text-primary" />
+                            <strong className="text-foreground">Termo de Responsabilidade</strong>
+                          </div>
+                          <p className="text-muted-foreground">
+                            Declaro que todas as informações prestadas neste formulário são verdadeiras 
+                            e de minha inteira responsabilidade. Estou ciente de que a omissão ou 
+                            falsidade de qualquer informação poderá comprometer meu tratamento e a 
+                            atuação do profissional de saúde. Autorizo o uso dessas informações para 
+                            fins de diagnóstico e tratamento médico.
+                          </p>
+                        </label>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Assinatura Digital */}
+                  {acceptedResponsibility && (
+                    <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                      <DigitalSignature
+                        title="Sua Assinatura"
+                        onSign={(data) => setSignatureData(data)}
+                        onClear={() => setSignatureData(null)}
+                        existingSignature={signatureData}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex justify-end mt-6 pt-6 border-t">
-                  <Button onClick={handleSubmit} disabled={saving} size="lg">
+                  <Button 
+                    onClick={handleSubmit} 
+                    disabled={saving || !acceptedResponsibility || !signatureData} 
+                    size="lg"
+                  >
                     {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                     Enviar Anamnese
                   </Button>
