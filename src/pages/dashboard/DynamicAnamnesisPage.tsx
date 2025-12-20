@@ -7,6 +7,8 @@ import {
   Loader2,
   FileText,
   Clock,
+  ShieldCheck,
+  PenTool,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -62,6 +64,10 @@ interface Response {
   template_id: string;
   template_title: string;
   created_at: string;
+  filled_by_patient: boolean;
+  signature_data: string | null;
+  signed_at: string | null;
+  responsibility_accepted: boolean;
 }
 
 // Helper function to display answer based on question type
@@ -177,6 +183,10 @@ export default function DynamicAnamnesisPage() {
         id,
         template_id,
         created_at,
+        filled_by_patient,
+        signature_data,
+        signed_at,
+        responsibility_accepted,
         anamnese_templates (
           title
         )
@@ -190,9 +200,29 @@ export default function DynamicAnamnesisPage() {
       template_id: r.template_id,
       template_title: r.anamnese_templates?.title || "Template removido",
       created_at: r.created_at,
+      filled_by_patient: r.filled_by_patient || false,
+      signature_data: r.signature_data,
+      signed_at: r.signed_at,
+      responsibility_accepted: r.responsibility_accepted || false,
     }));
 
     setPatientResponses(responses);
+  };
+
+  const getSignatureUrl = (signatureData: string | null): string | null => {
+    if (!signatureData) return null;
+    
+    // Se começa com "data:", é base64
+    if (signatureData.startsWith('data:')) {
+      return signatureData;
+    }
+    
+    // Caso contrário, é um path no Storage
+    const { data } = supabase.storage
+      .from('anamnesis-signatures')
+      .getPublicUrl(signatureData);
+    
+    return data.publicUrl;
   };
 
   const fetchTemplateQuestions = async (templateId: string) => {
@@ -513,6 +543,11 @@ export default function DynamicAnamnesisPage() {
                             {format(new Date(response.created_at), "dd/MM/yyyy 'às' HH:mm", {
                               locale: ptBR,
                             })}
+                            {response.filled_by_patient && response.signature_data && (
+                              <Badge variant="secondary" className="ml-2 text-xs">
+                                ✍️ Assinado
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -539,6 +574,55 @@ export default function DynamicAnamnesisPage() {
                               </div>
                             );
                           })}
+
+                          {/* Seção de Assinatura Digital */}
+                          {response.filled_by_patient && response.signature_data && (
+                            <div className="mt-6 pt-4 border-t space-y-4">
+                              {/* Badge indicando preenchimento pelo paciente */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
+                                  <ShieldCheck className="h-3 w-3 mr-1" />
+                                  Preenchido pelo paciente
+                                </Badge>
+                                {response.signed_at && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Assinado em {format(new Date(response.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                  </span>
+                                )}
+                              </div>
+                              
+                              {/* Termo de responsabilidade */}
+                              {response.responsibility_accepted && (
+                                <Card className="bg-muted/30">
+                                  <CardContent className="py-3">
+                                    <p className="text-sm text-muted-foreground">
+                                      <ShieldCheck className="h-4 w-4 inline mr-2 text-primary" />
+                                      O paciente aceitou o termo de responsabilidade sobre as informações fornecidas.
+                                    </p>
+                                  </CardContent>
+                                </Card>
+                              )}
+                              
+                              {/* Assinatura digital */}
+                              <Card>
+                                <CardHeader className="pb-2">
+                                  <CardTitle className="text-base flex items-center gap-2">
+                                    <PenTool className="h-4 w-4" />
+                                    Assinatura do Paciente
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                  <div className="border rounded-lg p-4 bg-white">
+                                    <img 
+                                      src={getSignatureUrl(response.signature_data) || ''} 
+                                      alt="Assinatura do paciente"
+                                      className="max-w-full h-auto max-h-32 mx-auto"
+                                    />
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">
