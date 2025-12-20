@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -473,6 +474,7 @@ export default function AnamneseTemplatesPage() {
   );
 
   return (
+    <RoleGuard permission="manage_anamnesis_templates">
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -683,5 +685,6 @@ export default function AnamneseTemplatesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </RoleGuard>
   );
 }

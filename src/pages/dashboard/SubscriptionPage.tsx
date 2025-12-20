@@ -14,6 +14,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 import {
   CreditCard,
   Users,
@@ -113,6 +114,7 @@ export default function SubscriptionPage() {
   }
 
   return (
+    <RoleGuard permission="manage_subscription">
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Meu Plano</h1>
@@ -344,5 +346,6 @@ export default function SubscriptionPage() {
         </DialogContent>
       </Dialog>
     </div>
+    </RoleGuard>
   );
 }

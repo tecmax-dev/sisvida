@@ -40,6 +40,7 @@ import {
   Legend,
 } from "recharts";
 import { useAuth } from "@/hooks/useAuth";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { exportToPDF, exportToExcel } from "@/lib/exportUtils";
 import { useToast } from "@/hooks/use-toast";
@@ -274,6 +275,7 @@ export default function ReportsPage() {
   }
 
   return (
+    <RoleGuard permission="view_reports">
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
@@ -517,5 +519,6 @@ export default function ReportsPage() {
         </Card>
       </div>
     </div>
+    </RoleGuard>
   );
 }
