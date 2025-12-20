@@ -11,6 +11,7 @@ import {
   Pill,
   ClipboardList,
   Printer,
+  Send,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,8 @@ import { PrintDialog } from "@/components/medical/PrintDialog";
 import { calculateAge } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { sendWhatsAppDocument } from "@/lib/whatsapp";
+import { generatePrescriptionPDF } from "@/lib/prescriptionExportUtils";
 
 interface Patient {
   id: string;
@@ -85,6 +88,7 @@ export default function MedicalRecordsPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<string>("");
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -217,6 +221,62 @@ export default function MedicalRecordsPage() {
     setPrintDialogOpen(true);
   };
 
+  const handleSendWhatsApp = async (record: MedicalRecord) => {
+    if (!currentClinic || !selectedPatient) return;
+    
+    if (!record.prescription?.trim()) {
+      toast({ title: "Este registro não possui prescrição", variant: "destructive" });
+      return;
+    }
+
+    if (!selectedPatient.phone) {
+      toast({ title: "Paciente não possui telefone cadastrado", variant: "destructive" });
+      return;
+    }
+
+    setSendingWhatsApp(record.id);
+    try {
+      const { base64, fileName } = await generatePrescriptionPDF({
+        clinic: {
+          name: currentClinic.name,
+          address: currentClinic.address || undefined,
+          phone: currentClinic.phone || undefined,
+          cnpj: currentClinic.cnpj || undefined,
+        },
+        patient: {
+          name: selectedPatient.name,
+        },
+        professional: {
+          name: record.professional?.name || 'Profissional',
+          specialty: record.professional?.specialty || undefined,
+          registration_number: record.professional?.registration_number || undefined,
+        },
+        prescription: {
+          content: record.prescription,
+          created_at: record.record_date,
+        },
+      });
+
+      const result = await sendWhatsAppDocument({
+        phone: selectedPatient.phone,
+        clinicId: currentClinic.id,
+        pdfBase64: base64,
+        fileName,
+        caption: `Receituário - ${selectedPatient.name}`,
+      });
+
+      if (result.success) {
+        toast({ title: "Receituário enviado com sucesso!" });
+      } else {
+        toast({ title: "Erro ao enviar", description: result.error, variant: "destructive" });
+      }
+    } catch (error: any) {
+      toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
+    } finally {
+      setSendingWhatsApp(null);
+    }
+  };
+
   const filteredPatients = patients.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     p.phone.includes(searchQuery)
@@ -333,6 +393,21 @@ export default function MedicalRecordsPage() {
                           </p>
                         </div>
                         <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          {record.prescription && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSendWhatsApp(record)}
+                              disabled={sendingWhatsApp === record.id || !selectedPatient?.phone}
+                              title={!selectedPatient?.phone ? "Paciente sem telefone" : "Enviar receituário via WhatsApp"}
+                            >
+                              {sendingWhatsApp === record.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="h-4 w-4" />
+                              )}
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
