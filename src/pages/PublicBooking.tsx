@@ -66,6 +66,7 @@ interface Professional {
   specialty: string | null;
   appointment_duration: number | null;
   schedule: Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null;
+  avatar_url: string | null;
 }
 
 interface InsurancePlan {
@@ -136,7 +137,7 @@ export default function PublicBooking() {
       // Fetch professionals with schedules
       const { data: professionalsData } = await supabase
         .from('professionals')
-        .select('id, name, specialty, appointment_duration, schedule')
+        .select('id, name, specialty, appointment_duration, schedule, avatar_url')
         .eq('clinic_id', clinicData.id)
         .eq('is_active', true);
 
@@ -467,10 +468,25 @@ export default function PublicBooking() {
                           : "border-border hover:border-primary/50"
                       )}
                     >
-                      <p className="font-medium text-foreground">{prof.name}</p>
-                      {prof.specialty && (
-                        <p className="text-sm text-muted-foreground">{prof.specialty}</p>
-                      )}
+                      <div className="flex items-center gap-3">
+                        {prof.avatar_url ? (
+                          <img 
+                            src={prof.avatar_url} 
+                            alt={prof.name}
+                            className="w-12 h-12 rounded-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                            <User className="h-6 w-6 text-primary/60" />
+                          </div>
+                        )}
+                        <div>
+                          <p className="font-medium text-foreground">{prof.name}</p>
+                          {prof.specialty && (
+                            <p className="text-sm text-muted-foreground">{prof.specialty}</p>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </CardContent>
