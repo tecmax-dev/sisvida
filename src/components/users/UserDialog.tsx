@@ -220,6 +220,24 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
           if (profileError) console.error('Error updating profile:', profileError);
         }
 
+        // Auto-create professional record when role is 'professional'
+        if (data.role === 'professional') {
+          const { error: professionalError } = await supabase
+            .from('professionals')
+            .insert({
+              clinic_id: clinicId,
+              user_id: authData.user.id,
+              name: data.name,
+              email: data.email,
+              phone: data.phone || null,
+              is_active: true,
+            });
+
+          if (professionalError) {
+            console.error('Error creating professional record:', professionalError);
+          }
+        }
+
         await logAction({
           action: 'create_super_admin',
           entityType: 'user',

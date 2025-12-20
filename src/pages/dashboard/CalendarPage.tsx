@@ -72,6 +72,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { handleScheduleValidationError } from "@/lib/scheduleValidation";
@@ -152,6 +153,7 @@ interface Appointment {
 
 export default function CalendarPage() {
   const { currentClinic, user } = useAuth();
+  const { isProfessionalOnly } = usePermissions();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -200,12 +202,36 @@ export default function CalendarPage() {
   const [formTime, setFormTime] = useState("");
   const [formType, setFormType] = useState("first_visit");
   const [formNotes, setFormNotes] = useState("");
+  
+  // Professional user state
+  const [loggedInProfessionalId, setLoggedInProfessionalId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentClinic) {
       fetchData();
     }
   }, [currentClinic]);
+
+  // Fetch logged-in professional's ID if user is a professional
+  useEffect(() => {
+    const fetchLoggedInProfessional = async () => {
+      if (!isProfessionalOnly || !user?.id || !currentClinic?.id) return;
+      
+      const { data } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('clinic_id', currentClinic.id)
+        .maybeSingle();
+      
+      if (data) {
+        setLoggedInProfessionalId(data.id);
+        setFormProfessional(data.id);
+      }
+    };
+
+    fetchLoggedInProfessional();
+  }, [isProfessionalOnly, user?.id, currentClinic?.id]);
 
   useEffect(() => {
     if (currentClinic) {
@@ -621,7 +647,10 @@ export default function CalendarPage() {
 
   const resetForm = () => {
     setFormPatient("");
-    setFormProfessional("");
+    // Keep professional selection for logged-in professionals
+    if (!loggedInProfessionalId) {
+      setFormProfessional("");
+    }
     setFormTime("");
     setFormType("first_visit");
     setFormNotes("");
@@ -826,7 +855,11 @@ export default function CalendarPage() {
 
       <div className="space-y-2">
         <Label>Profissional *</Label>
-        <Select value={formProfessional} onValueChange={setFormProfessional}>
+        <Select 
+          value={formProfessional} 
+          onValueChange={setFormProfessional}
+          disabled={!!loggedInProfessionalId}
+        >
           <SelectTrigger className="bg-background">
             <SelectValue placeholder="Selecione o profissional" />
           </SelectTrigger>
@@ -844,6 +877,11 @@ export default function CalendarPage() {
             )}
           </SelectContent>
         </Select>
+        {loggedInProfessionalId && (
+          <p className="text-xs text-muted-foreground">
+            Seu perfil de profissional está selecionado automaticamente
+          </p>
+        )}
       </div>
 
       <div className="space-y-2">
