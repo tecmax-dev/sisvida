@@ -9,6 +9,7 @@ import {
   Pill,
   CheckCircle,
   Clock,
+  Send,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +37,8 @@ import { DigitalSignature } from "@/components/medical/DigitalSignature";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { calculateAge } from "@/lib/utils";
+import { sendWhatsAppDocument } from "@/lib/whatsapp";
+import { generatePrescriptionPDF } from "@/lib/prescriptionExportUtils";
 
 interface Patient {
   id: string;
@@ -58,7 +61,7 @@ interface Prescription {
   signed_at: string | null;
   signature_data: string | null;
   created_at: string;
-  patient: { name: string; birth_date: string | null } | null;
+  patient: { name: string; birth_date: string | null; phone: string } | null;
   professional: { name: string; specialty: string | null; registration_number: string | null } | null;
 }
 
@@ -76,6 +79,7 @@ export default function PrescriptionPage() {
   const [selectedProfessionalId, setSelectedProfessionalId] = useState("");
   const [prescriptionContent, setPrescriptionContent] = useState("");
   const [signatureData, setSignatureData] = useState<string | null>(null);
+  const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentClinic) {
@@ -123,7 +127,7 @@ export default function PrescriptionPage() {
         signed_at,
         signature_data,
         created_at,
-        patient:patients (name, birth_date),
+        patient:patients (name, birth_date, phone),
         professional:professionals (name, specialty, registration_number)
       `)
       .eq('clinic_id', currentClinic.id)
@@ -237,6 +241,70 @@ export default function PrescriptionPage() {
       </html>
     `);
     printWindow.document.close();
+  };
+
+  const handleSendWhatsApp = async (prescription: Prescription) => {
+    if (!currentClinic || !prescription.patient?.phone) {
+      toast({
+        title: "Erro",
+        description: "Paciente sem telefone cadastrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingWhatsApp(prescription.id);
+    
+    try {
+      const { base64, fileName } = await generatePrescriptionPDF({
+        clinic: {
+          name: currentClinic.name,
+          address: currentClinic.address,
+          phone: currentClinic.phone,
+          cnpj: currentClinic.cnpj,
+        },
+        patient: {
+          name: prescription.patient.name,
+          birth_date: prescription.patient.birth_date,
+        },
+        professional: prescription.professional ? {
+          name: prescription.professional.name,
+          specialty: prescription.professional.specialty,
+          registration_number: prescription.professional.registration_number,
+        } : undefined,
+        prescription: {
+          content: prescription.content,
+          created_at: prescription.created_at,
+          signature_data: prescription.signature_data,
+          is_signed: prescription.is_signed,
+        },
+      });
+
+      const result = await sendWhatsAppDocument({
+        phone: prescription.patient.phone,
+        clinicId: currentClinic.id,
+        pdfBase64: base64,
+        fileName,
+        caption: `📋 Receituário - ${prescription.patient.name}\n\nEmitido por: ${prescription.professional?.name || 'Profissional'}\nData: ${format(new Date(prescription.created_at), "dd/MM/yyyy", { locale: ptBR })}\n\n${currentClinic.name}`,
+      });
+
+      if (result.success) {
+        toast({
+          title: "Receituário enviado!",
+          description: `PDF enviado via WhatsApp para ${prescription.patient.phone}`,
+        });
+      } else {
+        throw new Error(result.error || "Erro ao enviar");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingWhatsApp(null);
+    }
   };
 
   const filteredPatients = patients.filter(p =>
@@ -360,6 +428,20 @@ export default function PrescriptionPage() {
                             Pendente
                           </Badge>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleSendWhatsApp(prescription)}
+                          disabled={sendingWhatsApp === prescription.id || !prescription.patient?.phone}
+                          title={!prescription.patient?.phone ? "Paciente sem telefone" : "Enviar via WhatsApp"}
+                        >
+                          {sendingWhatsApp === prescription.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Send className="h-4 w-4 mr-1" />
+                          )}
+                          WhatsApp
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
