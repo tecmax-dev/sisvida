@@ -58,6 +58,7 @@ const PlansManagement = lazy(() => import("./pages/admin/PlansManagement"));
 const FeaturesManagement = lazy(() => import("./pages/admin/FeaturesManagement"));
 const UpgradeRequestsPage = lazy(() => import("./pages/admin/UpgradeRequestsPage"));
 const AuditLogsPage = lazy(() => import("./pages/admin/AuditLogsPage"));
+const DataImportPage = lazy(() => import("./pages/admin/DataImportPage"));
 
 const queryClient = new QueryClient();
 
@@ -148,6 +149,7 @@ const App = () => (
                   <Route path="plans" element={<PlansManagement />} />
                   <Route path="features" element={<FeaturesManagement />} />
                   <Route path="upgrades" element={<UpgradeRequestsPage />} />
+                  <Route path="import" element={<DataImportPage />} />
                   <Route path="audit" element={<AuditLogsPage />} />
                 </Route>
                 {/* Dashboard Routes */}

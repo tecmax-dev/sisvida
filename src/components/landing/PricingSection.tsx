@@ -223,7 +223,7 @@ export function PricingSection() {
             </div>
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-success" />
-              <span className="text-sm">Migração gratuita</span>
+              <span className="text-sm">Suporte à migração</span>
             </div>
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-success" />
