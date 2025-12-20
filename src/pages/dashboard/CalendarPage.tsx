@@ -349,10 +349,33 @@ export default function CalendarPage() {
     });
   }, [appointments, filterProfessional, filterType, searchQuery, patients]);
 
-  // Get appointments for a specific date
+  // Status priority for sorting (active appointments first)
+  const statusPriority: Record<string, number> = {
+    'in_progress': 1,   // Em atendimento - máxima prioridade
+    'scheduled': 2,     // Agendado
+    'confirmed': 3,     // Confirmado
+    'cancelled': 4,     // Cancelado - baixa prioridade
+    'completed': 5,     // Concluído - baixa prioridade
+    'no_show': 6,       // Não compareceu - baixa prioridade
+  };
+
+  // Get appointments for a specific date (sorted by status priority then by time)
   const getAppointmentsForDate = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0];
-    return filteredAppointments.filter(apt => apt.appointment_date === dateStr);
+    return filteredAppointments
+      .filter(apt => apt.appointment_date === dateStr)
+      .sort((a, b) => {
+        // First: sort by status priority
+        const priorityA = statusPriority[a.status] || 99;
+        const priorityB = statusPriority[b.status] || 99;
+        
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        
+        // Second: sort by time (within same priority group)
+        return a.start_time.localeCompare(b.start_time);
+      });
   };
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
