@@ -74,7 +74,7 @@ export function FAQSection() {
             </p>
             <Button asChild size="lg" variant="outline" className="gap-2">
               <a
-                href="https://wa.me/5511999999999?text=Olá! Tenho uma dúvida sobre o Eclini"
+                href="https://wa.me/5571982786864?text=Olá! Tenho uma dúvida sobre o Eclini"
                 target="_blank"
                 rel="noopener noreferrer"
               >
