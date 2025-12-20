@@ -285,7 +285,22 @@ export default function PrescriptionPage() {
         clinicId: currentClinic.id,
         pdfBase64: base64,
         fileName,
-        caption: `📋 Receituário - ${prescription.patient.name}\n\nEmitido por: ${prescription.professional?.name || 'Profissional'}\nData: ${format(new Date(prescription.created_at), "dd/MM/yyyy", { locale: ptBR })}\n\n${currentClinic.name}`,
+        caption: [
+          `📋 *Receituário Médico*`,
+          ``,
+          `Olá ${prescription.patient.name}! 👋`,
+          ``,
+          `Segue em anexo seu receituário.`,
+          ``,
+          `📅 *Data:* ${format(new Date(prescription.created_at), "dd/MM/yyyy", { locale: ptBR })}`,
+          `👨‍⚕️ *Profissional:* ${prescription.professional?.name || 'Profissional'}`,
+          `🏥 *Clínica:* ${currentClinic.name}`,
+          ``,
+          `⚠️ *Atenção:* Siga as orientações do profissional de saúde. Em caso de dúvidas, entre em contato conosco.`,
+          ``,
+          `Atenciosamente,`,
+          `Equipe ${currentClinic.name}`,
+        ].join('\n'),
       });
 
       if (result.success) {

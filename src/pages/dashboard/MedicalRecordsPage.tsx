@@ -262,7 +262,22 @@ export default function MedicalRecordsPage() {
         clinicId: currentClinic.id,
         pdfBase64: base64,
         fileName,
-        caption: `Receituário - ${selectedPatient.name}`,
+        caption: [
+          `📋 *Receituário Médico*`,
+          ``,
+          `Olá ${selectedPatient.name}! 👋`,
+          ``,
+          `Segue em anexo seu receituário.`,
+          ``,
+          `📅 *Data:* ${format(new Date(record.record_date), "dd/MM/yyyy", { locale: ptBR })}`,
+          `👨‍⚕️ *Profissional:* ${record.professional?.name || 'Profissional'}`,
+          `🏥 *Clínica:* ${currentClinic.name}`,
+          ``,
+          `⚠️ *Atenção:* Siga as orientações do profissional de saúde. Em caso de dúvidas, entre em contato conosco.`,
+          ``,
+          `Atenciosamente,`,
+          `Equipe ${currentClinic.name}`,
+        ].join('\n'),
       });
 
       if (result.success) {
