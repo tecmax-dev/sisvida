@@ -51,6 +51,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -544,6 +546,7 @@ export default function ProfessionalsPage() {
   const usagePercentage = subscription ? (activeProfessionals / maxProfessionals) * 100 : 0;
 
   return (
+    <RoleGuard permission="manage_professionals">
     <div className="space-y-6">
       {/* Limit Alert */}
       {subscription && isAtLimit && (
@@ -985,5 +988,6 @@ export default function ProfessionalsPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </RoleGuard>
   );
 }

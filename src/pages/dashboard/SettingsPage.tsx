@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2, Bell, Clock, Globe, ShieldCheck } from "lucide-react";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function SettingsPage() {
   const { user, currentClinic } = useAuth();
@@ -83,6 +84,7 @@ export default function SettingsPage() {
   };
 
   return (
+    <RoleGuard permission="manage_settings">
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
@@ -305,5 +307,6 @@ export default function SettingsPage() {
         </Button>
       </div>
     </div>
+    </RoleGuard>
   );
 }

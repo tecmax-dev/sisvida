@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -31,34 +32,47 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-const navItems = [
-  { href: "/dashboard", icon: Home, label: "Visão Geral" },
-  { href: "/dashboard/calendar", icon: Calendar, label: "Agenda" },
-  { href: "/dashboard/patients", icon: Users, label: "Pacientes" },
-  { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais" },
-  { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário" },
-  { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese" },
-  { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica" },
-  { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates de Anamnese" },
-  { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera" },
-  { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios" },
-  { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios" },
-  { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano" },
-  { href: "/dashboard/settings", icon: Settings, label: "Configurações" },
+interface NavItem {
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  permission?: Permission;
+}
+
+const navItems: NavItem[] = [
+  { href: "/dashboard", icon: Home, label: "Visão Geral", permission: "view_dashboard" },
+  { href: "/dashboard/calendar", icon: Calendar, label: "Agenda", permission: "manage_calendar" },
+  { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients" },
+  { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais", permission: "manage_professionals" },
+  { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
+  { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
+  { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "view_anamnesis" },
+  { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates de Anamnese", permission: "manage_anamnesis_templates" },
+  { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "manage_waiting_list" },
+  { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "manage_insurance" },
+  { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios", permission: "view_reports" },
+  { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano", permission: "manage_subscription" },
+  { href: "/dashboard/settings", icon: Settings, label: "Configurações", permission: "manage_settings" },
 ];
 
-const adminNavItems = [
-  { href: "/dashboard/users", icon: UserCog, label: "Usuários" },
+const adminNavItems: NavItem[] = [
+  { href: "/dashboard/users", icon: UserCog, label: "Usuários", permission: "manage_users" },
 ];
 
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { user, profile, currentClinic, userRoles, signOut, setCurrentClinic } = useAuth();
+  const { hasPermission, isAdmin } = usePermissions();
 
-  // Check if current user is admin of the clinic
-  const currentUserRole = userRoles.find(r => r.clinic_id === currentClinic?.id);
-  const isAdmin = currentUserRole?.role === 'owner' || currentUserRole?.role === 'admin';
+  // Filter navigation items based on permissions
+  const filteredNavItems = navItems.filter((item) =>
+    !item.permission || hasPermission(item.permission)
+  );
+
+  const filteredAdminNavItems = adminNavItems.filter((item) =>
+    !item.permission || hasPermission(item.permission)
+  );
 
   const isActive = (href: string) => {
     if (href === "/dashboard") {
@@ -136,7 +150,7 @@ export function DashboardLayout() {
           )}
 
           <nav className="flex-1 p-4 space-y-1">
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <Link
                 key={item.href}
                 to={item.href}
@@ -154,7 +168,7 @@ export function DashboardLayout() {
             ))}
             
             {/* Admin only navigation items */}
-            {isAdmin && adminNavItems.map((item) => (
+            {isAdmin && filteredAdminNavItems.map((item) => (
               <Link
                 key={item.href}
                 to={item.href}
