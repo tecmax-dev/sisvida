@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2, Bell, Clock, Globe, ShieldCheck } from "lucide-react";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
+import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function SettingsPage() {
@@ -332,6 +333,11 @@ export default function SettingsPage() {
       {/* WhatsApp Integration */}
       {currentClinic && (
         <EvolutionConfigPanel clinicId={currentClinic.id} />
+      )}
+
+      {/* API Integrations */}
+      {currentClinic && (
+        <ApiKeysPanel clinicId={currentClinic.id} />
       )}
 
       <div className="flex justify-end">
