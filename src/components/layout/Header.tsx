@@ -1,127 +1,126 @@
 import { Link, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./Logo";
-import { Menu, X, LogIn, Play, ArrowRight } from "lucide-react";
-import { useState } from "react";
+import { Menu, X, ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const navLinks = [
-  { href: "/", label: "Home" },
   { href: "/#features", label: "Recursos" },
-  { href: "/#pricing", label: "Preço" },
-  { href: "/#contact", label: "Contato" },
+  { href: "/#specialties", label: "Especialidades" },
+  { href: "/#pricing", label: "Planos" },
 ];
 
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
 
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <>
-      {/* Top Bar - LGPD Info */}
-      <div className="bg-foreground text-background text-xs py-2">
-        <div className="container flex items-center justify-center gap-2">
-          <span className="opacity-80">
-            🔒 Sistema em conformidade com a LGPD - Lei Geral de Proteção de Dados
-          </span>
-        </div>
-      </div>
+    <header 
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        isScrolled 
+          ? "bg-card/95 backdrop-blur-lg border-b border-border/40 shadow-sm" 
+          : "bg-transparent"
+      }`}
+    >
+      <div className="container flex h-16 lg:h-20 items-center justify-between">
+        <Logo />
 
-      <header className="sticky top-0 z-50 w-full bg-card border-b border-border/40 shadow-sm">
-        <div className="container flex h-16 items-center justify-between">
-          <Logo />
-
-          {/* Desktop Navigation - Center */}
-          <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  location.pathname === link.href 
-                    ? "text-foreground" 
-                    : "text-muted-foreground"
-                }`}
-              >
-                {link.label}
-              </a>
-            ))}
-          </nav>
-
-          {/* Desktop Actions - Right */}
-          <div className="hidden md:flex items-center gap-3">
-            <Button 
-              variant="outline" 
-              className="border-primary text-primary hover:bg-primary/5 rounded-full px-5"
-              asChild
+        {/* Desktop Navigation */}
+        <nav className="hidden md:flex items-center gap-8">
+          {navLinks.map((link) => (
+            <a
+              key={link.href}
+              href={link.href}
+              className={`text-sm font-medium transition-colors hover:text-primary ${
+                isScrolled ? "text-muted-foreground" : "text-foreground/80"
+              }`}
             >
-              <Link to="/auth" className="flex items-center gap-2">
-                <Play className="h-4 w-4 fill-current" />
-                Demonstração
-              </Link>
-            </Button>
-            <Button 
-              className="bg-cta hover:bg-cta-hover text-cta-foreground rounded-full px-5 shadow-md"
-              asChild
-            >
-              <Link to="/auth?tab=signup" className="flex items-center gap-2">
-                Testar agora
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
+              {link.label}
+            </a>
+          ))}
+        </nav>
 
-          {/* Mobile Menu Button */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
+        {/* Desktop Actions */}
+        <div className="hidden md:flex items-center gap-3">
+          <Button 
+            variant="ghost" 
+            className="text-sm font-medium"
+            asChild
           >
-            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            <Link to="/auth">
+              Entrar
+            </Link>
+          </Button>
+          <Button 
+            className="bg-cta hover:bg-cta-hover text-cta-foreground rounded-full px-6 shadow-md transition-all duration-300 hover:scale-105"
+            asChild
+          >
+            <Link to="/auth?tab=signup" className="flex items-center gap-2">
+              Começar grátis
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </Button>
         </div>
 
-        {/* Mobile Menu */}
-        {isMenuOpen && (
-          <div className="md:hidden border-t border-border bg-card animate-slide-in-from-top">
-            <div className="container py-4 space-y-4">
-              <nav className="flex flex-col gap-3">
-                {navLinks.map((link) => (
-                  <a
-                    key={link.href}
-                    href={link.href}
-                    className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    {link.label}
-                  </a>
-                ))}
-              </nav>
-              <div className="flex flex-col gap-2 pt-2">
-                <Button 
-                  variant="outline" 
-                  className="border-primary text-primary w-full rounded-full"
-                  asChild
+        {/* Mobile Menu Button */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+        >
+          {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </Button>
+      </div>
+
+      {/* Mobile Menu */}
+      {isMenuOpen && (
+        <div className="md:hidden bg-card/95 backdrop-blur-lg border-b border-border animate-fade-in">
+          <div className="container py-4 space-y-4">
+            <nav className="flex flex-col gap-3">
+              {navLinks.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors py-2"
+                  onClick={() => setIsMenuOpen(false)}
                 >
-                  <Link to="/auth" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center gap-2">
-                    <Play className="h-4 w-4 fill-current" />
-                    Demonstração
-                  </Link>
-                </Button>
-                <Button 
-                  className="bg-cta hover:bg-cta-hover text-cta-foreground w-full rounded-full"
-                  asChild
-                >
-                  <Link to="/auth?tab=signup" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center gap-2">
-                    Testar agora
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
+                  {link.label}
+                </a>
+              ))}
+            </nav>
+            <div className="flex flex-col gap-2 pt-2">
+              <Button 
+                variant="outline" 
+                className="w-full rounded-full"
+                asChild
+              >
+                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                  Entrar
+                </Link>
+              </Button>
+              <Button 
+                className="bg-cta hover:bg-cta-hover text-cta-foreground w-full rounded-full"
+                asChild
+              >
+                <Link to="/auth?tab=signup" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center gap-2">
+                  Começar grátis
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </div>
           </div>
-        )}
-      </header>
-    </>
+        </div>
+      )}
+    </header>
   );
 }

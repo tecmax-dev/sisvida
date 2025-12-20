@@ -1,126 +1,137 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { ArrowRight, Check, Star } from "lucide-react";
+import { ArrowRight, Check, Star, Users, Shield } from "lucide-react";
 import heroMockup from "@/assets/dashboard-mockup.png";
 
 const highlights = [
   "Agenda online 24h",
-  "Lembretes WhatsApp",
-  "Prontuário digital",
-  "Gestão financeira",
-  "Anamnese personalizável",
-  "Assinatura digital",
+  "Lembretes WhatsApp automáticos",
+  "Prontuário eletrônico completo",
+  "Gestão financeira integrada",
 ];
 
 export function HeroSection() {
   return (
-    <section className="relative bg-card py-12 lg:py-16 overflow-hidden">
-      <div className="container">
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-6 items-center">
-          {/* Left Column - Content (5 cols) */}
-          <div className="lg:col-span-5 order-2 lg:order-1">
-            <h1 className="opacity-0 animate-slide-up-fade text-3xl sm:text-4xl lg:text-[2.75rem] font-bold leading-tight text-foreground">
-              Sistema para clínicas
+    <section className="relative min-h-[90vh] flex items-center pt-20 lg:pt-24 pb-12 overflow-hidden">
+      {/* Background gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-background to-accent/10" />
+      <div className="absolute top-20 right-0 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent/20 rounded-full blur-3xl" />
+      
+      <div className="container relative z-10">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+          {/* Left Column - Content */}
+          <div className="order-2 lg:order-1">
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full mb-6 animate-fade-in">
+              <Star className="h-4 w-4 text-primary fill-primary" />
+              <span className="text-sm font-medium text-primary">Sistema #1 para clínicas no Brasil</span>
+            </div>
+
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold leading-tight text-foreground animate-fade-in" style={{ animationDelay: '100ms' }}>
+              Simplifique a gestão
               <br />
-              <span className="text-primary">de multi especialidades</span>
+              <span className="text-primary">da sua clínica</span>
             </h1>
 
-            <p className="opacity-0 animate-slide-up-fade-delay-1 mt-5 text-base lg:text-lg text-muted-foreground leading-relaxed">
-              Junte-se a profissionais da saúde de todo o Brasil e melhore sua gestão com o{" "}
-              <Link to="/" className="text-primary font-medium hover:underline">
-                Eclini
-              </Link>
-              . Ganhe tempo ao organizar sua agenda e economize gerenciando melhor sua clínica.
+            <p className="mt-6 text-lg lg:text-xl text-muted-foreground leading-relaxed max-w-lg animate-fade-in" style={{ animationDelay: '200ms' }}>
+              Organize agendamentos, automatize lembretes e gerencie seu negócio em um só lugar. 
+              Junte-se a milhares de profissionais de saúde.
             </p>
 
             {/* Highlights */}
-            <div className="opacity-0 animate-slide-up-fade-delay-2 mt-6 grid grid-cols-2 gap-3">
+            <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-3 animate-fade-in" style={{ animationDelay: '300ms' }}>
               {highlights.map((item, i) => (
                 <div 
                   key={i} 
-                  className="flex items-center gap-2 text-sm text-foreground transition-transform duration-200 hover:translate-x-1"
+                  className="flex items-center gap-3 text-foreground"
                 >
-                  <div className="w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Check className="h-3 w-3 text-primary" />
+                  <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Check className="h-3.5 w-3.5 text-primary" />
                   </div>
-                  <span>{item}</span>
+                  <span className="text-sm font-medium">{item}</span>
                 </div>
               ))}
             </div>
 
-            {/* CTA Button */}
-            <div className="opacity-0 animate-slide-up-fade-delay-3 mt-8">
+            {/* CTA Buttons */}
+            <div className="mt-10 flex flex-col sm:flex-row gap-4 animate-fade-in" style={{ animationDelay: '400ms' }}>
               <Button 
                 size="lg" 
-                className="bg-cta hover:bg-cta-hover text-cta-foreground rounded-full px-8 h-12 shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
+                className="bg-cta hover:bg-cta-hover text-cta-foreground rounded-full px-8 h-14 text-base shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
                 asChild
               >
                 <Link to="/auth?tab=signup" className="flex items-center gap-2">
-                  Quero testar agora
-                  <ArrowRight className="h-4 w-4" />
+                  Começar grátis por 7 dias
+                  <ArrowRight className="h-5 w-5" />
                 </Link>
               </Button>
+              <Button 
+                size="lg"
+                variant="outline" 
+                className="border-primary text-primary hover:bg-primary/5 rounded-full px-8 h-14 text-base"
+                asChild
+              >
+                <a href="#pricing">
+                  Ver planos e preços
+                </a>
+              </Button>
+            </div>
+
+            {/* Social Proof */}
+            <div className="mt-10 flex items-center gap-8 text-sm text-muted-foreground animate-fade-in" style={{ animationDelay: '500ms' }}>
+              <div className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-primary" />
+                <span><strong className="text-foreground">+10.000</strong> clínicas</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex -space-x-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="h-4 w-4 text-warning fill-warning" />
+                  ))}
+                </div>
+                <span><strong className="text-foreground">4.9</strong> no Google</span>
+              </div>
+              <div className="hidden sm:flex items-center gap-2">
+                <Shield className="h-5 w-5 text-primary" />
+                <span>LGPD</span>
+              </div>
             </div>
           </div>
 
-          {/* Center Column - Mockup Image (4 cols) */}
-          <div className="lg:col-span-4 order-1 lg:order-2 flex justify-center">
-            <div className="relative opacity-0 animate-scale-in-fade">
+          {/* Right Column - Mockup */}
+          <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
+            <div className="relative w-full max-w-lg lg:max-w-xl animate-fade-in" style={{ animationDelay: '200ms' }}>
               <img 
                 src={heroMockup} 
                 alt="Eclini - Sistema de gestão para clínicas" 
-                className="w-full max-w-sm lg:max-w-md h-auto object-contain drop-shadow-2xl animate-float"
+                className="w-full h-auto object-contain drop-shadow-2xl animate-float"
               />
-              {/* Decorative gradient */}
-              <div className="absolute -z-10 inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10 rounded-3xl blur-3xl scale-110" />
-            </div>
-          </div>
-
-          {/* Right Column - Price Card (3 cols) */}
-          <div className="lg:col-span-3 order-3 flex justify-center lg:justify-end">
-            <div className="relative w-full max-w-xs opacity-0 animate-slide-in-right-fade">
-              {/* Badge */}
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                <div className="bg-cta text-cta-foreground text-xs font-semibold px-4 py-1.5 rounded-full flex items-center gap-1 shadow-md animate-bounce-soft">
-                  <Star className="h-3 w-3 fill-current" />
-                  Mais vendido
+              {/* Decorative elements */}
+              <div className="absolute -z-10 inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20 rounded-3xl blur-3xl scale-110" />
+              
+              {/* Floating cards */}
+              <div className="absolute -left-4 top-1/4 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block" style={{ animationDelay: '1s' }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
+                    <Check className="h-4 w-4 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium">Consulta confirmada</p>
+                    <p className="text-xs text-muted-foreground">Hoje, 14:30</p>
+                  </div>
                 </div>
               </div>
-
-              {/* Card */}
-              <div className="bg-card border-2 border-primary/30 rounded-2xl p-6 shadow-float transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                <div className="text-center pt-4">
-                  <p className="text-sm text-muted-foreground mb-1">Apenas</p>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-sm text-muted-foreground">R$</span>
-                    <span className="text-4xl font-bold text-foreground">49,90</span>
+              
+              <div className="absolute -right-4 bottom-1/4 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block" style={{ animationDelay: '2s' }}>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Users className="h-4 w-4 text-primary" />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    por profissional/mês
-                  </p>
+                  <div>
+                    <p className="text-xs font-medium">+3 agendamentos</p>
+                    <p className="text-xs text-muted-foreground">Esta semana</p>
+                  </div>
                 </div>
-
-                <div className="mt-6 space-y-3">
-                  {["Agenda ilimitada", "Gestão financeira", "Anamnese customizável", "Suporte dedicado"].map((feature, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm text-foreground">
-                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
-                      <span>{feature}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <Button 
-                  className="w-full mt-6 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full transition-transform duration-200 hover:scale-[1.02]"
-                  asChild
-                >
-                  <Link to="/auth?tab=signup">
-                    Começar teste grátis
-                  </Link>
-                </Button>
-
-                <p className="text-xs text-center text-muted-foreground mt-3">
-                  7 dias grátis • Sem cartão
-                </p>
               </div>
             </div>
           </div>

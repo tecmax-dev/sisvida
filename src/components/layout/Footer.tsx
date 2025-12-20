@@ -1,40 +1,45 @@
 import { Logo } from "./Logo";
-import { MessageCircle, Mail, Phone } from "lucide-react";
+import { MessageCircle, Mail, Shield, Instagram, Linkedin, Youtube } from "lucide-react";
 
 export function Footer() {
   return (
-    <footer className="border-t border-border bg-white">
-      <div className="container py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="md:col-span-2">
+    <footer className="border-t border-border bg-card">
+      <div className="container py-12 lg:py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
+          {/* Brand Column */}
+          <div className="lg:col-span-1">
             <Logo size="md" />
-            <p className="mt-4 text-sm text-muted-foreground max-w-md">
-              Sistema de agendamento e gestão para clínicas. Simplifique sua recepção, 
-              reduza faltas e melhore a experiência dos seus pacientes.
+            <p className="mt-4 text-sm text-muted-foreground max-w-xs">
+              Sistema completo de agendamento e gestão para clínicas de todas as especialidades.
             </p>
-            <div className="mt-4 space-y-2">
+            
+            {/* Social Links */}
+            <div className="mt-6 flex gap-3">
               <a 
-                href="https://wa.me/5571982786864" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                href="#" 
+                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
               >
-                <MessageCircle className="h-4 w-4" />
-                (71) 98278-6864
+                <Instagram className="h-5 w-5" />
               </a>
               <a 
-                href="mailto:contato@eclini.com.br"
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                href="#" 
+                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
               >
-                <Mail className="h-4 w-4" />
-                contato@eclini.com.br
+                <Linkedin className="h-5 w-5" />
+              </a>
+              <a 
+                href="#" 
+                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+              >
+                <Youtube className="h-5 w-5" />
               </a>
             </div>
           </div>
           
+          {/* Product Links */}
           <div>
             <h4 className="font-semibold text-foreground mb-4">Produto</h4>
-            <ul className="space-y-2.5">
+            <ul className="space-y-3">
               <li>
                 <a href="/#features" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Recursos
@@ -46,16 +51,22 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/#contact" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Contato
+                <a href="/#specialties" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Especialidades
+                </a>
+              </li>
+              <li>
+                <a href="/auth?tab=signup" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Criar conta
                 </a>
               </li>
             </ul>
           </div>
           
+          {/* Legal Links */}
           <div>
             <h4 className="font-semibold text-foreground mb-4">Legal</h4>
-            <ul className="space-y-2.5">
+            <ul className="space-y-3">
               <li>
                 <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Termos de Uso
@@ -68,36 +79,76 @@ export function Footer() {
               </li>
               <li>
                 <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  LGPD
+                  Cookies
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h4 className="font-semibold text-foreground mb-4">Contato</h4>
+            <ul className="space-y-3">
+              <li>
+                <a 
+                  href="https://wa.me/5571982786864" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  (71) 98278-6864
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="mailto:contato@eclini.com.br"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Mail className="h-4 w-4" />
+                  contato@eclini.com.br
                 </a>
               </li>
             </ul>
           </div>
         </div>
         
-        <div className="mt-10 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
-          <div>
-            <p className="text-sm text-muted-foreground">
-              © {new Date().getFullYear()} Eclini. Todos os direitos reservados.
-            </p>
-            <p className="text-xs text-muted-foreground/70 mt-1">
-              CNPJ: 03.025.212/0001-11
-            </p>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span>Desenvolvido por</span>
-            <a
-              href="https://danielasales.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:opacity-80 transition-opacity"
-            >
-              <img
-                src="https://danielasales.com/assets/logo-tecmax-DxAeqUGw.png"
-                alt="Tecmax Tecnologia"
-                className="h-6"
-              />
-            </a>
+        {/* Bottom Bar */}
+        <div className="mt-12 pt-8 border-t border-border">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <div className="flex flex-col md:flex-row items-center gap-4">
+              <p className="text-sm text-muted-foreground">
+                © {new Date().getFullYear()} Eclini. Todos os direitos reservados.
+              </p>
+              <span className="hidden md:inline text-muted-foreground/50">•</span>
+              <p className="text-xs text-muted-foreground/70">
+                CNPJ: 03.025.212/0001-11
+              </p>
+            </div>
+            
+            {/* LGPD Badge */}
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-full">
+                <Shield className="h-4 w-4 text-primary" />
+                <span className="text-xs font-medium text-primary">Em conformidade com a LGPD</span>
+              </div>
+              
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Desenvolvido por</span>
+                <a
+                  href="https://danielasales.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:opacity-80 transition-opacity"
+                >
+                  <img
+                    src="https://danielasales.com/assets/logo-tecmax-DxAeqUGw.png"
+                    alt="Tecmax Tecnologia"
+                    className="h-5"
+                  />
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </div>
