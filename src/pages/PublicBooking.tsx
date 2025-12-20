@@ -11,6 +11,7 @@ import {
   ChevronRight,
   CheckCircle2,
   Building2,
+  Stethoscope,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -74,6 +75,16 @@ interface InsurancePlan {
   name: string;
 }
 
+interface Procedure {
+  id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  duration_minutes: number | null;
+  category: string | null;
+  color: string | null;
+}
+
 export default function PublicBooking() {
   const { clinicSlug } = useParams();
   const navigate = useNavigate();
@@ -82,6 +93,7 @@ export default function PublicBooking() {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [existingAppointments, setExistingAppointments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -96,6 +108,7 @@ export default function PublicBooking() {
   const [selectedProfessional, setSelectedProfessional] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedType, setSelectedType] = useState("first_visit");
+  const [selectedProcedure, setSelectedProcedure] = useState("");
   const [patientName, setPatientName] = useState("");
   const [patientPhone, setPatientPhone] = useState("");
   const [patientEmail, setPatientEmail] = useState("");
@@ -151,6 +164,15 @@ export default function PublicBooking() {
         .eq('is_active', true);
 
       setInsurancePlans(insuranceData || []);
+
+      // Fetch active procedures
+      const { data: proceduresData } = await supabase
+        .from('procedures')
+        .select('id, name, description, price, duration_minutes, category, color')
+        .eq('clinic_id', clinicData.id)
+        .eq('is_active', true);
+
+      setProcedures(proceduresData || []);
     } catch (error) {
       console.error('Error fetching clinic data:', error);
     } finally {
@@ -174,6 +196,16 @@ export default function PublicBooking() {
     setExistingAppointments(data?.map(a => a.start_time.substring(0, 5)) || []);
   };
 
+  // Get appointment duration (from procedure or professional)
+  const appointmentDuration = useMemo(() => {
+    if (selectedProcedure) {
+      const procedure = procedures.find(p => p.id === selectedProcedure);
+      if (procedure?.duration_minutes) return procedure.duration_minutes;
+    }
+    const professional = professionals.find(p => p.id === selectedProfessional);
+    return professional?.appointment_duration || 30;
+  }, [selectedProcedure, selectedProfessional, procedures, professionals]);
+
   // Get available time slots based on professional schedule and existing appointments
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate || !selectedProfessional) return [];
@@ -194,7 +226,7 @@ export default function PublicBooking() {
     
     // Generate time slots from professional's schedule
     const daySchedule = schedule[dayKey];
-    const duration = professional.appointment_duration || 30;
+    const duration = appointmentDuration;
     const slots: string[] = [];
     
     daySchedule.slots.forEach(slot => {
@@ -214,7 +246,7 @@ export default function PublicBooking() {
     
     // Filter out existing appointments
     return slots.filter(slot => !existingAppointments.includes(slot));
-  }, [selectedDate, selectedProfessional, professionals, existingAppointments]);
+  }, [selectedDate, selectedProfessional, professionals, existingAppointments, appointmentDuration]);
 
   // Check if day has availability based on professional schedule
   const isDayAvailable = (date: Date) => {
@@ -275,12 +307,11 @@ export default function PublicBooking() {
     setSubmitting(true);
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
-      const duration = professionals.find(p => p.id === selectedProfessional)?.appointment_duration || 30;
       
-      // Calculate end time
+      // Calculate end time using procedure duration or professional duration
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const endDate = new Date();
-      endDate.setHours(hours, minutes + duration, 0, 0);
+      endDate.setHours(hours, minutes + appointmentDuration, 0, 0);
       const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
       // Create or find patient
@@ -314,16 +345,18 @@ export default function PublicBooking() {
         patientId = newPatient.id;
       }
 
-      // Create appointment
+      // Create appointment with procedure_id if selected
       const { error: appointmentError } = await supabase
         .from('appointments')
         .insert([{
           clinic_id: clinic.id,
           patient_id: patientId,
           professional_id: selectedProfessional,
+          procedure_id: selectedProcedure || null,
           appointment_date: dateStr,
           start_time: selectedTime,
           end_time: endTime,
+          duration_minutes: appointmentDuration,
           type: selectedType as "first_visit" | "return" | "exam" | "procedure",
           status: 'scheduled' as const,
         }]);
@@ -564,9 +597,79 @@ export default function PublicBooking() {
             </div>
           )}
 
-          {/* Step 2: Select Time and Type */}
+          {/* Step 2: Select Procedure and Time */}
           {step === 2 && (
             <div className="space-y-6">
+              {/* Procedure Selection */}
+              {procedures.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Stethoscope className="h-5 w-5" />
+                      Selecione o Procedimento
+                    </CardTitle>
+                    <CardDescription>
+                      Escolha o tipo de atendimento desejado
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {procedures.map((proc) => (
+                        <div
+                          key={proc.id}
+                          onClick={() => {
+                            setSelectedProcedure(proc.id);
+                            setSelectedTime(""); // Reset time when procedure changes
+                          }}
+                          className={cn(
+                            "p-4 rounded-lg border cursor-pointer transition-colors",
+                            selectedProcedure === proc.id 
+                              ? "border-primary bg-primary/5" 
+                              : "border-border hover:border-primary/50"
+                          )}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                {proc.color && (
+                                  <div 
+                                    className="w-3 h-3 rounded-full" 
+                                    style={{ backgroundColor: proc.color }}
+                                  />
+                                )}
+                                <p className="font-medium text-foreground">{proc.name}</p>
+                              </div>
+                              {proc.description && (
+                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                  {proc.description}
+                                </p>
+                              )}
+                              <div className="flex items-center gap-3 mt-2 text-sm">
+                                {proc.duration_minutes && (
+                                  <span className="text-muted-foreground flex items-center gap-1">
+                                    <Clock className="h-3 w-3" />
+                                    {proc.duration_minutes} min
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold text-foreground">
+                                {proc.price > 0 
+                                  ? `R$ ${proc.price.toFixed(2).replace('.', ',')}`
+                                  : 'Grátis'
+                                }
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Time Selection */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -575,6 +678,11 @@ export default function PublicBooking() {
                   </CardTitle>
                   <CardDescription>
                     {selectedDate?.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    {selectedProcedure && procedures.find(p => p.id === selectedProcedure)?.duration_minutes && (
+                      <span className="ml-2">
+                        • Duração: {procedures.find(p => p.id === selectedProcedure)?.duration_minutes} min
+                      </span>
+                    )}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -598,36 +706,42 @@ export default function PublicBooking() {
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tipo de Consulta</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 gap-3">
-                    {appointmentTypes.map((type) => (
-                      <div
-                        key={type.value}
-                        onClick={() => setSelectedType(type.value)}
-                        className={cn(
-                          "p-4 rounded-lg border cursor-pointer transition-colors text-center",
-                          selectedType === type.value 
-                            ? "border-primary bg-primary/5" 
-                            : "border-border hover:border-primary/50"
-                        )}
-                      >
-                        <p className="font-medium text-foreground">{type.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Appointment Type (shown only if no procedures) */}
+              {procedures.length === 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Tipo de Consulta</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-3">
+                      {appointmentTypes.map((type) => (
+                        <div
+                          key={type.value}
+                          onClick={() => setSelectedType(type.value)}
+                          className={cn(
+                            "p-4 rounded-lg border cursor-pointer transition-colors text-center",
+                            selectedType === type.value 
+                              ? "border-primary bg-primary/5" 
+                              : "border-border hover:border-primary/50"
+                          )}
+                        >
+                          <p className="font-medium text-foreground">{type.label}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="flex justify-between">
                 <Button variant="outline" onClick={() => setStep(1)}>
                   <ChevronLeft className="h-4 w-4 mr-2" />
                   Voltar
                 </Button>
-                <Button onClick={() => setStep(3)} disabled={!selectedTime}>
+                <Button 
+                  onClick={() => setStep(3)} 
+                  disabled={!selectedTime || (procedures.length > 0 && !selectedProcedure)}
+                >
                   Continuar
                 </Button>
               </div>
@@ -718,12 +832,40 @@ export default function PublicBooking() {
                       <span className="text-muted-foreground">Horário:</span>
                       <span className="font-medium text-foreground">{selectedTime}</span>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Tipo:</span>
-                      <span className="font-medium text-foreground">
-                        {appointmentTypes.find(t => t.value === selectedType)?.label}
-                      </span>
-                    </div>
+                    {selectedProcedure ? (
+                      <>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Procedimento:</span>
+                          <span className="font-medium text-foreground">
+                            {procedures.find(p => p.id === selectedProcedure)?.name}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Duração:</span>
+                          <span className="font-medium text-foreground">
+                            {procedures.find(p => p.id === selectedProcedure)?.duration_minutes || appointmentDuration} min
+                          </span>
+                        </div>
+                        <div className="flex justify-between border-t border-border pt-2 mt-2">
+                          <span className="text-muted-foreground font-medium">Valor:</span>
+                          <span className="font-semibold text-foreground">
+                            {(() => {
+                              const price = procedures.find(p => p.id === selectedProcedure)?.price || 0;
+                              return price > 0 
+                                ? `R$ ${price.toFixed(2).replace('.', ',')}` 
+                                : 'Grátis';
+                            })()}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Tipo:</span>
+                        <span className="font-medium text-foreground">
+                          {appointmentTypes.find(t => t.value === selectedType)?.label}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
