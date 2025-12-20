@@ -1,8 +1,12 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, pointerWithin } from "@dnd-kit/core";
 import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder } from "@/lib/whatsapp";
 import { ToastAction } from "@/components/ui/toast";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
+import { DraggableAppointment } from "@/components/appointments/DraggableAppointment";
+import { DroppableTimeSlot } from "@/components/appointments/DroppableTimeSlot";
+import { DragOverlayContent } from "@/components/appointments/DragOverlayContent";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -25,6 +29,7 @@ import {
   UserCheck,
   Stethoscope,
   Play,
+  GripVertical,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -197,6 +202,9 @@ export default function CalendarPage() {
   // Appointment Panel state
   const [appointmentPanelOpen, setAppointmentPanelOpen] = useState(false);
   const [selectedAppointmentForPanel, setSelectedAppointmentForPanel] = useState<Appointment | null>(null);
+  
+  // Drag and Drop state
+  const [activeAppointment, setActiveAppointment] = useState<Appointment | null>(null);
   
   // Form state
   const [formPatient, setFormPatient] = useState("");
@@ -688,6 +696,79 @@ export default function CalendarPage() {
     setAppointmentPanelOpen(true);
   };
 
+  // Drag and Drop handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const appointment = active.data.current?.appointment;
+    if (appointment) {
+      setActiveAppointment(appointment);
+    }
+  };
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveAppointment(null);
+
+    if (!over) return;
+
+    const appointment = active.data.current?.appointment as Appointment;
+    if (!appointment) return;
+
+    // Parse the drop target ID (format: "date_time")
+    const overId = over.id as string;
+    const [newDate, newTime] = overId.split('_');
+
+    if (!newDate || !newTime) return;
+
+    // Check if the appointment was dropped in its original position
+    const originalDate = active.data.current?.originalDate;
+    const originalTime = active.data.current?.originalTime;
+    
+    if (newDate === originalDate && newTime === originalTime) {
+      return; // No change needed
+    }
+
+    // Calculate end time based on duration (default 30 minutes)
+    const duration = appointment.duration_minutes || 30;
+    const [hours, minutes] = newTime.split(':').map(Number);
+    const totalMinutes = hours * 60 + minutes + duration;
+    const endHours = Math.floor(totalMinutes / 60);
+    const endMinutes = totalMinutes % 60;
+    const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+
+    // Update in database
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          appointment_date: newDate,
+          start_time: newTime,
+          end_time: endTime,
+        })
+        .eq('id', appointment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Agendamento reagendado",
+        description: `Movido para ${new Date(newDate + 'T12:00:00').toLocaleDateString('pt-BR')} às ${newTime}`,
+      });
+
+      fetchAppointments();
+    } catch (error: any) {
+      const { isScheduleError, message } = handleScheduleValidationError(error);
+      toast({
+        title: isScheduleError ? "Horário indisponível" : "Erro ao reagendar",
+        description: message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDragCancel = () => {
+    setActiveAppointment(null);
+  };
+
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
     const month = date.getMonth();
@@ -1112,6 +1193,7 @@ export default function CalendarPage() {
           const dayAppointments = getAppointmentsForDate(date);
           const isTodayDate = isToday(date);
           const isSelectedDate = isSelected(date);
+          const dateStr = date.toISOString().split('T')[0];
 
           return (
             <div key={i} className="min-h-[300px]">
@@ -1126,22 +1208,33 @@ export default function CalendarPage() {
                 <div className="text-xs text-muted-foreground">{weekDaysFull[i]}</div>
                 <div className="text-lg font-semibold">{date.getDate()}</div>
               </button>
-              <div className="space-y-1">
+              
+              {/* Droppable zone for the entire day */}
+              <DroppableTimeSlot 
+                date={dateStr} 
+                time="08:00" 
+                showTime={false}
+                className="space-y-1 min-h-[200px] p-1"
+              >
                 {dayAppointments.slice(0, 4).map((apt) => {
                   const status = statusConfig[apt.status as keyof typeof statusConfig] || statusConfig.scheduled;
+                  const canDrag = apt.status !== "cancelled" && apt.status !== "completed" && apt.status !== "no_show" && apt.status !== "in_progress";
+                  
                   return (
-                    <div
-                      key={apt.id}
-                      onClick={() => openRescheduleDialog(apt)}
-                      className={cn(
-                        "p-2 rounded-lg text-xs cursor-pointer hover:opacity-80 transition-opacity",
-                        status.bgColor,
-                        apt.status === "cancelled" && "opacity-50"
-                      )}
-                    >
-                      <div className="font-medium truncate">{apt.start_time.slice(0, 5)}</div>
-                      <div className="truncate text-muted-foreground">{apt.patient?.name}</div>
-                    </div>
+                    <DraggableAppointment key={apt.id} appointment={apt}>
+                      <div
+                        onClick={() => canDrag ? openRescheduleDialog(apt) : undefined}
+                        className={cn(
+                          "p-2 rounded-lg text-xs transition-opacity",
+                          canDrag && "cursor-pointer hover:opacity-80",
+                          status.bgColor,
+                          apt.status === "cancelled" && "opacity-50"
+                        )}
+                      >
+                        <div className="font-medium truncate">{apt.start_time.slice(0, 5)}</div>
+                        <div className="truncate text-muted-foreground">{apt.patient?.name}</div>
+                      </div>
+                    </DraggableAppointment>
                   );
                 })}
                 {dayAppointments.length > 4 && (
@@ -1149,7 +1242,7 @@ export default function CalendarPage() {
                     +{dayAppointments.length - 4} mais
                   </div>
                 )}
-              </div>
+              </DroppableTimeSlot>
             </div>
           );
         })}
@@ -1214,6 +1307,12 @@ export default function CalendarPage() {
   };
 
   return (
+    <DndContext
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+      collisionDetection={pointerWithin}
+    >
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -1555,24 +1654,34 @@ export default function CalendarPage() {
                 ))}
               </div>
               <div className="grid grid-cols-7 gap-1">
-                {getDaysInMonth(currentDate).map((item, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleDayClick(item.date)}
-                    className={cn(
-                      "aspect-square flex items-center justify-center text-sm rounded-lg transition-colors",
-                      item.isCurrentMonth
-                        ? "text-foreground hover:bg-muted"
-                        : "text-muted-foreground/40",
-                      isToday(item.date) &&
-                        "bg-primary/10 text-primary font-semibold",
-                      isSelected(item.date) &&
-                        "bg-primary text-primary-foreground font-semibold"
-                    )}
-                  >
-                    {item.day}
-                  </button>
-                ))}
+                {getDaysInMonth(currentDate).map((item, i) => {
+                  const dateStr = item.date.toISOString().split('T')[0];
+                  return (
+                    <DroppableTimeSlot
+                      key={i}
+                      date={dateStr}
+                      time="08:00"
+                      showTime={false}
+                      className="p-0"
+                    >
+                      <button
+                        onClick={() => handleDayClick(item.date)}
+                        className={cn(
+                          "w-full aspect-square flex items-center justify-center text-sm rounded-lg transition-colors",
+                          item.isCurrentMonth
+                            ? "text-foreground hover:bg-muted"
+                            : "text-muted-foreground/40",
+                          isToday(item.date) &&
+                            "bg-primary/10 text-primary font-semibold",
+                          isSelected(item.date) &&
+                            "bg-primary text-primary-foreground font-semibold"
+                        )}
+                      >
+                        {item.day}
+                      </button>
+                    </DroppableTimeSlot>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -1630,22 +1739,58 @@ export default function CalendarPage() {
                 Carregando agendamentos...
               </div>
             ) : viewMode === "day" ? (
-              getAppointmentsForDate(selectedDate).length > 0 ? (
-                <div className="space-y-3">
-                  {getAppointmentsForDate(selectedDate).map((appointment) => (
-                    <AppointmentCard key={appointment.id} appointment={appointment} />
-                  ))}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Time slots for dropping */}
+                <div className="lg:col-span-1 space-y-1 p-2 rounded-lg border border-dashed border-border/50 bg-muted/20">
+                  <p className="text-xs text-muted-foreground font-medium mb-2 text-center">
+                    Arraste para reagendar
+                  </p>
+                  <div className="grid grid-cols-3 gap-1">
+                    {timeSlots.map((time) => {
+                      const dateStr = selectedDate.toISOString().split('T')[0];
+                      const hasAppointment = getAppointmentsForDate(selectedDate).some(
+                        apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled'
+                      );
+                      return (
+                        <DroppableTimeSlot
+                          key={time}
+                          date={dateStr}
+                          time={time}
+                          disabled={hasAppointment}
+                          className={cn(
+                            "p-2 text-center rounded-md border border-transparent",
+                            hasAppointment 
+                              ? "bg-muted/50 text-muted-foreground/50" 
+                              : "bg-background hover:border-primary/20"
+                          )}
+                        />
+                      );
+                    })}
+                  </div>
                 </div>
-              ) : (
-                <div className="text-center py-12 text-muted-foreground">
-                  <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                  <p className="mb-4">Nenhum agendamento para este dia</p>
-                  <Button variant="outline" onClick={() => setDialogOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar agendamento
-                  </Button>
+
+                {/* Appointments list */}
+                <div className="lg:col-span-2">
+                  {getAppointmentsForDate(selectedDate).length > 0 ? (
+                    <div className="space-y-3">
+                      {getAppointmentsForDate(selectedDate).map((appointment) => (
+                        <DraggableAppointment key={appointment.id} appointment={appointment}>
+                          <AppointmentCard appointment={appointment} />
+                        </DraggableAppointment>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                      <p className="mb-4">Nenhum agendamento para este dia</p>
+                      <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar agendamento
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              )
+              </div>
             ) : viewMode === "week" ? (
               <WeekView />
             ) : (
@@ -1678,6 +1823,14 @@ export default function CalendarPage() {
           onUpdate={fetchAppointments}
         />
       )}
+
+      {/* Drag Overlay */}
+      <DragOverlay>
+        {activeAppointment && (
+          <DragOverlayContent appointment={activeAppointment} />
+        )}
+      </DragOverlay>
     </div>
+    </DndContext>
   );
 }
