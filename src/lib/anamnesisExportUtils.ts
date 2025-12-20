@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import "jspdf-autotable";
+import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -164,7 +164,7 @@ export async function exportAnamnesisToPDF({
     ];
   });
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: yPos,
     head: [["Pergunta", "Resposta"]],
     body: tableData,
@@ -200,7 +200,7 @@ export async function exportAnamnesisToPDF({
     },
   });
 
-  yPos = (doc as any).lastAutoTable.finalY + 15;
+  yPos = (doc as any).lastAutoTable?.finalY + 15 || yPos + 15;
 
   // Check if we need a new page for signature
   if (response.filled_by_patient && response.signature_data && yPos > 220) {
