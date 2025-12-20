@@ -16,6 +16,12 @@
     --primary-foreground: 0 0% 100%;
     --primary-soft: 174 45% 95%;
     --primary-glow: 174 62% 60%;
+    --primary-dark: 174 62% 35%;
+    
+    /* CTA - Orange/Amber (Action Color) */
+    --cta: 25 95% 53%;
+    --cta-foreground: 0 0% 100%;
+    --cta-hover: 25 95% 48%;
     
     /* Background & Surfaces */
     --background: 200 20% 98%;
@@ -77,6 +83,7 @@
     --gradient-hero: linear-gradient(135deg, hsl(210 30% 12%) 0%, hsl(210 25% 18%) 50%, hsl(174 40% 25%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
     --gradient-soft: linear-gradient(135deg, hsl(174 45% 95%) 0%, hsl(200 40% 96%) 100%);
+    --gradient-stats: linear-gradient(135deg, hsl(174 62% 35%) 0%, hsl(174 50% 28%) 100%);
     
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 hsl(210 30% 15% / 0.05);
@@ -85,6 +92,7 @@
     --shadow-xl: 0 20px 25px -5px hsl(210 30% 15% / 0.1), 0 8px 10px -6px hsl(210 30% 15% / 0.08);
     --shadow-glow: 0 0 40px hsl(174 62% 47% / 0.2);
     --shadow-card: 0 1px 3px 0 hsl(210 30% 15% / 0.06), 0 1px 2px -1px hsl(210 30% 15% / 0.06);
+    --shadow-float: 0 25px 50px -12px hsl(210 30% 15% / 0.25);
     
     /* Transitions */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
