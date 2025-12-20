@@ -21,6 +21,20 @@ interface ClinicWithReminder {
   reminder_hours: number;
 }
 
+// Converter horário UTC para horário de Bahia, Brasil (UTC-3)
+function getBrazilTime(): Date {
+  const now = new Date();
+  // Bahia (America/Bahia) = UTC-3
+  const brazilOffsetMinutes = -3 * 60; // -3 horas em minutos
+  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return new Date(utcTime + (brazilOffsetMinutes * 60000));
+}
+
+// Formatar data para exibição no fuso horário do Brasil
+function formatDateBrazil(date: Date): string {
+  return date.toLocaleString('pt-BR', { timeZone: 'America/Bahia' });
+}
+
 async function sendWhatsAppViaEvolution(
   config: EvolutionConfig,
   phone: string,
@@ -105,8 +119,10 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const now = new Date();
-    console.log(`[${now.toISOString()}] Starting automatic reminder check`);
+    // Usar horário do Brasil (Bahia, UTC-3) para todos os cálculos
+    const now = getBrazilTime();
+    const nowUTC = new Date();
+    console.log(`[UTC: ${nowUTC.toISOString()}] [Brasil/Bahia: ${formatDateBrazil(now)}] Starting automatic reminder check`);
 
     // Get clinics with reminders enabled
     const { data: clinics, error: clinicsError } = await supabase
@@ -139,7 +155,7 @@ serve(async (req) => {
       const targetStartTime = targetStart.toTimeString().substring(0, 5);
       const targetEndTime = targetEnd.toTimeString().substring(0, 5);
       
-      console.log(`Clinic ${clinic.name}: checking appointments for ${targetDate} between ${targetStartTime} and ${targetEndTime} (${reminderHours}h before)`);
+      console.log(`Clinic ${clinic.name}: checking appointments for ${targetDate} between ${targetStartTime} and ${targetEndTime} (${reminderHours}h before) [Horário Brasil/Bahia]`);
 
       // Fetch clinic's Evolution API config
       const { data: evolutionConfig } = await supabase
