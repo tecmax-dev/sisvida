@@ -1625,6 +1625,97 @@ export type Database = {
           },
         ]
       }
+      webhook_logs: {
+        Row: {
+          delivered_at: string | null
+          duration_ms: number | null
+          error: string | null
+          event: string
+          id: string
+          payload: Json | null
+          response_body: string | null
+          response_status: number | null
+          webhook_id: string
+        }
+        Insert: {
+          delivered_at?: string | null
+          duration_ms?: number | null
+          error?: string | null
+          event: string
+          id?: string
+          payload?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          webhook_id: string
+        }
+        Update: {
+          delivered_at?: string | null
+          duration_ms?: number | null
+          error?: string | null
+          event?: string
+          id?: string
+          payload?: Json | null
+          response_body?: string | null
+          response_status?: number | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          events: string[]
+          id: string
+          is_active: boolean | null
+          name: string
+          secret: string | null
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          events?: string[]
+          id?: string
+          is_active?: boolean | null
+          name: string
+          secret?: string | null
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          events?: string[]
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          secret?: string | null
+          updated_at?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

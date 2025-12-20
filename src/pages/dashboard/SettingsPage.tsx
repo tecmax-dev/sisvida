@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Building2, Bell, Clock, Globe, ShieldCheck } from "lucide-react";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
+import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function SettingsPage() {
@@ -339,6 +340,9 @@ export default function SettingsPage() {
       {currentClinic && (
         <ApiKeysPanel clinicId={currentClinic.id} />
       )}
+
+      {/* Webhooks */}
+      <WebhooksPanel />
 
       <div className="flex justify-end">
         <Button variant="hero" onClick={handleSave} disabled={saving}>

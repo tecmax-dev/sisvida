@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.clinic-api]
 verify_jwt = false
+
+[functions.dispatch-webhook]
+verify_jwt = true
