@@ -852,7 +852,7 @@ export default function PatientsPage() {
                 {selectedPatient.birth_date && (
                   <div className="flex items-center gap-3">
                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                    <span>Nascimento: {format(new Date(selectedPatient.birth_date), "dd/MM/yyyy")}</span>
+                    <span>Nascimento: {format(new Date(selectedPatient.birth_date + "T12:00:00"), "dd/MM/yyyy")}</span>
                   </div>
                 )}
                 {selectedPatient.address && (

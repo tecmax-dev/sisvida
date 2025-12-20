@@ -103,7 +103,7 @@ export default function DashboardOverview() {
 
           toast({
             title: "Novo agendamento!",
-            description: `${patient?.name || 'Paciente'} agendou para ${new Date(payload.new.appointment_date).toLocaleDateString('pt-BR')} às ${payload.new.start_time.slice(0, 5)}`,
+            description: `${patient?.name || 'Paciente'} agendou para ${new Date(payload.new.appointment_date + "T12:00:00").toLocaleDateString('pt-BR')} às ${payload.new.start_time.slice(0, 5)}`,
           });
 
           // Highlight new appointment
