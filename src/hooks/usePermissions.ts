@@ -18,7 +18,9 @@ export type Permission =
   | "manage_settings"
   | "manage_users"
   | "view_prescriptions"
-  | "manage_prescriptions";
+  | "manage_prescriptions"
+  | "view_financials"
+  | "manage_financials";
 
 // Define permissions for each role
 const rolePermissions: Record<string, Permission[] | "*"> = {

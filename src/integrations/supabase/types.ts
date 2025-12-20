@@ -621,6 +621,143 @@ export type Database = {
           },
         ]
       }
+      financial_categories: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_categories_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_transactions: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          category_id: string | null
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string
+          due_date: string | null
+          id: string
+          notes: string | null
+          paid_date: string | null
+          patient_id: string | null
+          payment_method: string | null
+          professional_id: string | null
+          status: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          category_id?: string | null
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          paid_date?: string | null
+          patient_id?: string | null
+          payment_method?: string | null
+          professional_id?: string | null
+          status?: string | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          category_id?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          paid_date?: string | null
+          patient_id?: string | null
+          payment_method?: string | null
+          professional_id?: string | null
+          status?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insurance_plans: {
         Row: {
           clinic_id: string
@@ -878,6 +1015,57 @@ export type Database = {
             columns: ["insurance_plan_id"]
             isOneToOne: false
             referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_plans: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          installments: number
+          patient_id: string | null
+          status: string | null
+          total_amount: number
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          installments: number
+          patient_id?: string | null
+          status?: string | null
+          total_amount: number
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          installments?: number
+          patient_id?: string | null
+          status?: string | null
+          total_amount?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_plans_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_plans_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
