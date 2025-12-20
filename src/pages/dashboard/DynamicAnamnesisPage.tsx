@@ -6,7 +6,6 @@ import {
   User,
   Loader2,
   FileText,
-  ChevronRight,
   Clock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,6 +13,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Dialog,
   DialogContent,
@@ -58,6 +63,33 @@ interface Response {
   template_title: string;
   created_at: string;
 }
+
+// Helper function to display answer based on question type
+const getAnswerDisplay = (question: Question, answer: Answer | undefined): string => {
+  if (!answer) return "";
+  
+  if (question.question_type === "text" || question.question_type === "textarea" || question.question_type === "date" || question.question_type === "number") {
+    return answer.answer_text || "";
+  }
+  
+  if (question.question_type === "boolean") {
+    if (answer.answer_text === "true") return "Sim";
+    if (answer.answer_text === "false") return "Não";
+    return answer.answer_text || "";
+  }
+  
+  if (question.question_type === "radio" || question.question_type === "select" || question.question_type === "checkbox") {
+    if (!answer.answer_option_ids || answer.answer_option_ids.length === 0) return "";
+    
+    const selectedOptions = question.options
+      ?.filter(opt => answer.answer_option_ids?.includes(opt.id))
+      .map(opt => opt.option_text);
+    
+    return selectedOptions?.join(", ") || "";
+  }
+  
+  return answer.answer_text || "";
+};
 
 export default function DynamicAnamnesisPage() {
   const { currentClinic, user } = useAuth();
@@ -437,33 +469,72 @@ export default function DynamicAnamnesisPage() {
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
+              <Accordion type="single" collapsible className="space-y-2">
                 {patientResponses.map((response) => (
-                  <div
-                    key={response.id}
-                    onClick={() => handleOpenViewResponse(response)}
-                    className="flex items-center justify-between p-4 rounded-lg border border-border hover:border-primary/50 cursor-pointer transition-colors"
+                  <AccordionItem 
+                    key={response.id} 
+                    value={response.id}
+                    className="border border-border rounded-lg px-4"
                   >
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-primary/10">
-                        <FileText className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {response.template_title}
-                        </p>
-                        <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Clock className="h-3 w-3" />
-                          {format(new Date(response.created_at), "dd/MM/yyyy 'às' HH:mm", {
-                            locale: ptBR,
-                          })}
+                    <AccordionTrigger 
+                      className="hover:no-underline py-4"
+                      onClick={(e) => {
+                        // Prevent default trigger behavior to load data first
+                        const isOpen = e.currentTarget.getAttribute('data-state') === 'open';
+                        if (!isOpen) {
+                          fetchResponseAnswers(response.id, response.template_id);
+                        }
+                      }}
+                    >
+                      <div className="flex items-center gap-3 text-left">
+                        <div className="p-2 rounded-lg bg-primary/10">
+                          <FileText className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {response.template_title}
+                          </p>
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            {format(new Date(response.created_at), "dd/MM/yyyy 'às' HH:mm", {
+                              locale: ptBR,
+                            })}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                  </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-2 pb-4">
+                      {loadingQuestions ? (
+                        <div className="flex justify-center py-4">
+                          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : viewQuestions.length > 0 ? (
+                        <div className="space-y-4 pl-12">
+                          {viewQuestions.map((question) => {
+                            const answer = viewAnswers.find(a => a.question_id === question.id);
+                            const answerDisplay = getAnswerDisplay(question, answer);
+                            
+                            return (
+                              <div key={question.id} className="border-l-2 border-primary/20 pl-4">
+                                <p className="text-sm font-medium text-foreground mb-1">
+                                  {question.question_text}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {answerDisplay || <em>Não respondido</em>}
+                                </p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-muted-foreground text-center py-4">
+                          Sem respostas disponíveis
+                        </p>
+                      )}
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </div>
+              </Accordion>
             )}
           </CardContent>
         </Card>
