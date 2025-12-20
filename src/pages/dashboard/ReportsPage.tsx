@@ -60,7 +60,9 @@ interface ReportData {
   dailyAppointments: { date: string; total: number; completed: number; noShow: number }[];
 }
 
-export default function ReportsPage() {
+import { FeatureGate } from "@/components/features/FeatureGate";
+
+function ReportsContent() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
@@ -520,5 +522,13 @@ export default function ReportsPage() {
       </div>
     </div>
     </RoleGuard>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <FeatureGate feature="basic_reports" showUpgradePrompt>
+      <ReportsContent />
+    </FeatureGate>
   );
 }

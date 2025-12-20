@@ -1,11 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSubscription, useAvailablePlans } from "@/hooks/useSubscription";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -24,18 +27,72 @@ import {
   Loader2,
   Crown,
   Sparkles,
+  Lock,
+  Clock,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+interface UpgradeRequest {
+  id: string;
+  requested_plan_id: string;
+  status: string;
+  reason: string | null;
+  admin_notes: string | null;
+  created_at: string;
+  processed_at: string | null;
+  requested_plan?: { name: string };
+}
+
 export default function SubscriptionPage() {
   const { subscription, loading, professionalCount, refetch } = useSubscription();
   const { plans, loading: loadingPlans } = useAvailablePlans();
-  const { currentClinic } = useAuth();
+  const { availableFeatures, allFeatures, loading: loadingFeatures } = usePlanFeatures();
+  const { currentClinic, user } = useAuth();
   const { toast } = useToast();
   const [upgradeDialogOpen, setUpgradeDialogOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
-  const [upgrading, setUpgrading] = useState(false);
+  const [upgradeReason, setUpgradeReason] = useState("");
+  const [requesting, setRequesting] = useState(false);
+  const [upgradeRequests, setUpgradeRequests] = useState<UpgradeRequest[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(true);
+
+  useEffect(() => {
+    if (currentClinic) {
+      fetchUpgradeRequests();
+    }
+  }, [currentClinic]);
+
+  const fetchUpgradeRequests = async () => {
+    if (!currentClinic) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('upgrade_requests')
+        .select(`
+          id,
+          requested_plan_id,
+          status,
+          reason,
+          admin_notes,
+          created_at,
+          processed_at,
+          requested_plan:subscription_plans!upgrade_requests_requested_plan_id_fkey(name)
+        `)
+        .eq('clinic_id', currentClinic.id)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (error) throw error;
+      setUpgradeRequests(data || []);
+    } catch (error) {
+      console.error('Error fetching upgrade requests:', error);
+    } finally {
+      setLoadingRequests(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -54,6 +111,19 @@ export default function SubscriptionPage() {
     }
   };
 
+  const getRequestStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
+      case 'approved':
+        return <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100"><CheckCircle className="h-3 w-3 mr-1" />Aprovado</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100"><XCircle className="h-3 w-3 mr-1" />Rejeitado</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -61,40 +131,41 @@ export default function SubscriptionPage() {
     }).format(price);
   };
 
-  const handleUpgrade = async () => {
-    if (!selectedPlan || !currentClinic) return;
+  const handleRequestUpgrade = async () => {
+    if (!selectedPlan || !currentClinic || !user) return;
 
-    setUpgrading(true);
+    setRequesting(true);
 
     try {
       const { error } = await supabase
-        .from('subscriptions')
-        .update({
-          plan_id: selectedPlan,
-          status: 'active',
-          current_period_start: new Date().toISOString(),
-          current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        })
-        .eq('clinic_id', currentClinic.id);
+        .from('upgrade_requests')
+        .insert({
+          clinic_id: currentClinic.id,
+          current_plan_id: subscription?.plan_id,
+          requested_plan_id: selectedPlan,
+          requested_by: user.id,
+          reason: upgradeReason || null,
+        });
 
       if (error) throw error;
 
       toast({
-        title: "Plano atualizado!",
-        description: "Seu plano foi atualizado com sucesso. Os novos limites já estão ativos.",
+        title: "Solicitação enviada!",
+        description: "Sua solicitação de upgrade foi enviada para análise. Você será notificado quando for processada.",
       });
 
       setUpgradeDialogOpen(false);
       setSelectedPlan(null);
-      refetch();
+      setUpgradeReason("");
+      fetchUpgradeRequests();
     } catch (error: any) {
       toast({
-        title: "Erro ao atualizar plano",
+        title: "Erro ao solicitar upgrade",
         description: error.message,
         variant: "destructive",
       });
     } finally {
-      setUpgrading(false);
+      setRequesting(false);
     }
   };
 
@@ -104,6 +175,12 @@ export default function SubscriptionPage() {
 
   const maxProfessionals = subscription?.plan?.max_professionals || 1;
   const usagePercentage = (professionalCount / maxProfessionals) * 100;
+
+  // Determine which features are available and which are blocked
+  const availableFeatureKeys = new Set(availableFeatures.map(f => f.key));
+  const blockedFeatures = allFeatures.filter(f => !availableFeatureKeys.has(f.key));
+
+  const hasPendingRequest = upgradeRequests.some(r => r.status === 'pending');
 
   if (loading) {
     return (
@@ -184,27 +261,13 @@ export default function SubscriptionPage() {
                   )}
                 </div>
 
-                {subscription.plan.features.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">Recursos incluídos:</p>
-                    <ul className="space-y-1">
-                      {subscription.plan.features.map((feature, index) => (
-                        <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Check className="h-4 w-4 text-green-600" />
-                          {feature}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
                 <Button
                   onClick={() => setUpgradeDialogOpen(true)}
                   className="w-full"
-                  disabled={loadingPlans}
+                  disabled={loadingPlans || hasPendingRequest}
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
-                  Ver planos disponíveis
+                  {hasPendingRequest ? "Solicitação pendente" : "Solicitar Upgrade"}
                 </Button>
               </CardContent>
             </Card>
@@ -262,6 +325,103 @@ export default function SubscriptionPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Features Section */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Available Features */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-600">
+                  <Check className="h-5 w-5" />
+                  Recursos Incluídos ({availableFeatures.length})
+                </CardTitle>
+                <CardDescription>
+                  Recursos disponíveis no seu plano atual
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingFeatures ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : availableFeatures.length > 0 ? (
+                  <ul className="space-y-2">
+                    {availableFeatures.map((feature) => (
+                      <li key={feature.id} className="flex items-center gap-2 text-sm">
+                        <Check className="h-4 w-4 text-green-600" />
+                        <span>{feature.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nenhum recurso vinculado ao plano.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Blocked Features */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-muted-foreground">
+                  <Lock className="h-5 w-5" />
+                  Recursos Bloqueados ({blockedFeatures.length})
+                </CardTitle>
+                <CardDescription>
+                  Faça upgrade para desbloquear estes recursos
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingFeatures ? (
+                  <div className="flex justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  </div>
+                ) : blockedFeatures.length > 0 ? (
+                  <ul className="space-y-2">
+                    {blockedFeatures.map((feature) => (
+                      <li key={feature.id} className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Lock className="h-4 w-4" />
+                        <span>{feature.name}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Todos os recursos estão disponíveis!</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Upgrade Requests History */}
+          {upgradeRequests.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Histórico de Solicitações</CardTitle>
+                <CardDescription>Suas últimas solicitações de upgrade</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {upgradeRequests.map((request) => (
+                    <div key={request.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">
+                          Upgrade para {request.requested_plan?.name || 'Plano'}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {format(new Date(request.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                        </p>
+                        {request.admin_notes && request.status !== 'pending' && (
+                          <p className="text-xs text-muted-foreground italic">
+                            "{request.admin_notes}"
+                          </p>
+                        )}
+                      </div>
+                      {getRequestStatusBadge(request.status)}
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       )}
 
@@ -269,9 +429,9 @@ export default function SubscriptionPage() {
       <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader>
-            <DialogTitle>Escolha seu plano</DialogTitle>
+            <DialogTitle>Solicitar Upgrade de Plano</DialogTitle>
             <DialogDescription>
-              Selecione o plano que melhor atende às necessidades da sua clínica
+              Selecione o plano desejado e sua solicitação será analisada pela nossa equipe
             </DialogDescription>
           </DialogHeader>
 
@@ -280,55 +440,65 @@ export default function SubscriptionPage() {
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 py-4">
-              {plans.map((plan) => (
-                <Card
-                  key={plan.id}
-                  className={`cursor-pointer transition-all hover:border-primary ${
-                    selectedPlan === plan.id ? 'border-primary ring-2 ring-primary/20' : ''
-                  } ${subscription?.plan_id === plan.id ? 'bg-muted/50' : ''}`}
-                  onClick={() => setSelectedPlan(plan.id)}
-                >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
+            <>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 py-4">
+                {plans.filter(p => p.id !== subscription?.plan_id).map((plan) => (
+                  <Card
+                    key={plan.id}
+                    className={`cursor-pointer transition-all hover:border-primary ${
+                      selectedPlan === plan.id ? 'border-primary ring-2 ring-primary/20' : ''
+                    }`}
+                    onClick={() => setSelectedPlan(plan.id)}
+                  >
+                    <CardHeader className="pb-2">
                       <CardTitle className="text-lg">{plan.name}</CardTitle>
-                      {subscription?.plan_id === plan.id && (
-                        <Badge variant="secondary">Atual</Badge>
-                      )}
-                    </div>
-                    <CardDescription className="text-xs">
-                      {plan.description}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div>
-                      <span className="text-2xl font-bold">
-                        {plan.monthly_price === 0 ? "Grátis" : formatPrice(plan.monthly_price)}
-                      </span>
-                      {plan.monthly_price > 0 && (
-                        <span className="text-muted-foreground text-sm">/mês</span>
-                      )}
-                    </div>
+                      <CardDescription className="text-xs">
+                        {plan.description}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <span className="text-2xl font-bold">
+                          {plan.monthly_price === 0 ? "Grátis" : formatPrice(plan.monthly_price)}
+                        </span>
+                        {plan.monthly_price > 0 && (
+                          <span className="text-muted-foreground text-sm">/mês</span>
+                        )}
+                      </div>
 
-                    <div className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span>Até {plan.max_professionals} profissional(is)</span>
-                    </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Users className="h-4 w-4 text-muted-foreground" />
+                        <span>Até {plan.max_professionals} profissional(is)</span>
+                      </div>
 
-                    {plan.features.length > 0 && (
-                      <ul className="space-y-1">
-                        {plan.features.slice(0, 4).map((feature, index) => (
-                          <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Check className="h-3 w-3 text-green-600" />
-                            {feature}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      {plan.features.length > 0 && (
+                        <ul className="space-y-1">
+                          {plan.features.slice(0, 4).map((feature, index) => (
+                            <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Check className="h-3 w-3 text-green-600" />
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {selectedPlan && (
+                <div className="space-y-2">
+                  <Label htmlFor="reason">Motivo da solicitação (opcional)</Label>
+                  <Textarea
+                    id="reason"
+                    placeholder="Descreva por que você deseja fazer upgrade..."
+                    value={upgradeReason}
+                    onChange={(e) => setUpgradeReason(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              )}
+            </>
           )}
 
           <div className="flex justify-end gap-2 pt-4 border-t">
@@ -336,11 +506,11 @@ export default function SubscriptionPage() {
               Cancelar
             </Button>
             <Button
-              onClick={handleUpgrade}
-              disabled={!selectedPlan || selectedPlan === subscription?.plan_id || upgrading}
+              onClick={handleRequestUpgrade}
+              disabled={!selectedPlan || requesting}
             >
-              {upgrading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Confirmar Upgrade
+              {requesting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Enviar Solicitação
             </Button>
           </div>
         </DialogContent>

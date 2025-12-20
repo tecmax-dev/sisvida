@@ -44,6 +44,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { FeatureGate } from "@/components/features/FeatureGate";
 
 interface Patient {
   id: string;
@@ -68,7 +69,7 @@ interface WaitingListEntry {
   professional: { name: string } | null;
 }
 
-export default function WaitingListPage() {
+function WaitingListContent() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
   const [entries, setEntries] = useState<WaitingListEntry[]>([]);
@@ -455,5 +456,13 @@ export default function WaitingListPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function WaitingListPage() {
+  return (
+    <FeatureGate feature="waiting_list" showUpgradePrompt>
+      <WaitingListContent />
+    </FeatureGate>
   );
 }
