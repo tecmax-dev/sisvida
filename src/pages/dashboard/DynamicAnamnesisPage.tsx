@@ -11,6 +11,7 @@ import {
   PenTool,
   Printer,
   Download,
+  MessageCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ import {
 } from "@/components/anamnesis/AnamneseResponseForm";
 import { AnamnesisPrint } from "@/components/anamnesis/AnamnesisPrint";
 import { exportAnamnesisToPDF } from "@/lib/anamnesisExportUtils";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -496,6 +498,70 @@ export default function DynamicAnamnesisPage() {
     }
   };
 
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+
+  const handleSendWhatsApp = async (responseToSend: Response) => {
+    if (!selectedPatient || !currentClinic) return;
+    
+    setSendingWhatsApp(true);
+    
+    try {
+      // Format anamnesis content for WhatsApp
+      const dateFormatted = format(new Date(responseToSend.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+      
+      let message = `📋 *ANAMNESE - ${responseToSend.template_title.toUpperCase()}*\n`;
+      message += `━━━━━━━━━━━━━━━━━━━━\n\n`;
+      message += `👤 *Paciente:* ${selectedPatient.name}\n`;
+      message += `📅 *Data:* ${dateFormatted}\n`;
+      message += `🏥 *Clínica:* ${currentClinic.name}\n\n`;
+      message += `━━━━━━━━━━━━━━━━━━━━\n`;
+      message += `*RESPOSTAS:*\n\n`;
+      
+      // Add questions and answers
+      for (const question of viewQuestions) {
+        const answer = viewAnswers.find(a => a.question_id === question.id);
+        const answerDisplay = getAnswerDisplay(question, answer);
+        
+        message += `📌 *${question.question_text}*\n`;
+        message += `${answerDisplay || "Não respondido"}\n\n`;
+      }
+      
+      message += `━━━━━━━━━━━━━━━━━━━━\n`;
+      
+      if (responseToSend.filled_by_patient && responseToSend.signed_at) {
+        const signedDate = format(new Date(responseToSend.signed_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+        message += `✅ *Preenchido e assinado pelo paciente em:* ${signedDate}\n`;
+      }
+      
+      message += `\n_Documento gerado por ${currentClinic.name}_`;
+      
+      const result = await sendWhatsAppMessage({
+        phone: selectedPatient.phone,
+        message,
+        clinicId: currentClinic.id,
+        type: 'custom',
+      });
+      
+      if (result.success) {
+        toast({ title: "Anamnese enviada por WhatsApp!" });
+      } else {
+        toast({
+          title: "Erro ao enviar",
+          description: result.error,
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar WhatsApp",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
+
   const filteredPatients = patients.filter(
     (p) =>
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -718,7 +784,20 @@ export default function DynamicAnamnesisPage() {
                           )}
 
                           {/* Botões de Ação */}
-                          <div className="flex gap-2 justify-end mt-6 pt-4 border-t">
+                          <div className="flex gap-2 justify-end mt-6 pt-4 border-t flex-wrap">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleSendWhatsApp(response)}
+                              disabled={sendingWhatsApp}
+                            >
+                              {sendingWhatsApp ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <MessageCircle className="h-4 w-4 mr-2" />
+                              )}
+                              WhatsApp
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
