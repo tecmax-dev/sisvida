@@ -11,6 +11,7 @@ import {
   MessageCircle,
   Stethoscope,
   ClipboardList,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -33,8 +34,13 @@ const features = [
   },
   { 
     icon: Stethoscope, 
-    title: "Anamnese Digital", 
-    description: "Formulários personalizados para cada especialidade" 
+    title: "Anamnese Personalizável", 
+    description: "Crie formulários customizados para cada especialidade e paciente" 
+  },
+  { 
+    icon: Wallet, 
+    title: "Gestão Financeira", 
+    description: "Controle receitas, despesas e fluxo de caixa da sua clínica" 
   },
   { 
     icon: ClipboardList, 
