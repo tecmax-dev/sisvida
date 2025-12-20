@@ -32,15 +32,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PrintDialog } from "@/components/medical/PrintDialog";
+import { calculateAge } from "@/lib/utils";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 interface Patient {
   id: string;
   name: string;
   phone: string;
+  birth_date: string | null;
 }
 
 interface MedicalRecord {
@@ -105,7 +115,7 @@ export default function MedicalRecordsPage() {
     
     const { data } = await supabase
       .from('patients')
-      .select('id, name, phone')
+      .select('id, name, phone, birth_date')
       .eq('clinic_id', currentClinic.id)
       .order('name');
 
@@ -287,7 +297,10 @@ export default function MedicalRecordsPage() {
                 {selectedPatient ? `Histórico - ${selectedPatient.name}` : "Selecione um paciente"}
               </CardTitle>
               {selectedPatient && (
-                <CardDescription>
+                <CardDescription className="flex items-center gap-2">
+                  {selectedPatient.birth_date && (
+                    <Badge variant="outline">{calculateAge(selectedPatient.birth_date)} anos</Badge>
+                  )}
                   {records.length} registro(s) encontrado(s)
                 </CardDescription>
               )}
@@ -306,51 +319,64 @@ export default function MedicalRecordsPage() {
                 <p>Selecione um paciente para ver o histórico</p>
               </div>
             ) : records.length > 0 ? (
-              <div className="space-y-4">
+              <Accordion type="single" collapsible className="space-y-2">
                 {records.map((record) => (
-                  <div key={record.id} className="border border-border rounded-lg p-4">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {new Date(record.record_date).toLocaleDateString('pt-BR')}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {record.professional?.name || "Profissional não informado"}
-                        </p>
+                  <AccordionItem key={record.id} value={record.id} className="border rounded-lg px-4">
+                    <AccordionTrigger className="hover:no-underline py-4">
+                      <div className="flex items-center justify-between w-full pr-4">
+                        <div className="text-left">
+                          <p className="font-medium text-foreground">
+                            {format(new Date(record.record_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            {record.professional?.name || "Profissional não informado"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePrintRecord(record)}
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handlePrintRecord(record)}
-                        >
-                          <Printer className="h-4 w-4 mr-1" />
-                          Imprimir
-                        </Button>
-                        <Badge variant="outline">Prontuário</Badge>
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-4">
+                      <div className="space-y-4 pt-2">
+                        {record.chief_complaint && (
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Queixa Principal</p>
+                            <p className="text-foreground mt-1">{record.chief_complaint}</p>
+                          </div>
+                        )}
+                        {record.diagnosis && (
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Diagnóstico</p>
+                            <p className="text-foreground mt-1">{record.diagnosis}</p>
+                          </div>
+                        )}
+                        {record.treatment_plan && (
+                          <div>
+                            <p className="text-sm font-medium text-muted-foreground">Plano de Tratamento</p>
+                            <p className="text-foreground mt-1">{record.treatment_plan}</p>
+                          </div>
+                        )}
+                        {record.prescription && (
+                          <div className="flex items-start gap-2 pt-3 border-t border-border">
+                            <Pill className="h-4 w-4 text-muted-foreground mt-0.5" />
+                            <div>
+                              <p className="text-sm font-medium text-muted-foreground">Prescrição</p>
+                              <p className="text-foreground mt-1">{record.prescription}</p>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                    {record.chief_complaint && (
-                      <div className="mb-2">
-                        <p className="text-sm font-medium text-muted-foreground">Queixa Principal</p>
-                        <p className="text-foreground">{record.chief_complaint}</p>
-                      </div>
-                    )}
-                    {record.diagnosis && (
-                      <div className="mb-2">
-                        <p className="text-sm font-medium text-muted-foreground">Diagnóstico</p>
-                        <p className="text-foreground">{record.diagnosis}</p>
-                      </div>
-                    )}
-                    {record.prescription && (
-                      <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
-                        <Pill className="h-4 w-4 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">{record.prescription}</p>
-                      </div>
-                    )}
-                  </div>
+                    </AccordionContent>
+                  </AccordionItem>
                 ))}
-              </div>
+              </Accordion>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
                 <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />

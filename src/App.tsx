@@ -35,6 +35,8 @@ import UsersManagement from "./pages/admin/UsersManagement";
 import AuditLogsPage from "./pages/admin/AuditLogsPage";
 import PlansManagement from "./pages/admin/PlansManagement";
 import SubscriptionPage from "./pages/dashboard/SubscriptionPage";
+import PublicAnamnesis from "./pages/PublicAnamnesis";
+import PrescriptionPage from "./pages/dashboard/PrescriptionPage";
 import { Button } from "./components/ui/button";
 
 const queryClient = new QueryClient();
@@ -94,6 +96,8 @@ const App = () => (
               {/* Public booking (both legacy and current URLs) */}
               <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />
               <Route path="/booking/:clinicSlug" element={<PublicBooking />} />
+              {/* Public anamnesis form via token */}
+              <Route path="/anamnese/:token" element={<PublicAnamnesis />} />
               {/* Appointment confirmation via token */}
               <Route path="/consulta/:token" element={<AppointmentConfirmation />} />
               {/* Professional Portal */}
@@ -143,6 +147,7 @@ const App = () => (
                 <Route path="waiting-list" element={<WaitingListPage />} />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="subscription" element={<SubscriptionPage />} />
+                <Route path="prescriptions" element={<PrescriptionPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="users" element={<UsersManagementPage />} />
               </Route>
