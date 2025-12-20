@@ -413,7 +413,7 @@ export function AppointmentPanel({
               <Badge variant="outline">{typeLabels[appointment.type] || appointment.type}</Badge>
               <Badge variant="outline" className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                {new Date(appointment.appointment_date).toLocaleDateString("pt-BR")}
+                {new Date(appointment.appointment_date + "T12:00:00").toLocaleDateString("pt-BR")}
               </Badge>
               <Badge variant="outline" className="flex items-center gap-1">
                 <Clock className="h-3 w-3" />
@@ -632,7 +632,7 @@ export function AppointmentPanel({
                       <CardHeader className="pb-2">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-sm">
-                            {new Date(record.record_date).toLocaleDateString("pt-BR")}
+                            {new Date(record.record_date + "T12:00:00").toLocaleDateString("pt-BR")}
                           </CardTitle>
                           <Badge variant="outline" className="text-xs">
                             {new Date(record.created_at).toLocaleTimeString("pt-BR", {

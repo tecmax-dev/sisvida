@@ -326,7 +326,7 @@ export default function MedicalRecordsPage() {
                       <div className="flex items-center justify-between w-full pr-4">
                         <div className="text-left">
                           <p className="font-medium text-foreground">
-                            {format(new Date(record.record_date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                            {format(new Date(record.record_date + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {record.professional?.name || "Profissional não informado"}
@@ -413,7 +413,7 @@ export default function MedicalRecordsPage() {
                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    {new Date(apt.appointment_date).toLocaleDateString('pt-BR')} às {apt.start_time.slice(0, 5)}
+                    {new Date(apt.appointment_date + "T12:00:00").toLocaleDateString('pt-BR')} às {apt.start_time.slice(0, 5)}
                   </p>
                 </div>
               ))}
