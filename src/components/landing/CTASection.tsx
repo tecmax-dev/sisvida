@@ -33,7 +33,7 @@ export function CTASection() {
               asChild
             >
               <a 
-                href="https://wa.me/5571982386864?text=Olá! Gostaria de saber mais sobre o Eclini." 
+                href="https://wa.me/5571982786864?text=Olá! Gostaria de saber mais sobre o Eclini." 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-2"
@@ -57,7 +57,7 @@ export function CTASection() {
               </a>
             </p>
             <p className="text-primary-foreground/50 text-xs mt-2">
-              CNPJ: 03.025.212/0001-11 | Contato: (71) 98238-6864
+              CNPJ: 03.025.212/0001-11 | Contato: (71) 98278-6864
             </p>
           </div>
         </div>

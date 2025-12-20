@@ -35,11 +35,11 @@ export function BlockedClinicOverlay({ reason }: BlockedClinicOverlayProps) {
           <h3 className="font-medium mb-3">Contato do Suporte</h3>
           <div className="space-y-2 text-sm">
             <a 
-              href="tel:+5571982386864" 
+              href="tel:+5571982786864" 
               className="flex items-center justify-center gap-2 text-primary hover:underline"
             >
               <Phone className="h-4 w-4" />
-              (71) 98238-6864
+              (71) 98278-6864
             </a>
             <a 
               href="mailto:suporte@eclini.com.br" 
