@@ -87,7 +87,7 @@ serve(async (req) => {
         number: formattedPhone,
         mediatype: "document",
         mimetype: "application/pdf",
-        media: `data:application/pdf;base64,${pdfBase64}`,
+        media: pdfBase64,
         fileName: fileName,
         caption: caption || "",
       }),
