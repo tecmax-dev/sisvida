@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Check, Star } from "lucide-react";
-import heroMockup from "@/assets/hero-mockup.png";
+import heroMockup from "@/assets/dashboard-mockup.png";
 
 const highlights = [
   "Agenda online 24h",
