@@ -66,7 +66,8 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
         .select(`
           *,
           financial_categories (name, color),
-          patients (name)
+          patients (name),
+          procedures (name, price)
         `)
         .eq("clinic_id", clinicId)
         .order("due_date", { ascending: false })
@@ -178,6 +179,7 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
               <TableRow>
                 <TableHead>Data</TableHead>
                 <TableHead>Descrição</TableHead>
+                <TableHead>Procedimento</TableHead>
                 <TableHead>Categoria</TableHead>
                 <TableHead>Paciente</TableHead>
                 <TableHead>Forma Pgto</TableHead>
@@ -198,6 +200,9 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
                   </TableCell>
                   <TableCell className="font-medium">
                     {transaction.description}
+                  </TableCell>
+                  <TableCell>
+                    {(transaction.procedures as any)?.name || "-"}
                   </TableCell>
                   <TableCell>
                     {(transaction.financial_categories as any)?.name || "-"}

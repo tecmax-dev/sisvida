@@ -436,6 +436,7 @@ export type Database = {
           id: string
           notes: string | null
           patient_id: string
+          procedure_id: string | null
           professional_id: string
           reminder_sent: boolean | null
           start_time: string
@@ -459,6 +460,7 @@ export type Database = {
           id?: string
           notes?: string | null
           patient_id: string
+          procedure_id?: string | null
           professional_id: string
           reminder_sent?: boolean | null
           start_time: string
@@ -482,6 +484,7 @@ export type Database = {
           id?: string
           notes?: string | null
           patient_id?: string
+          procedure_id?: string | null
           professional_id?: string
           reminder_sent?: boolean | null
           start_time?: string
@@ -503,6 +506,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
             referencedColumns: ["id"]
           },
           {
@@ -790,6 +800,7 @@ export type Database = {
           paid_date: string | null
           patient_id: string | null
           payment_method: string | null
+          procedure_id: string | null
           professional_id: string | null
           status: string | null
           type: string
@@ -809,6 +820,7 @@ export type Database = {
           paid_date?: string | null
           patient_id?: string | null
           payment_method?: string | null
+          procedure_id?: string | null
           professional_id?: string | null
           status?: string | null
           type: string
@@ -828,6 +840,7 @@ export type Database = {
           paid_date?: string | null
           patient_id?: string | null
           payment_method?: string | null
+          procedure_id?: string | null
           professional_id?: string | null
           status?: string | null
           type?: string
@@ -860,6 +873,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
             referencedColumns: ["id"]
           },
           {
@@ -1250,6 +1270,56 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      procedures: {
+        Row: {
+          category: string | null
+          clinic_id: string
+          color: string | null
+          created_at: string | null
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          category?: string | null
+          clinic_id: string
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          category?: string | null
+          clinic_id?: string
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedures_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]

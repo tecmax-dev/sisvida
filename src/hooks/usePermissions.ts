@@ -20,7 +20,9 @@ export type Permission =
   | "view_prescriptions"
   | "manage_prescriptions"
   | "view_financials"
-  | "manage_financials";
+  | "manage_financials"
+  | "view_procedures"
+  | "manage_procedures";
 
 // Define permissions for each role
 const rolePermissions: Record<string, Permission[] | "*"> = {
@@ -34,6 +36,7 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
     "view_anamnesis",
     "manage_anamnesis",
     "manage_waiting_list",
+    "view_procedures",
   ],
   professional: [
     "view_dashboard",
@@ -45,6 +48,7 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
     "manage_anamnesis",
     "view_prescriptions",
     "manage_prescriptions",
+    "view_procedures",
   ],
   administrative: [
     "view_dashboard",
@@ -56,6 +60,7 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
     "manage_waiting_list",
     "manage_insurance",
     "view_reports",
+    "view_procedures",
   ],
 };
 

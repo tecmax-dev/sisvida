@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -37,6 +38,7 @@ const transactionSchema = z.object({
   amount: z.string().min(1, "Valor é obrigatório"),
   category_id: z.string().optional(),
   patient_id: z.string().optional(),
+  procedure_id: z.string().optional(),
   payment_method: z.string().optional(),
   status: z.enum(["pending", "paid"]),
   due_date: z.string().optional(),
@@ -72,6 +74,7 @@ export function TransactionDialog({
   });
 
   const type = form.watch("type");
+  const procedureId = form.watch("procedure_id");
 
   const { data: categories } = useQuery({
     queryKey: ["financial-categories", clinicId, type],
@@ -104,6 +107,35 @@ export function TransactionDialog({
     },
   });
 
+  const { data: procedures } = useQuery({
+    queryKey: ["procedures-list", clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("procedures")
+        .select("id, name, price")
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true)
+        .order("name");
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: type === "income",
+  });
+
+  // Auto-fill amount and description when procedure is selected
+  useEffect(() => {
+    if (procedureId && procedures) {
+      const selectedProcedure = procedures.find((p) => p.id === procedureId);
+      if (selectedProcedure) {
+        form.setValue("amount", selectedProcedure.price.toString());
+        if (!form.getValues("description")) {
+          form.setValue("description", selectedProcedure.name);
+        }
+      }
+    }
+  }, [procedureId, procedures, form]);
+
   const createMutation = useMutation({
     mutationFn: async (data: TransactionFormData) => {
       const amount = parseFloat(data.amount.replace(",", "."));
@@ -116,6 +148,7 @@ export function TransactionDialog({
         amount,
         category_id: data.category_id || null,
         patient_id: data.patient_id || null,
+        procedure_id: data.procedure_id || null,
         payment_method: data.payment_method || null,
         status: data.status,
         due_date: data.due_date || null,
@@ -152,6 +185,12 @@ export function TransactionDialog({
     createMutation.mutate(data);
   };
 
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
@@ -174,6 +213,33 @@ export function TransactionDialog({
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+
+            {type === "income" && procedures && procedures.length > 0 && (
+              <FormField
+                control={form.control}
+                name="procedure_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Procedimento</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione um procedimento (opcional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {procedures.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name} - {formatCurrency(p.price)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

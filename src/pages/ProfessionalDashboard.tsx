@@ -46,6 +46,8 @@ interface Appointment {
   started_at: string | null;
   completed_at: string | null;
   duration_minutes: number | null;
+  procedure_id: string | null;
+  procedure?: { id: string; name: string; price: number } | null;
   patient: {
     id: string;
     name: string;
@@ -146,6 +148,8 @@ export default function ProfessionalDashboard() {
         started_at,
         completed_at,
         duration_minutes,
+        procedure_id,
+        procedure:procedures (id, name, price),
         patient:patients (id, name, phone, email, birth_date)
       `)
       .eq('professional_id', professionalId)
@@ -157,6 +161,8 @@ export default function ProfessionalDashboard() {
     if (!error && data) {
       setAppointments(data.map(apt => ({
         ...apt,
+        procedure_id: apt.procedure_id || null,
+        procedure: apt.procedure as { id: string; name: string; price: number } | null,
         patient: apt.patient as { id: string; name: string; phone: string; email: string | null; birth_date: string | null }
       })));
     }
