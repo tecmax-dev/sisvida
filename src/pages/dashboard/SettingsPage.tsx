@@ -76,11 +76,37 @@ export default function SettingsPage() {
   const bookingPath = currentClinic?.slug ? `/agendar/${currentClinic.slug}` : "/agendar";
   const bookingLink = `${window.location.origin}${bookingPath}`;
 
-  const handleSave = () => {
-    toast({
-      title: "Configurações salvas",
-      description: "Suas alterações foram salvas com sucesso.",
-    });
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!currentClinic?.id) return;
+    
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from('clinics')
+        .update({ 
+          name: clinicName,
+          reminder_enabled: reminderEnabled,
+          reminder_hours: parseInt(reminderTime)
+        })
+        .eq('id', currentClinic.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Configurações salvas",
+        description: "Suas alterações foram salvas com sucesso.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message || "Não foi possível salvar as configurações.",
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -170,10 +196,17 @@ export default function SettingsPage() {
                 onChange={(e) => setReminderTime(e.target.value)}
                 className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm"
               >
+                <option value="1">1 hora antes</option>
+                <option value="2">2 horas antes</option>
+                <option value="6">6 horas antes</option>
                 <option value="12">12 horas antes</option>
                 <option value="24">24 horas antes</option>
                 <option value="48">48 horas antes</option>
+                <option value="72">72 horas antes</option>
               </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                O lembrete será enviado automaticamente no horário configurado antes da consulta
+              </p>
             </div>
           )}
         </CardContent>
@@ -302,8 +335,8 @@ export default function SettingsPage() {
       )}
 
       <div className="flex justify-end">
-        <Button variant="hero" onClick={handleSave}>
-          Salvar alterações
+        <Button variant="hero" onClick={handleSave} disabled={saving}>
+          {saving ? "Salvando..." : "Salvar alterações"}
         </Button>
       </div>
     </div>
