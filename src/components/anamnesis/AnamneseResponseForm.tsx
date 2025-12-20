@@ -54,13 +54,24 @@ export function AnamneseResponseForm({
   readOnly = false,
 }: AnamneseResponseFormProps) {
   const getAnswer = (questionId: string): Answer => {
-    return (
-      answers.find((a) => a.question_id === questionId) || {
+    const existingAnswer = answers.find((a) => a.question_id === questionId);
+    if (existingAnswer) return existingAnswer;
+    
+    // Verificar se é uma pergunta booleana para inicializar com "false"
+    const question = questions.find(q => q.id === questionId);
+    if (question?.question_type === "boolean") {
+      return {
         question_id: questionId,
-        answer_text: null,
+        answer_text: "false",
         answer_option_ids: null,
-      }
-    );
+      };
+    }
+    
+    return {
+      question_id: questionId,
+      answer_text: null,
+      answer_option_ids: null,
+    };
   };
 
   const updateAnswer = (questionId: string, updates: Partial<Answer>) => {
