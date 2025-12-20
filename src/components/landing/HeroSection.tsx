@@ -96,7 +96,7 @@ export function HeroSection() {
                 </div>
 
                 <div className="mt-6 space-y-3">
-                  {["Agenda ilimitada", "WhatsApp integrado", "Prontuário digital", "Suporte dedicado"].map((feature, i) => (
+                  {["Agenda ilimitada", "Assinatura digital", "Prontuário digital", "Suporte dedicado"].map((feature, i) => (
                     <div key={i} className="flex items-center gap-2 text-sm text-foreground">
                       <Check className="h-4 w-4 text-primary flex-shrink-0" />
                       <span>{feature}</span>
