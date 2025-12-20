@@ -85,14 +85,13 @@ export function HeroSection() {
               {/* Card */}
               <div className="bg-card border-2 border-primary/30 rounded-2xl p-6 shadow-float">
                 <div className="text-center pt-4">
-                  <p className="text-sm text-muted-foreground mb-1">A partir de</p>
+                  <p className="text-sm text-muted-foreground mb-1">Apenas</p>
                   <div className="flex items-baseline justify-center gap-1">
                     <span className="text-sm text-muted-foreground">R$</span>
-                    <span className="text-4xl font-bold text-foreground">99</span>
-                    <span className="text-sm text-muted-foreground">/mês</span>
+                    <span className="text-4xl font-bold text-foreground">49,90</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    Até 3 profissionais
+                    por profissional/mês
                   </p>
                 </div>
 
