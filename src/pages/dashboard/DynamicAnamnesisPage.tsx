@@ -108,7 +108,9 @@ const getAnswerDisplay = (question: Question, answer: Answer | undefined): strin
   return answer.answer_text || "";
 };
 
-export default function DynamicAnamnesisPage() {
+import { FeatureGate } from "@/components/features/FeatureGate";
+
+function DynamicAnamnesisContent() {
   const { currentClinic, user } = useAuth();
   const { toast } = useToast();
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -968,5 +970,13 @@ export default function DynamicAnamnesisPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function DynamicAnamnesisPage() {
+  return (
+    <FeatureGate feature="dynamic_anamnesis" showUpgradePrompt>
+      <DynamicAnamnesisContent />
+    </FeatureGate>
   );
 }

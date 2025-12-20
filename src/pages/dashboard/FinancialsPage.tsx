@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { FeatureGate } from "@/components/features/FeatureGate";
 import { FinancialMetrics } from "@/components/financials/FinancialMetrics";
 import { FinancialCharts } from "@/components/financials/FinancialCharts";
 import { TransactionTable } from "@/components/financials/TransactionTable";
@@ -10,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Settings2 } from "lucide-react";
 
-export default function FinancialsPage() {
+function FinancialsContent() {
   const { currentClinic } = useAuth();
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -82,5 +83,13 @@ export default function FinancialsPage() {
         />
       </div>
     </RoleGuard>
+  );
+}
+
+export default function FinancialsPage() {
+  return (
+    <FeatureGate feature="financial_management" showUpgradePrompt>
+      <FinancialsContent />
+    </FeatureGate>
   );
 }
