@@ -106,12 +106,13 @@ const timeSlots = [
 ];
 
 const statusConfig = {
-  scheduled: { icon: AlertCircle, color: "text-warning", bgColor: "bg-warning/10", label: "Agendado" },
-  confirmed: { icon: CheckCircle2, color: "text-success", bgColor: "bg-success/10", label: "Confirmado" },
-  in_progress: { icon: Clock, color: "text-info", bgColor: "bg-info/10", label: "Em atendimento" },
-  completed: { icon: CheckCircle2, color: "text-muted-foreground", bgColor: "bg-muted", label: "Concluído" },
-  cancelled: { icon: XCircle, color: "text-destructive", bgColor: "bg-destructive/10", label: "Cancelado" },
-  no_show: { icon: XCircle, color: "text-destructive", bgColor: "bg-destructive/10", label: "Não compareceu" },
+  scheduled: { icon: AlertCircle, color: "text-amber-600", bgColor: "bg-amber-100", label: "A confirmar" },
+  confirmed: { icon: CheckCircle2, color: "text-blue-600", bgColor: "bg-blue-100", label: "Confirmado" },
+  arrived: { icon: UserCheck, color: "text-green-600", bgColor: "bg-green-100", label: "Chegou" },
+  in_progress: { icon: Clock, color: "text-purple-600", bgColor: "bg-purple-100", label: "Em atendimento" },
+  completed: { icon: CheckCircle2, color: "text-gray-500", bgColor: "bg-gray-100", label: "Concluído" },
+  cancelled: { icon: XCircle, color: "text-red-600", bgColor: "bg-red-100", label: "Cancelado" },
+  no_show: { icon: XCircle, color: "text-orange-600", bgColor: "bg-orange-100", label: "Faltou" },
 };
 
 type ViewMode = "day" | "week" | "month";
@@ -519,10 +520,59 @@ export default function CalendarPage() {
 
       if (error) throw error;
 
-      toast({
-        title: "Agendamento cancelado",
-        description: "A consulta foi cancelada com sucesso.",
-      });
+      // Check waiting list and notify first patient
+      if (currentClinic) {
+        const { data: waitingPatients } = await supabase
+          .from('waiting_list')
+          .select('*, patient:patients(id, name, phone)')
+          .eq('clinic_id', currentClinic.id)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true });
+
+        if (waitingPatients && waitingPatients.length > 0) {
+          const firstWaiting = waitingPatients[0];
+          const formattedDate = new Date(cancellingAppointment.appointment_date + 'T12:00:00').toLocaleDateString('pt-BR');
+          
+          // Try to send WhatsApp notification
+          if (firstWaiting.patient?.phone) {
+            const message = `Olá ${firstWaiting.patient.name}! 🎉\n\n` +
+              `Temos uma boa notícia! Uma vaga abriu para o dia ${formattedDate} às ${cancellingAppointment.start_time.slice(0, 5)}.\n\n` +
+              `Entre em contato conosco o mais rápido possível para confirmar o agendamento.\n\n` +
+              `Atenciosamente,\n${currentClinic.name}`;
+
+            sendWhatsAppMessage({
+              phone: firstWaiting.patient.phone,
+              message,
+              clinicId: currentClinic.id,
+              type: 'custom',
+            }).then(result => {
+              if (result.success) {
+                toast({
+                  title: "Lista de espera notificada",
+                  description: `${firstWaiting.patient.name} foi notificado sobre a vaga disponível.`,
+                });
+              }
+            }).catch(err => {
+              console.error('Error sending waiting list notification:', err);
+            });
+          }
+
+          toast({
+            title: "Agendamento cancelado",
+            description: `Vaga liberada! ${waitingPatients.length} paciente(s) na lista de espera.`,
+          });
+        } else {
+          toast({
+            title: "Agendamento cancelado",
+            description: "A consulta foi cancelada com sucesso.",
+          });
+        }
+      } else {
+        toast({
+          title: "Agendamento cancelado",
+          description: "A consulta foi cancelada com sucesso.",
+        });
+      }
 
       setCancelDialogOpen(false);
       setCancellingAppointment(null);
@@ -542,11 +592,16 @@ export default function CalendarPage() {
   const handleUpdateStatus = async (appointment: Appointment, newStatus: string) => {
     try {
       const updateData: Record<string, any> = {
-        status: newStatus as "scheduled" | "confirmed" | "completed" | "cancelled" | "no_show",
+        status: newStatus as "scheduled" | "confirmed" | "arrived" | "completed" | "cancelled" | "no_show" | "in_progress",
       };
 
       if (newStatus === "confirmed") {
         updateData.confirmed_at = new Date().toISOString();
+      }
+
+      if (newStatus === "arrived") {
+        // Mark that patient has arrived
+        updateData.confirmed_at = updateData.confirmed_at || new Date().toISOString();
       }
 
       const { error } = await supabase
@@ -1168,18 +1223,49 @@ export default function CalendarPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-popover">
-              <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "confirmed")}>
-                <CheckCircle2 className="h-4 w-4 mr-2 text-success" />
-                Confirmar
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "completed")}>
-                <Check className="h-4 w-4 mr-2 text-info" />
-                Concluir
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "no_show")}>
-                <XCircle className="h-4 w-4 mr-2 text-destructive" />
-                Não compareceu
-              </DropdownMenuItem>
+              {/* A confirmar -> Confirmar ou Faltou */}
+              {appointment.status === "scheduled" && (
+                <>
+                  <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "confirmed")}>
+                    <CheckCircle2 className="h-4 w-4 mr-2 text-blue-600" />
+                    Confirmar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "no_show")}>
+                    <XCircle className="h-4 w-4 mr-2 text-orange-600" />
+                    Faltou
+                  </DropdownMenuItem>
+                </>
+              )}
+              
+              {/* Confirmado -> Chegou ou Faltou */}
+              {appointment.status === "confirmed" && (
+                <>
+                  <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "arrived")}>
+                    <UserCheck className="h-4 w-4 mr-2 text-green-600" />
+                    Chegou
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "no_show")}>
+                    <XCircle className="h-4 w-4 mr-2 text-orange-600" />
+                    Faltou
+                  </DropdownMenuItem>
+                </>
+              )}
+              
+              {/* Chegou -> Iniciar Atendimento */}
+              {appointment.status === "arrived" && (
+                <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "in_progress")}>
+                  <Stethoscope className="h-4 w-4 mr-2 text-purple-600" />
+                  Iniciar Atendimento
+                </DropdownMenuItem>
+              )}
+              
+              {/* Em atendimento -> Concluir */}
+              {appointment.status === "in_progress" && (
+                <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "completed")}>
+                  <Check className="h-4 w-4 mr-2 text-gray-500" />
+                  Concluir
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (

@@ -1958,6 +1958,7 @@ export type Database = {
         | "completed"
         | "no_show"
         | "in_progress"
+        | "arrived"
       appointment_type: "first_visit" | "return" | "exam" | "procedure"
       specialty_category:
         | "medical"
@@ -2106,6 +2107,7 @@ export const Constants = {
         "completed",
         "no_show",
         "in_progress",
+        "arrived",
       ],
       appointment_type: ["first_visit", "return", "exam", "procedure"],
       specialty_category: [
