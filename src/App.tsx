@@ -37,6 +37,7 @@ import PlansManagement from "./pages/admin/PlansManagement";
 import SubscriptionPage from "./pages/dashboard/SubscriptionPage";
 import PublicAnamnesis from "./pages/PublicAnamnesis";
 import PrescriptionPage from "./pages/dashboard/PrescriptionPage";
+import FinancialsPage from "./pages/dashboard/FinancialsPage";
 import { Button } from "./components/ui/button";
 
 const queryClient = new QueryClient();
@@ -148,6 +149,7 @@ const App = () => (
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="subscription" element={<SubscriptionPage />} />
                 <Route path="prescriptions" element={<PrescriptionPage />} />
+                <Route path="financials" element={<FinancialsPage />} />
                 <Route path="settings" element={<SettingsPage />} />
                 <Route path="users" element={<UsersManagementPage />} />
               </Route>
