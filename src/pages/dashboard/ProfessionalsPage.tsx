@@ -12,6 +12,8 @@ import {
   UserX,
   AlertTriangle,
   Sparkles,
+  Camera,
+  User,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -75,6 +77,7 @@ interface Professional {
   schedule: Json;
   user_id: string | null;
   email: string | null;
+  avatar_url: string | null;
   specialtyNames?: string[];
 }
 
@@ -158,6 +161,12 @@ export default function ProfessionalsPage() {
   const [editUserId, setEditUserId] = useState<string>("");
   const [editErrors, setEditErrors] = useState<{ name?: string; email?: string }>({});
 
+  // Avatar upload state
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
+  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
+
   useEffect(() => {
     if (currentClinic) {
       fetchProfessionals();
@@ -173,7 +182,7 @@ export default function ProfessionalsPage() {
     try {
       const { data, error } = await supabase
         .from('professionals')
-        .select('id, name, specialty, registration_number, phone, is_active, schedule, user_id, email')
+        .select('id, name, specialty, registration_number, phone, is_active, schedule, user_id, email, avatar_url')
         .eq('clinic_id', currentClinic.id)
         .order('name');
 
@@ -321,6 +330,27 @@ export default function ProfessionalsPage() {
 
       if (error) throw error;
 
+      // Upload avatar if selected
+      if (newProfessional && avatarFile) {
+        const fileExt = avatarFile.name.split('.').pop();
+        const filePath = `${currentClinic.id}/${newProfessional.id}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('professional-avatars')
+          .upload(filePath, avatarFile, { upsert: true });
+        
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('professional-avatars')
+            .getPublicUrl(filePath);
+          
+          await supabase
+            .from('professionals')
+            .update({ avatar_url: urlData.publicUrl })
+            .eq('id', newProfessional.id);
+        }
+      }
+
       // Save professional specialties
       if (newProfessional && formSpecialtyIds.length > 0) {
         const result = await saveProfessionalSpecialties(newProfessional.id, formSpecialtyIds);
@@ -382,6 +412,8 @@ export default function ProfessionalsPage() {
     setFormEmail("");
     setFormUserId("");
     setFormErrors({});
+    setAvatarFile(null);
+    setAvatarPreview(null);
   };
 
   const openScheduleDialog = (professional: Professional) => {
@@ -403,6 +435,8 @@ export default function ProfessionalsPage() {
     setEditEmail(professional.email || "");
     setEditUserId(professional.user_id || "");
     setEditErrors({});
+    setEditAvatarFile(null);
+    setEditAvatarPreview(professional.avatar_url || null);
     
     // Load existing specialties
     const existingSpecialtyIds = await fetchProfessionalSpecialties(professional.id);
@@ -441,6 +475,24 @@ export default function ProfessionalsPage() {
         .map(id => getSpecialtyById(id)?.name)
         .filter((n): n is string => !!n);
       const specialtyDisplay = specialtyNames.join(', ') || null;
+
+      // Upload new avatar if selected
+      let avatarUrl = selectedProfessional.avatar_url;
+      if (editAvatarFile && currentClinic) {
+        const fileExt = editAvatarFile.name.split('.').pop();
+        const filePath = `${currentClinic.id}/${selectedProfessional.id}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('professional-avatars')
+          .upload(filePath, editAvatarFile, { upsert: true });
+        
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('professional-avatars')
+            .getPublicUrl(filePath);
+          avatarUrl = urlData.publicUrl;
+        }
+      }
       
       const { error } = await supabase
         .from('professionals')
@@ -451,6 +503,7 @@ export default function ProfessionalsPage() {
           phone: editPhone.trim() || null,
           email: editEmail.trim() || null,
           user_id: editUserId || null,
+          avatar_url: avatarUrl,
         })
         .eq('id', selectedProfessional.id);
 
@@ -646,6 +699,41 @@ export default function ProfessionalsPage() {
                 )}
               </div>
               
+              {/* Avatar upload */}
+              <div>
+                <Label>Foto do Profissional</Label>
+                <div className="mt-2 flex items-center gap-4">
+                  {avatarPreview ? (
+                    <img 
+                      src={avatarPreview} 
+                      alt="Preview" 
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-8 w-8 text-primary/60" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setAvatarFile(file);
+                          setAvatarPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      className="cursor-pointer"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      A foto será exibida no agendamento online
+                    </p>
+                  </div>
+                </div>
+              </div>
+              
               {clinicUsers.length > 0 && (
                 <div>
                   <Label htmlFor="profUser">Vincular usuário (Portal do Profissional)</Label>
@@ -703,10 +791,18 @@ export default function ProfessionalsPage() {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4">
-                    <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <span className="text-xl font-semibold text-primary">
-                        {professional.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
-                      </span>
+                    <div className="w-14 h-14 rounded-xl overflow-hidden bg-primary/10 flex items-center justify-center">
+                      {professional.avatar_url ? (
+                        <img 
+                          src={professional.avatar_url} 
+                          alt={professional.name} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <span className="text-xl font-semibold text-primary">
+                          {professional.name.split(" ").slice(0, 2).map((n) => n[0]).join("")}
+                        </span>
+                      )}
                     </div>
                     <div>
                       <h3 className="font-semibold text-foreground">
@@ -915,6 +1011,41 @@ export default function ProfessionalsPage() {
               {editErrors.email && (
                 <p className="mt-1 text-sm text-destructive">{editErrors.email}</p>
               )}
+            </div>
+            
+            {/* Avatar upload for edit */}
+            <div>
+              <Label>Foto do Profissional</Label>
+              <div className="mt-2 flex items-center gap-4">
+                {editAvatarPreview ? (
+                  <img 
+                    src={editAvatarPreview} 
+                    alt="Preview" 
+                    className="w-16 h-16 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="h-8 w-8 text-primary/60" />
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setEditAvatarFile(file);
+                        setEditAvatarPreview(URL.createObjectURL(file));
+                      }
+                    }}
+                    className="cursor-pointer"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    A foto será exibida no agendamento online
+                  </p>
+                </div>
+              </div>
             </div>
             
             {clinicUsers.length > 0 && (
