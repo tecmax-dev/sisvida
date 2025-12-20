@@ -14,13 +14,13 @@ export function Footer() {
             </p>
             <div className="mt-4 space-y-2">
               <a 
-                href="https://wa.me/5571982386864" 
+                href="https://wa.me/5571982786864" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <MessageCircle className="h-4 w-4" />
-                (71) 98238-6864
+                (71) 98278-6864
               </a>
               <a 
                 href="mailto:contato@eclini.com.br"
