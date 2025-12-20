@@ -475,7 +475,22 @@ export function AppointmentPanel({
         clinicId: clinicId,
         pdfBase64: base64,
         fileName,
-        caption: `📋 Receituário - ${appointment.patient.name}\n\nData: ${format(new Date(), "dd/MM/yyyy", { locale: ptBR })}\n\n${clinic?.name || "Clínica"}`,
+        caption: [
+          `📋 *Receituário Médico*`,
+          ``,
+          `Olá ${appointment.patient.name}! 👋`,
+          ``,
+          `Segue em anexo seu receituário.`,
+          ``,
+          `📅 *Data:* ${format(new Date(), "dd/MM/yyyy", { locale: ptBR })}`,
+          `👨‍⚕️ *Profissional:* ${professional?.name || 'Profissional'}`,
+          `🏥 *Clínica:* ${clinic?.name || 'Clínica'}`,
+          ``,
+          `⚠️ *Atenção:* Siga as orientações do profissional de saúde. Em caso de dúvidas, entre em contato conosco.`,
+          ``,
+          `Atenciosamente,`,
+          `Equipe ${clinic?.name || 'Clínica'}`,
+        ].join('\n'),
       });
 
       if (result.success) {
