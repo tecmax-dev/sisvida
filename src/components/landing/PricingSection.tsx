@@ -1,63 +1,91 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Check, Star, Sparkles } from "lucide-react";
+import { Check, Star, Sparkles, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const plans = [
-  {
-    name: "Gratuito",
-    monthlyPrice: 0,
-    yearlyPrice: 0,
-    description: "Ideal para começar",
-    features: [
-      "Até 50 agendamentos/mês",
-      "1 profissional",
-      "Agenda online básica",
-      "Cadastro de pacientes",
-      "Suporte por email",
-    ],
-    cta: "Começar grátis",
-    popular: false,
-  },
-  {
-    name: "Profissional",
-    monthlyPrice: 99,
-    yearlyPrice: 79,
-    description: "Para clínicas em crescimento",
-    features: [
-      "Agendamentos ilimitados",
-      "Até 5 profissionais",
-      "Lembretes WhatsApp",
-      "Prontuário eletrônico",
-      "Relatórios básicos",
-      "Lista de espera",
-      "Suporte prioritário",
-    ],
-    cta: "Testar 7 dias grátis",
-    popular: true,
-  },
-  {
-    name: "Clínica",
-    monthlyPrice: 199,
-    yearlyPrice: 159,
-    description: "Gestão completa",
-    features: [
-      "Tudo do Profissional",
-      "Profissionais ilimitados",
-      "Múltiplas unidades",
-      "Gestão financeira",
-      "Relatórios avançados",
-      "API de integração",
-      "Suporte dedicado",
-      "Treinamento incluso",
-    ],
-    cta: "Falar com consultor",
-    popular: false,
-  },
-];
+interface PlanFeature {
+  id: string;
+  name: string;
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  description: string | null;
+  monthly_price: number;
+  max_professionals: number;
+  features: string[];
+  linkedFeatures: PlanFeature[];
+}
 
 export function PricingSection() {
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isYearly, setIsYearly] = useState(false);
+
+  useEffect(() => {
+    fetchPlans();
+  }, []);
+
+  const fetchPlans = async () => {
+    try {
+      // Fetch public active plans
+      const { data: plansData, error: plansError } = await supabase
+        .from('subscription_plans')
+        .select('*')
+        .eq('is_active', true)
+        .eq('is_public', true)
+        .order('monthly_price', { ascending: true });
+
+      if (plansError) throw plansError;
+
+      // Fetch linked features for each plan
+      const plansWithFeatures = await Promise.all(
+        (plansData || []).map(async (plan) => {
+          const { data: linkedData } = await supabase
+            .from('plan_features')
+            .select('feature_id, system_features(id, name)')
+            .eq('plan_id', plan.id);
+
+          const linkedFeatures = (linkedData || [])
+            .map((pf: any) => pf.system_features)
+            .filter(Boolean);
+
+          return {
+            ...plan,
+            features: Array.isArray(plan.features) 
+              ? (plan.features as unknown[]).map(f => String(f))
+              : [],
+            linkedFeatures,
+          };
+        })
+      );
+
+      setPlans(plansWithFeatures);
+    } catch (error) {
+      console.error("Error fetching plans:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Find most popular plan (middle one or marked)
+  const popularIndex = plans.length === 3 ? 1 : Math.floor(plans.length / 2);
+
+  if (loading) {
+    return (
+      <section id="pricing" className="py-20 lg:py-28 bg-background">
+        <div className="container flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </section>
+    );
+  }
+
+  if (plans.length === 0) {
+    return null;
+  }
 
   return (
     <section id="pricing" className="py-20 lg:py-28 bg-background">
@@ -102,20 +130,32 @@ export function PricingSection() {
           )}
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 max-w-5xl mx-auto">
+        <div className={`grid gap-6 lg:gap-8 max-w-5xl mx-auto ${
+          plans.length === 1 ? 'md:grid-cols-1 max-w-md' :
+          plans.length === 2 ? 'md:grid-cols-2 max-w-3xl' :
+          'md:grid-cols-3'
+        }`}>
           {plans.map((plan, i) => {
-            const price = isYearly ? plan.yearlyPrice : plan.monthlyPrice;
+            const isPopular = i === popularIndex && plans.length > 1;
+            const monthlyPrice = plan.monthly_price;
+            const price = isYearly ? Math.round(monthlyPrice * 0.8) : monthlyPrice;
+            
+            // Combine descriptive features with linked features
+            const displayFeatures = [
+              ...plan.features,
+              ...plan.linkedFeatures.map(f => f.name)
+            ].slice(0, 8);
             
             return (
               <div
-                key={i}
+                key={plan.id}
                 className={`relative rounded-3xl p-8 border transition-all duration-300 ${
-                  plan.popular
+                  isPopular
                     ? "bg-primary text-primary-foreground border-primary shadow-2xl shadow-primary/20 scale-105 z-10"
                     : "bg-card border-border hover:border-primary/30 hover:shadow-lg"
                 }`}
               >
-                {plan.popular && (
+                {isPopular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-cta text-cta-foreground text-xs font-bold px-4 py-1.5 rounded-full flex items-center gap-1 shadow-lg">
                     <Star className="h-3 w-3 fill-current" />
                     Mais Popular
@@ -123,31 +163,31 @@ export function PricingSection() {
                 )}
 
                 <div className="mb-6">
-                  <h3 className={`text-xl font-bold ${plan.popular ? "" : "text-foreground"}`}>
+                  <h3 className={`text-xl font-bold ${isPopular ? "" : "text-foreground"}`}>
                     {plan.name}
                   </h3>
-                  <p className={`text-sm mt-1 ${plan.popular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                    {plan.description}
+                  <p className={`text-sm mt-1 ${isPopular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                    {plan.description || `Até ${plan.max_professionals} profissional(is)`}
                   </p>
                 </div>
 
                 <div className="mb-6">
                   <div className="flex items-baseline gap-1">
-                    <span className={`text-sm ${plan.popular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                    <span className={`text-sm ${isPopular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                       R$
                     </span>
                     <span className="text-5xl font-bold">{price}</span>
                   </div>
-                  <span className={`text-sm ${plan.popular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
+                  <span className={`text-sm ${isPopular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                     /mês {isYearly && price > 0 && "(cobrado anualmente)"}
                   </span>
                 </div>
 
                 <ul className="space-y-3 mb-8">
-                  {plan.features.map((feature, j) => (
+                  {displayFeatures.map((feature, j) => (
                     <li key={j} className="flex items-start gap-3">
-                      <Check className={`h-5 w-5 flex-shrink-0 mt-0.5 ${plan.popular ? "" : "text-primary"}`} />
-                      <span className={`text-sm ${plan.popular ? "" : "text-muted-foreground"}`}>
+                      <Check className={`h-5 w-5 flex-shrink-0 mt-0.5 ${isPopular ? "" : "text-primary"}`} />
+                      <span className={`text-sm ${isPopular ? "" : "text-muted-foreground"}`}>
                         {feature}
                       </span>
                     </li>
@@ -156,13 +196,15 @@ export function PricingSection() {
 
                 <Button
                   className={`w-full rounded-full h-12 text-base font-semibold transition-all duration-300 hover:scale-[1.02] ${
-                    plan.popular
+                    isPopular
                       ? "bg-white text-primary hover:bg-white/90"
                       : "bg-primary text-primary-foreground hover:bg-primary/90"
                   }`}
                   asChild
                 >
-                  <Link to="/auth?tab=signup">{plan.cta}</Link>
+                  <Link to="/auth?tab=signup">
+                    {price === 0 ? "Começar grátis" : "Testar grátis"}
+                  </Link>
                 </Button>
               </div>
             );
@@ -174,7 +216,7 @@ export function PricingSection() {
           <p className="text-muted-foreground text-sm mb-4">
             Garantia de 7 dias • Cancele a qualquer momento • Suporte em português
           </p>
-          <div className="flex items-center justify-center gap-6 text-muted-foreground">
+          <div className="flex items-center justify-center gap-6 text-muted-foreground flex-wrap">
             <div className="flex items-center gap-2">
               <Check className="h-4 w-4 text-success" />
               <span className="text-sm">Sem taxas ocultas</span>

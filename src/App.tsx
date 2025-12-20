@@ -50,11 +50,13 @@ const ProceduresPage = lazy(() => import("./pages/dashboard/ProceduresPage"));
 const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
 const UsersManagementPage = lazy(() => import("./pages/dashboard/UsersManagementPage"));
 
-// Admin pages (5 páginas)
+// Admin pages (7 páginas)
 const SuperAdminDashboard = lazy(() => import("./pages/admin/SuperAdminDashboard"));
 const ClinicsManagement = lazy(() => import("./pages/admin/ClinicsManagement"));
 const UsersManagement = lazy(() => import("./pages/admin/UsersManagement"));
 const PlansManagement = lazy(() => import("./pages/admin/PlansManagement"));
+const FeaturesManagement = lazy(() => import("./pages/admin/FeaturesManagement"));
+const UpgradeRequestsPage = lazy(() => import("./pages/admin/UpgradeRequestsPage"));
 const AuditLogsPage = lazy(() => import("./pages/admin/AuditLogsPage"));
 
 const queryClient = new QueryClient();
@@ -144,6 +146,8 @@ const App = () => (
                   <Route path="clinics" element={<ClinicsManagement />} />
                   <Route path="users" element={<UsersManagement />} />
                   <Route path="plans" element={<PlansManagement />} />
+                  <Route path="features" element={<FeaturesManagement />} />
+                  <Route path="upgrades" element={<UpgradeRequestsPage />} />
                   <Route path="audit" element={<AuditLogsPage />} />
                 </Route>
                 {/* Dashboard Routes */}

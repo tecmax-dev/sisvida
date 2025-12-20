@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
@@ -22,6 +23,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import {
   Plus,
@@ -32,7 +35,9 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  Layers,
 } from "lucide-react";
+import { useSystemFeatures, usePlanLinkedFeatures, SystemFeature } from "@/hooks/usePlanFeatures";
 
 interface Plan {
   id: string;
@@ -49,6 +54,18 @@ interface Plan {
   subscription_count?: number;
 }
 
+const CATEGORIES = [
+  { value: 'anamnese', label: 'Anamnese' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'financial', label: 'Financeiro' },
+  { value: 'medical', label: 'Médico' },
+  { value: 'patients', label: 'Pacientes' },
+  { value: 'scheduling', label: 'Agendamento' },
+  { value: 'integrations', label: 'Integrações' },
+  { value: 'reports', label: 'Relatórios' },
+  { value: 'management', label: 'Gestão' },
+];
+
 export default function PlansManagement() {
   const { toast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -56,6 +73,7 @@ export default function PlansManagement() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
+  const [activeTab, setActiveTab] = useState("details");
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -67,16 +85,26 @@ export default function PlansManagement() {
   const [formIsPublic, setFormIsPublic] = useState(true);
   const [formIsDefaultTrial, setFormIsDefaultTrial] = useState(false);
   const [formFeatures, setFormFeatures] = useState("");
+  const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>([]);
+
+  // System features
+  const { features: systemFeatures, loading: loadingFeatures } = useSystemFeatures();
+  const { linkedFeatureIds, refetch: refetchLinked } = usePlanLinkedFeatures(editingPlan?.id || null);
 
   useEffect(() => {
     fetchPlans();
   }, []);
 
+  useEffect(() => {
+    if (editingPlan) {
+      setSelectedFeatureIds(linkedFeatureIds);
+    }
+  }, [linkedFeatureIds, editingPlan]);
+
   const fetchPlans = async () => {
     try {
       setLoading(true);
       
-      // Fetch plans
       const { data: plansData, error: plansError } = await supabase
         .from('subscription_plans')
         .select('*')
@@ -84,7 +112,6 @@ export default function PlansManagement() {
 
       if (plansError) throw plansError;
 
-      // Fetch subscription counts for each plan
       const plansWithCounts = await Promise.all(
         (plansData || []).map(async (plan) => {
           const { count } = await supabase
@@ -124,7 +151,9 @@ export default function PlansManagement() {
     setFormIsPublic(true);
     setFormIsDefaultTrial(false);
     setFormFeatures("");
+    setSelectedFeatureIds([]);
     setEditingPlan(null);
+    setActiveTab("details");
   };
 
   const openEditDialog = (plan: Plan) => {
@@ -139,6 +168,15 @@ export default function PlansManagement() {
     setFormIsDefaultTrial(plan.is_default_trial);
     setFormFeatures(plan.features.join("\n"));
     setDialogOpen(true);
+    refetchLinked();
+  };
+
+  const handleFeatureToggle = (featureId: string) => {
+    setSelectedFeatureIds(prev => 
+      prev.includes(featureId)
+        ? prev.filter(id => id !== featureId)
+        : [...prev, featureId]
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -168,6 +206,8 @@ export default function PlansManagement() {
         features: formFeatures.split("\n").filter(f => f.trim()),
       };
 
+      let planId = editingPlan?.id;
+
       if (editingPlan) {
         const { error } = await supabase
           .from('subscription_plans')
@@ -175,23 +215,46 @@ export default function PlansManagement() {
           .eq('id', editingPlan.id);
 
         if (error) throw error;
-
-        toast({
-          title: "Plano atualizado",
-          description: "As alterações foram salvas com sucesso.",
-        });
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('subscription_plans')
-          .insert(planData);
+          .insert(planData)
+          .select('id')
+          .single();
 
         if (error) throw error;
-
-        toast({
-          title: "Plano criado",
-          description: "O novo plano foi criado com sucesso.",
-        });
+        planId = data.id;
       }
+
+      // Update linked features
+      if (planId) {
+        // Remove all existing links
+        await supabase
+          .from('plan_features')
+          .delete()
+          .eq('plan_id', planId);
+
+        // Add new links
+        if (selectedFeatureIds.length > 0) {
+          const linksToInsert = selectedFeatureIds.map(featureId => ({
+            plan_id: planId,
+            feature_id: featureId,
+          }));
+
+          const { error: linkError } = await supabase
+            .from('plan_features')
+            .insert(linksToInsert);
+
+          if (linkError) throw linkError;
+        }
+      }
+
+      toast({
+        title: editingPlan ? "Plano atualizado" : "Plano criado",
+        description: editingPlan 
+          ? "As alterações foram salvas com sucesso."
+          : "O novo plano foi criado com sucesso.",
+      });
 
       setDialogOpen(false);
       resetForm();
@@ -218,9 +281,6 @@ export default function PlansManagement() {
 
       toast({
         title: plan.is_active ? "Plano desativado" : "Plano ativado",
-        description: plan.is_active
-          ? "O plano não estará mais disponível para novos usuários."
-          : "O plano está disponível para novos usuários.",
       });
 
       fetchPlans();
@@ -240,13 +300,26 @@ export default function PlansManagement() {
     }).format(price);
   };
 
+  const getCategoryLabel = (category: string) => {
+    return CATEGORIES.find(c => c.value === category)?.label || category;
+  };
+
+  // Group features by category
+  const groupedFeatures = systemFeatures.reduce((acc, feature) => {
+    if (!acc[feature.category]) {
+      acc[feature.category] = [];
+    }
+    acc[feature.category].push(feature);
+    return acc;
+  }, {} as Record<string, SystemFeature[]>);
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Gestão de Planos</h1>
           <p className="text-muted-foreground">
-            Configure os planos de assinatura disponíveis para as clínicas
+            Configure os planos de assinatura e vincule recursos
           </p>
         </div>
 
@@ -260,136 +333,205 @@ export default function PlansManagement() {
               Novo Plano
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent className="max-w-2xl max-h-[90vh]">
             <DialogHeader>
               <DialogTitle>
                 {editingPlan ? "Editar Plano" : "Novo Plano"}
               </DialogTitle>
             </DialogHeader>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome do Plano *</Label>
-                <Input
-                  id="name"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Ex: Profissional"
-                />
-              </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="details">Detalhes</TabsTrigger>
+                <TabsTrigger value="features">
+                  Recursos ({selectedFeatureIds.length})
+                </TabsTrigger>
+              </TabsList>
 
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  placeholder="Descrição do plano..."
-                  rows={2}
-                />
-              </div>
+              <form onSubmit={handleSubmit}>
+                <TabsContent value="details" className="space-y-4 mt-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Nome do Plano *</Label>
+                    <Input
+                      id="name"
+                      value={formName}
+                      onChange={(e) => setFormName(e.target.value)}
+                      placeholder="Ex: Profissional"
+                    />
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="maxProfessionals">Máx. Profissionais</Label>
-                  <Input
-                    id="maxProfessionals"
-                    type="number"
-                    min="1"
-                    value={formMaxProfessionals}
-                    onChange={(e) => setFormMaxProfessionals(e.target.value)}
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="description">Descrição</Label>
+                    <Textarea
+                      id="description"
+                      value={formDescription}
+                      onChange={(e) => setFormDescription(e.target.value)}
+                      placeholder="Descrição do plano..."
+                      rows={2}
+                    />
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="monthlyPrice">Preço Mensal (R$)</Label>
-                  <Input
-                    id="monthlyPrice"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={formMonthlyPrice}
-                    onChange={(e) => setFormMonthlyPrice(e.target.value)}
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="maxProfessionals">Máx. Profissionais</Label>
+                      <Input
+                        id="maxProfessionals"
+                        type="number"
+                        min="1"
+                        value={formMaxProfessionals}
+                        onChange={(e) => setFormMaxProfessionals(e.target.value)}
+                      />
+                    </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="externalId">ID Externo (gateway)</Label>
-                <Input
-                  id="externalId"
-                  value={formExternalId}
-                  onChange={(e) => setFormExternalId(e.target.value)}
-                  placeholder="ID do plano no gateway de pagamento"
-                />
-              </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="monthlyPrice">Preço Mensal (R$)</Label>
+                      <Input
+                        id="monthlyPrice"
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={formMonthlyPrice}
+                        onChange={(e) => setFormMonthlyPrice(e.target.value)}
+                      />
+                    </div>
+                  </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="features">Recursos (um por linha)</Label>
-                <Textarea
-                  id="features"
-                  value={formFeatures}
-                  onChange={(e) => setFormFeatures(e.target.value)}
-                  placeholder="Agendamento online&#10;Prontuário eletrônico&#10;Relatórios"
-                  rows={3}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="externalId">ID Externo (gateway)</Label>
+                    <Input
+                      id="externalId"
+                      value={formExternalId}
+                      onChange={(e) => setFormExternalId(e.target.value)}
+                      placeholder="ID do plano no gateway de pagamento"
+                    />
+                  </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Plano Ativo</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Disponível para assinaturas
+                  <div className="space-y-2">
+                    <Label htmlFor="features">Descrição de recursos (um por linha)</Label>
+                    <Textarea
+                      id="features"
+                      value={formFeatures}
+                      onChange={(e) => setFormFeatures(e.target.value)}
+                      placeholder="Agendamento online&#10;Prontuário eletrônico&#10;Relatórios"
+                      rows={3}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Texto descritivo para exibição. Use a aba "Recursos" para vincular funcionalidades reais.
                     </p>
                   </div>
-                  <Switch
-                    checked={formIsActive}
-                    onCheckedChange={setFormIsActive}
-                  />
-                </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Plano Público</Label>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Plano Ativo</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Disponível para assinaturas
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formIsActive}
+                        onCheckedChange={setFormIsActive}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Plano Público</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Visível na landing page
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formIsPublic}
+                        onCheckedChange={setFormIsPublic}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Plano Trial Padrão</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Atribuído automaticamente a novos cadastros
+                        </p>
+                      </div>
+                      <Switch
+                        checked={formIsDefaultTrial}
+                        onCheckedChange={setFormIsDefaultTrial}
+                      />
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="features" className="mt-4">
+                  <div className="space-y-2 mb-4">
                     <p className="text-sm text-muted-foreground">
-                      Visível para usuários
+                      Selecione os recursos que estarão disponíveis para clínicas com este plano.
+                      Recursos não marcados serão bloqueados.
                     </p>
                   </div>
-                  <Switch
-                    checked={formIsPublic}
-                    onCheckedChange={setFormIsPublic}
-                  />
-                </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Plano Trial Padrão</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Atribuído automaticamente a novos cadastros
-                    </p>
-                  </div>
-                  <Switch
-                    checked={formIsDefaultTrial}
-                    onCheckedChange={setFormIsDefaultTrial}
-                  />
-                </div>
-              </div>
+                  {loadingFeatures ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : (
+                    <ScrollArea className="h-[400px] pr-4">
+                      <div className="space-y-6">
+                        {Object.entries(groupedFeatures).map(([category, features]) => (
+                          <div key={category}>
+                            <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+                              <Layers className="h-4 w-4" />
+                              {getCategoryLabel(category)}
+                            </h4>
+                            <div className="space-y-2 pl-6">
+                              {features.filter(f => f.is_active).map((feature) => (
+                                <div
+                                  key={feature.id}
+                                  className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50"
+                                >
+                                  <Checkbox
+                                    id={feature.id}
+                                    checked={selectedFeatureIds.includes(feature.id)}
+                                    onCheckedChange={() => handleFeatureToggle(feature.id)}
+                                  />
+                                  <div className="flex-1">
+                                    <label
+                                      htmlFor={feature.id}
+                                      className="text-sm font-medium cursor-pointer"
+                                    >
+                                      {feature.name}
+                                    </label>
+                                    {feature.description && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {feature.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  )}
+                </TabsContent>
 
-              <div className="flex justify-end gap-2 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  {editingPlan ? "Salvar" : "Criar Plano"}
-                </Button>
-              </div>
-            </form>
+                <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setDialogOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={saving}>
+                    {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    {editingPlan ? "Salvar" : "Criar Plano"}
+                  </Button>
+                </div>
+              </form>
+            </Tabs>
           </DialogContent>
         </Dialog>
       </div>
