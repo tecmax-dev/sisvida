@@ -93,8 +93,13 @@ export default function Auth() {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Check URL hash directly for recovery flow - don't rely on state
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const isRecoveryFlow = hashParams.get("type") === "recovery" || 
+                             window.location.hash.includes("type=recovery");
+      
       // Don't redirect if we're in password reset flow
-      if (view === "reset-password") return;
+      if (isRecoveryFlow) return;
       
       if (session?.user) {
         setTimeout(() => {
@@ -104,13 +109,17 @@ export default function Auth() {
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user && view !== "reset-password") {
+      // Check URL hash directly for recovery flow
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const isRecoveryFlow = hashParams.get("type") === "recovery";
+      
+      if (session?.user && !isRecoveryFlow) {
         checkSuperAdminAndRedirect(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, view]);
+  }, [navigate]);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
