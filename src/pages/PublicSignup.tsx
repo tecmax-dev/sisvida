@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/layout/Logo";
-import heroMockup from "@/assets/hero-mockup.png";
 import { ArrowRight, Check, Eye, EyeOff, MessageCircle, Loader2 } from "lucide-react";
 import { z } from "zod";
 
@@ -151,108 +150,121 @@ export default function PublicSignup() {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
       {/* Left Column - Branding & Benefits */}
-      <div className="relative lg:w-1/2 bg-gradient-to-br from-primary via-primary to-primary-dark p-8 lg:p-12 flex flex-col justify-between overflow-hidden">
+      <div className="relative lg:w-1/2 bg-gradient-to-br from-primary via-primary to-primary-dark p-6 sm:p-8 lg:p-12 flex flex-col overflow-hidden">
         {/* Background decorations */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
+        <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-white/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-white/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
         
         <div className="relative z-10">
           <Link to="/">
             <Logo variant="light" size="md" />
           </Link>
           
-          <div className="mt-8 lg:mt-12">
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 backdrop-blur-sm rounded-full mb-6 animate-pulse">
+          <div className="mt-6 sm:mt-8 lg:mt-12">
+            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-sm rounded-full mb-4 sm:mb-6 animate-pulse">
               <span className="w-2 h-2 bg-success rounded-full" />
-              <span className="text-sm font-medium text-white">TESTE GRÁTIS POR 14 DIAS</span>
+              <span className="text-xs sm:text-sm font-medium text-white">TESTE GRÁTIS POR 14 DIAS</span>
             </div>
             
-            <h1 className="text-3xl lg:text-4xl xl:text-5xl font-bold text-white leading-tight">
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-white leading-tight">
               Transforme a gestão
               <br />
               da sua clínica
             </h1>
             
-            <p className="mt-6 text-lg text-white/80 max-w-md">
+            <p className="mt-4 sm:mt-6 text-sm sm:text-base lg:text-lg text-white/80 max-w-md">
               Sistema completo para profissionais de saúde. 
               Simplifique agendamentos, automatize lembretes e foque no que importa: seus pacientes.
             </p>
             
-            <div className="mt-8 space-y-3">
+            {/* Benefits - Grid on mobile, list on larger screens */}
+            <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-1">
               {benefits.map((benefit, i) => (
-                <div key={i} className="flex items-center gap-3 text-white/90">
-                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="h-3 w-3 text-white" />
+                <div key={i} className="flex items-center gap-2 sm:gap-3 text-white/90">
+                  <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
+                    <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
                   </div>
-                  <span className="text-sm">{benefit}</span>
+                  <span className="text-xs sm:text-sm">{benefit}</span>
                 </div>
               ))}
             </div>
           </div>
         </div>
         
-        <div className="relative z-10 mt-8 lg:mt-0">
-          <img 
-            src={heroMockup} 
-            alt="Dashboard Eclini" 
-            className="w-full max-w-md mx-auto drop-shadow-2xl hidden lg:block"
-          />
+        {/* Doctor Image */}
+        <div className="relative z-10 mt-6 lg:mt-auto lg:pt-8 flex justify-center lg:justify-start">
+          <div className="relative">
+            {/* Glow effect */}
+            <div className="absolute inset-0 bg-white/20 rounded-2xl blur-2xl scale-95" />
+            <img 
+              src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
+              alt="Profissional de saúde" 
+              className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-64 lg:h-64 xl:w-72 xl:h-72 object-cover rounded-2xl shadow-2xl"
+            />
+            {/* Floating badge */}
+            <div className="absolute -bottom-2 -right-2 sm:-bottom-3 sm:-right-3 bg-white rounded-lg px-2 py-1 sm:px-3 sm:py-1.5 shadow-lg">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
+                <span className="text-xs sm:text-sm font-medium text-foreground">+2.000 clínicas</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       {/* Right Column - Form */}
-      <div className="lg:w-1/2 flex items-center justify-center p-8 lg:p-12 bg-background">
+      <div className="lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-background">
         <div className="w-full max-w-md">
-          <div className="text-center lg:text-left mb-8">
-            <h2 className="text-2xl lg:text-3xl font-bold text-foreground">
+          <div className="text-center lg:text-left mb-6 sm:mb-8">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
               Crie sua conta grátis
             </h2>
-            <p className="mt-2 text-muted-foreground">
+            <p className="mt-2 text-sm sm:text-base text-muted-foreground">
               Em menos de 2 minutos você estará usando o sistema
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome completo *</Label>
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="name" className="text-sm">Nome completo *</Label>
               <Input
                 id="name"
                 placeholder="Seu nome"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className={errors.name ? "border-destructive" : ""}
+                className={`h-10 sm:h-11 ${errors.name ? "border-destructive" : ""}`}
               />
-              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+              {errors.name && <p className="text-xs sm:text-sm text-destructive">{errors.name}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email *</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="email" className="text-sm">Email *</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="seu@email.com"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                className={errors.email ? "border-destructive" : ""}
+                className={`h-10 sm:h-11 ${errors.email ? "border-destructive" : ""}`}
               />
-              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+              {errors.email && <p className="text-xs sm:text-sm text-destructive">{errors.email}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefone celular *</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="phone" className="text-sm">Telefone celular *</Label>
               <Input
                 id="phone"
                 placeholder="(00) 00000-0000"
                 value={formData.phone}
                 onChange={handlePhoneChange}
                 maxLength={15}
-                className={errors.phone ? "border-destructive" : ""}
+                className={`h-10 sm:h-11 ${errors.phone ? "border-destructive" : ""}`}
               />
-              {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
+              {errors.phone && <p className="text-xs sm:text-sm text-destructive">{errors.phone}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha *</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="password" className="text-sm">Senha *</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -260,7 +272,7 @@ export default function PublicSignup() {
                   placeholder="Mínimo 6 caracteres"
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  className={errors.password ? "border-destructive pr-10" : "pr-10"}
+                  className={`h-10 sm:h-11 ${errors.password ? "border-destructive pr-10" : "pr-10"}`}
                 />
                 <button
                   type="button"
@@ -270,16 +282,16 @@ export default function PublicSignup() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
+              {errors.password && <p className="text-xs sm:text-sm text-destructive">{errors.password}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="businessType">Tipo de negócio *</Label>
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="businessType" className="text-sm">Tipo de negócio *</Label>
               <Select
                 value={formData.businessType}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, businessType: value }))}
               >
-                <SelectTrigger className={errors.businessType ? "border-destructive" : ""}>
+                <SelectTrigger className={`h-10 sm:h-11 ${errors.businessType ? "border-destructive" : ""}`}>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -290,12 +302,12 @@ export default function PublicSignup() {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.businessType && <p className="text-sm text-destructive">{errors.businessType}</p>}
+              {errors.businessType && <p className="text-xs sm:text-sm text-destructive">{errors.businessType}</p>}
             </div>
 
             <Button 
               type="submit" 
-              className="w-full h-12 bg-cta hover:bg-cta-hover text-cta-foreground text-base font-semibold"
+              className="w-full h-11 sm:h-12 bg-cta hover:bg-cta-hover text-cta-foreground text-sm sm:text-base font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -311,15 +323,15 @@ export default function PublicSignup() {
               )}
             </Button>
 
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-xs sm:text-sm text-muted-foreground">
               Ao criar sua conta, você concorda com nossos{" "}
               <a href="#" className="text-primary hover:underline">Termos de Uso</a>
               {" "}e{" "}
               <a href="#" className="text-primary hover:underline">Política de Privacidade</a>
             </p>
 
-            <div className="text-center pt-4 border-t">
-              <p className="text-sm text-muted-foreground">
+            <div className="text-center pt-3 sm:pt-4 border-t">
+              <p className="text-xs sm:text-sm text-muted-foreground">
                 Já tem uma conta?{" "}
                 <Link to="/auth" className="text-primary font-medium hover:underline">
                   Fazer login
@@ -335,10 +347,10 @@ export default function PublicSignup() {
         href="https://wa.me/5571982786864?text=Olá! Gostaria de saber mais sobre o Eclini."
         target="_blank"
         rel="noopener noreferrer"
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white px-4 py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
       >
         <MessageCircle className="h-5 w-5" />
-        <span className="hidden sm:inline font-medium">Dúvidas? Fale conosco</span>
+        <span className="hidden sm:inline font-medium text-sm">Dúvidas? Fale conosco</span>
       </a>
     </div>
   );
