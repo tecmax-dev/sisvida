@@ -56,7 +56,7 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/auth?tab=signup" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <a href="/cadastro" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Criar conta
                 </a>
               </li>

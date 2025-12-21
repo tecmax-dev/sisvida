@@ -113,7 +113,7 @@ export function FeaturesSection() {
             className="bg-cta hover:bg-cta-hover text-cta-foreground rounded-full px-8 h-14 text-base shadow-lg transition-all duration-300 hover:scale-105"
             asChild
           >
-            <Link to="/auth?tab=signup">
+            <Link to="/cadastro">
               Experimentar grátis por 7 dias
             </Link>
           </Button>
