@@ -158,9 +158,17 @@ export function AppointmentPanel({
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [professional, setProfessional] = useState<Professional | null>(null);
+  
+  // Telemedicine states
+  const [isVideoCallActive, setIsVideoCallActive] = useState(false);
+  const [telemedicineSession, setTelemedicineSession] = useState<{
+    sessionId: string;
+    roomId: string;
+  } | null>(null);
 
   const isCompleted = appointment.status === "completed";
   const isInProgress = appointment.status === "in_progress";
+  const isTelemedicine = appointment.type === "telemedicine";
 
   // Real-time timer based on started_at
   useEffect(() => {
@@ -870,6 +878,22 @@ export function AppointmentPanel({
           </Tabs>
         </ScrollArea>
 
+        {/* Video Call Overlay */}
+        {isVideoCallActive && telemedicineSession && (
+          <div className="fixed inset-0 z-50 bg-background">
+            <VideoCall
+              sessionId={telemedicineSession.sessionId}
+              roomId={telemedicineSession.roomId}
+              isInitiator={true}
+              patientName={appointment.patient.name}
+              onEnd={() => {
+                setIsVideoCallActive(false);
+                setTelemedicineSession(null);
+              }}
+            />
+          </div>
+        )}
+
         {/* Footer Actions */}
         <Separator className="my-2" />
         <div className="flex justify-between gap-4">
@@ -877,14 +901,29 @@ export function AppointmentPanel({
             Fechar
           </Button>
           <div className="flex gap-2">
+            {/* Telemedicine Button */}
+            {isTelemedicine && !isVideoCallActive && isInProgress && (
+              <TelemedicineButton
+                appointmentId={appointment.id}
+                clinicId={clinicId}
+                onStartCall={(sessionId, roomId) => {
+                  setTelemedicineSession({ sessionId, roomId });
+                  setIsVideoCallActive(true);
+                }}
+                disabled={isCompleted}
+              />
+            )}
+            
             {!isInProgress && !isCompleted && (
               <Button onClick={handleStartAppointment} disabled={loading}>
                 {loading ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : isTelemedicine ? (
+                  <Video className="h-4 w-4 mr-2" />
                 ) : (
                   <Play className="h-4 w-4 mr-2" />
                 )}
-                Iniciar Atendimento
+                {isTelemedicine ? "Iniciar Teleconsulta" : "Iniciar Atendimento"}
               </Button>
             )}
             {isInProgress && (
