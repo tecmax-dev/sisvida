@@ -1407,52 +1407,85 @@ export type Database = {
       }
       professionals: {
         Row: {
+          address: string | null
           appointment_duration: number | null
           avatar_url: string | null
+          bio: string | null
+          city: string | null
           clinic_id: string
           created_at: string
+          education: string | null
           email: string | null
+          experience: string | null
           id: string
           is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
           name: string
           phone: string | null
           registration_number: string | null
           schedule: Json | null
+          slug: string | null
           specialty: string | null
+          state: string | null
           updated_at: string
           user_id: string | null
+          whatsapp: string | null
+          zip_code: string | null
         }
         Insert: {
+          address?: string | null
           appointment_duration?: number | null
           avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
           clinic_id: string
           created_at?: string
+          education?: string | null
           email?: string | null
+          experience?: string | null
           id?: string
           is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           name: string
           phone?: string | null
           registration_number?: string | null
           schedule?: Json | null
+          slug?: string | null
           specialty?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string | null
+          whatsapp?: string | null
+          zip_code?: string | null
         }
         Update: {
+          address?: string | null
           appointment_duration?: number | null
           avatar_url?: string | null
+          bio?: string | null
+          city?: string | null
           clinic_id?: string
           created_at?: string
+          education?: string | null
           email?: string | null
+          experience?: string | null
           id?: string
           is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           phone?: string | null
           registration_number?: string | null
           schedule?: Json | null
+          slug?: string | null
           specialty?: string | null
+          state?: string | null
           updated_at?: string
           user_id?: string | null
+          whatsapp?: string | null
+          zip_code?: string | null
         }
         Relationships: [
           {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/layout/Logo";
-import { ArrowRight, Check, Eye, EyeOff, MessageCircle, Loader2, Star, Shield, Clock, Users, ChevronDown, Quote } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { z } from "zod";
 
 const signupSchema = z.object({
@@ -27,34 +27,21 @@ const businessTypes = [
   { value: "outro", label: "Outro" },
 ];
 
-const benefits = [
-  "Agenda online 24 horas",
-  "Confirmação automática via WhatsApp",
-  "Prontuário eletrônico completo",
-  "Gestão financeira integrada",
-  "Relatórios e métricas em tempo real",
-  "Suporte em português",
-];
-
-const stats = [
-  { icon: Users, value: "+2.000", label: "Clínicas ativas" },
-  { icon: Clock, value: "50.000+", label: "Agendamentos/mês" },
-  { icon: Star, value: "4.9", label: "Avaliação média" },
-  { icon: Shield, value: "99.9%", label: "Uptime garantido" },
-];
-
-const testimonials = [
+const carouselImages = [
   {
-    name: "Dra. Juliane Leite",
-    role: "Dermatologista",
-    quote: "O Eclini transformou completamente a gestão da minha clínica. Reduzi em 70% o tempo gasto com agendamentos.",
-    avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
+    url: "https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+    title: "Agenda inteligente",
+    description: "Gerencie seus agendamentos de forma simples e eficiente"
   },
   {
-    name: "Dr. José Alcides",
-    role: "Cardiologista", 
-    quote: "A integração com WhatsApp reduziu drasticamente as faltas. Meus pacientes adoram a confirmação automática.",
-    avatar: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
+    url: "https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+    title: "Prontuário digital",
+    description: "Histórico completo dos seus pacientes em um só lugar"
+  },
+  {
+    url: "https://images.unsplash.com/photo-1666214280557-f1b5022eb634?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+    title: "Lembretes automáticos",
+    description: "Reduza faltas com confirmações via WhatsApp"
   },
 ];
 
@@ -72,6 +59,7 @@ export default function PublicSignup() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -80,6 +68,14 @@ export default function PublicSignup() {
     password: "",
     businessType: "",
   });
+
+  // Auto-advance carousel
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % carouselImages.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatPhone(e.target.value);
@@ -90,7 +86,6 @@ export default function PublicSignup() {
     e.preventDefault();
     setErrors({});
 
-    // Validate form
     const result = signupSchema.safeParse(formData);
     if (!result.success) {
       const fieldErrors: Record<string, string> = {};
@@ -106,7 +101,6 @@ export default function PublicSignup() {
     setIsLoading(true);
 
     try {
-      // Create user account
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -134,7 +128,6 @@ export default function PublicSignup() {
       }
 
       if (data.user) {
-        // Notify super admin about new signup
         try {
           await supabase.functions.invoke("notify-new-signup", {
             body: {
@@ -147,7 +140,6 @@ export default function PublicSignup() {
           });
         } catch (notifyError) {
           console.error("Failed to notify admin:", notifyError);
-          // Don't block signup if notification fails
         }
 
         toast({
@@ -169,181 +161,71 @@ export default function PublicSignup() {
     }
   };
 
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % carouselImages.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + carouselImages.length) % carouselImages.length);
+
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left Column - Branding & Benefits - SCROLLABLE */}
-      <div className="relative lg:w-1/2 lg:h-screen lg:overflow-y-auto bg-gradient-to-br from-primary via-primary to-primary-dark p-6 sm:p-8 lg:p-12 flex flex-col scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
-        {/* Background decorations */}
-        <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-white/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
-        <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-white/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
-        
-        <div className="relative z-10">
-          <Link to="/">
-            <Logo variant="light" size="md" />
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background">
+      {/* Left Column - Form */}
+      <div className="lg:w-1/2 flex flex-col justify-center p-6 sm:p-8 lg:p-12 xl:p-16 order-2 lg:order-1">
+        <div className="w-full max-w-md mx-auto">
+          {/* Logo */}
+          <Link to="/" className="inline-block mb-8">
+            <Logo size="md" />
           </Link>
-          
-          <div className="mt-6 sm:mt-8 lg:mt-12">
-            <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 backdrop-blur-sm rounded-full mb-4 sm:mb-6 animate-pulse">
-              <span className="w-2 h-2 bg-success rounded-full" />
-              <span className="text-xs sm:text-sm font-medium text-white">TESTE GRÁTIS POR 14 DIAS</span>
-            </div>
-            
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold text-white leading-tight">
-              Transforme a gestão
-              <br />
-              da sua clínica
+
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground mb-2">
+              Crie sua conta
             </h1>
-            
-            <p className="mt-4 sm:mt-6 text-sm sm:text-base lg:text-lg text-white/80 max-w-md">
-              Sistema completo para profissionais de saúde. 
-              Simplifique agendamentos, automatize lembretes e foque no que importa: seus pacientes.
-            </p>
-            
-            {/* Benefits - Grid on mobile, list on larger screens */}
-            <div className="mt-6 sm:mt-8 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-1">
-              {benefits.map((benefit, i) => (
-                <div key={i} className="flex items-center gap-2 sm:gap-3 text-white/90">
-                  <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-white/20 flex items-center justify-center flex-shrink-0">
-                    <Check className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-white" />
-                  </div>
-                  <span className="text-xs sm:text-sm">{benefit}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-        
-        {/* Doctor Image */}
-        <div className="relative z-10 mt-6 lg:mt-8 flex justify-center lg:justify-start">
-          <div className="relative">
-            {/* Glow effect */}
-            <div className="absolute inset-0 bg-white/20 rounded-2xl blur-2xl scale-95" />
-            <img 
-              src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
-              alt="Profissional de saúde" 
-              className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 object-cover rounded-2xl shadow-2xl"
-            />
-            {/* Floating badge */}
-            <div className="absolute -bottom-2 -right-2 sm:-bottom-3 sm:-right-3 bg-white rounded-lg px-2 py-1 sm:px-3 sm:py-1.5 shadow-lg">
-              <div className="flex items-center gap-1.5">
-                <div className="w-2 h-2 bg-success rounded-full animate-pulse" />
-                <span className="text-xs sm:text-sm font-medium text-foreground">+2.000 clínicas</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Section */}
-        <div className="relative z-10 mt-8 lg:mt-10">
-          <div className="grid grid-cols-2 gap-3 sm:gap-4">
-            {stats.map((stat, i) => (
-              <div key={i} className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
-                <div className="flex items-center gap-2 mb-1">
-                  <stat.icon className="h-4 w-4 text-white/70" />
-                  <span className="text-lg sm:text-xl font-bold text-white">{stat.value}</span>
-                </div>
-                <span className="text-xs text-white/60">{stat.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Testimonials Section */}
-        <div className="relative z-10 mt-8 lg:mt-10 space-y-4">
-          <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">O que nossos clientes dizem</h3>
-          
-          {testimonials.map((testimonial, i) => (
-            <div key={i} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-5">
-              <Quote className="h-5 w-5 text-white/40 mb-2" />
-              <p className="text-sm text-white/90 italic mb-4">"{testimonial.quote}"</p>
-              <div className="flex items-center gap-3">
-                <img 
-                  src={testimonial.avatar} 
-                  alt={testimonial.name}
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-                <div>
-                  <p className="text-sm font-medium text-white">{testimonial.name}</p>
-                  <p className="text-xs text-white/60">{testimonial.role}</p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Trust badges */}
-        <div className="relative z-10 mt-8 lg:mt-10 pb-4">
-          <div className="flex flex-wrap items-center gap-4 justify-center lg:justify-start">
-            <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg">
-              <Shield className="h-4 w-4 text-white/70" />
-              <span className="text-xs text-white/80">Dados criptografados</span>
-            </div>
-            <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg">
-              <Check className="h-4 w-4 text-white/70" />
-              <span className="text-xs text-white/80">LGPD Compliant</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Scroll indicator - visible only on desktop */}
-        <div className="hidden lg:flex justify-center mt-4 animate-bounce">
-          <ChevronDown className="h-5 w-5 text-white/40" />
-        </div>
-      </div>
-
-      {/* Right Column - Form - FIXED */}
-      <div className="lg:w-1/2 lg:h-screen lg:sticky lg:top-0 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-background overflow-y-auto">
-        <div className="w-full max-w-md">
-          <div className="text-center lg:text-left mb-6 sm:mb-8">
-            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
-              Crie sua conta grátis
-            </h2>
-            <p className="mt-2 text-sm sm:text-base text-muted-foreground">
-              Em menos de 2 minutos você estará usando o sistema
+            <p className="text-muted-foreground">
+              Comece seu teste grátis de 14 dias
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="name" className="text-sm">Nome completo *</Label>
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome completo</Label>
               <Input
                 id="name"
                 placeholder="Seu nome"
                 value={formData.name}
                 onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                className={`h-10 sm:h-11 ${errors.name ? "border-destructive" : ""}`}
+                className={`h-12 ${errors.name ? "border-destructive" : ""}`}
               />
-              {errors.name && <p className="text-xs sm:text-sm text-destructive">{errors.name}</p>}
+              {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="email" className="text-sm">Email *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="seu@email.com"
                 value={formData.email}
                 onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                className={`h-10 sm:h-11 ${errors.email ? "border-destructive" : ""}`}
+                className={`h-12 ${errors.email ? "border-destructive" : ""}`}
               />
-              {errors.email && <p className="text-xs sm:text-sm text-destructive">{errors.email}</p>}
+              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="phone" className="text-sm">Telefone celular *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone celular</Label>
               <Input
                 id="phone"
                 placeholder="(00) 00000-0000"
                 value={formData.phone}
                 onChange={handlePhoneChange}
                 maxLength={15}
-                className={`h-10 sm:h-11 ${errors.phone ? "border-destructive" : ""}`}
+                className={`h-12 ${errors.phone ? "border-destructive" : ""}`}
               />
-              {errors.phone && <p className="text-xs sm:text-sm text-destructive">{errors.phone}</p>}
+              {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="password" className="text-sm">Senha *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -351,26 +233,26 @@ export default function PublicSignup() {
                   placeholder="Mínimo 6 caracteres"
                   value={formData.password}
                   onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  className={`h-10 sm:h-11 ${errors.password ? "border-destructive pr-10" : "pr-10"}`}
+                  className={`h-12 pr-12 ${errors.password ? "border-destructive" : ""}`}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                 </button>
               </div>
-              {errors.password && <p className="text-xs sm:text-sm text-destructive">{errors.password}</p>}
+              {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
             </div>
 
-            <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="businessType" className="text-sm">Tipo de negócio *</Label>
+            <div className="space-y-2">
+              <Label htmlFor="businessType">Tipo de negócio</Label>
               <Select
                 value={formData.businessType}
                 onValueChange={(value) => setFormData(prev => ({ ...prev, businessType: value }))}
               >
-                <SelectTrigger className={`h-10 sm:h-11 ${errors.businessType ? "border-destructive" : ""}`}>
+                <SelectTrigger className={`h-12 ${errors.businessType ? "border-destructive" : ""}`}>
                   <SelectValue placeholder="Selecione o tipo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -381,56 +263,124 @@ export default function PublicSignup() {
                   ))}
                 </SelectContent>
               </Select>
-              {errors.businessType && <p className="text-xs sm:text-sm text-destructive">{errors.businessType}</p>}
+              {errors.businessType && <p className="text-sm text-destructive">{errors.businessType}</p>}
             </div>
 
             <Button 
               type="submit" 
-              className="w-full h-11 sm:h-12 bg-cta hover:bg-cta-hover text-cta-foreground text-sm sm:text-base font-semibold"
+              className="w-full h-12 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
               disabled={isLoading}
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Criando conta...
                 </>
               ) : (
                 <>
                   Criar conta grátis
-                  <ArrowRight className="ml-2 h-4 w-4" />
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </>
               )}
             </Button>
 
-            <p className="text-center text-xs sm:text-sm text-muted-foreground">
+            <p className="text-center text-sm text-muted-foreground">
               Ao criar sua conta, você concorda com nossos{" "}
               <a href="#" className="text-primary hover:underline">Termos de Uso</a>
               {" "}e{" "}
               <a href="#" className="text-primary hover:underline">Política de Privacidade</a>
             </p>
-
-            <div className="text-center pt-3 sm:pt-4 border-t">
-              <p className="text-xs sm:text-sm text-muted-foreground">
-                Já tem uma conta?{" "}
-                <Link to="/auth" className="text-primary font-medium hover:underline">
-                  Fazer login
-                </Link>
-              </p>
-            </div>
           </form>
+
+          {/* Login link */}
+          <div className="mt-8 text-center">
+            <p className="text-muted-foreground">
+              Já tem uma conta?{" "}
+              <Link to="/auth" className="text-primary font-medium hover:underline">
+                Fazer login
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
 
-      {/* WhatsApp floating button */}
-      <a
-        href="https://wa.me/5571982786864?text=Olá! Gostaria de saber mais sobre o Eclini."
-        target="_blank"
-        rel="noopener noreferrer"
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex items-center gap-2 bg-[#25D366] hover:bg-[#20BD5A] text-white px-3 sm:px-4 py-2.5 sm:py-3 rounded-full shadow-lg transition-all duration-300 hover:scale-105"
-      >
-        <MessageCircle className="h-5 w-5" />
-        <span className="hidden sm:inline font-medium text-sm">Dúvidas? Fale conosco</span>
-      </a>
+      {/* Right Column - Carousel */}
+      <div className="lg:w-1/2 relative bg-primary min-h-[300px] lg:min-h-screen order-1 lg:order-2 overflow-hidden">
+        {/* SVG Decorations */}
+        <svg className="absolute top-0 right-0 w-64 h-64 text-white/10" viewBox="0 0 200 200" fill="currentColor">
+          <circle cx="100" cy="100" r="80" />
+        </svg>
+        <svg className="absolute bottom-0 left-0 w-48 h-48 text-white/10" viewBox="0 0 200 200" fill="currentColor">
+          <circle cx="100" cy="100" r="60" />
+        </svg>
+        <svg className="absolute top-1/2 right-10 w-32 h-32 text-white/5" viewBox="0 0 200 200" fill="currentColor">
+          <rect x="20" y="20" width="160" height="160" rx="20" />
+        </svg>
+
+        {/* Carousel */}
+        <div className="relative h-full flex items-center justify-center p-6 lg:p-12">
+          <div className="relative w-full max-w-lg">
+            {/* Image Container */}
+            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
+              {carouselImages.map((image, index) => (
+                <div
+                  key={index}
+                  className={`absolute inset-0 transition-opacity duration-500 ${
+                    index === currentSlide ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  <img
+                    src={image.url}
+                    alt={image.title}
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                  {/* Text */}
+                  <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                    <h3 className="text-xl font-bold mb-2">{image.title}</h3>
+                    <p className="text-white/80 text-sm">{image.description}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Navigation Arrows */}
+            <button
+              onClick={prevSlide}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={nextSlide}
+              className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+
+            {/* Dots */}
+            <div className="flex justify-center gap-2 mt-6">
+              {carouselImages.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`w-2 h-2 rounded-full transition-all ${
+                    index === currentSlide 
+                      ? "w-8 bg-white" 
+                      : "bg-white/40 hover:bg-white/60"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Trial Badge */}
+        <div className="absolute top-6 right-6 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2">
+          <span className="text-white text-sm font-medium">14 dias grátis</span>
+        </div>
+      </div>
     </div>
   );
 }
