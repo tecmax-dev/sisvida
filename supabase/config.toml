@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.dispatch-webhook]
 verify_jwt = true
+
+[functions.notify-new-signup]
+verify_jwt = false

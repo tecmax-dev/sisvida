@@ -23,7 +23,7 @@ export function CTASection() {
               className="bg-white text-primary hover:bg-white/90 rounded-full px-8 h-14 text-base font-semibold shadow-xl transition-all duration-300 hover:scale-105"
               asChild
             >
-              <Link to="/auth?tab=signup" className="flex items-center gap-2">
+              <Link to="/cadastro" className="flex items-center gap-2">
                 Começar grátis agora
                 <ArrowRight className="h-5 w-5" />
               </Link>

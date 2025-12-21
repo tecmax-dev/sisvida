@@ -60,7 +60,7 @@ export function HeroSection() {
                 className="bg-cta hover:bg-cta-hover text-cta-foreground rounded-full px-8 h-14 text-base shadow-lg transition-all duration-300 hover:scale-105 hover:shadow-xl"
                 asChild
               >
-                <Link to="/auth?tab=signup" className="flex items-center gap-2">
+                <Link to="/cadastro" className="flex items-center gap-2">
                   Começar grátis por 7 dias
                   <ArrowRight className="h-5 w-5" />
                 </Link>

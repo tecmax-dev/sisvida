@@ -30,7 +30,8 @@ import {
   LogOut,
   Building2,
   Users,
-  Shield
+  Shield,
+  UserPlus
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -56,6 +57,7 @@ const actionLabels: Record<string, { label: string; icon: typeof Eye; color: str
   logout: { label: "Logout", icon: LogOut, color: "bg-warning/10 text-warning" },
   create_super_admin: { label: "Criou super admin", icon: Shield, color: "bg-success/10 text-success" },
   remove_super_admin: { label: "Removeu super admin", icon: Shield, color: "bg-destructive/10 text-destructive" },
+  new_user_signup: { label: "Novo cadastro", icon: UserPlus, color: "bg-success/10 text-success" },
 };
 
 export default function AuditLogsPage() {

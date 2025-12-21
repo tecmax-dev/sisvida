@@ -27,6 +27,7 @@ const InstallPage = lazy(() => import("./pages/InstallPage"));
 const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const PublicAnamnesis = lazy(() => import("./pages/PublicAnamnesis"));
 const AppointmentConfirmation = lazy(() => import("./pages/AppointmentConfirmation"));
+const PublicSignup = lazy(() => import("./pages/PublicSignup"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -116,6 +117,7 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/instalar" element={<InstallPage />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/cadastro" element={<PublicSignup />} />
                 {/* Public booking (both legacy and current URLs) */}
                 <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />
                 <Route path="/booking/:clinicSlug" element={<PublicBooking />} />
