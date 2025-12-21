@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 interface TelemedicineButtonProps {
   appointmentId: string;
   clinicId: string;
-  onStartCall: (sessionId: string, roomId: string) => void;
+  onStartCall: (sessionId: string, roomId: string, patientToken?: string) => void;
   disabled?: boolean;
   className?: string;
 }
@@ -31,7 +31,7 @@ export function TelemedicineButton({
       // Check if session already exists
       const { data: existingSession } = await supabase
         .from("telemedicine_sessions")
-        .select("id, room_id, status")
+        .select("id, room_id, status, patient_token")
         .eq("appointment_id", appointmentId)
         .maybeSingle();
 
@@ -46,7 +46,7 @@ export function TelemedicineButton({
           return;
         }
         
-        onStartCall(existingSession.id, existingSession.room_id);
+        onStartCall(existingSession.id, existingSession.room_id, existingSession.patient_token);
         return;
       }
 
@@ -71,7 +71,7 @@ export function TelemedicineButton({
         description: "Aguardando o paciente entrar na chamada...",
       });
 
-      onStartCall(session.id, session.room_id);
+      onStartCall(session.id, session.room_id, session.patient_token);
     } catch (error) {
       console.error("[TelemedicineButton] Error:", error);
       toast({
