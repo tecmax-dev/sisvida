@@ -27,10 +27,34 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // 1. Verify Authorization header exists
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('[send-whatsapp] Missing Authorization header');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 2. Create client with user's auth to verify identity
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error('[send-whatsapp] Invalid token:', authError?.message);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 3. Parse request body
     const { phone, message, clinicId, type = 'custom' }: WhatsAppRequest = await req.json();
 
     if (!phone || !message || !clinicId) {
@@ -43,7 +67,41 @@ serve(async (req) => {
       );
     }
 
-    // Fetch clinic's Evolution API configuration
+    // 4. Validate phone format
+    const cleanPhone = phone.replace(/\D/g, '');
+    if (cleanPhone.length < 10 || cleanPhone.length > 13) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Formato de telefone inválido' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 5. Validate message length
+    if (message.length > 4096) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Mensagem muito longa (máx 4096 caracteres)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 6. Create service role client for RPC call
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // 7. Verify user has access to this clinic
+    const { data: hasAccess, error: accessError } = await supabase.rpc('has_clinic_access', {
+      _user_id: user.id,
+      _clinic_id: clinicId
+    });
+
+    if (accessError || !hasAccess) {
+      console.error(`[send-whatsapp] User ${user.id} denied access to clinic ${clinicId}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Acesso negado a esta clínica' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 8. Fetch clinic's Evolution API configuration
     const { data: evolutionConfig, error: configError } = await supabase
       .from('evolution_configs')
       .select('api_url, api_key, instance_name, is_connected')
@@ -86,12 +144,12 @@ serve(async (req) => {
     const { api_url, api_key, instance_name } = evolutionConfig as EvolutionConfig;
 
     // Format phone number (remove non-digits and add country code if needed)
-    let formattedPhone = phone.replace(/\D/g, '');
+    let formattedPhone = cleanPhone;
     if (!formattedPhone.startsWith('55')) {
       formattedPhone = '55' + formattedPhone;
     }
 
-    console.log(`[Clinic ${clinicId}] Sending WhatsApp message to ${formattedPhone} via instance ${instance_name}`);
+    console.log(`[Clinic ${clinicId}] User ${user.id} sending WhatsApp message to ${formattedPhone} via instance ${instance_name}`);
 
     const response = await fetch(`${api_url}/message/sendText/${instance_name}`, {
       method: 'POST',
@@ -115,7 +173,7 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[Clinic ${clinicId}] Message sent successfully:`, result);
+    console.log(`[Clinic ${clinicId}] Message sent successfully by user ${user.id}`);
 
     return new Response(
       JSON.stringify({ success: true, data: result }),

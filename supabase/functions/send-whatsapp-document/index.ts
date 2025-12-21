@@ -21,9 +21,38 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // 1. Verify Authorization header exists
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      console.error("[send-whatsapp-document] Missing Authorization header");
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 2. Create client with user's auth to verify identity
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error("[send-whatsapp-document] Invalid token:", authError?.message);
+      return new Response(
+        JSON.stringify({ success: false, error: "Invalid token" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 3. Parse request body
     const { phone, clinicId, pdfBase64, fileName, caption } = await req.json() as SendDocumentRequest;
 
-    console.log(`[send-whatsapp-document] Sending document to ${phone} for clinic ${clinicId}`);
+    console.log(`[send-whatsapp-document] User ${user.id} sending document to ${phone} for clinic ${clinicId}`);
     console.log(`[send-whatsapp-document] File: ${fileName}, Caption: ${caption?.substring(0, 50)}...`);
 
     if (!phone || !clinicId || !pdfBase64 || !fileName) {
@@ -34,12 +63,41 @@ serve(async (req) => {
       );
     }
 
-    // Initialize Supabase client
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    // 4. Validate phone format
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (cleanPhone.length < 10 || cleanPhone.length > 13) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Formato de telefone inválido" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-    // Fetch Evolution API config for this clinic
+    // 5. Validate file size (max 16MB base64)
+    if (pdfBase64.length > 22 * 1024 * 1024) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Arquivo muito grande (máx 16MB)" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 6. Create service role client for RPC call
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // 7. Verify user has access to this clinic
+    const { data: hasAccess, error: accessError } = await supabase.rpc("has_clinic_access", {
+      _user_id: user.id,
+      _clinic_id: clinicId
+    });
+
+    if (accessError || !hasAccess) {
+      console.error(`[send-whatsapp-document] User ${user.id} denied access to clinic ${clinicId}`);
+      return new Response(
+        JSON.stringify({ success: false, error: "Acesso negado a esta clínica" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 8. Fetch Evolution API config for this clinic
     const { data: evolutionConfig, error: configError } = await supabase
       .from("evolution_configs")
       .select("*")
@@ -65,7 +123,7 @@ serve(async (req) => {
     const { api_url, api_key, instance_name } = evolutionConfig;
 
     // Format phone number (remove non-digits and ensure country code)
-    let formattedPhone = phone.replace(/\D/g, "");
+    let formattedPhone = cleanPhone;
     if (!formattedPhone.startsWith("55")) {
       formattedPhone = "55" + formattedPhone;
     }
@@ -112,7 +170,7 @@ serve(async (req) => {
       result = { raw: responseText };
     }
 
-    console.log("[send-whatsapp-document] Document sent successfully");
+    console.log(`[send-whatsapp-document] Document sent successfully by user ${user.id}`);
 
     return new Response(
       JSON.stringify({ success: true, data: result }),
