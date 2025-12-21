@@ -12,12 +12,15 @@ import {
   CheckCircle2,
   Building2,
   Stethoscope,
+  ArrowRight,
+  MapPin,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -34,13 +37,6 @@ const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const monthNames = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
-
-const timeSlots = [
-  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-  "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-  "17:00", "17:30", "18:00"
 ];
 
 const baseAppointmentTypes = [
@@ -70,6 +66,7 @@ interface Professional {
   schedule: Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null;
   avatar_url: string | null;
   telemedicine_enabled: boolean;
+  slug: string | null;
 }
 
 interface InsurancePlan {
@@ -139,7 +136,6 @@ export default function PublicBooking() {
     
     setLoading(true);
     try {
-      // Fetch clinic by slug (public access)
       const { data: clinicData, error: clinicError } = await supabase
         .from('clinics')
         .select('*')
@@ -188,7 +184,7 @@ export default function PublicBooking() {
       // Fetch professionals with schedules
       const { data: professionalsData } = await supabase
         .from('professionals')
-        .select('id, name, specialty, appointment_duration, schedule, avatar_url, telemedicine_enabled')
+        .select('id, name, specialty, appointment_duration, schedule, avatar_url, telemedicine_enabled, slug')
         .eq('clinic_id', clinicData.id)
         .eq('is_active', true);
 
@@ -245,7 +241,6 @@ export default function PublicBooking() {
     setExistingAppointments(data?.map(a => a.start_time.substring(0, 5)) || []);
   };
 
-  // Get appointment duration (from procedure or professional)
   const appointmentDuration = useMemo(() => {
     if (selectedProcedure) {
       const procedure = procedures.find(p => p.id === selectedProcedure);
@@ -255,25 +250,21 @@ export default function PublicBooking() {
     return professional?.appointment_duration || 30;
   }, [selectedProcedure, selectedProfessional, procedures, professionals]);
 
-  // Get available time slots based on professional schedule and existing appointments
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate || !selectedProfessional) return [];
     
     const professional = professionals.find(p => p.id === selectedProfessional);
     if (!professional) return [];
     
-    // Get day of week
     const dayIndex = selectedDate.getDay();
     const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayKey = dayKeys[dayIndex];
     
-    // Check if professional has schedule configured
     const schedule = professional.schedule;
     if (!schedule || !schedule[dayKey] || !schedule[dayKey].enabled) {
       return [];
     }
     
-    // Generate time slots from professional's schedule
     const daySchedule = schedule[dayKey];
     const duration = appointmentDuration;
     const slots: string[] = [];
@@ -293,18 +284,14 @@ export default function PublicBooking() {
       }
     });
     
-    // Filter out existing appointments
     return slots.filter(slot => !existingAppointments.includes(slot));
   }, [selectedDate, selectedProfessional, professionals, existingAppointments, appointmentDuration]);
 
-  // Filter appointment types based on telemedicine availability
   const appointmentTypes = useMemo(() => {
-    // If clinic doesn't have telemedicine in plan, remove it
     if (!clinicHasTelemedicine) {
       return baseAppointmentTypes.filter(t => t.value !== 'telemedicine');
     }
     
-    // If a professional is selected, check if they have telemedicine enabled
     if (selectedProfessional) {
       const prof = professionals.find(p => p.id === selectedProfessional);
       if (!prof?.telemedicine_enabled) {
@@ -315,7 +302,6 @@ export default function PublicBooking() {
     return baseAppointmentTypes;
   }, [clinicHasTelemedicine, selectedProfessional, professionals]);
 
-  // Get price for a procedure based on selected insurance
   const getProcedurePrice = (procedureId: string, defaultPrice: number): number => {
     if (!selectedInsurance) return defaultPrice;
     
@@ -326,12 +312,11 @@ export default function PublicBooking() {
     return insurancePrice ? insurancePrice.price : defaultPrice;
   };
 
-  // Check if day has availability based on professional schedule
   const isDayAvailable = (date: Date) => {
-    if (!selectedProfessional) return true; // If no professional selected, show all days
+    if (!selectedProfessional) return true;
     
     const professional = professionals.find(p => p.id === selectedProfessional);
-    if (!professional?.schedule) return true; // No schedule = use default
+    if (!professional?.schedule) return true;
     
     const dayIndex = date.getDay();
     const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -382,7 +367,6 @@ export default function PublicBooking() {
       return;
     }
 
-    // Client-side validation before submitting
     const trimmedName = patientName.trim();
     if (trimmedName.length < 2 || trimmedName.length > 100) {
       toast({
@@ -419,7 +403,6 @@ export default function PublicBooking() {
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
 
-      // Call secure edge function for booking
       const { data, error } = await supabase.functions.invoke('create-public-booking', {
         body: {
           clinicId: clinic.id,
@@ -473,9 +456,20 @@ export default function PublicBooking() {
     }
   };
 
+  const handleProfessionalClick = (professional: Professional) => {
+    if (professional.slug && clinic) {
+      navigate(`/profissional/${clinic.slug}/${professional.slug}`);
+    } else {
+      setSelectedProfessional(professional.id);
+      setStep(2);
+    }
+  };
+
+  const selectedProfessionalData = professionals.find(p => p.id === selectedProfessional);
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -483,7 +477,7 @@ export default function PublicBooking() {
 
   if (!clinic) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -497,21 +491,45 @@ export default function PublicBooking() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
-          <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center mx-auto mb-4">
-              <CheckCircle2 className="h-8 w-8 text-success" />
+          <CardContent className="pt-8 pb-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
             </div>
-            <h2 className="text-xl font-semibold text-foreground mb-2">Agendamento Confirmado!</h2>
-            <p className="text-muted-foreground mb-4">
-              Sua consulta foi agendada para {selectedDate?.toLocaleDateString('pt-BR')} às {selectedTime}
+            <h2 className="text-2xl font-bold mb-2">Agendamento Confirmado!</h2>
+            <p className="text-muted-foreground mb-6">
+              Você receberá uma confirmação por WhatsApp em breve.
             </p>
-            <p className="text-sm text-muted-foreground mb-6">
-              Você receberá um lembrete via WhatsApp antes da consulta.
-            </p>
-            <Button onClick={() => window.location.reload()}>
-              Agendar nova consulta
+            <div className="bg-muted/50 rounded-lg p-4 text-left mb-6">
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Profissional:</span>
+                  <span className="font-medium">{selectedProfessionalData?.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Data:</span>
+                  <span className="font-medium">
+                    {selectedDate?.toLocaleDateString('pt-BR')}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Horário:</span>
+                  <span className="font-medium">{selectedTime}</span>
+                </div>
+              </div>
+            </div>
+            <Button onClick={() => {
+              setSuccess(false);
+              setStep(1);
+              setSelectedProfessional("");
+              setSelectedDate(null);
+              setSelectedTime("");
+              setPatientName("");
+              setPatientPhone("");
+              setPatientEmail("");
+            }} variant="outline" className="w-full">
+              Fazer outro agendamento
             </Button>
           </CardContent>
         </Card>
@@ -520,468 +538,404 @@ export default function PublicBooking() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Header */}
-      <header className="border-b border-border bg-card">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            {clinic.logo_url ? (
-              <img src={clinic.logo_url} alt={clinic.name} className="h-12 w-auto" />
-            ) : (
-              <Logo />
-            )}
-            <div>
-              <h1 className="text-xl font-semibold text-foreground">{clinic.name}</h1>
-              <p className="text-sm text-muted-foreground">Agendamento Online</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              {clinic.logo_url ? (
+                <img src={clinic.logo_url} alt={clinic.name} className="h-10 w-auto" />
+              ) : (
+                <Logo size="sm" />
+              )}
+              <div>
+                <h1 className="font-semibold text-foreground">{clinic.name}</h1>
+                {clinic.address && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />
+                    {clinic.address}
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
-          {/* Progress */}
-          <div className="flex items-center justify-center mb-8 gap-2">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="flex items-center">
-                <div className={cn(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
-                  step >= s ? "bg-primary text-primary-foreground" : "bg-secondary text-muted-foreground"
-                )}>
-                  {s}
-                </div>
-                {s < 3 && (
-                  <div className={cn(
-                    "w-12 h-1 mx-1 rounded",
-                    step > s ? "bg-primary" : "bg-secondary"
-                  )} />
-                )}
+      <main className="container mx-auto px-4 py-8 max-w-4xl">
+        {/* Step 1: Select Professional */}
+        {step === 1 && (
+          <div className="space-y-6">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-bold mb-2">Escolha o Profissional</h2>
+              <p className="text-muted-foreground">Selecione o profissional para sua consulta</p>
+            </div>
+
+            {professionals.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {professionals.map((professional) => (
+                  <Card 
+                    key={professional.id} 
+                    className="cursor-pointer hover:shadow-lg hover:border-primary/50 transition-all duration-200 group"
+                    onClick={() => handleProfessionalClick(professional)}
+                  >
+                    <CardContent className="p-5">
+                      <div className="flex items-start gap-4">
+                        <Avatar className="w-16 h-16 border-2 border-primary/10">
+                          <AvatarImage src={professional.avatar_url || undefined} alt={professional.name} />
+                          <AvatarFallback className="text-lg bg-primary/10 text-primary font-semibold">
+                            {professional.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                            {professional.name}
+                          </h3>
+                          {professional.specialty && (
+                            <p className="text-sm text-muted-foreground mt-0.5">
+                              {professional.specialty}
+                            </p>
+                          )}
+                          {professional.telemedicine_enabled && clinicHasTelemedicine && (
+                            <Badge variant="secondary" className="mt-2 text-xs">
+                              Telemedicina disponível
+                            </Badge>
+                          )}
+                        </div>
+                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            ))}
+            ) : (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Stethoscope className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Nenhum profissional disponível no momento</p>
+                </CardContent>
+              </Card>
+            )}
           </div>
+        )}
 
-          {/* Step 1: Select Professional and Date */}
-          {step === 1 && (
+        {/* Step 2: Select Date & Time */}
+        {step === 2 && selectedProfessionalData && (
+          <div className="space-y-6">
+            {/* Back Button */}
+            <Button variant="ghost" onClick={() => setStep(1)} className="gap-2">
+              <ChevronLeft className="h-4 w-4" />
+              Voltar
+            </Button>
+
+            {/* Professional Info */}
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="w-12 h-12">
+                    <AvatarImage src={selectedProfessionalData.avatar_url || undefined} />
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {selectedProfessionalData.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <h3 className="font-semibold">{selectedProfessionalData.name}</h3>
+                    {selectedProfessionalData.specialty && (
+                      <p className="text-sm text-muted-foreground">{selectedProfessionalData.specialty}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="grid lg:grid-cols-2 gap-6">
+              {/* Left: Date Selection */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    Selecione o Profissional
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {professionals.map((prof) => (
-                    <div
-                      key={prof.id}
-                      onClick={() => setSelectedProfessional(prof.id)}
-                      className={cn(
-                        "p-4 rounded-lg border cursor-pointer transition-colors",
-                        selectedProfessional === prof.id 
-                          ? "border-primary bg-primary/5" 
-                          : "border-border hover:border-primary/50"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        {prof.avatar_url ? (
-                          <img 
-                            src={prof.avatar_url} 
-                            alt={prof.name}
-                            className="w-12 h-12 rounded-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                            <User className="h-6 w-6 text-primary/60" />
-                          </div>
-                        )}
-                        <div>
-                          <p className="font-medium text-foreground">{prof.name}</p>
-                          {prof.specialty && (
-                            <p className="text-sm text-muted-foreground">{prof.specialty}</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
-                    Selecione a Data
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    Escolha a Data
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between mb-4">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <h3 className="font-medium text-foreground">
-                      {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
-                    </h3>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1 mb-2">
-                    {weekDays.map((day) => (
-                      <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2">
-                        {day}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-7 gap-1">
-                    {getDaysInMonth(currentMonth).map((day, index) => (
-                      <div key={index} className="aspect-square">
-                        {day && (
-                          <button
-                            disabled={isDateDisabled(day)}
-                            onClick={() => setSelectedDate(day)}
-                            className={cn(
-                              "w-full h-full rounded-lg text-sm transition-colors",
-                              isDateDisabled(day)
-                                ? "text-muted-foreground/50 cursor-not-allowed"
-                                : selectedDate?.toDateString() === day.toDateString()
-                                ? "bg-primary text-primary-foreground"
-                                : "hover:bg-secondary text-foreground"
-                            )}
-                          >
-                            {day.getDate()}
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="lg:col-span-2 flex justify-end">
-                <Button 
-                  onClick={() => setStep(2)} 
-                  disabled={!selectedProfessional || !selectedDate}
-                >
-                  Continuar
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 2: Select Procedure and Time */}
-          {step === 2 && (
-            <div className="space-y-6">
-              {/* Procedure Selection */}
-              {procedures.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Stethoscope className="h-5 w-5" />
-                      Selecione o Procedimento
-                    </CardTitle>
-                    <CardDescription>
-                      Escolha o tipo de atendimento desejado
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {procedures.map((proc) => (
-                        <div
-                          key={proc.id}
-                          onClick={() => {
-                            setSelectedProcedure(proc.id);
-                            setSelectedTime(""); // Reset time when procedure changes
-                          }}
-                          className={cn(
-                            "p-4 rounded-lg border cursor-pointer transition-colors",
-                            selectedProcedure === proc.id 
-                              ? "border-primary bg-primary/5" 
-                              : "border-border hover:border-primary/50"
-                          )}
-                        >
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                {proc.color && (
-                                  <div 
-                                    className="w-3 h-3 rounded-full" 
-                                    style={{ backgroundColor: proc.color }}
-                                  />
-                                )}
-                                <p className="font-medium text-foreground">{proc.name}</p>
-                              </div>
-                              {proc.description && (
-                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                  {proc.description}
-                                </p>
+                  <div className="border rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <span className="font-medium">
+                        {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1 mb-2">
+                      {weekDays.map((day) => (
+                        <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1">
+                          {day}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {getDaysInMonth(currentMonth).map((date, index) => (
+                        <div key={index} className="aspect-square">
+                          {date && (
+                            <button
+                              onClick={() => !isDateDisabled(date) && setSelectedDate(date)}
+                              disabled={isDateDisabled(date)}
+                              className={cn(
+                                "w-full h-full rounded-md text-sm font-medium transition-colors",
+                                isDateDisabled(date) 
+                                  ? "text-muted-foreground/40 cursor-not-allowed" 
+                                  : "hover:bg-primary/10",
+                                selectedDate?.toDateString() === date.toDateString() 
+                                  ? "bg-primary text-primary-foreground hover:bg-primary" 
+                                  : ""
                               )}
-                              <div className="flex items-center gap-3 mt-2 text-sm">
-                                {proc.duration_minutes && (
-                                  <span className="text-muted-foreground flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    {proc.duration_minutes} min
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              {(() => {
-                                const displayPrice = getProcedurePrice(proc.id, proc.price);
-                                return (
-                                  <p className="font-semibold text-foreground">
-                                    {displayPrice > 0 
-                                      ? `R$ ${displayPrice.toFixed(2).replace('.', ',')}`
-                                      : 'Grátis'
-                                    }
-                                  </p>
-                                );
-                              })()}
-                            </div>
-                          </div>
+                            >
+                              {date.getDate()}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Time Selection */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Clock className="h-5 w-5" />
-                    Selecione o Horário
-                  </CardTitle>
-                  <CardDescription>
-                    {selectedDate?.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-                    {selectedProcedure && procedures.find(p => p.id === selectedProcedure)?.duration_minutes && (
-                      <span className="ml-2">
-                        • Duração: {procedures.find(p => p.id === selectedProcedure)?.duration_minutes} min
-                      </span>
-                    )}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
-                    {timeSlots.map((slot) => {
-                      const isAvailable = availableTimeSlots.includes(slot);
-                      return (
-                        <Button
-                          key={slot}
-                          variant={selectedTime === slot ? "default" : "outline"}
-                          size="sm"
-                          disabled={!isAvailable}
-                          onClick={() => setSelectedTime(slot)}
-                          className={cn(!isAvailable && "opacity-50")}
-                        >
-                          {slot}
-                        </Button>
-                      );
-                    })}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Appointment Type (shown only if no procedures) */}
-              {procedures.length === 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Tipo de Consulta</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 gap-3">
-                      {appointmentTypes.map((type) => (
-                        <div
-                          key={type.value}
-                          onClick={() => setSelectedType(type.value)}
+              {/* Right: Time Selection */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Clock className="h-5 w-5 text-primary" />
+                    Escolha o Horário
+                  </CardTitle>
+                  {selectedDate && (
+                    <CardDescription>
+                      {selectedDate.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {!selectedDate ? (
+                    <p className="text-muted-foreground text-center py-8">
+                      Selecione uma data primeiro
+                    </p>
+                  ) : availableTimeSlots.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {availableTimeSlots.map((time) => (
+                        <button
+                          key={time}
+                          onClick={() => setSelectedTime(time)}
                           className={cn(
-                            "p-4 rounded-lg border cursor-pointer transition-colors text-center",
-                            selectedType === type.value 
-                              ? "border-primary bg-primary/5" 
-                              : "border-border hover:border-primary/50"
+                            "py-3 px-4 rounded-lg text-sm font-medium border transition-all",
+                            selectedTime === time
+                              ? "bg-primary text-primary-foreground border-primary shadow-md"
+                              : "border-border hover:border-primary hover:bg-primary/5"
                           )}
                         >
-                          <p className="font-medium text-foreground">{type.label}</p>
-                        </div>
+                          {time}
+                        </button>
                       ))}
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setStep(1)}>
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Voltar
-                </Button>
-                <Button 
-                  onClick={() => setStep(3)} 
-                  disabled={!selectedTime || (procedures.length > 0 && !selectedProcedure)}
-                >
-                  Continuar
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Patient Info */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Seus Dados</CardTitle>
-                  <CardDescription>Preencha suas informações para confirmar o agendamento</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nome completo *</Label>
-                      <Input
-                        id="name"
-                        value={patientName}
-                        onChange={(e) => setPatientName(e.target.value)}
-                        placeholder="Seu nome"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Telefone (WhatsApp) *</Label>
-                      <Input
-                        id="phone"
-                        value={patientPhone}
-                        onChange={(e) => setPatientPhone(formatPhone(e.target.value))}
-                        placeholder="(00) 00000-0000"
-                        maxLength={15}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">E-mail</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={patientEmail}
-                        onChange={(e) => setPatientEmail(e.target.value)}
-                        placeholder="seu@email.com"
-                      />
-                    </div>
-                    {insurancePlans.length > 0 && (
-                      <div className="space-y-2">
-                        <Label>Convênio</Label>
-                        <Select value={selectedInsurance} onValueChange={setSelectedInsurance}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Particular" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="">Particular</SelectItem>
-                            {insurancePlans.map((plan) => (
-                              <SelectItem key={plan.id} value={plan.id}>
-                                {plan.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
+                  ) : (
+                    <p className="text-muted-foreground text-center py-8">
+                      Nenhum horário disponível para esta data
+                    </p>
+                  )}
                 </CardContent>
               </Card>
+            </div>
 
-              {/* Summary */}
+            {/* Procedure Selection */}
+            {procedures.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Resumo do Agendamento</CardTitle>
+                  <CardTitle className="text-lg">Procedimento (opcional)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Profissional:</span>
-                      <span className="font-medium text-foreground">
-                        {professionals.find(p => p.id === selectedProfessional)?.name}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Data:</span>
-                      <span className="font-medium text-foreground">
-                        {selectedDate?.toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Horário:</span>
-                      <span className="font-medium text-foreground">{selectedTime}</span>
-                    </div>
-                    {selectedProcedure ? (
-                      <>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Procedimento:</span>
-                          <span className="font-medium text-foreground">
-                            {procedures.find(p => p.id === selectedProcedure)?.name}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Duração:</span>
-                          <span className="font-medium text-foreground">
-                            {procedures.find(p => p.id === selectedProcedure)?.duration_minutes || appointmentDuration} min
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-t border-border pt-2 mt-2">
-                          <span className="text-muted-foreground font-medium">Valor:</span>
-                          <span className="font-semibold text-foreground">
-                            {(() => {
-                              const price = procedures.find(p => p.id === selectedProcedure)?.price || 0;
-                              return price > 0 
-                                ? `R$ ${price.toFixed(2).replace('.', ',')}` 
-                                : 'Grátis';
-                            })()}
-                          </span>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Tipo:</span>
-                        <span className="font-medium text-foreground">
-                          {appointmentTypes.find(t => t.value === selectedType)?.label}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  <Select value={selectedProcedure} onValueChange={setSelectedProcedure}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um procedimento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {procedures.map((procedure) => (
+                        <SelectItem key={procedure.id} value={procedure.id}>
+                          <div className="flex justify-between items-center w-full">
+                            <span>{procedure.name}</span>
+                            {procedure.price > 0 && (
+                              <span className="text-muted-foreground ml-4">
+                                R$ {getProcedurePrice(procedure.id, procedure.price).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </CardContent>
               </Card>
+            )}
 
-              <div className="flex justify-between">
-                <Button variant="outline" onClick={() => setStep(2)}>
-                  <ChevronLeft className="h-4 w-4 mr-2" />
-                  Voltar
-                </Button>
-                <Button 
-                  onClick={handleSubmit} 
+            {/* Continue Button */}
+            <Button
+              onClick={() => setStep(3)}
+              disabled={!selectedDate || !selectedTime}
+              className="w-full h-12 text-base"
+              size="lg"
+            >
+              Continuar
+              <ArrowRight className="ml-2 h-5 w-5" />
+            </Button>
+          </div>
+        )}
+
+        {/* Step 3: Patient Info */}
+        {step === 3 && selectedProfessionalData && (
+          <div className="space-y-6">
+            {/* Back Button */}
+            <Button variant="ghost" onClick={() => setStep(2)} className="gap-2">
+              <ChevronLeft className="h-4 w-4" />
+              Voltar
+            </Button>
+
+            {/* Summary Card */}
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="p-4">
+                <div className="flex flex-wrap gap-4 text-sm">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="font-medium">{selectedProfessionalData.name}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span>{selectedDate?.toLocaleDateString('pt-BR')}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <span>{selectedTime}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Seus Dados</CardTitle>
+                <CardDescription>Preencha suas informações para confirmar o agendamento</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {/* Insurance Plan */}
+                  {insurancePlans.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <Label>Convênio</Label>
+                      <Select value={selectedInsurance} onValueChange={setSelectedInsurance}>
+                        <SelectTrigger className="mt-1.5">
+                          <SelectValue placeholder="Particular" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="particular">Particular</SelectItem>
+                          {insurancePlans.map((plan) => (
+                            <SelectItem key={plan.id} value={plan.id}>
+                              {plan.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+
+                  {/* Appointment Type */}
+                  <div className="sm:col-span-2">
+                    <Label>Tipo de Consulta</Label>
+                    <Select value={selectedType} onValueChange={setSelectedType}>
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {appointmentTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Patient Name */}
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="patientName">Nome completo *</Label>
+                    <Input
+                      id="patientName"
+                      value={patientName}
+                      onChange={(e) => setPatientName(e.target.value)}
+                      placeholder="Seu nome completo"
+                      className="mt-1.5"
+                    />
+                  </div>
+
+                  {/* Phone */}
+                  <div>
+                    <Label htmlFor="patientPhone">Telefone / WhatsApp *</Label>
+                    <Input
+                      id="patientPhone"
+                      value={patientPhone}
+                      onChange={(e) => setPatientPhone(formatPhone(e.target.value))}
+                      placeholder="(00) 00000-0000"
+                      maxLength={15}
+                      className="mt-1.5"
+                    />
+                  </div>
+
+                  {/* Email */}
+                  <div>
+                    <Label htmlFor="patientEmail">Email (opcional)</Label>
+                    <Input
+                      id="patientEmail"
+                      type="email"
+                      value={patientEmail}
+                      onChange={(e) => setPatientEmail(e.target.value)}
+                      placeholder="seu@email.com"
+                      className="mt-1.5"
+                    />
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  onClick={handleSubmit}
                   disabled={submitting || !patientName || !patientPhone}
+                  className="w-full h-12 text-base mt-6"
+                  size="lg"
                 >
-                  {submitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Confirmar Agendamento
+                  {submitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Agendando...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="mr-2 h-5 w-5" />
+                      Confirmar Agendamento
+                    </>
+                  )}
                 </Button>
-              </div>
-            </div>
-          )}
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-border py-6 mt-12">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            Powered by Eclini • Tecmax Tecnologia
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
