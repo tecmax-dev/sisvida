@@ -43,7 +43,7 @@ const timeSlots = [
   "17:00", "17:30", "18:00"
 ];
 
-const appointmentTypes = [
+const baseAppointmentTypes = [
   { value: "first_visit", label: "Primeira Consulta" },
   { value: "return", label: "Retorno" },
   { value: "exam", label: "Exame" },
@@ -69,6 +69,7 @@ interface Professional {
   appointment_duration: number | null;
   schedule: Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null;
   avatar_url: string | null;
+  telemedicine_enabled: boolean;
 }
 
 interface InsurancePlan {
@@ -99,6 +100,7 @@ export default function PublicBooking() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [clinicHasTelemedicine, setClinicHasTelemedicine] = useState(false);
   
   // Calendar
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -148,10 +150,38 @@ export default function PublicBooking() {
 
       setClinic(clinicData);
 
+      // Check if clinic plan includes telemedicine feature
+      const { data: subscriptionData } = await supabase
+        .from('subscriptions')
+        .select(`
+          plan_id,
+          subscription_plans!inner(
+            id
+          )
+        `)
+        .eq('clinic_id', clinicData.id)
+        .in('status', ['trial', 'active'])
+        .maybeSingle();
+
+      if (subscriptionData?.plan_id) {
+        const { data: planFeaturesData } = await supabase
+          .from('plan_features')
+          .select(`
+            feature_id,
+            system_features!inner(key)
+          `)
+          .eq('plan_id', subscriptionData.plan_id);
+
+        const hasTelemedicine = planFeaturesData?.some(
+          (pf: any) => pf.system_features?.key === 'telemedicine'
+        ) || false;
+        setClinicHasTelemedicine(hasTelemedicine);
+      }
+
       // Fetch professionals with schedules
       const { data: professionalsData } = await supabase
         .from('professionals')
-        .select('id, name, specialty, appointment_duration, schedule, avatar_url')
+        .select('id, name, specialty, appointment_duration, schedule, avatar_url, telemedicine_enabled')
         .eq('clinic_id', clinicData.id)
         .eq('is_active', true);
 
@@ -248,6 +278,24 @@ export default function PublicBooking() {
     // Filter out existing appointments
     return slots.filter(slot => !existingAppointments.includes(slot));
   }, [selectedDate, selectedProfessional, professionals, existingAppointments, appointmentDuration]);
+
+  // Filter appointment types based on telemedicine availability
+  const appointmentTypes = useMemo(() => {
+    // If clinic doesn't have telemedicine in plan, remove it
+    if (!clinicHasTelemedicine) {
+      return baseAppointmentTypes.filter(t => t.value !== 'telemedicine');
+    }
+    
+    // If a professional is selected, check if they have telemedicine enabled
+    if (selectedProfessional) {
+      const prof = professionals.find(p => p.id === selectedProfessional);
+      if (!prof?.telemedicine_enabled) {
+        return baseAppointmentTypes.filter(t => t.value !== 'telemedicine');
+      }
+    }
+    
+    return baseAppointmentTypes;
+  }, [clinicHasTelemedicine, selectedProfessional, professionals]);
 
   // Check if day has availability based on professional schedule
   const isDayAvailable = (date: Date) => {

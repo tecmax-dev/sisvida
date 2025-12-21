@@ -1428,6 +1428,7 @@ export type Database = {
           slug: string | null
           specialty: string | null
           state: string | null
+          telemedicine_enabled: boolean | null
           updated_at: string
           user_id: string | null
           whatsapp: string | null
@@ -1455,6 +1456,7 @@ export type Database = {
           slug?: string | null
           specialty?: string | null
           state?: string | null
+          telemedicine_enabled?: boolean | null
           updated_at?: string
           user_id?: string | null
           whatsapp?: string | null
@@ -1482,6 +1484,7 @@ export type Database = {
           slug?: string | null
           specialty?: string | null
           state?: string | null
+          telemedicine_enabled?: boolean | null
           updated_at?: string
           user_id?: string | null
           whatsapp?: string | null
