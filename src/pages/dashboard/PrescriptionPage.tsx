@@ -34,7 +34,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DigitalSignature } from "@/components/medical/DigitalSignature";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { calculateAge } from "@/lib/utils";
 import { sendWhatsAppDocument } from "@/lib/whatsapp";
@@ -292,7 +292,7 @@ export default function PrescriptionPage() {
           ``,
           `Segue em anexo seu receituário.`,
           ``,
-          `📅 *Data:* ${format(new Date(prescription.created_at), "dd/MM/yyyy", { locale: ptBR })}`,
+          `📅 *Data:* ${format(parseISO(prescription.created_at!), "dd/MM/yyyy", { locale: ptBR })}`,
           `👨‍⚕️ *Profissional:* ${prescription.professional?.name || 'Profissional'}`,
           `🏥 *Clínica:* ${currentClinic.name}`,
           ``,

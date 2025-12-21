@@ -44,7 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { PrintDialog } from "@/components/medical/PrintDialog";
 import { calculateAge } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { sendWhatsAppDocument } from "@/lib/whatsapp";
 import { generatePrescriptionPDF } from "@/lib/prescriptionExportUtils";
@@ -269,7 +269,7 @@ export default function MedicalRecordsPage() {
           ``,
           `Segue em anexo seu receituário.`,
           ``,
-          `📅 *Data:* ${format(new Date(record.record_date), "dd/MM/yyyy", { locale: ptBR })}`,
+          `📅 *Data:* ${format(parseISO(record.record_date), "dd/MM/yyyy", { locale: ptBR })}`,
           `👨‍⚕️ *Profissional:* ${record.professional?.name || 'Profissional'}`,
           `🏥 *Clínica:* ${currentClinic.name}`,
           ``,
