@@ -4,6 +4,8 @@ import {
   MoreVertical,
   Users,
   Loader2,
+  CheckCircle,
+  XCircle,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +20,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ import { RoleGuard } from "@/components/auth/RoleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
+import { cn } from "@/lib/utils";
 
 interface InsurancePlan {
   id: string;
@@ -50,11 +52,15 @@ export default function InsurancePage() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   
   // Form state
   const [formName, setFormName] = useState("");
   const [formCode, setFormCode] = useState("");
   const [formErrors, setFormErrors] = useState<{ name?: string }>({});
+  
+  // Edit mode
+  const [editingInsurance, setEditingInsurance] = useState<InsurancePlan | null>(null);
 
   useEffect(() => {
     if (currentClinic) {
@@ -99,7 +105,29 @@ export default function InsurancePage() {
     }
   };
 
-  const handleCreateInsurance = async (e: React.FormEvent) => {
+  const handleOpenDialog = (insurance?: InsurancePlan) => {
+    if (insurance) {
+      setEditingInsurance(insurance);
+      setFormName(insurance.name);
+      setFormCode(insurance.code || "");
+    } else {
+      setEditingInsurance(null);
+      setFormName("");
+      setFormCode("");
+    }
+    setFormErrors({});
+    setDialogOpen(true);
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpen(false);
+    setEditingInsurance(null);
+    setFormName("");
+    setFormCode("");
+    setFormErrors({});
+  };
+
+  const handleSaveInsurance = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const validation = insuranceSchema.safeParse({
@@ -122,34 +150,81 @@ export default function InsurancePage() {
     setFormErrors({});
 
     try {
-      const { error } = await supabase
-        .from('insurance_plans')
-        .insert({
-          clinic_id: currentClinic.id,
-          name: formName.trim(),
-          code: formCode.trim() || null,
-          procedures: ['Consulta', 'Retorno'],
+      if (editingInsurance) {
+        // Update existing
+        const { error } = await supabase
+          .from('insurance_plans')
+          .update({
+            name: formName.trim(),
+            code: formCode.trim() || null,
+          })
+          .eq('id', editingInsurance.id);
+
+        if (error) throw error;
+
+        toast({
+          title: "Convênio atualizado",
+          description: "As alterações foram salvas com sucesso.",
         });
+      } else {
+        // Create new
+        const { error } = await supabase
+          .from('insurance_plans')
+          .insert({
+            clinic_id: currentClinic.id,
+            name: formName.trim(),
+            code: formCode.trim() || null,
+            procedures: ['Consulta', 'Retorno'],
+          });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast({
-        title: "Convênio cadastrado",
-        description: "O convênio foi adicionado com sucesso.",
-      });
+        toast({
+          title: "Convênio cadastrado",
+          description: "O convênio foi adicionado com sucesso.",
+        });
+      }
 
-      setDialogOpen(false);
-      setFormName("");
-      setFormCode("");
+      handleCloseDialog();
       fetchInsurances();
     } catch (error: any) {
       toast({
-        title: "Erro ao cadastrar",
+        title: "Erro ao salvar",
         description: error.message || "Tente novamente.",
         variant: "destructive",
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleActive = async (insurance: InsurancePlan) => {
+    setTogglingId(insurance.id);
+
+    try {
+      const { error } = await supabase
+        .from('insurance_plans')
+        .update({ is_active: !insurance.is_active })
+        .eq('id', insurance.id);
+
+      if (error) throw error;
+
+      toast({
+        title: insurance.is_active ? "Convênio desativado" : "Convênio ativado",
+        description: insurance.is_active 
+          ? "O convênio não aparecerá mais para seleção." 
+          : "O convênio está disponível novamente.",
+      });
+
+      fetchInsurances();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao alterar status",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -163,58 +238,60 @@ export default function InsurancePage() {
             Gerencie os convênios aceitos pela clínica
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="hero">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Convênio
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Cadastrar Convênio</DialogTitle>
-            </DialogHeader>
-            <form onSubmit={handleCreateInsurance} className="space-y-4">
-              <div>
-                <Label htmlFor="insuranceName">Nome *</Label>
-                <Input
-                  id="insuranceName"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Ex: Unimed"
-                  className={`mt-1.5 ${formErrors.name ? "border-destructive" : ""}`}
-                />
-                {formErrors.name && (
-                  <p className="mt-1 text-sm text-destructive">{formErrors.name}</p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="insuranceCode">Código</Label>
-                <Input
-                  id="insuranceCode"
-                  value={formCode}
-                  onChange={(e) => setFormCode(e.target.value)}
-                  placeholder="Código interno (opcional)"
-                  className="mt-1.5"
-                />
-              </div>
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Cadastrar
-                </Button>
-              </div>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <Button variant="hero" onClick={() => handleOpenDialog()}>
+          <Plus className="h-4 w-4 mr-2" />
+          Novo Convênio
+        </Button>
       </div>
+
+      {/* Dialog for Create/Edit */}
+      <Dialog open={dialogOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingInsurance ? "Editar Convênio" : "Cadastrar Convênio"}
+            </DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSaveInsurance} className="space-y-4">
+            <div>
+              <Label htmlFor="insuranceName">Nome *</Label>
+              <Input
+                id="insuranceName"
+                value={formName}
+                onChange={(e) => setFormName(e.target.value)}
+                placeholder="Ex: Unimed"
+                className={`mt-1.5 ${formErrors.name ? "border-destructive" : ""}`}
+              />
+              {formErrors.name && (
+                <p className="mt-1 text-sm text-destructive">{formErrors.name}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="insuranceCode">Código</Label>
+              <Input
+                id="insuranceCode"
+                value={formCode}
+                onChange={(e) => setFormCode(e.target.value)}
+                placeholder="Código interno (opcional)"
+                className="mt-1.5"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCloseDialog}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={saving}>
+                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {editingInsurance ? "Salvar" : "Cadastrar"}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">
@@ -224,13 +301,26 @@ export default function InsurancePage() {
       ) : insurances.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {insurances.map((insurance) => (
-            <Card key={insurance.id} className="card-hover">
+            <Card 
+              key={insurance.id} 
+              className={cn(
+                "card-hover",
+                !insurance.is_active && "opacity-60"
+              )}
+            >
               <CardContent className="p-6">
                 <div className="flex items-start justify-between mb-4">
                   <div>
-                    <h3 className="font-semibold text-foreground text-lg">
-                      {insurance.name}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-foreground text-lg">
+                        {insurance.name}
+                      </h3>
+                      {!insurance.is_active && (
+                        <Badge variant="secondary" className="text-xs">
+                          Inativo
+                        </Badge>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1.5 mt-1 text-sm text-muted-foreground">
                       <Users className="h-4 w-4" />
                       {insurance.patient_count || 0} pacientes
@@ -243,14 +333,31 @@ export default function InsurancePage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Editar</DropdownMenuItem>
-                      <DropdownMenuItem>Ver pacientes</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">
-                        Desativar
+                      <DropdownMenuItem onClick={() => handleOpenDialog(insurance)}>
+                        Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        onClick={() => handleToggleActive(insurance)}
+                        disabled={togglingId === insurance.id}
+                      >
+                        {togglingId === insurance.id ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : insurance.is_active ? (
+                          <XCircle className="h-4 w-4 mr-2" />
+                        ) : (
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                        )}
+                        {insurance.is_active ? "Desativar" : "Ativar"}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
+
+                {insurance.code && (
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Código: {insurance.code}
+                  </p>
+                )}
 
                 <div className="space-y-2">
                   <p className="text-sm font-medium text-foreground">Procedimentos</p>
@@ -271,7 +378,7 @@ export default function InsurancePage() {
           <CardContent className="py-12 text-center text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
             <p className="mb-4">Nenhum convênio cadastrado</p>
-            <Button variant="outline" onClick={() => setDialogOpen(true)}>
+            <Button variant="outline" onClick={() => handleOpenDialog()}>
               <Plus className="h-4 w-4 mr-2" />
               Adicionar convênio
             </Button>

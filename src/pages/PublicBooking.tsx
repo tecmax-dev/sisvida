@@ -87,6 +87,12 @@ interface Procedure {
   color: string | null;
 }
 
+interface ProcedureInsurancePrice {
+  procedure_id: string;
+  insurance_plan_id: string;
+  price: number;
+}
+
 export default function PublicBooking() {
   const { clinicSlug } = useParams();
   const navigate = useNavigate();
@@ -96,6 +102,7 @@ export default function PublicBooking() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [procedureInsurancePrices, setProcedureInsurancePrices] = useState<ProcedureInsurancePrice[]>([]);
   const [existingAppointments, setExistingAppointments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -204,6 +211,17 @@ export default function PublicBooking() {
         .eq('is_active', true);
 
       setProcedures(proceduresData || []);
+
+      // Fetch procedure insurance prices
+      if (proceduresData && proceduresData.length > 0) {
+        const procedureIds = proceduresData.map(p => p.id);
+        const { data: pricesData } = await supabase
+          .from('procedure_insurance_prices')
+          .select('procedure_id, insurance_plan_id, price')
+          .in('procedure_id', procedureIds);
+        
+        setProcedureInsurancePrices(pricesData || []);
+      }
     } catch (error) {
       console.error('Error fetching clinic data:', error);
     } finally {
@@ -296,6 +314,17 @@ export default function PublicBooking() {
     
     return baseAppointmentTypes;
   }, [clinicHasTelemedicine, selectedProfessional, professionals]);
+
+  // Get price for a procedure based on selected insurance
+  const getProcedurePrice = (procedureId: string, defaultPrice: number): number => {
+    if (!selectedInsurance) return defaultPrice;
+    
+    const insurancePrice = procedureInsurancePrices.find(
+      p => p.procedure_id === procedureId && p.insurance_plan_id === selectedInsurance
+    );
+    
+    return insurancePrice ? insurancePrice.price : defaultPrice;
+  };
 
   // Check if day has availability based on professional schedule
   const isDayAvailable = (date: Date) => {
@@ -706,12 +735,17 @@ export default function PublicBooking() {
                               </div>
                             </div>
                             <div className="text-right">
-                              <p className="font-semibold text-foreground">
-                                {proc.price > 0 
-                                  ? `R$ ${proc.price.toFixed(2).replace('.', ',')}`
-                                  : 'Grátis'
-                                }
-                              </p>
+                              {(() => {
+                                const displayPrice = getProcedurePrice(proc.id, proc.price);
+                                return (
+                                  <p className="font-semibold text-foreground">
+                                    {displayPrice > 0 
+                                      ? `R$ ${displayPrice.toFixed(2).replace('.', ',')}`
+                                      : 'Grátis'
+                                    }
+                                  </p>
+                                );
+                              })()}
                             </div>
                           </div>
                         </div>

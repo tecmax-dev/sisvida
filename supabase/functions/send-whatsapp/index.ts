@@ -124,24 +124,68 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'WhatsApp não configurado para esta clínica. Configure a Evolution API nas configurações.' 
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    if (!evolutionConfig.is_connected) {
-      console.log(`Evolution API not connected for clinic ${clinicId}`);
-      return new Response(
-        JSON.stringify({ 
-          success: false, 
-          error: 'WhatsApp não está conectado. Escaneie o QR Code nas configurações.' 
+          error: 'WhatsApp não configurado. Configure a Evolution API em Configurações > Integrações.' 
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const { api_url, api_key, instance_name } = evolutionConfig as EvolutionConfig;
+
+    // 9. CHECK REAL CONNECTION STATUS with Evolution API
+    console.log(`[Clinic ${clinicId}] Checking real connection status for instance ${instance_name}`);
+    
+    let reallyConnected = false;
+    try {
+      const stateUrl = `${api_url}/instance/connectionState/${instance_name}`;
+      const stateResponse = await fetch(stateUrl, {
+        method: 'GET',
+        headers: {
+          'apikey': api_key,
+        },
+      });
+
+      if (stateResponse.ok) {
+        const stateData = await stateResponse.json();
+        console.log(`[Clinic ${clinicId}] Evolution state response:`, JSON.stringify(stateData));
+        
+        // Check various possible response formats from Evolution API
+        reallyConnected = 
+          stateData?.instance?.state === "open" ||
+          stateData?.state === "open" ||
+          stateData?.status === "CONNECTED" ||
+          stateData?.instance?.status === "CONNECTED";
+      } else {
+        console.error(`[Clinic ${clinicId}] Failed to check Evolution state: ${stateResponse.status}`);
+      }
+    } catch (stateError) {
+      console.error(`[Clinic ${clinicId}] Error checking Evolution connection state:`, stateError);
+    }
+
+    // 10. Update database if status differs
+    if (reallyConnected !== evolutionConfig.is_connected) {
+      console.log(`[Clinic ${clinicId}] Updating connection status: ${evolutionConfig.is_connected} -> ${reallyConnected}`);
+      await supabase
+        .from('evolution_configs')
+        .update({ 
+          is_connected: reallyConnected,
+          connected_at: reallyConnected ? new Date().toISOString() : null,
+          phone_number: reallyConnected ? evolutionConfig.is_connected : null,
+        })
+        .eq('clinic_id', clinicId);
+    }
+
+    // 11. If not really connected, return specific error
+    if (!reallyConnected) {
+      console.log(`[Clinic ${clinicId}] WhatsApp not really connected`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'WhatsApp desconectado. Escaneie o QR Code novamente em Configurações > Integrações > WhatsApp.' 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Format phone number (remove non-digits and add country code if needed)
     let formattedPhone = cleanPhone;
@@ -167,6 +211,33 @@ serve(async (req) => {
 
     if (!response.ok) {
       console.error('Evolution API error:', result);
+      
+      // Check if error indicates disconnection
+      const errorMessage = result?.message || result?.error || '';
+      if (
+        errorMessage.includes('disconnected') || 
+        errorMessage.includes('not connected') ||
+        errorMessage.includes('ENOTFOUND') ||
+        errorMessage.includes('QR')
+      ) {
+        // Update database to reflect disconnection
+        await supabase
+          .from('evolution_configs')
+          .update({ 
+            is_connected: false,
+            connected_at: null,
+          })
+          .eq('clinic_id', clinicId);
+          
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'WhatsApp desconectado. Escaneie o QR Code novamente em Configurações > Integrações.' 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
         JSON.stringify({ success: false, error: result.message || 'Erro ao enviar mensagem' }),
         { status: response.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
