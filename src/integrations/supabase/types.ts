@@ -1319,6 +1319,48 @@ export type Database = {
           },
         ]
       }
+      procedure_insurance_prices: {
+        Row: {
+          created_at: string | null
+          id: string
+          insurance_plan_id: string
+          price: number
+          procedure_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          insurance_plan_id: string
+          price: number
+          procedure_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          insurance_plan_id?: string
+          price?: number
+          procedure_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "procedure_insurance_prices_insurance_plan_id_fkey"
+            columns: ["insurance_plan_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "procedure_insurance_prices_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       procedures: {
         Row: {
           category: string | null
