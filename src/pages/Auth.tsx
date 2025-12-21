@@ -27,6 +27,7 @@ export default function Auth() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fromExpiredLink, setFromExpiredLink] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [errors, setErrors] = useState<{ 
     email?: string; 
     password?: string; 
@@ -93,12 +94,21 @@ export default function Auth() {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Check URL hash directly for recovery flow - don't rely on state
+      // Use PASSWORD_RECOVERY event - this is the reliable way to detect recovery flow
+      if (event === "PASSWORD_RECOVERY") {
+        setView("reset-password");
+        setIsResettingPassword(true);
+        return; // Don't redirect
+      }
+      
+      // Don't redirect if we're in password reset flow
+      if (isResettingPassword) return;
+      
+      // Also check URL hash as fallback
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const isRecoveryFlow = hashParams.get("type") === "recovery" || 
                              window.location.hash.includes("type=recovery");
       
-      // Don't redirect if we're in password reset flow
       if (isRecoveryFlow) return;
       
       if (session?.user) {
@@ -113,13 +123,13 @@ export default function Auth() {
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
       const isRecoveryFlow = hashParams.get("type") === "recovery";
       
-      if (session?.user && !isRecoveryFlow) {
+      if (session?.user && !isRecoveryFlow && !isResettingPassword) {
         checkSuperAdminAndRedirect(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, isResettingPassword]);
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -218,8 +228,9 @@ export default function Auth() {
         description: "Você já pode fazer login com sua nova senha.",
       });
       
-      // Clear the hash from URL
+      // Clear the hash from URL and reset state
       window.history.replaceState(null, '', window.location.pathname);
+      setIsResettingPassword(false);
       
       setPassword("");
       setConfirmPassword("");
