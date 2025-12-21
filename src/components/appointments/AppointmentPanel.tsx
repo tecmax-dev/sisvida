@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { TelemedicineButton } from "@/components/telemedicine/TelemedicineButton";
 import { VideoCall } from "@/components/telemedicine/VideoCall";
-import { sendWhatsAppDocument } from "@/lib/whatsapp";
+import { sendWhatsAppDocument, sendWhatsAppMessage, formatTelemedicineInvite } from "@/lib/whatsapp";
 import { generatePrescriptionPDF } from "@/lib/prescriptionExportUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -164,7 +164,9 @@ export function AppointmentPanel({
   const [telemedicineSession, setTelemedicineSession] = useState<{
     sessionId: string;
     roomId: string;
+    patientToken?: string;
   } | null>(null);
+  const [sendingTelemedicineLink, setSendingTelemedicineLink] = useState(false);
 
   const isCompleted = appointment.status === "completed";
   const isInProgress = appointment.status === "in_progress";
@@ -521,6 +523,65 @@ export function AppointmentPanel({
       });
     } finally {
       setSendingWhatsApp(false);
+    }
+  };
+
+  const handleSendTelemedicineLink = async () => {
+    if (!telemedicineSession?.patientToken) {
+      toast({
+        title: "Erro",
+        description: "Sessão de telemedicina não encontrada. Inicie a teleconsulta primeiro.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!appointment.patient.phone) {
+      toast({
+        title: "Erro",
+        description: "Paciente sem telefone cadastrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingTelemedicineLink(true);
+
+    try {
+      const telemedicineLink = `${window.location.origin}/telemedicina/${telemedicineSession.patientToken}`;
+      
+      const message = formatTelemedicineInvite(
+        appointment.patient.name,
+        clinic?.name || "Clínica",
+        format(new Date(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR }),
+        appointment.start_time.substring(0, 5),
+        professional?.name || "Profissional",
+        telemedicineLink
+      );
+
+      const result = await sendWhatsAppMessage({
+        phone: appointment.patient.phone,
+        message,
+        clinicId,
+        type: "custom",
+      });
+
+      if (result.success) {
+        toast({
+          title: "Link enviado!",
+          description: `Link da teleconsulta enviado para ${appointment.patient.phone}`,
+        });
+      } else {
+        throw new Error(result.error || "Erro ao enviar");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingTelemedicineLink(false);
     }
   };
 
@@ -901,17 +962,36 @@ export function AppointmentPanel({
             Fechar
           </Button>
           <div className="flex gap-2">
-            {/* Telemedicine Button */}
+            {/* Telemedicine Buttons */}
             {isTelemedicine && !isVideoCallActive && isInProgress && (
-              <TelemedicineButton
-                appointmentId={appointment.id}
-                clinicId={clinicId}
-                onStartCall={(sessionId, roomId) => {
-                  setTelemedicineSession({ sessionId, roomId });
-                  setIsVideoCallActive(true);
-                }}
-                disabled={isCompleted}
-              />
+              <>
+                <TelemedicineButton
+                  appointmentId={appointment.id}
+                  clinicId={clinicId}
+                  onStartCall={(sessionId, roomId, patientToken) => {
+                    setTelemedicineSession({ sessionId, roomId, patientToken });
+                    setIsVideoCallActive(true);
+                  }}
+                  disabled={isCompleted}
+                />
+                
+                {/* Send Link Button */}
+                {telemedicineSession?.patientToken && (
+                  <Button
+                    variant="outline"
+                    onClick={handleSendTelemedicineLink}
+                    disabled={sendingTelemedicineLink || !appointment.patient.phone}
+                    title={!appointment.patient.phone ? "Paciente sem telefone" : "Enviar link via WhatsApp"}
+                  >
+                    {sendingTelemedicineLink ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    Enviar Link
+                  </Button>
+                )}
+              </>
             )}
             
             {!isInProgress && !isCompleted && (
