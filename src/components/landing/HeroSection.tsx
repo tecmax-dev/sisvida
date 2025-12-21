@@ -7,7 +7,7 @@ const highlights = [
   "Agenda online 24h",
   "Lembretes WhatsApp automáticos",
   "Prontuário eletrônico completo",
-  "Gestão financeira integrada",
+  "Teleconsulta integrada",
 ];
 
 export function HeroSection() {
