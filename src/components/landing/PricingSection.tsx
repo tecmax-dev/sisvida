@@ -202,7 +202,7 @@ export function PricingSection() {
                   }`}
                   asChild
                 >
-                  <Link to="/auth?tab=signup">
+                  <Link to="/cadastro">
                     {price === 0 ? "Começar grátis" : "Testar grátis"}
                   </Link>
                 </Button>

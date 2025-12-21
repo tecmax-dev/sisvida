@@ -64,7 +64,7 @@ export function Header() {
             className="bg-cta hover:bg-cta-hover text-cta-foreground rounded-full px-6 shadow-md transition-all duration-300 hover:scale-105"
             asChild
           >
-            <Link to="/auth?tab=signup" className="flex items-center gap-2">
+            <Link to="/cadastro" className="flex items-center gap-2">
               Começar grátis
               <ArrowRight className="h-4 w-4" />
             </Link>
@@ -112,7 +112,7 @@ export function Header() {
                 className="bg-cta hover:bg-cta-hover text-cta-foreground w-full rounded-full"
                 asChild
               >
-                <Link to="/auth?tab=signup" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center gap-2">
+                <Link to="/cadastro" onClick={() => setIsMenuOpen(false)} className="flex items-center justify-center gap-2">
                   Começar grátis
                   <ArrowRight className="h-4 w-4" />
                 </Link>
