@@ -28,6 +28,7 @@ const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const PublicAnamnesis = lazy(() => import("./pages/PublicAnamnesis"));
 const AppointmentConfirmation = lazy(() => import("./pages/AppointmentConfirmation"));
 const PublicSignup = lazy(() => import("./pages/PublicSignup"));
+const ProfessionalProfile = lazy(() => import("./pages/ProfessionalProfile"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -121,6 +122,8 @@ const App = () => (
                 {/* Public booking (both legacy and current URLs) */}
                 <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />
                 <Route path="/booking/:clinicSlug" element={<PublicBooking />} />
+                {/* Professional public profile */}
+                <Route path="/profissional/:clinicSlug/:professionalSlug" element={<ProfessionalProfile />} />
                 {/* Public anamnesis form via token */}
                 <Route path="/anamnese/:token" element={<PublicAnamnesis />} />
                 {/* Appointment confirmation via token */}
