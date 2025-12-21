@@ -29,7 +29,7 @@ const businessTypes = [
 
 const carouselImages = [
   {
-    url: "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80",
+    url: "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/carousel-images/scheduling-mockup-1766334441034.png",
     title: "Agenda inteligente",
     description: "Gerencie seus agendamentos de forma simples e eficiente"
   },
