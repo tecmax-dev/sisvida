@@ -26,6 +26,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fromExpiredLink, setFromExpiredLink] = useState(false);
   const [errors, setErrors] = useState<{ 
     email?: string; 
     password?: string; 
@@ -37,15 +38,44 @@ export default function Auth() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is coming from a password reset link
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    
+    // Check for errors in URL (expired/invalid link)
+    const error = hashParams.get("error");
+    const errorCode = hashParams.get("error_code");
+    
+    if (error === "access_denied") {
+      // Clear the hash from URL
+      window.history.replaceState(null, '', window.location.pathname);
+      
+      if (errorCode === "otp_expired") {
+        toast({
+          title: "Link expirado",
+          description: "O link de recuperação expirou ou já foi usado. Solicite um novo link.",
+          variant: "destructive",
+        });
+        setFromExpiredLink(true);
+        setView("forgot-password");
+      } else {
+        toast({
+          title: "Link inválido",
+          description: "O link de recuperação é inválido. Solicite um novo link.",
+          variant: "destructive",
+        });
+        setFromExpiredLink(true);
+        setView("forgot-password");
+      }
+      return;
+    }
+    
+    // Check if user is coming from a valid password reset link
     const type = hashParams.get("type");
     const accessToken = hashParams.get("access_token");
     
     if (type === "recovery" && accessToken) {
       setView("reset-password");
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     const checkSuperAdminAndRedirect = async (userId: string) => {
@@ -269,6 +299,7 @@ export default function Auth() {
     setErrors({});
     setPassword("");
     setConfirmPassword("");
+    setFromExpiredLink(false);
   };
 
   const getTitle = () => {
@@ -318,6 +349,11 @@ export default function Auth() {
           {/* Forgot Password Form */}
           {view === "forgot-password" && (
             <form className="space-y-5" onSubmit={handleForgotPassword}>
+              {fromExpiredLink && (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-200">
+                  O link anterior expirou ou já foi utilizado. Solicite um novo link abaixo.
+                </div>
+              )}
               <div>
                 <Label htmlFor="email">Email</Label>
                 <div className="relative mt-1.5">
