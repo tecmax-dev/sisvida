@@ -128,7 +128,7 @@ serve(async (req) => {
     }
 
     // Validate appointment type
-    const validTypes = ['first_visit', 'return', 'exam', 'procedure'];
+    const validTypes = ['first_visit', 'return', 'exam', 'procedure', 'telemedicine'];
     if (!type || !validTypes.includes(type)) {
       return errorResponse('Tipo de consulta inválido');
     }
@@ -310,6 +310,111 @@ serve(async (req) => {
 
     console.log(`[create-public-booking] Booking created successfully: ${appointment.id} for patient ${patientId}`);
 
+    // If telemedicine, create session and send WhatsApp with link
+    let telemedicineSession = null;
+    if (type === 'telemedicine') {
+      const roomId = `room_${appointment.id}_${Date.now()}`;
+      
+      const { data: session, error: sessionError } = await supabase
+        .from('telemedicine_sessions')
+        .insert({
+          appointment_id: appointment.id,
+          clinic_id: clinicId,
+          room_id: roomId,
+          status: 'waiting',
+        })
+        .select('id, patient_token')
+        .single();
+
+      if (sessionError) {
+        console.error('[create-public-booking] Error creating telemedicine session:', sessionError);
+      } else {
+        telemedicineSession = session;
+        console.log(`[create-public-booking] Telemedicine session created: ${session.id}`);
+
+        // Get clinic and professional names for the message
+        const { data: clinicData } = await supabase
+          .from('clinics')
+          .select('name')
+          .eq('id', clinicId)
+          .single();
+
+        const { data: profData } = await supabase
+          .from('professionals')
+          .select('name')
+          .eq('id', professionalId)
+          .single();
+
+        // Send WhatsApp with telemedicine link
+        const telemedicineLink = `${supabaseUrl.replace('.supabase.co', '.lovable.app')}/telemedicina/${session.patient_token}`;
+        
+        // Format date for display
+        const [year, month, day] = date.split('-');
+        const formattedDate = `${day}/${month}/${year}`;
+
+        const message = [
+          `Olá ${trimmedName}! 👋`,
+          ``,
+          `Sua *teleconsulta* foi agendada com sucesso!`,
+          ``,
+          `📅 *Data:* ${formattedDate}`,
+          `🕐 *Horário:* ${time}`,
+          `👨‍⚕️ *Profissional:* ${profData?.name || 'Profissional'}`,
+          `🏥 *Clínica:* ${clinicData?.name || 'Clínica'}`,
+          ``,
+          `📹 *Link para a consulta:*`,
+          telemedicineLink,
+          ``,
+          `⚠️ *Importante:*`,
+          `• Acesse o link 5 minutos antes do horário`,
+          `• Use um navegador atualizado (Chrome, Firefox, Safari)`,
+          `• Verifique se sua câmera e microfone estão funcionando`,
+          `• Escolha um local silencioso e bem iluminado`,
+          ``,
+          `Atenciosamente,`,
+          `Equipe ${clinicData?.name || 'Clínica'}`,
+        ].join('\n');
+
+        // Check if clinic has Evolution API configured
+        const { data: evolutionConfig } = await supabase
+          .from('evolution_configs')
+          .select('id, is_connected')
+          .eq('clinic_id', clinicId)
+          .eq('is_connected', true)
+          .maybeSingle();
+
+        if (evolutionConfig) {
+          // Call send-whatsapp function
+          try {
+            const whatsappResponse = await fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+              },
+              body: JSON.stringify({
+                phone: cleanPhone,
+                message: message,
+                clinicId: clinicId,
+                type: 'custom',
+              }),
+            });
+
+            const whatsappResult = await whatsappResponse.json();
+            if (whatsappResult.success) {
+              console.log(`[create-public-booking] WhatsApp telemedicine link sent to ${cleanPhone}`);
+            } else {
+              console.error('[create-public-booking] Failed to send WhatsApp:', whatsappResult.error);
+            }
+          } catch (whatsappError) {
+            console.error('[create-public-booking] Error sending WhatsApp:', whatsappError);
+          }
+        } else {
+          console.log('[create-public-booking] Clinic has no Evolution API configured, skipping WhatsApp');
+        }
+      }
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true, 
@@ -318,7 +423,11 @@ serve(async (req) => {
           patientId: patientId,
           date,
           time,
-          endTime
+          endTime,
+          telemedicineSession: telemedicineSession ? {
+            id: telemedicineSession.id,
+            patientToken: telemedicineSession.patient_token,
+          } : null,
         } 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
