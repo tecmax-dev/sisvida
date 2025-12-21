@@ -29,6 +29,7 @@ const PublicAnamnesis = lazy(() => import("./pages/PublicAnamnesis"));
 const AppointmentConfirmation = lazy(() => import("./pages/AppointmentConfirmation"));
 const PublicSignup = lazy(() => import("./pages/PublicSignup"));
 const ProfessionalProfile = lazy(() => import("./pages/ProfessionalProfile"));
+const TelemedicinePatient = lazy(() => import("./pages/TelemedicinePatient"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -128,6 +129,8 @@ const App = () => (
                 <Route path="/anamnese/:token" element={<PublicAnamnesis />} />
                 {/* Appointment confirmation via token */}
                 <Route path="/consulta/:token" element={<AppointmentConfirmation />} />
+                {/* Telemedicine patient room */}
+                <Route path="/telemedicina/:token" element={<TelemedicinePatient />} />
                 {/* Professional Portal */}
                 <Route path="/profissional" element={<ProfessionalAuth />} />
                 <Route path="/profissional/painel" element={<ProfessionalDashboard />} />

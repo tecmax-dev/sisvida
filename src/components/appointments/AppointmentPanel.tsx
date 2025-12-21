@@ -33,7 +33,10 @@ import {
   Timer,
   Lock,
   Send,
+  Video,
 } from "lucide-react";
+import { TelemedicineButton } from "@/components/telemedicine/TelemedicineButton";
+import { VideoCall } from "@/components/telemedicine/VideoCall";
 import { sendWhatsAppDocument } from "@/lib/whatsapp";
 import { generatePrescriptionPDF } from "@/lib/prescriptionExportUtils";
 import { format } from "date-fns";
@@ -125,6 +128,7 @@ const typeLabels: Record<string, string> = {
   return: "Retorno",
   exam: "Exame",
   procedure: "Procedimento",
+  telemedicine: "Telemedicina",
 };
 
 export function AppointmentPanel({

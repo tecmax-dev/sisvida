@@ -1713,6 +1713,56 @@ export type Database = {
         }
         Relationships: []
       }
+      telemedicine_sessions: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string
+          created_at: string
+          ended_at: string | null
+          id: string
+          patient_token: string
+          professional_token: string
+          room_id: string
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          patient_token?: string
+          professional_token?: string
+          room_id: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          patient_token?: string
+          professional_token?: string
+          room_id?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telemedicine_sessions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       upgrade_requests: {
         Row: {
           admin_notes: string | null
@@ -1992,7 +2042,12 @@ export type Database = {
         | "no_show"
         | "in_progress"
         | "arrived"
-      appointment_type: "first_visit" | "return" | "exam" | "procedure"
+      appointment_type:
+        | "first_visit"
+        | "return"
+        | "exam"
+        | "procedure"
+        | "telemedicine"
       specialty_category:
         | "medical"
         | "dental"
@@ -2142,7 +2197,13 @@ export const Constants = {
         "in_progress",
         "arrived",
       ],
-      appointment_type: ["first_visit", "return", "exam", "procedure"],
+      appointment_type: [
+        "first_visit",
+        "return",
+        "exam",
+        "procedure",
+        "telemedicine",
+      ],
       specialty_category: [
         "medical",
         "dental",

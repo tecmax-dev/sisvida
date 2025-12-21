@@ -96,6 +96,7 @@ const appointmentTypes = [
   { value: "return", label: "Retorno" },
   { value: "exam", label: "Exame" },
   { value: "procedure", label: "Procedimento" },
+  { value: "telemedicine", label: "Telemedicina" },
 ];
 
 const timeSlots = [
