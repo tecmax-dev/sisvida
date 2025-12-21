@@ -138,7 +138,11 @@ export function PricingSection() {
           {plans.map((plan, i) => {
             const isPopular = i === popularIndex && plans.length > 1;
             const monthlyPrice = plan.monthly_price;
-            const price = isYearly ? Math.round(monthlyPrice * 0.8) : monthlyPrice;
+            const priceValue = isYearly ? Math.round(monthlyPrice * 0.8) : monthlyPrice;
+            const formattedPrice = priceValue.toLocaleString('pt-BR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            });
             
             // Combine descriptive features with linked features
             const displayFeatures = [
@@ -176,10 +180,10 @@ export function PricingSection() {
                     <span className={`text-sm ${isPopular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
                       R$
                     </span>
-                    <span className="text-5xl font-bold">{price}</span>
+                    <span className="text-5xl font-bold">{formattedPrice}</span>
                   </div>
                   <span className={`text-sm ${isPopular ? "text-primary-foreground/80" : "text-muted-foreground"}`}>
-                    /mês {isYearly && price > 0 && "(cobrado anualmente)"}
+                    /mês {isYearly && priceValue > 0 && "(cobrado anualmente)"}
                   </span>
                 </div>
 
@@ -203,7 +207,7 @@ export function PricingSection() {
                   asChild
                 >
                   <Link to="/cadastro">
-                    {price === 0 ? "Começar grátis" : "Testar grátis"}
+                    {priceValue === 0 ? "Começar grátis" : "Testar grátis"}
                   </Link>
                 </Button>
               </div>
