@@ -13,6 +13,9 @@ import {
   Briefcase,
   User,
   MessageCircle,
+  Mail,
+  Info,
+  CheckCircle2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +31,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -99,6 +107,7 @@ export default function ProfessionalProfile() {
   const [existingAppointments, setExistingAppointments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [success, setSuccess] = useState(false);
 
   // Calendar & Form state
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -242,7 +251,7 @@ export default function ProfessionalProfile() {
     const duration = appointmentDuration;
     const slots: string[] = [];
     
-    daySchedule.slots.forEach(slot => {
+    daySchedule.slots.forEach((slot: { start: string; end: string }) => {
       const [startHour, startMin] = slot.start.split(':').map(Number);
       const [endHour, endMin] = slot.end.split(':').map(Number);
       
@@ -303,6 +312,15 @@ export default function ProfessionalProfile() {
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
+  const formatZipCode = (zipCode: string | null) => {
+    if (!zipCode) return null;
+    const numbers = zipCode.replace(/\D/g, '');
+    if (numbers.length === 8) {
+      return `${numbers.slice(0, 5)}-${numbers.slice(5)}`;
+    }
+    return zipCode;
+  };
+
   const handleSubmit = async () => {
     if (!clinic || !professional || !selectedDate || !selectedTime || !patientName || !patientPhone) {
       toast({ title: "Preencha todos os campos obrigatórios", variant: "destructive" });
@@ -333,15 +351,8 @@ export default function ProfessionalProfile() {
       if (error) throw error;
       if (!data?.success) throw new Error(data?.error || 'Erro ao criar agendamento');
 
+      setSuccess(true);
       toast({ title: "Agendamento realizado!", description: "Você receberá uma confirmação em breve." });
-      
-      // Reset form
-      setSelectedDate(null);
-      setSelectedTime("");
-      setPatientName("");
-      setPatientPhone("");
-      setPatientEmail("");
-      setSelectedProcedure("");
     } catch (error: any) {
       toast({ title: "Erro ao agendar", description: error.message, variant: "destructive" });
     } finally {
@@ -349,9 +360,9 @@ export default function ProfessionalProfile() {
     }
   };
 
-  const getGoogleStreetViewUrl = () => {
+  const getGoogleMapUrl = () => {
     if (professional?.latitude && professional?.longitude) {
-      return `https://www.google.com/maps/embed?pb=!4v1!6m8!1m7!1s!2m2!1d${professional.latitude}!2d${professional.longitude}!3f0!4f0!5f0.7820865974627469`;
+      return `https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d1000!2d${professional.longitude}!3d${professional.latitude}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zM!5e0!3m2!1spt-BR!2sbr!4v1`;
     }
     if (professional?.address) {
       const query = encodeURIComponent(`${professional.address}, ${professional.city || ''}, ${professional.state || ''}`);
@@ -362,7 +373,7 @@ export default function ProfessionalProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
@@ -370,7 +381,7 @@ export default function ProfessionalProfile() {
 
   if (!clinic || !professional) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6 text-center">
             <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -382,12 +393,33 @@ export default function ProfessionalProfile() {
     );
   }
 
-  const streetViewUrl = getGoogleStreetViewUrl();
+  if (success) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-8 pb-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="h-8 w-8 text-green-600" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Agendamento Confirmado!</h2>
+            <p className="text-muted-foreground mb-6">
+              Você receberá uma confirmação por WhatsApp em breve.
+            </p>
+            <Button onClick={() => setSuccess(false)} variant="outline">
+              Fazer outro agendamento
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const mapUrl = getGoogleMapUrl();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
       {/* Header */}
-      <header className="border-b border-border bg-card sticky top-0 z-50">
+      <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-3">
           <div className="flex items-center gap-3">
             {clinic.logo_url ? (
@@ -401,92 +433,122 @@ export default function ProfessionalProfile() {
       </header>
 
       <main className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column - Professional Info */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Profile Header */}
-            <Card>
-              <CardContent className="p-6">
+        <div className="grid lg:grid-cols-5 gap-6">
+          {/* Left Column - Professional Info (3/5) */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Profile Header Card */}
+            <Card className="overflow-hidden">
+              <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
                 <div className="flex flex-col sm:flex-row gap-6">
-                  <Avatar className="w-32 h-32 border-4 border-primary/20">
+                  <Avatar className="w-28 h-28 border-4 border-background shadow-lg">
                     <AvatarImage src={professional.avatar_url || undefined} alt={professional.name} />
-                    <AvatarFallback className="text-3xl bg-primary/10 text-primary">
+                    <AvatarFallback className="text-3xl bg-primary text-primary-foreground font-semibold">
                       {professional.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1">
+                  <div className="flex-1 space-y-2">
                     <h1 className="text-2xl font-bold text-foreground">{professional.name}</h1>
                     {professional.specialty && (
-                      <p className="text-primary font-medium">{professional.specialty}</p>
+                      <p className="text-primary font-medium text-lg">{professional.specialty}</p>
                     )}
                     {professional.registration_number && (
-                      <Badge variant="secondary" className="mt-2">
+                      <Badge variant="secondary" className="text-sm">
                         {professional.registration_number}
                       </Badge>
                     )}
                     
-                    <div className="mt-4 flex flex-wrap gap-3">
-                      {professional.phone && (
-                        <a href={`tel:${professional.phone}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
-                          <Phone className="h-4 w-4" />
-                          {professional.phone}
-                        </a>
-                      )}
-                      {professional.whatsapp && (
-                        <a 
-                          href={`https://wa.me/55${professional.whatsapp.replace(/\D/g, '')}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-sm text-green-600 hover:text-green-700"
-                        >
-                          <MessageCircle className="h-4 w-4" />
-                          WhatsApp
-                        </a>
-                      )}
+                    {/* Contact Info Popover */}
+                    <div className="pt-2">
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="gap-2">
+                            <Info className="h-4 w-4" />
+                            Informações de contato
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-72" align="start">
+                          <div className="space-y-3">
+                            <h4 className="font-medium text-sm">Contato</h4>
+                            {professional.phone && (
+                              <a href={`tel:${professional.phone}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
+                                <Phone className="h-4 w-4" />
+                                {professional.phone}
+                              </a>
+                            )}
+                            {professional.whatsapp && (
+                              <a 
+                                href={`https://wa.me/55${professional.whatsapp.replace(/\D/g, '')}`} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-2 text-sm text-green-600 hover:text-green-700"
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                                WhatsApp
+                              </a>
+                            )}
+                            {professional.email && (
+                              <a href={`mailto:${professional.email}`} className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
+                                <Mail className="h-4 w-4" />
+                                {professional.email}
+                              </a>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   </div>
                 </div>
-              </CardContent>
+              </div>
             </Card>
 
             {/* Tabs */}
             <Tabs defaultValue="info" className="w-full">
-              <TabsList className="w-full justify-start">
-                <TabsTrigger value="info">Informações Gerais</TabsTrigger>
-                <TabsTrigger value="experience">Experiência</TabsTrigger>
+              <TabsList className="w-full grid grid-cols-2 h-12">
+                <TabsTrigger value="info" className="gap-2 text-sm">
+                  <MapPin className="h-4 w-4" />
+                  Informações Gerais
+                </TabsTrigger>
+                <TabsTrigger value="experience" className="gap-2 text-sm">
+                  <Briefcase className="h-4 w-4" />
+                  Experiência
+                </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="info" className="space-y-6 mt-4">
+              <TabsContent value="info" className="mt-4">
                 {/* Address & Map */}
-                {(professional.address || professional.city) && (
+                {(professional.address || professional.city || clinic.address) && (
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-lg">
-                        <MapPin className="h-5 w-5 text-primary" />
+                        <Building2 className="h-5 w-5 text-primary" />
                         Consultório
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      <div>
-                        <p className="font-medium">{professional.name}</p>
-                        {professional.address && <p className="text-muted-foreground">{professional.address}</p>}
+                      <div className="space-y-1">
+                        <p className="font-medium text-foreground">{clinic.name}</p>
+                        {professional.address && (
+                          <p className="text-muted-foreground">{professional.address}</p>
+                        )}
                         {(professional.city || professional.state) && (
                           <p className="text-muted-foreground">
                             {[professional.city, professional.state].filter(Boolean).join(' - ')}
                           </p>
                         )}
                         {professional.zip_code && (
-                          <p className="text-muted-foreground">CEP: {professional.zip_code}</p>
+                          <p className="text-muted-foreground text-sm">
+                            CEP: {formatZipCode(professional.zip_code)}
+                          </p>
                         )}
                       </div>
                       
-                      {/* Google Street View / Map */}
-                      {streetViewUrl && (
-                        <div className="rounded-lg overflow-hidden border">
+                      {/* Google Map */}
+                      {mapUrl && (
+                        <div className="rounded-xl overflow-hidden border shadow-sm">
                           <iframe
-                            src={streetViewUrl}
+                            src={mapUrl}
                             width="100%"
-                            height="300"
+                            height="250"
                             style={{ border: 0 }}
                             allowFullScreen
                             loading="lazy"
@@ -496,27 +558,35 @@ export default function ProfessionalProfile() {
                         </div>
                       )}
 
-                      {professional.phone && (
-                        <div className="flex items-center gap-2 pt-2">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-muted-foreground">{professional.phone}</span>
-                        </div>
+                      {/* WhatsApp */}
+                      {professional.whatsapp && (
+                        <a 
+                          href={`https://wa.me/55${professional.whatsapp.replace(/\D/g, '')}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-950/50 transition-colors"
+                        >
+                          <MessageCircle className="h-5 w-5" />
+                          <span className="font-medium">Fale pelo WhatsApp</span>
+                        </a>
                       )}
                     </CardContent>
                   </Card>
                 )}
+              </TabsContent>
 
-                {/* About */}
+              <TabsContent value="experience" className="mt-4 space-y-4">
+                {/* About Me */}
                 {professional.bio && (
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <User className="h-5 w-5 text-primary" />
                         Sobre Mim
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-muted-foreground whitespace-pre-line">{professional.bio}</p>
+                      <p className="text-muted-foreground whitespace-pre-wrap">{professional.bio}</p>
                     </CardContent>
                   </Card>
                 )}
@@ -524,37 +594,38 @@ export default function ProfessionalProfile() {
                 {/* Education */}
                 {professional.education && (
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <GraduationCap className="h-5 w-5 text-primary" />
                         Formação
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-muted-foreground whitespace-pre-line">{professional.education}</p>
+                      <p className="text-muted-foreground whitespace-pre-wrap">{professional.education}</p>
                     </CardContent>
                   </Card>
                 )}
-              </TabsContent>
 
-              <TabsContent value="experience" className="mt-4">
-                {professional.experience ? (
+                {/* Experience */}
+                {professional.experience && (
                   <Card>
-                    <CardHeader>
+                    <CardHeader className="pb-3">
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <Briefcase className="h-5 w-5 text-primary" />
                         Experiência Profissional
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-muted-foreground whitespace-pre-line">{professional.experience}</p>
+                      <p className="text-muted-foreground whitespace-pre-wrap">{professional.experience}</p>
                     </CardContent>
                   </Card>
-                ) : (
+                )}
+
+                {!professional.bio && !professional.education && !professional.experience && (
                   <Card>
-                    <CardContent className="py-12 text-center">
-                      <Briefcase className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                      <p className="text-muted-foreground">Nenhuma experiência cadastrada</p>
+                    <CardContent className="py-12 text-center text-muted-foreground">
+                      <User className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Nenhuma informação de experiência disponível</p>
                     </CardContent>
                   </Card>
                 )}
@@ -562,29 +633,36 @@ export default function ProfessionalProfile() {
             </Tabs>
           </div>
 
-          {/* Right Column - Booking Widget (Sticky) */}
-          <div className="lg:col-span-1">
-            <div className="lg:sticky lg:top-24">
-              <Card className="border-primary/20 shadow-lg">
-                <CardHeader className="bg-primary/5 border-b">
-                  <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-                    <CardTitle className="text-lg">Agende uma Consulta</CardTitle>
-                  </div>
+          {/* Right Column - Booking Widget (2/5) */}
+          <div className="lg:col-span-2">
+            <div className="lg:sticky lg:top-20">
+              <Card className="shadow-lg border-2 border-primary/10">
+                <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg">
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Agende uma Consulta
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 space-y-4">
-                  {/* Procedure Select */}
+                  {/* Procedure Selection */}
                   {procedures.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Procedimento</Label>
+                    <div>
+                      <Label className="text-sm font-medium">Procedimento</Label>
                       <Select value={selectedProcedure} onValueChange={setSelectedProcedure}>
-                        <SelectTrigger>
+                        <SelectTrigger className="mt-1.5">
                           <SelectValue placeholder="Selecione (opcional)" />
                         </SelectTrigger>
                         <SelectContent>
-                          {procedures.map((proc) => (
-                            <SelectItem key={proc.id} value={proc.id}>
-                              {proc.name} - R$ {proc.price.toFixed(2)}
+                          {procedures.map((procedure) => (
+                            <SelectItem key={procedure.id} value={procedure.id}>
+                              <div className="flex justify-between items-center w-full">
+                                <span>{procedure.name}</span>
+                                {procedure.price > 0 && (
+                                  <span className="text-muted-foreground ml-2">
+                                    R$ {procedure.price.toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -593,50 +671,50 @@ export default function ProfessionalProfile() {
                   )}
 
                   {/* Calendar */}
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4" />
-                      Selecione uma data
-                    </Label>
-                    <div className="border rounded-lg p-3">
+                  <div>
+                    <Label className="text-sm font-medium">Data da Consulta</Label>
+                    <div className="mt-2 border rounded-lg p-3 bg-muted/30">
                       <div className="flex items-center justify-between mb-3">
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1))}
-                          className="p-1 hover:bg-secondary rounded"
                         >
                           <ChevronLeft className="h-4 w-4" />
-                        </button>
+                        </Button>
                         <span className="font-medium text-sm">
                           {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
                         </span>
-                        <button
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1))}
-                          className="p-1 hover:bg-secondary rounded"
                         >
                           <ChevronRight className="h-4 w-4" />
-                        </button>
+                        </Button>
                       </div>
-                      
-                      <div className="grid grid-cols-7 gap-1 mb-1">
-                        {weekDays.map(day => (
+                      <div className="grid grid-cols-7 gap-1 mb-2">
+                        {weekDays.map((day) => (
                           <div key={day} className="text-center text-xs font-medium text-muted-foreground py-1">
                             {day}
                           </div>
                         ))}
                       </div>
-                      
                       <div className="grid grid-cols-7 gap-1">
-                        {getDaysInMonth(currentMonth).map((date, i) => (
-                          <div key={i} className="aspect-square">
+                        {getDaysInMonth(currentMonth).map((date, index) => (
+                          <div key={index} className="aspect-square">
                             {date && (
                               <button
                                 onClick={() => !isDateDisabled(date) && setSelectedDate(date)}
                                 disabled={isDateDisabled(date)}
                                 className={cn(
-                                  "w-full h-full rounded text-sm flex items-center justify-center transition-colors",
-                                  isDateDisabled(date) && "text-muted-foreground/40 cursor-not-allowed",
-                                  !isDateDisabled(date) && "hover:bg-primary/10",
-                                  selectedDate?.toDateString() === date.toDateString() && "bg-primary text-primary-foreground hover:bg-primary"
+                                  "w-full h-full rounded-md text-sm font-medium transition-colors",
+                                  isDateDisabled(date) 
+                                    ? "text-muted-foreground/40 cursor-not-allowed" 
+                                    : "hover:bg-primary/10",
+                                  selectedDate?.toDateString() === date.toDateString() 
+                                    ? "bg-primary text-primary-foreground hover:bg-primary" 
+                                    : ""
                                 )}
                               >
                                 {date.getDate()}
@@ -650,22 +728,19 @@ export default function ProfessionalProfile() {
 
                   {/* Time Slots */}
                   {selectedDate && (
-                    <div className="space-y-2">
-                      <Label className="flex items-center gap-2">
-                        <Clock className="h-4 w-4" />
-                        Selecione um horário
-                      </Label>
+                    <div>
+                      <Label className="text-sm font-medium">Horário</Label>
                       {availableTimeSlots.length > 0 ? (
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="mt-2 grid grid-cols-4 gap-2">
                           {availableTimeSlots.map((time) => (
                             <button
                               key={time}
                               onClick={() => setSelectedTime(time)}
                               className={cn(
-                                "py-2 text-sm rounded border transition-colors",
+                                "py-2 px-3 rounded-md text-sm font-medium border transition-colors",
                                 selectedTime === time
                                   ? "bg-primary text-primary-foreground border-primary"
-                                  : "hover:border-primary hover:bg-primary/5"
+                                  : "border-border hover:border-primary hover:bg-primary/5"
                               )}
                             >
                               {time}
@@ -673,19 +748,19 @@ export default function ProfessionalProfile() {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          Nenhum horário disponível nesta data
+                        <p className="mt-2 text-sm text-muted-foreground">
+                          Nenhum horário disponível para esta data
                         </p>
                       )}
                     </div>
                   )}
 
-                  {/* Insurance */}
+                  {/* Insurance Plan */}
                   {insurancePlans.length > 0 && (
-                    <div className="space-y-2">
-                      <Label>Convênio</Label>
+                    <div>
+                      <Label className="text-sm font-medium">Convênio</Label>
                       <Select value={selectedInsurance} onValueChange={setSelectedInsurance}>
-                        <SelectTrigger>
+                        <SelectTrigger className="mt-1.5">
                           <SelectValue placeholder="Particular" />
                         </SelectTrigger>
                         <SelectContent>
@@ -700,11 +775,28 @@ export default function ProfessionalProfile() {
                     </div>
                   )}
 
+                  {/* Appointment Type */}
+                  <div>
+                    <Label className="text-sm font-medium">Tipo de Consulta</Label>
+                    <Select value={selectedType} onValueChange={setSelectedType}>
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {appointmentTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   {/* Price Display */}
                   {selectedProcedurePrice > 0 && (
-                    <div className="bg-primary/5 rounded-lg p-3">
+                    <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
                       <div className="flex justify-between items-center">
-                        <span className="text-muted-foreground">Valor:</span>
+                        <span className="text-sm text-muted-foreground">Valor:</span>
                         <span className="text-lg font-bold text-primary">
                           R$ {selectedProcedurePrice.toFixed(2)}
                         </span>
@@ -712,72 +804,63 @@ export default function ProfessionalProfile() {
                     </div>
                   )}
 
-                  {/* Appointment Type */}
-                  <div className="space-y-2">
-                    <Label>É sua primeira consulta?</Label>
-                    <div className="flex gap-2">
-                      {appointmentTypes.map((type) => (
-                        <button
-                          key={type.value}
-                          onClick={() => setSelectedType(type.value)}
-                          className={cn(
-                            "flex-1 py-2 text-sm rounded border transition-colors",
-                            selectedType === type.value
-                              ? "bg-primary text-primary-foreground border-primary"
-                              : "hover:border-primary"
-                          )}
-                        >
-                          {type.value === "first_visit" ? "Sim" : "Não"}
-                        </button>
-                      ))}
+                  {/* Patient Info */}
+                  <div className="space-y-3 pt-2 border-t">
+                    <h4 className="font-medium text-sm flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Seus Dados
+                    </h4>
+                    <div>
+                      <Label htmlFor="patientName" className="text-sm">Nome completo *</Label>
+                      <Input
+                        id="patientName"
+                        value={patientName}
+                        onChange={(e) => setPatientName(e.target.value)}
+                        placeholder="Seu nome"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="patientPhone" className="text-sm">Telefone / WhatsApp *</Label>
+                      <Input
+                        id="patientPhone"
+                        value={patientPhone}
+                        onChange={(e) => setPatientPhone(formatPhone(e.target.value))}
+                        placeholder="(00) 00000-0000"
+                        maxLength={15}
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="patientEmail" className="text-sm">Email (opcional)</Label>
+                      <Input
+                        id="patientEmail"
+                        type="email"
+                        value={patientEmail}
+                        onChange={(e) => setPatientEmail(e.target.value)}
+                        placeholder="seu@email.com"
+                        className="mt-1"
+                      />
                     </div>
                   </div>
-
-                  {/* Patient Info */}
-                  {selectedTime && (
-                    <div className="space-y-3 border-t pt-4">
-                      <div className="space-y-2">
-                        <Label>Seu nome *</Label>
-                        <Input
-                          value={patientName}
-                          onChange={(e) => setPatientName(e.target.value)}
-                          placeholder="Nome completo"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Telefone *</Label>
-                        <Input
-                          value={patientPhone}
-                          onChange={(e) => setPatientPhone(formatPhone(e.target.value))}
-                          placeholder="(00) 00000-0000"
-                          maxLength={15}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Email (opcional)</Label>
-                        <Input
-                          type="email"
-                          value={patientEmail}
-                          onChange={(e) => setPatientEmail(e.target.value)}
-                          placeholder="seu@email.com"
-                        />
-                      </div>
-                    </div>
-                  )}
 
                   {/* Submit Button */}
                   <Button
                     onClick={handleSubmit}
-                    disabled={!selectedDate || !selectedTime || !patientName || !patientPhone || submitting}
-                    className="w-full"
+                    disabled={submitting || !selectedDate || !selectedTime || !patientName || !patientPhone}
+                    className="w-full h-12 text-base font-semibold"
+                    size="lg"
                   >
                     {submitting ? (
                       <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                         Agendando...
                       </>
                     ) : (
-                      "Confirmar Agendamento"
+                      <>
+                        <CheckCircle2 className="mr-2 h-5 w-5" />
+                        Confirmar Agendamento
+                      </>
                     )}
                   </Button>
                 </CardContent>

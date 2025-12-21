@@ -12,9 +12,12 @@ import {
   UserX,
   AlertTriangle,
   Sparkles,
-  Camera,
   User,
   Video,
+  Link,
+  Copy,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +25,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -53,6 +57,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { RoleGuard } from "@/components/auth/RoleGuard";
@@ -62,6 +67,7 @@ import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { ScheduleDialog } from "@/components/professionals/ScheduleDialog";
 import { SpecialtySelector } from "@/components/professionals/SpecialtySelector";
+import { ProfessionalFormFields } from "@/components/professionals/ProfessionalFormFields";
 import { useSpecialties } from "@/hooks/useSpecialties";
 import { useSubscription } from "@/hooks/useSubscription";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
@@ -82,6 +88,15 @@ interface Professional {
   email: string | null;
   avatar_url: string | null;
   telemedicine_enabled: boolean;
+  slug: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  zip_code: string | null;
+  whatsapp: string | null;
+  bio: string | null;
+  education: string | null;
+  experience: string | null;
   specialtyNames?: string[];
 }
 
@@ -112,6 +127,15 @@ const professionalSchema = z.object({
   email: z.string().email("Email inválido").optional().or(z.literal("")),
 });
 
+function generateSlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 export default function ProfessionalsPage() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
@@ -140,6 +164,7 @@ export default function ProfessionalsPage() {
   const [saving, setSaving] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   
   // Additional dialog states
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -157,6 +182,16 @@ export default function ProfessionalsPage() {
   const [formUserId, setFormUserId] = useState<string>("");
   const [formErrors, setFormErrors] = useState<{ name?: string; email?: string }>({});
 
+  // Public profile fields for create
+  const [formAddress, setFormAddress] = useState("");
+  const [formCity, setFormCity] = useState("");
+  const [formState, setFormState] = useState("");
+  const [formZipCode, setFormZipCode] = useState("");
+  const [formWhatsapp, setFormWhatsapp] = useState("");
+  const [formBio, setFormBio] = useState("");
+  const [formEducation, setFormEducation] = useState("");
+  const [formExperience, setFormExperience] = useState("");
+
   // Form state for edit
   const [editName, setEditName] = useState("");
   const [editSpecialtyIds, setEditSpecialtyIds] = useState<string[]>([]);
@@ -165,6 +200,16 @@ export default function ProfessionalsPage() {
   const [editEmail, setEditEmail] = useState("");
   const [editUserId, setEditUserId] = useState<string>("");
   const [editErrors, setEditErrors] = useState<{ name?: string; email?: string }>({});
+
+  // Public profile fields for edit
+  const [editAddress, setEditAddress] = useState("");
+  const [editCity, setEditCity] = useState("");
+  const [editState, setEditState] = useState("");
+  const [editZipCode, setEditZipCode] = useState("");
+  const [editWhatsapp, setEditWhatsapp] = useState("");
+  const [editBio, setEditBio] = useState("");
+  const [editEducation, setEditEducation] = useState("");
+  const [editExperience, setEditExperience] = useState("");
 
   // Avatar upload state
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -191,7 +236,7 @@ export default function ProfessionalsPage() {
     try {
       const { data, error } = await supabase
         .from('professionals')
-        .select('id, name, specialty, registration_number, phone, is_active, schedule, user_id, email, avatar_url, telemedicine_enabled')
+        .select('id, name, specialty, registration_number, phone, is_active, schedule, user_id, email, avatar_url, telemedicine_enabled, slug, address, city, state, zip_code, whatsapp, bio, education, experience')
         .eq('clinic_id', currentClinic.id)
         .order('name');
 
@@ -323,6 +368,9 @@ export default function ProfessionalsPage() {
         .filter((n): n is string => !!n);
       const specialtyDisplay = specialtyNames.join(', ') || null;
       
+      // Generate slug from name
+      const slug = generateSlug(formName);
+      
       const { data: newProfessional, error } = await supabase
         .from('professionals')
         .insert({
@@ -334,6 +382,15 @@ export default function ProfessionalsPage() {
           email: formEmail.trim() || null,
           user_id: formUserId || null,
           telemedicine_enabled: hasFeature('telemedicine') ? formTelemedicineEnabled : false,
+          slug,
+          address: formAddress.trim() || null,
+          city: formCity.trim() || null,
+          state: formState || null,
+          zip_code: formZipCode.replace(/\D/g, '') || null,
+          whatsapp: formWhatsapp.replace(/\D/g, '') || null,
+          bio: formBio.trim() || null,
+          education: formEducation.trim() || null,
+          experience: formExperience.trim() || null,
         })
         .select('id')
         .single();
@@ -425,6 +482,14 @@ export default function ProfessionalsPage() {
     setAvatarFile(null);
     setAvatarPreview(null);
     setFormTelemedicineEnabled(false);
+    setFormAddress("");
+    setFormCity("");
+    setFormState("");
+    setFormZipCode("");
+    setFormWhatsapp("");
+    setFormBio("");
+    setFormEducation("");
+    setFormExperience("");
   };
 
   const openScheduleDialog = (professional: Professional) => {
@@ -449,6 +514,16 @@ export default function ProfessionalsPage() {
     setEditAvatarFile(null);
     setEditAvatarPreview(professional.avatar_url || null);
     setEditTelemedicineEnabled(professional.telemedicine_enabled || false);
+    
+    // Load public profile fields
+    setEditAddress(professional.address || "");
+    setEditCity(professional.city || "");
+    setEditState(professional.state || "");
+    setEditZipCode(professional.zip_code || "");
+    setEditWhatsapp(professional.whatsapp || "");
+    setEditBio(professional.bio || "");
+    setEditEducation(professional.education || "");
+    setEditExperience(professional.experience || "");
     
     // Load existing specialties
     const existingSpecialtyIds = await fetchProfessionalSpecialties(professional.id);
@@ -505,6 +580,11 @@ export default function ProfessionalsPage() {
           avatarUrl = urlData.publicUrl;
         }
       }
+
+      // Generate new slug if name changed
+      const newSlug = editName !== selectedProfessional.name 
+        ? generateSlug(editName) 
+        : selectedProfessional.slug;
       
       const { error } = await supabase
         .from('professionals')
@@ -517,6 +597,15 @@ export default function ProfessionalsPage() {
           user_id: editUserId || null,
           avatar_url: avatarUrl,
           telemedicine_enabled: hasFeature('telemedicine') ? editTelemedicineEnabled : false,
+          slug: newSlug,
+          address: editAddress.trim() || null,
+          city: editCity.trim() || null,
+          state: editState || null,
+          zip_code: editZipCode.replace(/\D/g, '') || null,
+          whatsapp: editWhatsapp.replace(/\D/g, '') || null,
+          bio: editBio.trim() || null,
+          education: editEducation.trim() || null,
+          experience: editExperience.trim() || null,
         })
         .eq('id', selectedProfessional.id);
 
@@ -607,6 +696,32 @@ export default function ProfessionalsPage() {
     return format(date, "dd/MM", { locale: ptBR });
   };
 
+  const getPublicProfileUrl = (professional: Professional) => {
+    if (!currentClinic || !professional.slug) return null;
+    return `${window.location.origin}/profissional/${currentClinic.slug}/${professional.slug}`;
+  };
+
+  const handleCopyLink = async (professional: Professional) => {
+    const url = getPublicProfileUrl(professional);
+    if (!url) return;
+    
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(professional.id);
+      setTimeout(() => setCopiedId(null), 2000);
+      toast({
+        title: "Link copiado!",
+        description: "O link do perfil público foi copiado.",
+      });
+    } catch (error) {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o link.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const maxProfessionals = subscription?.plan?.max_professionals || 999;
   const activeProfessionals = professionals.filter(p => p.is_active).length;
   const usagePercentage = subscription ? (activeProfessionals / maxProfessionals) * 100 : 0;
@@ -652,164 +767,186 @@ export default function ProfessionalsPage() {
               Novo Profissional
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-2xl max-h-[90vh]">
             <DialogHeader>
               <DialogTitle>Cadastrar Profissional</DialogTitle>
             </DialogHeader>
-            <form onSubmit={handleCreateProfessional} className="space-y-4">
-              <div>
-                <Label htmlFor="profName">Nome *</Label>
-                <Input
-                  id="profName"
-                  value={formName}
-                  onChange={(e) => setFormName(e.target.value)}
-                  placeholder="Dr. João Silva"
-                  className={`mt-1.5 ${formErrors.name ? "border-destructive" : ""}`}
-                />
-                {formErrors.name && (
-                  <p className="mt-1 text-sm text-destructive">{formErrors.name}</p>
-                )}
-              </div>
-              <SpecialtySelector
-                selectedIds={formSpecialtyIds}
-                onChange={setFormSpecialtyIds}
-                groupedSpecialties={groupedSpecialties}
-                loading={loadingSpecialties}
-                getSpecialtyById={getSpecialtyById}
-              />
-              <div>
-                <Label htmlFor="profCRM">CRM / Registro</Label>
-                <Input
-                  id="profCRM"
-                  value={formCRM}
-                  onChange={(e) => setFormCRM(e.target.value)}
-                  placeholder="123456-SP"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profPhone">Telefone</Label>
-                <Input
-                  id="profPhone"
-                  value={formPhone}
-                  onChange={(e) => setFormPhone(e.target.value)}
-                  placeholder="(11) 99999-9999"
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="profEmail">Email</Label>
-                <Input
-                  id="profEmail"
-                  type="email"
-                  value={formEmail}
-                  onChange={(e) => setFormEmail(e.target.value)}
-                  placeholder="profissional@email.com"
-                  className={`mt-1.5 ${formErrors.email ? "border-destructive" : ""}`}
-                />
-                {formErrors.email && (
-                  <p className="mt-1 text-sm text-destructive">{formErrors.email}</p>
-                )}
-              </div>
-              
-              {/* Avatar upload */}
-              <div>
-                <Label>Foto do Profissional</Label>
-                <div className="mt-2 flex items-center gap-4">
-                  {avatarPreview ? (
-                    <img 
-                      src={avatarPreview} 
-                      alt="Preview" 
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-8 w-8 text-primary/60" />
-                    </div>
+            <ScrollArea className="max-h-[70vh] pr-4">
+              <form onSubmit={handleCreateProfessional} className="space-y-4">
+                <div>
+                  <Label htmlFor="profName">Nome *</Label>
+                  <Input
+                    id="profName"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    placeholder="Dr. João Silva"
+                    className={`mt-1.5 ${formErrors.name ? "border-destructive" : ""}`}
+                  />
+                  {formErrors.name && (
+                    <p className="mt-1 text-sm text-destructive">{formErrors.name}</p>
                   )}
-                  <div className="flex-1">
-                    <Input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setAvatarFile(file);
-                          setAvatarPreview(URL.createObjectURL(file));
-                        }
-                      }}
-                      className="cursor-pointer"
-                    />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      A foto será exibida no agendamento online
-                    </p>
-                  </div>
                 </div>
-              </div>
-
-              {/* Telemedicine Toggle */}
-              {hasFeature('telemedicine') && (
-                <div className="flex items-center justify-between rounded-lg border border-border p-4">
-                  <div className="flex items-center gap-3">
-                    <Video className="h-5 w-5 text-primary" />
-                    <div>
-                      <Label htmlFor="formTelemedicine" className="cursor-pointer">
-                        Atende por Telemedicina
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Habilitar consultas online por vídeo
+                <SpecialtySelector
+                  selectedIds={formSpecialtyIds}
+                  onChange={setFormSpecialtyIds}
+                  groupedSpecialties={groupedSpecialties}
+                  loading={loadingSpecialties}
+                  getSpecialtyById={getSpecialtyById}
+                />
+                <div>
+                  <Label htmlFor="profCRM">CRM / Registro</Label>
+                  <Input
+                    id="profCRM"
+                    value={formCRM}
+                    onChange={(e) => setFormCRM(e.target.value)}
+                    placeholder="123456-SP"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="profPhone">Telefone</Label>
+                  <Input
+                    id="profPhone"
+                    value={formPhone}
+                    onChange={(e) => setFormPhone(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="profEmail">Email</Label>
+                  <Input
+                    id="profEmail"
+                    type="email"
+                    value={formEmail}
+                    onChange={(e) => setFormEmail(e.target.value)}
+                    placeholder="profissional@email.com"
+                    className={`mt-1.5 ${formErrors.email ? "border-destructive" : ""}`}
+                  />
+                  {formErrors.email && (
+                    <p className="mt-1 text-sm text-destructive">{formErrors.email}</p>
+                  )}
+                </div>
+                
+                {/* Avatar upload */}
+                <div>
+                  <Label>Foto do Profissional</Label>
+                  <div className="mt-2 flex items-center gap-4">
+                    {avatarPreview ? (
+                      <img 
+                        src={avatarPreview} 
+                        alt="Preview" 
+                        className="w-16 h-16 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                        <User className="h-8 w-8 text-primary/60" />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setAvatarFile(file);
+                            setAvatarPreview(URL.createObjectURL(file));
+                          }
+                        }}
+                        className="cursor-pointer"
+                      />
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        A foto será exibida no agendamento online
                       </p>
                     </div>
                   </div>
-                  <Switch
-                    id="formTelemedicine"
-                    checked={formTelemedicineEnabled}
-                    onCheckedChange={setFormTelemedicineEnabled}
-                  />
                 </div>
-              )}
-              
-              {clinicUsers.length > 0 && (
-                <div>
-                  <Label htmlFor="profUser">Vincular usuário (Portal do Profissional)</Label>
-                  <Select value={formUserId || "none"} onValueChange={(val) => setFormUserId(val === "none" ? "" : val)}>
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue placeholder="Selecione um usuário (opcional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {clinicUsers
-                        .filter(u => !professionals.some(p => p.user_id === u.user_id))
-                        .map((user) => (
-                          <SelectItem key={user.user_id} value={user.user_id}>
-                            {user.profile?.name || "Usuário sem nome"}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Vincular permite que o profissional acesse o portal em /profissional
-                  </p>
-                </div>
-              )}
 
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setDialogOpen(false);
-                    resetForm();
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Cadastrar
-                </Button>
-              </div>
-            </form>
+                {/* Telemedicine Toggle */}
+                {hasFeature('telemedicine') && (
+                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                    <div className="flex items-center gap-3">
+                      <Video className="h-5 w-5 text-primary" />
+                      <div>
+                        <Label htmlFor="formTelemedicine" className="cursor-pointer">
+                          Atende por Telemedicina
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          Habilitar consultas online por vídeo
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      id="formTelemedicine"
+                      checked={formTelemedicineEnabled}
+                      onCheckedChange={setFormTelemedicineEnabled}
+                    />
+                  </div>
+                )}
+                
+                {clinicUsers.length > 0 && (
+                  <div>
+                    <Label htmlFor="profUser">Vincular usuário (Portal do Profissional)</Label>
+                    <Select value={formUserId || "none"} onValueChange={(val) => setFormUserId(val === "none" ? "" : val)}>
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue placeholder="Selecione um usuário (opcional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Nenhum</SelectItem>
+                        {clinicUsers
+                          .filter(u => !professionals.some(p => p.user_id === u.user_id))
+                          .map((user) => (
+                            <SelectItem key={user.user_id} value={user.user_id}>
+                              {user.profile?.name || "Usuário sem nome"}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Vincular permite que o profissional acesse o portal em /profissional
+                    </p>
+                  </div>
+                )}
+
+                {/* Public Profile Fields */}
+                <ProfessionalFormFields
+                  address={formAddress}
+                  setAddress={setFormAddress}
+                  city={formCity}
+                  setCity={setFormCity}
+                  state={formState}
+                  setState={setFormState}
+                  zipCode={formZipCode}
+                  setZipCode={setFormZipCode}
+                  whatsapp={formWhatsapp}
+                  setWhatsapp={setFormWhatsapp}
+                  bio={formBio}
+                  setBio={setFormBio}
+                  education={formEducation}
+                  setEducation={setFormEducation}
+                  experience={formExperience}
+                  setExperience={setFormExperience}
+                />
+
+                <div className="flex justify-end gap-3 pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      setDialogOpen(false);
+                      resetForm();
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button type="submit" disabled={saving}>
+                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Cadastrar
+                  </Button>
+                </div>
+              </form>
+            </ScrollArea>
           </DialogContent>
         </Dialog>
       </div>
@@ -860,6 +997,12 @@ export default function ProfessionalsPage() {
                             Telemedicina
                           </Badge>
                         )}
+                        {professional.slug && (
+                          <Badge variant="outline" className="text-xs gap-1">
+                            <Link className="h-3 w-3" />
+                            Perfil público
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -883,6 +1026,26 @@ export default function ProfessionalsPage() {
                         <Settings className="h-4 w-4 mr-2" />
                         Configurar horários
                       </DropdownMenuItem>
+                      {professional.slug && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleCopyLink(professional)}>
+                            {copiedId === professional.id ? (
+                              <Check className="h-4 w-4 mr-2 text-green-500" />
+                            ) : (
+                              <Copy className="h-4 w-4 mr-2" />
+                            )}
+                            Copiar link público
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => window.open(getPublicProfileUrl(professional) || '', '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-2" />
+                            Ver página pública
+                          </DropdownMenuItem>
+                        </>
+                      )}
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem 
                         className={professional.is_active ? "text-destructive" : "text-green-600"}
                         onClick={() => handleOpenDeactivate(professional)}
@@ -1000,156 +1163,178 @@ export default function ProfessionalsPage() {
 
       {/* Edit Professional Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>Editar Profissional</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEditProfessional} className="space-y-4">
-            <div>
-              <Label htmlFor="editProfName">Nome *</Label>
-              <Input
-                id="editProfName"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className={`mt-1.5 ${editErrors.name ? "border-destructive" : ""}`}
-              />
-              {editErrors.name && (
-                <p className="mt-1 text-sm text-destructive">{editErrors.name}</p>
-              )}
-            </div>
-            <SpecialtySelector
-              selectedIds={editSpecialtyIds}
-              onChange={setEditSpecialtyIds}
-              groupedSpecialties={groupedSpecialties}
-              loading={loadingSpecialties}
-              getSpecialtyById={getSpecialtyById}
-            />
-            <div>
-              <Label htmlFor="editProfCRM">CRM / Registro</Label>
-              <Input
-                id="editProfCRM"
-                value={editCRM}
-                onChange={(e) => setEditCRM(e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label htmlFor="editProfPhone">Telefone</Label>
-              <Input
-                id="editProfPhone"
-                value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
-                className="mt-1.5"
-              />
-            </div>
-            <div>
-              <Label htmlFor="editProfEmail">Email</Label>
-              <Input
-                id="editProfEmail"
-                type="email"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                className={`mt-1.5 ${editErrors.email ? "border-destructive" : ""}`}
-              />
-              {editErrors.email && (
-                <p className="mt-1 text-sm text-destructive">{editErrors.email}</p>
-              )}
-            </div>
-            
-            {/* Avatar upload for edit */}
-            <div>
-              <Label>Foto do Profissional</Label>
-              <div className="mt-2 flex items-center gap-4">
-                {editAvatarPreview ? (
-                  <img 
-                    src={editAvatarPreview} 
-                    alt="Preview" 
-                    className="w-16 h-16 rounded-full object-cover"
-                  />
-                ) : (
-                  <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="h-8 w-8 text-primary/60" />
-                  </div>
+          <ScrollArea className="max-h-[70vh] pr-4">
+            <form onSubmit={handleEditProfessional} className="space-y-4">
+              <div>
+                <Label htmlFor="editProfName">Nome *</Label>
+                <Input
+                  id="editProfName"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className={`mt-1.5 ${editErrors.name ? "border-destructive" : ""}`}
+                />
+                {editErrors.name && (
+                  <p className="mt-1 text-sm text-destructive">{editErrors.name}</p>
                 )}
-                <div className="flex-1">
-                  <Input 
-                    type="file" 
-                    accept="image/*" 
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setEditAvatarFile(file);
-                        setEditAvatarPreview(URL.createObjectURL(file));
-                      }
-                    }}
-                    className="cursor-pointer"
-                  />
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    A foto será exibida no agendamento online
-                  </p>
-                </div>
               </div>
-            </div>
-
-            {/* Telemedicine Toggle for Edit */}
-            {hasFeature('telemedicine') && (
-              <div className="flex items-center justify-between rounded-lg border border-border p-4">
-                <div className="flex items-center gap-3">
-                  <Video className="h-5 w-5 text-primary" />
-                  <div>
-                    <Label htmlFor="editTelemedicine" className="cursor-pointer">
-                      Atende por Telemedicina
-                    </Label>
-                    <p className="text-xs text-muted-foreground">
-                      Habilitar consultas online por vídeo
+              <SpecialtySelector
+                selectedIds={editSpecialtyIds}
+                onChange={setEditSpecialtyIds}
+                groupedSpecialties={groupedSpecialties}
+                loading={loadingSpecialties}
+                getSpecialtyById={getSpecialtyById}
+              />
+              <div>
+                <Label htmlFor="editProfCRM">CRM / Registro</Label>
+                <Input
+                  id="editProfCRM"
+                  value={editCRM}
+                  onChange={(e) => setEditCRM(e.target.value)}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editProfPhone">Telefone</Label>
+                <Input
+                  id="editProfPhone"
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="mt-1.5"
+                />
+              </div>
+              <div>
+                <Label htmlFor="editProfEmail">Email</Label>
+                <Input
+                  id="editProfEmail"
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  className={`mt-1.5 ${editErrors.email ? "border-destructive" : ""}`}
+                />
+                {editErrors.email && (
+                  <p className="mt-1 text-sm text-destructive">{editErrors.email}</p>
+                )}
+              </div>
+              
+              {/* Avatar upload for edit */}
+              <div>
+                <Label>Foto do Profissional</Label>
+                <div className="mt-2 flex items-center gap-4">
+                  {editAvatarPreview ? (
+                    <img 
+                      src={editAvatarPreview} 
+                      alt="Preview" 
+                      className="w-16 h-16 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="h-8 w-8 text-primary/60" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setEditAvatarFile(file);
+                          setEditAvatarPreview(URL.createObjectURL(file));
+                        }
+                      }}
+                      className="cursor-pointer"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      A foto será exibida no agendamento online
                     </p>
                   </div>
                 </div>
-                <Switch
-                  id="editTelemedicine"
-                  checked={editTelemedicineEnabled}
-                  onCheckedChange={setEditTelemedicineEnabled}
-                />
               </div>
-            )}
-            
-            {clinicUsers.length > 0 && (
-              <div>
-                <Label htmlFor="editProfUser">Vincular usuário</Label>
-                <Select value={editUserId || "none"} onValueChange={(val) => setEditUserId(val === "none" ? "" : val)}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue placeholder="Selecione um usuário (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {clinicUsers
-                      .filter(u => 
-                        !professionals.some(p => p.user_id === u.user_id && p.id !== selectedProfessional?.id)
-                      )
-                      .map((user) => (
-                        <SelectItem key={user.user_id} value={user.user_id}>
-                          {user.profile?.name || "Usuário sem nome"}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
 
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setEditDialogOpen(false)}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar
-              </Button>
-            </div>
-          </form>
+              {/* Telemedicine Toggle for Edit */}
+              {hasFeature('telemedicine') && (
+                <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                  <div className="flex items-center gap-3">
+                    <Video className="h-5 w-5 text-primary" />
+                    <div>
+                      <Label htmlFor="editTelemedicine" className="cursor-pointer">
+                        Atende por Telemedicina
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Habilitar consultas online por vídeo
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="editTelemedicine"
+                    checked={editTelemedicineEnabled}
+                    onCheckedChange={setEditTelemedicineEnabled}
+                  />
+                </div>
+              )}
+              
+              {clinicUsers.length > 0 && (
+                <div>
+                  <Label htmlFor="editProfUser">Vincular usuário</Label>
+                  <Select value={editUserId || "none"} onValueChange={(val) => setEditUserId(val === "none" ? "" : val)}>
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue placeholder="Selecione um usuário (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {clinicUsers
+                        .filter(u => 
+                          !professionals.some(p => p.user_id === u.user_id && p.id !== selectedProfessional?.id)
+                        )
+                        .map((user) => (
+                          <SelectItem key={user.user_id} value={user.user_id}>
+                            {user.profile?.name || "Usuário sem nome"}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Public Profile Fields for Edit */}
+              <ProfessionalFormFields
+                address={editAddress}
+                setAddress={setEditAddress}
+                city={editCity}
+                setCity={setEditCity}
+                state={editState}
+                setState={setEditState}
+                zipCode={editZipCode}
+                setZipCode={setEditZipCode}
+                whatsapp={editWhatsapp}
+                setWhatsapp={setEditWhatsapp}
+                bio={editBio}
+                setBio={setEditBio}
+                education={editEducation}
+                setEducation={setEditEducation}
+                experience={editExperience}
+                setExperience={setEditExperience}
+              />
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={saving}>
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Salvar
+                </Button>
+              </div>
+            </form>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
 
