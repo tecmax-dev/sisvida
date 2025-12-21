@@ -1,6 +1,8 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { useSessionTimeout } from "./useSessionTimeout";
+import { SessionExpiryWarning } from "@/components/auth/SessionExpiryWarning";
 
 interface Profile {
   id: string;
@@ -53,6 +55,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
+
+  // Função de logout
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setProfile(null);
+    setUserRoles([]);
+    setCurrentClinic(null);
+    setIsSuperAdmin(false);
+    setRolesLoaded(false);
+  };
+
+  // Hook de timeout de sessão
+  const {
+    saveLoginTime,
+    clearSessionData,
+    renewSession,
+    showWarning,
+    timeRemaining,
+  } = useSessionTimeout({
+    maxSessionDuration: 480, // 8 horas
+    inactivityTimeout: 30,   // 30 minutos
+    warningTime: 5,          // 5 minutos de aviso
+    onExpire: handleSignOut,
+    enabled: !!user
+  });
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -142,6 +169,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Salvar tempo de login quando faz login
+          if (event === 'SIGNED_IN') {
+            saveLoginTime();
+          }
+          
           setLoading(true);
           setRolesLoaded(false);
           // Defer data fetching to avoid deadlock
@@ -149,6 +181,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             loadUserData(session.user.id);
           }, 0);
         } else {
+          // Limpar dados de sessão ao deslogar
+          if (event === 'SIGNED_OUT') {
+            clearSessionData();
+          }
+          
           setProfile(null);
           setUserRoles([]);
           setCurrentClinic(null);
@@ -171,15 +208,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [saveLoginTime, clearSessionData]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setProfile(null);
-    setUserRoles([]);
-    setCurrentClinic(null);
-    setIsSuperAdmin(false);
-    setRolesLoaded(false);
+    clearSessionData();
+    await handleSignOut();
   };
 
   return (
@@ -197,6 +230,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshProfile
     }}>
       {children}
+      <SessionExpiryWarning
+        open={showWarning}
+        timeRemaining={timeRemaining}
+        onRenew={renewSession}
+        onLogout={signOut}
+      />
     </AuthContext.Provider>
   );
 }
