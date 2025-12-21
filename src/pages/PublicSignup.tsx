@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/layout/Logo";
-import { ArrowRight, Check, Eye, EyeOff, MessageCircle, Loader2 } from "lucide-react";
+import { ArrowRight, Check, Eye, EyeOff, MessageCircle, Loader2, Star, Shield, Clock, Users, ChevronDown, Quote } from "lucide-react";
 import { z } from "zod";
 
 const signupSchema = z.object({
@@ -34,6 +34,28 @@ const benefits = [
   "Gestão financeira integrada",
   "Relatórios e métricas em tempo real",
   "Suporte em português",
+];
+
+const stats = [
+  { icon: Users, value: "+2.000", label: "Clínicas ativas" },
+  { icon: Clock, value: "50.000+", label: "Agendamentos/mês" },
+  { icon: Star, value: "4.9", label: "Avaliação média" },
+  { icon: Shield, value: "99.9%", label: "Uptime garantido" },
+];
+
+const testimonials = [
+  {
+    name: "Dra. Juliane Leite",
+    role: "Dermatologista",
+    quote: "O Eclini transformou completamente a gestão da minha clínica. Reduzi em 70% o tempo gasto com agendamentos.",
+    avatar: "https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
+  },
+  {
+    name: "Dr. José Alcides",
+    role: "Cardiologista", 
+    quote: "A integração com WhatsApp reduziu drasticamente as faltas. Meus pacientes adoram a confirmação automática.",
+    avatar: "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80",
+  },
 ];
 
 function formatPhone(value: string): string {
@@ -149,8 +171,8 @@ export default function PublicSignup() {
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">
-      {/* Left Column - Branding & Benefits */}
-      <div className="relative lg:w-1/2 bg-gradient-to-br from-primary via-primary to-primary-dark p-6 sm:p-8 lg:p-12 flex flex-col overflow-hidden">
+      {/* Left Column - Branding & Benefits - SCROLLABLE */}
+      <div className="relative lg:w-1/2 lg:h-screen lg:overflow-y-auto bg-gradient-to-br from-primary via-primary to-primary-dark p-6 sm:p-8 lg:p-12 flex flex-col scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent">
         {/* Background decorations */}
         <div className="absolute top-0 right-0 w-64 sm:w-96 h-64 sm:h-96 bg-white/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
         <div className="absolute bottom-0 left-0 w-64 sm:w-96 h-64 sm:h-96 bg-white/5 rounded-full blur-3xl -translate-x-1/2 translate-y-1/2" />
@@ -192,14 +214,14 @@ export default function PublicSignup() {
         </div>
         
         {/* Doctor Image */}
-        <div className="relative z-10 mt-6 lg:mt-auto lg:pt-8 flex justify-center lg:justify-start">
+        <div className="relative z-10 mt-6 lg:mt-8 flex justify-center lg:justify-start">
           <div className="relative">
             {/* Glow effect */}
             <div className="absolute inset-0 bg-white/20 rounded-2xl blur-2xl scale-95" />
             <img 
               src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80" 
               alt="Profissional de saúde" 
-              className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-64 lg:h-64 xl:w-72 xl:h-72 object-cover rounded-2xl shadow-2xl"
+              className="relative w-32 h-32 sm:w-40 sm:h-40 md:w-48 md:h-48 lg:w-56 lg:h-56 object-cover rounded-2xl shadow-2xl"
             />
             {/* Floating badge */}
             <div className="absolute -bottom-2 -right-2 sm:-bottom-3 sm:-right-3 bg-white rounded-lg px-2 py-1 sm:px-3 sm:py-1.5 shadow-lg">
@@ -210,10 +232,67 @@ export default function PublicSignup() {
             </div>
           </div>
         </div>
+
+        {/* Stats Section */}
+        <div className="relative z-10 mt-8 lg:mt-10">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            {stats.map((stat, i) => (
+              <div key={i} className="bg-white/10 backdrop-blur-sm rounded-xl p-3 sm:p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  <stat.icon className="h-4 w-4 text-white/70" />
+                  <span className="text-lg sm:text-xl font-bold text-white">{stat.value}</span>
+                </div>
+                <span className="text-xs text-white/60">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Testimonials Section */}
+        <div className="relative z-10 mt-8 lg:mt-10 space-y-4">
+          <h3 className="text-sm font-medium text-white/60 uppercase tracking-wider">O que nossos clientes dizem</h3>
+          
+          {testimonials.map((testimonial, i) => (
+            <div key={i} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-5">
+              <Quote className="h-5 w-5 text-white/40 mb-2" />
+              <p className="text-sm text-white/90 italic mb-4">"{testimonial.quote}"</p>
+              <div className="flex items-center gap-3">
+                <img 
+                  src={testimonial.avatar} 
+                  alt={testimonial.name}
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+                <div>
+                  <p className="text-sm font-medium text-white">{testimonial.name}</p>
+                  <p className="text-xs text-white/60">{testimonial.role}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Trust badges */}
+        <div className="relative z-10 mt-8 lg:mt-10 pb-4">
+          <div className="flex flex-wrap items-center gap-4 justify-center lg:justify-start">
+            <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg">
+              <Shield className="h-4 w-4 text-white/70" />
+              <span className="text-xs text-white/80">Dados criptografados</span>
+            </div>
+            <div className="flex items-center gap-2 px-3 py-2 bg-white/10 rounded-lg">
+              <Check className="h-4 w-4 text-white/70" />
+              <span className="text-xs text-white/80">LGPD Compliant</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Scroll indicator - visible only on desktop */}
+        <div className="hidden lg:flex justify-center mt-4 animate-bounce">
+          <ChevronDown className="h-5 w-5 text-white/40" />
+        </div>
       </div>
 
-      {/* Right Column - Form */}
-      <div className="lg:w-1/2 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-background">
+      {/* Right Column - Form - FIXED */}
+      <div className="lg:w-1/2 lg:h-screen lg:sticky lg:top-0 flex items-center justify-center p-6 sm:p-8 lg:p-12 bg-background overflow-y-auto">
         <div className="w-full max-w-md">
           <div className="text-center lg:text-left mb-6 sm:mb-8">
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-foreground">
