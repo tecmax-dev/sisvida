@@ -12,6 +12,7 @@ import {
   Stethoscope,
   ClipboardList,
   Wallet,
+  Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -33,6 +34,12 @@ const mainFeatures = [
     icon: FileText, 
     title: "Prontuário Eletrônico", 
     description: "Histórico completo do paciente, anamnese personalizável, prescrições e atestados com assinatura digital.",
+    highlight: true
+  },
+  { 
+    icon: Video, 
+    title: "Teleconsulta Integrada", 
+    description: "Consultas por vídeo diretamente pelo sistema. Paciente acessa via link único, sem instalar nada. Compartilhe tela e documentos.",
     highlight: true
   },
 ];
@@ -67,7 +74,7 @@ export function FeaturesSection() {
         </div>
 
         {/* Main Features - Large Cards */}
-        <div className="grid md:grid-cols-3 gap-6 lg:gap-8 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8 mb-12">
           {mainFeatures.map((feature, i) => (
             <div
               key={i}
