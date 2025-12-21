@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -27,7 +27,6 @@ export default function Auth() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fromExpiredLink, setFromExpiredLink] = useState(false);
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [errors, setErrors] = useState<{ 
     email?: string; 
     password?: string; 
@@ -35,8 +34,24 @@ export default function Auth() {
     name?: string 
   }>({});
   
+  // useRef para controlar o fluxo de recuperação - atualizado imediatamente sem re-render
+  const isRecoveryFlowRef = useRef(false);
+  
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Verificar URL hash IMEDIATAMENTE na inicialização - antes de qualquer coisa
+  useEffect(() => {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const type = hashParams.get("type");
+    const accessToken = hashParams.get("access_token");
+    
+    // Se for recovery flow, marcar ref IMEDIATAMENTE
+    if (type === "recovery" && accessToken) {
+      isRecoveryFlowRef.current = true;
+      setView("reset-password");
+    }
+  }, []);
 
   useEffect(() => {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -48,6 +63,7 @@ export default function Auth() {
     if (error === "access_denied") {
       // Clear the hash from URL
       window.history.replaceState(null, '', window.location.pathname);
+      isRecoveryFlowRef.current = false;
       
       if (errorCode === "otp_expired") {
         toast({
@@ -68,23 +84,21 @@ export default function Auth() {
       }
       return;
     }
-    
-    // Check if user is coming from a valid password reset link
-    const type = hashParams.get("type");
-    const accessToken = hashParams.get("access_token");
-    
-    if (type === "recovery" && accessToken) {
-      setView("reset-password");
-    }
   }, [toast]);
 
   useEffect(() => {
     const checkSuperAdminAndRedirect = async (userId: string) => {
+      // Verificar ref antes de redirecionar
+      if (isRecoveryFlowRef.current) return;
+      
       const { data } = await supabase
         .from('super_admins')
         .select('id')
         .eq('user_id', userId)
         .maybeSingle();
+      
+      // Verificar ref novamente após a query assíncrona
+      if (isRecoveryFlowRef.current) return;
       
       if (data) {
         navigate("/admin");
@@ -94,42 +108,55 @@ export default function Auth() {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Use PASSWORD_RECOVERY event - this is the reliable way to detect recovery flow
+      // PASSWORD_RECOVERY - marcar ref e não redirecionar
       if (event === "PASSWORD_RECOVERY") {
+        isRecoveryFlowRef.current = true;
         setView("reset-password");
-        setIsResettingPassword(true);
-        return; // Don't redirect
+        return;
       }
       
-      // Don't redirect if we're in password reset flow
-      if (isResettingPassword) return;
+      // Verificar ref (síncrono e confiável)
+      if (isRecoveryFlowRef.current) return;
       
-      // Also check URL hash as fallback
+      // Verificar URL hash como fallback
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const isRecoveryFlow = hashParams.get("type") === "recovery" || 
-                             window.location.hash.includes("type=recovery");
+      const isRecoveryInHash = hashParams.get("type") === "recovery" || 
+                               window.location.hash.includes("type=recovery");
       
-      if (isRecoveryFlow) return;
+      if (isRecoveryInHash) {
+        isRecoveryFlowRef.current = true;
+        return;
+      }
       
       if (session?.user) {
         setTimeout(() => {
-          checkSuperAdminAndRedirect(session.user.id);
+          // Verificar ref novamente antes de redirecionar
+          if (!isRecoveryFlowRef.current) {
+            checkSuperAdminAndRedirect(session.user.id);
+          }
         }, 0);
       }
     });
 
+    // Verificar sessão existente
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // Check URL hash directly for recovery flow
-      const hashParams = new URLSearchParams(window.location.hash.substring(1));
-      const isRecoveryFlow = hashParams.get("type") === "recovery";
+      // Verificar ref ANTES de redirecionar
+      if (isRecoveryFlowRef.current) return;
       
-      if (session?.user && !isRecoveryFlow && !isResettingPassword) {
+      // Verificar URL hash como dupla checagem
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      if (hashParams.get("type") === "recovery") {
+        isRecoveryFlowRef.current = true;
+        return;
+      }
+      
+      if (session?.user) {
         checkSuperAdminAndRedirect(session.user.id);
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, isResettingPassword]);
+  }, [navigate]); // Removido isResettingPassword das dependências!
 
   const validateForm = () => {
     const newErrors: typeof errors = {};
@@ -228,9 +255,9 @@ export default function Auth() {
         description: "Você já pode fazer login com sua nova senha.",
       });
       
-      // Clear the hash from URL and reset state
+      // Clear the hash from URL and reset ref
       window.history.replaceState(null, '', window.location.pathname);
-      setIsResettingPassword(false);
+      isRecoveryFlowRef.current = false;
       
       setPassword("");
       setConfirmPassword("");
