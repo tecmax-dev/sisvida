@@ -14,6 +14,7 @@ import {
   Sparkles,
   Camera,
   User,
+  Video,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,7 +64,9 @@ import { ScheduleDialog } from "@/components/professionals/ScheduleDialog";
 import { SpecialtySelector } from "@/components/professionals/SpecialtySelector";
 import { useSpecialties } from "@/hooks/useSpecialties";
 import { useSubscription } from "@/hooks/useSubscription";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { Json } from "@/integrations/supabase/types";
+import { Switch } from "@/components/ui/switch";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -78,6 +81,7 @@ interface Professional {
   user_id: string | null;
   email: string | null;
   avatar_url: string | null;
+  telemedicine_enabled: boolean;
   specialtyNames?: string[];
 }
 
@@ -128,6 +132,7 @@ export default function ProfessionalsPage() {
     professionalCount: subProfessionalCount,
     refetch: refetchSubscription,
   } = useSubscription();
+  const { hasFeature } = usePlanFeatures();
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [clinicUsers, setClinicUsers] = useState<ClinicUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,6 +172,10 @@ export default function ProfessionalsPage() {
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
   const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
 
+  // Telemedicine state
+  const [formTelemedicineEnabled, setFormTelemedicineEnabled] = useState(false);
+  const [editTelemedicineEnabled, setEditTelemedicineEnabled] = useState(false);
+
   useEffect(() => {
     if (currentClinic) {
       fetchProfessionals();
@@ -182,7 +191,7 @@ export default function ProfessionalsPage() {
     try {
       const { data, error } = await supabase
         .from('professionals')
-        .select('id, name, specialty, registration_number, phone, is_active, schedule, user_id, email, avatar_url')
+        .select('id, name, specialty, registration_number, phone, is_active, schedule, user_id, email, avatar_url, telemedicine_enabled')
         .eq('clinic_id', currentClinic.id)
         .order('name');
 
@@ -324,6 +333,7 @@ export default function ProfessionalsPage() {
           phone: formPhone.trim() || null,
           email: formEmail.trim() || null,
           user_id: formUserId || null,
+          telemedicine_enabled: hasFeature('telemedicine') ? formTelemedicineEnabled : false,
         })
         .select('id')
         .single();
@@ -414,6 +424,7 @@ export default function ProfessionalsPage() {
     setFormErrors({});
     setAvatarFile(null);
     setAvatarPreview(null);
+    setFormTelemedicineEnabled(false);
   };
 
   const openScheduleDialog = (professional: Professional) => {
@@ -437,6 +448,7 @@ export default function ProfessionalsPage() {
     setEditErrors({});
     setEditAvatarFile(null);
     setEditAvatarPreview(professional.avatar_url || null);
+    setEditTelemedicineEnabled(professional.telemedicine_enabled || false);
     
     // Load existing specialties
     const existingSpecialtyIds = await fetchProfessionalSpecialties(professional.id);
@@ -504,6 +516,7 @@ export default function ProfessionalsPage() {
           email: editEmail.trim() || null,
           user_id: editUserId || null,
           avatar_url: avatarUrl,
+          telemedicine_enabled: hasFeature('telemedicine') ? editTelemedicineEnabled : false,
         })
         .eq('id', selectedProfessional.id);
 
@@ -733,6 +746,28 @@ export default function ProfessionalsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Telemedicine Toggle */}
+              {hasFeature('telemedicine') && (
+                <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                  <div className="flex items-center gap-3">
+                    <Video className="h-5 w-5 text-primary" />
+                    <div>
+                      <Label htmlFor="formTelemedicine" className="cursor-pointer">
+                        Atende por Telemedicina
+                      </Label>
+                      <p className="text-xs text-muted-foreground">
+                        Habilitar consultas online por vídeo
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="formTelemedicine"
+                    checked={formTelemedicineEnabled}
+                    onCheckedChange={setFormTelemedicineEnabled}
+                  />
+                </div>
+              )}
               
               {clinicUsers.length > 0 && (
                 <div>
@@ -818,6 +853,14 @@ export default function ProfessionalsPage() {
                           CRM: {professional.registration_number}
                         </p>
                       )}
+                      <div className="flex items-center gap-2 mt-1">
+                        {professional.telemedicine_enabled && (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <Video className="h-3 w-3" />
+                            Telemedicina
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
                   
@@ -1047,6 +1090,28 @@ export default function ProfessionalsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Telemedicine Toggle for Edit */}
+            {hasFeature('telemedicine') && (
+              <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                <div className="flex items-center gap-3">
+                  <Video className="h-5 w-5 text-primary" />
+                  <div>
+                    <Label htmlFor="editTelemedicine" className="cursor-pointer">
+                      Atende por Telemedicina
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Habilitar consultas online por vídeo
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="editTelemedicine"
+                  checked={editTelemedicineEnabled}
+                  onCheckedChange={setEditTelemedicineEnabled}
+                />
+              </div>
+            )}
             
             {clinicUsers.length > 0 && (
               <div>

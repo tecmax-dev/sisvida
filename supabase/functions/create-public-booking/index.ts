@@ -197,7 +197,7 @@ serve(async (req) => {
     // Verify professional exists, is active, and belongs to clinic
     const { data: professional, error: profError } = await supabase
       .from('professionals')
-      .select('id, is_active, schedule, appointment_duration')
+      .select('id, is_active, schedule, appointment_duration, telemedicine_enabled')
       .eq('id', professionalId)
       .eq('clinic_id', clinicId)
       .single();
@@ -209,6 +209,44 @@ serve(async (req) => {
 
     if (!professional.is_active) {
       return errorResponse('Este profissional não está disponível');
+    }
+
+    // Validate telemedicine requirements
+    if (type === 'telemedicine') {
+      // Check if professional has telemedicine enabled
+      if (!professional.telemedicine_enabled) {
+        console.error('[create-public-booking] Professional does not offer telemedicine:', professionalId);
+        return errorResponse('Este profissional não oferece consultas por telemedicina');
+      }
+
+      // Check if clinic plan includes telemedicine feature
+      const { data: subscriptionData } = await supabase
+        .from('subscriptions')
+        .select('plan_id')
+        .eq('clinic_id', clinicId)
+        .in('status', ['trial', 'active'])
+        .maybeSingle();
+
+      if (!subscriptionData?.plan_id) {
+        return errorResponse('O plano desta clínica não inclui telemedicina');
+      }
+
+      const { data: planFeature } = await supabase
+        .from('plan_features')
+        .select(`
+          feature_id,
+          system_features!inner(key)
+        `)
+        .eq('plan_id', subscriptionData.plan_id)
+        .eq('system_features.key', 'telemedicine')
+        .maybeSingle();
+
+      if (!planFeature) {
+        console.error('[create-public-booking] Clinic plan does not include telemedicine:', clinicId);
+        return errorResponse('O plano desta clínica não inclui telemedicina');
+      }
+
+      console.log('[create-public-booking] Telemedicine validation passed for clinic:', clinicId);
     }
 
     // Verify procedure belongs to clinic (if provided)
