@@ -132,3 +132,37 @@ export function formatAppointmentCancellation(
 
   return lines.join('\n');
 }
+
+export function formatTelemedicineInvite(
+  patientName: string,
+  clinicName: string,
+  date: string,
+  time: string,
+  professionalName: string,
+  telemedicineLink: string
+): string {
+  const lines = [
+    `Olá ${patientName}! 👋`,
+    ``,
+    `Sua *teleconsulta* foi agendada com sucesso!`,
+    ``,
+    `📅 *Data:* ${date}`,
+    `🕐 *Horário:* ${time}`,
+    `👨‍⚕️ *Profissional:* ${professionalName}`,
+    `🏥 *Clínica:* ${clinicName}`,
+    ``,
+    `📹 *Link para a consulta:*`,
+    telemedicineLink,
+    ``,
+    `⚠️ *Importante:*`,
+    `• Acesse o link 5 minutos antes do horário`,
+    `• Use um navegador atualizado (Chrome, Firefox, Safari)`,
+    `• Verifique se sua câmera e microfone estão funcionando`,
+    `• Escolha um local silencioso e bem iluminado`,
+    ``,
+    `Atenciosamente,`,
+    `Equipe ${clinicName}`,
+  ];
+
+  return lines.join('\n');
+}
