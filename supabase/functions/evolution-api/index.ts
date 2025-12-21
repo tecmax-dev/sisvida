@@ -9,7 +9,7 @@ const corsHeaders = {
 interface EvolutionRequest {
   clinicId: string;
   action: 'fetchInstances' | 'create' | 'connect' | 'connectionState' | 'logout';
-  payload?: Record<string, any>;
+  payload?: Record<string, unknown>;
 }
 
 serve(async (req) => {
@@ -19,16 +19,64 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+    // 1. Verify Authorization header exists
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('[evolution-api] Missing Authorization header');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 2. Create client with user's auth to verify identity
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const { data: { user }, error: authError } = await supabaseAuth.auth.getUser();
+    if (authError || !user) {
+      console.error('[evolution-api] Invalid token:', authError?.message);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 3. Parse request body
     const { clinicId, action, payload } = await req.json() as EvolutionRequest;
 
-    console.log(`Evolution API request: ${action} for clinic ${clinicId}`);
+    console.log(`[evolution-api] User ${user.id} requesting: ${action} for clinic ${clinicId}`);
 
-    // Create Supabase client
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    if (!clinicId || !action) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'clinicId e action são obrigatórios' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 4. Create service role client for RPC call
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch Evolution config for this clinic
+    // 5. Verify user is admin of this clinic (not just has access)
+    const { data: isAdmin, error: adminError } = await supabase.rpc('is_clinic_admin', {
+      _user_id: user.id,
+      _clinic_id: clinicId
+    });
+
+    if (adminError || !isAdmin) {
+      console.error(`[evolution-api] User ${user.id} is not admin of clinic ${clinicId}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Apenas administradores podem gerenciar o WhatsApp' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // 6. Fetch Evolution config for this clinic
     const { data: config, error: configError } = await supabase
       .from('evolution_configs')
       .select('*')
@@ -98,7 +146,7 @@ serve(async (req) => {
         );
     }
 
-    console.log(`Calling Evolution API: ${method} ${evolutionUrl}`);
+    console.log(`[evolution-api] User ${user.id} calling Evolution API: ${method} ${evolutionUrl}`);
 
     const headers: Record<string, string> = {
       'apikey': api_key,

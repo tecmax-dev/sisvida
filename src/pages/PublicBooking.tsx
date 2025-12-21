@@ -304,82 +304,85 @@ export default function PublicBooking() {
       return;
     }
 
+    // Client-side validation before submitting
+    const trimmedName = patientName.trim();
+    if (trimmedName.length < 2 || trimmedName.length > 100) {
+      toast({
+        title: "Nome inválido",
+        description: "O nome deve ter entre 2 e 100 caracteres",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const phoneClean = patientPhone.replace(/\D/g, '');
+    if (phoneClean.length < 10 || phoneClean.length > 11) {
+      toast({
+        title: "Telefone inválido",
+        description: "O telefone deve ter 10 ou 11 dígitos",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (patientEmail && patientEmail.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(patientEmail.trim())) {
+        toast({
+          title: "Email inválido",
+          description: "Por favor, insira um email válido",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
-      
-      // Calculate end time using procedure duration or professional duration
-      const [hours, minutes] = selectedTime.split(':').map(Number);
-      const endDate = new Date();
-      endDate.setHours(hours, minutes + appointmentDuration, 0, 0);
-      const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
-      // Create or find patient
-      const phoneClean = patientPhone.replace(/\D/g, '');
-      
-      let { data: existingPatient } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('clinic_id', clinic.id)
-        .eq('phone', phoneClean)
-        .single();
+      // Call secure edge function for booking
+      const { data, error } = await supabase.functions.invoke('create-public-booking', {
+        body: {
+          clinicId: clinic.id,
+          professionalId: selectedProfessional,
+          date: dateStr,
+          time: selectedTime,
+          type: selectedType,
+          patientName: trimmedName,
+          patientPhone: phoneClean,
+          patientEmail: patientEmail?.trim() || null,
+          procedureId: selectedProcedure || null,
+          insurancePlanId: selectedInsurance || null,
+          durationMinutes: appointmentDuration,
+        },
+      });
 
-      let patientId: string;
+      if (error) throw error;
 
-      if (existingPatient) {
-        patientId = existingPatient.id;
-      } else {
-        const { data: newPatient, error: patientError } = await supabase
-          .from('patients')
-          .insert({
-            clinic_id: clinic.id,
-            name: patientName.trim(),
-            phone: phoneClean,
-            email: patientEmail || null,
-            insurance_plan_id: selectedInsurance || null,
-          })
-          .select('id')
-          .single();
-
-        if (patientError) throw patientError;
-        patientId = newPatient.id;
+      if (!data?.success) {
+        throw new Error(data?.error || 'Erro ao criar agendamento');
       }
-
-      // Create appointment with procedure_id if selected
-      const { error: appointmentError } = await supabase
-        .from('appointments')
-        .insert([{
-          clinic_id: clinic.id,
-          patient_id: patientId,
-          professional_id: selectedProfessional,
-          procedure_id: selectedProcedure || null,
-          appointment_date: dateStr,
-          start_time: selectedTime,
-          end_time: endTime,
-          duration_minutes: appointmentDuration,
-          type: selectedType as "first_visit" | "return" | "exam" | "procedure",
-          status: 'scheduled' as const,
-        }]);
-
-      if (appointmentError) throw appointmentError;
 
       setSuccess(true);
       toast({
         title: "Agendamento realizado!",
         description: "Você receberá uma confirmação em breve.",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error creating appointment:', error);
       
-      // Check for schedule validation errors
-      const errorMessage = error?.message || "";
+      const errorMessage = error instanceof Error ? error.message : String(error);
       let title = "Erro ao agendar";
-      let description = error.message || "Tente novamente";
+      let description = errorMessage || "Tente novamente";
       
-      if (errorMessage.includes("HORARIO_INVALIDO")) {
+      if (errorMessage.includes("HORARIO_INVALIDO") || errorMessage.includes("horário")) {
         title = "Horário indisponível";
         const match = errorMessage.match(/HORARIO_INVALIDO:\s*(.+)/);
-        description = match ? match[1].trim() : "O profissional não atende neste horário.";
+        description = match ? match[1].trim() : errorMessage;
+      } else if (errorMessage.includes("Rate limit") || errorMessage.includes("Limite")) {
+        title = "Muitas tentativas";
+        description = "Por favor, aguarde alguns minutos antes de tentar novamente.";
       }
       
       toast({
