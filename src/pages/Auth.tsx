@@ -87,11 +87,12 @@ export default function Auth() {
   }, [toast]);
 
   useEffect(() => {
-    const checkSuperAdminAndRedirect = async (userId: string) => {
+    const checkUserAndRedirect = async (userId: string) => {
       // Verificar ref antes de redirecionar
       if (isRecoveryFlowRef.current) return;
       
-      const { data } = await supabase
+      // Verificar se é super admin
+      const { data: superAdminData } = await supabase
         .from('super_admins')
         .select('id')
         .eq('user_id', userId)
@@ -100,10 +101,27 @@ export default function Auth() {
       // Verificar ref novamente após a query assíncrona
       if (isRecoveryFlowRef.current) return;
       
-      if (data) {
+      if (superAdminData) {
         navigate("/admin");
-      } else {
+        return;
+      }
+      
+      // Verificar se usuário tem roles/clínica
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('clinic_id')
+        .eq('user_id', userId)
+        .limit(1);
+      
+      // Verificar ref novamente
+      if (isRecoveryFlowRef.current) return;
+      
+      // Se tem pelo menos uma clínica, vai para dashboard
+      if (rolesData && rolesData.length > 0) {
         navigate("/dashboard");
+      } else {
+        // Sem clínica, vai para setup
+        navigate("/clinic-setup");
       }
     };
 
@@ -132,7 +150,7 @@ export default function Auth() {
         setTimeout(() => {
           // Verificar ref novamente antes de redirecionar
           if (!isRecoveryFlowRef.current) {
-            checkSuperAdminAndRedirect(session.user.id);
+            checkUserAndRedirect(session.user.id);
           }
         }, 0);
       }
@@ -151,7 +169,7 @@ export default function Auth() {
       }
       
       if (session?.user) {
-        checkSuperAdminAndRedirect(session.user.id);
+        checkUserAndRedirect(session.user.id);
       }
     });
 
