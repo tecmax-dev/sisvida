@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.create-public-booking]
 verify_jwt = false
+
+[functions.telemedicine]
+verify_jwt = true
