@@ -578,6 +578,7 @@ export type Database = {
           closing_time: string | null
           cnpj: string | null
           created_at: string
+          custom_map_embed_url: string | null
           email: string | null
           enforce_schedule_validation: boolean | null
           id: string
@@ -600,6 +601,7 @@ export type Database = {
           closing_time?: string | null
           cnpj?: string | null
           created_at?: string
+          custom_map_embed_url?: string | null
           email?: string | null
           enforce_schedule_validation?: boolean | null
           id?: string
@@ -622,6 +624,7 @@ export type Database = {
           closing_time?: string | null
           cnpj?: string | null
           created_at?: string
+          custom_map_embed_url?: string | null
           email?: string | null
           enforce_schedule_validation?: boolean | null
           id?: string
