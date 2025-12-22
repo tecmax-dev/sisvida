@@ -38,7 +38,7 @@ const AlertDialogContent = React.forwardRef<
         className,
       )}
       onFocusOutside={(e) => {
-        // Prevenir fechamento quando o foco sai (ex: trocar de aba do navegador)
+        // SEMPRE prevenir fechamento quando o foco sai (ex: trocar de aba do navegador)
         e.preventDefault();
         onFocusOutside?.(e);
       }}
