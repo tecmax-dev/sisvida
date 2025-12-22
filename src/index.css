@@ -68,14 +68,14 @@
     
     --radius: 0.75rem;
     
-    /* Sidebar */
-    --sidebar-background: 210 30% 12%;
-    --sidebar-foreground: 210 15% 85%;
-    --sidebar-primary: 174 62% 55%;
+    /* Sidebar - Clean White Professional Theme */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 210 25% 35%;
+    --sidebar-primary: 174 62% 47%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 25% 18%;
-    --sidebar-accent-foreground: 210 15% 90%;
-    --sidebar-border: 210 25% 20%;
+    --sidebar-accent: 174 50% 96%;
+    --sidebar-accent-foreground: 174 50% 30%;
+    --sidebar-border: 210 20% 92%;
     --sidebar-ring: 174 62% 47%;
     
     /* Custom Gradients */

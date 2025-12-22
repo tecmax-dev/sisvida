@@ -149,18 +149,18 @@ export function DashboardLayout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 bg-sidebar border-r border-sidebar-border transform transition-all duration-300 lg:translate-x-0 lg:static",
+          "fixed inset-y-0 left-0 z-50 bg-sidebar border-r border-sidebar-border shadow-sm transform transition-all duration-300 lg:translate-x-0 lg:static",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
           sidebarCollapsed ? "w-16" : "w-64"
         )}
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-            {!sidebarCollapsed && <Logo variant="light" size="md" />}
+            {!sidebarCollapsed && <Logo size="md" />}
             {sidebarCollapsed && (
               <div className="w-full flex justify-center">
-                <div className="w-8 h-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-                  <span className="text-sidebar-primary-foreground font-bold text-sm">E</span>
+                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm">
+                  <span className="text-primary-foreground font-bold text-sm">E</span>
                 </div>
               </div>
             )}
@@ -253,19 +253,19 @@ export function DashboardLayout() {
             ))}
           </nav>
 
-          <div className={cn("p-4 border-t border-sidebar-border", sidebarCollapsed && "p-2")}>
+          <div className={cn("p-4 border-t border-sidebar-border bg-sidebar-accent/30", sidebarCollapsed && "p-2")}>
             {!sidebarCollapsed && (
               <div className="flex items-center gap-3 mb-4 px-3">
-                <div className="w-9 h-9 rounded-full bg-sidebar-accent flex items-center justify-center">
-                  <span className="text-sm font-medium text-sidebar-foreground">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center ring-2 ring-primary/20">
+                  <span className="text-sm font-medium text-primary-foreground">
                     {displayName.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-sidebar-foreground truncate">
+                  <p className="text-sm font-semibold text-foreground truncate">
                     {displayName}
                   </p>
-                  <p className="text-xs text-sidebar-foreground/60 truncate">
+                  <p className="text-xs text-muted-foreground truncate">
                     {user?.email}
                   </p>
                 </div>
