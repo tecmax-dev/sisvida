@@ -635,8 +635,8 @@ export default function Auth() {
         {/* Overlay gradiente para legibilidade */}
         <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/60 to-primary/30" />
         
-        {/* Screenshot do sistema sobreposto */}
-        <div className="absolute right-6 top-1/3 -translate-y-1/4 w-[340px] transform rotate-2 hover:rotate-0 transition-transform duration-500 group">
+        {/* Screenshot do sistema sobreposto - posicionado no canto superior direito */}
+        <div className="absolute right-4 top-6 w-[260px] transform rotate-2 hover:rotate-0 transition-transform duration-500 group">
           <div className="relative">
             <img 
               src={dashboardMockup}
