@@ -24,13 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ResponsiveSelect } from "@/components/ui/responsive-select";
 import {
   Popover,
   PopoverContent,
@@ -741,25 +735,16 @@ export default function ProfessionalProfile() {
                   {procedures.length > 0 && (
                     <div>
                       <Label className="text-sm font-medium">Procedimento</Label>
-                      <Select value={selectedProcedure} onValueChange={setSelectedProcedure}>
-                        <SelectTrigger className="mt-1.5">
-                          <SelectValue placeholder="Selecione (opcional)" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {procedures.map((procedure) => (
-                            <SelectItem key={procedure.id} value={procedure.id}>
-                              <div className="flex justify-between items-center w-full">
-                                <span>{procedure.name}</span>
-                                {procedure.price > 0 && (
-                                  <span className="text-muted-foreground ml-2">
-                                    R$ {procedure.price.toFixed(2)}
-                                  </span>
-                                )}
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <ResponsiveSelect
+                        value={selectedProcedure}
+                        onValueChange={setSelectedProcedure}
+                        placeholder="Selecione (opcional)"
+                        className="mt-1.5"
+                        options={procedures.map((procedure) => ({
+                          value: procedure.id,
+                          label: `${procedure.name}${procedure.price > 0 ? ` - R$ ${procedure.price.toFixed(2)}` : ''}`
+                        }))}
+                      />
                     </div>
                   )}
 
@@ -852,37 +837,35 @@ export default function ProfessionalProfile() {
                   {insurancePlans.length > 0 && (
                     <div>
                       <Label className="text-sm font-medium">Convênio</Label>
-                      <Select value={selectedInsurance} onValueChange={setSelectedInsurance}>
-                        <SelectTrigger className="mt-1.5">
-                          <SelectValue placeholder="Particular" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="particular">Particular</SelectItem>
-                          {insurancePlans.map((plan) => (
-                            <SelectItem key={plan.id} value={plan.id}>
-                              {plan.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <ResponsiveSelect
+                        value={selectedInsurance}
+                        onValueChange={setSelectedInsurance}
+                        placeholder="Particular"
+                        className="mt-1.5"
+                        options={[
+                          { value: "particular", label: "Particular" },
+                          ...insurancePlans.map((plan) => ({
+                            value: plan.id,
+                            label: plan.name
+                          }))
+                        ]}
+                      />
                     </div>
                   )}
 
                   {/* Appointment Type */}
                   <div>
                     <Label className="text-sm font-medium">Tipo de Consulta</Label>
-                    <Select value={selectedType} onValueChange={setSelectedType}>
-                      <SelectTrigger className="mt-1.5">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {appointmentTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ResponsiveSelect
+                      value={selectedType}
+                      onValueChange={setSelectedType}
+                      placeholder="Selecione o tipo"
+                      className="mt-1.5"
+                      options={appointmentTypes.map((type) => ({
+                        value: type.value,
+                        label: type.label
+                      }))}
+                    />
                   </div>
 
                   {/* Price Display */}
