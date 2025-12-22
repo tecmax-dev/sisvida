@@ -503,33 +503,8 @@ export default function ProfessionalsPage() {
     setScheduleViewDialogOpen(true);
   };
 
-  const handleOpenEdit = async (professional: Professional) => {
-    setSelectedProfessional(professional);
-    setEditName(professional.name);
-    setEditCRM(professional.registration_number || "");
-    setEditPhone(professional.phone || "");
-    setEditEmail(professional.email || "");
-    setEditUserId(professional.user_id || "");
-    setEditErrors({});
-    setEditAvatarFile(null);
-    setEditAvatarPreview(professional.avatar_url || null);
-    setEditTelemedicineEnabled(professional.telemedicine_enabled || false);
-    
-    // Load public profile fields
-    setEditAddress(professional.address || "");
-    setEditCity(professional.city || "");
-    setEditState(professional.state || "");
-    setEditZipCode(professional.zip_code || "");
-    setEditWhatsapp(professional.whatsapp || "");
-    setEditBio(professional.bio || "");
-    setEditEducation(professional.education || "");
-    setEditExperience(professional.experience || "");
-    
-    // Load existing specialties
-    const existingSpecialtyIds = await fetchProfessionalSpecialties(professional.id);
-    setEditSpecialtyIds(existingSpecialtyIds);
-    
-    setEditDialogOpen(true);
+  const handleOpenEdit = (professional: Professional) => {
+    navigate(`/dashboard/professionals/${professional.id}/edit`);
   };
 
   const handleEditProfessional = async (e: React.FormEvent) => {
