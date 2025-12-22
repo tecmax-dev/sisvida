@@ -1,54 +1,61 @@
-import { Calendar, ChevronDown, Check, Clock, User, Video } from "lucide-react";
-
-const mockProfessionals = [
-  { name: "Dr. João Silva", specialty: "Clínico Geral", selected: true },
-  { name: "Dra. Ana Costa", specialty: "Dermatologia", selected: false },
-  { name: "Dr. Carlos Lima", specialty: "Ortopedia", selected: false },
-];
+import { Calendar, Clock, User, Video, Phone, MoreHorizontal, Plus } from "lucide-react";
 
 const mockAppointments = [
   { 
     time: "09:00", 
+    endTime: "09:30",
     patient: "Maria Silva", 
     type: "Primeira Consulta",
-    professional: "Dr. João Silva",
     status: "confirmed",
     statusLabel: "Confirmado",
-    statusColor: "bg-success",
-    textColor: "text-success",
+    avatar: "MS",
+    avatarColor: "bg-emerald-100 text-emerald-700",
   },
   { 
     time: "10:30", 
+    endTime: "11:00",
     patient: "Pedro Santos", 
     type: "Retorno",
-    professional: "Dra. Ana Costa",
     status: "scheduled",
     statusLabel: "Aguardando",
-    statusColor: "bg-warning",
-    textColor: "text-warning",
+    avatar: "PS",
+    avatarColor: "bg-amber-100 text-amber-700",
   },
   { 
     time: "14:00", 
+    endTime: "14:45",
     patient: "Ana Oliveira", 
     type: "Teleconsulta",
-    professional: "Dr. João Silva",
     status: "in_progress",
     statusLabel: "Em atendimento",
-    statusColor: "bg-primary",
-    textColor: "text-primary",
+    avatar: "AO",
+    avatarColor: "bg-primary/10 text-primary",
     isTelemedicine: true,
   },
   { 
     time: "15:30", 
+    endTime: "16:00",
     patient: "Carlos Mendes", 
     type: "Procedimento",
-    professional: "Dr. Carlos Lima",
     status: "confirmed",
     statusLabel: "Confirmado",
-    statusColor: "bg-success",
-    textColor: "text-success",
+    avatar: "CM",
+    avatarColor: "bg-sky-100 text-sky-700",
   },
 ];
+
+const getStatusStyles = (status: string) => {
+  switch (status) {
+    case "confirmed":
+      return "bg-emerald-50 text-emerald-600 border-emerald-200";
+    case "scheduled":
+      return "bg-amber-50 text-amber-600 border-amber-200";
+    case "in_progress":
+      return "bg-primary/10 text-primary border-primary/20";
+    default:
+      return "bg-muted text-muted-foreground border-border";
+  }
+};
 
 export function AgendaMockup() {
   const today = new Date();
@@ -59,93 +66,93 @@ export function AgendaMockup() {
   });
 
   return (
-    <div className="w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-float">
+    <div className="w-full max-w-md bg-background border border-border/50 rounded-2xl shadow-2xl overflow-hidden animate-float">
       {/* Header */}
-      <div className="bg-primary/5 border-b border-border p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Calendar className="h-4 w-4 text-primary" />
+      <div className="bg-gradient-to-r from-primary/5 to-accent/5 border-b border-border/50 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <Calendar className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="font-semibold text-foreground text-sm">Agenda de Hoje</h3>
+              <h3 className="font-semibold text-foreground">Agenda</h3>
               <p className="text-xs text-muted-foreground capitalize">{formattedDate}</p>
             </div>
           </div>
-          <div className="text-xs text-muted-foreground bg-card px-2 py-1 rounded-full border border-border">
-            4 consultas
-          </div>
+          <button className="flex items-center gap-2 px-3 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:bg-primary/90 transition-colors">
+            <Plus className="h-3.5 w-3.5" />
+            Novo
+          </button>
         </div>
 
-        {/* Dropdown (sempre aberto) */}
-        <div className="relative">
-          <button className="w-full flex items-center justify-between px-3 py-2 bg-card border border-primary/30 rounded-lg text-sm">
-            <span className="text-foreground font-medium">Dr. João Silva</span>
-            <ChevronDown className="h-4 w-4 text-primary" />
-          </button>
-          
-          {/* Dropdown menu aberto */}
-          <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-lg shadow-lg z-10 overflow-hidden">
-            {mockProfessionals.map((prof, index) => (
-              <div 
-                key={index}
-                className={`flex items-center justify-between px-3 py-2 hover:bg-muted/50 cursor-pointer transition-colors ${
-                  prof.selected ? 'bg-primary/5' : ''
-                }`}
-              >
-                <div>
-                  <p className="text-sm font-medium text-foreground">{prof.name}</p>
-                  <p className="text-xs text-muted-foreground">{prof.specialty}</p>
-                </div>
-                {prof.selected && (
-                  <Check className="h-4 w-4 text-primary" />
-                )}
-              </div>
-            ))}
+        {/* Stats row */}
+        <div className="flex gap-3">
+          <div className="flex-1 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/30">
+            <p className="text-lg font-bold text-foreground">4</p>
+            <p className="text-[10px] text-muted-foreground">Consultas hoje</p>
+          </div>
+          <div className="flex-1 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/30">
+            <p className="text-lg font-bold text-emerald-600">3</p>
+            <p className="text-[10px] text-muted-foreground">Confirmados</p>
+          </div>
+          <div className="flex-1 bg-background/80 backdrop-blur-sm rounded-lg px-3 py-2 border border-border/30">
+            <p className="text-lg font-bold text-primary">1</p>
+            <p className="text-[10px] text-muted-foreground">Em andamento</p>
           </div>
         </div>
       </div>
 
       {/* Appointments List */}
-      <div className="p-3 space-y-2 max-h-[320px] overflow-hidden">
+      <div className="p-3 space-y-2 max-h-[300px] overflow-hidden bg-muted/20">
         {mockAppointments.map((appointment, index) => (
           <div 
             key={index}
-            className="group bg-card border border-border rounded-xl p-3 hover:border-primary/30 hover:shadow-sm transition-all duration-200"
+            className={`group bg-background rounded-xl p-3 border transition-all duration-200 hover:shadow-md ${
+              appointment.status === 'in_progress' 
+                ? 'border-primary/30 ring-1 ring-primary/10' 
+                : 'border-border/50 hover:border-primary/20'
+            }`}
             style={{ animationDelay: `${index * 100}ms` }}
           >
             <div className="flex items-start gap-3">
-              {/* Time indicator */}
-              <div className="flex flex-col items-center">
-                <div className={`w-2.5 h-2.5 rounded-full ${appointment.statusColor}`} />
-                <div className="w-px h-full bg-border mt-1" />
+              {/* Avatar */}
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-xs font-semibold ${appointment.avatarColor}`}>
+                {appointment.avatar}
               </div>
 
               {/* Content */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="font-semibold text-foreground text-sm">{appointment.time}</span>
-                    {appointment.isTelemedicine && (
-                      <Video className="h-3.5 w-3.5 text-primary" />
-                    )}
-                  </div>
-                  <span className={`text-xs font-medium ${appointment.textColor}`}>
+                  <p className="font-medium text-foreground text-sm truncate">{appointment.patient}</p>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${getStatusStyles(appointment.status)}`}>
                     {appointment.statusLabel}
                   </span>
                 </div>
 
-                <p className="font-medium text-foreground text-sm truncate">{appointment.patient}</p>
-                
-                <div className="flex items-center gap-2 mt-1">
-                  <span className="text-xs text-muted-foreground">{appointment.type}</span>
-                  <span className="text-xs text-muted-foreground">•</span>
+                <div className="flex items-center gap-3 text-xs text-muted-foreground">
                   <div className="flex items-center gap-1">
-                    <User className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground truncate">{appointment.professional}</span>
+                    <Clock className="h-3 w-3" />
+                    <span>{appointment.time} - {appointment.endTime}</span>
                   </div>
+                  <span className="text-border">•</span>
+                  <span>{appointment.type}</span>
+                  {appointment.isTelemedicine && (
+                    <>
+                      <span className="text-border">•</span>
+                      <Video className="h-3 w-3 text-primary" />
+                    </>
+                  )}
                 </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+                <button className="p-1.5 hover:bg-muted rounded-lg transition-colors">
+                  <MoreHorizontal className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
               </div>
             </div>
           </div>
@@ -153,10 +160,16 @@ export function AgendaMockup() {
       </div>
 
       {/* Footer */}
-      <div className="bg-muted/30 border-t border-border px-4 py-2">
-        <p className="text-xs text-muted-foreground text-center">
-          Próxima consulta em <span className="font-medium text-primary">45 min</span>
-        </p>
+      <div className="bg-gradient-to-r from-primary/5 to-accent/5 border-t border-border/50 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+          <p className="text-xs text-muted-foreground">
+            Próxima consulta em <span className="font-medium text-foreground">45 min</span>
+          </p>
+        </div>
+        <button className="text-xs text-primary font-medium hover:underline">
+          Ver agenda completa
+        </button>
       </div>
     </div>
   );
