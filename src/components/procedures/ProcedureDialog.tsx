@@ -176,7 +176,7 @@ export function ProcedureDialog({
     }
   }, [procedure, form]);
 
-  // Update insurance prices state when existing prices load
+  // Update insurance prices state when existing prices load (only when there are prices)
   useEffect(() => {
     if (existingPrices.length > 0) {
       const pricesMap: Record<string, string> = {};
@@ -184,12 +184,15 @@ export function ProcedureDialog({
         pricesMap[p.insurance_plan_id] = p.price.toString();
       });
       setInsurancePrices(pricesMap);
-    } else {
-      setInsurancePrices({});
     }
   }, [existingPrices]);
 
-  // Reset insurance prices when dialog closes or procedure changes
+  // Reset insurance prices when procedure changes (from edit to create or vice versa)
+  useEffect(() => {
+    setInsurancePrices({});
+  }, [procedure?.id]);
+
+  // Reset insurance prices when dialog closes
   useEffect(() => {
     if (!open) {
       setInsurancePrices({});
