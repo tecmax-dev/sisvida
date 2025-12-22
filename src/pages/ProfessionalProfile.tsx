@@ -245,6 +245,10 @@ export default function ProfessionalProfile() {
   const getProcedurePrice = (procedureId: string, defaultPrice: number): number => {
     if (!selectedInsurance || selectedInsurance === "particular") return defaultPrice;
     
+    // Check if the selected plan is "Particular" by ID
+    const selectedPlan = insurancePlans.find(p => p.id === selectedInsurance);
+    if (selectedPlan?.name.toLowerCase() === "particular") return defaultPrice;
+    
     const insurancePrice = procedureInsurancePrices.find(
       p => p.procedure_id === procedureId && p.insurance_plan_id === selectedInsurance
     );
@@ -773,10 +777,12 @@ export default function ProfessionalProfile() {
                         className="mt-1.5"
                         options={[
                           { value: "particular", label: "Particular" },
-                          ...insurancePlans.map((plan) => ({
-                            value: plan.id,
-                            label: plan.name
-                          }))
+                          ...insurancePlans
+                            .filter((plan) => plan.name.toLowerCase() !== "particular")
+                            .map((plan) => ({
+                              value: plan.id,
+                              label: plan.name
+                            }))
                         ]}
                       />
                     </div>
