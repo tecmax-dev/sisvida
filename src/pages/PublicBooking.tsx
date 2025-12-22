@@ -663,14 +663,7 @@ export default function PublicBooking() {
                     <SelectContent>
                       {procedures.map((procedure) => (
                         <SelectItem key={procedure.id} value={procedure.id}>
-                          <div className="flex justify-between items-center w-full">
-                            <span>{procedure.name}</span>
-                            {procedure.price > 0 && (
-                              <span className="text-muted-foreground ml-4">
-                                R$ {getProcedurePrice(procedure.id, procedure.price).toFixed(2)}
-                              </span>
-                            )}
-                          </div>
+                          {procedure.name}{procedure.price > 0 ? ` - R$ ${getProcedurePrice(procedure.id, procedure.price).toFixed(2)}` : ''}
                         </SelectItem>
                       ))}
                     </SelectContent>
