@@ -58,8 +58,12 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
       <SheetPrimitive.Content 
         ref={ref} 
         className={cn(sheetVariants({ side }), className)} 
+        onFocusOutside={(e) => {
+          // SEMPRE prevenir fechamento quando o foco sai (ex: trocar de aba do navegador)
+          e.preventDefault();
+        }}
         onInteractOutside={(e) => {
-          // Prevenir fechamento quando o foco sai (ex: trocar de aba do navegador)
+          // Prevenir fechamento em eventos de foco, permitir apenas clique
           const originalEvent = e.detail?.originalEvent;
           if (originalEvent instanceof FocusEvent || 
               originalEvent?.type === 'focusout' || 

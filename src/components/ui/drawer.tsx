@@ -34,8 +34,12 @@ const DrawerContent = React.forwardRef<
         "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
         className,
       )}
+      onFocusOutside={(e) => {
+        // SEMPRE prevenir fechamento quando o foco sai (ex: trocar de aba do navegador)
+        e.preventDefault();
+      }}
       onInteractOutside={(e) => {
-        // Prevenir fechamento quando o foco sai (ex: trocar de aba do navegador)
+        // Prevenir fechamento em eventos de foco, permitir apenas clique
         const originalEvent = e.detail?.originalEvent;
         if (originalEvent instanceof FocusEvent || 
             originalEvent?.type === 'focusout' || 
