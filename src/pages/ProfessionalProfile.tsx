@@ -504,29 +504,29 @@ export default function ProfessionalProfile() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-5 gap-6">
-          {/* Left Column - Professional Info (3/5) */}
-          <div className="lg:col-span-3 space-y-6">
+      <main className="container mx-auto px-4 py-6 max-w-6xl">
+        <div className="grid lg:grid-cols-12 gap-6">
+          {/* Left Column - Professional Info (7/12 ≈ 58%) */}
+          <div className="lg:col-span-7 space-y-5">
             {/* Profile Header Card */}
-            <Card className="overflow-hidden">
-              <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6">
-                <div className="flex flex-col sm:flex-row gap-6">
-                  <Avatar className="w-28 h-28 border-4 border-background shadow-lg">
+            <Card className="overflow-hidden shadow-sm">
+              <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-5">
+                <div className="flex flex-col sm:flex-row gap-4 items-start">
+                  <Avatar className="w-24 h-24 border-4 border-background shadow-md flex-shrink-0">
                     <AvatarImage src={professional.avatar_url || undefined} alt={professional.name} />
-                    <AvatarFallback className="text-3xl bg-primary text-primary-foreground font-semibold">
+                    <AvatarFallback className="text-2xl bg-primary text-primary-foreground font-semibold">
                       {professional.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex-1 space-y-2">
-                    <h1 className="text-2xl font-bold text-foreground">{professional.name}</h1>
+                  <div className="flex-1 space-y-1.5">
+                    <h1 className="text-xl font-bold text-foreground">{professional.name}</h1>
                     {professional.specialty && (
-                      <p className="text-primary font-medium text-lg">{professional.specialty}</p>
+                      <p className="text-primary font-medium">{professional.specialty}</p>
                     )}
                     {professional.registration_number && (
-                      <Badge variant="secondary" className="text-sm">
-                        {professional.registration_number}
-                      </Badge>
+                      <p className="text-sm text-muted-foreground">
+                        Número de registro: {professional.registration_number}
+                      </p>
                     )}
                     
                     {/* Contact Info Popover */}
@@ -575,13 +575,11 @@ export default function ProfessionalProfile() {
 
             {/* Tabs */}
             <Tabs defaultValue="info" className="w-full">
-              <TabsList className="w-full grid grid-cols-2 h-12">
-                <TabsTrigger value="info" className="gap-2 text-sm">
-                  <MapPin className="h-4 w-4" />
+              <TabsList className="w-full grid grid-cols-2 h-10 bg-muted/50">
+                <TabsTrigger value="info" className="gap-2 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   Informações Gerais
                 </TabsTrigger>
-                <TabsTrigger value="experience" className="gap-2 text-sm">
-                  <Briefcase className="h-4 w-4" />
+                <TabsTrigger value="experience" className="gap-2 text-sm data-[state=active]:bg-background data-[state=active]:shadow-sm">
                   Experiência
                 </TabsTrigger>
               </TabsList>
@@ -619,11 +617,11 @@ export default function ProfessionalProfile() {
                         <>
                           {/* Custom Embed URL */}
                           {mapViewType === 'custom' && customEmbedSrc && (
-                            <div className="rounded-xl overflow-hidden border shadow-sm">
+                            <div className="rounded-lg overflow-hidden border shadow-sm">
                               <iframe
                                 src={customEmbedSrc}
                                 width="100%"
-                                height="250"
+                                height="300"
                                 style={{ border: 0 }}
                                 allowFullScreen
                                 loading="lazy"
@@ -635,11 +633,11 @@ export default function ProfessionalProfile() {
 
                           {/* Street View */}
                           {(mapViewType === 'streetview' || mapViewType === 'both') && streetViewUrl && (
-                            <div className="rounded-xl overflow-hidden border shadow-sm">
+                            <div className="rounded-lg overflow-hidden border shadow-sm">
                               <iframe
                                 src={streetViewUrl}
                                 width="100%"
-                                height="250"
+                                height="300"
                                 style={{ border: 0 }}
                                 allowFullScreen
                                 loading="lazy"
@@ -651,11 +649,11 @@ export default function ProfessionalProfile() {
                           
                           {/* Regular Map */}
                           {mapViewType === 'map' && mapUrl && (
-                            <div className="rounded-xl overflow-hidden border shadow-sm">
+                            <div className="rounded-lg overflow-hidden border shadow-sm">
                               <iframe
                                 src={mapUrl}
                                 width="100%"
-                                height="250"
+                                height="300"
                                 style={{ border: 0 }}
                                 allowFullScreen
                                 loading="lazy"
@@ -755,17 +753,15 @@ export default function ProfessionalProfile() {
             </Tabs>
           </div>
 
-          {/* Right Column - Booking Widget (2/5) */}
-          <div className="lg:col-span-2">
+          {/* Right Column - Booking Widget (5/12 ≈ 42%) */}
+          <div className="lg:col-span-5">
             <div className="lg:sticky lg:top-20">
-              <Card className="shadow-lg border-2 border-primary/10">
-                <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg">
-                  <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
-                    Agende uma Consulta
-                  </CardTitle>
+              <Card className="shadow-md border border-border">
+                <CardHeader className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground rounded-t-lg py-4">
+                  <CardTitle className="text-lg font-semibold">Agende uma Consulta</CardTitle>
+                  <p className="text-sm text-primary-foreground/80 mt-0.5">Consulte especialidades da maneira mais conveniente</p>
                 </CardHeader>
-                <CardContent className="p-4 space-y-4">
+                <CardContent className="p-4 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
                   {/* Insurance Plan - FIRST so price updates for procedures */}
                   {insurancePlans.length > 0 && (
                     <div>
