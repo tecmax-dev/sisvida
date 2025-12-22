@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Check, Star, Users, Shield } from "lucide-react";
-import { AgendaMockup } from "./AgendaMockup";
+import dashboardMockup from "@/assets/dashboard-mockup.png";
 
 const highlights = [
   "Agenda online 24h",
@@ -101,7 +101,17 @@ export function HeroSection() {
           {/* Right Column - Mockup */}
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
             <div className="relative w-full max-w-lg lg:max-w-xl">
-              <AgendaMockup />
+              <div className="overflow-hidden rounded-2xl shadow-2xl border border-border animate-float">
+                <img 
+                  src={dashboardMockup}
+                  alt="Painel de agenda do Eclini"
+                  className="w-full h-auto object-cover object-right"
+                  style={{ 
+                    marginLeft: '-18%',
+                    width: '118%'
+                  }}
+                />
+              </div>
               {/* Decorative elements */}
               <div className="absolute -z-10 inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20 rounded-3xl blur-3xl scale-110" />
             </div>
