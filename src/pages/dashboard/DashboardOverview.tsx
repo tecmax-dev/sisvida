@@ -340,20 +340,20 @@ export default function DashboardOverview() {
         {statCards.map((stat, i) => (
           <Card 
             key={i} 
-            className="relative overflow-hidden border-0 shadow-md hover:shadow-lg transition-all duration-300 group"
+            className="relative overflow-hidden border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 group"
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-60`} />
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-12 translate-x-12 bg-gradient-to-br from-foreground/[0.02] to-transparent" />
-            <CardContent className="relative p-6">
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-40`} />
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-8 translate-x-8 bg-gradient-to-br from-foreground/[0.02] to-transparent" />
+            <CardContent className="relative p-5">
               <div className="flex items-start justify-between">
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className="text-3xl font-bold text-foreground tracking-tight">
+                  <p className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
                     {stat.value}
                   </p>
                 </div>
-                <div className={`w-12 h-12 rounded-xl ${stat.iconBg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                  <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
+                <div className={`w-11 h-11 rounded-xl ${stat.iconBg} flex items-center justify-center group-hover:scale-105 transition-transform duration-300`}>
+                  <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                 </div>
               </div>
             </CardContent>
@@ -382,15 +382,15 @@ export default function DashboardOverview() {
       </div>
 
       {/* Today's Appointments */}
-      <Card className="border-0 shadow-md">
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
+      <Card className="border border-border/60 bg-card shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/40">
           <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold">Consultas de Hoje</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground">Consultas de Hoje</CardTitle>
             <p className="text-sm text-muted-foreground">
               {todayAppointments.length} {todayAppointments.length === 1 ? 'consulta agendada' : 'consultas agendadas'}
             </p>
           </div>
-          <Button variant="ghost" size="sm" asChild className="text-primary hover:text-primary">
+          <Button variant="ghost" size="sm" asChild className="text-primary hover:text-primary hover:bg-primary/5">
             <Link to="/dashboard/calendar" className="flex items-center gap-1">
               Ver todas
               <ArrowRight className="h-4 w-4" />
