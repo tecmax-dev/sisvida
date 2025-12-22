@@ -51,7 +51,9 @@ const DialogContent = React.forwardRef<
       onInteractOutside={(e) => {
         // Prevenir fechamento quando o foco sai (ex: trocar de aba do navegador)
         const originalEvent = e.detail?.originalEvent;
-        if (originalEvent instanceof FocusEvent) {
+        if (originalEvent instanceof FocusEvent || 
+            originalEvent?.type === 'focusout' || 
+            originalEvent?.type === 'blur') {
           e.preventDefault();
           return;
         }
