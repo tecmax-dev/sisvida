@@ -23,34 +23,32 @@ serve(async (req) => {
 
     console.log('Starting dashboard mockup generation...');
 
-    const prompt = `Create a professional, high-quality UI screenshot of a medical clinic management dashboard software interface. The design must be:
+    const prompt = `Create a professional, realistic photograph-style image of a Brazilian healthcare scene.
 
-LAYOUT:
-- Clean WHITE sidebar on the left side (about 20% width) with teal/cyan (#20A39E) colored icons
-- Menu items in Portuguese: "Visão Geral", "Agenda" (highlighted/active), "Pacientes", "Profissionais", "Prontuário", "Financeiro"
-- The "Agenda" menu item should have a light teal background indicating it's selected
-- Main content area (80% width) showing an appointment calendar/schedule view
+SCENE:
+- A friendly female doctor or dentist wearing a clean white coat
+- She is sitting at a modern desk in a bright, welcoming medical office
+- Using a laptop or desktop monitor that shows a medical software interface with teal/cyan (#20A39E) accent colors visible on screen
+- The software on screen should show appointment cards and a clean sidebar interface
+- Warm, natural lighting coming from a window
+- Modern clinic interior with white walls and minimal, clean decor
 
-MAIN CONTENT - AGENDA VIEW:
-- Header showing "Agenda" title with current date
-- A bright orange/coral button labeled "Novo Agendamento" in top right
-- Calendar view or list of appointments showing:
-  - Patient cards with names like "Maria Silva", "João Santos", "Ana Costa"
-  - Appointment times (09:00, 10:30, 14:00, etc.)
-  - Status badges: "Confirmado" (green), "Pendente" (yellow), "Agendado" (blue)
-  - Professional name for each appointment
+ATMOSPHERE:
+- Professional but warm and approachable feeling
+- The doctor looks confident and focused while using the system
+- Optional: A patient sitting across the desk, creating a consultation atmosphere
+- Clean, organized medical office environment
 
 STYLE:
-- Modern, clean, minimalist healthcare software aesthetic
-- Light gray background (#F8FAFC or #FAFBFC)
-- White cards with very subtle shadows
-- Rounded corners on cards and buttons
-- Professional Brazilian clinic management software look
-- Crisp, high-resolution UI design
-- NO device frames, NO mockup elements - just the pure interface
+- Photorealistic, high-quality professional photography style
+- Warm color tones, natural lighting
+- Sharp focus on the doctor and the screen
+- Modern Brazilian healthcare aesthetic
+- Trustworthy and professional feeling
 - 16:9 aspect ratio, landscape orientation
+- Ultra high resolution
 
-The overall feel should be modern, trustworthy, and professional - like a real SaaS product for healthcare clinics.`;
+The image should convey: technology making healthcare better, human connection, professionalism, and modern medical practice in Brazil.`;
 
     console.log('Calling Lovable AI Gateway for image generation...');
 
