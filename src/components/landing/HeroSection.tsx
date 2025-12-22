@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Check, Star, Users, Shield } from "lucide-react";
-import heroMockup from "@/assets/dashboard-mockup.png";
+import { AgendaMockup } from "./AgendaMockup";
 
 const highlights = [
   "Agenda online 24h",
@@ -100,39 +100,10 @@ export function HeroSection() {
 
           {/* Right Column - Mockup */}
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
-            <div className="relative w-full max-w-lg lg:max-w-xl animate-fade-in" style={{ animationDelay: '200ms' }}>
-              <img 
-                src={heroMockup} 
-                alt="Eclini - Sistema de gestão para clínicas" 
-                className="w-full h-auto object-contain drop-shadow-2xl animate-float"
-              />
+            <div className="relative w-full max-w-lg lg:max-w-xl">
+              <AgendaMockup />
               {/* Decorative elements */}
               <div className="absolute -z-10 inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20 rounded-3xl blur-3xl scale-110" />
-              
-              {/* Floating cards */}
-              <div className="absolute -left-4 top-1/4 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block" style={{ animationDelay: '1s' }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-success/20 flex items-center justify-center">
-                    <Check className="h-4 w-4 text-success" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">Consulta confirmada</p>
-                    <p className="text-xs text-muted-foreground">Hoje, 14:30</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="absolute -right-4 bottom-1/4 bg-card border border-border rounded-xl p-3 shadow-lg animate-float hidden lg:block" style={{ animationDelay: '2s' }}>
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                    <Users className="h-4 w-4 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium">+3 agendamentos</p>
-                    <p className="text-xs text-muted-foreground">Esta semana</p>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
