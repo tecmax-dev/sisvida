@@ -29,3 +29,6 @@ verify_jwt = true
 
 [functions.generate-carousel-image]
 verify_jwt = false
+
+[functions.generate-dashboard-mockup]
+verify_jwt = false
