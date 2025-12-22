@@ -11,7 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { Plus, Search, Pencil, Trash2, Clock, DollarSign } from "lucide-react";
-import { ProcedureDialog } from "@/components/procedures/ProcedureDialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,7 +41,6 @@ export default function ProceduresPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [procedureToDelete, setProcedureToDelete] = useState<Procedure | null>(null);
 
@@ -122,8 +120,8 @@ export default function ProceduresPage() {
     setDeleteDialogOpen(true);
   };
 
-  const handleDialogClose = () => {
-    setDialogOpen(false);
+  const handleNewProcedure = () => {
+    navigate("/dashboard/procedures/new");
   };
 
   if (!currentClinic) {
@@ -140,7 +138,7 @@ export default function ProceduresPage() {
               Gerencie os procedimentos e serviços da clínica
             </p>
           </div>
-          <Button onClick={() => setDialogOpen(true)}>
+          <Button onClick={handleNewProcedure}>
             <Plus className="h-4 w-4 mr-2" />
             Novo Procedimento
           </Button>
@@ -168,7 +166,7 @@ export default function ProceduresPage() {
               <p className="text-muted-foreground mb-4">
                 Nenhum procedimento encontrado
               </p>
-              <Button onClick={() => setDialogOpen(true)}>
+              <Button onClick={handleNewProcedure}>
                 <Plus className="h-4 w-4 mr-2" />
                 Criar primeiro procedimento
               </Button>
@@ -251,12 +249,6 @@ export default function ProceduresPage() {
           </div>
         )}
 
-        <ProcedureDialog
-          open={dialogOpen}
-          onOpenChange={handleDialogClose}
-          clinicId={currentClinic.id}
-          procedure={null}
-        />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
