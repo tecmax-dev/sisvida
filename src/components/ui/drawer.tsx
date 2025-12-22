@@ -36,9 +36,17 @@ const DrawerContent = React.forwardRef<
         className,
       )}
       onFocusOutside={(e) => {
+        if (document.hidden || document.visibilityState === 'hidden') {
+          e.preventDefault();
+          return;
+        }
         e.preventDefault();
       }}
       onInteractOutside={(e) => {
+        if (document.hidden || document.visibilityState === 'hidden') {
+          e.preventDefault();
+          return;
+        }
         const originalEvent = e.detail?.originalEvent;
         if (originalEvent instanceof FocusEvent || 
             originalEvent?.type === 'focusout' || 

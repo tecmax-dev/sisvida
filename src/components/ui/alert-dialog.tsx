@@ -39,6 +39,10 @@ const AlertDialogContent = React.forwardRef<
         className,
       )}
       onFocusOutside={(e) => {
+        if (document.hidden || document.visibilityState === 'hidden') {
+          e.preventDefault();
+          return;
+        }
         e.preventDefault();
         onFocusOutside?.(e);
       }}
