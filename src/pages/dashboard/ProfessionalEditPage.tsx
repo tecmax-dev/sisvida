@@ -168,27 +168,33 @@ export default function ProfessionalEditPage() {
     if (!currentClinic) return;
     
     try {
-      const { data: rolesData } = await supabase
+      const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id')
         .eq('clinic_id', currentClinic.id);
 
+      console.log('[DEBUG] fetchClinicUsers - rolesData:', rolesData, 'error:', rolesError);
+
       if (!rolesData || rolesData.length === 0) {
+        console.log('[DEBUG] fetchClinicUsers - No roles found for clinic');
         setClinicUsers([]);
         return;
       }
 
       const userIds = rolesData.map(r => r.user_id);
-      const { data: profilesData } = await supabase
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, name')
         .in('user_id', userIds);
+
+      console.log('[DEBUG] fetchClinicUsers - profilesData:', profilesData, 'error:', profilesError);
 
       const users: ClinicUser[] = (profilesData || []).map(p => ({
         user_id: p.user_id,
         profile: { name: p.name },
       }));
       
+      console.log('[DEBUG] fetchClinicUsers - final users list:', users);
       setClinicUsers(users);
     } catch (error) {
       console.error("Error fetching clinic users:", error);
@@ -258,7 +264,7 @@ export default function ProfessionalEditPage() {
         ? generateSlug(name) 
         : professional.slug;
 
-      const { error } = await supabase
+      const { data: updateData, error } = await supabase
         .from('professionals')
         .update({
           name: name.trim(),
@@ -279,9 +285,15 @@ export default function ProfessionalEditPage() {
           education: education.trim() || null,
           experience: experience.trim() || null,
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select();
 
       if (error) throw error;
+
+      // Verificar se alguma linha foi realmente atualizada
+      if (!updateData || updateData.length === 0) {
+        throw new Error('Não foi possível atualizar. Verifique suas permissões de administrador.');
+      }
 
       // Save professional specialties
       const result = await saveProfessionalSpecialties(id, specialtyIds);
