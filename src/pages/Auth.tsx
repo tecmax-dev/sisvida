@@ -8,6 +8,7 @@ import { Logo } from "@/components/layout/Logo";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2, ArrowLeft, Mail, KeyRound } from "lucide-react";
 import { z } from "zod";
+import dashboardMockup from "@/assets/dashboard-mockup.png";
 
 const emailSchema = z.string().email("Email inválido");
 const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres");
@@ -638,7 +639,7 @@ export default function Auth() {
         <div className="absolute right-6 top-1/3 -translate-y-1/4 w-[340px] transform rotate-2 hover:rotate-0 transition-transform duration-500 group">
           <div className="relative">
             <img 
-              src="/src/assets/dashboard-mockup.png"
+              src={dashboardMockup}
               alt="Sistema Eclini - Agenda"
               className="rounded-xl shadow-2xl border-4 border-white/20 group-hover:shadow-primary/30 transition-all duration-500"
             />
