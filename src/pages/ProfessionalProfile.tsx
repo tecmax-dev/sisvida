@@ -373,13 +373,11 @@ export default function ProfessionalProfile() {
   };
 
   const getStreetViewUrl = () => {
+    // Street View REQUER coordenadas - não aceita endereço texto
     if (professional?.latitude && professional?.longitude) {
       return `https://www.google.com/maps/embed?pb=!4v1!6m8!1m7!1s!2m2!1d${professional.latitude}!2d${professional.longitude}!3f0!4f0!5f0.75`;
     }
-    if (professional?.address) {
-      const query = encodeURIComponent(`${professional.address}, ${professional.city || ''}, ${professional.state || ''}`);
-      return `https://www.google.com/maps/embed/v1/streetview?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&location=${query}`;
-    }
+    // Sem coordenadas, Street View não é possível - retornar null para fallback
     return null;
   };
 
@@ -440,7 +438,12 @@ export default function ProfessionalProfile() {
   const mapUrl = getGoogleMapUrl();
   const streetViewUrl = getStreetViewUrl();
   const googleMapsLink = getGoogleMapsLink();
-  const mapViewType = clinic.map_view_type || 'streetview';
+  const configuredMapViewType = clinic.map_view_type || 'streetview';
+  
+  // Fallback inteligente: se Street View foi selecionado mas não há coordenadas, usar mapa normal
+  const mapViewType = (configuredMapViewType === 'streetview' || configuredMapViewType === 'both') && !streetViewUrl
+    ? 'map' // Fallback para mapa quando Street View não está disponível
+    : configuredMapViewType;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
