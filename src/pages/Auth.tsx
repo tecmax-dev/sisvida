@@ -622,23 +622,43 @@ export default function Auth() {
         </div>
       </div>
 
-      {/* Right Panel - Visual */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-primary via-primary/90 to-primary/70 relative overflow-hidden">
-        <div className="absolute inset-0">
-          <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-white/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 left-1/4 w-[300px] h-[300px] bg-white/5 rounded-full blur-3xl" />
+      {/* Right Panel - Visual Profissional */}
+      <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
+        {/* Imagem de fundo - Médica profissional */}
+        <img 
+          src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=1200&q=80" 
+          alt="Profissional de saúde"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        
+        {/* Overlay gradiente para legibilidade */}
+        <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/60 to-primary/30" />
+        
+        {/* Screenshot do sistema sobreposto */}
+        <div className="absolute right-6 top-1/3 -translate-y-1/4 w-[340px] transform rotate-2 hover:rotate-0 transition-transform duration-500 group">
+          <div className="relative">
+            <img 
+              src="/src/assets/dashboard-mockup.png"
+              alt="Sistema Eclini - Agenda"
+              className="rounded-xl shadow-2xl border-4 border-white/20 group-hover:shadow-primary/30 transition-all duration-500"
+            />
+            {/* Brilho sutil */}
+            <div className="absolute inset-0 rounded-xl bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none" />
+          </div>
         </div>
         
-        <div className="relative z-10 flex flex-col justify-center items-center p-12 text-center">
-          <h3 className="text-3xl font-bold text-white">
+        {/* Conteúdo textual na parte inferior */}
+        <div className="relative z-10 flex flex-col justify-end items-start p-10 text-left w-full">
+          <h3 className="text-3xl font-bold text-white drop-shadow-lg">
             Simplifique sua gestão
           </h3>
-          <p className="mt-4 text-lg text-white/90 max-w-md">
+          <p className="mt-3 text-lg text-white/90 max-w-md drop-shadow-md">
             Agendamento inteligente, lembretes automáticos e menos faltas. 
             Tudo para sua clínica funcionar melhor.
           </p>
           
-          <div className="mt-12 grid grid-cols-2 gap-4 max-w-sm">
+          {/* Cards de estatísticas em linha */}
+          <div className="mt-6 flex gap-3">
             {[
               { value: "50%", label: "menos faltas" },
               { value: "2x", label: "mais produtivo" },
@@ -647,10 +667,10 @@ export default function Auth() {
             ].map((stat, i) => (
               <div
                 key={i}
-                className="p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20"
+                className="px-4 py-3 rounded-xl bg-white/15 backdrop-blur-md border border-white/25"
               >
-                <div className="text-2xl font-bold text-white">{stat.value}</div>
-                <div className="text-sm text-white/80">{stat.label}</div>
+                <div className="text-xl font-bold text-white">{stat.value}</div>
+                <div className="text-xs text-white/80">{stat.label}</div>
               </div>
             ))}
           </div>
