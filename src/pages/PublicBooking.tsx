@@ -649,6 +649,36 @@ export default function PublicBooking() {
               </CardContent>
             </Card>
 
+            {/* Procedure Selection - Moved before date/time for mobile visibility */}
+            {procedures.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Procedimento (opcional)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Select value={selectedProcedure} onValueChange={setSelectedProcedure}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione um procedimento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {procedures.map((procedure) => (
+                        <SelectItem key={procedure.id} value={procedure.id}>
+                          <div className="flex justify-between items-center w-full">
+                            <span>{procedure.name}</span>
+                            {procedure.price > 0 && (
+                              <span className="text-muted-foreground ml-4">
+                                R$ {getProcedurePrice(procedure.id, procedure.price).toFixed(2)}
+                              </span>
+                            )}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid lg:grid-cols-2 gap-6">
               {/* Left: Date Selection */}
               <Card>
@@ -756,36 +786,6 @@ export default function PublicBooking() {
                 </CardContent>
               </Card>
             </div>
-
-            {/* Procedure Selection */}
-            {procedures.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Procedimento (opcional)</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Select value={selectedProcedure} onValueChange={setSelectedProcedure}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um procedimento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {procedures.map((procedure) => (
-                        <SelectItem key={procedure.id} value={procedure.id}>
-                          <div className="flex justify-between items-center w-full">
-                            <span>{procedure.name}</span>
-                            {procedure.price > 0 && (
-                              <span className="text-muted-foreground ml-4">
-                                R$ {getProcedurePrice(procedure.id, procedure.price).toFixed(2)}
-                              </span>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Continue Button */}
             <Button
