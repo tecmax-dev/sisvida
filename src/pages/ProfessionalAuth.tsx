@@ -217,17 +217,17 @@ export default function ProfessionalAuth() {
       </div>
 
       {/* Right Panel - Visual */}
-      <div className="hidden lg:flex lg:flex-1 bg-gradient-hero relative overflow-hidden">
+      <div className="hidden lg:flex lg:flex-1 bg-gradient-to-br from-primary via-primary/90 to-primary/70 relative overflow-hidden">
         <div className="absolute inset-0">
-          <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-primary/20 rounded-full blur-3xl" />
-          <div className="absolute bottom-1/4 left-1/4 w-[300px] h-[300px] bg-primary/10 rounded-full blur-3xl" />
+          <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-white/10 rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 left-1/4 w-[300px] h-[300px] bg-white/5 rounded-full blur-3xl" />
         </div>
         
         <div className="relative z-10 flex flex-col justify-center items-center p-12 text-center">
-          <h3 className="text-3xl font-bold text-primary-foreground">
+          <h3 className="text-3xl font-bold text-white">
             Sua agenda digital
           </h3>
-          <p className="mt-4 text-lg text-sidebar-foreground/80 max-w-md">
+          <p className="mt-4 text-lg text-white/90 max-w-md">
             Visualize seus pacientes do dia, inicie e finalize atendimentos 
             de forma simples e organizada.
           </p>
@@ -241,10 +241,10 @@ export default function ProfessionalAuth() {
             ].map((stat, i) => (
               <div
                 key={i}
-                className="p-4 rounded-xl bg-sidebar-accent/50 backdrop-blur-sm border border-sidebar-border"
+                className="p-4 rounded-xl bg-white/10 backdrop-blur-sm border border-white/20"
               >
                 <div className="text-2xl">{stat.value}</div>
-                <div className="text-sm text-sidebar-foreground/70">{stat.label}</div>
+                <div className="text-sm text-white/80">{stat.label}</div>
               </div>
             ))}
           </div>
