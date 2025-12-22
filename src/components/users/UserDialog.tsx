@@ -53,7 +53,8 @@ interface UserDialogProps {
   clinicId: string;
 }
 
-const formSchema = z.object({
+// Schema para criação de novo usuário (email obrigatório)
+const createUserSchema = z.object({
   email: z.string().email("Email inválido"),
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   phone: z.string().optional(),
@@ -61,7 +62,16 @@ const formSchema = z.object({
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional(),
 });
 
-type FormData = z.infer<typeof formSchema>;
+// Schema para edição de usuário (email não necessário)
+const editUserSchema = z.object({
+  name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
+  phone: z.string().optional(),
+  role: z.enum(['admin', 'professional', 'administrative', 'receptionist']),
+});
+
+type CreateFormData = z.infer<typeof createUserSchema>;
+type EditFormData = z.infer<typeof editUserSchema>;
+type FormData = CreateFormData | EditFormData;
 
 const roleLabels: Record<string, string> = {
   admin: "Admin - Acesso total ao sistema",
@@ -81,7 +91,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
   const isOwner = clinicUser?.role === 'owner';
 
   const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(isEditing ? editUserSchema : createUserSchema),
     defaultValues: {
       email: "",
       name: "",
@@ -173,15 +183,17 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         toast.success('Usuário atualizado com sucesso');
         onClose(true);
       } else {
-        // Create new user
+        // Create new user - cast to CreateFormData since we're in create mode
+        const createData = data as CreateFormData;
+        
         // First, create auth user
         const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: data.email,
-          password: data.password || Math.random().toString(36).slice(-8) + 'A1!',
+          email: createData.email,
+          password: createData.password || Math.random().toString(36).slice(-8) + 'A1!',
           options: {
             emailRedirectTo: `${window.location.origin}/auth`,
             data: {
-              name: data.name,
+              name: createData.name,
             },
           },
         });
@@ -221,15 +233,15 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         }
 
         // Auto-create professional record when role is 'professional'
-        if (data.role === 'professional') {
+        if (createData.role === 'professional') {
           const { error: professionalError } = await supabase
             .from('professionals')
             .insert({
               clinic_id: clinicId,
               user_id: authData.user.id,
-              name: data.name,
-              email: data.email,
-              phone: data.phone || null,
+              name: createData.name,
+              email: createData.email,
+              phone: createData.phone || null,
               is_active: true,
             });
 
@@ -243,9 +255,9 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
           entityType: 'user',
           entityId: authData.user.id,
           details: {
-            user_name: data.name,
-            user_email: data.email,
-            role: data.role,
+            user_name: createData.name,
+            user_email: createData.email,
+            role: createData.role,
             clinic_id: clinicId,
           },
         });
