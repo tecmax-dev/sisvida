@@ -156,7 +156,7 @@ function WaitingListContent() {
         .insert({
           clinic_id: currentClinic.id,
           patient_id: selectedPatient,
-          professional_id: selectedProfessional || null,
+          professional_id: selectedProfessional && selectedProfessional !== "none" ? selectedProfessional : null,
           preferred_times: preferredTimes.length > 0 ? preferredTimes : null,
           notes: notes || null,
         });
@@ -297,7 +297,7 @@ function WaitingListContent() {
                     <SelectValue placeholder="Qualquer profissional" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Qualquer profissional</SelectItem>
+                    <SelectItem value="none">Qualquer profissional</SelectItem>
                     {professionals.map((prof) => (
                       <SelectItem key={prof.id} value={prof.id}>
                         {prof.name}
