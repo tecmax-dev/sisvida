@@ -82,6 +82,7 @@ export default function ProcedureEditPage() {
   const queryClient = useQueryClient();
   const returnTo = searchParams.get("returnTo") || "/dashboard/procedures";
 
+  const isCreating = !id;
   const [insurancePrices, setInsurancePrices] = useState<Record<string, string>>({});
 
   const form = useForm<ProcedureFormData>({
@@ -97,7 +98,7 @@ export default function ProcedureEditPage() {
     },
   });
 
-  // Fetch procedure data
+  // Fetch procedure data (only when editing)
   const { data: procedure, isLoading } = useQuery({
     queryKey: ["procedure", id],
     queryFn: async () => {
@@ -130,7 +131,7 @@ export default function ProcedureEditPage() {
     enabled: !!currentClinic?.id,
   });
 
-  // Fetch existing insurance prices for this procedure
+  // Fetch existing insurance prices for this procedure (only when editing)
   const { data: existingPrices = [] } = useQuery({
     queryKey: ["procedure-insurance-prices", id],
     queryFn: async () => {
@@ -145,7 +146,7 @@ export default function ProcedureEditPage() {
     enabled: !!id,
   });
 
-  // Populate form when procedure loads
+  // Populate form when procedure loads (editing mode)
   useEffect(() => {
     if (procedure) {
       form.reset({
@@ -173,7 +174,7 @@ export default function ProcedureEditPage() {
 
   const mutation = useMutation({
     mutationFn: async (data: ProcedureFormData) => {
-      if (!id || !currentClinic?.id) throw new Error("Missing procedure or clinic ID");
+      if (!currentClinic?.id) throw new Error("Missing clinic ID");
 
       const payload = {
         name: data.name,
@@ -185,44 +186,60 @@ export default function ProcedureEditPage() {
         is_active: data.is_active,
       };
 
-      const { error } = await supabase
-        .from("procedures")
-        .update(payload)
-        .eq("id", id);
-      if (error) throw error;
+      let procedureId = id;
+
+      if (isCreating) {
+        // INSERT new procedure
+        const { data: newProcedure, error } = await supabase
+          .from("procedures")
+          .insert({ ...payload, clinic_id: currentClinic.id })
+          .select("id")
+          .single();
+        if (error) throw error;
+        procedureId = newProcedure.id;
+      } else {
+        // UPDATE existing procedure
+        const { error } = await supabase
+          .from("procedures")
+          .update(payload)
+          .eq("id", id);
+        if (error) throw error;
+      }
 
       // Save insurance prices
-      // Delete existing prices first
-      await supabase
-        .from("procedure_insurance_prices")
-        .delete()
-        .eq("procedure_id", id);
-
-      // Insert new prices
-      const pricesToInsert = Object.entries(insurancePrices)
-        .filter(([_, price]) => price && parseFloat(price) > 0)
-        .map(([insurancePlanId, price]) => ({
-          procedure_id: id,
-          insurance_plan_id: insurancePlanId,
-          price: parseFloat(price),
-        }));
-
-      if (pricesToInsert.length > 0) {
-        const { error: priceError } = await supabase
+      if (procedureId) {
+        // Delete existing prices first (only matters for editing, but safe for creation too)
+        await supabase
           .from("procedure_insurance_prices")
-          .insert(pricesToInsert);
-        if (priceError) throw priceError;
+          .delete()
+          .eq("procedure_id", procedureId);
+
+        // Insert new prices
+        const pricesToInsert = Object.entries(insurancePrices)
+          .filter(([_, price]) => price && parseFloat(price) > 0)
+          .map(([insurancePlanId, price]) => ({
+            procedure_id: procedureId,
+            insurance_plan_id: insurancePlanId,
+            price: parseFloat(price),
+          }));
+
+        if (pricesToInsert.length > 0) {
+          const { error: priceError } = await supabase
+            .from("procedure_insurance_prices")
+            .insert(pricesToInsert);
+          if (priceError) throw priceError;
+        }
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["procedures"] });
       queryClient.invalidateQueries({ queryKey: ["procedure-insurance-prices"] });
-      toast.success("Procedimento atualizado com sucesso");
+      toast.success(isCreating ? "Procedimento criado com sucesso" : "Procedimento atualizado com sucesso");
       navigate(returnTo);
     },
     onError: (error) => {
-      console.error("Error updating procedure:", error);
-      toast.error("Erro ao atualizar procedimento");
+      console.error("Error saving procedure:", error);
+      toast.error(isCreating ? "Erro ao criar procedimento" : "Erro ao atualizar procedimento");
     },
   });
 
@@ -241,7 +258,8 @@ export default function ProcedureEditPage() {
     navigate(returnTo);
   };
 
-  if (isLoading) {
+  // Show loading only when editing
+  if (!isCreating && isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -249,7 +267,8 @@ export default function ProcedureEditPage() {
     );
   }
 
-  if (!procedure) {
+  // Show not found only when editing and procedure doesn't exist
+  if (!isCreating && !procedure) {
     return (
       <div className="space-y-6">
         <Button variant="ghost" onClick={() => navigate(returnTo)}>
@@ -272,8 +291,12 @@ export default function ProcedureEditPage() {
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Editar Procedimento</h1>
-          <p className="text-muted-foreground">{procedure.name}</p>
+          <h1 className="text-2xl font-bold text-foreground">
+            {isCreating ? "Novo Procedimento" : "Editar Procedimento"}
+          </h1>
+          {!isCreating && procedure && (
+            <p className="text-muted-foreground">{procedure.name}</p>
+          )}
         </div>
       </div>
 
