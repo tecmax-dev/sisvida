@@ -439,6 +439,19 @@ export default function ProfessionalProfile() {
   const streetViewUrl = getStreetViewUrl();
   const googleMapsLink = getGoogleMapsLink();
   const configuredMapViewType = clinic.map_view_type || 'streetview';
+  const customMapEmbedUrl = (clinic as any).custom_map_embed_url as string | null;
+  
+  // Extrai a URL src do iframe se o usuário colou o código completo
+  const extractIframeSrc = (input: string | null): string | null => {
+    if (!input) return null;
+    // Se já é uma URL direta, retorna
+    if (input.startsWith('http')) return input;
+    // Tenta extrair src do iframe
+    const match = input.match(/src=["']([^"']+)["']/);
+    return match ? match[1] : null;
+  };
+  
+  const customEmbedSrc = extractIframeSrc(customMapEmbedUrl);
   
   // Fallback inteligente: se Street View foi selecionado mas não há coordenadas, usar mapa normal
   const mapViewType = (configuredMapViewType === 'streetview' || configuredMapViewType === 'both') && !streetViewUrl
@@ -574,6 +587,22 @@ export default function ProfessionalProfile() {
                       {/* Street View / Map based on clinic config */}
                       {mapViewType !== 'none' && (
                         <>
+                          {/* Custom Embed URL */}
+                          {mapViewType === 'custom' && customEmbedSrc && (
+                            <div className="rounded-xl overflow-hidden border shadow-sm">
+                              <iframe
+                                src={customEmbedSrc}
+                                width="100%"
+                                height="250"
+                                style={{ border: 0 }}
+                                allowFullScreen
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                                title="Localização do consultório"
+                              />
+                            </div>
+                          )}
+
                           {/* Street View */}
                           {(mapViewType === 'streetview' || mapViewType === 'both') && streetViewUrl && (
                             <div className="rounded-xl overflow-hidden border shadow-sm">

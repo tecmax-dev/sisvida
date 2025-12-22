@@ -4,10 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [enforceScheduleValidation, setEnforceScheduleValidation] = useState(true);
   const [loadingValidation, setLoadingValidation] = useState(false);
   const [mapViewType, setMapViewType] = useState("streetview");
+  const [customMapEmbedUrl, setCustomMapEmbedUrl] = useState("");
 
   // Load clinic settings
   useEffect(() => {
@@ -31,7 +33,7 @@ export default function SettingsPage() {
       
       const { data, error } = await supabase
         .from('clinics')
-        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type')
+        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url')
         .eq('id', currentClinic.id)
         .single();
       
@@ -41,6 +43,7 @@ export default function SettingsPage() {
         setReminderEnabled(data.reminder_enabled ?? true);
         setReminderTime(String(data.reminder_hours || 24));
         setMapViewType(data.map_view_type || "streetview");
+        setCustomMapEmbedUrl(data.custom_map_embed_url || "");
       }
     };
     
@@ -94,7 +97,8 @@ export default function SettingsPage() {
           name: clinicName,
           reminder_enabled: reminderEnabled,
           reminder_hours: parseInt(reminderTime),
-          map_view_type: mapViewType
+          map_view_type: mapViewType,
+          custom_map_embed_url: customMapEmbedUrl || null
         })
         .eq('id', currentClinic.id);
       
@@ -327,6 +331,13 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="flex items-start space-x-3">
+              <RadioGroupItem value="custom" id="custom" className="mt-0.5" />
+              <div>
+                <Label htmlFor="custom" className="font-medium cursor-pointer">Link Personalizado</Label>
+                <p className="text-sm text-muted-foreground">Cole o link de incorporação do Google Maps</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-3">
               <RadioGroupItem value="none" id="none" className="mt-0.5" />
               <div>
                 <Label htmlFor="none" className="font-medium cursor-pointer">Nenhum</Label>
@@ -334,6 +345,36 @@ export default function SettingsPage() {
               </div>
             </div>
           </RadioGroup>
+
+          {/* Custom Embed URL Input */}
+          {mapViewType === 'custom' && (
+            <div className="mt-4 space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="customMapEmbed">Link de Incorporação</Label>
+                <Textarea
+                  id="customMapEmbed"
+                  placeholder='Cole aqui o código de incorporação do Google Maps (ex: <iframe src="https://www.google.com/maps/embed?..." ...></iframe>)'
+                  value={customMapEmbedUrl}
+                  onChange={(e) => setCustomMapEmbedUrl(e.target.value)}
+                  rows={4}
+                  className="font-mono text-xs"
+                />
+              </div>
+              <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-200 font-medium mb-2 flex items-center gap-2">
+                  <ExternalLink className="h-4 w-4" />
+                  Como obter o link de incorporação:
+                </p>
+                <ol className="text-sm text-blue-700 dark:text-blue-300 space-y-1 ml-6 list-decimal">
+                  <li>Abra o <a href="https://www.google.com/maps" target="_blank" rel="noopener noreferrer" className="underline hover:no-underline">Google Maps</a></li>
+                  <li>Pesquise o endereço ou ative o Street View</li>
+                  <li>Clique no menu (≡) → "Compartilhar ou incorporar mapa"</li>
+                  <li>Selecione a aba "Incorporar um mapa"</li>
+                  <li>Copie o código HTML completo</li>
+                </ol>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
