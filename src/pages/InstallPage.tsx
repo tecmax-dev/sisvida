@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Smartphone, Share, Plus, MoreVertical, Home, ArrowLeft, Download, CheckCircle2 } from "lucide-react";
+import { Smartphone, Share, Plus, MoreVertical, Home, ArrowLeft, Download, CheckCircle2, RefreshCw } from "lucide-react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -13,6 +14,7 @@ export default function InstallPage() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     // Verificar se já está instalado como PWA
@@ -56,6 +58,38 @@ export default function InstallPage() {
       setDeferredPrompt(null);
     } catch (error) {
       console.error('Erro ao instalar PWA:', error);
+    }
+  };
+
+  const handleForceUpdate = async () => {
+    setIsUpdating(true);
+    toast.info('Atualizando aplicativo...');
+    
+    try {
+      // Limpar todos os caches
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        await Promise.all(cacheNames.map(name => caches.delete(name)));
+        console.log('Caches limpos:', cacheNames);
+      }
+      
+      // Desregistrar Service Workers antigos
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(r => r.unregister()));
+        console.log('Service Workers desregistrados');
+      }
+      
+      toast.success('Cache limpo! Recarregando...');
+      
+      // Pequeno delay para mostrar o toast
+      setTimeout(() => {
+        window.location.reload();
+      }, 500);
+    } catch (error) {
+      console.error('Erro ao atualizar:', error);
+      toast.error('Erro ao atualizar. Tente recarregar a página manualmente.');
+      setIsUpdating(false);
     }
   };
 
@@ -252,6 +286,30 @@ export default function InstallPage() {
                   Funciona como um aplicativo nativo
                 </li>
               </ul>
+            </CardContent>
+          </Card>
+
+          {/* Botão de Atualização */}
+          <Card className="border-orange-500/30 bg-orange-500/5">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-orange-600">
+                <RefreshCw className="h-5 w-5" />
+                Atualizar Aplicativo
+              </CardTitle>
+              <CardDescription>
+                Limpe o cache e force o download da versão mais recente
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button 
+                onClick={handleForceUpdate} 
+                variant="outline" 
+                className="w-full gap-2 border-orange-500/50 text-orange-600 hover:bg-orange-500/10"
+                disabled={isUpdating}
+              >
+                <RefreshCw className={`h-4 w-4 ${isUpdating ? 'animate-spin' : ''}`} />
+                {isUpdating ? 'Atualizando...' : 'Forçar Atualização'}
+              </Button>
             </CardContent>
           </Card>
 
