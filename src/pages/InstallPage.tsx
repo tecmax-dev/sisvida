@@ -1,9 +1,64 @@
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Smartphone, Share, Plus, MoreVertical, Home, ArrowLeft } from "lucide-react";
+import { Smartphone, Share, Plus, MoreVertical, Home, ArrowLeft, Download, CheckCircle2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 export default function InstallPage() {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [canInstall, setCanInstall] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(false);
+
+  useEffect(() => {
+    // Verificar se já está instalado como PWA
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+      return;
+    }
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setCanInstall(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    // Verificar se foi instalado
+    const installedHandler = () => {
+      setIsInstalled(true);
+      setCanInstall(false);
+    };
+    window.addEventListener('appinstalled', installedHandler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installedHandler);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (!deferredPrompt) return;
+
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+        setCanInstall(false);
+      }
+      setDeferredPrompt(null);
+    } catch (error) {
+      console.error('Erro ao instalar PWA:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-primary/5 to-background py-12 px-4">
       <div className="max-w-2xl mx-auto">
@@ -25,6 +80,40 @@ export default function InstallPage() {
         </div>
 
         <div className="space-y-6">
+          {/* Botão de Instalação Programática */}
+          {isInstalled ? (
+            <Card className="bg-green-500/10 border-green-500/30">
+              <CardContent className="flex items-center justify-center gap-3 py-6">
+                <CheckCircle2 className="h-6 w-6 text-green-600" />
+                <span className="text-lg font-medium text-green-700">App instalado com sucesso!</span>
+              </CardContent>
+            </Card>
+          ) : canInstall ? (
+            <Card className="bg-primary/10 border-primary/30">
+              <CardContent className="py-6">
+                <div className="text-center space-y-4">
+                  <p className="text-foreground font-medium">
+                    Instale o Eclini diretamente no seu dispositivo
+                  </p>
+                  <Button onClick={handleInstall} size="lg" className="gap-2">
+                    <Download className="h-5 w-5" />
+                    Instalar Agora
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="bg-muted/50 border-muted">
+              <CardContent className="py-6">
+                <p className="text-center text-muted-foreground text-sm">
+                  O botão de instalação rápida aparecerá automaticamente quando disponível.
+                  <br />
+                  Enquanto isso, siga as instruções abaixo para o seu dispositivo.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Android Instructions */}
           <Card>
             <CardHeader>
