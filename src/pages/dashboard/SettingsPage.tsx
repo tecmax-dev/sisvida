@@ -7,7 +7,8 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
@@ -21,6 +22,7 @@ export default function SettingsPage() {
   const [reminderTime, setReminderTime] = useState("24");
   const [enforceScheduleValidation, setEnforceScheduleValidation] = useState(true);
   const [loadingValidation, setLoadingValidation] = useState(false);
+  const [mapViewType, setMapViewType] = useState("streetview");
 
   // Load clinic settings
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function SettingsPage() {
       
       const { data, error } = await supabase
         .from('clinics')
-        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours')
+        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type')
         .eq('id', currentClinic.id)
         .single();
       
@@ -38,6 +40,7 @@ export default function SettingsPage() {
         setClinicName(data.name || "Clínica");
         setReminderEnabled(data.reminder_enabled ?? true);
         setReminderTime(String(data.reminder_hours || 24));
+        setMapViewType(data.map_view_type || "streetview");
       }
     };
     
@@ -90,7 +93,8 @@ export default function SettingsPage() {
         .update({ 
           name: clinicName,
           reminder_enabled: reminderEnabled,
-          reminder_hours: parseInt(reminderTime)
+          reminder_hours: parseInt(reminderTime),
+          map_view_type: mapViewType
         })
         .eq('id', currentClinic.id);
       
@@ -281,6 +285,55 @@ export default function SettingsPage() {
               </p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Map View Type */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <MapPin className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Visualização de Localização</CardTitle>
+              <CardDescription>
+                Como exibir a localização na página pública do profissional
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <RadioGroup value={mapViewType} onValueChange={setMapViewType} className="space-y-3">
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem value="streetview" id="streetview" className="mt-0.5" />
+              <div>
+                <Label htmlFor="streetview" className="font-medium cursor-pointer">Street View</Label>
+                <p className="text-sm text-muted-foreground">Visualização de rua do Google</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem value="map" id="map" className="mt-0.5" />
+              <div>
+                <Label htmlFor="map" className="font-medium cursor-pointer">Mapa</Label>
+                <p className="text-sm text-muted-foreground">Mapa com marcador de localização</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem value="both" id="both" className="mt-0.5" />
+              <div>
+                <Label htmlFor="both" className="font-medium cursor-pointer">Ambos</Label>
+                <p className="text-sm text-muted-foreground">Street View + link para o mapa</p>
+              </div>
+            </div>
+            <div className="flex items-start space-x-3">
+              <RadioGroupItem value="none" id="none" className="mt-0.5" />
+              <div>
+                <Label htmlFor="none" className="font-medium cursor-pointer">Nenhum</Label>
+                <p className="text-sm text-muted-foreground">Não exibir mapa ou street view</p>
+              </div>
+            </div>
+          </RadioGroup>
         </CardContent>
       </Card>
 

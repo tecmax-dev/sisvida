@@ -59,6 +59,7 @@ interface Clinic {
   phone: string | null;
   address: string | null;
   logo_url: string | null;
+  map_view_type: string | null;
 }
 
 interface Professional {
@@ -138,7 +139,7 @@ export default function ProfessionalProfile() {
       // Fetch clinic
       const { data: clinicData, error: clinicError } = await supabase
         .from('clinics')
-        .select('id, name, slug, phone, address, logo_url')
+        .select('id, name, slug, phone, address, logo_url, map_view_type')
         .eq('slug', clinicSlug)
         .single();
 
@@ -371,6 +372,28 @@ export default function ProfessionalProfile() {
     return null;
   };
 
+  const getStreetViewUrl = () => {
+    if (professional?.latitude && professional?.longitude) {
+      return `https://www.google.com/maps/embed?pb=!4v1!6m8!1m7!1s!2m2!1d${professional.latitude}!2d${professional.longitude}!3f0!4f0!5f0.75`;
+    }
+    if (professional?.address) {
+      const query = encodeURIComponent(`${professional.address}, ${professional.city || ''}, ${professional.state || ''}`);
+      return `https://www.google.com/maps/embed/v1/streetview?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&location=${query}`;
+    }
+    return null;
+  };
+
+  const getGoogleMapsLink = () => {
+    if (professional?.latitude && professional?.longitude) {
+      return `https://www.google.com/maps?q=${professional.latitude},${professional.longitude}`;
+    }
+    if (professional?.address) {
+      const query = encodeURIComponent(`${professional.address}, ${professional.city || ''}, ${professional.state || ''}`);
+      return `https://www.google.com/maps/search/${query}`;
+    }
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-background to-muted/30 flex items-center justify-center">
@@ -415,6 +438,9 @@ export default function ProfessionalProfile() {
   }
 
   const mapUrl = getGoogleMapUrl();
+  const streetViewUrl = getStreetViewUrl();
+  const googleMapsLink = getGoogleMapsLink();
+  const mapViewType = clinic.map_view_type || 'streetview';
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/30">
@@ -542,20 +568,54 @@ export default function ProfessionalProfile() {
                         )}
                       </div>
                       
-                      {/* Google Map */}
-                      {mapUrl && (
-                        <div className="rounded-xl overflow-hidden border shadow-sm">
-                          <iframe
-                            src={mapUrl}
-                            width="100%"
-                            height="250"
-                            style={{ border: 0 }}
-                            allowFullScreen
-                            loading="lazy"
-                            referrerPolicy="no-referrer-when-downgrade"
-                            title="Localização do consultório"
-                          />
-                        </div>
+                      {/* Street View / Map based on clinic config */}
+                      {mapViewType !== 'none' && (
+                        <>
+                          {/* Street View */}
+                          {(mapViewType === 'streetview' || mapViewType === 'both') && streetViewUrl && (
+                            <div className="rounded-xl overflow-hidden border shadow-sm">
+                              <iframe
+                                src={streetViewUrl}
+                                width="100%"
+                                height="250"
+                                style={{ border: 0 }}
+                                allowFullScreen
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                                title="Street View do consultório"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Regular Map */}
+                          {mapViewType === 'map' && mapUrl && (
+                            <div className="rounded-xl overflow-hidden border shadow-sm">
+                              <iframe
+                                src={mapUrl}
+                                width="100%"
+                                height="250"
+                                style={{ border: 0 }}
+                                allowFullScreen
+                                loading="lazy"
+                                referrerPolicy="no-referrer-when-downgrade"
+                                title="Localização do consultório"
+                              />
+                            </div>
+                          )}
+                          
+                          {/* Link to Google Maps when showing both */}
+                          {mapViewType === 'both' && googleMapsLink && (
+                            <a 
+                              href={googleMapsLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-950/50 transition-colors"
+                            >
+                              <MapPin className="h-5 w-5" />
+                              <span className="font-medium">Ver no Google Maps</span>
+                            </a>
+                          )}
+                        </>
                       )}
 
                       {/* WhatsApp */}

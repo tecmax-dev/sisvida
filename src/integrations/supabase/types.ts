@@ -583,6 +583,7 @@ export type Database = {
           id: string
           is_blocked: boolean | null
           logo_url: string | null
+          map_view_type: string | null
           name: string
           opening_time: string | null
           phone: string | null
@@ -604,6 +605,7 @@ export type Database = {
           id?: string
           is_blocked?: boolean | null
           logo_url?: string | null
+          map_view_type?: string | null
           name: string
           opening_time?: string | null
           phone?: string | null
@@ -625,6 +627,7 @@ export type Database = {
           id?: string
           is_blocked?: boolean | null
           logo_url?: string | null
+          map_view_type?: string | null
           name?: string
           opening_time?: string | null
           phone?: string | null
