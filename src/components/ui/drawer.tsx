@@ -30,16 +30,15 @@ const DrawerContent = React.forwardRef<
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}
+      {...props}
       className={cn(
         "fixed inset-x-0 bottom-0 z-50 mt-24 flex h-auto flex-col rounded-t-[10px] border bg-background",
         className,
       )}
       onFocusOutside={(e) => {
-        // SEMPRE prevenir fechamento quando o foco sai (ex: trocar de aba do navegador)
         e.preventDefault();
       }}
       onInteractOutside={(e) => {
-        // Prevenir fechamento em eventos de foco, permitir apenas clique
         const originalEvent = e.detail?.originalEvent;
         if (originalEvent instanceof FocusEvent || 
             originalEvent?.type === 'focusout' || 
@@ -47,7 +46,6 @@ const DrawerContent = React.forwardRef<
           e.preventDefault();
         }
       }}
-      {...props}
     >
       <div className="mx-auto mt-4 h-2 w-[100px] rounded-full bg-muted" />
       {children}
