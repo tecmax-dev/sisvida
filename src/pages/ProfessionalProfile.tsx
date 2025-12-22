@@ -92,6 +92,12 @@ interface InsurancePlan {
   name: string;
 }
 
+interface ProcedureInsurancePrice {
+  procedure_id: string;
+  insurance_plan_id: string;
+  price: number;
+}
+
 export default function ProfessionalProfile() {
   const { clinicSlug, professionalSlug } = useParams();
   const { toast } = useToast();
@@ -100,6 +106,7 @@ export default function ProfessionalProfile() {
   const [professional, setProfessional] = useState<Professional | null>(null);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
+  const [procedureInsurancePrices, setProcedureInsurancePrices] = useState<ProcedureInsurancePrice[]>([]);
   const [existingAppointments, setExistingAppointments] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -184,6 +191,17 @@ export default function ProfessionalProfile() {
 
       setProcedures(proceduresData || []);
 
+      // Fetch procedure insurance prices
+      if (proceduresData && proceduresData.length > 0) {
+        const procedureIds = proceduresData.map(p => p.id);
+        const { data: pricesData } = await supabase
+          .from('procedure_insurance_prices')
+          .select('procedure_id, insurance_plan_id, price')
+          .in('procedure_id', procedureIds);
+        
+        setProcedureInsurancePrices(pricesData || []);
+      }
+
       // Fetch insurance plans
       const { data: insuranceData } = await supabase
         .from('insurance_plans')
@@ -223,13 +241,26 @@ export default function ProfessionalProfile() {
     return professional?.appointment_duration || 30;
   }, [selectedProcedure, professional, procedures]);
 
+  // Helper function to get price based on selected insurance
+  const getProcedurePrice = (procedureId: string, defaultPrice: number): number => {
+    if (!selectedInsurance || selectedInsurance === "particular") return defaultPrice;
+    
+    const insurancePrice = procedureInsurancePrices.find(
+      p => p.procedure_id === procedureId && p.insurance_plan_id === selectedInsurance
+    );
+    
+    return insurancePrice ? insurancePrice.price : defaultPrice;
+  };
+
   const selectedProcedurePrice = useMemo(() => {
     if (selectedProcedure) {
       const procedure = procedures.find(p => p.id === selectedProcedure);
-      return procedure?.price || 0;
+      if (procedure) {
+        return getProcedurePrice(procedure.id, procedure.price);
+      }
     }
     return 0;
-  }, [selectedProcedure, procedures]);
+  }, [selectedProcedure, procedures, selectedInsurance, procedureInsurancePrices]);
 
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate || !professional) return [];
@@ -731,7 +762,27 @@ export default function ProfessionalProfile() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 space-y-4">
-                  {/* Procedure Selection */}
+                  {/* Insurance Plan - FIRST so price updates for procedures */}
+                  {insurancePlans.length > 0 && (
+                    <div>
+                      <Label className="text-sm font-medium">Convênio</Label>
+                      <ResponsiveSelect
+                        value={selectedInsurance}
+                        onValueChange={setSelectedInsurance}
+                        placeholder="Particular"
+                        className="mt-1.5"
+                        options={[
+                          { value: "particular", label: "Particular" },
+                          ...insurancePlans.map((plan) => ({
+                            value: plan.id,
+                            label: plan.name
+                          }))
+                        ]}
+                      />
+                    </div>
+                  )}
+
+                  {/* Procedure Selection - Shows dynamic price based on insurance */}
                   {procedures.length > 0 && (
                     <div>
                       <Label className="text-sm font-medium">Procedimento</Label>
@@ -740,10 +791,13 @@ export default function ProfessionalProfile() {
                         onValueChange={setSelectedProcedure}
                         placeholder="Selecione (opcional)"
                         className="mt-1.5"
-                        options={procedures.map((procedure) => ({
-                          value: procedure.id,
-                          label: `${procedure.name}${procedure.price > 0 ? ` - R$ ${procedure.price.toFixed(2)}` : ''}`
-                        }))}
+                        options={procedures.map((procedure) => {
+                          const price = getProcedurePrice(procedure.id, procedure.price);
+                          return {
+                            value: procedure.id,
+                            label: `${procedure.name}${price > 0 ? ` - R$ ${price.toFixed(2)}` : ''}`
+                          };
+                        })}
                       />
                     </div>
                   )}
@@ -832,27 +886,6 @@ export default function ProfessionalProfile() {
                       )}
                     </div>
                   )}
-
-                  {/* Insurance Plan */}
-                  {insurancePlans.length > 0 && (
-                    <div>
-                      <Label className="text-sm font-medium">Convênio</Label>
-                      <ResponsiveSelect
-                        value={selectedInsurance}
-                        onValueChange={setSelectedInsurance}
-                        placeholder="Particular"
-                        className="mt-1.5"
-                        options={[
-                          { value: "particular", label: "Particular" },
-                          ...insurancePlans.map((plan) => ({
-                            value: plan.id,
-                            label: plan.name
-                          }))
-                        ]}
-                      />
-                    </div>
-                  )}
-
                   {/* Appointment Type */}
                   <div>
                     <Label className="text-sm font-medium">Tipo de Consulta</Label>
