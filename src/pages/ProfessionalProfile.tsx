@@ -60,6 +60,7 @@ interface Clinic {
   address: string | null;
   logo_url: string | null;
   map_view_type: string | null;
+  custom_map_embed_url: string | null;
 }
 
 interface Professional {
@@ -139,7 +140,7 @@ export default function ProfessionalProfile() {
       // Fetch clinic
       const { data: clinicData, error: clinicError } = await supabase
         .from('clinics')
-        .select('id, name, slug, phone, address, logo_url, map_view_type')
+        .select('id, name, slug, phone, address, logo_url, map_view_type, custom_map_embed_url')
         .eq('slug', clinicSlug)
         .single();
 
@@ -439,7 +440,7 @@ export default function ProfessionalProfile() {
   const streetViewUrl = getStreetViewUrl();
   const googleMapsLink = getGoogleMapsLink();
   const configuredMapViewType = clinic.map_view_type || 'streetview';
-  const customMapEmbedUrl = (clinic as any).custom_map_embed_url as string | null;
+  const customMapEmbedUrl = clinic.custom_map_embed_url;
   
   // Extrai a URL src do iframe se o usuário colou o código completo
   const extractIframeSrc = (input: string | null): string | null => {
