@@ -715,13 +715,7 @@ export default function CalendarPage() {
   };
 
   const openEditDialog = (appointment: Appointment) => {
-    setEditingAppointment(appointment);
-    setFormPatient(appointment.patient_id);
-    setFormProfessional(appointment.professional_id);
-    setFormTime(appointment.start_time.slice(0, 5));
-    setFormType(appointment.type);
-    setFormNotes(appointment.notes || "");
-    setEditDialogOpen(true);
+    navigate(`/dashboard/appointments/${appointment.id}/edit?returnTo=/dashboard/calendar`);
   };
 
   const openCancelDialog = (appointment: Appointment) => {

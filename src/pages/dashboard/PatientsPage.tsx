@@ -396,17 +396,7 @@ export default function PatientsPage() {
   };
 
   const handleOpenEdit = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setEditName(patient.name);
-    setEditPhone(patient.phone);
-    setEditEmail(patient.email || "");
-    setEditCpf(patient.cpf || "");
-    setEditAddress(patient.address || "");
-    setEditBirthDate(patient.birth_date || "");
-    setEditNotes(patient.notes || "");
-    setEditInsurancePlanId(patient.insurance_plan_id || "");
-    setEditErrors({});
-    setEditDialogOpen(true);
+    navigate(`/dashboard/patients/${patient.id}/edit`);
   };
 
   const handleEditPatient = async (e: React.FormEvent) => {

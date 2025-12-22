@@ -34,11 +34,14 @@ const TelemedicinePatient = lazy(() => import("./pages/TelemedicinePatient"));
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
 
-// Dashboard pages (17 páginas)
+// Dashboard pages (20 páginas)
 const DashboardOverview = lazy(() => import("./pages/dashboard/DashboardOverview"));
 const CalendarPage = lazy(() => import("./pages/dashboard/CalendarPage"));
 const PatientsPage = lazy(() => import("./pages/dashboard/PatientsPage"));
+const PatientEditPage = lazy(() => import("./pages/dashboard/PatientEditPage"));
 const ProfessionalsPage = lazy(() => import("./pages/dashboard/ProfessionalsPage"));
+const ProfessionalEditPage = lazy(() => import("./pages/dashboard/ProfessionalEditPage"));
+const AppointmentEditPage = lazy(() => import("./pages/dashboard/AppointmentEditPage"));
 const InsurancePage = lazy(() => import("./pages/dashboard/InsurancePage"));
 const MedicalRecordsPage = lazy(() => import("./pages/dashboard/MedicalRecordsPage"));
 const AnamnesisPage = lazy(() => import("./pages/dashboard/AnamnesisPage"));
@@ -172,8 +175,10 @@ const App = () => (
                   <Route index element={<DashboardOverview />} />
                   <Route path="calendar" element={<CalendarPage />} />
                   <Route path="patients" element={<PatientsPage />} />
+                  <Route path="patients/:id/edit" element={<PatientEditPage />} />
                   <Route path="professionals" element={<ProfessionalsPage />} />
-                  <Route path="insurance" element={<InsurancePage />} />
+                  <Route path="professionals/:id/edit" element={<ProfessionalEditPage />} />
+                  <Route path="appointments/:id/edit" element={<AppointmentEditPage />} />
                   <Route path="medical-records" element={<MedicalRecordsPage />} />
                   <Route path="anamnesis" element={<AnamnesisPage />} />
                   <Route path="anamnesis-templates" element={<AnamneseTemplatesPage />} />
