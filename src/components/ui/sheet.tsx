@@ -57,13 +57,12 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
       <SheetOverlay />
       <SheetPrimitive.Content 
         ref={ref} 
+        {...props}
         className={cn(sheetVariants({ side }), className)} 
         onFocusOutside={(e) => {
-          // SEMPRE prevenir fechamento quando o foco sai (ex: trocar de aba do navegador)
           e.preventDefault();
         }}
         onInteractOutside={(e) => {
-          // Prevenir fechamento em eventos de foco, permitir apenas clique
           const originalEvent = e.detail?.originalEvent;
           if (originalEvent instanceof FocusEvent || 
               originalEvent?.type === 'focusout' || 
@@ -71,7 +70,6 @@ const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Con
             e.preventDefault();
           }
         }}
-        {...props}
       >
         {children}
         <SheetPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity data-[state=open]:bg-secondary hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
