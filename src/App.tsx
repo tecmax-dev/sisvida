@@ -53,6 +53,7 @@ const SubscriptionPage = lazy(() => import("./pages/dashboard/SubscriptionPage")
 const PrescriptionPage = lazy(() => import("./pages/dashboard/PrescriptionPage"));
 const FinancialsPage = lazy(() => import("./pages/dashboard/FinancialsPage"));
 const ProceduresPage = lazy(() => import("./pages/dashboard/ProceduresPage"));
+const ProcedureEditPage = lazy(() => import("./pages/dashboard/ProcedureEditPage"));
 const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
 const UsersManagementPage = lazy(() => import("./pages/dashboard/UsersManagementPage"));
 
@@ -179,6 +180,7 @@ const App = () => (
                   <Route path="professionals" element={<ProfessionalsPage />} />
                   <Route path="professionals/:id/edit" element={<ProfessionalEditPage />} />
                   <Route path="appointments/:id/edit" element={<AppointmentEditPage />} />
+                  <Route path="insurance" element={<InsurancePage />} />
                   <Route path="medical-records" element={<MedicalRecordsPage />} />
                   <Route path="anamnesis" element={<AnamnesisPage />} />
                   <Route path="anamnesis-templates" element={<AnamneseTemplatesPage />} />
@@ -189,6 +191,7 @@ const App = () => (
                   <Route path="prescriptions" element={<PrescriptionPage />} />
                   <Route path="financials" element={<FinancialsPage />} />
                   <Route path="procedures" element={<ProceduresPage />} />
+                  <Route path="procedures/:id/edit" element={<ProcedureEditPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="users" element={<UsersManagementPage />} />
                 </Route>

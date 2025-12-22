@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -39,9 +40,9 @@ interface Procedure {
 export default function ProceduresPage() {
   const { currentClinic } = useAuth();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedProcedure, setSelectedProcedure] = useState<Procedure | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [procedureToDelete, setProcedureToDelete] = useState<Procedure | null>(null);
 
@@ -113,8 +114,7 @@ export default function ProceduresPage() {
   };
 
   const handleEdit = (procedure: Procedure) => {
-    setSelectedProcedure(procedure);
-    setDialogOpen(true);
+    navigate(`/dashboard/procedures/${procedure.id}/edit`);
   };
 
   const handleDelete = (procedure: Procedure) => {
@@ -124,7 +124,6 @@ export default function ProceduresPage() {
 
   const handleDialogClose = () => {
     setDialogOpen(false);
-    setSelectedProcedure(null);
   };
 
   if (!currentClinic) {
@@ -256,7 +255,7 @@ export default function ProceduresPage() {
           open={dialogOpen}
           onOpenChange={handleDialogClose}
           clinicId={currentClinic.id}
-          procedure={selectedProcedure}
+          procedure={null}
         />
 
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
