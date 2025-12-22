@@ -21,13 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ResponsiveSelect } from "@/components/ui/responsive-select";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -656,18 +650,16 @@ export default function PublicBooking() {
                   <CardTitle className="text-lg">Procedimento (opcional)</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Select value={selectedProcedure} onValueChange={setSelectedProcedure}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um procedimento" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {procedures.map((procedure) => (
-                        <SelectItem key={procedure.id} value={procedure.id}>
-                          {procedure.name}{procedure.price > 0 ? ` - R$ ${getProcedurePrice(procedure.id, procedure.price).toFixed(2)}` : ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ResponsiveSelect
+                    value={selectedProcedure}
+                    onValueChange={setSelectedProcedure}
+                    options={procedures.map((procedure) => ({
+                      value: procedure.id,
+                      label: procedure.name + (procedure.price > 0 ? ` - R$ ${getProcedurePrice(procedure.id, procedure.price).toFixed(2)}` : ''),
+                    }))}
+                    placeholder="Selecione um procedimento"
+                    title="Procedimento"
+                  />
                 </CardContent>
               </Card>
             )}
@@ -833,37 +825,34 @@ export default function PublicBooking() {
                   {insurancePlans.length > 0 && (
                     <div className="sm:col-span-2">
                       <Label>Convênio</Label>
-                      <Select value={selectedInsurance} onValueChange={setSelectedInsurance}>
-                        <SelectTrigger className="mt-1.5">
-                          <SelectValue placeholder="Particular" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="particular">Particular</SelectItem>
-                          {insurancePlans.map((plan) => (
-                            <SelectItem key={plan.id} value={plan.id}>
-                              {plan.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <ResponsiveSelect
+                        value={selectedInsurance}
+                        onValueChange={setSelectedInsurance}
+                        options={[
+                          { value: "particular", label: "Particular" },
+                          ...insurancePlans.map((plan) => ({
+                            value: plan.id,
+                            label: plan.name,
+                          })),
+                        ]}
+                        placeholder="Particular"
+                        title="Convênio"
+                        className="mt-1.5"
+                      />
                     </div>
                   )}
 
                   {/* Appointment Type */}
                   <div className="sm:col-span-2">
                     <Label>Tipo de Consulta</Label>
-                    <Select value={selectedType} onValueChange={setSelectedType}>
-                      <SelectTrigger className="mt-1.5">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {appointmentTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <ResponsiveSelect
+                      value={selectedType}
+                      onValueChange={setSelectedType}
+                      options={appointmentTypes}
+                      placeholder="Selecione o tipo"
+                      title="Tipo de Consulta"
+                      className="mt-1.5"
+                    />
                   </div>
 
                   {/* Patient Name */}
