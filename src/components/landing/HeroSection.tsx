@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Check, Star, Users, Shield } from "lucide-react";
-import dashboardMockup from "@/assets/dashboard-mockup.png";
+// Imagem do dashboard gerada por IA com sidebar branca e tema teal
+const dashboardMockup = "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/carousel-images/dashboard-mockup-1766375431389.png";
 
 const highlights = [
   "Agenda online 24h",
@@ -104,12 +105,8 @@ export function HeroSection() {
               <div className="overflow-hidden rounded-2xl shadow-2xl border border-border animate-float">
                 <img 
                   src={dashboardMockup}
-                  alt="Painel de agenda do Eclini"
-                  className="w-full h-auto object-cover object-right"
-                  style={{ 
-                    marginLeft: '-18%',
-                    width: '118%'
-                  }}
+                  alt="Painel de agenda do Eclini - Sistema de gestão para clínicas"
+                  className="w-full h-auto"
                 />
               </div>
               {/* Decorative elements */}
