@@ -761,7 +761,7 @@ export default function ProfessionalProfile() {
                   <CardTitle className="text-lg font-semibold">Agende uma Consulta</CardTitle>
                   <p className="text-sm text-primary-foreground/80 mt-0.5">Consulte especialidades da maneira mais conveniente</p>
                 </CardHeader>
-                <CardContent className="p-4 space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+                <CardContent className="p-4 space-y-4">
                   {/* Insurance Plan - FIRST so price updates for procedures */}
                   {insurancePlans.length > 0 && (
                     <div>
