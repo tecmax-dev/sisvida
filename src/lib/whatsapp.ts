@@ -21,14 +21,40 @@ interface WhatsAppResponse {
   data?: any;
 }
 
+const SESSION_EXPIRED_MESSAGE = "Sessão expirada. Por favor, faça login novamente.";
+
+function isAuthError(error: any): boolean {
+  const message = error?.message || '';
+  return (
+    message.includes('Auth session missing') ||
+    message.includes('Invalid token') ||
+    message.includes('session_not_found') ||
+    message.includes('JWT expired') ||
+    message.includes('not authenticated')
+  );
+}
+
+async function checkSession(): Promise<boolean> {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  return !error && !!session;
+}
+
 export async function sendWhatsAppMessage(params: SendWhatsAppParams): Promise<WhatsAppResponse> {
   try {
+    // Verificar sessão ativa antes de enviar
+    if (!await checkSession()) {
+      return { success: false, error: SESSION_EXPIRED_MESSAGE };
+    }
+
     const { data, error } = await supabase.functions.invoke('send-whatsapp', {
       body: params,
     });
 
     if (error) {
       console.error('Error invoking send-whatsapp function:', error);
+      if (isAuthError(error)) {
+        return { success: false, error: SESSION_EXPIRED_MESSAGE };
+      }
       return { success: false, error: error.message };
     }
 
@@ -36,18 +62,29 @@ export async function sendWhatsAppMessage(params: SendWhatsAppParams): Promise<W
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     console.error('Error sending WhatsApp:', errorMessage);
+    if (isAuthError(error)) {
+      return { success: false, error: SESSION_EXPIRED_MESSAGE };
+    }
     return { success: false, error: errorMessage };
   }
 }
 
 export async function sendWhatsAppDocument(params: SendWhatsAppDocumentParams): Promise<WhatsAppResponse> {
   try {
+    // Verificar sessão ativa antes de enviar
+    if (!await checkSession()) {
+      return { success: false, error: SESSION_EXPIRED_MESSAGE };
+    }
+
     const { data, error } = await supabase.functions.invoke('send-whatsapp-document', {
       body: params,
     });
 
     if (error) {
       console.error('Error invoking send-whatsapp-document function:', error);
+      if (isAuthError(error)) {
+        return { success: false, error: SESSION_EXPIRED_MESSAGE };
+      }
       return { success: false, error: error.message };
     }
 
@@ -55,6 +92,9 @@ export async function sendWhatsAppDocument(params: SendWhatsAppDocumentParams): 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
     console.error('Error sending WhatsApp document:', errorMessage);
+    if (isAuthError(error)) {
+      return { success: false, error: SESSION_EXPIRED_MESSAGE };
+    }
     return { success: false, error: errorMessage };
   }
 }
