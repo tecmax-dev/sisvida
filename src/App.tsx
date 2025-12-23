@@ -67,7 +67,16 @@ const UpgradeRequestsPage = lazy(() => import("./pages/admin/UpgradeRequestsPage
 const AuditLogsPage = lazy(() => import("./pages/admin/AuditLogsPage"));
 const DataImportPage = lazy(() => import("./pages/admin/DataImportPage"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: 1,
+      staleTime: 5 * 60 * 1000,
+    },
+  },
+});
 
 // ErrorBoundary global para evitar páginas em branco
 class ErrorBoundary extends React.Component<
