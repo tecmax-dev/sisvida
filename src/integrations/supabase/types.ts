@@ -1407,44 +1407,131 @@ export type Database = {
         Row: {
           address: string | null
           birth_date: string | null
+          birthplace: string | null
+          cep: string | null
+          city: string | null
           clinic_id: string
+          complement: string | null
+          contact_name: string | null
           cpf: string | null
           created_at: string
+          education: string | null
           email: string | null
+          father_name: string | null
+          gender: string | null
+          height_cm: number | null
           id: string
           insurance_plan_id: string | null
+          is_company: boolean | null
+          is_foreigner: boolean | null
+          landline: string | null
+          marital_status: string | null
+          mother_name: string | null
           name: string
+          neighborhood: string | null
           notes: string | null
           phone: string
+          preferred_channel: string | null
+          priority: string | null
+          profession: string | null
+          record_code: number
+          referral: string | null
+          religion: string | null
+          rg: string | null
+          send_notifications: boolean | null
+          skin_color: string | null
+          state: string | null
+          street: string | null
+          street_number: string | null
+          tag: string | null
           updated_at: string
+          weight_kg: number | null
         }
         Insert: {
           address?: string | null
           birth_date?: string | null
+          birthplace?: string | null
+          cep?: string | null
+          city?: string | null
           clinic_id: string
+          complement?: string | null
+          contact_name?: string | null
           cpf?: string | null
           created_at?: string
+          education?: string | null
           email?: string | null
+          father_name?: string | null
+          gender?: string | null
+          height_cm?: number | null
           id?: string
           insurance_plan_id?: string | null
+          is_company?: boolean | null
+          is_foreigner?: boolean | null
+          landline?: string | null
+          marital_status?: string | null
+          mother_name?: string | null
           name: string
+          neighborhood?: string | null
           notes?: string | null
           phone: string
+          preferred_channel?: string | null
+          priority?: string | null
+          profession?: string | null
+          record_code?: number
+          referral?: string | null
+          religion?: string | null
+          rg?: string | null
+          send_notifications?: boolean | null
+          skin_color?: string | null
+          state?: string | null
+          street?: string | null
+          street_number?: string | null
+          tag?: string | null
           updated_at?: string
+          weight_kg?: number | null
         }
         Update: {
           address?: string | null
           birth_date?: string | null
+          birthplace?: string | null
+          cep?: string | null
+          city?: string | null
           clinic_id?: string
+          complement?: string | null
+          contact_name?: string | null
           cpf?: string | null
           created_at?: string
+          education?: string | null
           email?: string | null
+          father_name?: string | null
+          gender?: string | null
+          height_cm?: number | null
           id?: string
           insurance_plan_id?: string | null
+          is_company?: boolean | null
+          is_foreigner?: boolean | null
+          landline?: string | null
+          marital_status?: string | null
+          mother_name?: string | null
           name?: string
+          neighborhood?: string | null
           notes?: string | null
           phone?: string
+          preferred_channel?: string | null
+          priority?: string | null
+          profession?: string | null
+          record_code?: number
+          referral?: string | null
+          religion?: string | null
+          rg?: string | null
+          send_notifications?: boolean | null
+          skin_color?: string | null
+          state?: string | null
+          street?: string | null
+          street_number?: string | null
+          tag?: string | null
           updated_at?: string
+          weight_kg?: number | null
         }
         Relationships: [
           {
