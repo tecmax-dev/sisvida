@@ -44,3 +44,9 @@ verify_jwt = false
 
 [functions.test-smtp-connection]
 verify_jwt = true
+
+[functions.update-user-email]
+verify_jwt = true
+
+[functions.list-users-with-email]
+verify_jwt = true
