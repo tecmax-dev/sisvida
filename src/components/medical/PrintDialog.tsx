@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CidSearch } from "./CidSearch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PrescriptionPrint } from "./PrescriptionPrint";
 import { MedicalCertificatePrint } from "./MedicalCertificatePrint";
@@ -448,10 +449,10 @@ export function PrintDialog({
                 </div>
                 <div>
                   <Label>CID (opcional)</Label>
-                  <Input
+                  <CidSearch
                     value={certificateReason}
-                    onChange={(e) => setCertificateReason(e.target.value)}
-                    placeholder="Ex: J11 - Gripe"
+                    onChange={setCertificateReason}
+                    placeholder="Buscar CID..."
                     className="mt-1.5"
                   />
                 </div>
