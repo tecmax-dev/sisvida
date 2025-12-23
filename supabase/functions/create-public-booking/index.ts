@@ -161,12 +161,37 @@ serve(async (req) => {
       cleanEmail = patientEmail.trim().toLowerCase();
     }
 
-    // Validate CPF if provided (Brazilian format: 11 digits)
+    // Validate CPF if provided (Brazilian format: 11 digits with verification)
     let cleanCpf: string | null = null;
     if (patientCpf && patientCpf.trim()) {
       cleanCpf = patientCpf.replace(/\D/g, '');
       if (cleanCpf.length !== 11) {
         return errorResponse('CPF deve ter 11 dígitos');
+      }
+      
+      // Validate CPF check digits
+      if (/^(\d)\1+$/.test(cleanCpf)) {
+        return errorResponse('CPF inválido');
+      }
+      
+      let sum = 0;
+      for (let i = 0; i < 9; i++) {
+        sum += parseInt(cleanCpf[i]) * (10 - i);
+      }
+      let remainder = (sum * 10) % 11;
+      if (remainder === 10 || remainder === 11) remainder = 0;
+      if (remainder !== parseInt(cleanCpf[9])) {
+        return errorResponse('CPF inválido');
+      }
+      
+      sum = 0;
+      for (let i = 0; i < 10; i++) {
+        sum += parseInt(cleanCpf[i]) * (11 - i);
+      }
+      remainder = (sum * 10) % 11;
+      if (remainder === 10 || remainder === 11) remainder = 0;
+      if (remainder !== parseInt(cleanCpf[10])) {
+        return errorResponse('CPF inválido');
       }
     }
 
