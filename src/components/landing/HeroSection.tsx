@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Check, Star, Users, Shield } from "lucide-react";
 // Imagem do dashboard gerada por IA com sidebar branca e tema teal
-const dashboardMockup = "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/carousel-images/dashboard-mockup-1766375649088.png";
+const dashboardMockup = "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/carousel-images/hero-mockup-1766508040326.png";
 
 const highlights = [
   "Agenda online 24h",
