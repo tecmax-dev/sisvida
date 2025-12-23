@@ -67,6 +67,7 @@ interface MedicalRecord {
   diagnosis: string | null;
   treatment_plan: string | null;
   prescription: string | null;
+  created_at: string;
   professional: { id: string; name: string; specialty: string | null; registration_number: string | null } | null;
 }
 
@@ -158,11 +159,12 @@ export default function MedicalRecordsPage() {
         diagnosis,
         treatment_plan,
         prescription,
+        created_at,
         professional:professionals (id, name, specialty, registration_number)
       `)
       .eq('clinic_id', currentClinic.id)
       .eq('patient_id', selectedPatient.id)
-      .order('record_date', { ascending: false });
+      .order('created_at', { ascending: false });
 
     setRecords(data as MedicalRecord[] || []);
   };
@@ -463,7 +465,7 @@ export default function MedicalRecordsPage() {
                       <div className="flex items-center justify-between w-full pr-4">
                         <div className="text-left">
                           <p className="font-medium text-foreground">
-                            {format(new Date(record.record_date + "T12:00:00"), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
+                            {format(new Date(record.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {record.professional?.name || "Profissional não informado"}
