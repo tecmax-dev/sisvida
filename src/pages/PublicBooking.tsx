@@ -114,6 +114,9 @@ export default function PublicBooking() {
   const [patientPhone, setPatientPhone] = useState("");
   const [patientEmail, setPatientEmail] = useState("");
   const [selectedInsurance, setSelectedInsurance] = useState("");
+  const [patientCpf, setPatientCpf] = useState("");
+  const [searchingPatient, setSearchingPatient] = useState(false);
+  const [patientFound, setPatientFound] = useState(false);
 
   useEffect(() => {
     fetchClinicData();
@@ -352,6 +355,58 @@ export default function PublicBooking() {
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
+  const formatCpf = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  const searchPatientByCpf = async (cpf: string) => {
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11 || !clinic) return;
+    
+    setSearchingPatient(true);
+    setPatientFound(false);
+    try {
+      const { data } = await supabase
+        .from('patients')
+        .select('name, phone, email')
+        .eq('clinic_id', clinic.id)
+        .eq('cpf', cleanCpf)
+        .maybeSingle();
+      
+      if (data) {
+        setPatientName(data.name);
+        setPatientPhone(formatPhone(data.phone));
+        setPatientEmail(data.email || '');
+        setPatientFound(true);
+        toast({ 
+          title: "Cadastro encontrado!", 
+          description: "Seus dados foram preenchidos automaticamente." 
+        });
+      }
+    } catch (error) {
+      console.error('Error searching patient:', error);
+    } finally {
+      setSearchingPatient(false);
+    }
+  };
+
+  // Debounced CPF search
+  useEffect(() => {
+    const cleanCpf = patientCpf.replace(/\D/g, '');
+    if (cleanCpf.length === 11 && clinic) {
+      const timeoutId = setTimeout(() => {
+        searchPatientByCpf(patientCpf);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setPatientFound(false);
+    }
+  }, [patientCpf, clinic]);
+
   const handleSubmit = async () => {
     if (!clinic || !selectedDate || !selectedProfessional || !selectedTime || !patientName || !patientPhone) {
       toast({
@@ -407,6 +462,7 @@ export default function PublicBooking() {
           patientName: trimmedName,
           patientPhone: phoneClean,
           patientEmail: patientEmail?.trim() || null,
+          patientCpf: patientCpf?.replace(/\D/g, '') || null,
           procedureId: selectedProcedure || null,
           insurancePlanId: selectedInsurance || null,
           durationMinutes: appointmentDuration,
@@ -855,6 +911,30 @@ export default function PublicBooking() {
                     />
                   </div>
 
+                  {/* CPF - Auto Search */}
+                  <div className="sm:col-span-2">
+                    <Label htmlFor="patientCpf">CPF</Label>
+                    <div className="relative">
+                      <Input
+                        id="patientCpf"
+                        value={patientCpf}
+                        onChange={(e) => setPatientCpf(formatCpf(e.target.value))}
+                        placeholder="000.000.000-00"
+                        maxLength={14}
+                        className="mt-1.5 pr-10"
+                      />
+                      {searchingPatient && (
+                        <Loader2 className="absolute right-3 top-1/2 translate-y-[-25%] h-4 w-4 animate-spin text-muted-foreground" />
+                      )}
+                      {patientFound && !searchingPatient && (
+                        <CheckCircle2 className="absolute right-3 top-1/2 translate-y-[-25%] h-4 w-4 text-green-500" />
+                      )}
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Digite seu CPF para buscar seu cadastro automaticamente
+                    </p>
+                  </div>
+
                   {/* Patient Name */}
                   <div className="sm:col-span-2">
                     <Label htmlFor="patientName">Nome completo *</Label>
@@ -864,6 +944,7 @@ export default function PublicBooking() {
                       onChange={(e) => setPatientName(e.target.value)}
                       placeholder="Seu nome completo"
                       className="mt-1.5"
+                      disabled={patientFound}
                     />
                   </div>
 
