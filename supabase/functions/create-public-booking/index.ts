@@ -15,6 +15,7 @@ interface BookingRequest {
   patientName: string;
   patientPhone: string;
   patientEmail?: string;
+  patientCpf?: string;
   procedureId?: string;
   insurancePlanId?: string;
   durationMinutes: number;
@@ -77,6 +78,7 @@ serve(async (req) => {
       patientName,
       patientPhone,
       patientEmail,
+      patientCpf,
       procedureId,
       insurancePlanId,
       durationMinutes
@@ -157,6 +159,15 @@ serve(async (req) => {
         return errorResponse('Email inválido');
       }
       cleanEmail = patientEmail.trim().toLowerCase();
+    }
+
+    // Validate CPF if provided (Brazilian format: 11 digits)
+    let cleanCpf: string | null = null;
+    if (patientCpf && patientCpf.trim()) {
+      cleanCpf = patientCpf.replace(/\D/g, '');
+      if (cleanCpf.length !== 11) {
+        return errorResponse('CPF deve ter 11 dígitos');
+      }
     }
 
     // Validate optional UUIDs
@@ -295,6 +306,15 @@ serve(async (req) => {
     if (existingPatient) {
       patientId = existingPatient.id;
       console.log(`[create-public-booking] Found existing patient: ${patientId}`);
+      
+      // Update CPF if provided and patient doesn't have one
+      if (cleanCpf) {
+        await supabase
+          .from('patients')
+          .update({ cpf: cleanCpf })
+          .eq('id', patientId)
+          .is('cpf', null);
+      }
     } else {
       const { data: newPatient, error: patientError } = await supabase
         .from('patients')
@@ -303,6 +323,7 @@ serve(async (req) => {
           name: trimmedName,
           phone: cleanPhone,
           email: cleanEmail,
+          cpf: cleanCpf,
           insurance_plan_id: insurancePlanId || null,
         })
         .select('id')
