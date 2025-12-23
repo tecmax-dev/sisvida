@@ -339,206 +339,208 @@ export default function PlansManagement() {
               Novo Plano
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh]">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+            <DialogHeader className="flex-shrink-0">
               <DialogTitle>
                 {editingPlan ? "Editar Plano" : "Novo Plano"}
               </DialogTitle>
             </DialogHeader>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+              <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
                 <TabsTrigger value="details">Detalhes</TabsTrigger>
                 <TabsTrigger value="features">
                   Recursos ({selectedFeatureIds.length})
                 </TabsTrigger>
               </TabsList>
 
-              <form onSubmit={handleSubmit}>
-                <TabsContent value="details" className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome do Plano *</Label>
-                    <Input
-                      id="name"
-                      value={formName}
-                      onChange={(e) => setFormName(e.target.value)}
-                      placeholder="Ex: Profissional"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Descrição</Label>
-                    <Textarea
-                      id="description"
-                      value={formDescription}
-                      onChange={(e) => setFormDescription(e.target.value)}
-                      placeholder="Descrição do plano..."
-                      rows={2}
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 mt-4">
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  <TabsContent value="details" className="space-y-4 mt-0 data-[state=inactive]:hidden">
                     <div className="space-y-2">
-                      <Label htmlFor="maxProfessionals">Máx. Profissionais</Label>
+                      <Label htmlFor="name">Nome do Plano *</Label>
                       <Input
-                        id="maxProfessionals"
-                        type="number"
-                        min="1"
-                        value={formMaxProfessionals}
-                        onChange={(e) => setFormMaxProfessionals(e.target.value)}
+                        id="name"
+                        value={formName}
+                        onChange={(e) => setFormName(e.target.value)}
+                        placeholder="Ex: Profissional"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="monthlyPrice">Preço Mensal (R$)</Label>
+                      <Label htmlFor="description">Descrição</Label>
+                      <Textarea
+                        id="description"
+                        value={formDescription}
+                        onChange={(e) => setFormDescription(e.target.value)}
+                        placeholder="Descrição do plano..."
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="maxProfessionals">Máx. Profissionais</Label>
+                        <Input
+                          id="maxProfessionals"
+                          type="number"
+                          min="1"
+                          value={formMaxProfessionals}
+                          onChange={(e) => setFormMaxProfessionals(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="monthlyPrice">Preço Mensal (R$)</Label>
+                        <Input
+                          id="monthlyPrice"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formMonthlyPrice}
+                          onChange={(e) => setFormMonthlyPrice(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="maxMessages">Mensagens/Mês (WhatsApp)</Label>
                       <Input
-                        id="monthlyPrice"
+                        id="maxMessages"
                         type="number"
                         min="0"
-                        step="0.01"
-                        value={formMonthlyPrice}
-                        onChange={(e) => setFormMonthlyPrice(e.target.value)}
+                        value={formMaxMessages}
+                        onChange={(e) => setFormMaxMessages(e.target.value)}
+                        placeholder="100"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        0 = ilimitado. Inclui lembretes automáticos, confirmações e envios manuais.
+                      </p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="externalId">ID Externo (gateway)</Label>
+                      <Input
+                        id="externalId"
+                        value={formExternalId}
+                        onChange={(e) => setFormExternalId(e.target.value)}
+                        placeholder="ID do plano no gateway de pagamento"
                       />
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="maxMessages">Mensagens/Mês (WhatsApp)</Label>
-                    <Input
-                      id="maxMessages"
-                      type="number"
-                      min="0"
-                      value={formMaxMessages}
-                      onChange={(e) => setFormMaxMessages(e.target.value)}
-                      placeholder="100"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      0 = ilimitado. Inclui lembretes automáticos, confirmações e envios manuais.
-                    </p>
-                  </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="features">Descrição de recursos (um por linha)</Label>
+                      <Textarea
+                        id="features"
+                        value={formFeatures}
+                        onChange={(e) => setFormFeatures(e.target.value)}
+                        placeholder="Agendamento online&#10;Prontuário eletrônico&#10;Relatórios"
+                        rows={3}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Texto descritivo para exibição. Use a aba "Recursos" para vincular funcionalidades reais.
+                      </p>
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="externalId">ID Externo (gateway)</Label>
-                    <Input
-                      id="externalId"
-                      value={formExternalId}
-                      onChange={(e) => setFormExternalId(e.target.value)}
-                      placeholder="ID do plano no gateway de pagamento"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="features">Descrição de recursos (um por linha)</Label>
-                    <Textarea
-                      id="features"
-                      value={formFeatures}
-                      onChange={(e) => setFormFeatures(e.target.value)}
-                      placeholder="Agendamento online&#10;Prontuário eletrônico&#10;Relatórios"
-                      rows={3}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Texto descritivo para exibição. Use a aba "Recursos" para vincular funcionalidades reais.
-                    </p>
-                  </div>
-
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Plano Ativo</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Disponível para assinaturas
-                        </p>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Plano Ativo</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Disponível para assinaturas
+                          </p>
+                        </div>
+                        <Switch
+                          checked={formIsActive}
+                          onCheckedChange={setFormIsActive}
+                        />
                       </div>
-                      <Switch
-                        checked={formIsActive}
-                        onCheckedChange={setFormIsActive}
-                      />
-                    </div>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Plano Público</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Visível na landing page
-                        </p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Plano Público</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Visível na landing page
+                          </p>
+                        </div>
+                        <Switch
+                          checked={formIsPublic}
+                          onCheckedChange={setFormIsPublic}
+                        />
                       </div>
-                      <Switch
-                        checked={formIsPublic}
-                        onCheckedChange={setFormIsPublic}
-                      />
-                    </div>
 
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label>Plano Trial Padrão</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Atribuído automaticamente a novos cadastros
-                        </p>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label>Plano Trial Padrão</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Atribuído automaticamente a novos cadastros
+                          </p>
+                        </div>
+                        <Switch
+                          checked={formIsDefaultTrial}
+                          onCheckedChange={setFormIsDefaultTrial}
+                        />
                       </div>
-                      <Switch
-                        checked={formIsDefaultTrial}
-                        onCheckedChange={setFormIsDefaultTrial}
-                      />
                     </div>
-                  </div>
-                </TabsContent>
+                  </TabsContent>
 
-                <TabsContent value="features" className="mt-4">
-                  <div className="space-y-2 mb-4">
-                    <p className="text-sm text-muted-foreground">
-                      Selecione os recursos que estarão disponíveis para clínicas com este plano.
-                      Recursos não marcados serão bloqueados.
-                    </p>
-                  </div>
-
-                  {loadingFeatures ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                  <TabsContent value="features" className="mt-0 data-[state=inactive]:hidden">
+                    <div className="space-y-2 mb-4">
+                      <p className="text-sm text-muted-foreground">
+                        Selecione os recursos que estarão disponíveis para clínicas com este plano.
+                        Recursos não marcados serão bloqueados.
+                      </p>
                     </div>
-                  ) : (
-                    <ScrollArea className="h-[400px] pr-4">
-                      <div className="space-y-6">
-                        {Object.entries(groupedFeatures).map(([category, features]) => (
-                          <div key={category}>
-                            <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
-                              <Layers className="h-4 w-4" />
-                              {getCategoryLabel(category)}
-                            </h4>
-                            <div className="space-y-2 pl-6">
-                              {features.filter(f => f.is_active).map((feature) => (
-                                <div
-                                  key={feature.id}
-                                  className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50"
-                                >
-                                  <Checkbox
-                                    id={feature.id}
-                                    checked={selectedFeatureIds.includes(feature.id)}
-                                    onCheckedChange={() => handleFeatureToggle(feature.id)}
-                                  />
-                                  <div className="flex-1">
-                                    <label
-                                      htmlFor={feature.id}
-                                      className="text-sm font-medium cursor-pointer"
-                                    >
-                                      {feature.name}
-                                    </label>
-                                    {feature.description && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {feature.description}
-                                      </p>
-                                    )}
+
+                    {loadingFeatures ? (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : (
+                      <ScrollArea className="h-[300px] pr-4">
+                        <div className="space-y-6">
+                          {Object.entries(groupedFeatures).map(([category, features]) => (
+                            <div key={category}>
+                              <h4 className="font-medium text-sm mb-3 flex items-center gap-2">
+                                <Layers className="h-4 w-4" />
+                                {getCategoryLabel(category)}
+                              </h4>
+                              <div className="space-y-2 pl-6">
+                                {features.filter(f => f.is_active).map((feature) => (
+                                  <div
+                                    key={feature.id}
+                                    className="flex items-start gap-3 p-2 rounded-lg hover:bg-muted/50"
+                                  >
+                                    <Checkbox
+                                      id={feature.id}
+                                      checked={selectedFeatureIds.includes(feature.id)}
+                                      onCheckedChange={() => handleFeatureToggle(feature.id)}
+                                    />
+                                    <div className="flex-1">
+                                      <label
+                                        htmlFor={feature.id}
+                                        className="text-sm font-medium cursor-pointer"
+                                      >
+                                        {feature.name}
+                                      </label>
+                                      {feature.description && (
+                                        <p className="text-xs text-muted-foreground">
+                                          {feature.description}
+                                        </p>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    </ScrollArea>
-                  )}
-                </TabsContent>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    )}
+                  </TabsContent>
+                </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t mt-4">
+                <div className="flex justify-end gap-2 pt-4 border-t mt-4 flex-shrink-0 bg-background">
                   <Button
                     type="button"
                     variant="outline"
