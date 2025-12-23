@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -13,6 +14,7 @@ import { useCepLookup } from "@/hooks/useCepLookup";
 import { PatientRecordsModal } from "@/components/patients/modals/PatientRecordsModal";
 import { PatientAnamnesisModal } from "@/components/patients/modals/PatientAnamnesisModal";
 import { PatientPrescriptionModal } from "@/components/patients/modals/PatientPrescriptionModal";
+import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
 
 interface InsurancePlan {
   id: string;
@@ -116,6 +118,7 @@ export default function PatientEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentClinic } = useAuth();
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const { lookupCep, loading: cepLoading } = useCepLookup();
   
@@ -131,6 +134,20 @@ export default function PatientEditPage() {
   const [recordsModalOpen, setRecordsModalOpen] = useState(false);
   const [anamnesisModalOpen, setAnamnesisModalOpen] = useState(false);
   const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
+  const [appointmentsModalOpen, setAppointmentsModalOpen] = useState(false);
+
+  // Permission checks for restricted tabs
+  const canViewMedicalRecords = hasPermission('view_medical_records');
+  const canViewPrescriptions = hasPermission('view_prescriptions');
+  
+  // Determine which tabs to hide based on permissions
+  const hiddenTabs: PatientTab[] = [];
+  if (!canViewMedicalRecords) {
+    hiddenTabs.push('prontuario', 'anexos');
+  }
+  if (!canViewPrescriptions) {
+    hiddenTabs.push('prescricoes');
+  }
 
   useEffect(() => {
     if (currentClinic && id) {
@@ -252,7 +269,7 @@ export default function PatientEditPage() {
     } else if (tab === 'anexos') {
       navigate(`/dashboard/patients/${id}/attachments`);
     } else if (tab === 'agendamentos') {
-      navigate(`/dashboard/calendar?patient=${id}`);
+      setAppointmentsModalOpen(true);
     } else if (tab === 'prescricoes') {
       setPrescriptionModalOpen(true);
     }
@@ -402,6 +419,7 @@ export default function PatientEditPage() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         patientId={id || ''}
+        hiddenTabs={hiddenTabs}
       />
 
       {/* Tab Content */}
@@ -438,6 +456,13 @@ export default function PatientEditPage() {
       <PatientPrescriptionModal
         open={prescriptionModalOpen}
         onOpenChange={setPrescriptionModalOpen}
+        patientId={id || ''}
+        patientName={formData.name}
+      />
+
+      <PatientAppointmentsModal
+        open={appointmentsModalOpen}
+        onOpenChange={setAppointmentsModalOpen}
         patientId={id || ''}
         patientName={formData.name}
       />
