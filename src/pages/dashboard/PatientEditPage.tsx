@@ -10,6 +10,9 @@ import { PatientHeader } from "@/components/patients/PatientHeader";
 import { PatientTabs, PatientTab } from "@/components/patients/PatientTabs";
 import { PatientFormFields, PatientFormData } from "@/components/patients/PatientFormFields";
 import { useCepLookup } from "@/hooks/useCepLookup";
+import { PatientRecordsModal } from "@/components/patients/modals/PatientRecordsModal";
+import { PatientAnamnesisModal } from "@/components/patients/modals/PatientAnamnesisModal";
+import { PatientPrescriptionModal } from "@/components/patients/modals/PatientPrescriptionModal";
 
 interface InsurancePlan {
   id: string;
@@ -123,6 +126,11 @@ export default function PatientEditPage() {
   const [formData, setFormData] = useState<PatientFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [insurancePlanName, setInsurancePlanName] = useState<string>('');
+  
+  // Modal states
+  const [recordsModalOpen, setRecordsModalOpen] = useState(false);
+  const [anamnesisModalOpen, setAnamnesisModalOpen] = useState(false);
+  const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
 
   useEffect(() => {
     if (currentClinic && id) {
@@ -238,15 +246,15 @@ export default function PatientEditPage() {
     if (tab === 'cadastro') {
       setActiveTab(tab);
     } else if (tab === 'prontuario') {
-      navigate(`/dashboard/patients/${id}/records`);
+      setRecordsModalOpen(true);
     } else if (tab === 'anamnese') {
-      navigate(`/dashboard/patients/${id}/anamnesis`);
+      setAnamnesisModalOpen(true);
     } else if (tab === 'anexos') {
       navigate(`/dashboard/patients/${id}/attachments`);
     } else if (tab === 'agendamentos') {
       navigate(`/dashboard/calendar?patient=${id}`);
     } else if (tab === 'prescricoes') {
-      navigate(`/dashboard/patients/${id}/prescription`);
+      setPrescriptionModalOpen(true);
     }
   };
 
@@ -411,6 +419,28 @@ export default function PatientEditPage() {
           </form>
         </div>
       )}
+
+      {/* Modals */}
+      <PatientRecordsModal
+        open={recordsModalOpen}
+        onOpenChange={setRecordsModalOpen}
+        patientId={id || ''}
+        patientName={formData.name}
+      />
+
+      <PatientAnamnesisModal
+        open={anamnesisModalOpen}
+        onOpenChange={setAnamnesisModalOpen}
+        patientId={id || ''}
+        patientName={formData.name}
+      />
+
+      <PatientPrescriptionModal
+        open={prescriptionModalOpen}
+        onOpenChange={setPrescriptionModalOpen}
+        patientId={id || ''}
+        patientName={formData.name}
+      />
     </div>
   );
 }
