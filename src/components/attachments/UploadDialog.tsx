@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Upload, X, File } from "lucide-react";
+import { Upload, X, File, FolderPlus, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,12 +11,28 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+
+interface PatientFolder {
+  id: string;
+  name: string;
+  parent_folder_id: string | null;
+}
 
 interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onUpload: (files: File[], description?: string) => Promise<void>;
+  onUpload: (files: File[], folderId: string | null, description?: string) => Promise<void>;
+  folders?: PatientFolder[];
+  currentFolderId?: string | null;
+  onCreateFolder?: (name: string, parentId?: string | null) => Promise<PatientFolder | null>;
 }
 
 function formatFileSize(bytes: number): string {
@@ -25,11 +41,27 @@ function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function UploadDialog({ open, onOpenChange, onUpload }: UploadDialogProps) {
+export function UploadDialog({ 
+  open, 
+  onOpenChange, 
+  onUpload, 
+  folders = [], 
+  currentFolderId = null,
+  onCreateFolder 
+}: UploadDialogProps) {
   const [files, setFiles] = useState<File[]>([]);
   const [description, setDescription] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(currentFolderId);
+  const [showNewFolder, setShowNewFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const [creatingFolder, setCreatingFolder] = useState(false);
+
+  // Sync selectedFolderId when currentFolderId changes
+  useState(() => {
+    setSelectedFolderId(currentFolderId);
+  });
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -65,9 +97,10 @@ export function UploadDialog({ open, onOpenChange, onUpload }: UploadDialogProps
     
     setUploading(true);
     try {
-      await onUpload(files, description);
+      await onUpload(files, selectedFolderId, description);
       setFiles([]);
       setDescription("");
+      setSelectedFolderId(currentFolderId);
       onOpenChange(false);
     } finally {
       setUploading(false);
@@ -78,9 +111,32 @@ export function UploadDialog({ open, onOpenChange, onUpload }: UploadDialogProps
     if (!uploading) {
       setFiles([]);
       setDescription("");
+      setSelectedFolderId(currentFolderId);
+      setShowNewFolder(false);
+      setNewFolderName("");
       onOpenChange(false);
     }
   };
+
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim() || !onCreateFolder) return;
+    
+    setCreatingFolder(true);
+    try {
+      const folder = await onCreateFolder(newFolderName.trim());
+      if (folder) {
+        setSelectedFolderId(folder.id);
+        setNewFolderName("");
+        setShowNewFolder(false);
+      }
+    } finally {
+      setCreatingFolder(false);
+    }
+  };
+
+  const selectedFolderName = selectedFolderId 
+    ? folders.find(f => f.id === selectedFolderId)?.name 
+    : null;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -143,6 +199,78 @@ export function UploadDialog({ open, onOpenChange, onUpload }: UploadDialogProps
               ))}
             </div>
           )}
+
+          {/* Folder Selection */}
+          <div className="space-y-2">
+            <Label>Pasta de destino</Label>
+            <div className="flex gap-2">
+              <Select
+                value={selectedFolderId || "root"}
+                onValueChange={(value) => setSelectedFolderId(value === "root" ? null : value)}
+              >
+                <SelectTrigger className="flex-1">
+                  <SelectValue>
+                    <span className="flex items-center gap-2">
+                      <Folder className="h-4 w-4" />
+                      {selectedFolderName || "Raiz (sem pasta)"}
+                    </span>
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="root">
+                    <span className="flex items-center gap-2">
+                      <Folder className="h-4 w-4" />
+                      Raiz (sem pasta)
+                    </span>
+                  </SelectItem>
+                  {folders.map((folder) => (
+                    <SelectItem key={folder.id} value={folder.id}>
+                      <span className="flex items-center gap-2">
+                        <Folder className="h-4 w-4" />
+                        {folder.name}
+                      </span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {onCreateFolder && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowNewFolder(!showNewFolder)}
+                  title="Nova pasta"
+                >
+                  <FolderPlus className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+
+            {/* New Folder Input */}
+            {showNewFolder && onCreateFolder && (
+              <div className="flex gap-2 mt-2">
+                <Input
+                  placeholder="Nome da nova pasta"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleCreateFolder();
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleCreateFolder}
+                  disabled={!newFolderName.trim() || creatingFolder}
+                >
+                  {creatingFolder ? "Criando..." : "Criar"}
+                </Button>
+              </div>
+            )}
+          </div>
 
           <div>
             <Label htmlFor="description">Descrição (opcional)</Label>

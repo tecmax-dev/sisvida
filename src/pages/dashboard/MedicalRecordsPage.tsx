@@ -411,8 +411,8 @@ export default function MedicalRecordsPage() {
   };
 
   // Attachment handlers
-  const handleUpload = async (files: File[], description?: string) => {
-    await uploadFiles(files, selectedFolderId, description);
+  const handleUpload = async (files: File[], folderId: string | null, description?: string) => {
+    await uploadFiles(files, folderId, description);
     fetchAttachments(selectedFolderId);
   };
 
@@ -875,6 +875,9 @@ export default function MedicalRecordsPage() {
         open={uploadDialogOpen}
         onOpenChange={setUploadDialogOpen}
         onUpload={handleUpload}
+        folders={folders}
+        currentFolderId={selectedFolderId}
+        onCreateFolder={createFolder}
       />
 
       {/* File Preview Modal */}
