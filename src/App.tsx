@@ -13,8 +13,8 @@ import { Button } from "./components/ui/button";
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import { AdminLayout } from "./components/admin/AdminLayout";
 
-// Landing page e roteamento por domínio
-import { DomainRouter } from "./components/routing/DomainRouter";
+// Landing page (carregamento imediato - primeira página)
+import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
 // Páginas com lazy loading - Auth & Setup
@@ -131,7 +131,7 @@ const App = () => (
           <BrowserRouter>
             <Suspense fallback={<LoadingFallback />}>
               <Routes>
-                <Route path="/" element={<DomainRouter />} />
+                <Route path="/" element={<Index />} />
                 <Route path="/instalar" element={<InstallPage />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/cadastro" element={<PublicSignup />} />
