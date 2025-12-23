@@ -363,10 +363,46 @@ export default function PublicBooking() {
     return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
   };
 
+  const validateCpf = (cpf: string): boolean => {
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11) return false;
+    
+    // Check for known invalid patterns (all same digits)
+    if (/^(\d)\1+$/.test(cleanCpf)) return false;
+    
+    // Validate first verification digit
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cleanCpf[i]) * (10 - i);
+    }
+    let remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cleanCpf[9])) return false;
+    
+    // Validate second verification digit
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(cleanCpf[i]) * (11 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cleanCpf[10])) return false;
+    
+    return true;
+  };
+
+  const [cpfError, setCpfError] = useState("");
+
   const searchPatientByCpf = async (cpf: string) => {
     const cleanCpf = cpf.replace(/\D/g, '');
     if (cleanCpf.length !== 11 || !clinic) return;
     
+    if (!validateCpf(cleanCpf)) {
+      setCpfError("CPF inválido");
+      return;
+    }
+    
+    setCpfError("");
     setSearchingPatient(true);
     setPatientFound(false);
     try {
@@ -404,6 +440,7 @@ export default function PublicBooking() {
       return () => clearTimeout(timeoutId);
     } else {
       setPatientFound(false);
+      setCpfError("");
     }
   }, [patientCpf, clinic]);
 
@@ -921,7 +958,7 @@ export default function PublicBooking() {
                         onChange={(e) => setPatientCpf(formatCpf(e.target.value))}
                         placeholder="000.000.000-00"
                         maxLength={14}
-                        className="mt-1.5 pr-10"
+                        className={cn("mt-1.5 pr-10", cpfError && "border-destructive")}
                       />
                       {searchingPatient && (
                         <Loader2 className="absolute right-3 top-1/2 translate-y-[-25%] h-4 w-4 animate-spin text-muted-foreground" />
@@ -930,9 +967,13 @@ export default function PublicBooking() {
                         <CheckCircle2 className="absolute right-3 top-1/2 translate-y-[-25%] h-4 w-4 text-green-500" />
                       )}
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Digite seu CPF para buscar seu cadastro automaticamente
-                    </p>
+                    {cpfError ? (
+                      <p className="text-xs text-destructive mt-1">{cpfError}</p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Digite seu CPF para buscar seu cadastro automaticamente
+                      </p>
+                    )}
                   </div>
 
                   {/* Patient Name */}
