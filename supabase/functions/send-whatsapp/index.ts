@@ -10,7 +10,7 @@ interface WhatsAppRequest {
   phone: string;
   message: string;
   clinicId: string;
-  type?: 'reminder' | 'confirmation' | 'custom';
+  type?: 'reminder' | 'confirmation' | 'custom' | 'document';
 }
 
 interface EvolutionConfig {
@@ -101,7 +101,33 @@ serve(async (req) => {
       );
     }
 
-    // 8. Fetch clinic's Evolution API configuration
+    // 8. Check message limit for the clinic
+    const monthYear = new Date().toISOString().slice(0, 7);
+    const { data: usageData, error: usageError } = await supabase.rpc('get_clinic_message_usage', {
+      _clinic_id: clinicId,
+      _month_year: monthYear
+    });
+
+    if (usageError) {
+      console.error('[send-whatsapp] Error checking message usage:', usageError);
+    } else if (usageData && usageData.length > 0) {
+      const usage = usageData[0];
+      console.log(`[Clinic ${clinicId}] Message usage: ${usage.used}/${usage.max_allowed} (remaining: ${usage.remaining})`);
+      
+      if (usage.max_allowed > 0 && usage.remaining <= 0) {
+        console.log(`[Clinic ${clinicId}] Message limit reached`);
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Limite de mensagens do mês atingido. Faça upgrade do plano para enviar mais.',
+            usage: usage
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // 9. Fetch clinic's Evolution API configuration
     const { data: evolutionConfig, error: configError } = await supabase
       .from('evolution_configs')
       .select('api_url, api_key, instance_name, is_connected')
@@ -132,7 +158,7 @@ serve(async (req) => {
 
     const { api_url, api_key, instance_name } = evolutionConfig as EvolutionConfig;
 
-    // 9. CHECK REAL CONNECTION STATUS with Evolution API
+    // 10. CHECK REAL CONNECTION STATUS with Evolution API
     console.log(`[Clinic ${clinicId}] Checking real connection status for instance ${instance_name}`);
     
     let reallyConnected = false;
@@ -162,7 +188,7 @@ serve(async (req) => {
       console.error(`[Clinic ${clinicId}] Error checking Evolution connection state:`, stateError);
     }
 
-    // 10. Update database if status differs
+    // 11. Update database if status differs
     if (reallyConnected !== evolutionConfig.is_connected) {
       console.log(`[Clinic ${clinicId}] Updating connection status: ${evolutionConfig.is_connected} -> ${reallyConnected}`);
       await supabase
@@ -175,7 +201,7 @@ serve(async (req) => {
         .eq('clinic_id', clinicId);
     }
 
-    // 11. If not really connected, return specific error
+    // 12. If not really connected, return specific error
     if (!reallyConnected) {
       console.log(`[Clinic ${clinicId}] WhatsApp not really connected`);
       return new Response(
@@ -244,7 +270,21 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[Clinic ${clinicId}] Message sent successfully by user ${user.id}`);
+    // 13. Log message sent successfully
+    console.log(`[Clinic ${clinicId}] Message sent successfully by user ${user.id}, logging to message_logs`);
+    const { error: logError } = await supabase
+      .from('message_logs')
+      .insert({
+        clinic_id: clinicId,
+        message_type: type,
+        phone: formattedPhone,
+        month_year: monthYear
+      });
+
+    if (logError) {
+      console.error('[send-whatsapp] Error logging message:', logError);
+      // Don't fail the request, just log the error
+    }
 
     return new Response(
       JSON.stringify({ success: true, data: result }),

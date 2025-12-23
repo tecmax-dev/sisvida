@@ -140,11 +140,34 @@ serve(async (req) => {
     let sentCount = 0;
     let errorCount = 0;
     let skippedCount = 0;
+    let limitReachedCount = 0;
 
     const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://eclini.lovable.app';
+    const monthYear = new Date().toISOString().slice(0, 7);
 
     for (const clinic of (clinics || []) as ClinicWithReminder[]) {
       const reminderHours = clinic.reminder_hours || 24;
+      
+      // Check message limit for this clinic BEFORE processing
+      const { data: usageData, error: usageError } = await supabase.rpc('get_clinic_message_usage', {
+        _clinic_id: clinic.id,
+        _month_year: monthYear
+      });
+
+      if (usageError) {
+        console.error(`[Clinic ${clinic.name}] Error checking message usage:`, usageError);
+        continue;
+      }
+
+      const usage = usageData && usageData.length > 0 ? usageData[0] : null;
+      
+      if (usage && usage.max_allowed > 0 && usage.remaining <= 0) {
+        console.log(`[Clinic ${clinic.name}] Message limit reached (${usage.used}/${usage.max_allowed}), skipping reminders`);
+        limitReachedCount++;
+        continue;
+      }
+
+      console.log(`[Clinic ${clinic.name}] Message usage: ${usage?.used || 0}/${usage?.max_allowed || 'unlimited'} (remaining: ${usage?.remaining || 'unlimited'})`);
       
       // Calculate the target time window for this clinic
       // We want appointments that are exactly reminder_hours away (within a 1-hour window)
@@ -201,7 +224,16 @@ serve(async (req) => {
 
       console.log(`Found ${appointments?.length || 0} appointments for clinic ${clinic.name}`);
 
+      // Track remaining messages for this clinic
+      let remainingMessages = usage ? usage.remaining : 999999;
+
       for (const appointment of appointments || []) {
+        // Check if we still have messages available
+        if (usage && usage.max_allowed > 0 && remainingMessages <= 0) {
+          console.log(`[Clinic ${clinic.name}] No more messages available, stopping reminders for this clinic`);
+          break;
+        }
+
         const patient = appointment.patient as any;
         const professional = appointment.professional as any;
 
@@ -242,7 +274,23 @@ serve(async (req) => {
             .from('appointments')
             .update({ reminder_sent: true })
             .eq('id', appointment.id);
-          
+
+          // Log the message
+          const formattedPhone = patient.phone.replace(/\D/g, '');
+          const { error: logError } = await supabase
+            .from('message_logs')
+            .insert({
+              clinic_id: clinic.id,
+              message_type: 'reminder',
+              phone: formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone,
+              month_year: monthYear
+            });
+
+          if (logError) {
+            console.error(`Error logging message for clinic ${clinic.id}:`, logError);
+          }
+
+          remainingMessages--;
           sentCount++;
           console.log(`✓ Reminder sent to ${patient.name} for appointment on ${targetDate} at ${time}`);
         } else {
@@ -260,6 +308,7 @@ serve(async (req) => {
       sent: sentCount,
       errors: errorCount,
       skipped: skippedCount,
+      limitReached: limitReachedCount,
       timestamp: now.toISOString()
     };
 

@@ -31,6 +31,7 @@ import {
   Clock,
   CheckCircle,
   XCircle,
+  MessageSquare,
 } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -47,7 +48,7 @@ interface UpgradeRequest {
 }
 
 export default function SubscriptionPage() {
-  const { subscription, loading, professionalCount, refetch } = useSubscription();
+  const { subscription, loading, professionalCount, messageUsage, refetch } = useSubscription();
   const { plans, loading: loadingPlans } = useAvailablePlans();
   const { availableFeatures, allFeatures, loading: loadingFeatures } = usePlanFeatures();
   const { currentClinic, user } = useAuth();
@@ -325,6 +326,63 @@ export default function SubscriptionPage() {
               </CardContent>
             </Card>
           </div>
+
+          {/* Message Usage Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                Uso de Mensagens WhatsApp
+              </CardTitle>
+              <CardDescription>
+                Mensagens enviadas neste mês (lembretes, confirmações e envios manuais)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {messageUsage ? (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Mensagens enviadas</span>
+                      <span className="font-medium">
+                        {messageUsage.used} / {messageUsage.max_allowed === 0 ? '∞' : messageUsage.max_allowed}
+                      </span>
+                    </div>
+                    {messageUsage.max_allowed > 0 && (
+                      <>
+                        <Progress 
+                          value={(messageUsage.used / messageUsage.max_allowed) * 100} 
+                          className="h-2" 
+                        />
+                        {messageUsage.remaining <= 10 && messageUsage.remaining > 0 && (
+                          <p className="text-xs text-yellow-600">
+                            ⚠️ Você está próximo do limite ({messageUsage.remaining} restantes)
+                          </p>
+                        )}
+                        {messageUsage.remaining <= 0 && (
+                          <p className="text-xs text-red-600">
+                            ❌ Limite de mensagens atingido. Faça upgrade para continuar enviando.
+                          </p>
+                        )}
+                      </>
+                    )}
+                    {messageUsage.max_allowed === 0 && (
+                      <p className="text-xs text-green-600">
+                        ✓ Seu plano possui mensagens ilimitadas
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    O contador reinicia no primeiro dia de cada mês.
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum dado de uso disponível.
+                </p>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Features Section */}
           <div className="grid gap-6 md:grid-cols-2">

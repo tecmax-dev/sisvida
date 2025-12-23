@@ -7,6 +7,7 @@ interface SubscriptionPlan {
   name: string;
   description: string | null;
   max_professionals: number;
+  max_messages_monthly: number;
   monthly_price: number;
   features: string[];
   is_public: boolean;
@@ -24,6 +25,12 @@ interface Subscription {
   plan: SubscriptionPlan;
 }
 
+interface MessageUsage {
+  used: number;
+  max_allowed: number;
+  remaining: number;
+}
+
 interface UseSubscriptionReturn {
   subscription: Subscription | null;
   loading: boolean;
@@ -32,6 +39,7 @@ interface UseSubscriptionReturn {
   canAddProfessional: boolean;
   isAtLimit: boolean;
   remainingSlots: number;
+  messageUsage: MessageUsage | null;
   refetch: () => Promise<void>;
 }
 
@@ -39,6 +47,7 @@ export function useSubscription(): UseSubscriptionReturn {
   const { currentClinic } = useAuth();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [professionalCount, setProfessionalCount] = useState(0);
+  const [messageUsage, setMessageUsage] = useState<MessageUsage | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,6 +77,7 @@ export function useSubscription(): UseSubscriptionReturn {
             name,
             description,
             max_professionals,
+            max_messages_monthly,
             monthly_price,
             features,
             is_public,
@@ -90,13 +100,29 @@ export function useSubscription(): UseSubscriptionReturn {
 
       setProfessionalCount(count || 0);
 
+      // Fetch message usage
+      const monthYear = new Date().toISOString().slice(0, 7);
+      const { data: usageData, error: usageError } = await supabase.rpc(
+        'get_clinic_message_usage',
+        { _clinic_id: currentClinic.id, _month_year: monthYear }
+      );
+
+      if (usageError) {
+        console.error("Error fetching message usage:", usageError);
+      } else if (usageData && usageData.length > 0) {
+        setMessageUsage(usageData[0] as MessageUsage);
+      } else {
+        setMessageUsage(null);
+      }
+
       if (subData && subData.plan) {
         const plan = Array.isArray(subData.plan) ? subData.plan[0] : subData.plan;
         setSubscription({
           ...subData,
           plan: {
             ...plan,
-            features: Array.isArray(plan.features) ? plan.features : []
+            features: Array.isArray(plan.features) ? plan.features : [],
+            max_messages_monthly: plan.max_messages_monthly ?? 100
           }
         } as Subscription);
       } else {
@@ -128,6 +154,7 @@ export function useSubscription(): UseSubscriptionReturn {
     canAddProfessional,
     isAtLimit,
     remainingSlots,
+    messageUsage,
     refetch: fetchSubscription,
   };
 }

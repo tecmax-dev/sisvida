@@ -36,6 +36,7 @@ import {
   Eye,
   EyeOff,
   Layers,
+  MessageSquare,
 } from "lucide-react";
 import { useSystemFeatures, usePlanLinkedFeatures, SystemFeature } from "@/hooks/usePlanFeatures";
 
@@ -44,6 +45,7 @@ interface Plan {
   name: string;
   description: string | null;
   max_professionals: number;
+  max_messages_monthly: number;
   monthly_price: number;
   external_plan_id: string | null;
   is_active: boolean;
@@ -79,6 +81,7 @@ export default function PlansManagement() {
   const [formName, setFormName] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formMaxProfessionals, setFormMaxProfessionals] = useState("1");
+  const [formMaxMessages, setFormMaxMessages] = useState("100");
   const [formMonthlyPrice, setFormMonthlyPrice] = useState("0");
   const [formExternalId, setFormExternalId] = useState("");
   const [formIsActive, setFormIsActive] = useState(true);
@@ -145,6 +148,7 @@ export default function PlansManagement() {
     setFormName("");
     setFormDescription("");
     setFormMaxProfessionals("1");
+    setFormMaxMessages("100");
     setFormMonthlyPrice("0");
     setFormExternalId("");
     setFormIsActive(true);
@@ -161,6 +165,7 @@ export default function PlansManagement() {
     setFormName(plan.name);
     setFormDescription(plan.description || "");
     setFormMaxProfessionals(plan.max_professionals.toString());
+    setFormMaxMessages((plan.max_messages_monthly ?? 100).toString());
     setFormMonthlyPrice(plan.monthly_price.toString());
     setFormExternalId(plan.external_plan_id || "");
     setFormIsActive(plan.is_active);
@@ -198,6 +203,7 @@ export default function PlansManagement() {
         name: formName.trim(),
         description: formDescription.trim() || null,
         max_professionals: parseInt(formMaxProfessionals) || 1,
+        max_messages_monthly: parseInt(formMaxMessages) || 100,
         monthly_price: parseFloat(formMonthlyPrice) || 0,
         external_plan_id: formExternalId.trim() || null,
         is_active: formIsActive,
@@ -394,6 +400,21 @@ export default function PlansManagement() {
                         onChange={(e) => setFormMonthlyPrice(e.target.value)}
                       />
                     </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="maxMessages">Mensagens/Mês (WhatsApp)</Label>
+                    <Input
+                      id="maxMessages"
+                      type="number"
+                      min="0"
+                      value={formMaxMessages}
+                      onChange={(e) => setFormMaxMessages(e.target.value)}
+                      placeholder="100"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      0 = ilimitado. Inclui lembretes automáticos, confirmações e envios manuais.
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -598,6 +619,7 @@ export default function PlansManagement() {
                 <TableRow>
                   <TableHead>Plano</TableHead>
                   <TableHead>Profissionais</TableHead>
+                  <TableHead>Mensagens/Mês</TableHead>
                   <TableHead>Preço</TableHead>
                   <TableHead>Assinaturas</TableHead>
                   <TableHead>Status</TableHead>
@@ -628,6 +650,12 @@ export default function PlansManagement() {
                       <div className="flex items-center gap-1">
                         <Users className="h-4 w-4 text-muted-foreground" />
                         {plan.max_professionals}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                        {plan.max_messages_monthly === 0 ? '∞' : plan.max_messages_monthly ?? 100}
                       </div>
                     </TableCell>
                     <TableCell>
