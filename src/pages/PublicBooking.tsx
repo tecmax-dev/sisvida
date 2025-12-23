@@ -405,26 +405,26 @@ export default function PublicBooking() {
     setCpfError("");
     setSearchingPatient(true);
     setPatientFound(false);
+    
     try {
-      const { data } = await supabase
-        .from('patients')
-        .select('name, phone, email')
-        .eq('clinic_id', clinic.id)
-        .eq('cpf', cleanCpf)
-        .maybeSingle();
+      const { data, error } = await supabase.functions.invoke('search-patient-by-cpf', {
+        body: { clinicId: clinic.id, cpf: cleanCpf }
+      });
       
-      if (data) {
-        setPatientName(data.name);
-        setPatientPhone(formatPhone(data.phone));
-        setPatientEmail(data.email || '');
+      if (error) throw error;
+      
+      if (data?.patient) {
+        setPatientName(data.patient.name);
+        setPatientPhone(formatPhone(data.patient.phone));
+        setPatientEmail(data.patient.email || '');
         setPatientFound(true);
         toast({ 
           title: "Cadastro encontrado!", 
           description: "Seus dados foram preenchidos automaticamente." 
         });
       }
-    } catch (error) {
-      console.error('Error searching patient:', error);
+    } catch (err) {
+      console.error('Error searching patient:', err);
     } finally {
       setSearchingPatient(false);
     }
