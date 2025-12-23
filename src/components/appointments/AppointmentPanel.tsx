@@ -205,6 +205,22 @@ export function AppointmentPanel({
     return () => clearInterval(interval);
   }, [isInProgress, appointment.started_at]);
 
+  // Listen for auth state changes (session expiry)
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || (event === 'TOKEN_REFRESHED' && !session)) {
+        toast({
+          title: "Sessão encerrada",
+          description: "Você foi desconectado. Por favor, faça login novamente.",
+          variant: "destructive",
+        });
+        onClose();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [onClose, toast]);
+
   // Load patient data
   useEffect(() => {
     if (isOpen) {
