@@ -677,8 +677,25 @@ export default function CalendarPage() {
     }
   };
 
+  // Helper function to check if date/time is in the past
+  const isDateTimeInPast = (date: string, time: string): boolean => {
+    const now = new Date();
+    const targetDateTime = new Date(`${date}T${time}:00`);
+    return targetDateTime < now;
+  };
+
   const handleReschedule = async () => {
     if (!reschedulingAppointment || !newDate || !newTime) return;
+
+    // Validate: cannot reschedule to past date/time
+    if (isDateTimeInPast(newDate, newTime)) {
+      toast({
+        title: "Horário não permitido",
+        description: "Não é possível reagendar para uma data ou horário que já passou.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setSaving(true);
 
@@ -806,6 +823,16 @@ export default function CalendarPage() {
       toast({
         title: "Horário ocupado",
         description: "Este horário já possui um agendamento. Escolha outro horário.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate: cannot reschedule to past date/time
+    if (isDateTimeInPast(newDate, newTime)) {
+      toast({
+        title: "Horário não permitido",
+        description: "Não é possível reagendar para uma data ou horário que já passou.",
         variant: "destructive",
       });
       return;
@@ -1707,7 +1734,21 @@ export default function CalendarPage() {
               <Input
                 type="date"
                 value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
+                onChange={(e) => {
+                  setNewDate(e.target.value);
+                  // Reset time if date changes to today and current time is past
+                  const today = new Date().toISOString().split('T')[0];
+                  if (e.target.value === today && newTime) {
+                    const now = new Date();
+                    const [hours, minutes] = newTime.split(':').map(Number);
+                    const slotTime = new Date();
+                    slotTime.setHours(hours, minutes, 0, 0);
+                    if (slotTime <= now) {
+                      setNewTime("");
+                    }
+                  }
+                }}
+                min={new Date().toISOString().split('T')[0]}
               />
             </div>
             <div className="space-y-2">
@@ -1717,11 +1758,24 @@ export default function CalendarPage() {
                   <SelectValue placeholder="Selecione o horário" />
                 </SelectTrigger>
                 <SelectContent>
-                  {timeSlots.map((time) => (
-                    <SelectItem key={time} value={time}>
-                      {time}
-                    </SelectItem>
-                  ))}
+                  {timeSlots
+                    .filter((time) => {
+                      // If selected date is today, filter out past times
+                      const today = new Date().toISOString().split('T')[0];
+                      if (newDate === today) {
+                        const now = new Date();
+                        const [hours, minutes] = time.split(':').map(Number);
+                        const slotTime = new Date();
+                        slotTime.setHours(hours, minutes, 0, 0);
+                        return slotTime > now;
+                      }
+                      return true;
+                    })
+                    .map((time) => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
