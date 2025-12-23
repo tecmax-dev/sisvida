@@ -87,6 +87,10 @@ interface MedicalRecord {
   prescription: string | null;
   notes: string | null;
   created_at: string;
+  professional: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 interface Anamnesis {
@@ -292,17 +296,27 @@ export function AppointmentPanel({
         setAnamnesis(anamnesisData);
       }
 
-      // Load medical history
+      // Load medical history with professional data
       const { data: historyData } = await supabase
         .from("medical_records")
-        .select("*")
+        .select(`
+          id,
+          record_date,
+          chief_complaint,
+          diagnosis,
+          treatment_plan,
+          prescription,
+          notes,
+          created_at,
+          professional:professionals(id, name)
+        `)
         .eq("patient_id", appointment.patient_id)
         .eq("clinic_id", clinicId)
-        .order("record_date", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(10);
 
       if (historyData) {
-        setMedicalHistory(historyData);
+        setMedicalHistory(historyData as MedicalRecord[]);
       }
 
       // Load prescription from this appointment if completed
@@ -980,16 +994,16 @@ export function AppointmentPanel({
                   {medicalHistory.map((record) => (
                     <Card key={record.id}>
                       <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-sm">
-                            {new Date(record.record_date + "T12:00:00").toLocaleDateString("pt-BR")}
-                          </CardTitle>
-                          <Badge variant="outline" className="text-xs">
-                            {new Date(record.created_at).toLocaleTimeString("pt-BR", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </Badge>
+                        <div className="flex items-center gap-2">
+                          <FileText className="h-4 w-4 text-primary" />
+                          <span className="font-medium text-sm">
+                            {format(new Date(record.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                          </span>
+                          {record.professional?.name && (
+                            <span className="text-sm text-muted-foreground">
+                              - {record.professional.name}
+                            </span>
+                          )}
                         </div>
                       </CardHeader>
                       <CardContent className="text-sm space-y-2">
