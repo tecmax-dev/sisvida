@@ -12,6 +12,10 @@ import {
   ClipboardList,
   Printer,
   Send,
+  RefreshCw,
+  FlaskConical,
+  Award,
+  ClipboardCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,7 +67,7 @@ interface MedicalRecord {
   diagnosis: string | null;
   treatment_plan: string | null;
   prescription: string | null;
-  professional: { name: string; specialty: string | null; registration_number: string | null } | null;
+  professional: { id: string; name: string; specialty: string | null; registration_number: string | null } | null;
 }
 
 interface Appointment {
@@ -71,7 +75,20 @@ interface Appointment {
   appointment_date: string;
   start_time: string;
   patient: { id: string; name: string };
-  professional: { name: string };
+  professional: { id: string; name: string };
+}
+
+interface MedicalDocument {
+  id: string;
+  document_type: string;
+  content: string;
+  additional_info: Record<string, unknown> | null;
+  document_date: string;
+  sent_via_whatsapp: boolean;
+  sent_at: string | null;
+  sent_to_phone: string | null;
+  created_at: string;
+  professional_id: string | null;
 }
 
 export default function MedicalRecordsPage() {
@@ -80,6 +97,7 @@ export default function MedicalRecordsPage() {
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [records, setRecords] = useState<MedicalRecord[]>([]);
+  const [documents, setDocuments] = useState<MedicalDocument[]>([]);
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -111,6 +129,7 @@ export default function MedicalRecordsPage() {
   useEffect(() => {
     if (selectedPatient) {
       fetchPatientRecords();
+      fetchPatientDocuments();
     }
   }, [selectedPatient]);
 
@@ -139,13 +158,26 @@ export default function MedicalRecordsPage() {
         diagnosis,
         treatment_plan,
         prescription,
-        professional:professionals (name, specialty, registration_number)
+        professional:professionals (id, name, specialty, registration_number)
       `)
       .eq('clinic_id', currentClinic.id)
       .eq('patient_id', selectedPatient.id)
       .order('record_date', { ascending: false });
 
     setRecords(data as MedicalRecord[] || []);
+  };
+
+  const fetchPatientDocuments = async () => {
+    if (!currentClinic || !selectedPatient) return;
+
+    const { data } = await supabase
+      .from('medical_documents')
+      .select('*')
+      .eq('clinic_id', currentClinic.id)
+      .eq('patient_id', selectedPatient.id)
+      .order('created_at', { ascending: false });
+
+    setDocuments(data as MedicalDocument[] || []);
   };
 
   const fetchPendingAppointments = async () => {
@@ -160,7 +192,7 @@ export default function MedicalRecordsPage() {
         appointment_date,
         start_time,
         patient:patients (id, name),
-        professional:professionals (name)
+        professional:professionals (id, name)
       `)
       .eq('clinic_id', currentClinic.id)
       .eq('status', 'confirmed')
@@ -303,6 +335,36 @@ export default function MedicalRecordsPage() {
       setSelectedPatient(patient);
       setSelectedAppointment(appointment.id);
       setDialogOpen(true);
+    }
+  };
+
+  const getDocumentTypeLabel = (type: string) => {
+    switch (type) {
+      case 'prescription': return 'Receituário';
+      case 'certificate': return 'Atestado';
+      case 'attendance': return 'Comparecimento';
+      case 'exam_request': return 'Exames';
+      default: return type;
+    }
+  };
+
+  const getDocumentTypeIcon = (type: string) => {
+    switch (type) {
+      case 'prescription': return <Pill className="h-4 w-4" />;
+      case 'certificate': return <Award className="h-4 w-4" />;
+      case 'attendance': return <ClipboardCheck className="h-4 w-4" />;
+      case 'exam_request': return <FlaskConical className="h-4 w-4" />;
+      default: return <FileText className="h-4 w-4" />;
+    }
+  };
+
+  const getDocumentTypeBadgeVariant = (type: string): "default" | "secondary" | "outline" | "destructive" => {
+    switch (type) {
+      case 'prescription': return 'default';
+      case 'certificate': return 'secondary';
+      case 'attendance': return 'outline';
+      case 'exam_request': return 'secondary';
+      default: return 'outline';
     }
   };
 
@@ -481,6 +543,51 @@ export default function MedicalRecordsPage() {
         </Card>
       </div>
 
+      {/* Issued Documents History */}
+      {selectedPatient && documents.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Documentos Emitidos
+            </CardTitle>
+            <CardDescription>
+              Histórico de documentos emitidos para este paciente
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {documents.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="p-4 border border-border rounded-lg hover:border-primary/50 transition-colors"
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      {getDocumentTypeIcon(doc.document_type)}
+                      <Badge variant={getDocumentTypeBadgeVariant(doc.document_type)}>
+                        {getDocumentTypeLabel(doc.document_type)}
+                      </Badge>
+                    </div>
+                    {doc.sent_via_whatsapp && (
+                      <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
+                        ✓ WhatsApp
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {format(new Date(doc.document_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                  </p>
+                  <p className="text-sm text-foreground mt-1 line-clamp-2">
+                    {doc.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Pending Appointments for Quick Access */}
       {pendingAppointments.length > 0 && (
         <Card>
@@ -629,13 +736,17 @@ export default function MedicalRecordsPage() {
           }}
           clinicId={currentClinic.id}
           patient={{ name: selectedPatient.name, phone: selectedPatient.phone }}
+          patientId={selectedPatient.id}
           professional={selectedRecord.professional ? {
             name: selectedRecord.professional.name,
             specialty: selectedRecord.professional.specialty || undefined,
             registration_number: selectedRecord.professional.registration_number || undefined,
           } : undefined}
+          professionalId={selectedRecord.professional?.id}
+          medicalRecordId={selectedRecord.id}
           initialPrescription={selectedRecord.prescription || ""}
           date={selectedRecord.record_date}
+          onDocumentSaved={() => fetchPatientDocuments()}
         />
       )}
     </div>
