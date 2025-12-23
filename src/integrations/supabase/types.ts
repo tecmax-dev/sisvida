@@ -1125,6 +1125,44 @@ export type Database = {
           },
         ]
       }
+      message_logs: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          id: string
+          message_type: string
+          month_year: string
+          phone: string
+          sent_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          id?: string
+          message_type: string
+          month_year: string
+          phone: string
+          sent_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          id?: string
+          message_type?: string
+          month_year?: string
+          phone?: string
+          sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       odontogram_records: {
         Row: {
           appointment_id: string | null
@@ -1713,6 +1751,7 @@ export type Database = {
           is_active: boolean | null
           is_default_trial: boolean | null
           is_public: boolean | null
+          max_messages_monthly: number | null
           max_professionals: number
           monthly_price: number
           name: string
@@ -1727,6 +1766,7 @@ export type Database = {
           is_active?: boolean | null
           is_default_trial?: boolean | null
           is_public?: boolean | null
+          max_messages_monthly?: number | null
           max_professionals?: number
           monthly_price?: number
           name: string
@@ -1741,6 +1781,7 @@ export type Database = {
           is_active?: boolean | null
           is_default_trial?: boolean | null
           is_public?: boolean | null
+          max_messages_monthly?: number | null
           max_professionals?: number
           monthly_price?: number
           name?: string
@@ -2162,6 +2203,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_clinic_message_usage: {
+        Args: { _clinic_id: string; _month_year?: string }
+        Returns: {
+          max_allowed: number
+          remaining: number
+          used: number
+        }[]
+      }
       get_user_clinic_ids: { Args: { _user_id: string }; Returns: string[] }
       has_clinic_access: {
         Args: { _clinic_id: string; _user_id: string }
