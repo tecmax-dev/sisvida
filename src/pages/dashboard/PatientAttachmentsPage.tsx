@@ -83,8 +83,9 @@ export default function PatientAttachmentsPage() {
     setSelectedFolderId(folderId);
   }, []);
 
-  const handleUpload = async (files: File[], description?: string) => {
-    await uploadFiles(files, selectedFolderId, description);
+  const handleUpload = async (files: File[], folderId: string | null, description?: string) => {
+    await uploadFiles(files, folderId, description);
+    await fetchAttachments(selectedFolderId);
   };
 
   const handleView = async (attachment: PatientAttachment) => {
@@ -191,6 +192,9 @@ export default function PatientAttachmentsPage() {
         open={showUploadDialog}
         onOpenChange={setShowUploadDialog}
         onUpload={handleUpload}
+        folders={folders}
+        currentFolderId={selectedFolderId}
+        onCreateFolder={createFolder}
       />
 
       <FilePreviewModal
