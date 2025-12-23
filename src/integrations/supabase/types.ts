@@ -1988,6 +1988,51 @@ export type Database = {
         }
         Relationships: []
       }
+      smtp_settings: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          encryption: string
+          from_email: string
+          from_name: string
+          host: string
+          id: string
+          is_active: boolean
+          password: string
+          port: number
+          updated_at: string | null
+          username: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          encryption?: string
+          from_email: string
+          from_name?: string
+          host: string
+          id?: string
+          is_active?: boolean
+          password: string
+          port?: number
+          updated_at?: string | null
+          username: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          encryption?: string
+          from_email?: string
+          from_name?: string
+          host?: string
+          id?: string
+          is_active?: boolean
+          password?: string
+          port?: number
+          updated_at?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       specialties: {
         Row: {
           category: Database["public"]["Enums"]["specialty_category"]

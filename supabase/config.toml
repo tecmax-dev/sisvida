@@ -35,3 +35,12 @@ verify_jwt = false
 
 [functions.generate-hero-mockup]
 verify_jwt = false
+
+[functions.search-patient-by-cpf]
+verify_jwt = false
+
+[functions.send-welcome-email]
+verify_jwt = false
+
+[functions.test-smtp-connection]
+verify_jwt = true
