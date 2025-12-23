@@ -43,6 +43,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Building2, 
   Search, 
@@ -56,6 +63,7 @@ import {
   CreditCard,
   Trash2,
   Stethoscope,
+  MoreHorizontal,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -95,6 +103,148 @@ interface ClinicWithCounts extends Clinic {
   professionalsCount: number;
   subscription?: ClinicSubscription | null;
 }
+
+// Card component for mobile/tablet view
+interface ClinicCardProps {
+  clinic: ClinicWithCounts;
+  onAccess: (clinic: ClinicWithCounts) => void;
+  onManagePlan: (clinic: ClinicWithCounts) => void;
+  onBlock: (clinic: ClinicWithCounts) => void;
+  onUnblock: (clinic: ClinicWithCounts) => void;
+  onDelete: (clinic: ClinicWithCounts) => void;
+  getStatusBadge: (status: string) => React.ReactNode;
+}
+
+const ClinicCard = ({ 
+  clinic, 
+  onAccess, 
+  onManagePlan, 
+  onBlock, 
+  onUnblock, 
+  onDelete,
+  getStatusBadge 
+}: ClinicCardProps) => (
+  <div className={`border rounded-lg p-4 space-y-4 ${clinic.is_blocked ? "bg-destructive/5 border-destructive/20" : ""}`}>
+    {/* Header: Name + Status */}
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-center gap-3 min-w-0">
+        <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
+          clinic.is_blocked ? "bg-destructive/10" : "bg-primary/10"
+        }`}>
+          {clinic.is_blocked ? (
+            <Ban className="h-5 w-5 text-destructive" />
+          ) : (
+            <Building2 className="h-5 w-5 text-primary" />
+          )}
+        </div>
+        <div className="min-w-0">
+          <p className="font-medium truncate">{clinic.name}</p>
+          <code className="text-xs text-muted-foreground">/{clinic.slug}</code>
+        </div>
+      </div>
+      {clinic.is_blocked ? (
+        <Badge variant="destructive" className="gap-1 shrink-0">
+          <Ban className="h-3 w-3" />
+          Bloqueada
+        </Badge>
+      ) : (
+        <Badge variant="outline" className="text-success border-success gap-1 shrink-0">
+          <CheckCircle className="h-3 w-3" />
+          Ativa
+        </Badge>
+      )}
+    </div>
+    
+    {/* Metrics in 3-column grid */}
+    <div className="grid grid-cols-3 gap-2 text-center bg-muted/50 rounded-lg p-3">
+      <div>
+        <Stethoscope className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+        <span className="text-sm font-medium block">
+          {clinic.professionalsCount}
+          {clinic.subscription && (
+            <span className="text-muted-foreground">/{clinic.subscription.plan.max_professionals}</span>
+          )}
+        </span>
+        <p className="text-xs text-muted-foreground">Profissionais</p>
+      </div>
+      <div>
+        <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+        <span className="text-sm font-medium block">{clinic.patientsCount}</span>
+        <p className="text-xs text-muted-foreground">Pacientes</p>
+      </div>
+      <div>
+        <Calendar className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+        <span className="text-sm font-medium block">{clinic.appointmentsCount}</span>
+        <p className="text-xs text-muted-foreground">Agendamentos</p>
+      </div>
+    </div>
+    
+    {/* Plan + Date */}
+    <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+      <div className="flex items-center gap-2">
+        {clinic.subscription ? (
+          <>
+            <span className="font-medium">{clinic.subscription.plan.name}</span>
+            {getStatusBadge(clinic.subscription.status)}
+          </>
+        ) : (
+          <Badge variant="outline" className="text-muted-foreground">Sem plano</Badge>
+        )}
+      </div>
+      <span className="text-muted-foreground text-xs">
+        Criada em {new Date(clinic.created_at).toLocaleDateString('pt-BR')}
+      </span>
+    </div>
+    
+    {/* Actions */}
+    <div className="flex items-center gap-2 pt-2 border-t">
+      <Button 
+        size="sm" 
+        variant="outline" 
+        className="flex-1"
+        onClick={() => onManagePlan(clinic)}
+      >
+        <CreditCard className="h-4 w-4 mr-2" />
+        Plano
+      </Button>
+      {clinic.is_blocked ? (
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="text-success hover:text-success"
+          onClick={() => onUnblock(clinic)}
+        >
+          <CheckCircle className="h-4 w-4" />
+        </Button>
+      ) : (
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="text-destructive hover:text-destructive"
+          onClick={() => onBlock(clinic)}
+        >
+          <Ban className="h-4 w-4" />
+        </Button>
+      )}
+      <Button 
+        size="sm" 
+        variant="outline"
+        className="text-destructive hover:text-destructive"
+        onClick={() => onDelete(clinic)}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+      <Button 
+        size="sm" 
+        className="flex-1"
+        onClick={() => onAccess(clinic)}
+      >
+        <ExternalLink className="h-4 w-4 mr-2" />
+        Acessar
+      </Button>
+    </div>
+  </div>
+);
 
 export default function ClinicsManagement() {
   const [clinics, setClinics] = useState<ClinicWithCounts[]>([]);
@@ -484,11 +634,11 @@ export default function ClinicsManagement() {
     : false;
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-foreground">Gerenciar Clínicas</h1>
-        <p className="text-muted-foreground mt-1">
+        <h1 className="text-xl md:text-2xl font-bold text-foreground">Gerenciar Clínicas</h1>
+        <p className="text-muted-foreground mt-1 text-sm md:text-base">
           Lista de todas as clínicas cadastradas no sistema
         </p>
       </div>
@@ -496,8 +646,8 @@ export default function ClinicsManagement() {
       {/* Search & Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1 max-w-md">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome, slug ou CNPJ..."
@@ -506,14 +656,14 @@ export default function ClinicsManagement() {
                 className="pl-9"
               />
             </div>
-            <Badge variant="secondary" className="text-sm">
+            <Badge variant="secondary" className="text-sm justify-center">
               {filteredClinics.length} clínica{filteredClinics.length !== 1 ? 's' : ''}
             </Badge>
           </div>
         </CardContent>
       </Card>
 
-      {/* Clinics Table */}
+      {/* Clinics List */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -536,145 +686,166 @@ export default function ClinicsManagement() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Clínica</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Plano</TableHead>
-                  <TableHead className="text-center">Profissionais</TableHead>
-                  <TableHead className="text-center">Pacientes</TableHead>
-                  <TableHead className="text-center">Agendamentos</TableHead>
-                  <TableHead>Criada em</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredClinics.map((clinic) => (
-                  <TableRow key={clinic.id} className={clinic.is_blocked ? "bg-destructive/5" : ""}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${
-                          clinic.is_blocked ? "bg-destructive/10" : "bg-primary/10"
-                        }`}>
+            <>
+              {/* Desktop: Table View */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Clínica</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Plano</TableHead>
+                      <TableHead className="text-center">Profissionais</TableHead>
+                      <TableHead className="text-center">Pacientes</TableHead>
+                      <TableHead className="text-center">Agendamentos</TableHead>
+                      <TableHead>Criada em</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClinics.map((clinic) => (
+                      <TableRow key={clinic.id} className={clinic.is_blocked ? "bg-destructive/5" : ""}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${
+                              clinic.is_blocked ? "bg-destructive/10" : "bg-primary/10"
+                            }`}>
+                              {clinic.is_blocked ? (
+                                <Ban className="h-4 w-4 text-destructive" />
+                              ) : (
+                                <Building2 className="h-4 w-4 text-primary" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-medium">{clinic.name}</p>
+                              <code className="text-xs text-muted-foreground">/{clinic.slug}</code>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
                           {clinic.is_blocked ? (
-                            <Ban className="h-4 w-4 text-destructive" />
+                            <Badge variant="destructive" className="gap-1">
+                              <Ban className="h-3 w-3" />
+                              Bloqueada
+                            </Badge>
                           ) : (
-                            <Building2 className="h-4 w-4 text-primary" />
+                            <Badge variant="outline" className="text-success border-success gap-1">
+                              <CheckCircle className="h-3 w-3" />
+                              Ativa
+                            </Badge>
                           )}
-                        </div>
-                        <div>
-                          <p className="font-medium">{clinic.name}</p>
-                          <code className="text-xs text-muted-foreground">/{clinic.slug}</code>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {clinic.is_blocked ? (
-                        <Badge variant="destructive" className="gap-1">
-                          <Ban className="h-3 w-3" />
-                          Bloqueada
-                        </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-success border-success gap-1">
-                          <CheckCircle className="h-3 w-3" />
-                          Ativa
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {clinic.subscription ? (
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">{clinic.subscription.plan.name}</p>
-                          {getStatusBadge(clinic.subscription.status)}
-                        </div>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          Sem plano
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Stethoscope className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>
-                          {clinic.professionalsCount}
-                          {clinic.subscription && (
-                            <span className="text-muted-foreground">
-                              /{clinic.subscription.plan.max_professionals}
+                        </TableCell>
+                        <TableCell>
+                          {clinic.subscription ? (
+                            <div className="space-y-1">
+                              <p className="text-sm font-medium">{clinic.subscription.plan.name}</p>
+                              {getStatusBadge(clinic.subscription.status)}
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              Sem plano
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Stethoscope className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>
+                              {clinic.professionalsCount}
+                              {clinic.subscription && (
+                                <span className="text-muted-foreground">
+                                  /{clinic.subscription.plan.max_professionals}
+                                </span>
+                              )}
                             </span>
-                          )}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{clinic.patientsCount}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{clinic.appointmentsCount}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {new Date(clinic.created_at).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          title="Gerenciar Plano"
-                          onClick={() => handleOpenPlanDialog(clinic)}
-                        >
-                          <CreditCard className="h-4 w-4" />
-                        </Button>
-                        {clinic.is_blocked ? (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-success hover:text-success"
-                            title="Desbloquear"
-                            onClick={() => handleOpenUnblockDialog(clinic)}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                        ) : (
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive"
-                            title="Bloquear"
-                            onClick={() => handleOpenBlockDialog(clinic)}
-                          >
-                            <Ban className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive"
-                          title="Excluir Clínica"
-                          onClick={() => handleOpenDeleteDialog(clinic)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => handleAccessClinic(clinic)}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                          Acessar
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{clinic.patientsCount}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{clinic.appointmentsCount}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {new Date(clinic.created_at).toLocaleDateString('pt-BR')}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="icon" variant="ghost">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="bg-background">
+                                <DropdownMenuItem onClick={() => handleOpenPlanDialog(clinic)}>
+                                  <CreditCard className="h-4 w-4 mr-2" />
+                                  Gerenciar Plano
+                                </DropdownMenuItem>
+                                {clinic.is_blocked ? (
+                                  <DropdownMenuItem 
+                                    onClick={() => handleOpenUnblockDialog(clinic)}
+                                    className="text-success focus:text-success"
+                                  >
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Desbloquear
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem 
+                                    onClick={() => handleOpenBlockDialog(clinic)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Ban className="h-4 w-4 mr-2" />
+                                    Bloquear
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  onClick={() => handleOpenDeleteDialog(clinic)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                            <Button
+                              size="sm"
+                              onClick={() => handleAccessClinic(clinic)}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                              Acessar
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile/Tablet: Cards View */}
+              <div className="lg:hidden space-y-4">
+                {filteredClinics.map((clinic) => (
+                  <ClinicCard
+                    key={clinic.id}
+                    clinic={clinic}
+                    onAccess={handleAccessClinic}
+                    onManagePlan={handleOpenPlanDialog}
+                    onBlock={handleOpenBlockDialog}
+                    onUnblock={handleOpenUnblockDialog}
+                    onDelete={handleOpenDeleteDialog}
+                    getStatusBadge={getStatusBadge}
+                  />
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
