@@ -122,6 +122,10 @@ export default function ProfessionalProfile() {
   const [patientName, setPatientName] = useState("");
   const [patientPhone, setPatientPhone] = useState("");
   const [patientEmail, setPatientEmail] = useState("");
+  const [patientCpf, setPatientCpf] = useState("");
+  const [searchingPatient, setSearchingPatient] = useState(false);
+  const [patientFound, setPatientFound] = useState(false);
+  const [cpfError, setCpfError] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -343,6 +347,84 @@ export default function ProfessionalProfile() {
     return `(${numbers.slice(0, 2)}) ${numbers.slice(2, 7)}-${numbers.slice(7, 11)}`;
   };
 
+  const formatCpf = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  const validateCpf = (cpf: string): boolean => {
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11) return false;
+    if (/^(\d)\1+$/.test(cleanCpf)) return false;
+    
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cleanCpf[i]) * (10 - i);
+    }
+    let remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cleanCpf[9])) return false;
+    
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(cleanCpf[i]) * (11 - i);
+    }
+    remainder = (sum * 10) % 11;
+    if (remainder === 10 || remainder === 11) remainder = 0;
+    if (remainder !== parseInt(cleanCpf[10])) return false;
+    
+    return true;
+  };
+
+  const searchPatientByCpf = async (cpf: string) => {
+    const cleanCpf = cpf.replace(/\D/g, '');
+    if (cleanCpf.length !== 11 || !clinic) return;
+    
+    if (!validateCpf(cleanCpf)) {
+      setCpfError("CPF inválido");
+      return;
+    }
+    
+    setCpfError("");
+    setSearchingPatient(true);
+    setPatientFound(false);
+    
+    try {
+      const { data } = await supabase
+        .from('patients')
+        .select('name, phone, email')
+        .eq('clinic_id', clinic.id)
+        .eq('cpf', cleanCpf)
+        .maybeSingle();
+      
+      if (data) {
+        setPatientName(data.name);
+        setPatientPhone(formatPhone(data.phone));
+        setPatientEmail(data.email || '');
+        setPatientFound(true);
+        toast({ title: "Cadastro encontrado!", description: "Seus dados foram preenchidos automaticamente." });
+      }
+    } finally {
+      setSearchingPatient(false);
+    }
+  };
+
+  useEffect(() => {
+    const cleanCpf = patientCpf.replace(/\D/g, '');
+    if (cleanCpf.length === 11 && clinic) {
+      const timeoutId = setTimeout(() => {
+        searchPatientByCpf(patientCpf);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    } else {
+      setPatientFound(false);
+      setCpfError("");
+    }
+  }, [patientCpf, clinic]);
+
   const formatZipCode = (zipCode: string | null) => {
     if (!zipCode) return null;
     const numbers = zipCode.replace(/\D/g, '');
@@ -373,6 +455,7 @@ export default function ProfessionalProfile() {
           patientName: patientName.trim(),
           patientPhone: phoneClean,
           patientEmail: patientEmail?.trim() || null,
+          patientCpf: patientCpf?.replace(/\D/g, '') || null,
           procedureId: selectedProcedure || null,
           insurancePlanId: selectedInsurance || null,
           durationMinutes: appointmentDuration,
@@ -922,6 +1005,32 @@ export default function ProfessionalProfile() {
                       Seus Dados
                     </h4>
                     <div>
+                      <Label htmlFor="patientCpf" className="text-sm">CPF</Label>
+                      <div className="relative">
+                        <Input
+                          id="patientCpf"
+                          value={patientCpf}
+                          onChange={(e) => setPatientCpf(formatCpf(e.target.value))}
+                          placeholder="000.000.000-00"
+                          maxLength={14}
+                          className={cn("mt-1 pr-10", cpfError && "border-destructive")}
+                        />
+                        {searchingPatient && (
+                          <Loader2 className="absolute right-3 top-1/2 translate-y-[-25%] h-4 w-4 animate-spin text-muted-foreground" />
+                        )}
+                        {patientFound && !searchingPatient && (
+                          <CheckCircle2 className="absolute right-3 top-1/2 translate-y-[-25%] h-4 w-4 text-green-500" />
+                        )}
+                      </div>
+                      {cpfError ? (
+                        <p className="text-xs text-destructive mt-1">{cpfError}</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Digite seu CPF para buscar cadastro
+                        </p>
+                      )}
+                    </div>
+                    <div>
                       <Label htmlFor="patientName" className="text-sm">Nome completo *</Label>
                       <Input
                         id="patientName"
@@ -929,6 +1038,7 @@ export default function ProfessionalProfile() {
                         onChange={(e) => setPatientName(e.target.value)}
                         placeholder="Seu nome"
                         className="mt-1"
+                        disabled={patientFound}
                       />
                     </div>
                     <div>
@@ -940,6 +1050,7 @@ export default function ProfessionalProfile() {
                         placeholder="(00) 00000-0000"
                         maxLength={15}
                         className="mt-1"
+                        disabled={patientFound}
                       />
                     </div>
                     <div>
@@ -951,6 +1062,7 @@ export default function ProfessionalProfile() {
                         onChange={(e) => setPatientEmail(e.target.value)}
                         placeholder="seu@email.com"
                         className="mt-1"
+                        disabled={patientFound}
                       />
                     </div>
                   </div>
