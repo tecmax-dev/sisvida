@@ -1,34 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-
-interface Patient {
-  id: string;
-  name: string;
-  email: string | null;
-  phone: string;
-  cpf: string | null;
-  address: string | null;
-  birth_date: string | null;
-  notes: string | null;
-  insurance_plan_id: string | null;
-}
+import { PatientHeader } from "@/components/patients/PatientHeader";
+import { PatientTabs, PatientTab } from "@/components/patients/PatientTabs";
+import { PatientFormFields, PatientFormData } from "@/components/patients/PatientFormFields";
+import { useCepLookup } from "@/hooks/useCepLookup";
 
 interface InsurancePlan {
   id: string;
@@ -87,33 +68,61 @@ const patientSchema = z.object({
     .refine((val) => !val || val.replace(/\D/g, '').length === 0 || isValidCPF(val), {
       message: "CPF inválido"
     }),
-  birth_date: z.string().optional().or(z.literal("")),
-  address: z.string().max(200, "Endereço deve ter no máximo 200 caracteres").optional().or(z.literal("")),
-  insurance_plan_id: z.string().optional().or(z.literal("")),
-  notes: z.string().max(500, "Observações deve ter no máximo 500 caracteres").optional().or(z.literal("")),
 });
+
+const initialFormData: PatientFormData = {
+  isCompany: false,
+  isForeigner: false,
+  recordCode: undefined,
+  name: '',
+  contactName: '',
+  cpf: '',
+  rg: '',
+  gender: '',
+  birthDate: '',
+  birthplace: '',
+  maritalStatus: '',
+  insurancePlanId: '',
+  heightCm: '',
+  weightKg: '',
+  skinColor: '',
+  priority: 'none',
+  religion: '',
+  cep: '',
+  street: '',
+  streetNumber: '',
+  neighborhood: '',
+  city: '',
+  state: '',
+  complement: '',
+  tag: '',
+  referral: '',
+  sendNotifications: true,
+  phone: '',
+  landline: '',
+  email: '',
+  preferredChannel: 'whatsapp',
+  profession: '',
+  education: '',
+  motherName: '',
+  fatherName: '',
+  notes: '',
+};
 
 export default function PatientEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentClinic } = useAuth();
   const { toast } = useToast();
+  const { lookupCep, loading: cepLoading } = useCepLookup();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [patient, setPatient] = useState<Patient | null>(null);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
-  
-  // Form state
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [cpf, setCpf] = useState("");
-  const [birthDate, setBirthDate] = useState("");
-  const [address, setAddress] = useState("");
-  const [insurancePlanId, setInsurancePlanId] = useState("");
-  const [notes, setNotes] = useState("");
+  const [activeTab, setActiveTab] = useState<PatientTab>('cadastro');
+  const [formData, setFormData] = useState<PatientFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [insurancePlanName, setInsurancePlanName] = useState<string>('');
 
   useEffect(() => {
     if (currentClinic && id) {
@@ -129,7 +138,7 @@ export default function PatientEditPage() {
     try {
       const { data, error } = await supabase
         .from('patients')
-        .select('*')
+        .select('*, insurance_plans(name)')
         .eq('id', id)
         .eq('clinic_id', currentClinic.id)
         .single();
@@ -137,15 +146,48 @@ export default function PatientEditPage() {
       if (error) throw error;
       
       if (data) {
-        setPatient(data);
-        setName(data.name);
-        setPhone(formatPhone(data.phone));
-        setEmail(data.email || "");
-        setCpf(data.cpf ? formatCPF(data.cpf) : "");
-        setBirthDate(data.birth_date || "");
-        setAddress(data.address || "");
-        setInsurancePlanId(data.insurance_plan_id || "");
-        setNotes(data.notes || "");
+        setFormData({
+          isCompany: data.is_company || false,
+          isForeigner: data.is_foreigner || false,
+          recordCode: data.record_code,
+          name: data.name || '',
+          contactName: data.contact_name || '',
+          cpf: data.cpf ? formatCPF(data.cpf) : '',
+          rg: data.rg || '',
+          gender: data.gender || '',
+          birthDate: data.birth_date || '',
+          birthplace: data.birthplace || '',
+          maritalStatus: data.marital_status || '',
+          insurancePlanId: data.insurance_plan_id || '',
+          heightCm: data.height_cm?.toString() || '',
+          weightKg: data.weight_kg?.toString() || '',
+          skinColor: data.skin_color || '',
+          priority: data.priority || 'none',
+          religion: data.religion || '',
+          cep: data.cep || '',
+          street: data.street || '',
+          streetNumber: data.street_number || '',
+          neighborhood: data.neighborhood || '',
+          city: data.city || '',
+          state: data.state || '',
+          complement: data.complement || '',
+          tag: data.tag || '',
+          referral: data.referral || '',
+          sendNotifications: data.send_notifications ?? true,
+          phone: data.phone ? formatPhone(data.phone) : '',
+          landline: data.landline ? formatPhone(data.landline) : '',
+          email: data.email || '',
+          preferredChannel: data.preferred_channel || 'whatsapp',
+          profession: data.profession || '',
+          education: data.education || '',
+          motherName: data.mother_name || '',
+          fatherName: data.father_name || '',
+          notes: data.notes || '',
+        });
+        
+        if (data.insurance_plans) {
+          setInsurancePlanName((data.insurance_plans as any).name || '');
+        }
       }
     } catch (error) {
       console.error("Error fetching patient:", error);
@@ -178,18 +220,44 @@ export default function PatientEditPage() {
     }
   };
 
+  const handleCepLookup = async () => {
+    const cepData = await lookupCep(formData.cep);
+    if (cepData) {
+      setFormData(prev => ({
+        ...prev,
+        street: cepData.logradouro || prev.street,
+        neighborhood: cepData.bairro || prev.neighborhood,
+        city: cepData.localidade || prev.city,
+        state: cepData.uf || prev.state,
+        complement: cepData.complemento || prev.complement,
+      }));
+    }
+  };
+
+  const handleTabChange = (tab: PatientTab) => {
+    if (tab === 'cadastro') {
+      setActiveTab(tab);
+    } else if (tab === 'prontuario') {
+      navigate(`/dashboard/patients/${id}/records`);
+    } else if (tab === 'anamnese') {
+      navigate(`/dashboard/patients/${id}/anamnesis`);
+    } else if (tab === 'anexos') {
+      navigate(`/dashboard/patients/${id}/attachments`);
+    } else if (tab === 'agendamentos') {
+      navigate(`/dashboard/calendar?patient=${id}`);
+    } else if (tab === 'prescricoes') {
+      navigate(`/dashboard/patients/${id}/prescription`);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const validation = patientSchema.safeParse({
-      name,
-      phone,
-      email: email || undefined,
-      cpf: cpf || undefined,
-      birth_date: birthDate || undefined,
-      address: address || undefined,
-      insurance_plan_id: insurancePlanId || undefined,
-      notes: notes || undefined,
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email || undefined,
+      cpf: formData.cpf || undefined,
     });
     
     if (!validation.success) {
@@ -211,14 +279,42 @@ export default function PatientEditPage() {
       const { error } = await supabase
         .from('patients')
         .update({
-          name: name.trim(),
-          phone: phone.replace(/\D/g, '').trim(),
-          email: email.trim() || null,
-          cpf: cpf.replace(/\D/g, '').trim() || null,
-          address: address.trim() || null,
-          birth_date: birthDate || null,
-          notes: notes.trim() || null,
-          insurance_plan_id: insurancePlanId || null,
+          name: formData.name.trim(),
+          phone: formData.phone.replace(/\D/g, '').trim(),
+          email: formData.email.trim() || null,
+          cpf: formData.cpf.replace(/\D/g, '').trim() || null,
+          birth_date: formData.birthDate || null,
+          notes: formData.notes.trim() || null,
+          insurance_plan_id: formData.insurancePlanId || null,
+          // New fields
+          is_company: formData.isCompany,
+          is_foreigner: formData.isForeigner,
+          contact_name: formData.contactName.trim() || null,
+          rg: formData.rg.trim() || null,
+          gender: formData.gender || null,
+          birthplace: formData.birthplace.trim() || null,
+          marital_status: formData.maritalStatus || null,
+          height_cm: formData.heightCm ? parseFloat(formData.heightCm) : null,
+          weight_kg: formData.weightKg ? parseFloat(formData.weightKg) : null,
+          skin_color: formData.skinColor || null,
+          priority: formData.priority || 'none',
+          religion: formData.religion.trim() || null,
+          cep: formData.cep.replace(/\D/g, '').trim() || null,
+          street: formData.street.trim() || null,
+          street_number: formData.streetNumber.trim() || null,
+          neighborhood: formData.neighborhood.trim() || null,
+          city: formData.city.trim() || null,
+          state: formData.state || null,
+          complement: formData.complement.trim() || null,
+          tag: formData.tag.trim() || null,
+          referral: formData.referral.trim() || null,
+          send_notifications: formData.sendNotifications,
+          landline: formData.landline.replace(/\D/g, '').trim() || null,
+          preferred_channel: formData.preferredChannel || 'whatsapp',
+          profession: formData.profession.trim() || null,
+          education: formData.education || null,
+          mother_name: formData.motherName.trim() || null,
+          father_name: formData.fatherName.trim() || null,
         })
         .eq('id', id);
 
@@ -258,7 +354,7 @@ export default function PatientEditPage() {
     );
   }
 
-  if (!patient) {
+  if (!formData.name) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Paciente não encontrado.</p>
@@ -270,154 +366,51 @@ export default function PatientEditPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/patients')}>
-          <ArrowLeft className="h-5 w-5" />
+    <div className="space-y-4">
+      {/* Top bar with back button */}
+      <div className="flex items-center justify-between">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/patients')} className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Voltar
         </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Editar Paciente</h1>
-          <p className="text-muted-foreground">{patient.name}</p>
-        </div>
+        <Button onClick={handleSubmit} disabled={saving} className="gap-2">
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Salvar
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Informações do Paciente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="sm:col-span-2">
-                <Label htmlFor="name">Nome Completo *</Label>
-                <Input
-                  id="name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={`mt-1.5 ${errors.name ? "border-destructive" : ""}`}
-                />
-                {errors.name && (
-                  <p className="mt-1 text-sm text-destructive">{errors.name}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="phone">Telefone *</Label>
-                <Input
-                  id="phone"
-                  value={phone}
-                  onChange={(e) => setPhone(formatPhone(e.target.value))}
-                  placeholder="(00) 00000-0000"
-                  className={`mt-1.5 ${errors.phone ? "border-destructive" : ""}`}
-                />
-                {errors.phone && (
-                  <p className="mt-1 text-sm text-destructive">{errors.phone}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="cpf">CPF</Label>
-                <Input
-                  id="cpf"
-                  value={cpf}
-                  onChange={(e) => setCpf(formatCPF(e.target.value))}
-                  placeholder="000.000.000-00"
-                  className={`mt-1.5 ${errors.cpf ? "border-destructive" : ""}`}
-                />
-                {errors.cpf && (
-                  <p className="mt-1 text-sm text-destructive">{errors.cpf}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="email@exemplo.com"
-                  className={`mt-1.5 ${errors.email ? "border-destructive" : ""}`}
-                />
-                {errors.email && (
-                  <p className="mt-1 text-sm text-destructive">{errors.email}</p>
-                )}
-              </div>
-              
-              <div>
-                <Label htmlFor="birthDate">Data de Nascimento</Label>
-                <Input
-                  id="birthDate"
-                  type="date"
-                  value={birthDate}
-                  onChange={(e) => setBirthDate(e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-              
-              <div className="sm:col-span-2">
-                <Label htmlFor="address">Endereço</Label>
-                <Input
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="Rua, número, bairro, cidade"
-                  className={`mt-1.5 ${errors.address ? "border-destructive" : ""}`}
-                />
-                {errors.address && (
-                  <p className="mt-1 text-sm text-destructive">{errors.address}</p>
-                )}
-              </div>
-              
-              <div className="sm:col-span-2">
-                <Label htmlFor="insurance">Plano de Saúde</Label>
-                <Select value={insurancePlanId || "none"} onValueChange={(val) => setInsurancePlanId(val === "none" ? "" : val)}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue placeholder="Selecione (opcional)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Nenhum</SelectItem>
-                    {insurancePlans.map((plan) => (
-                      <SelectItem key={plan.id} value={plan.id}>
-                        {plan.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="sm:col-span-2">
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Informações adicionais sobre o paciente"
-                  className={`mt-1.5 ${errors.notes ? "border-destructive" : ""}`}
-                  rows={3}
-                />
-                {errors.notes && (
-                  <p className="mt-1 text-sm text-destructive">{errors.notes}</p>
-                )}
-              </div>
-            </div>
+      {/* Patient Header */}
+      <PatientHeader
+        name={formData.name}
+        recordCode={formData.recordCode}
+        birthDate={formData.birthDate}
+        phone={formData.phone}
+        insurancePlan={insurancePlanName}
+        priority={formData.priority}
+      />
 
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => navigate('/dashboard/patients')}
-              >
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Alterações
-              </Button>
-            </div>
+      {/* Tabs Navigation */}
+      <PatientTabs
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        patientId={id || ''}
+      />
+
+      {/* Tab Content */}
+      {activeTab === 'cadastro' && (
+        <div className="bg-card rounded-lg border p-6">
+          <form onSubmit={handleSubmit}>
+            <PatientFormFields
+              formData={formData}
+              setFormData={setFormData}
+              errors={errors}
+              insurancePlans={insurancePlans}
+              onCepLookup={handleCepLookup}
+              cepLoading={cepLoading}
+            />
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,5 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Open WhatsApp chat with a phone number
+export function openWhatsApp(phone: string, message?: string): void {
+  const cleanedPhone = phone.replace(/\D/g, '');
+  // Add Brazil country code if not present
+  const phoneWithCountry = cleanedPhone.startsWith('55') ? cleanedPhone : `55${cleanedPhone}`;
+  const encodedMessage = message ? `&text=${encodeURIComponent(message)}` : '';
+  window.open(`https://wa.me/${phoneWithCountry}?${encodedMessage}`, '_blank');
+}
+
 interface SendWhatsAppParams {
   phone: string;
   message: string;
