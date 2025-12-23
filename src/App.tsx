@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
-
+import { LoadingFallback } from "@/components/ui/loading-fallback";
 import { Button } from "./components/ui/button";
 
 // Layouts (carregamento imediato - necessários para estrutura)
@@ -127,7 +127,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Suspense fallback={null}>
+            <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/instalar" element={<InstallPage />} />
