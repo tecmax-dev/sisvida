@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -17,23 +18,34 @@ import {
   Users, 
   Search, 
   Shield,
-  Building2
+  Building2,
+  Pencil,
+  Mail,
+  AlertCircle
 } from "lucide-react";
+import { EditUserEmailDialog } from "@/components/admin/EditUserEmailDialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-interface UserProfile {
+interface UserWithEmail {
   id: string;
   user_id: string;
   name: string;
+  email: string;
   phone: string | null;
   created_at: string;
   isSuperAdmin: boolean;
   clinicsCount: number;
+  email_confirmed_at: string | null;
+  last_sign_in_at: string | null;
 }
 
 export default function UsersManagement() {
-  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [users, setUsers] = useState<UserWithEmail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithEmail | null>(null);
   const { logAction } = useAuditLog();
 
   useEffect(() => {
@@ -42,47 +54,39 @@ export default function UsersManagement() {
   }, []);
 
   const fetchUsers = async () => {
+    setLoading(true);
+    setError(null);
+    
     try {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error: fnError } = await supabase.functions.invoke(
+        "list-users-with-email"
+      );
 
-      if (error) throw error;
-
-      if (profiles) {
-        const { data: superAdmins } = await supabase
-          .from('super_admins')
-          .select('user_id');
-
-        const superAdminIds = new Set(superAdmins?.map(sa => sa.user_id) || []);
-
-        const usersWithData = await Promise.all(
-          profiles.map(async (profile) => {
-            const { count } = await supabase
-              .from('user_roles')
-              .select('id', { count: 'exact', head: true })
-              .eq('user_id', profile.user_id);
-
-            return {
-              ...profile,
-              isSuperAdmin: superAdminIds.has(profile.user_id),
-              clinicsCount: count || 0,
-            };
-          })
-        );
-
-        setUsers(usersWithData);
+      if (fnError) {
+        throw new Error(fnError.message);
       }
-    } catch (error) {
-      console.error("Error fetching users:", error);
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      setUsers(data?.users || []);
+    } catch (err: any) {
+      console.error("Error fetching users:", err);
+      setError(err.message || "Erro ao carregar usuários");
     } finally {
       setLoading(false);
     }
   };
 
+  const handleEditEmail = (user: UserWithEmail) => {
+    setSelectedUser(user);
+    setEditDialogOpen(true);
+  };
+
   const filteredUsers = users.filter((user) =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (user.phone && user.phone.includes(searchTerm))
   );
 
@@ -101,7 +105,7 @@ export default function UsersManagement() {
             <div className="relative flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar por nome ou telefone..."
+                placeholder="Buscar por nome, email ou telefone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
@@ -113,6 +117,13 @@ export default function UsersManagement() {
           </div>
         </CardContent>
       </Card>
+
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
       <Card>
         <CardHeader>
@@ -136,58 +147,148 @@ export default function UsersManagement() {
               </p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuário</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead className="text-center">Clínicas</TableHead>
-                  <TableHead>Tipo</TableHead>
-                  <TableHead>Cadastrado em</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* Desktop Table */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Usuário</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Telefone</TableHead>
+                      <TableHead className="text-center">Clínicas</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Cadastrado em</TableHead>
+                      <TableHead className="text-center">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredUsers.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                              <span className="text-sm font-medium text-primary">
+                                {user.name.charAt(0).toUpperCase()}
+                              </span>
+                            </div>
+                            <p className="font-medium">{user.name}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-sm">{user.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {user.phone || "-"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span>{user.clinicsCount}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {user.isSuperAdmin ? (
+                            <Badge variant="default" className="bg-warning text-warning-foreground">
+                              <Shield className="h-3 w-3 mr-1" />
+                              Super Admin
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Usuário</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => handleEditEmail(user)}
+                            title="Editar email"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {/* Mobile/Tablet Cards */}
+              <div className="lg:hidden space-y-4">
                 {filteredUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
+                  <div key={user.id} className="border rounded-lg p-4 space-y-3">
+                    {/* Header: Nome + Status */}
+                    <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                           <span className="text-sm font-medium text-primary">
                             {user.name.charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <p className="font-medium">{user.name}</p>
+                        <div>
+                          <p className="font-medium">{user.name}</p>
+                          <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                            <Mail className="h-3 w-3" />
+                            <span className="truncate max-w-[180px]">{user.email}</span>
+                          </div>
+                        </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {user.phone || "-"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{user.clinicsCount}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
                       {user.isSuperAdmin ? (
                         <Badge variant="default" className="bg-warning text-warning-foreground">
                           <Shield className="h-3 w-3 mr-1" />
-                          Super Admin
+                          Admin
                         </Badge>
                       ) : (
                         <Badge variant="secondary">Usuário</Badge>
                       )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {new Date(user.created_at).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                  </TableRow>
+                    </div>
+
+                    {/* Info */}
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Telefone:</span>{" "}
+                        <span>{user.phone || "-"}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span>{user.clinicsCount} clínica{user.clinicsCount !== 1 ? "s" : ""}</span>
+                      </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="flex items-center justify-between pt-2 border-t">
+                      <span className="text-xs text-muted-foreground">
+                        Cadastrado em {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleEditEmail(user)}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Editar Email
+                      </Button>
+                    </div>
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
+
+      <EditUserEmailDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        user={selectedUser}
+        onSuccess={fetchUsers}
+      />
     </div>
   );
 }
