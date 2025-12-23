@@ -56,6 +56,7 @@ const ProceduresPage = lazy(() => import("./pages/dashboard/ProceduresPage"));
 const ProcedureEditPage = lazy(() => import("./pages/dashboard/ProcedureEditPage"));
 const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
 const UsersManagementPage = lazy(() => import("./pages/dashboard/UsersManagementPage"));
+const PatientAttachmentsPage = lazy(() => import("./pages/dashboard/PatientAttachmentsPage"));
 
 // Admin pages (7 páginas)
 const SuperAdminDashboard = lazy(() => import("./pages/admin/SuperAdminDashboard"));
@@ -186,6 +187,7 @@ const App = () => (
                   <Route path="calendar" element={<CalendarPage />} />
                   <Route path="patients" element={<PatientsPage />} />
                   <Route path="patients/:id/edit" element={<PatientEditPage />} />
+                  <Route path="patients/:id/attachments" element={<PatientAttachmentsPage />} />
                   <Route path="professionals" element={<ProfessionalsPage />} />
                   <Route path="professionals/:id/edit" element={<ProfessionalEditPage />} />
                   <Route path="appointments/:id/edit" element={<AppointmentEditPage />} />
