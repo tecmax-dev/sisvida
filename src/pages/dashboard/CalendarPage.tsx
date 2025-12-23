@@ -253,24 +253,31 @@ export default function CalendarPage() {
   }, [currentClinic, selectedDate, viewMode]);
 
   const fetchData = async () => {
-    if (!currentClinic) return;
+    if (!currentClinic) {
+      console.log('[DEBUG CalendarPage] fetchData - currentClinic is null');
+      return;
+    }
+    
+    console.log('[DEBUG CalendarPage] fetchData - clinic_id:', currentClinic.id, 'user:', user?.id);
     
     try {
-      const { data: patientsData } = await supabase
+      const { data: patientsData, error: patientsError } = await supabase
         .from('patients')
         .select('id, name, phone, email, birth_date')
         .eq('clinic_id', currentClinic.id)
         .order('name');
       
+      console.log('[DEBUG CalendarPage] patients fetched:', patientsData?.length, 'error:', patientsError);
       if (patientsData) setPatients(patientsData);
 
-      const { data: professionalsData } = await supabase
+      const { data: professionalsData, error: professionalsError } = await supabase
         .from('professionals')
         .select('id, name, specialty')
         .eq('clinic_id', currentClinic.id)
         .eq('is_active', true)
         .order('name');
       
+      console.log('[DEBUG CalendarPage] professionals fetched:', professionalsData, 'error:', professionalsError);
       if (professionalsData) setProfessionals(professionalsData);
     } catch (error) {
       console.error("Error fetching data:", error);
