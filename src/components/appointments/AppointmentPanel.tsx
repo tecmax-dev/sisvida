@@ -34,11 +34,15 @@ import {
   Lock,
   Send,
   Video,
+  FlaskConical,
+  MessageCircle,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { TelemedicineButton } from "@/components/telemedicine/TelemedicineButton";
 import { VideoCall } from "@/components/telemedicine/VideoCall";
-import { sendWhatsAppDocument, sendWhatsAppMessage, formatTelemedicineInvite } from "@/lib/whatsapp";
+import { sendWhatsAppDocument, sendWhatsAppMessage, formatTelemedicineInvite, formatExamRequest } from "@/lib/whatsapp";
 import { generatePrescriptionPDF } from "@/lib/prescriptionExportUtils";
+import { generateExamRequestPDF } from "@/lib/examRequestExportUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Odontogram } from "@/components/medical/Odontogram";
@@ -168,6 +172,12 @@ export function AppointmentPanel({
   } | null>(null);
   const [sendingTelemedicineLink, setSendingTelemedicineLink] = useState(false);
 
+  // Exam request states
+  const [examRequest, setExamRequest] = useState("");
+  const [clinicalIndication, setClinicalIndication] = useState("");
+  const [sendingExamRequest, setSendingExamRequest] = useState(false);
+  const [examWhatsappPhone, setExamWhatsappPhone] = useState(appointment.patient.phone || "");
+  const [showExamWhatsAppDialog, setShowExamWhatsAppDialog] = useState(false);
   const isCompleted = appointment.status === "completed";
   const isInProgress = appointment.status === "in_progress";
   const isTelemedicine = appointment.type === "telemedicine";
@@ -585,6 +595,111 @@ export function AppointmentPanel({
     }
   };
 
+  const handleSaveExamRequest = async () => {
+    if (!examRequest.trim()) return;
+    
+    try {
+      await supabase.from("medical_documents").insert({
+        clinic_id: clinicId,
+        patient_id: appointment.patient_id,
+        professional_id: professionalId,
+        document_type: "exam_request",
+        content: examRequest,
+        additional_info: { clinical_indication: clinicalIndication || null },
+        document_date: new Date().toISOString().split("T")[0],
+      });
+
+      toast({
+        title: "Solicitação salva!",
+        description: "Exames registrados no prontuário do paciente.",
+      });
+      
+      setExamRequest("");
+      setClinicalIndication("");
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSendExamRequestWhatsApp = async () => {
+    if (!examRequest.trim() || !examWhatsappPhone) return;
+    
+    setSendingExamRequest(true);
+    
+    try {
+      const { base64, fileName } = await generateExamRequestPDF({
+        clinic: {
+          name: clinic?.name || "Clínica",
+          address: clinic?.address,
+          phone: clinic?.phone,
+          cnpj: clinic?.cnpj,
+        },
+        patient: {
+          name: appointment.patient.name,
+        },
+        professional: professional ? {
+          name: professional.name,
+          specialty: professional.specialty,
+          registration_number: professional.registration_number,
+        } : undefined,
+        examRequest,
+        clinicalIndication,
+        date: new Date().toISOString().split("T")[0],
+      });
+
+      const result = await sendWhatsAppDocument({
+        phone: examWhatsappPhone,
+        clinicId,
+        pdfBase64: base64,
+        fileName,
+        caption: formatExamRequest(
+          appointment.patient.name,
+          clinic?.name || "Clínica",
+          format(new Date(), "dd/MM/yyyy", { locale: ptBR }),
+          professional?.name || "Profissional"
+        ),
+      });
+
+      if (result.success) {
+        await supabase.from("medical_documents").insert({
+          clinic_id: clinicId,
+          patient_id: appointment.patient_id,
+          professional_id: professionalId,
+          document_type: "exam_request",
+          content: examRequest,
+          additional_info: { clinical_indication: clinicalIndication || null },
+          document_date: new Date().toISOString().split("T")[0],
+          sent_via_whatsapp: true,
+          sent_at: new Date().toISOString(),
+          sent_to_phone: examWhatsappPhone,
+        });
+
+        toast({
+          title: "Enviado com sucesso! 📋",
+          description: `Solicitação de exames enviada para ${examWhatsappPhone}`,
+        });
+        
+        setShowExamWhatsAppDialog(false);
+        setExamRequest("");
+        setClinicalIndication("");
+      } else {
+        throw new Error(result.error || "Erro ao enviar");
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSendingExamRequest(false);
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -665,7 +780,7 @@ export function AppointmentPanel({
         {/* Main Content */}
         <ScrollArea className="flex-1">
           <Tabs defaultValue="prontuario" className="w-full">
-            <TabsList className={`w-full grid ${isDentalSpecialty ? 'grid-cols-5' : 'grid-cols-4'}`}>
+            <TabsList className={`w-full grid ${isDentalSpecialty ? 'grid-cols-6' : 'grid-cols-5'}`}>
               <TabsTrigger value="prontuario">
                 <FileText className="h-4 w-4 mr-1.5" />
                 Prontuário
@@ -687,6 +802,10 @@ export function AppointmentPanel({
               <TabsTrigger value="receituario">
                 <Pill className="h-4 w-4 mr-1.5" />
                 Receituário
+              </TabsTrigger>
+              <TabsTrigger value="exames">
+                <FlaskConical className="h-4 w-4 mr-1.5" />
+                Exames
               </TabsTrigger>
             </TabsList>
 
@@ -936,8 +1055,100 @@ export function AppointmentPanel({
                 </p>
               )}
             </TabsContent>
+
+            {/* Exames Tab */}
+            <TabsContent value="exames" className="mt-4">
+              <div className="space-y-4">
+                <div>
+                  <Label>Exames Solicitados</Label>
+                  <Textarea
+                    value={examRequest}
+                    onChange={(e) => setExamRequest(e.target.value)}
+                    placeholder="1. Hemograma completo&#10;2. Glicemia de jejum&#10;3. Colesterol total e frações&#10;..."
+                    className="min-h-[150px] font-mono"
+                    disabled={isCompleted}
+                  />
+                </div>
+                
+                <div>
+                  <Label>Indicação Clínica (opcional)</Label>
+                  <Input
+                    value={clinicalIndication}
+                    onChange={(e) => setClinicalIndication(e.target.value)}
+                    placeholder="Ex: Investigação de diabetes"
+                    disabled={isCompleted}
+                  />
+                </div>
+
+                <div className="flex gap-2">
+                  {!isCompleted && (
+                    <Button 
+                      onClick={handleSaveExamRequest} 
+                      disabled={!examRequest.trim()}
+                      className="flex-1"
+                    >
+                      <Save className="h-4 w-4 mr-2" />
+                      Salvar Solicitação
+                    </Button>
+                  )}
+                  
+                  <Button 
+                    variant="outline"
+                    className="text-green-600 border-green-600 hover:bg-green-50 dark:hover:bg-green-950"
+                    onClick={() => setShowExamWhatsAppDialog(true)}
+                    disabled={!examRequest.trim()}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Enviar WhatsApp
+                  </Button>
+                </div>
+              </div>
+            </TabsContent>
           </Tabs>
         </ScrollArea>
+
+        {/* Dialog para WhatsApp de Exames */}
+        <Dialog open={showExamWhatsAppDialog} onOpenChange={setShowExamWhatsAppDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Enviar Solicitação por WhatsApp</DialogTitle>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label>Número do WhatsApp</Label>
+                <Input
+                  value={examWhatsappPhone}
+                  onChange={(e) => setExamWhatsappPhone(e.target.value)}
+                  placeholder="(00) 00000-0000"
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  {appointment.patient.phone 
+                    ? "Telefone do paciente já preenchido."
+                    : "Paciente sem telefone cadastrado."}
+                </p>
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowExamWhatsAppDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button 
+                  onClick={handleSendExamRequestWhatsApp}
+                  disabled={!examWhatsappPhone || sendingExamRequest}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {sendingExamRequest ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4 mr-2" />
+                  )}
+                  Enviar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* Video Call Overlay */}
         {isVideoCallActive && telemedicineSession && (
