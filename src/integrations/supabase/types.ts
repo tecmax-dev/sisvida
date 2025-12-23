@@ -953,6 +953,95 @@ export type Database = {
           },
         ]
       }
+      medical_documents: {
+        Row: {
+          additional_info: Json | null
+          clinic_id: string
+          content: string
+          created_at: string
+          document_date: string
+          document_type: string
+          id: string
+          is_signed: boolean | null
+          medical_record_id: string | null
+          patient_id: string
+          professional_id: string | null
+          sent_at: string | null
+          sent_to_phone: string | null
+          sent_via_whatsapp: boolean | null
+          signature_data: string | null
+          signed_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          additional_info?: Json | null
+          clinic_id: string
+          content: string
+          created_at?: string
+          document_date?: string
+          document_type: string
+          id?: string
+          is_signed?: boolean | null
+          medical_record_id?: string | null
+          patient_id: string
+          professional_id?: string | null
+          sent_at?: string | null
+          sent_to_phone?: string | null
+          sent_via_whatsapp?: boolean | null
+          signature_data?: string | null
+          signed_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          additional_info?: Json | null
+          clinic_id?: string
+          content?: string
+          created_at?: string
+          document_date?: string
+          document_type?: string
+          id?: string
+          is_signed?: boolean | null
+          medical_record_id?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          sent_at?: string | null
+          sent_to_phone?: string | null
+          sent_via_whatsapp?: boolean | null
+          signature_data?: string | null
+          signed_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_documents_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_documents_medical_record_id_fkey"
+            columns: ["medical_record_id"]
+            isOneToOne: false
+            referencedRelation: "medical_records"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_documents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_documents_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       medical_records: {
         Row: {
           appointment_id: string | null

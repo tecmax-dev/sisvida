@@ -20,6 +20,7 @@ import { useDocumentSettings } from "@/hooks/useDocumentSettings";
 import { useToast } from "@/hooks/use-toast";
 import { generateExamRequestPDF } from "@/lib/examRequestExportUtils";
 import { sendWhatsAppDocument, formatExamRequest } from "@/lib/whatsapp";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PrintDialogProps {
   open: boolean;
@@ -36,13 +37,17 @@ interface PrintDialogProps {
     name: string;
     phone?: string;
   };
+  patientId: string;
   professional?: {
     name: string;
     specialty?: string;
     registration_number?: string;
   };
+  professionalId?: string;
+  medicalRecordId?: string;
   initialPrescription?: string;
   date: string;
+  onDocumentSaved?: () => void;
 }
 
 const getTabTitle = (tab: string) => {
@@ -61,9 +66,13 @@ export function PrintDialog({
   clinic,
   clinicId,
   patient,
+  patientId,
   professional,
+  professionalId,
+  medicalRecordId,
   initialPrescription = "",
   date,
+  onDocumentSaved,
 }: PrintDialogProps) {
   const { settings } = useDocumentSettings(clinicId);
   const { toast } = useToast();
@@ -109,10 +118,79 @@ export function PrintDialog({
     }
   };
 
-  const handlePrint = () => {
+  // Save document to database
+  const saveDocument = async (
+    type: string, 
+    content: string, 
+    additionalInfo?: Record<string, unknown> | null,
+    sentViaWhatsApp: boolean = false,
+    sentToPhone?: string
+  ) => {
+    if (!clinicId || !patientId) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('medical_documents')
+        .insert([{
+          clinic_id: clinicId,
+          patient_id: patientId,
+          professional_id: professionalId || null,
+          medical_record_id: medicalRecordId || null,
+          document_type: type,
+          content,
+          additional_info: additionalInfo ? JSON.parse(JSON.stringify(additionalInfo)) : null,
+          document_date: date,
+          sent_via_whatsapp: sentViaWhatsApp,
+          sent_at: sentViaWhatsApp ? new Date().toISOString() : null,
+          sent_to_phone: sentToPhone || null,
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      onDocumentSaved?.();
+      return data;
+    } catch (error) {
+      console.error("Erro ao salvar documento:", error);
+      return null;
+    }
+  };
+
+  // Get document content based on active tab
+  const getDocumentContent = () => {
+    switch (activeTab) {
+      case "receituario": return prescription;
+      case "atestado": return `Afastamento de ${certificateDays} dia(s)` + (certificateReason ? ` - ${certificateReason}` : '');
+      case "comparecimento": return `Comparecimento das ${attendanceStartTime} às ${attendanceEndTime}`;
+      case "exames": return examRequest;
+      default: return "";
+    }
+  };
+
+  // Get additional info based on active tab
+  const getAdditionalInfo = () => {
+    switch (activeTab) {
+      case "receituario": return { template_used: !!settings?.prescription_template };
+      case "atestado": return { days: certificateDays, cid: certificateReason || null };
+      case "comparecimento": return { start_time: attendanceStartTime, end_time: attendanceEndTime };
+      case "exames": return { clinical_indication: clinicalIndication || null };
+      default: return null;
+    }
+  };
+
+  const handlePrint = async () => {
     const printContent = getPrintContent();
     
     if (!printContent) return;
+
+    // Save document before printing
+    const documentType = activeTab === "receituario" ? "prescription" 
+      : activeTab === "atestado" ? "certificate"
+      : activeTab === "comparecimento" ? "attendance"
+      : "exam_request";
+    
+    await saveDocument(documentType, getDocumentContent(), getAdditionalInfo());
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
@@ -213,6 +291,11 @@ export function PrintDialog({
       printWindow.print();
       printWindow.close();
     }, 250);
+
+    toast({
+      title: "Documento salvo!",
+      description: "O documento foi salvo no histórico do paciente.",
+    });
   };
 
   const handleSendExamRequestWhatsApp = async () => {
@@ -249,6 +332,15 @@ export function PrintDialog({
       });
       
       if (result.success) {
+        // Save document with WhatsApp info
+        await saveDocument(
+          "exam_request",
+          examRequest,
+          { clinical_indication: clinicalIndication || null },
+          true,
+          whatsappPhone
+        );
+
         toast({
           title: "Enviado com sucesso! 📋",
           description: `Solicitação de exames enviada para ${whatsappPhone}`,
@@ -257,11 +349,11 @@ export function PrintDialog({
       } else {
         throw new Error(result.error || "Erro ao enviar");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao enviar solicitação por WhatsApp:", error);
       toast({
         title: "Erro ao enviar",
-        description: error.message || "Não foi possível enviar a solicitação de exames",
+        description: error instanceof Error ? error.message : "Não foi possível enviar a solicitação de exames",
         variant: "destructive",
       });
     } finally {
