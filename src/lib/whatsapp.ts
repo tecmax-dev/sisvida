@@ -133,6 +133,31 @@ export function formatAppointmentCancellation(
   return lines.join('\n');
 }
 
+export function formatExamRequest(
+  patientName: string,
+  clinicName: string,
+  date: string,
+  professionalName: string
+): string {
+  return `Olá ${patientName}! 👋
+
+📋 *Solicitação de Exames*
+
+O(a) Dr(a). ${professionalName} da ${clinicName} está enviando sua solicitação de exames.
+
+📅 *Data:* ${date}
+
+📎 O documento em PDF está anexado a esta mensagem.
+
+⚠️ *Importante:*
+• Leve este documento ao laboratório/clínica de imagens
+• Siga as orientações de preparo de cada exame
+• Em caso de dúvidas, entre em contato conosco
+
+Atenciosamente,
+Equipe ${clinicName}`;
+}
+
 export function formatTelemedicineInvite(
   patientName: string,
   clinicName: string,
