@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, pointerWithin } from "@dnd-kit/core";
-import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite } from "@/lib/whatsapp";
 import { ToastAction } from "@/components/ui/toast";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { DraggableAppointment } from "@/components/appointments/DraggableAppointment";
@@ -31,6 +31,7 @@ import {
   Stethoscope,
   Play,
   GripVertical,
+  Video,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -186,6 +187,7 @@ export default function CalendarPage() {
   
   // WhatsApp state
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
+  const [sendingTelemedicineLink, setSendingTelemedicineLink] = useState<string | null>(null);
   
   // Edit state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -1075,6 +1077,88 @@ export default function CalendarPage() {
     }
   };
 
+  const handleSendTelemedicineLink = async (appointment: Appointment) => {
+    if (!appointment.patient?.phone) {
+      toast({
+        title: "Telefone não cadastrado",
+        description: "O paciente não possui telefone para envio do WhatsApp.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!currentClinic) return;
+
+    setSendingTelemedicineLink(appointment.id);
+
+    try {
+      // Buscar ou criar sessão de telemedicina
+      const { data: sessionData, error: sessionError } = await supabase.functions.invoke('telemedicine', {
+        body: { 
+          action: 'create-session',
+          appointmentId: appointment.id,
+          clinicId: currentClinic.id
+        },
+      });
+
+      if (sessionError || !sessionData?.session) {
+        throw new Error(sessionError?.message || "Erro ao criar sessão de telemedicina");
+      }
+
+      const telemedicineLink = `${window.location.origin}/telemedicina/${sessionData.session.patient_token}`;
+      
+      // Formatar data
+      const dateObj = new Date(appointment.appointment_date + 'T00:00:00');
+      const formattedDate = dateObj.toLocaleDateString('pt-BR');
+      const formattedTime = appointment.start_time.slice(0, 5);
+
+      const message = formatTelemedicineInvite(
+        appointment.patient.name,
+        currentClinic.name || "Clínica",
+        formattedDate,
+        formattedTime,
+        appointment.professional?.name || "Profissional",
+        telemedicineLink
+      );
+
+      const result = await sendWhatsAppMessage({
+        phone: appointment.patient.phone,
+        message,
+        clinicId: currentClinic.id,
+        type: "custom",
+      });
+
+      if (result.success) {
+        toast({
+          title: "Link enviado! 📹",
+          description: `Link da teleconsulta enviado para ${appointment.patient.phone}`,
+        });
+      } else {
+        throw new Error(result.error || "Erro ao enviar mensagem");
+      }
+    } catch (error: any) {
+      const errorMessage = error.message || "";
+      const isNotConnected = errorMessage.includes("não está conectado") || 
+                             errorMessage.includes("não configurado") ||
+                             errorMessage.includes("Edge Function returned a non-2xx");
+      
+      toast({
+        title: isNotConnected ? "WhatsApp não conectado" : "Erro ao enviar",
+        description: isNotConnected 
+          ? "Configure e conecte o WhatsApp nas Configurações → Integração WhatsApp" 
+          : errorMessage,
+        variant: "destructive",
+        action: isNotConnected ? (
+          <ToastAction altText="Ir para configurações" onClick={() => navigate("/dashboard/settings")}>
+            Configurar
+          </ToastAction>
+        ) : undefined,
+      });
+    } finally {
+      setSendingTelemedicineLink(null);
+    }
+  };
+
   const AppointmentFormFields = () => (
     <>
       <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
@@ -1318,6 +1402,23 @@ export default function CalendarPage() {
         {/* Actions */}
         {canModify && (
           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Botão de telemedicina - apenas para consultas de telemedicina */}
+            {appointment.type === "telemedicine" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-info hover:text-info"
+                onClick={() => handleSendTelemedicineLink(appointment)}
+                disabled={sendingTelemedicineLink === appointment.id}
+                title="Enviar link de telemedicina via WhatsApp"
+              >
+                {sendingTelemedicineLink === appointment.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Video className="h-4 w-4" />
+                )}
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
