@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.generate-dashboard-mockup]
 verify_jwt = false
+
+[functions.generate-hero-mockup]
+verify_jwt = false
