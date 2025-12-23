@@ -650,6 +650,8 @@ export type Database = {
           clinic_id: string
           created_at: string
           custom_header_text: string | null
+          exam_request_template: string | null
+          exam_request_title: string | null
           footer_text: string | null
           id: string
           prescription_template: string | null
@@ -669,6 +671,8 @@ export type Database = {
           clinic_id: string
           created_at?: string
           custom_header_text?: string | null
+          exam_request_template?: string | null
+          exam_request_title?: string | null
           footer_text?: string | null
           id?: string
           prescription_template?: string | null
@@ -688,6 +692,8 @@ export type Database = {
           clinic_id?: string
           created_at?: string
           custom_header_text?: string | null
+          exam_request_template?: string | null
+          exam_request_title?: string | null
           footer_text?: string | null
           id?: string
           prescription_template?: string | null

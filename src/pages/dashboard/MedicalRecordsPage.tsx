@@ -628,7 +628,7 @@ export default function MedicalRecordsPage() {
             logo_url: currentClinic.logo_url || undefined,
           }}
           clinicId={currentClinic.id}
-          patient={{ name: selectedPatient.name }}
+          patient={{ name: selectedPatient.name, phone: selectedPatient.phone }}
           professional={selectedRecord.professional ? {
             name: selectedRecord.professional.name,
             specialty: selectedRecord.professional.specialty || undefined,

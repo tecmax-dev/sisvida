@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Printer, FileText, Award, ClipboardCheck, Settings } from "lucide-react";
+import { Printer, FileText, Award, ClipboardCheck, Settings, FlaskConical, MessageCircle, Send, Loader2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,8 +14,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PrescriptionPrint } from "./PrescriptionPrint";
 import { MedicalCertificatePrint } from "./MedicalCertificatePrint";
 import { AttendanceDeclarationPrint } from "./AttendanceDeclarationPrint";
+import { ExamRequestPrint } from "./ExamRequestPrint";
 import { DocumentSettingsDialog } from "./DocumentSettingsDialog";
 import { useDocumentSettings } from "@/hooks/useDocumentSettings";
+import { useToast } from "@/hooks/use-toast";
+import { generateExamRequestPDF } from "@/lib/examRequestExportUtils";
+import { sendWhatsAppDocument, formatExamRequest } from "@/lib/whatsapp";
 
 interface PrintDialogProps {
   open: boolean;
@@ -30,6 +34,7 @@ interface PrintDialogProps {
   clinicId: string;
   patient: {
     name: string;
+    phone?: string;
   };
   professional?: {
     name: string;
@@ -45,6 +50,7 @@ const getTabTitle = (tab: string) => {
     case "receituario": return "Receituário";
     case "atestado": return "Atestado";
     case "comparecimento": return "Declaração de Comparecimento";
+    case "exames": return "Solicitação de Exames";
     default: return "Documento";
   }
 };
@@ -60,6 +66,7 @@ export function PrintDialog({
   date,
 }: PrintDialogProps) {
   const { settings } = useDocumentSettings(clinicId);
+  const { toast } = useToast();
   const [prescription, setPrescription] = useState(initialPrescription);
   const [certificateDays, setCertificateDays] = useState(1);
   const [certificateReason, setCertificateReason] = useState("");
@@ -68,9 +75,17 @@ export function PrintDialog({
   const [activeTab, setActiveTab] = useState("receituario");
   const [settingsOpen, setSettingsOpen] = useState(false);
   
+  // Exam request states
+  const [examRequest, setExamRequest] = useState("");
+  const [clinicalIndication, setClinicalIndication] = useState("");
+  const [whatsappPhone, setWhatsappPhone] = useState(patient.phone || "");
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
+  
   const prescriptionRef = useRef<HTMLDivElement>(null);
   const certificateRef = useRef<HTMLDivElement>(null);
   const attendanceRef = useRef<HTMLDivElement>(null);
+  const examRequestRef = useRef<HTMLDivElement>(null);
 
   // Use prescription template if available and no initial prescription
   useEffect(() => {
@@ -79,11 +94,17 @@ export function PrintDialog({
     }
   }, [settings?.prescription_template, initialPrescription]);
 
+  // Update whatsapp phone when patient changes
+  useEffect(() => {
+    setWhatsappPhone(patient.phone || "");
+  }, [patient.phone]);
+
   const getPrintContent = () => {
     switch (activeTab) {
       case "receituario": return prescriptionRef.current;
       case "atestado": return certificateRef.current;
       case "comparecimento": return attendanceRef.current;
+      case "exames": return examRequestRef.current;
       default: return null;
     }
   };
@@ -137,7 +158,9 @@ export function PrintDialog({
             .pt-2 { padding-top: 0.5rem; }
             .pt-4 { padding-top: 1rem; }
             .pt-8 { padding-top: 2rem; }
+            .pl-4 { padding-left: 1rem; }
             .mb-2 { margin-bottom: 0.5rem; }
+            .mb-4 { margin-bottom: 1rem; }
             .mb-6 { margin-bottom: 1.5rem; }
             .mb-8 { margin-bottom: 2rem; }
             .mb-16 { margin-bottom: 4rem; }
@@ -163,15 +186,18 @@ export function PrintDialog({
             .font-semibold { font-weight: 600; }
             .text-gray-600 { color: #4b5563; }
             .text-gray-500 { color: #6b7280; }
+            .text-gray-700 { color: #374151; }
             .text-primary { color: #0d9488; }
             .leading-relaxed { line-height: 1.625; }
             .leading-loose { line-height: 2; }
             .whitespace-pre-wrap { white-space: pre-wrap; }
             .min-h-\\[400px\\] { min-height: 400px; }
+            .min-h-\\[200px\\] { min-height: 200px; }
             .w-64 { width: 16rem; }
             .h-16 { height: 4rem; }
             .object-contain { object-fit: contain; }
             strong { font-weight: bold; }
+            h3 { font-size: 1.125rem; font-weight: 600; }
           </style>
         </head>
         <body>
@@ -187,6 +213,60 @@ export function PrintDialog({
       printWindow.print();
       printWindow.close();
     }, 250);
+  };
+
+  const handleSendExamRequestWhatsApp = async () => {
+    if (!whatsappPhone || !clinicId) return;
+    
+    setSendingWhatsApp(true);
+    try {
+      // Generate PDF
+      const { base64, fileName } = await generateExamRequestPDF({
+        clinic,
+        patient,
+        professional,
+        examRequest,
+        clinicalIndication,
+        date,
+      });
+      
+      // Format friendly message
+      const formattedDate = new Date(date).toLocaleDateString('pt-BR');
+      const message = formatExamRequest(
+        patient.name,
+        clinic.name,
+        formattedDate,
+        professional?.name || "Profissional"
+      );
+      
+      // Send document via WhatsApp
+      const result = await sendWhatsAppDocument({
+        phone: whatsappPhone,
+        clinicId,
+        pdfBase64: base64,
+        fileName,
+        caption: message,
+      });
+      
+      if (result.success) {
+        toast({
+          title: "Enviado com sucesso! 📋",
+          description: `Solicitação de exames enviada para ${whatsappPhone}`,
+        });
+        setShowWhatsAppDialog(false);
+      } else {
+        throw new Error(result.error || "Erro ao enviar");
+      }
+    } catch (error: any) {
+      console.error("Erro ao enviar solicitação por WhatsApp:", error);
+      toast({
+        title: "Erro ao enviar",
+        description: error.message || "Não foi possível enviar a solicitação de exames",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingWhatsApp(false);
+    }
   };
 
   return (
@@ -212,7 +292,7 @@ export function PrintDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="receituario" className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Receituário</span>
@@ -224,6 +304,10 @@ export function PrintDialog({
               <TabsTrigger value="comparecimento" className="flex items-center gap-2">
                 <ClipboardCheck className="h-4 w-4" />
                 <span className="hidden sm:inline">Comparecimento</span>
+              </TabsTrigger>
+              <TabsTrigger value="exames" className="flex items-center gap-2">
+                <FlaskConical className="h-4 w-4" />
+                <span className="hidden sm:inline">Exames</span>
               </TabsTrigger>
             </TabsList>
 
@@ -342,16 +426,118 @@ export function PrintDialog({
                 </div>
               </div>
             </TabsContent>
+
+            <TabsContent value="exames" className="mt-4 space-y-4">
+              <div>
+                <Label>Exames Solicitados</Label>
+                <Textarea
+                  value={examRequest}
+                  onChange={(e) => setExamRequest(e.target.value)}
+                  placeholder={"1. Hemograma completo\n2. Glicemia de jejum\n3. Colesterol total e frações\n4. Triglicerídeos\n5. Creatinina\n..."}
+                  className="mt-1.5 min-h-[150px] font-mono"
+                />
+              </div>
+              
+              <div>
+                <Label>Indicação Clínica (opcional)</Label>
+                <Input
+                  value={clinicalIndication}
+                  onChange={(e) => setClinicalIndication(e.target.value)}
+                  placeholder="Ex: Investigação de diabetes, check-up anual"
+                  className="mt-1.5"
+                />
+              </div>
+
+              {/* Preview */}
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted px-4 py-2 text-sm font-medium">Pré-visualização</div>
+                <div className="overflow-auto max-h-[400px] bg-gray-100">
+                  <div className="transform scale-50 origin-top-left">
+                    <ExamRequestPrint
+                      ref={examRequestRef}
+                      clinic={clinic}
+                      patient={patient}
+                      professional={professional}
+                      examRequest={examRequest}
+                      clinicalIndication={clinicalIndication}
+                      date={date}
+                      settings={settings}
+                    />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
           </Tabs>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-border">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
+            
+            {/* WhatsApp button - only for exams tab */}
+            {activeTab === "exames" && (
+              <Button 
+                variant="outline" 
+                className="text-green-600 border-green-600 hover:bg-green-50 hover:text-green-700"
+                onClick={() => setShowWhatsAppDialog(true)}
+                disabled={!examRequest.trim()}
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                Enviar via WhatsApp
+              </Button>
+            )}
+            
             <Button onClick={handlePrint}>
               <Printer className="h-4 w-4 mr-2" />
               Imprimir {getTabTitle(activeTab)}
             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* WhatsApp phone dialog */}
+      <Dialog open={showWhatsAppDialog} onOpenChange={setShowWhatsAppDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageCircle className="h-5 w-5 text-green-600" />
+              Enviar Solicitação por WhatsApp
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div>
+              <Label>Número do WhatsApp</Label>
+              <Input
+                value={whatsappPhone}
+                onChange={(e) => setWhatsappPhone(e.target.value)}
+                placeholder="(00) 00000-0000"
+                className="mt-1.5"
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                {patient.phone 
+                  ? "Telefone do paciente já preenchido. Altere se necessário."
+                  : "Paciente sem telefone cadastrado. Insira o número manualmente."}
+              </p>
+            </div>
+            
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setShowWhatsAppDialog(false)}>
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSendExamRequestWhatsApp}
+                disabled={!whatsappPhone || sendingWhatsApp}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {sendingWhatsApp ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4 mr-2" />
+                )}
+                Enviar
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
