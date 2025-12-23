@@ -17,6 +17,7 @@ import {
   Layers,
   ArrowUpCircle,
   Upload,
+  Mail,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +29,7 @@ const adminNavItems = [
   { path: "/admin/features", label: "Recursos", icon: Layers },
   { path: "/admin/upgrades", label: "Upgrades", icon: ArrowUpCircle, hasBadge: true },
   { path: "/admin/import", label: "Importar Dados", icon: Upload },
+  { path: "/admin/smtp", label: "Email SMTP", icon: Mail },
   { path: "/admin/audit", label: "Auditoria", icon: ScrollText },
 ];
 

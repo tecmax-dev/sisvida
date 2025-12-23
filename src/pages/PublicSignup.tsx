@@ -128,6 +128,7 @@ export default function PublicSignup() {
       }
 
       if (data.user) {
+        // Notify admin about new signup
         try {
           await supabase.functions.invoke("notify-new-signup", {
             body: {
@@ -140,6 +141,19 @@ export default function PublicSignup() {
           });
         } catch (notifyError) {
           console.error("Failed to notify admin:", notifyError);
+        }
+
+        // Send welcome email
+        try {
+          await supabase.functions.invoke("send-welcome-email", {
+            body: {
+              userEmail: formData.email,
+              userName: formData.name,
+              trialDays: 14,
+            },
+          });
+        } catch (emailError) {
+          console.error("Failed to send welcome email:", emailError);
         }
 
         toast({
