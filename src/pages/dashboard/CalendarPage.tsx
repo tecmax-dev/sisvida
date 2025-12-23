@@ -749,6 +749,15 @@ export default function CalendarPage() {
     setFormNotes("");
   };
 
+  const openNewAppointmentWithTime = (time: string, date?: Date) => {
+    resetForm();
+    setFormTime(time);
+    if (date) {
+      setSelectedDate(date);
+    }
+    setDialogOpen(true);
+  };
+
   const openAppointmentPanel = (appointment: Appointment) => {
     setSelectedAppointmentForPanel(appointment);
     setAppointmentPanelOpen(true);
@@ -1915,11 +1924,12 @@ export default function CalendarPage() {
                           time={time}
                           disabled={hasAppointment}
                           isOccupied={hasAppointment}
+                          onClick={() => openNewAppointmentWithTime(time)}
                           className={cn(
                             "p-2 text-center rounded-md border border-transparent",
                             hasAppointment 
                               ? "bg-muted/50 text-muted-foreground/50" 
-                              : "bg-background hover:border-primary/20"
+                              : "bg-background"
                           )}
                         />
                       );
