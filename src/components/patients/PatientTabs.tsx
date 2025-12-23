@@ -12,6 +12,7 @@ interface PatientTabsProps {
   activeTab: PatientTab;
   onTabChange: (tab: PatientTab) => void;
   patientId: string;
+  hiddenTabs?: PatientTab[];
 }
 
 const tabs: { id: PatientTab; label: string }[] = [
@@ -23,11 +24,13 @@ const tabs: { id: PatientTab; label: string }[] = [
   { id: 'agendamentos', label: 'Agendamentos' },
 ];
 
-export function PatientTabs({ activeTab, onTabChange, patientId }: PatientTabsProps) {
+export function PatientTabs({ activeTab, onTabChange, patientId, hiddenTabs = [] }: PatientTabsProps) {
+  const visibleTabs = tabs.filter(tab => !hiddenTabs.includes(tab.id));
+
   return (
     <div className="border-b bg-card">
       <nav className="flex gap-1 px-4 overflow-x-auto" aria-label="Tabs">
-        {tabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => onTabChange(tab.id)}
