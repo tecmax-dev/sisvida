@@ -85,7 +85,24 @@ export async function sendWhatsAppDocument(params: SendWhatsAppDocumentParams): 
       if (isAuthError(error)) {
         return { success: false, error: SESSION_EXPIRED_MESSAGE };
       }
+      
+      // Check for limit exceeded error (429 status)
+      if (error.message?.includes('non-2xx') || error.message?.includes('429')) {
+        return { 
+          success: false, 
+          error: "📊 Limite de mensagens atingido!\n\nSua clínica atingiu o limite mensal de envios do plano atual. Para continuar enviando, faça upgrade do seu plano ou aguarde o próximo mês." 
+        };
+      }
+      
       return { success: false, error: error.message };
+    }
+
+    // Check if the response contains a limit error
+    if (data && !data.success && data.error?.includes('Limite de mensagens')) {
+      return { 
+        success: false, 
+        error: "📊 Limite de mensagens atingido!\n\nSua clínica atingiu o limite mensal de envios do plano atual. Para continuar enviando, faça upgrade do seu plano ou aguarde o próximo mês." 
+      };
     }
 
     return data as WhatsAppResponse;
