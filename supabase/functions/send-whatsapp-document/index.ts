@@ -97,7 +97,37 @@ serve(async (req) => {
       );
     }
 
-    // 8. Fetch Evolution API config for this clinic
+    // 8. Check message usage limits
+    const monthYear = new Date().toISOString().slice(0, 7); // YYYY-MM
+    const { data: usageData, error: usageError } = await supabase.rpc("get_clinic_message_usage", {
+      _clinic_id: clinicId,
+      _month_year: monthYear
+    });
+
+    if (usageError) {
+      console.error("[send-whatsapp-document] Error checking usage:", usageError);
+      return new Response(
+        JSON.stringify({ success: false, error: "Erro ao verificar limite de mensagens" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { used, max_allowed, remaining } = usageData[0] || { used: 0, max_allowed: 100, remaining: 100 };
+    console.log(`[send-whatsapp-document] Usage: ${used}/${max_allowed}, remaining: ${remaining}`);
+
+    // If max_allowed > 0 (not unlimited) and no remaining, block
+    if (max_allowed > 0 && remaining <= 0) {
+      console.warn(`[send-whatsapp-document] Limit reached for clinic ${clinicId}: ${used}/${max_allowed}`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `Limite de mensagens atingido (${used}/${max_allowed}). Faça upgrade do plano para enviar mais.` 
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 9. Fetch Evolution API config for this clinic
     const { data: evolutionConfig, error: configError } = await supabase
       .from("evolution_configs")
       .select("*")
@@ -170,7 +200,21 @@ serve(async (req) => {
       result = { raw: responseText };
     }
 
-    console.log(`[send-whatsapp-document] Document sent successfully by user ${user.id}`);
+    // 10. Log the message for usage tracking
+    const { error: logError } = await supabase.from("message_logs").insert({
+      clinic_id: clinicId,
+      phone: formattedPhone,
+      message_type: "document",
+      month_year: monthYear,
+      sent_at: new Date().toISOString()
+    });
+
+    if (logError) {
+      console.error("[send-whatsapp-document] Error logging message:", logError);
+      // Don't fail the request, just log the error
+    }
+
+    console.log(`[send-whatsapp-document] Document sent successfully by user ${user.id}, logged for month ${monthYear}`);
 
     return new Response(
       JSON.stringify({ success: true, data: result }),
