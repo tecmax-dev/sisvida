@@ -12,6 +12,7 @@ import {
   CreditCard,
   FileText,
   MessageCircle,
+  Paperclip,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -774,6 +775,10 @@ export default function PatientsPage() {
                       <DropdownMenuItem onClick={() => openAnamnesisDialog(patient)}>
                         <MessageCircle className="h-4 w-4 mr-2" />
                         Enviar Anamnese
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate(`/dashboard/patients/${patient.id}/attachments`)}>
+                        <Paperclip className="h-4 w-4 mr-2" />
+                        Anexos
                       </DropdownMenuItem>
                       <DropdownMenuItem 
                         className="text-destructive"
