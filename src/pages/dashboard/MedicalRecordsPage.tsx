@@ -16,7 +16,15 @@ import {
   FlaskConical,
   Award,
   ClipboardCheck,
+  Paperclip,
+  Upload,
 } from "lucide-react";
+import { usePatientAttachments } from "@/hooks/usePatientAttachments";
+import { AttachmentsList } from "@/components/attachments/AttachmentsList";
+import { FolderTree } from "@/components/attachments/FolderTree";
+import { UploadDialog } from "@/components/attachments/UploadDialog";
+import { FilePreviewModal } from "@/components/attachments/FilePreviewModal";
+import { AccessLogsModal } from "@/components/attachments/AccessLogsModal";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -109,6 +117,30 @@ export default function MedicalRecordsPage() {
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
 
+  // Attachments state
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [previewAttachment, setPreviewAttachment] = useState<any>(null);
+  const [logsAttachment, setLogsAttachment] = useState<any>(null);
+
+  // Use attachments hook
+  const {
+    folders,
+    attachments,
+    loading: attachmentsLoading,
+    fetchFolders,
+    fetchAttachments,
+    createFolder,
+    renameFolder,
+    deleteFolder,
+    uploadFiles,
+    deleteAttachment,
+    moveAttachment,
+    logAccess,
+    getAccessLogs,
+    getFileUrl,
+  } = usePatientAttachments(selectedPatient?.id || "");
+
   // Form state
   const [formData, setFormData] = useState({
     chief_complaint: "",
@@ -131,8 +163,16 @@ export default function MedicalRecordsPage() {
     if (selectedPatient) {
       fetchPatientRecords();
       fetchPatientDocuments();
+      fetchFolders();
+      fetchAttachments(selectedFolderId);
     }
   }, [selectedPatient]);
+
+  useEffect(() => {
+    if (selectedPatient) {
+      fetchAttachments(selectedFolderId);
+    }
+  }, [selectedFolderId]);
 
   const fetchPatients = async () => {
     if (!currentClinic) return;
@@ -370,6 +410,31 @@ export default function MedicalRecordsPage() {
     }
   };
 
+  // Attachment handlers
+  const handleUpload = async (files: File[], description?: string) => {
+    await uploadFiles(files, selectedFolderId, description);
+    fetchAttachments(selectedFolderId);
+  };
+
+  const handleViewAttachment = async (attachment: any) => {
+    await logAccess(attachment.id, "view");
+    setPreviewAttachment(attachment);
+  };
+
+  const handleDownloadAttachment = async (attachment: any) => {
+    await logAccess(attachment.id, "download");
+    const url = await getFileUrl(attachment);
+    if (url) {
+      window.open(url, "_blank");
+    }
+  };
+
+  const handleMoveAttachment = async (attachmentId: string, newFolderId: string | null): Promise<boolean> => {
+    const result = await moveAttachment(attachmentId, newFolderId);
+    fetchAttachments(selectedFolderId);
+    return result;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -544,6 +609,59 @@ export default function MedicalRecordsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Patient Attachments Section */}
+      {selectedPatient && (
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Paperclip className="h-5 w-5" />
+                Anexos do Paciente
+              </CardTitle>
+              <CardDescription>
+                Exames, documentos e arquivos do paciente
+              </CardDescription>
+            </div>
+            <Button onClick={() => setUploadDialogOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" />
+              Enviar Arquivo
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {attachmentsLoading ? (
+              <div className="text-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+              </div>
+            ) : (
+              <div className="grid lg:grid-cols-4 gap-4">
+                <div className="lg:col-span-1">
+                  <FolderTree
+                    folders={folders}
+                    selectedFolderId={selectedFolderId}
+                    onSelectFolder={setSelectedFolderId}
+                    onCreateFolder={createFolder}
+                    onRenameFolder={renameFolder}
+                    onDeleteFolder={deleteFolder}
+                  />
+                </div>
+                <div className="lg:col-span-3">
+                  <AttachmentsList
+                    attachments={attachments}
+                    folders={folders}
+                    loading={attachmentsLoading}
+                    onView={handleViewAttachment}
+                    onDownload={handleDownloadAttachment}
+                    onDelete={deleteAttachment}
+                    onMove={handleMoveAttachment}
+                    onViewLogs={(attachment) => setLogsAttachment(attachment)}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Issued Documents History */}
       {selectedPatient && documents.length > 0 && (
@@ -749,6 +867,34 @@ export default function MedicalRecordsPage() {
           initialPrescription={selectedRecord.prescription || ""}
           date={selectedRecord.record_date}
           onDocumentSaved={() => fetchPatientDocuments()}
+        />
+      )}
+
+      {/* Upload Dialog */}
+      <UploadDialog
+        open={uploadDialogOpen}
+        onOpenChange={setUploadDialogOpen}
+        onUpload={handleUpload}
+      />
+
+      {/* File Preview Modal */}
+      {previewAttachment && (
+        <FilePreviewModal
+          attachment={previewAttachment}
+          open={!!previewAttachment}
+          onOpenChange={(open) => !open && setPreviewAttachment(null)}
+          onGetUrl={getFileUrl}
+          onDownload={handleDownloadAttachment}
+        />
+      )}
+
+      {/* Access Logs Modal */}
+      {logsAttachment && (
+        <AccessLogsModal
+          attachment={logsAttachment}
+          open={!!logsAttachment}
+          onOpenChange={(open) => !open && setLogsAttachment(null)}
+          onFetchLogs={getAccessLogs}
         />
       )}
     </div>
