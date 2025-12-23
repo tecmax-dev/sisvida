@@ -950,6 +950,33 @@ export type Database = {
           },
         ]
       }
+      icd10_codes: {
+        Row: {
+          category: string | null
+          code: string
+          created_at: string | null
+          description: string
+          id: string
+          is_active: boolean | null
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          created_at?: string | null
+          description: string
+          id?: string
+          is_active?: boolean | null
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_active?: boolean | null
+        }
+        Relationships: []
+      }
       insurance_plans: {
         Row: {
           clinic_id: string
