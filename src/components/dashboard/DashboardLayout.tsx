@@ -105,19 +105,28 @@ export function DashboardLayout() {
   const displayName = profile?.name || user?.user_metadata?.name || "Usuário";
 
   const NavItemLink = ({ item }: { item: NavItem }) => {
+    const active = isActive(item.href);
+    
     const linkContent = (
       <Link
         to={item.href}
         onClick={() => setSidebarOpen(false)}
         className={cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-          isActive(item.href)
-            ? "bg-sidebar-primary text-sidebar-primary-foreground"
-            : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-          sidebarCollapsed && "justify-center px-2"
+          "relative flex items-center gap-3 px-3 py-2.5 rounded-r-lg text-sm font-medium transition-all duration-200",
+          active
+            ? "bg-sidebar-accent text-sidebar-accent-foreground"
+            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
+          sidebarCollapsed && "justify-center px-2 rounded-lg"
         )}
       >
-        <item.icon className="h-5 w-5 shrink-0" />
+        {/* Orange accent stripe for active item */}
+        {active && !sidebarCollapsed && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-cta rounded-r-full" />
+        )}
+        {active && sidebarCollapsed && (
+          <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-cta rounded-r-full" />
+        )}
+        <item.icon className={cn("h-5 w-5 shrink-0", active && "text-cta")} />
         {!sidebarCollapsed && item.label}
       </Link>
     );
@@ -156,11 +165,11 @@ export function DashboardLayout() {
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-            {!sidebarCollapsed && <Logo size="md" />}
+            {!sidebarCollapsed && <Logo size="md" variant="light" />}
             {sidebarCollapsed && (
               <div className="w-full flex justify-center">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm">
-                  <span className="text-primary-foreground font-bold text-sm">E</span>
+                <div className="w-8 h-8 rounded-lg bg-cta/20 flex items-center justify-center shadow-sm">
+                  <span className="text-cta font-bold text-sm">E</span>
                 </div>
               </div>
             )}
@@ -195,10 +204,10 @@ export function DashboardLayout() {
             <div className="p-4 border-b border-sidebar-border">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-sidebar-accent hover:bg-sidebar-accent/80 transition-colors">
+                  <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-sidebar-accent/50 hover:bg-sidebar-accent transition-colors">
                     <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-8 h-8 rounded-lg bg-sidebar-primary/20 flex items-center justify-center">
-                        <span className="text-xs font-semibold text-sidebar-primary">
+                      <div className="w-8 h-8 rounded-lg bg-cta/20 flex items-center justify-center">
+                        <span className="text-xs font-semibold text-cta">
                           {currentClinic.name.charAt(0)}
                         </span>
                       </div>
@@ -231,8 +240,8 @@ export function DashboardLayout() {
             <div className="p-2 border-b border-sidebar-border flex justify-center">
               <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
-                  <div className="w-10 h-10 rounded-lg bg-sidebar-accent flex items-center justify-center cursor-default">
-                    <span className="text-sm font-semibold text-sidebar-foreground">
+                  <div className="w-10 h-10 rounded-lg bg-cta/20 flex items-center justify-center cursor-default">
+                    <span className="text-sm font-semibold text-cta">
                       {currentClinic.name.charAt(0)}
                     </span>
                   </div>
@@ -253,19 +262,19 @@ export function DashboardLayout() {
             ))}
           </nav>
 
-          <div className={cn("p-4 border-t border-sidebar-border bg-sidebar-accent/30", sidebarCollapsed && "p-2")}>
+          <div className={cn("p-4 border-t border-sidebar-border bg-sidebar-accent/20", sidebarCollapsed && "p-2")}>
             {!sidebarCollapsed && (
               <div className="flex items-center gap-3 mb-4 px-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center ring-2 ring-primary/20">
-                  <span className="text-sm font-medium text-primary-foreground">
+                <div className="w-9 h-9 rounded-full bg-cta/20 flex items-center justify-center ring-2 ring-cta/30">
+                  <span className="text-sm font-medium text-cta">
                     {displayName.charAt(0).toUpperCase()}
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">
+                  <p className="text-sm font-semibold text-sidebar-foreground truncate">
                     {displayName}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-xs text-sidebar-foreground/60 truncate">
                     {user?.email}
                   </p>
                 </div>
