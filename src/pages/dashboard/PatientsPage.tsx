@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { 
   Search, 
   Plus, 
@@ -60,6 +60,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { calculateAge } from "@/lib/utils";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
 
 interface Patient {
   id: string;
@@ -190,14 +192,7 @@ export default function PatientsPage() {
   const [editInsurancePlanId, setEditInsurancePlanId] = useState("");
   const [editErrors, setEditErrors] = useState<{ name?: string; phone?: string; email?: string; cpf?: string; address?: string; notes?: string }>({});
 
-  useEffect(() => {
-    if (currentClinic) {
-      fetchPatients();
-      fetchInsurancePlans();
-    }
-  }, [currentClinic]);
-
-  const fetchPatients = async () => {
+  const fetchPatients = useCallback(async () => {
     if (!currentClinic) return;
     
     setLoading(true);
@@ -230,7 +225,24 @@ export default function PatientsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentClinic]);
+
+  useEffect(() => {
+    if (currentClinic) {
+      fetchPatients();
+      fetchInsurancePlans();
+    }
+  }, [currentClinic, fetchPatients]);
+
+  // Realtime subscription for automatic updates
+  useRealtimeSubscription({
+    table: "patients",
+    filter: currentClinic ? { column: "clinic_id", value: currentClinic.id } : undefined,
+    onInsert: () => fetchPatients(),
+    onUpdate: () => fetchPatients(),
+    onDelete: () => fetchPatients(),
+    enabled: !!currentClinic,
+  });
 
   const fetchInsurancePlans = async () => {
     if (!currentClinic) return;
@@ -544,6 +556,7 @@ export default function PatientsPage() {
           <p className="text-muted-foreground">
             Gerencie o cadastro dos seus pacientes
           </p>
+          <RealtimeIndicator className="mt-2" />
         </div>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
