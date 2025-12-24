@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { 
   Plus, 
   MoreVertical,
@@ -75,6 +75,8 @@ import { Json } from "@/integrations/supabase/types";
 import { Switch } from "@/components/ui/switch";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
 
 interface Professional {
   id: string;
@@ -221,14 +223,7 @@ export default function ProfessionalsPage() {
   const [formTelemedicineEnabled, setFormTelemedicineEnabled] = useState(false);
   const [editTelemedicineEnabled, setEditTelemedicineEnabled] = useState(false);
 
-  useEffect(() => {
-    if (currentClinic) {
-      fetchProfessionals();
-      fetchClinicUsers();
-    }
-  }, [currentClinic]);
-
-  const fetchProfessionals = async () => {
+  const fetchProfessionals = useCallback(async () => {
     if (!currentClinic) return;
     
     setLoading(true);
@@ -264,7 +259,24 @@ export default function ProfessionalsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentClinic]);
+
+  useEffect(() => {
+    if (currentClinic) {
+      fetchProfessionals();
+      fetchClinicUsers();
+    }
+  }, [currentClinic, fetchProfessionals]);
+
+  // Realtime subscription for automatic updates
+  useRealtimeSubscription({
+    table: "professionals",
+    filter: currentClinic ? { column: "clinic_id", value: currentClinic.id } : undefined,
+    onInsert: () => fetchProfessionals(),
+    onUpdate: () => fetchProfessionals(),
+    onDelete: () => fetchProfessionals(),
+    enabled: !!currentClinic,
+  });
 
   const fetchClinicUsers = async () => {
     if (!currentClinic) return;

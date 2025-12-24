@@ -24,6 +24,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
 
 interface TransactionTableProps {
   clinicId: string;
@@ -81,6 +83,29 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
       if (error) throw error;
       return data;
     },
+  });
+
+  // Realtime subscription for automatic updates
+  useRealtimeSubscription({
+    table: "financial_transactions",
+    filter: { column: "clinic_id", value: clinicId },
+    onInsert: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-monthly"] });
+    },
+    onUpdate: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-monthly"] });
+    },
+    onDelete: () => {
+      queryClient.invalidateQueries({ queryKey: ["financial-transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["financial-monthly"] });
+    },
+    enabled: !!clinicId,
+    showToast: false, // Avoid duplicate toasts since table already shows updates
   });
 
   const updateStatusMutation = useMutation({

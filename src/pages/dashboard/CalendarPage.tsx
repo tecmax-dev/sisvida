@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, pointerWithin } from "@dnd-kit/core";
 import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite } from "@/lib/whatsapp";
@@ -83,6 +83,8 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { handleScheduleValidationError } from "@/lib/scheduleValidation";
+import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
+import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
 
 const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const weekDaysFull = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
@@ -221,72 +223,7 @@ export default function CalendarPage() {
   // Professional user state
   const [loggedInProfessionalId, setLoggedInProfessionalId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (currentClinic) {
-      fetchData();
-    }
-  }, [currentClinic]);
-
-  // Fetch logged-in professional's ID if user is a professional
-  useEffect(() => {
-    const fetchLoggedInProfessional = async () => {
-      if (!isProfessionalOnly || !user?.id || !currentClinic?.id) return;
-      
-      const { data } = await supabase
-        .from('professionals')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('clinic_id', currentClinic.id)
-        .maybeSingle();
-      
-      if (data) {
-        setLoggedInProfessionalId(data.id);
-        setFormProfessional(data.id);
-      }
-    };
-
-    fetchLoggedInProfessional();
-  }, [isProfessionalOnly, user?.id, currentClinic?.id]);
-
-  useEffect(() => {
-    if (currentClinic) {
-      fetchAppointments();
-    }
-  }, [currentClinic, selectedDate, viewMode]);
-
-  const fetchData = async () => {
-    if (!currentClinic) {
-      console.log('[DEBUG CalendarPage] fetchData - currentClinic is null');
-      return;
-    }
-    
-    console.log('[DEBUG CalendarPage] fetchData - clinic_id:', currentClinic.id, 'user:', user?.id);
-    
-    try {
-      const { data: patientsData, error: patientsError } = await supabase
-        .from('patients')
-        .select('id, name, phone, email, birth_date')
-        .eq('clinic_id', currentClinic.id)
-        .order('name');
-      
-      console.log('[DEBUG CalendarPage] patients fetched:', patientsData?.length, 'error:', patientsError);
-      if (patientsData) setPatients(patientsData);
-
-      const { data: professionalsData, error: professionalsError } = await supabase
-        .from('professionals')
-        .select('id, name, specialty')
-        .eq('clinic_id', currentClinic.id)
-        .eq('is_active', true)
-        .order('name');
-      
-      console.log('[DEBUG CalendarPage] professionals fetched:', professionalsData, 'error:', professionalsError);
-      if (professionalsData) setProfessionals(professionalsData);
-    } catch (error) {
-      console.error("Error fetching data:", error);
-    }
-  };
-
-  const getDateRange = () => {
+  const getDateRange = useCallback(() => {
     if (viewMode === "day") {
       const dateStr = selectedDate.toISOString().split('T')[0];
       return { startDate: dateStr, endDate: dateStr };
@@ -307,9 +244,9 @@ export default function CalendarPage() {
         endDate: end.toISOString().split('T')[0] 
       };
     }
-  };
+  }, [viewMode, selectedDate, currentDate]);
 
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     if (!currentClinic) return;
     
     setLoading(true);
@@ -351,7 +288,82 @@ export default function CalendarPage() {
     } finally {
       setLoading(false);
     }
+  }, [currentClinic, getDateRange]);
+
+  useEffect(() => {
+    if (currentClinic) {
+      fetchData();
+    }
+  }, [currentClinic]);
+
+  // Fetch logged-in professional's ID if user is a professional
+  useEffect(() => {
+    const fetchLoggedInProfessional = async () => {
+      if (!isProfessionalOnly || !user?.id || !currentClinic?.id) return;
+      
+      const { data } = await supabase
+        .from('professionals')
+        .select('id')
+        .eq('user_id', user.id)
+        .eq('clinic_id', currentClinic.id)
+        .maybeSingle();
+      
+      if (data) {
+        setLoggedInProfessionalId(data.id);
+        setFormProfessional(data.id);
+      }
+    };
+
+    fetchLoggedInProfessional();
+  }, [isProfessionalOnly, user?.id, currentClinic?.id]);
+
+  useEffect(() => {
+    if (currentClinic) {
+      fetchAppointments();
+    }
+  }, [currentClinic, selectedDate, viewMode, fetchAppointments]);
+
+  const fetchData = async () => {
+    if (!currentClinic) {
+      console.log('[DEBUG CalendarPage] fetchData - currentClinic is null');
+      return;
+    }
+    
+    console.log('[DEBUG CalendarPage] fetchData - clinic_id:', currentClinic.id, 'user:', user?.id);
+    
+    try {
+      const { data: patientsData, error: patientsError } = await supabase
+        .from('patients')
+        .select('id, name, phone, email, birth_date')
+        .eq('clinic_id', currentClinic.id)
+        .order('name');
+      
+      console.log('[DEBUG CalendarPage] patients fetched:', patientsData?.length, 'error:', patientsError);
+      if (patientsData) setPatients(patientsData);
+
+      const { data: professionalsData, error: professionalsError } = await supabase
+        .from('professionals')
+        .select('id, name, specialty')
+        .eq('clinic_id', currentClinic.id)
+        .eq('is_active', true)
+        .order('name');
+      
+      console.log('[DEBUG CalendarPage] professionals fetched:', professionalsData, 'error:', professionalsError);
+      if (professionalsData) setProfessionals(professionalsData);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
   };
+
+  // Realtime subscription for automatic updates
+  useRealtimeSubscription({
+    table: "appointments",
+    filter: currentClinic ? { column: "clinic_id", value: currentClinic.id } : undefined,
+    onInsert: () => fetchAppointments(),
+    onUpdate: () => fetchAppointments(),
+    onDelete: () => fetchAppointments(),
+    enabled: !!currentClinic,
+  });
 
   // Filter and search appointments
   const filteredAppointments = useMemo(() => {
