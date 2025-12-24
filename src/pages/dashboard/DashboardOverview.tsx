@@ -242,29 +242,33 @@ export default function DashboardOverview() {
       title: "Consultas Hoje",
       value: stats.todayAppointments.toString(),
       icon: Calendar,
-      bgColor: "bg-primary",
-      textColor: "text-primary-foreground",
-    },
-    {
-      title: "A Pagar",
-      value: "R$ 0,00",
-      icon: TrendingUp,
-      bgColor: "bg-cta",
-      textColor: "text-cta-foreground",
-    },
-    {
-      title: "A Receber",
-      value: "R$ 0,00",
-      icon: Users,
-      bgColor: "bg-warning",
-      textColor: "text-warning-foreground",
+      gradient: "from-primary/10 via-primary/5 to-transparent",
+      iconBg: "bg-primary/15",
+      iconColor: "text-primary",
     },
     {
       title: "Pacientes Cadastrados",
       value: stats.totalPatients.toString(),
       icon: Users,
-      bgColor: "bg-info",
-      textColor: "text-info-foreground",
+      gradient: "from-info/10 via-info/5 to-transparent",
+      iconBg: "bg-info/15",
+      iconColor: "text-info",
+    },
+    {
+      title: "Taxa de Presença",
+      value: `${stats.completionRate}%`,
+      icon: TrendingUp,
+      gradient: "from-success/10 via-success/5 to-transparent",
+      iconBg: "bg-success/15",
+      iconColor: "text-success",
+    },
+    {
+      title: "Aguardando Confirmação",
+      value: stats.pendingConfirmations.toString(),
+      icon: Bell,
+      gradient: "from-warning/10 via-warning/5 to-transparent",
+      iconBg: "bg-warning/15",
+      iconColor: "text-warning",
     },
   ];
 
@@ -336,20 +340,20 @@ export default function DashboardOverview() {
         {statCards.map((stat, i) => (
           <Card 
             key={i} 
-            className={`relative overflow-hidden border-0 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 group ${stat.bgColor}`}
+            className="relative overflow-hidden border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 group"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-12 translate-x-12 bg-white/10" />
-            <div className="absolute bottom-0 left-0 w-20 h-20 rounded-full translate-y-8 -translate-x-8 bg-black/5" />
-            <CardContent className="relative p-6">
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-40`} />
+            <div className="absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-8 translate-x-8 bg-gradient-to-br from-foreground/[0.02] to-transparent" />
+            <CardContent className="relative p-5">
               <div className="flex items-start justify-between">
-                <div className="space-y-2">
-                  <p className={`text-sm font-medium ${stat.textColor} opacity-90`}>{stat.title}</p>
-                  <p className={`text-3xl lg:text-4xl font-bold ${stat.textColor} tracking-tight`}>
+                <div className="space-y-1.5">
+                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
+                  <p className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
                     {stat.value}
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                  <stat.icon className={`h-6 w-6 ${stat.textColor}`} />
+                <div className={`w-11 h-11 rounded-xl ${stat.iconBg} flex items-center justify-center group-hover:scale-105 transition-transform duration-300`}>
+                  <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                 </div>
               </div>
             </CardContent>

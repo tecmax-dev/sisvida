@@ -12,19 +12,19 @@
 @layer base {
   :root {
     /* Primary - Teal (Medical Trust) */
-    --primary: 174 62% 40%;
+    --primary: 174 62% 47%;
     --primary-foreground: 0 0% 100%;
     --primary-soft: 174 45% 95%;
-    --primary-glow: 174 62% 55%;
-    --primary-dark: 174 65% 25%;
+    --primary-glow: 174 62% 60%;
+    --primary-dark: 174 62% 35%;
     
-    /* CTA - Coral/Salmon (Action Color) */
-    --cta: 6 78% 60%;
+    /* CTA - Orange/Amber (Action Color) */
+    --cta: 25 95% 53%;
     --cta-foreground: 0 0% 100%;
-    --cta-hover: 6 78% 55%;
+    --cta-hover: 25 95% 48%;
     
     /* Background & Surfaces */
-    --background: 200 20% 97%;
+    --background: 200 20% 98%;
     --foreground: 210 30% 15%;
     
     --card: 0 0% 100%;
@@ -53,9 +53,9 @@
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
     
-    /* Warning - Amber/Yellow */
-    --warning: 45 93% 58%;
-    --warning-foreground: 45 100% 15%;
+    /* Warning */
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
     
     /* Info */
     --info: 199 89% 48%;
@@ -64,23 +64,23 @@
     /* Borders & Inputs */
     --border: 210 20% 90%;
     --input: 210 20% 90%;
-    --ring: 174 62% 40%;
+    --ring: 174 62% 47%;
     
     --radius: 0.75rem;
     
-    /* Sidebar - Dark Teal Theme */
-    --sidebar-background: 174 65% 20%;
-    --sidebar-foreground: 174 20% 85%;
-    --sidebar-primary: 6 78% 60%;
+    /* Sidebar - Clean White Professional Theme */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 210 25% 35%;
+    --sidebar-primary: 174 62% 47%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 174 50% 25%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 174 50% 25%;
-    --sidebar-ring: 6 78% 60%;
+    --sidebar-accent: 174 50% 96%;
+    --sidebar-accent-foreground: 174 50% 30%;
+    --sidebar-border: 210 20% 92%;
+    --sidebar-ring: 174 62% 47%;
     
     /* Custom Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(174 62% 40%) 0%, hsl(174 62% 55%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(174 65% 18%) 0%, hsl(174 60% 22%) 50%, hsl(174 55% 28%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(174 62% 47%) 0%, hsl(174 62% 60%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(210 30% 12%) 0%, hsl(210 25% 18%) 50%, hsl(174 40% 25%) 100%);
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(210 20% 98%) 100%);
     --gradient-soft: linear-gradient(135deg, hsl(174 45% 95%) 0%, hsl(200 40% 96%) 100%);
     --gradient-stats: linear-gradient(135deg, hsl(174 62% 35%) 0%, hsl(174 50% 28%) 100%);
@@ -90,7 +90,7 @@
     --shadow-md: 0 4px 6px -1px hsl(210 30% 15% / 0.08), 0 2px 4px -2px hsl(210 30% 15% / 0.05);
     --shadow-lg: 0 10px 15px -3px hsl(210 30% 15% / 0.08), 0 4px 6px -4px hsl(210 30% 15% / 0.05);
     --shadow-xl: 0 20px 25px -5px hsl(210 30% 15% / 0.1), 0 8px 10px -6px hsl(210 30% 15% / 0.08);
-    --shadow-glow: 0 0 40px hsl(174 62% 40% / 0.2);
+    --shadow-glow: 0 0 40px hsl(174 62% 47% / 0.2);
     --shadow-card: 0 1px 3px 0 hsl(210 30% 15% / 0.06), 0 1px 2px -1px hsl(210 30% 15% / 0.06);
     --shadow-float: 0 25px 50px -12px hsl(210 30% 15% / 0.25);
     

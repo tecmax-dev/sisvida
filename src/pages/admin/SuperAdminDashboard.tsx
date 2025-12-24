@@ -72,10 +72,10 @@ export default function SuperAdminDashboard() {
   };
 
   const statCards = [
-    { label: "Total de Clínicas", value: stats?.totalClinics || 0, icon: Building2, bgColor: "bg-primary", textColor: "text-primary-foreground" },
-    { label: "Total de Pacientes", value: stats?.totalPatients || 0, icon: Users, bgColor: "bg-cta", textColor: "text-cta-foreground" },
-    { label: "Agendamentos", value: stats?.totalAppointments || 0, icon: Calendar, bgColor: "bg-warning", textColor: "text-warning-foreground" },
-    { label: "Usuários", value: stats?.totalUsers || 0, icon: UserCheck, bgColor: "bg-info", textColor: "text-info-foreground" },
+    { label: "Total de Clínicas", value: stats?.totalClinics || 0, icon: Building2, color: "text-primary" },
+    { label: "Total de Pacientes", value: stats?.totalPatients || 0, icon: Users, color: "text-info" },
+    { label: "Agendamentos", value: stats?.totalAppointments || 0, icon: Calendar, color: "text-success" },
+    { label: "Usuários", value: stats?.totalUsers || 0, icon: UserCheck, color: "text-warning" },
   ];
 
   return (
@@ -99,23 +99,21 @@ export default function SuperAdminDashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat, index) => (
-          <Card key={index} className={`relative overflow-hidden border-0 shadow-lg hover:shadow-xl hover:scale-[1.02] transition-all duration-300 ${stat.bgColor}`}>
-            <div className="absolute top-0 right-0 w-32 h-32 rounded-full -translate-y-12 translate-x-12 bg-white/10" />
-            <div className="absolute bottom-0 left-0 w-20 h-20 rounded-full translate-y-8 -translate-x-8 bg-black/5" />
-            <CardContent className="relative p-6">
+          <Card key={index} className="card-hover">
+            <CardContent className="p-5">
               {loading ? (
                 <div className="space-y-2">
-                  <Skeleton className="h-4 w-20 bg-white/20" />
-                  <Skeleton className="h-8 w-16 bg-white/20" />
+                  <Skeleton className="h-4 w-20" />
+                  <Skeleton className="h-8 w-16" />
                 </div>
               ) : (
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className={`text-sm font-medium ${stat.textColor} opacity-90`}>{stat.label}</p>
-                    <p className={`text-3xl font-bold mt-1 ${stat.textColor}`}>{stat.value.toLocaleString('pt-BR')}</p>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-2xl font-bold mt-1">{stat.value.toLocaleString('pt-BR')}</p>
                   </div>
-                  <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
-                    <stat.icon className={`h-6 w-6 ${stat.textColor}`} />
+                  <div className={`p-3 rounded-lg bg-muted ${stat.color}`}>
+                    <stat.icon className="h-5 w-5" />
                   </div>
                 </div>
               )}
