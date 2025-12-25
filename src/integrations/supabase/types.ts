@@ -658,6 +658,117 @@ export type Database = {
           },
         ]
       }
+      cash_registers: {
+        Row: {
+          account_number: string | null
+          agency: string | null
+          bank_name: string | null
+          clinic_id: string
+          created_at: string
+          current_balance: number
+          id: string
+          initial_balance: number
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          account_number?: string | null
+          agency?: string | null
+          bank_name?: string | null
+          clinic_id: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_active?: boolean
+          name: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_number?: string | null
+          agency?: string | null
+          bank_name?: string | null
+          clinic_id?: string
+          created_at?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_transfers: {
+        Row: {
+          amount: number
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          from_register_id: string
+          id: string
+          to_register_id: string
+          transfer_date: string
+        }
+        Insert: {
+          amount: number
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          from_register_id: string
+          id?: string
+          to_register_id: string
+          transfer_date?: string
+        }
+        Update: {
+          amount?: number
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          from_register_id?: string
+          id?: string
+          to_register_id?: string
+          transfer_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_transfers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_transfers_from_register_id_fkey"
+            columns: ["from_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_transfers_to_register_id_fkey"
+            columns: ["to_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address: string | null
@@ -905,6 +1016,8 @@ export type Database = {
         Row: {
           amount: number
           appointment_id: string | null
+          bank_reference: string | null
+          cash_register_id: string | null
           category_id: string | null
           clinic_id: string
           created_at: string | null
@@ -912,12 +1025,14 @@ export type Database = {
           description: string
           due_date: string | null
           id: string
+          is_reconciled: boolean | null
           notes: string | null
           paid_date: string | null
           patient_id: string | null
           payment_method: string | null
           procedure_id: string | null
           professional_id: string | null
+          reconciled_at: string | null
           status: string | null
           type: string
           updated_at: string | null
@@ -925,6 +1040,8 @@ export type Database = {
         Insert: {
           amount: number
           appointment_id?: string | null
+          bank_reference?: string | null
+          cash_register_id?: string | null
           category_id?: string | null
           clinic_id: string
           created_at?: string | null
@@ -932,12 +1049,14 @@ export type Database = {
           description: string
           due_date?: string | null
           id?: string
+          is_reconciled?: boolean | null
           notes?: string | null
           paid_date?: string | null
           patient_id?: string | null
           payment_method?: string | null
           procedure_id?: string | null
           professional_id?: string | null
+          reconciled_at?: string | null
           status?: string | null
           type: string
           updated_at?: string | null
@@ -945,6 +1064,8 @@ export type Database = {
         Update: {
           amount?: number
           appointment_id?: string | null
+          bank_reference?: string | null
+          cash_register_id?: string | null
           category_id?: string | null
           clinic_id?: string
           created_at?: string | null
@@ -952,12 +1073,14 @@ export type Database = {
           description?: string
           due_date?: string | null
           id?: string
+          is_reconciled?: boolean | null
           notes?: string | null
           paid_date?: string | null
           patient_id?: string | null
           payment_method?: string | null
           procedure_id?: string | null
           professional_id?: string | null
+          reconciled_at?: string | null
           status?: string | null
           type?: string
           updated_at?: string | null
@@ -968,6 +1091,13 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
             referencedColumns: ["id"]
           },
           {
@@ -1884,6 +2014,83 @@ export type Database = {
           },
         ]
       }
+      professional_commissions: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          clinic_id: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          paid_date: string | null
+          percentage: number | null
+          professional_id: string
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          clinic_id: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          paid_date?: string | null
+          percentage?: number | null
+          professional_id: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          paid_date?: string | null
+          percentage?: number | null
+          professional_id?: string
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_commissions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_commissions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_commissions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_commissions_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_specialties: {
         Row: {
           created_at: string | null
@@ -2044,6 +2251,72 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      recurring_transactions: {
+        Row: {
+          amount: number
+          category_id: string | null
+          clinic_id: string
+          created_at: string
+          day_of_month: number | null
+          description: string
+          end_date: string | null
+          frequency: string
+          id: string
+          is_active: boolean
+          next_due_date: string
+          start_date: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          clinic_id: string
+          created_at?: string
+          day_of_month?: number | null
+          description: string
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          next_due_date: string
+          start_date: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          day_of_month?: number | null
+          description?: string
+          end_date?: string | null
+          frequency?: string
+          id?: string
+          is_active?: boolean
+          next_due_date?: string
+          start_date?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recurring_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_transactions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       smtp_settings: {
         Row: {
