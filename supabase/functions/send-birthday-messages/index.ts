@@ -182,6 +182,22 @@ serve(async (req) => {
         continue;
       }
 
+      // Fetch first active professional's avatar for the header image
+      const { data: professional } = await supabase
+        .from('professionals')
+        .select('avatar_url')
+        .eq('clinic_id', clinic.id)
+        .eq('is_active', true)
+        .not('avatar_url', 'is', null)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+
+      // Use professional's avatar as the header image, fallback to clinic logo
+      const headerImageUrl = professional?.avatar_url || clinic.logo_url;
+
+      console.log(`[Clinic ${clinic.name}] Header image: ${headerImageUrl ? 'professional avatar' : 'none'}`);
+
       // Check if we already sent birthday messages today for this clinic
       const { data: existingSent } = await supabase
         .from('birthday_message_logs')
@@ -248,12 +264,12 @@ serve(async (req) => {
 
         let success = false;
 
-        // Send with logo if available, otherwise text only
-        if (clinic.logo_url) {
+        // Send with professional avatar or clinic logo if available, otherwise text only
+        if (headerImageUrl) {
           success = await sendWhatsAppWithImage(
             evolutionConfig as EvolutionConfig,
             patient.phone,
-            clinic.logo_url,
+            headerImageUrl,
             message
           );
         } else {
