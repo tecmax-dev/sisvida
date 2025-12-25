@@ -16,6 +16,8 @@ import {
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { FinancialExportButton } from "./FinancialExportButton";
+import { exportCashFlow, CashFlowData } from "@/lib/financialExportUtils";
 import { Badge } from "@/components/ui/badge";
 
 interface CashFlowPanelProps {
@@ -105,6 +107,26 @@ export function CashFlowPanel({ clinicId }: CashFlowPanelProps) {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
   };
 
+  const handleExport = (exportFormat: 'pdf' | 'excel') => {
+    const exportData: CashFlowData[] = dailyWithBalance.map(d => ({
+      date: d.date,
+      income: d.income,
+      expense: d.expense,
+      pendingIncome: d.pendingIncome,
+      pendingExpense: d.pendingExpense,
+      balance: d.balance,
+      runningBalance: d.runningBalance,
+    }));
+    
+    exportCashFlow(
+      "Clínica",
+      format(currentDate, "MMMM yyyy", { locale: ptBR }),
+      exportData,
+      { income: totalIncome, expense: totalExpense, pendingIncome: totalPendingIncome, pendingExpense: totalPendingExpense },
+      exportFormat
+    );
+  };
+
   if (isLoading) {
     return <Skeleton className="h-96" />;
   }
@@ -118,16 +140,23 @@ export function CashFlowPanel({ clinicId }: CashFlowPanelProps) {
             Visualize entradas e saídas diárias
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={prevMonth}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span className="font-medium min-w-[150px] text-center">
-            {format(currentDate, "MMMM yyyy", { locale: ptBR })}
-          </span>
-          <Button variant="outline" size="icon" onClick={nextMonth}>
-            <ChevronRight className="h-4 w-4" />
-          </Button>
+        <div className="flex items-center gap-4">
+          <FinancialExportButton
+            onExportPDF={() => handleExport('pdf')}
+            onExportExcel={() => handleExport('excel')}
+            disabled={!transactions?.length}
+          />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={prevMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="font-medium min-w-[150px] text-center">
+              {format(currentDate, "MMMM yyyy", { locale: ptBR })}
+            </span>
+            <Button variant="outline" size="icon" onClick={nextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 

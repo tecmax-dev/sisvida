@@ -45,6 +45,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Plus, MoreHorizontal, Check, X, Users, DollarSign } from "lucide-react";
+import { FinancialExportButton } from "./FinancialExportButton";
+import { exportCommissions, CommissionData } from "@/lib/financialExportUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -182,6 +184,23 @@ export function CommissionsPanel({ clinicId }: CommissionsPanelProps) {
       currency: "BRL",
     }).format(value);
 
+  const handleExport = (exportFormat: 'pdf' | 'excel') => {
+    const exportData: CommissionData[] = (filteredCommissions || []).map(c => ({
+      professional: (c.professionals as any)?.name || "-",
+      description: c.description,
+      percentage: c.percentage || 0,
+      amount: Number(c.amount),
+      status: statusLabels[c.status],
+      dueDate: c.due_date ? format(parseISO(c.due_date), "dd/MM/yyyy", { locale: ptBR }) : "-",
+    }));
+    
+    const totalAmount = filteredCommissions?.reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+    const pendingAmount = filteredCommissions?.filter(c => c.status === 'pending').reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+    const paidAmount = filteredCommissions?.filter(c => c.status === 'paid').reduce((sum, c) => sum + Number(c.amount), 0) || 0;
+    
+    exportCommissions("Clínica", "Período atual", exportData, { total: totalAmount, pending: pendingAmount, paid: paidAmount }, exportFormat);
+  };
+
   // Calculate summary by professional
   const summaryByProfessional = professionals?.map((prof) => {
     const profCommissions = commissions?.filter((c) => c.professional_id === prof.id) || [];
@@ -208,10 +227,17 @@ export function CommissionsPanel({ clinicId }: CommissionsPanelProps) {
             Gerencie comissões de profissionais
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Comissão
-        </Button>
+        <div className="flex items-center gap-2">
+          <FinancialExportButton
+            onExportPDF={() => handleExport('pdf')}
+            onExportExcel={() => handleExport('excel')}
+            disabled={!filteredCommissions?.length}
+          />
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Comissão
+          </Button>
+        </div>
       </div>
 
       {/* Summary by Professional */}

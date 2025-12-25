@@ -19,6 +19,8 @@ import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { CheckCircle2, Circle, ChevronLeft, ChevronRight, FileCheck, Upload } from "lucide-react";
 import { OFXImportDialog } from "./OFXImportDialog";
+import { FinancialExportButton } from "./FinancialExportButton";
+import { exportReconciliation, ReconciliationData } from "@/lib/financialExportUtils";
 
 interface ReconciliationPanelProps {
   clinicId: string;
@@ -107,6 +109,24 @@ export function ReconciliationPanel({ clinicId }: ReconciliationPanelProps) {
       currency: "BRL",
     }).format(value);
 
+  const handleExport = (exportFormat: 'pdf' | 'excel') => {
+    const exportData: ReconciliationData[] = (transactions || []).map(t => ({
+      date: t.paid_date ? format(parseISO(t.paid_date), "dd/MM/yyyy", { locale: ptBR }) : "-",
+      description: t.description,
+      amount: Number(t.amount),
+      type: t.type === "income" ? "Entrada" : "Saída",
+      status: t.is_reconciled ? "Conciliado" : "Pendente",
+    }));
+    
+    exportReconciliation(
+      "Clínica",
+      format(currentDate, "MMMM yyyy", { locale: ptBR }),
+      exportData,
+      { reconciled: totalReconciled, pending: totalPending },
+      exportFormat
+    );
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
@@ -154,6 +174,11 @@ export function ReconciliationPanel({ clinicId }: ReconciliationPanelProps) {
           </p>
         </div>
         <div className="flex items-center gap-4">
+          <FinancialExportButton
+            onExportPDF={() => handleExport('pdf')}
+            onExportExcel={() => handleExport('excel')}
+            disabled={!transactions?.length}
+          />
           <Button variant="outline" onClick={() => setIsOFXDialogOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Importar OFX

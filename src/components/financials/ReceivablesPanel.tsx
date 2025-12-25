@@ -24,6 +24,8 @@ import { format, parseISO, isPast, isToday, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { MoreHorizontal, Check, Search, AlertCircle, Clock, CalendarDays } from "lucide-react";
+import { FinancialExportButton } from "./FinancialExportButton";
+import { exportReceivables, ReceivableData } from "@/lib/financialExportUtils";
 
 interface ReceivablesPanelProps {
   clinicId: string;
@@ -141,17 +143,42 @@ export function ReceivablesPanel({ clinicId }: ReceivablesPanelProps) {
     ?.filter((r) => r.due_date && isToday(parseISO(r.due_date)))
     .reduce((sum, r) => sum + Number(r.amount), 0) || 0;
 
+  const handleExport = (exportFormat: 'pdf' | 'excel') => {
+    const exportData: ReceivableData[] = (filteredReceivables || []).map(r => ({
+      dueDate: r.due_date ? format(parseISO(r.due_date), "dd/MM/yyyy", { locale: ptBR }) : "-",
+      description: r.description,
+      patient: (r.patients as any)?.name || "-",
+      status: getStatusInfo(r.due_date).label,
+      amount: Number(r.amount),
+    }));
+    
+    exportReceivables(
+      "Clínica",
+      "Período atual",
+      exportData,
+      { total: totalReceivables, overdue: overdueAmount, today: todayAmount },
+      exportFormat
+    );
+  };
+
   if (isLoading) {
     return <Skeleton className="h-96" />;
   }
 
   return (
     <div className="space-y-4">
-      <div>
-        <h3 className="text-lg font-semibold">Controle de Recebíveis</h3>
-        <p className="text-sm text-muted-foreground">
-          Gerencie suas contas a receber
-        </p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-lg font-semibold">Controle de Recebíveis</h3>
+          <p className="text-sm text-muted-foreground">
+            Gerencie suas contas a receber
+          </p>
+        </div>
+        <FinancialExportButton
+          onExportPDF={() => handleExport('pdf')}
+          onExportExcel={() => handleExport('excel')}
+          disabled={!filteredReceivables?.length}
+        />
       </div>
 
       {/* Summary Cards */}
