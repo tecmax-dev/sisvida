@@ -197,9 +197,21 @@ export default function DashboardOverview() {
         setStats(prev => ({ 
           ...prev, 
           todayAppointments: appointments.length,
-          pendingConfirmations: appointments.filter(a => a.status === 'scheduled').length,
         }));
       }
+
+      // Fetch ALL pending confirmations (not just today)
+      const { count: pendingCount } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', currentClinic.id)
+        .eq('status', 'scheduled')
+        .gte('appointment_date', today);
+
+      setStats(prev => ({ 
+        ...prev, 
+        pendingConfirmations: pendingCount || 0,
+      }));
 
       // Fetch total patients
       const { count: patientsCount } = await supabase
