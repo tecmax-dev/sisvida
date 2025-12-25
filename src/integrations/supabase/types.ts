@@ -607,9 +607,62 @@ export type Database = {
         }
         Relationships: []
       }
+      birthday_message_logs: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          patient_id: string
+          patient_name: string
+          patient_phone: string
+          sent_at: string
+          success: boolean
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          patient_id: string
+          patient_name: string
+          patient_phone: string
+          sent_at?: string
+          success?: boolean
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          patient_id?: string
+          patient_name?: string
+          patient_phone?: string
+          sent_at?: string
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "birthday_message_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "birthday_message_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address: string | null
+          birthday_enabled: boolean | null
+          birthday_message: string | null
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
@@ -633,6 +686,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          birthday_enabled?: boolean | null
+          birthday_message?: string | null
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
@@ -656,6 +711,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          birthday_enabled?: boolean | null
+          birthday_message?: string | null
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null

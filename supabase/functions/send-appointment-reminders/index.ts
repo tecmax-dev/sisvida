@@ -19,6 +19,7 @@ interface ClinicWithReminder {
   slug: string;
   reminder_enabled: boolean;
   reminder_hours: number;
+  logo_url: string | null;
 }
 
 // Converter horário UTC para horário de Bahia, Brasil (UTC-3)
@@ -68,6 +69,47 @@ async function sendWhatsAppViaEvolution(
     return response.ok;
   } catch (error) {
     console.error('Error sending WhatsApp:', error);
+    return false;
+  }
+}
+
+async function sendWhatsAppWithImage(
+  config: EvolutionConfig,
+  phone: string,
+  imageUrl: string,
+  caption: string
+): Promise<boolean> {
+  try {
+    let formattedPhone = phone.replace(/\D/g, '');
+    if (!formattedPhone.startsWith('55')) {
+      formattedPhone = '55' + formattedPhone;
+    }
+
+    console.log(`Sending WhatsApp with image to ${formattedPhone}`);
+
+    const response = await fetch(`${config.api_url}/message/sendMedia/${config.instance_name}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.api_key,
+      },
+      body: JSON.stringify({
+        number: formattedPhone,
+        mediatype: 'image',
+        media: imageUrl,
+        caption: caption,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('WhatsApp API error:', errorText);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Error sending WhatsApp with image:', error);
     return false;
   }
 }
@@ -127,7 +169,7 @@ serve(async (req) => {
     // Get clinics with reminders enabled
     const { data: clinics, error: clinicsError } = await supabase
       .from('clinics')
-      .select('id, name, slug, reminder_enabled, reminder_hours')
+      .select('id, name, slug, reminder_enabled, reminder_hours, logo_url')
       .eq('reminder_enabled', true);
 
     if (clinicsError) {
@@ -262,11 +304,23 @@ serve(async (req) => {
           confirmationLink
         );
 
-        const success = await sendWhatsAppViaEvolution(
-          evolutionConfig as EvolutionConfig,
-          patient.phone,
-          message
-        );
+        let success = false;
+        
+        // Send with logo if available, otherwise text only
+        if (clinic.logo_url) {
+          success = await sendWhatsAppWithImage(
+            evolutionConfig as EvolutionConfig,
+            patient.phone,
+            clinic.logo_url,
+            message
+          );
+        } else {
+          success = await sendWhatsAppViaEvolution(
+            evolutionConfig as EvolutionConfig,
+            patient.phone,
+            message
+          );
+        }
 
         if (success) {
           // Mark as sent
