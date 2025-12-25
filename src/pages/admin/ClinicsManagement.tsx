@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuditLog } from "@/hooks/useAuditLog";
@@ -10,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Table,
   TableBody,
@@ -64,8 +66,11 @@ import {
   Trash2,
   Stethoscope,
   MoreHorizontal,
+  TrendingUp,
+  Activity,
+  RefreshCw,
 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface Clinic {
@@ -104,7 +109,33 @@ interface ClinicWithCounts extends Clinic {
   subscription?: ClinicSubscription | null;
 }
 
-// Card component for mobile/tablet view
+// Stats Card Component
+const StatCard = ({ 
+  icon: Icon, 
+  label, 
+  value, 
+  color 
+}: { 
+  icon: React.ElementType; 
+  label: string; 
+  value: number; 
+  color: string 
+}) => (
+  <div className={`relative overflow-hidden rounded-xl p-5 ${color} transition-all duration-300 hover:scale-[1.02] hover:shadow-lg`}>
+    <div className="stat-decoration" />
+    <div className="relative z-10">
+      <div className="flex items-center gap-3 mb-2">
+        <div className="p-2 rounded-lg bg-white/20">
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+      </div>
+      <p className="text-3xl font-bold text-white">{value}</p>
+      <p className="text-sm text-white/80 mt-1">{label}</p>
+    </div>
+  </div>
+);
+
+// Clinic Card Component
 interface ClinicCardProps {
   clinic: ClinicWithCounts;
   onAccess: (clinic: ClinicWithCounts) => void;
@@ -124,67 +155,80 @@ const ClinicCard = ({
   onDelete,
   getStatusBadge 
 }: ClinicCardProps) => (
-  <div className={`border rounded-lg p-4 space-y-4 ${clinic.is_blocked ? "bg-destructive/5 border-destructive/20" : ""}`}>
-    {/* Header: Name + Status */}
-    <div className="flex items-start justify-between gap-3">
+  <div className={`group relative overflow-hidden rounded-xl border p-5 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
+    clinic.is_blocked 
+      ? "bg-destructive/5 border-destructive/30" 
+      : "bg-card border-border hover:border-primary/30"
+  }`}>
+    {/* Decorative gradient */}
+    <div className={`absolute top-0 left-0 right-0 h-1 ${
+      clinic.is_blocked ? "bg-destructive" : "bg-gradient-to-r from-primary to-primary-glow"
+    }`} />
+    
+    {/* Header */}
+    <div className="flex items-start justify-between gap-3 mb-4">
       <div className="flex items-center gap-3 min-w-0">
-        <div className={`h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ${
-          clinic.is_blocked ? "bg-destructive/10" : "bg-primary/10"
+        <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+          clinic.is_blocked 
+            ? "bg-destructive/10 text-destructive" 
+            : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
         }`}>
           {clinic.is_blocked ? (
-            <Ban className="h-5 w-5 text-destructive" />
+            <Ban className="h-6 w-6" />
           ) : (
-            <Building2 className="h-5 w-5 text-primary" />
+            <Building2 className="h-6 w-6" />
           )}
         </div>
         <div className="min-w-0">
-          <p className="font-medium truncate">{clinic.name}</p>
-          <code className="text-xs text-muted-foreground">/{clinic.slug}</code>
+          <p className="font-semibold text-foreground truncate">{clinic.name}</p>
+          <code className="text-xs text-muted-foreground font-mono">/{clinic.slug}</code>
         </div>
       </div>
       {clinic.is_blocked ? (
-        <Badge variant="destructive" className="gap-1 shrink-0">
+        <Badge variant="destructive" className="gap-1.5 shrink-0">
           <Ban className="h-3 w-3" />
           Bloqueada
         </Badge>
       ) : (
-        <Badge variant="outline" className="text-success border-success gap-1 shrink-0">
+        <Badge className="bg-success/10 text-success border-success/20 gap-1.5 shrink-0">
           <CheckCircle className="h-3 w-3" />
           Ativa
         </Badge>
       )}
     </div>
     
-    {/* Metrics in 3-column grid */}
-    <div className="grid grid-cols-3 gap-2 text-center bg-muted/50 rounded-lg p-3">
-      <div>
-        <Stethoscope className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-        <span className="text-sm font-medium block">
+    {/* Metrics */}
+    <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="text-center p-3 rounded-lg bg-muted/50 border border-border/50">
+        <Stethoscope className="h-4 w-4 mx-auto mb-1.5 text-primary" />
+        <span className="text-lg font-bold block text-foreground">
           {clinic.professionalsCount}
           {clinic.subscription && (
-            <span className="text-muted-foreground">/{clinic.subscription.plan.max_professionals}</span>
+            <span className="text-muted-foreground text-sm font-normal">/{clinic.subscription.plan.max_professionals}</span>
           )}
         </span>
         <p className="text-xs text-muted-foreground">Profissionais</p>
       </div>
-      <div>
-        <Users className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-        <span className="text-sm font-medium block">{clinic.patientsCount}</span>
+      <div className="text-center p-3 rounded-lg bg-muted/50 border border-border/50">
+        <Users className="h-4 w-4 mx-auto mb-1.5 text-info" />
+        <span className="text-lg font-bold block text-foreground">{clinic.patientsCount}</span>
         <p className="text-xs text-muted-foreground">Pacientes</p>
       </div>
-      <div>
-        <Calendar className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
-        <span className="text-sm font-medium block">{clinic.appointmentsCount}</span>
+      <div className="text-center p-3 rounded-lg bg-muted/50 border border-border/50">
+        <Calendar className="h-4 w-4 mx-auto mb-1.5 text-warning" />
+        <span className="text-lg font-bold block text-foreground">{clinic.appointmentsCount}</span>
         <p className="text-xs text-muted-foreground">Agendamentos</p>
       </div>
     </div>
     
-    {/* Plan + Date */}
-    <div className="flex items-center justify-between text-sm flex-wrap gap-2">
+    {/* Plan & Date */}
+    <div className="flex items-center justify-between text-sm flex-wrap gap-2 mb-4 pb-4 border-b border-border/50">
       <div className="flex items-center gap-2">
         {clinic.subscription ? (
           <>
-            <span className="font-medium">{clinic.subscription.plan.name}</span>
+            <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+              {clinic.subscription.plan.name}
+            </Badge>
             {getStatusBadge(clinic.subscription.status)}
           </>
         ) : (
@@ -197,11 +241,11 @@ const ClinicCard = ({
     </div>
     
     {/* Actions */}
-    <div className="flex items-center gap-2 pt-2 border-t">
+    <div className="flex items-center gap-2">
       <Button 
         size="sm" 
         variant="outline" 
-        className="flex-1"
+        className="flex-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
         onClick={() => onManagePlan(clinic)}
       >
         <CreditCard className="h-4 w-4 mr-2" />
@@ -211,7 +255,7 @@ const ClinicCard = ({
         <Button 
           size="sm" 
           variant="outline"
-          className="text-success hover:text-success"
+          className="text-success hover:bg-success/10 hover:border-success/30"
           onClick={() => onUnblock(clinic)}
         >
           <CheckCircle className="h-4 w-4" />
@@ -220,7 +264,7 @@ const ClinicCard = ({
         <Button 
           size="sm" 
           variant="outline"
-          className="text-destructive hover:text-destructive"
+          className="text-destructive hover:bg-destructive/10 hover:border-destructive/30"
           onClick={() => onBlock(clinic)}
         >
           <Ban className="h-4 w-4" />
@@ -229,14 +273,14 @@ const ClinicCard = ({
       <Button 
         size="sm" 
         variant="outline"
-        className="text-destructive hover:text-destructive"
+        className="text-destructive hover:bg-destructive/10 hover:border-destructive/30"
         onClick={() => onDelete(clinic)}
       >
         <Trash2 className="h-4 w-4" />
       </Button>
       <Button 
         size="sm" 
-        className="flex-1"
+        className="flex-1 bg-primary hover:bg-primary/90"
         onClick={() => onAccess(clinic)}
       >
         <ExternalLink className="h-4 w-4 mr-2" />
@@ -247,9 +291,7 @@ const ClinicCard = ({
 );
 
 export default function ClinicsManagement() {
-  const [clinics, setClinics] = useState<ClinicWithCounts[]>([]);
-  const [plans, setPlans] = useState<SubscriptionPlan[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   
   // Block/Unblock dialogs
@@ -267,20 +309,14 @@ export default function ClinicsManagement() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [confirmClinicName, setConfirmClinicName] = useState("");
   
-  const [actionLoading, setActionLoading] = useState(false);
   const { setCurrentClinic, user } = useAuth();
   const { logAction } = useAuditLog();
   const navigate = useNavigate();
-  const { toast } = useToast();
 
-  useEffect(() => {
-    fetchClinics();
-    fetchPlans();
-    logAction({ action: 'view_clinics_list', entityType: 'clinic' });
-  }, []);
-
-  const fetchPlans = async () => {
-    try {
+  // Fetch plans with React Query
+  const { data: plans = [] } = useQuery({
+    queryKey: ["subscription-plans"],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from('subscription_plans')
         .select('id, name, max_professionals, monthly_price')
@@ -288,14 +324,14 @@ export default function ClinicsManagement() {
         .order('monthly_price', { ascending: true });
 
       if (error) throw error;
-      setPlans(data || []);
-    } catch (error) {
-      console.error("Error fetching plans:", error);
-    }
-  };
+      return data as SubscriptionPlan[];
+    },
+  });
 
-  const fetchClinics = async () => {
-    try {
+  // Fetch clinics with React Query
+  const { data: clinics = [], isLoading, refetch, isFetching } = useQuery({
+    queryKey: ["admin-clinics"],
+    queryFn: async () => {
       const { data: clinicsData, error } = await supabase
         .from('clinics')
         .select('*')
@@ -303,51 +339,161 @@ export default function ClinicsManagement() {
 
       if (error) throw error;
 
-      if (clinicsData) {
-        const clinicsWithCounts = await Promise.all(
-          clinicsData.map(async (clinic) => {
-            const [patientsRes, appointmentsRes, professionalsRes, subscriptionRes] = await Promise.all([
-              supabase.from('patients').select('id', { count: 'exact', head: true }).eq('clinic_id', clinic.id),
-              supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('clinic_id', clinic.id),
-              supabase.from('professionals').select('id', { count: 'exact', head: true }).eq('clinic_id', clinic.id).eq('is_active', true),
-              supabase.from('subscriptions').select('id, status, plan_id, subscription_plans(id, name, max_professionals, monthly_price)').eq('clinic_id', clinic.id).maybeSingle(),
-            ]);
+      const clinicsWithCounts = await Promise.all(
+        (clinicsData || []).map(async (clinic) => {
+          const [patientsRes, appointmentsRes, professionalsRes, subscriptionRes] = await Promise.all([
+            supabase.from('patients').select('id', { count: 'exact', head: true }).eq('clinic_id', clinic.id),
+            supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('clinic_id', clinic.id),
+            supabase.from('professionals').select('id', { count: 'exact', head: true }).eq('clinic_id', clinic.id).eq('is_active', true),
+            supabase.from('subscriptions').select('id, status, plan_id, subscription_plans(id, name, max_professionals, monthly_price)').eq('clinic_id', clinic.id).maybeSingle(),
+          ]);
 
-            let subscription: ClinicSubscription | null = null;
-            if (subscriptionRes.data && subscriptionRes.data.subscription_plans) {
-              const planData = subscriptionRes.data.subscription_plans as unknown as SubscriptionPlan;
-              subscription = {
-                id: subscriptionRes.data.id,
-                status: subscriptionRes.data.status,
-                plan_id: subscriptionRes.data.plan_id,
-                plan: planData,
-              };
-            }
-
-            return {
-              ...clinic,
-              is_blocked: clinic.is_blocked || false,
-              patientsCount: patientsRes.count || 0,
-              appointmentsCount: appointmentsRes.count || 0,
-              professionalsCount: professionalsRes.count || 0,
-              subscription,
+          let subscription: ClinicSubscription | null = null;
+          if (subscriptionRes.data && subscriptionRes.data.subscription_plans) {
+            const planData = subscriptionRes.data.subscription_plans as unknown as SubscriptionPlan;
+            subscription = {
+              id: subscriptionRes.data.id,
+              status: subscriptionRes.data.status,
+              plan_id: subscriptionRes.data.plan_id,
+              plan: planData,
             };
-          })
-        );
+          }
 
-        setClinics(clinicsWithCounts);
+          return {
+            ...clinic,
+            is_blocked: clinic.is_blocked || false,
+            patientsCount: patientsRes.count || 0,
+            appointmentsCount: appointmentsRes.count || 0,
+            professionalsCount: professionalsRes.count || 0,
+            subscription,
+          };
+        })
+      );
+
+      return clinicsWithCounts;
+    },
+    staleTime: 30000,
+  });
+
+  // Block mutation
+  const blockMutation = useMutation({
+    mutationFn: async ({ clinicId, reason }: { clinicId: string; reason: string }) => {
+      const { error } = await supabase
+        .from('clinics')
+        .update({
+          is_blocked: true,
+          blocked_at: new Date().toISOString(),
+          blocked_reason: reason || "Inadimplência",
+          blocked_by: user?.id,
+        })
+        .eq('id', clinicId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-clinics"] });
+      toast.success("Clínica bloqueada com sucesso");
+      setBlockDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao bloquear: ${error.message}`);
+    },
+  });
+
+  // Unblock mutation
+  const unblockMutation = useMutation({
+    mutationFn: async (clinicId: string) => {
+      const { error } = await supabase
+        .from('clinics')
+        .update({
+          is_blocked: false,
+          blocked_at: null,
+          blocked_reason: null,
+          blocked_by: null,
+        })
+        .eq('id', clinicId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-clinics"] });
+      toast.success("Clínica desbloqueada com sucesso");
+      setUnblockDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao desbloquear: ${error.message}`);
+    },
+  });
+
+  // Save plan mutation
+  const savePlanMutation = useMutation({
+    mutationFn: async ({ clinic, planId, status }: { clinic: ClinicWithCounts; planId: string; status: string }) => {
+      if (clinic.subscription) {
+        const { error } = await supabase
+          .from('subscriptions')
+          .update({ plan_id: planId, status })
+          .eq('id', clinic.subscription.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('subscriptions')
+          .insert({
+            clinic_id: clinic.id,
+            plan_id: planId,
+            status,
+            trial_ends_at: status === 'trial' 
+              ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() 
+              : null,
+          });
+        if (error) throw error;
       }
-    } catch (error) {
-      console.error("Error fetching clinics:", error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar as clínicas.",
-        variant: "destructive",
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-clinics"] });
+      toast.success("Plano atualizado com sucesso");
+      setPlanDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao atualizar plano: ${error.message}`);
+    },
+  });
+
+  // Delete mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (clinic: ClinicWithCounts) => {
+      await logAction({
+        action: 'delete_clinic',
+        entityType: 'clinic',
+        entityId: clinic.id,
+        details: { clinic_name: clinic.name },
       });
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      // Delete related data
+      await supabase.from('subscriptions').delete().eq('clinic_id', clinic.id);
+      await supabase.from('waiting_list').delete().eq('clinic_id', clinic.id);
+      await supabase.from('odontogram_records').delete().eq('clinic_id', clinic.id);
+      await supabase.from('medical_records').delete().eq('clinic_id', clinic.id);
+      await supabase.from('appointments').delete().eq('clinic_id', clinic.id);
+      await supabase.from('anamnesis').delete().eq('clinic_id', clinic.id);
+      await supabase.from('patients').delete().eq('clinic_id', clinic.id);
+      await supabase.from('professionals').delete().eq('clinic_id', clinic.id);
+      await supabase.from('insurance_plans').delete().eq('clinic_id', clinic.id);
+      await supabase.from('document_settings').delete().eq('clinic_id', clinic.id);
+      await supabase.from('evolution_configs').delete().eq('clinic_id', clinic.id);
+      await supabase.from('user_roles').delete().eq('clinic_id', clinic.id);
+
+      const { error } = await supabase.from('clinics').delete().eq('id', clinic.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-clinics"] });
+      toast.success("Clínica excluída permanentemente");
+      setDeleteDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao excluir: ${error.message}`);
+    },
+  });
 
   const handleAccessClinic = (clinic: Clinic) => {
     logAction({ 
@@ -369,11 +515,7 @@ export default function ClinicsManagement() {
       blocked_reason: clinic.blocked_reason,
     });
     
-    toast({
-      title: "Clínica selecionada",
-      description: `Você está acessando: ${clinic.name}`,
-    });
-    
+    toast.success(`Acessando: ${clinic.name}`);
     navigate("/dashboard");
   };
 
@@ -401,225 +543,35 @@ export default function ClinicsManagement() {
     setDeleteDialogOpen(true);
   };
 
-  const handleBlockClinic = async () => {
-    if (!selectedClinic || !user) return;
-    
-    setActionLoading(true);
-
-    try {
-      const { error } = await supabase
-        .from('clinics')
-        .update({
-          is_blocked: true,
-          blocked_at: new Date().toISOString(),
-          blocked_reason: blockReason.trim() || "Inadimplência",
-          blocked_by: user.id,
-        })
-        .eq('id', selectedClinic.id);
-
-      if (error) throw error;
-
-      await logAction({
-        action: 'block_clinic',
-        entityType: 'clinic',
-        entityId: selectedClinic.id,
-        details: { 
-          clinic_name: selectedClinic.name,
-          reason: blockReason.trim() || "Inadimplência" 
-        }
-      });
-
-      toast({
-        title: "Clínica bloqueada",
-        description: `A clínica "${selectedClinic.name}" foi bloqueada.`,
-      });
-
-      setBlockDialogOpen(false);
-      fetchClinics();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao bloquear",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleUnblockClinic = async () => {
+  const handleBlockClinic = () => {
     if (!selectedClinic) return;
-    
-    setActionLoading(true);
-
-    try {
-      const { error } = await supabase
-        .from('clinics')
-        .update({
-          is_blocked: false,
-          blocked_at: null,
-          blocked_reason: null,
-          blocked_by: null,
-        })
-        .eq('id', selectedClinic.id);
-
-      if (error) throw error;
-
-      await logAction({
-        action: 'unblock_clinic',
-        entityType: 'clinic',
-        entityId: selectedClinic.id,
-        details: { clinic_name: selectedClinic.name }
-      });
-
-      toast({
-        title: "Clínica desbloqueada",
-        description: `A clínica "${selectedClinic.name}" foi desbloqueada.`,
-      });
-
-      setUnblockDialogOpen(false);
-      fetchClinics();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao desbloquear",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
+    blockMutation.mutate({ clinicId: selectedClinic.id, reason: blockReason });
   };
 
-  const handleSavePlan = async () => {
+  const handleUnblockClinic = () => {
+    if (!selectedClinic) return;
+    unblockMutation.mutate(selectedClinic.id);
+  };
+
+  const handleSavePlan = () => {
     if (!selectedClinic || !selectedPlanId) return;
-    
-    setActionLoading(true);
-
-    try {
-      if (selectedClinic.subscription) {
-        // Update existing subscription
-        const { error } = await supabase
-          .from('subscriptions')
-          .update({
-            plan_id: selectedPlanId,
-            status: selectedStatus,
-          })
-          .eq('id', selectedClinic.subscription.id);
-
-        if (error) throw error;
-      } else {
-        // Create new subscription
-        const { error } = await supabase
-          .from('subscriptions')
-          .insert({
-            clinic_id: selectedClinic.id,
-            plan_id: selectedPlanId,
-            status: selectedStatus,
-            trial_ends_at: selectedStatus === 'trial' 
-              ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() 
-              : null,
-          });
-
-        if (error) throw error;
-      }
-
-      await logAction({
-        action: 'manage_clinic_plan',
-        entityType: 'subscription',
-        entityId: selectedClinic.id,
-        details: { 
-          clinic_name: selectedClinic.name,
-          plan_id: selectedPlanId,
-          status: selectedStatus,
-        }
-      });
-
-      toast({
-        title: "Plano atualizado",
-        description: `O plano da clínica "${selectedClinic.name}" foi atualizado.`,
-      });
-
-      setPlanDialogOpen(false);
-      fetchClinics();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao atualizar plano",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
+    savePlanMutation.mutate({ clinic: selectedClinic, planId: selectedPlanId, status: selectedStatus });
   };
 
-  const handleDeleteClinic = async () => {
+  const handleDeleteClinic = () => {
     if (!selectedClinic || confirmClinicName !== selectedClinic.name) return;
-    
-    setActionLoading(true);
-
-    try {
-      // Log before deletion
-      await logAction({
-        action: 'delete_clinic',
-        entityType: 'clinic',
-        entityId: selectedClinic.id,
-        details: { 
-          clinic_name: selectedClinic.name,
-          patients_count: selectedClinic.patientsCount,
-          appointments_count: selectedClinic.appointmentsCount,
-          professionals_count: selectedClinic.professionalsCount,
-        }
-      });
-
-      // Delete related data first (in case CASCADE is not set)
-      await supabase.from('subscriptions').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('waiting_list').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('odontogram_records').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('medical_records').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('appointments').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('anamnesis').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('patients').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('professionals').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('insurance_plans').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('document_settings').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('evolution_configs').delete().eq('clinic_id', selectedClinic.id);
-      await supabase.from('user_roles').delete().eq('clinic_id', selectedClinic.id);
-
-      // Delete the clinic
-      const { error } = await supabase
-        .from('clinics')
-        .delete()
-        .eq('id', selectedClinic.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Clínica excluída",
-        description: `A clínica "${selectedClinic.name}" foi excluída permanentemente.`,
-      });
-
-      setDeleteDialogOpen(false);
-      fetchClinics();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao excluir",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setActionLoading(false);
-    }
+    deleteMutation.mutate(selectedClinic);
   };
 
   const getStatusBadge = (status: string) => {
-    const statusMap: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-      trial: { label: "Trial", variant: "secondary" },
-      active: { label: "Ativo", variant: "default" },
-      suspended: { label: "Suspenso", variant: "destructive" },
-      canceled: { label: "Cancelado", variant: "outline" },
+    const statusMap: Record<string, { label: string; className: string }> = {
+      trial: { label: "Trial", className: "bg-info/10 text-info border-info/20" },
+      active: { label: "Ativo", className: "bg-success/10 text-success border-success/20" },
+      suspended: { label: "Suspenso", className: "bg-warning/10 text-warning border-warning/20" },
+      canceled: { label: "Cancelado", className: "bg-destructive/10 text-destructive border-destructive/20" },
     };
-    const s = statusMap[status] || { label: status, variant: "outline" as const };
-    return <Badge variant={s.variant}>{s.label}</Badge>;
+    const s = statusMap[status] || { label: status, className: "" };
+    return <Badge variant="outline" className={s.className}>{s.label}</Badge>;
   };
 
   const filteredClinics = clinics.filter((clinic) =>
@@ -633,18 +585,71 @@ export default function ClinicsManagement() {
     ? selectedClinic.professionalsCount > selectedPlan.max_professionals 
     : false;
 
+  // Calculate totals
+  const totalPatients = clinics.reduce((sum, c) => sum + c.patientsCount, 0);
+  const totalProfessionals = clinics.reduce((sum, c) => sum + c.professionalsCount, 0);
+  const totalAppointments = clinics.reduce((sum, c) => sum + c.appointmentsCount, 0);
+  const activeClinics = clinics.filter(c => !c.is_blocked).length;
+
+  const isLoaderVisible = blockMutation.isPending || unblockMutation.isPending || savePlanMutation.isPending || deleteMutation.isPending;
+
   return (
-    <div className="p-4 md:p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       {/* Header */}
-      <div>
-        <h1 className="text-xl md:text-2xl font-bold text-foreground">Gerenciar Clínicas</h1>
-        <p className="text-muted-foreground mt-1 text-sm md:text-base">
-          Lista de todas as clínicas cadastradas no sistema
-        </p>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3">
+            <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10">
+              <Building2 className="h-6 w-6 text-primary" />
+            </div>
+            Gerenciar Clínicas
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Administre todas as clínicas cadastradas no sistema
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+          Atualizar
+        </Button>
       </div>
 
-      {/* Search & Filters */}
-      <Card>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard 
+          icon={Building2} 
+          label="Clínicas Ativas" 
+          value={activeClinics}
+          color="bg-gradient-to-br from-primary to-primary-dark"
+        />
+        <StatCard 
+          icon={Stethoscope} 
+          label="Total Profissionais" 
+          value={totalProfessionals}
+          color="bg-gradient-to-br from-info to-info/80"
+        />
+        <StatCard 
+          icon={Users} 
+          label="Total Pacientes" 
+          value={totalPatients}
+          color="bg-gradient-to-br from-success to-success/80"
+        />
+        <StatCard 
+          icon={Calendar} 
+          label="Total Agendamentos" 
+          value={totalAppointments}
+          color="bg-gradient-to-br from-warning to-warning/80"
+        />
+      </div>
+
+      {/* Search Card */}
+      <Card className="border-border/50 shadow-sm">
         <CardContent className="p-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative flex-1">
@@ -653,185 +658,205 @@ export default function ClinicsManagement() {
                 placeholder="Buscar por nome, slug ou CNPJ..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9"
+                className="pl-10 bg-muted/30 border-border/50 focus:bg-background"
               />
             </div>
-            <Badge variant="secondary" className="text-sm justify-center">
-              {filteredClinics.length} clínica{filteredClinics.length !== 1 ? 's' : ''}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-sm px-3 py-1.5">
+                <Activity className="h-3.5 w-3.5 mr-1.5" />
+                {filteredClinics.length} clínica{filteredClinics.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Clinics List */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            Clínicas
+      <Card className="border-border/50 shadow-sm overflow-hidden">
+        <CardHeader className="bg-muted/30 border-b border-border/50">
+          <CardTitle className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <TrendingUp className="h-5 w-5 text-primary" />
+            </div>
+            Lista de Clínicas
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="space-y-3">
+        <CardContent className="p-0">
+          {isLoading ? (
+            <div className="p-6 space-y-4">
               {[1, 2, 3, 4, 5].map((i) => (
-                <Skeleton key={i} className="h-16 w-full" />
+                <Skeleton key={i} className="h-20 w-full rounded-lg" />
               ))}
             </div>
           ) : filteredClinics.length === 0 ? (
-            <div className="text-center py-12">
-              <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
+            <div className="text-center py-16 px-6">
+              <div className="inline-flex p-4 rounded-full bg-muted/50 mb-4">
+                <Building2 className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <p className="text-lg font-medium text-foreground mb-1">
                 {searchTerm ? "Nenhuma clínica encontrada" : "Nenhuma clínica cadastrada"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {searchTerm ? "Tente buscar por outro termo" : "As clínicas aparecerão aqui quando cadastradas"}
               </p>
             </div>
           ) : (
             <>
               {/* Desktop: Table View */}
               <div className="hidden lg:block">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Clínica</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Plano</TableHead>
-                      <TableHead className="text-center">Profissionais</TableHead>
-                      <TableHead className="text-center">Pacientes</TableHead>
-                      <TableHead className="text-center">Agendamentos</TableHead>
-                      <TableHead>Criada em</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredClinics.map((clinic) => (
-                      <TableRow key={clinic.id} className={clinic.is_blocked ? "bg-destructive/5" : ""}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className={`h-9 w-9 rounded-lg flex items-center justify-center shrink-0 ${
-                              clinic.is_blocked ? "bg-destructive/10" : "bg-primary/10"
-                            }`}>
-                              {clinic.is_blocked ? (
-                                <Ban className="h-4 w-4 text-destructive" />
-                              ) : (
-                                <Building2 className="h-4 w-4 text-primary" />
-                              )}
-                            </div>
-                            <div>
-                              <p className="font-medium">{clinic.name}</p>
-                              <code className="text-xs text-muted-foreground">/{clinic.slug}</code>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {clinic.is_blocked ? (
-                            <Badge variant="destructive" className="gap-1">
-                              <Ban className="h-3 w-3" />
-                              Bloqueada
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-success border-success gap-1">
-                              <CheckCircle className="h-3 w-3" />
-                              Ativa
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {clinic.subscription ? (
-                            <div className="space-y-1">
-                              <p className="text-sm font-medium">{clinic.subscription.plan.name}</p>
-                              {getStatusBadge(clinic.subscription.status)}
-                            </div>
-                          ) : (
-                            <Badge variant="outline" className="text-muted-foreground">
-                              Sem plano
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <Stethoscope className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>
-                              {clinic.professionalsCount}
-                              {clinic.subscription && (
-                                <span className="text-muted-foreground">
-                                  /{clinic.subscription.plan.max_professionals}
-                                </span>
-                              )}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <Users className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>{clinic.patientsCount}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>{clinic.appointmentsCount}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {new Date(clinic.created_at).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button size="icon" variant="ghost">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="bg-background">
-                                <DropdownMenuItem onClick={() => handleOpenPlanDialog(clinic)}>
-                                  <CreditCard className="h-4 w-4 mr-2" />
-                                  Gerenciar Plano
-                                </DropdownMenuItem>
+                <ScrollArea className="h-[600px]">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background z-10">
+                      <TableRow className="bg-muted/30 hover:bg-muted/30">
+                        <TableHead className="font-semibold">Clínica</TableHead>
+                        <TableHead className="font-semibold">Status</TableHead>
+                        <TableHead className="font-semibold">Plano</TableHead>
+                        <TableHead className="text-center font-semibold">Profissionais</TableHead>
+                        <TableHead className="text-center font-semibold">Pacientes</TableHead>
+                        <TableHead className="text-center font-semibold">Agendamentos</TableHead>
+                        <TableHead className="font-semibold">Criada em</TableHead>
+                        <TableHead className="text-right font-semibold">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredClinics.map((clinic) => (
+                        <TableRow 
+                          key={clinic.id} 
+                          className={`transition-colors ${clinic.is_blocked ? "bg-destructive/5 hover:bg-destructive/10" : "hover:bg-muted/30"}`}
+                        >
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+                                clinic.is_blocked 
+                                  ? "bg-destructive/10 text-destructive" 
+                                  : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
+                              }`}>
                                 {clinic.is_blocked ? (
-                                  <DropdownMenuItem 
-                                    onClick={() => handleOpenUnblockDialog(clinic)}
-                                    className="text-success focus:text-success"
-                                  >
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Desbloquear
-                                  </DropdownMenuItem>
+                                  <Ban className="h-5 w-5" />
                                 ) : (
+                                  <Building2 className="h-5 w-5" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground">{clinic.name}</p>
+                                <code className="text-xs text-muted-foreground font-mono">/{clinic.slug}</code>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {clinic.is_blocked ? (
+                              <Badge variant="destructive" className="gap-1.5">
+                                <Ban className="h-3 w-3" />
+                                Bloqueada
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-success/10 text-success border-success/20 gap-1.5">
+                                <CheckCircle className="h-3 w-3" />
+                                Ativa
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {clinic.subscription ? (
+                              <div className="space-y-1.5">
+                                <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20">
+                                  {clinic.subscription.plan.name}
+                                </Badge>
+                                {getStatusBadge(clinic.subscription.status)}
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="text-muted-foreground">
+                                Sem plano
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/50">
+                              <Stethoscope className="h-3.5 w-3.5 text-primary" />
+                              <span className="font-medium">
+                                {clinic.professionalsCount}
+                                {clinic.subscription && (
+                                  <span className="text-muted-foreground font-normal">
+                                    /{clinic.subscription.plan.max_professionals}
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/50">
+                              <Users className="h-3.5 w-3.5 text-info" />
+                              <span className="font-medium">{clinic.patientsCount}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-muted/50">
+                              <Calendar className="h-3.5 w-3.5 text-warning" />
+                              <span className="font-medium">{clinic.appointmentsCount}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {new Date(clinic.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button size="icon" variant="ghost" className="hover:bg-muted">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                  <DropdownMenuItem onClick={() => handleOpenPlanDialog(clinic)}>
+                                    <CreditCard className="h-4 w-4 mr-2" />
+                                    Gerenciar Plano
+                                  </DropdownMenuItem>
+                                  {clinic.is_blocked ? (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleOpenUnblockDialog(clinic)}
+                                      className="text-success focus:text-success"
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Desbloquear
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleOpenBlockDialog(clinic)}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Ban className="h-4 w-4 mr-2" />
+                                      Bloquear
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
                                   <DropdownMenuItem 
-                                    onClick={() => handleOpenBlockDialog(clinic)}
+                                    onClick={() => handleOpenDeleteDialog(clinic)}
                                     className="text-destructive focus:text-destructive"
                                   >
-                                    <Ban className="h-4 w-4 mr-2" />
-                                    Bloquear
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Excluir
                                   </DropdownMenuItem>
-                                )}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  onClick={() => handleOpenDeleteDialog(clinic)}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                            <Button
-                              size="sm"
-                              onClick={() => handleAccessClinic(clinic)}
-                            >
-                              <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-                              Acessar
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                              <Button
+                                size="sm"
+                                onClick={() => handleAccessClinic(clinic)}
+                                className="bg-primary hover:bg-primary/90"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                Acessar
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </ScrollArea>
               </div>
 
               {/* Mobile/Tablet: Cards View */}
-              <div className="lg:hidden space-y-4">
+              <div className="lg:hidden p-4 space-y-4">
                 {filteredClinics.map((clinic) => (
                   <ClinicCard
                     key={clinic.id}
@@ -852,15 +877,16 @@ export default function ClinicsManagement() {
 
       {/* Block Dialog */}
       <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
+              <div className="p-2 rounded-lg bg-destructive/10">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
               Bloquear Clínica
             </DialogTitle>
             <DialogDescription>
               Esta ação irá bloquear o acesso de todos os usuários da clínica "{selectedClinic?.name}".
-              Eles verão uma mensagem informando que o sistema está indisponível.
             </DialogDescription>
           </DialogHeader>
           
@@ -872,6 +898,8 @@ export default function ClinicsManagement() {
                 placeholder="Ex: Inadimplência, pagamento pendente..."
                 value={blockReason}
                 onChange={(e) => setBlockReason(e.target.value)}
+                className="resize-none"
+                rows={3}
               />
             </div>
           </div>
@@ -883,9 +911,9 @@ export default function ClinicsManagement() {
             <Button 
               variant="destructive" 
               onClick={handleBlockClinic}
-              disabled={actionLoading}
+              disabled={blockMutation.isPending}
             >
-              {actionLoading ? (
+              {blockMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Ban className="h-4 w-4 mr-2" />
@@ -900,12 +928,16 @@ export default function ClinicsManagement() {
       <AlertDialog open={unblockDialogOpen} onOpenChange={setUnblockDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Desbloquear Clínica</AlertDialogTitle>
-            <AlertDialogDescription>
-              Deseja realmente desbloquear a clínica "{selectedClinic?.name}"?
-              Todos os usuários terão acesso novamente ao sistema.
+            <AlertDialogTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-success/10">
+                <CheckCircle className="h-5 w-5 text-success" />
+              </div>
+              Desbloquear Clínica
+            </AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span>Deseja realmente desbloquear a clínica "{selectedClinic?.name}"?</span>
               {selectedClinic?.blocked_reason && (
-                <span className="block mt-2 p-2 bg-muted rounded text-sm">
+                <span className="block mt-2 p-3 bg-muted rounded-lg text-sm">
                   <strong>Motivo do bloqueio:</strong> {selectedClinic.blocked_reason}
                 </span>
               )}
@@ -915,10 +947,10 @@ export default function ClinicsManagement() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleUnblockClinic}
-              disabled={actionLoading}
+              disabled={unblockMutation.isPending}
               className="bg-success hover:bg-success/90"
             >
-              {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {unblockMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Desbloquear
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -927,27 +959,29 @@ export default function ClinicsManagement() {
 
       {/* Plan Management Dialog */}
       <Dialog open={planDialogOpen} onOpenChange={setPlanDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5 text-primary" />
-              Gerenciar Plano - {selectedClinic?.name}
+              <div className="p-2 rounded-lg bg-primary/10">
+                <CreditCard className="h-5 w-5 text-primary" />
+              </div>
+              Gerenciar Plano
             </DialogTitle>
             <DialogDescription>
-              Vincule ou altere o plano de assinatura desta clínica.
+              {selectedClinic?.name}
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             {/* Current Status */}
-            <div className="p-3 bg-muted rounded-lg space-y-2">
-              <p className="text-sm font-medium">Situação Atual:</p>
+            <div className="p-4 bg-muted/50 rounded-xl border border-border/50 space-y-2">
+              <p className="text-sm font-medium text-foreground">Situação Atual:</p>
               <div className="text-sm text-muted-foreground space-y-1">
-                <p>• Plano: {selectedClinic?.subscription?.plan.name || "Sem plano"}</p>
-                <p>• Status: {selectedClinic?.subscription?.status || "N/A"}</p>
-                <p>• Profissionais ativos: {selectedClinic?.professionalsCount || 0}
+                <p>• Plano: <span className="font-medium text-foreground">{selectedClinic?.subscription?.plan.name || "Sem plano"}</span></p>
+                <p>• Status: <span className="font-medium text-foreground">{selectedClinic?.subscription?.status || "N/A"}</span></p>
+                <p>• Profissionais ativos: <span className="font-medium text-foreground">{selectedClinic?.professionalsCount || 0}</span>
                   {selectedClinic?.subscription && (
-                    <span>/{selectedClinic.subscription.plan.max_professionals}</span>
+                    <span className="text-muted-foreground">/{selectedClinic.subscription.plan.max_professionals}</span>
                   )}
                 </p>
               </div>
@@ -957,7 +991,7 @@ export default function ClinicsManagement() {
             <div className="space-y-2">
               <Label>Plano</Label>
               <Select value={selectedPlanId} onValueChange={setSelectedPlanId}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-muted/30">
                   <SelectValue placeholder="Selecione um plano" />
                 </SelectTrigger>
                 <SelectContent>
@@ -974,7 +1008,7 @@ export default function ClinicsManagement() {
             <div className="space-y-2">
               <Label>Status</Label>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-muted/30">
                   <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1004,9 +1038,9 @@ export default function ClinicsManagement() {
             </Button>
             <Button 
               onClick={handleSavePlan}
-              disabled={actionLoading || !selectedPlanId}
+              disabled={savePlanMutation.isPending || !selectedPlanId}
             >
-              {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {savePlanMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Salvar
             </Button>
           </DialogFooter>
@@ -1018,7 +1052,9 @@ export default function ClinicsManagement() {
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <Trash2 className="h-5 w-5" />
+              <div className="p-2 rounded-lg bg-destructive/10">
+                <Trash2 className="h-5 w-5" />
+              </div>
               Excluir Clínica Permanentemente
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
@@ -1026,18 +1062,18 @@ export default function ClinicsManagement() {
                 Esta ação é <strong>irreversível</strong> e excluirá todos os dados da clínica "{selectedClinic?.name}".
               </span>
               
-              <span className="block p-3 bg-destructive/10 rounded-lg text-sm">
-                <strong>Serão excluídos:</strong>
-                <ul className="list-disc list-inside mt-1 space-y-0.5">
+              <span className="block p-4 bg-destructive/10 rounded-xl text-sm border border-destructive/20">
+                <strong className="text-destructive">Serão excluídos:</strong>
+                <ul className="list-disc list-inside mt-2 space-y-1 text-muted-foreground">
                   <li>{selectedClinic?.professionalsCount || 0} profissional(is)</li>
                   <li>{selectedClinic?.patientsCount || 0} paciente(s)</li>
                   <li>{selectedClinic?.appointmentsCount || 0} agendamento(s)</li>
-                  <li>Todos os prontuários, odontogramas, anamneses e configurações</li>
+                  <li>Todos os prontuários, odontogramas e configurações</li>
                 </ul>
               </span>
 
               <span className="block">
-                Para confirmar, digite o nome da clínica: <strong>{selectedClinic?.name}</strong>
+                Para confirmar, digite o nome da clínica: <strong className="text-foreground">{selectedClinic?.name}</strong>
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -1047,6 +1083,7 @@ export default function ClinicsManagement() {
               placeholder="Digite o nome da clínica para confirmar"
               value={confirmClinicName}
               onChange={(e) => setConfirmClinicName(e.target.value)}
+              className="bg-muted/30"
             />
           </div>
 
@@ -1054,10 +1091,10 @@ export default function ClinicsManagement() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeleteClinic}
-              disabled={actionLoading || confirmClinicName !== selectedClinic?.name}
+              disabled={deleteMutation.isPending || confirmClinicName !== selectedClinic?.name}
               className="bg-destructive hover:bg-destructive/90"
             >
-              {actionLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Excluir Permanentemente
             </AlertDialogAction>
           </AlertDialogFooter>
