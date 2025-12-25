@@ -27,6 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import BirthdayMessagesHistory from "@/components/dashboard/BirthdayMessagesHistory";
 
 interface DashboardStats {
   todayAppointments: number;
@@ -472,6 +473,9 @@ export default function DashboardOverview() {
           )}
         </CardContent>
       </Card>
+
+      {/* Birthday Messages History */}
+      <BirthdayMessagesHistory />
     </div>
   );
 }

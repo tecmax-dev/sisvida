@@ -14,7 +14,8 @@ type TableName =
   | "insurance_plans"
   | "anamnese_templates"
   | "anamnese_responses"
-  | "waiting_list_entries";
+  | "waiting_list_entries"
+  | "birthday_message_logs";
 
 interface UseRealtimeSubscriptionOptions {
   table: TableName;
@@ -103,6 +104,11 @@ export function useRealtimeSubscription({
       insert: "Paciente adicionado à lista de espera",
       update: "Lista de espera atualizada",
       delete: "Paciente removido da lista de espera",
+    },
+    birthday_message_logs: {
+      insert: "Mensagem de aniversário enviada",
+      update: "Registro atualizado",
+      delete: "Registro removido",
     },
   };
 
