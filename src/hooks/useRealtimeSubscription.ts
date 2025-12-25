@@ -15,7 +15,8 @@ type TableName =
   | "anamnese_templates"
   | "anamnese_responses"
   | "waiting_list_entries"
-  | "birthday_message_logs";
+  | "birthday_message_logs"
+  | "message_logs";
 
 interface UseRealtimeSubscriptionOptions {
   table: TableName;
@@ -107,6 +108,11 @@ export function useRealtimeSubscription({
     },
     birthday_message_logs: {
       insert: "Mensagem de aniversário enviada",
+      update: "Registro atualizado",
+      delete: "Registro removido",
+    },
+    message_logs: {
+      insert: "Nova mensagem enviada",
       update: "Registro atualizado",
       delete: "Registro removido",
     },
