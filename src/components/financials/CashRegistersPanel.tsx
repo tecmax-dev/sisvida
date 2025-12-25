@@ -30,7 +30,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plus, Wallet, Building2, CreditCard, MoreHorizontal, Trash2, Edit } from "lucide-react";
+import { Plus, Wallet, Building2, CreditCard, MoreHorizontal, Trash2, Edit, FileText } from "lucide-react";
 import { FinancialExportButton } from "./FinancialExportButton";
 import { exportCashRegisters, CashRegisterData } from "@/lib/financialExportUtils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,6 +40,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { BankStatementDialog } from "./BankStatementDialog";
 
 interface CashRegistersPanelProps {
   clinicId: string;
@@ -74,6 +75,8 @@ export function CashRegistersPanel({ clinicId }: CashRegistersPanelProps) {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingRegister, setEditingRegister] = useState<any>(null);
+  const [statementDialogOpen, setStatementDialogOpen] = useState(false);
+  const [selectedRegisterForStatement, setSelectedRegisterForStatement] = useState<any>(null);
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -240,6 +243,15 @@ export function CashRegistersPanel({ clinicId }: CashRegistersPanelProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {register.type === "bank" && (
+                    <DropdownMenuItem onClick={() => {
+                      setSelectedRegisterForStatement(register);
+                      setStatementDialogOpen(true);
+                    }}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Importar Extrato OFX
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => handleEdit(register)}>
                     <Edit className="h-4 w-4 mr-2" />
                     Editar
@@ -407,6 +419,12 @@ export function CashRegistersPanel({ clinicId }: CashRegistersPanelProps) {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <BankStatementDialog
+        open={statementDialogOpen}
+        onOpenChange={setStatementDialogOpen}
+        register={selectedRegisterForStatement}
+      />
     </div>
   );
 }
