@@ -13,7 +13,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Lock, Sparkles, Loader2, ArrowUpCircle, AlertTriangle } from "lucide-react";
+import { Lock, Sparkles, Loader2, ArrowUpCircle, AlertTriangle, ArrowDownCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useAvailablePlans } from "@/hooks/useSubscription";
 
@@ -59,11 +60,19 @@ export function FeatureGate({
     return <>{fallback}</>;
   }
 
-  // Filter plans that have more features (potential upgrades)
+  // Filter plans based on price for upgrade/downgrade
+  const currentPrice = subscription?.plan?.monthly_price || 0;
   const upgradePlans = plans.filter(p => 
     p.id !== subscription?.plan_id && 
-    p.monthly_price > (subscription?.plan?.monthly_price || 0)
+    p.monthly_price > currentPrice
   );
+  
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(price);
+  };
 
   const handleRequestUpgrade = async () => {
     if (!currentClinic || !selectedPlanId || !user) return;
@@ -146,19 +155,22 @@ export function FeatureGate({
               <p className="font-medium">{subscription?.plan?.name || "Sem plano"}</p>
             </div>
 
-            {/* Plan Selection */}
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Selecione o plano desejado:</p>
-              <div className="grid gap-2">
-                {upgradePlans.length > 0 ? (
-                  upgradePlans.map((plan) => (
+            {/* Plan Selection - Upgrades */}
+            {upgradePlans.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <ArrowUpCircle className="h-4 w-4 text-green-600" />
+                  <p className="text-sm font-medium text-green-600">Upgrades disponíveis:</p>
+                </div>
+                <div className="grid gap-2">
+                  {upgradePlans.map((plan) => (
                     <div
                       key={plan.id}
                       onClick={() => setSelectedPlanId(plan.id)}
-                      className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                      className={`p-3 rounded-lg border cursor-pointer transition-all border-green-200 dark:border-green-800 ${
                         selectedPlanId === plan.id
-                          ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                          : 'hover:border-primary/50'
+                          ? 'border-green-500 bg-green-50 dark:bg-green-950 ring-2 ring-green-500/20'
+                          : 'hover:border-green-500/50'
                       }`}
                     >
                       <div className="flex items-center justify-between">
@@ -166,25 +178,33 @@ export function FeatureGate({
                           <p className="font-medium">{plan.name}</p>
                           <p className="text-sm text-muted-foreground">{plan.description}</p>
                         </div>
-                        <p className="font-semibold text-primary">
-                          {plan.monthly_price === 0 
-                            ? "Grátis" 
-                            : `R$ ${plan.monthly_price}/mês`}
-                        </p>
+                        <div className="text-right">
+                          <p className="font-semibold text-green-600">
+                            {plan.monthly_price === 0 
+                              ? "Grátis" 
+                              : formatPrice(plan.monthly_price)}
+                            <span className="text-xs font-normal text-muted-foreground">/mês</span>
+                          </p>
+                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 text-xs">
+                            +{formatPrice(plan.monthly_price - currentPrice)}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="flex items-center gap-2 p-4 rounded-lg bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800">
-                    <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                    <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                      Você já está no plano mais completo disponível.
-                      Entre em contato para soluções personalizadas.
-                    </p>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
+
+            {upgradePlans.length === 0 && (
+              <div className="flex items-center gap-2 p-4 rounded-lg bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800">
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
+                <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                  Você já está no plano mais completo disponível.
+                  Entre em contato para soluções personalizadas.
+                </p>
+              </div>
+            )}
 
             {/* Reason */}
             <div className="space-y-2">

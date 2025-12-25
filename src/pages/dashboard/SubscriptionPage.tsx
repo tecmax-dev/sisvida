@@ -268,7 +268,7 @@ export default function SubscriptionPage() {
                   disabled={loadingPlans || hasPendingRequest}
                 >
                   <Sparkles className="h-4 w-4 mr-2" />
-                  {hasPendingRequest ? "Solicitação pendente" : "Solicitar Upgrade"}
+                  {hasPendingRequest ? "Solicitação pendente" : "Alterar Plano"}
                 </Button>
               </CardContent>
             </Card>
@@ -483,11 +483,11 @@ export default function SubscriptionPage() {
         </>
       )}
 
-      {/* Upgrade Dialog */}
+      {/* Plan Change Dialog */}
       <Dialog open={upgradeDialogOpen} onOpenChange={setUpgradeDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Solicitar Upgrade de Plano</DialogTitle>
+            <DialogTitle>Alterar Plano</DialogTitle>
             <DialogDescription>
               Selecione o plano desejado e sua solicitação será analisada pela nossa equipe
             </DialogDescription>
@@ -499,57 +499,151 @@ export default function SubscriptionPage() {
             </div>
           ) : (
             <>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 py-4">
-                {plans.filter(p => p.id !== subscription?.plan_id).map((plan) => (
-                  <Card
-                    key={plan.id}
-                    className={`cursor-pointer transition-all hover:border-primary ${
-                      selectedPlan === plan.id ? 'border-primary ring-2 ring-primary/20' : ''
-                    }`}
-                    onClick={() => setSelectedPlan(plan.id)}
-                  >
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-lg">{plan.name}</CardTitle>
-                      <CardDescription className="text-xs">
-                        {plan.description}
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div>
-                        <span className="text-2xl font-bold">
-                          {plan.monthly_price === 0 ? "Grátis" : formatPrice(plan.monthly_price)}
-                        </span>
-                        {plan.monthly_price > 0 && (
-                          <span className="text-muted-foreground text-sm">/mês</span>
-                        )}
-                      </div>
+              {/* Upgrade Plans */}
+              {(() => {
+                const currentPrice = subscription?.plan?.monthly_price || 0;
+                const upgradePlans = plans.filter(p => p.id !== subscription?.plan_id && p.monthly_price > currentPrice);
+                const downgradePlans = plans.filter(p => p.id !== subscription?.plan_id && p.monthly_price < currentPrice);
 
-                      <div className="flex items-center gap-2 text-sm">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span>Até {plan.max_professionals} profissional(is)</span>
-                      </div>
+                return (
+                  <div className="space-y-6 py-4">
+                    {upgradePlans.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-green-600" />
+                          <h3 className="font-medium text-green-600">Upgrade - Planos Superiores</h3>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {upgradePlans.map((plan) => (
+                            <Card
+                              key={plan.id}
+                              className={`cursor-pointer transition-all hover:border-green-500 border-green-200 dark:border-green-800 ${
+                                selectedPlan === plan.id ? 'border-green-500 ring-2 ring-green-500/20' : ''
+                              }`}
+                              onClick={() => setSelectedPlan(plan.id)}
+                            >
+                              <CardHeader className="pb-2">
+                                <div className="flex items-center justify-between">
+                                  <CardTitle className="text-lg">{plan.name}</CardTitle>
+                                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                                    +{formatPrice(plan.monthly_price - currentPrice)}
+                                  </Badge>
+                                </div>
+                                <CardDescription className="text-xs">
+                                  {plan.description}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                <div>
+                                  <span className="text-2xl font-bold text-green-600">
+                                    {plan.monthly_price === 0 ? "Grátis" : formatPrice(plan.monthly_price)}
+                                  </span>
+                                  {plan.monthly_price > 0 && (
+                                    <span className="text-muted-foreground text-sm">/mês</span>
+                                  )}
+                                </div>
 
-                      {plan.features.length > 0 && (
-                        <ul className="space-y-1">
-                          {plan.features.slice(0, 4).map((feature, index) => (
-                            <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
-                              <Check className="h-3 w-3 text-green-600" />
-                              {feature}
-                            </li>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Users className="h-4 w-4 text-muted-foreground" />
+                                  <span>Até {plan.max_professionals} profissional(is)</span>
+                                </div>
+
+                                {plan.features.length > 0 && (
+                                  <ul className="space-y-1">
+                                    {plan.features.slice(0, 4).map((feature, index) => (
+                                      <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <Check className="h-3 w-3 text-green-600" />
+                                        {feature}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </CardContent>
+                            </Card>
                           ))}
-                        </ul>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {downgradePlans.length > 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                          <h3 className="font-medium text-yellow-600">Downgrade - Planos Inferiores</h3>
+                        </div>
+                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                          {downgradePlans.map((plan) => (
+                            <Card
+                              key={plan.id}
+                              className={`cursor-pointer transition-all hover:border-yellow-500 border-yellow-200 dark:border-yellow-800 ${
+                                selectedPlan === plan.id ? 'border-yellow-500 ring-2 ring-yellow-500/20' : ''
+                              }`}
+                              onClick={() => setSelectedPlan(plan.id)}
+                            >
+                              <CardHeader className="pb-2">
+                                <div className="flex items-center justify-between">
+                                  <CardTitle className="text-lg">{plan.name}</CardTitle>
+                                  <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100">
+                                    -{formatPrice(currentPrice - plan.monthly_price)}
+                                  </Badge>
+                                </div>
+                                <CardDescription className="text-xs">
+                                  {plan.description}
+                                </CardDescription>
+                              </CardHeader>
+                              <CardContent className="space-y-3">
+                                <div>
+                                  <span className="text-2xl font-bold text-yellow-600">
+                                    {plan.monthly_price === 0 ? "Grátis" : formatPrice(plan.monthly_price)}
+                                  </span>
+                                  {plan.monthly_price > 0 && (
+                                    <span className="text-muted-foreground text-sm">/mês</span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2 text-sm">
+                                  <Users className="h-4 w-4 text-muted-foreground" />
+                                  <span>Até {plan.max_professionals} profissional(is)</span>
+                                </div>
+
+                                {plan.features.length > 0 && (
+                                  <ul className="space-y-1">
+                                    {plan.features.slice(0, 4).map((feature, index) => (
+                                      <li key={index} className="flex items-center gap-2 text-xs text-muted-foreground">
+                                        <Check className="h-3 w-3 text-yellow-600" />
+                                        {feature}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </CardContent>
+                            </Card>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          ⚠️ Ao fazer downgrade, você pode perder acesso a alguns recursos e limites do plano atual.
+                        </p>
+                      </div>
+                    )}
+
+                    {upgradePlans.length === 0 && downgradePlans.length === 0 && (
+                      <div className="flex items-center gap-2 p-4 rounded-lg bg-muted/50 border">
+                        <AlertTriangle className="h-5 w-5 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Não há outros planos disponíveis para alteração no momento.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
 
               {selectedPlan && (
                 <div className="space-y-2">
                   <Label htmlFor="reason">Motivo da solicitação (opcional)</Label>
                   <Textarea
                     id="reason"
-                    placeholder="Descreva por que você deseja fazer upgrade..."
+                    placeholder="Descreva por que você deseja alterar seu plano..."
                     value={upgradeReason}
                     onChange={(e) => setUpgradeReason(e.target.value)}
                     rows={3}
