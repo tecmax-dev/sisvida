@@ -17,6 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { handleScheduleValidationError } from "@/lib/scheduleValidation";
+import { findConflictingAppointments, calculateEndTime, getConflictMessage } from "@/lib/appointmentConflictUtils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -45,8 +46,19 @@ interface Appointment {
   notes: string | null;
   patient_id: string;
   professional_id: string;
+  duration_minutes?: number | null;
   patient: { id: string; name: string; phone: string } | null;
   professional: { id: string; name: string } | null;
+}
+
+interface ExistingAppointment {
+  id: string;
+  appointment_date: string;
+  start_time: string;
+  end_time: string;
+  professional_id: string;
+  status: string;
+  patient: { name: string } | null;
 }
 
 interface Patient {
@@ -108,6 +120,7 @@ export default function AppointmentEditPage() {
           notes,
           patient_id,
           professional_id,
+          duration_minutes,
           patient:patients (id, name, phone),
           professional:professionals (id, name)
         `)
@@ -182,10 +195,50 @@ export default function AppointmentEditPage() {
     setSaving(true);
 
     try {
-      const [hours, minutes] = startTime.split(':');
-      const endHours = parseInt(hours) + (parseInt(minutes) + 30 >= 60 ? 1 : 0);
-      const endMinutes = (parseInt(minutes) + 30) % 60;
-      const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+      const durationMinutes = appointment?.duration_minutes || 30;
+      
+      // Fetch existing appointments for the date and professional to check conflicts
+      const { data: existingAppointments } = await supabase
+        .from('appointments')
+        .select('id, appointment_date, start_time, end_time, professional_id, status, patient:patients(name)')
+        .eq('clinic_id', currentClinic.id)
+        .eq('appointment_date', appointmentDate)
+        .eq('professional_id', professionalId)
+        .in('status', ['scheduled', 'confirmed', 'arrived', 'in_progress']);
+
+      // Check for conflicts
+      if (existingAppointments) {
+        const conflicts = findConflictingAppointments(
+          existingAppointments as ExistingAppointment[],
+          {
+            appointmentDate,
+            startTime,
+            durationMinutes,
+            professionalId,
+            excludeAppointmentId: id,
+          }
+        );
+
+        if (conflicts.length > 0) {
+          const patientNames: Record<string, string> = {};
+          conflicts.forEach(c => {
+            const apt = existingAppointments.find((a: any) => a.id === c.id);
+            if (apt?.patient?.name) {
+              patientNames[c.id] = apt.patient.name;
+            }
+          });
+
+          toast({
+            title: "Conflito de horário",
+            description: getConflictMessage(conflicts, patientNames),
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+      }
+
+      const endTime = calculateEndTime(startTime, durationMinutes);
 
       const { error } = await supabase
         .from('appointments')
@@ -197,6 +250,7 @@ export default function AppointmentEditPage() {
           end_time: endTime,
           type: type as "first_visit" | "return" | "exam" | "procedure" | "telemedicine",
           notes: notes.trim() || null,
+          duration_minutes: durationMinutes,
         })
         .eq('id', id);
 

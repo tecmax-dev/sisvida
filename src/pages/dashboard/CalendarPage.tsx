@@ -9,6 +9,12 @@ import { DroppableTimeSlot } from "@/components/appointments/DroppableTimeSlot";
 import { DragOverlayContent } from "@/components/appointments/DragOverlayContent";
 import { DragInstructions } from "@/components/appointments/DragInstructions";
 import { 
+  findConflictingAppointments, 
+  findAllConflictingAppointments, 
+  calculateEndTime,
+  getConflictMessage,
+} from "@/lib/appointmentConflictUtils";
+import { 
   ChevronLeft, 
   ChevronRight, 
   Plus,
@@ -32,6 +38,7 @@ import {
   Play,
   GripVertical,
   Video,
+  AlertTriangle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -381,6 +388,23 @@ export default function CalendarPage() {
     });
   }, [appointments, filterProfessional, filterType, searchQuery, patients]);
 
+  // Detect conflicting appointments
+  const conflictingAppointmentIds = useMemo(() => {
+    return findAllConflictingAppointments(appointments);
+  }, [appointments]);
+
+  // Show notification when conflicts are detected
+  useEffect(() => {
+    if (conflictingAppointmentIds.size > 0 && !loading) {
+      toast({
+        title: `⚠️ ${conflictingAppointmentIds.size} agendamento(s) com conflito`,
+        description: "Existem agendamentos com conflitos de horário. Verifique e ajuste os horários.",
+        variant: "destructive",
+        duration: 6000,
+      });
+    }
+  }, [conflictingAppointmentIds.size, loading]);
+
   // Status priority for sorting (active appointments first)
   const statusPriority: Record<string, number> = {
     'in_progress': 1,   // Em atendimento - máxima prioridade
@@ -424,14 +448,38 @@ export default function CalendarPage() {
 
     if (!currentClinic || !user) return;
 
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    const durationMinutes = 30; // Default duration, could be from procedure
+    
+    // Check for conflicts before saving
+    const conflicts = findConflictingAppointments(appointments, {
+      appointmentDate: dateStr,
+      startTime: formTime,
+      durationMinutes,
+      professionalId: formProfessional,
+    });
+
+    if (conflicts.length > 0) {
+      const patientNames: Record<string, string> = {};
+      conflicts.forEach(c => {
+        const apt = appointments.find(a => a.id === c.id);
+        if (apt?.patient?.name) {
+          patientNames[c.id] = apt.patient.name;
+        }
+      });
+      
+      toast({
+        title: "Conflito de horário",
+        description: getConflictMessage(conflicts, patientNames),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
 
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
-      const [hours, minutes] = formTime.split(':');
-      const endHours = parseInt(hours) + (parseInt(minutes) + 30 >= 60 ? 1 : 0);
-      const endMinutes = (parseInt(minutes) + 30) % 60;
-      const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+      const endTime = calculateEndTime(formTime, durationMinutes);
 
       const { error } = await supabase
         .from('appointments')
@@ -446,6 +494,7 @@ export default function CalendarPage() {
           status: "scheduled" as const,
           notes: formNotes.trim() || null,
           created_by: user.id,
+          duration_minutes: durationMinutes,
         });
 
       if (error) throw error;
@@ -482,13 +531,38 @@ export default function CalendarPage() {
       return;
     }
 
+    const durationMinutes = editingAppointment.duration_minutes || 30;
+    
+    // Check for conflicts before saving (exclude current appointment)
+    const conflicts = findConflictingAppointments(appointments, {
+      appointmentDate: editingAppointment.appointment_date,
+      startTime: formTime,
+      durationMinutes,
+      professionalId: formProfessional,
+      excludeAppointmentId: editingAppointment.id,
+    });
+
+    if (conflicts.length > 0) {
+      const patientNames: Record<string, string> = {};
+      conflicts.forEach(c => {
+        const apt = appointments.find(a => a.id === c.id);
+        if (apt?.patient?.name) {
+          patientNames[c.id] = apt.patient.name;
+        }
+      });
+      
+      toast({
+        title: "Conflito de horário",
+        description: getConflictMessage(conflicts, patientNames),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
 
     try {
-      const [hours, minutes] = formTime.split(':');
-      const endHours = parseInt(hours) + (parseInt(minutes) + 30 >= 60 ? 1 : 0);
-      const endMinutes = (parseInt(minutes) + 30) % 60;
-      const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+      const endTime = calculateEndTime(formTime, durationMinutes);
 
       const { error } = await supabase
         .from('appointments')
@@ -499,6 +573,7 @@ export default function CalendarPage() {
           end_time: endTime,
           type: formType as "first_visit" | "return" | "exam" | "procedure",
           notes: formNotes.trim() || null,
+          duration_minutes: durationMinutes,
         })
         .eq('id', editingAppointment.id);
 
@@ -826,17 +901,28 @@ export default function CalendarPage() {
       return; // No change needed
     }
 
-    // Check if the target slot is occupied
-    const targetDateObj = new Date(newDate + 'T12:00:00');
-    const targetAppointments = getAppointmentsForDate(targetDateObj);
-    const isOccupied = targetAppointments.some(
-      apt => apt.start_time.slice(0, 5) === newTime && apt.status !== 'cancelled' && apt.id !== appointment.id
-    );
+    // Check for conflicts using the proper conflict detection
+    const duration = appointment.duration_minutes || 30;
+    const conflicts = findConflictingAppointments(appointments, {
+      appointmentDate: newDate,
+      startTime: newTime,
+      durationMinutes: duration,
+      professionalId: appointment.professional_id,
+      excludeAppointmentId: appointment.id,
+    });
 
-    if (isOccupied) {
+    if (conflicts.length > 0) {
+      const patientNames: Record<string, string> = {};
+      conflicts.forEach(c => {
+        const apt = appointments.find(a => a.id === c.id);
+        if (apt?.patient?.name) {
+          patientNames[c.id] = apt.patient.name;
+        }
+      });
+      
       toast({
-        title: "Horário ocupado",
-        description: "Este horário já possui um agendamento. Escolha outro horário.",
+        title: "Conflito de horário",
+        description: getConflictMessage(conflicts, patientNames),
         variant: "destructive",
       });
       return;
@@ -852,13 +938,8 @@ export default function CalendarPage() {
       return;
     }
 
-    // Calculate end time based on duration (default 30 minutes)
-    const duration = appointment.duration_minutes || 30;
-    const [hours, minutes] = newTime.split(':').map(Number);
-    const totalMinutes = hours * 60 + minutes + duration;
-    const endHours = Math.floor(totalMinutes / 60);
-    const endMinutes = totalMinutes % 60;
-    const endTime = `${endHours.toString().padStart(2, '0')}:${endMinutes.toString().padStart(2, '0')}`;
+    // Calculate end time based on duration
+    const endTime = calculateEndTime(newTime, duration);
 
     // Store original values for undo
     const originalAppointmentDate = appointment.appointment_date;
@@ -1289,22 +1370,29 @@ export default function CalendarPage() {
     const isInProgress = appointment.status === "in_progress";
     const canModify = !isCancelled && !isCompleted;
     const canAttend = appointment.status === "scheduled" || appointment.status === "confirmed" || isInProgress;
+    const hasConflict = conflictingAppointmentIds.has(appointment.id);
     
     return (
       <div
         className={cn(
           "flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group",
           isCancelled && "opacity-60",
-          isInProgress && "border-info bg-info/5"
+          isInProgress && "border-info bg-info/5",
+          hasConflict && !isCancelled && "border-destructive bg-destructive/5"
         )}
       >
         <div className={cn(
-          "w-20 text-center py-2 rounded-lg",
-          isInProgress ? "bg-info/20" : "bg-primary/10"
+          "w-20 text-center py-2 rounded-lg relative",
+          isInProgress ? "bg-info/20" : hasConflict && !isCancelled ? "bg-destructive/20" : "bg-primary/10"
         )}>
+          {hasConflict && !isCancelled && (
+            <div className="absolute -top-1 -right-1 bg-destructive rounded-full p-0.5" title="Conflito de horário">
+              <AlertTriangle className="h-3 w-3 text-destructive-foreground" />
+            </div>
+          )}
           <span className={cn(
             "text-sm font-semibold",
-            isInProgress ? "text-info" : "text-primary"
+            isInProgress ? "text-info" : hasConflict && !isCancelled ? "text-destructive" : "text-primary"
           )}>
             {appointment.start_time.slice(0, 5)}
           </span>
@@ -1316,9 +1404,17 @@ export default function CalendarPage() {
           )}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-medium text-foreground">
-            {appointment.patient?.name || "Paciente"}
-          </p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium text-foreground">
+              {appointment.patient?.name || "Paciente"}
+            </p>
+            {hasConflict && !isCancelled && (
+              <Badge variant="destructive" className="text-xs gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                Conflito
+              </Badge>
+            )}
+          </div>
           <div className="flex items-center gap-4 mt-1">
             <span className="text-sm text-muted-foreground flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
