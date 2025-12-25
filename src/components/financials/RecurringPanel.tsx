@@ -45,6 +45,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Plus, MoreHorizontal, Trash2, Play, Pause, RefreshCw } from "lucide-react";
+import { FinancialExportButton } from "./FinancialExportButton";
+import { exportRecurring, RecurringData } from "@/lib/financialExportUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -199,6 +201,22 @@ export function RecurringPanel({ clinicId }: RecurringPanelProps) {
       currency: "BRL",
     }).format(value);
 
+  const handleExport = (exportFormat: 'pdf' | 'excel') => {
+    const exportData: RecurringData[] = (recurrings || []).map(r => ({
+      description: r.description,
+      type: r.type === "income" ? "Receita" : "Despesa",
+      amount: Number(r.amount),
+      frequency: frequencyLabels[r.frequency],
+      nextDate: format(parseISO(r.next_due_date), "dd/MM/yyyy", { locale: ptBR }),
+      status: r.is_active ? "Ativa" : "Pausada",
+    }));
+    
+    const monthlyIncome = recurrings?.filter(r => r.type === 'income' && r.is_active).reduce((sum, r) => sum + Number(r.amount), 0) || 0;
+    const monthlyExpense = recurrings?.filter(r => r.type === 'expense' && r.is_active).reduce((sum, r) => sum + Number(r.amount), 0) || 0;
+    
+    exportRecurring("Clínica", exportData, { monthlyIncome, monthlyExpense }, exportFormat);
+  };
+
   if (isLoading) {
     return <Skeleton className="h-96" />;
   }
@@ -212,10 +230,17 @@ export function RecurringPanel({ clinicId }: RecurringPanelProps) {
             Configure receitas e despesas que se repetem automaticamente
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Recorrência
-        </Button>
+        <div className="flex items-center gap-2">
+          <FinancialExportButton
+            onExportPDF={() => handleExport('pdf')}
+            onExportExcel={() => handleExport('excel')}
+            disabled={!recurrings?.length}
+          />
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Recorrência
+          </Button>
+        </div>
       </div>
 
       <Card>

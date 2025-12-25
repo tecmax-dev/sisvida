@@ -31,6 +31,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Plus, Wallet, Building2, CreditCard, MoreHorizontal, Trash2, Edit } from "lucide-react";
+import { FinancialExportButton } from "./FinancialExportButton";
+import { exportCashRegisters, CashRegisterData } from "@/lib/financialExportUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -173,6 +175,22 @@ export function CashRegistersPanel({ clinicId }: CashRegistersPanelProps) {
       currency: "BRL",
     }).format(value);
 
+  const handleExport = (exportFormat: 'pdf' | 'excel') => {
+    const exportData: CashRegisterData[] = (registers || []).map(r => ({
+      name: r.name,
+      type: typeLabels[r.type],
+      initialBalance: Number(r.initial_balance),
+      currentBalance: Number(r.current_balance),
+      bankName: r.bank_name || undefined,
+      agency: r.agency || undefined,
+      account: r.account_number || undefined,
+    }));
+    
+    const totalBalance = registers?.reduce((sum, r) => sum + Number(r.current_balance), 0) || 0;
+    
+    exportCashRegisters("Clínica", exportData, totalBalance, exportFormat);
+  };
+
   const type = form.watch("type");
 
   if (isLoading) {
@@ -194,10 +212,17 @@ export function CashRegistersPanel({ clinicId }: CashRegistersPanelProps) {
             Gerencie seus caixas e contas bancárias
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Caixa
-        </Button>
+        <div className="flex items-center gap-2">
+          <FinancialExportButton
+            onExportPDF={() => handleExport('pdf')}
+            onExportExcel={() => handleExport('excel')}
+            disabled={!registers?.length}
+          />
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Caixa
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

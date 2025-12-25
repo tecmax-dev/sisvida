@@ -20,6 +20,8 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { MoreHorizontal, Search, Check, X, Trash2 } from "lucide-react";
+import { FinancialExportButton } from "./FinancialExportButton";
+import { exportTransactions, TransactionData } from "@/lib/financialExportUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -170,6 +172,30 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
       currency: "BRL",
     }).format(value);
 
+  const handleExport = (exportFormat: 'pdf' | 'excel') => {
+    const exportData: TransactionData[] = (filteredTransactions || []).map(t => ({
+      date: t.due_date ? format(new Date(t.due_date), "dd/MM/yyyy", { locale: ptBR }) : "-",
+      description: t.description,
+      category: (t.financial_categories as any)?.name || "-",
+      patient: (t.patients as any)?.name || "-",
+      paymentMethod: t.payment_method ? paymentMethodLabels[t.payment_method] : "-",
+      amount: Number(t.amount),
+      type: t.type as 'income' | 'expense',
+      status: statusLabels[t.status || "pending"],
+    }));
+    
+    const totalIncome = filteredTransactions?.filter(t => t.type === 'income').reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+    const totalExpense = filteredTransactions?.filter(t => t.type === 'expense').reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+    
+    exportTransactions(
+      "Clínica",
+      "Período atual",
+      exportData,
+      { income: totalIncome, expense: totalExpense },
+      exportFormat
+    );
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -187,14 +213,21 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">Transações</CardTitle>
-        <div className="relative w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+        <div className="flex items-center gap-4">
+          <FinancialExportButton
+            onExportPDF={() => handleExport('pdf')}
+            onExportExcel={() => handleExport('excel')}
+            disabled={!filteredTransactions?.length}
           />
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
       </CardHeader>
       <CardContent>

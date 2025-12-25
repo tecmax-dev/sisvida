@@ -38,6 +38,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { Plus, ArrowRight, Wallet } from "lucide-react";
+import { FinancialExportButton } from "./FinancialExportButton";
+import { exportTransfers, TransferData } from "@/lib/financialExportUtils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -151,6 +153,20 @@ export function TransfersPanel({ clinicId }: TransfersPanelProps) {
       currency: "BRL",
     }).format(value);
 
+  const handleExport = (exportFormat: 'pdf' | 'excel') => {
+    const exportData: TransferData[] = (transfers || []).map(t => ({
+      date: format(parseISO(t.transfer_date), "dd/MM/yyyy", { locale: ptBR }),
+      from: (t.from_register as any)?.name || "-",
+      to: (t.to_register as any)?.name || "-",
+      amount: Number(t.amount),
+      description: t.description || "",
+    }));
+    
+    const totalAmount = transfers?.reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+    
+    exportTransfers("Clínica", "Período atual", exportData, totalAmount, exportFormat);
+  };
+
   if (isLoading) {
     return <Skeleton className="h-96" />;
   }
@@ -164,10 +180,17 @@ export function TransfersPanel({ clinicId }: TransfersPanelProps) {
             Transfira valores entre caixas e contas
           </p>
         </div>
-        <Button onClick={() => setDialogOpen(true)} disabled={!registers || registers.length < 2}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Transferência
-        </Button>
+        <div className="flex items-center gap-2">
+          <FinancialExportButton
+            onExportPDF={() => handleExport('pdf')}
+            onExportExcel={() => handleExport('excel')}
+            disabled={!transfers?.length}
+          />
+          <Button onClick={() => setDialogOpen(true)} disabled={!registers || registers.length < 2}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Transferência
+          </Button>
+        </div>
       </div>
 
       {(!registers || registers.length < 2) && (
