@@ -13,6 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
+import { MessageHistoryPanel } from "@/components/settings/MessageHistoryPanel";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function SettingsPage() {
@@ -428,6 +429,11 @@ export default function SettingsPage() {
       {/* WhatsApp Integration */}
       {currentClinic && (
         <EvolutionConfigPanel clinicId={currentClinic.id} />
+      )}
+
+      {/* Message History */}
+      {currentClinic && (
+        <MessageHistoryPanel clinicId={currentClinic.id} />
       )}
 
       {/* API Integrations */}
