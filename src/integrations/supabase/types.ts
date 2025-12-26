@@ -14,6 +14,76 @@ export type Database = {
   }
   public: {
     Tables: {
+      access_group_permissions: {
+        Row: {
+          access_group_id: string
+          created_at: string | null
+          id: string
+          permission_key: string
+        }
+        Insert: {
+          access_group_id: string
+          created_at?: string | null
+          id?: string
+          permission_key: string
+        }
+        Update: {
+          access_group_id?: string
+          created_at?: string | null
+          id?: string
+          permission_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_group_permissions_access_group_id_fkey"
+            columns: ["access_group_id"]
+            isOneToOne: false
+            referencedRelation: "access_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      access_groups: {
+        Row: {
+          clinic_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_system: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_system?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "access_groups_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anamnese_answers: {
         Row: {
           answer_option_ids: string[] | null
@@ -2146,6 +2216,42 @@ export type Database = {
           },
         ]
       }
+      permission_definitions: {
+        Row: {
+          category: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          key: string
+          name: string
+          order_index: number | null
+          parent_key: string | null
+        }
+        Insert: {
+          category: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          name: string
+          order_index?: number | null
+          parent_key?: string | null
+        }
+        Update: {
+          category?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          name?: string
+          order_index?: number | null
+          parent_key?: string | null
+        }
+        Relationships: []
+      }
       plan_features: {
         Row: {
           created_at: string | null
@@ -3314,6 +3420,7 @@ export type Database = {
       }
       user_roles: {
         Row: {
+          access_group_id: string | null
           clinic_id: string
           created_at: string
           id: string
@@ -3321,6 +3428,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          access_group_id?: string | null
           clinic_id: string
           created_at?: string
           id?: string
@@ -3328,6 +3436,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          access_group_id?: string | null
           clinic_id?: string
           created_at?: string
           id?: string
@@ -3335,6 +3444,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "user_roles_access_group_id_fkey"
+            columns: ["access_group_id"]
+            isOneToOne: false
+            referencedRelation: "access_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "user_roles_clinic_id_fkey"
             columns: ["clinic_id"]
@@ -3564,6 +3680,12 @@ export type Database = {
         }[]
       }
       get_user_clinic_ids: { Args: { _user_id: string }; Returns: string[] }
+      get_user_permissions: {
+        Args: { _clinic_id: string; _user_id: string }
+        Returns: {
+          permission_key: string
+        }[]
+      }
       has_clinic_access: {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean
@@ -3573,6 +3695,10 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      user_has_permission: {
+        Args: { _clinic_id: string; _permission_key: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role:

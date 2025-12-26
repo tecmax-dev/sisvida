@@ -1,5 +1,8 @@
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
+// Legacy permission types for backward compatibility
 export type Permission =
   | "view_dashboard"
   | "manage_calendar"
@@ -24,10 +27,10 @@ export type Permission =
   | "view_procedures"
   | "manage_procedures";
 
-// Define permissions for each role
+// Legacy role permissions for backward compatibility (used when access_group_id is not set)
 const rolePermissions: Record<string, Permission[] | "*"> = {
-  owner: "*", // All permissions
-  admin: "*", // All permissions
+  owner: "*",
+  admin: "*",
   receptionist: [
     "view_dashboard",
     "manage_calendar",
@@ -65,11 +68,34 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
 };
 
 export function usePermissions() {
-  const { userRoles, currentClinic, isSuperAdmin } = useAuth();
+  const { user, userRoles, currentClinic, isSuperAdmin } = useAuth();
 
   // Get current role for the current clinic
   const currentUserRole = userRoles.find((r) => r.clinic_id === currentClinic?.id);
   const currentRole = currentUserRole?.role || null;
+  const accessGroupId = (currentUserRole as any)?.access_group_id || null;
+
+  // Fetch permissions from database when user has an access_group_id
+  const { data: dbPermissions } = useQuery({
+    queryKey: ['user-permissions', user?.id, currentClinic?.id],
+    queryFn: async () => {
+      if (!user?.id || !currentClinic?.id) return null;
+      
+      const { data, error } = await supabase.rpc('get_user_permissions', {
+        _user_id: user.id,
+        _clinic_id: currentClinic.id
+      });
+
+      if (error) {
+        console.error('Error fetching user permissions:', error);
+        return null;
+      }
+
+      return new Set(data?.map((p: { permission_key: string }) => p.permission_key) || []);
+    },
+    enabled: !!user?.id && !!currentClinic?.id && (!!accessGroupId || isSuperAdmin || currentRole === 'owner' || currentRole === 'admin'),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
 
   const hasPermission = (permission: Permission): boolean => {
     // Super admins have all permissions
@@ -78,6 +104,12 @@ export function usePermissions() {
     // No role means no permissions
     if (!currentRole) return false;
 
+    // If using database permissions (access group or owner/admin)
+    if (dbPermissions) {
+      return dbPermissions.has(permission);
+    }
+
+    // Fallback to legacy role-based permissions
     const permissions = rolePermissions[currentRole];
 
     // If permissions is "*", user has all permissions
@@ -108,5 +140,6 @@ export function usePermissions() {
     hasAllPermissions,
     isAdmin,
     isProfessionalOnly,
+    dbPermissions, // Expose for debugging if needed
   };
 }

@@ -60,12 +60,13 @@ const PackagesPage = lazy(() => import("./pages/dashboard/PackagesPage"));
 const PatientAttachmentsPage = lazy(() => import("./pages/dashboard/PatientAttachmentsPage"));
 const StockPage = lazy(() => import("./pages/dashboard/StockPage"));
 
-// Admin pages (8 páginas)
+// Admin pages (9 páginas)
 const SuperAdminDashboard = lazy(() => import("./pages/admin/SuperAdminDashboard"));
 const ClinicsManagement = lazy(() => import("./pages/admin/ClinicsManagement"));
 const UsersManagement = lazy(() => import("./pages/admin/UsersManagement"));
 const PlansManagement = lazy(() => import("./pages/admin/PlansManagement"));
 const FeaturesManagement = lazy(() => import("./pages/admin/FeaturesManagement"));
+const AccessGroupsPage = lazy(() => import("./pages/admin/AccessGroupsPage"));
 const UpgradeRequestsPage = lazy(() => import("./pages/admin/UpgradeRequestsPage"));
 const AuditLogsPage = lazy(() => import("./pages/admin/AuditLogsPage"));
 const DataImportPage = lazy(() => import("./pages/admin/DataImportPage"));
@@ -173,6 +174,7 @@ const App = () => (
                   <Route path="users" element={<UsersManagement />} />
                   <Route path="plans" element={<PlansManagement />} />
                   <Route path="features" element={<FeaturesManagement />} />
+                  <Route path="access-groups" element={<AccessGroupsPage />} />
                   <Route path="upgrades" element={<UpgradeRequestsPage />} />
                   <Route path="import" element={<DataImportPage />} />
                   <Route path="smtp" element={<SmtpSettingsPage />} />
