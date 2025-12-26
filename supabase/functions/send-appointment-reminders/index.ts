@@ -6,6 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Logo padrão do sistema Eclini
+// Logo padrão do sistema Eclini - hospedada publicamente
+const DEFAULT_SYSTEM_LOGO = 'https://eclini.lovable.app/logo.png';
+
 interface EvolutionConfig {
   api_url: string;
   api_key: string;
@@ -306,21 +310,14 @@ serve(async (req) => {
 
         let success = false;
         
-        // Send with logo if available, otherwise text only
-        if (clinic.logo_url) {
-          success = await sendWhatsAppWithImage(
-            evolutionConfig as EvolutionConfig,
-            patient.phone,
-            clinic.logo_url,
-            message
-          );
-        } else {
-          success = await sendWhatsAppViaEvolution(
-            evolutionConfig as EvolutionConfig,
-            patient.phone,
-            message
-          );
-        }
+        // Sempre envia com imagem: usa logo da clínica ou logo padrão do sistema
+        const logoUrl = clinic.logo_url || DEFAULT_SYSTEM_LOGO;
+        success = await sendWhatsAppWithImage(
+          evolutionConfig as EvolutionConfig,
+          patient.phone,
+          logoUrl,
+          message
+        );
 
         if (success) {
           // Mark as sent

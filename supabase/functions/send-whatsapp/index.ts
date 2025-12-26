@@ -6,11 +6,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Logo padrão do sistema Eclini
+// Logo padrão do sistema Eclini - hospedada publicamente
+const DEFAULT_SYSTEM_LOGO = 'https://eclini.lovable.app/logo.png';
+
 interface WhatsAppRequest {
   phone: string;
   message: string;
   clinicId: string;
   type?: 'reminder' | 'confirmation' | 'custom' | 'document';
+  imageUrl?: string; // URL da imagem para enviar como cabeçalho
 }
 
 interface EvolutionConfig {
@@ -127,12 +132,21 @@ serve(async (req) => {
       }
     }
 
-    // 9. Fetch clinic's Evolution API configuration
+    // 9. Fetch clinic's Evolution API configuration and logo
     const { data: evolutionConfig, error: configError } = await supabase
       .from('evolution_configs')
       .select('api_url, api_key, instance_name, is_connected')
       .eq('clinic_id', clinicId)
       .maybeSingle();
+
+    // Fetch clinic logo
+    const { data: clinicData } = await supabase
+      .from('clinics')
+      .select('logo_url')
+      .eq('id', clinicId)
+      .maybeSingle();
+
+    const logoUrl = clinicData?.logo_url || DEFAULT_SYSTEM_LOGO;
 
     if (configError) {
       console.error('Error fetching evolution config:', configError);
@@ -219,9 +233,10 @@ serve(async (req) => {
       formattedPhone = '55' + formattedPhone;
     }
 
-    console.log(`[Clinic ${clinicId}] User ${user.id} sending WhatsApp message to ${formattedPhone} via instance ${instance_name}`);
+    console.log(`[Clinic ${clinicId}] User ${user.id} sending WhatsApp message to ${formattedPhone} via instance ${instance_name} with logo`);
 
-    const response = await fetch(`${api_url}/message/sendText/${instance_name}`, {
+    // Envia mensagem com imagem (logo) no cabeçalho
+    const response = await fetch(`${api_url}/message/sendMedia/${instance_name}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -229,7 +244,9 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         number: formattedPhone,
-        text: message,
+        mediatype: 'image',
+        media: logoUrl,
+        caption: message,
       }),
     });
 
