@@ -420,9 +420,9 @@ Equipe {clinica}`;
               Enviar Teste
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2 italic">
-            O envio de teste conta no limite mensal de mensagens.
-          </p>
+           <p className="text-xs text-muted-foreground mt-2 italic">
+             O envio de teste não consome créditos do sistema.
+           </p>
         </div>
         {loading ? (
           <div className="flex items-center justify-center py-8">

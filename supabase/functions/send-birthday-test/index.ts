@@ -99,12 +99,12 @@ serve(async (req) => {
   }
 
   try {
-    // Validate authentication
+    // Validate authentication (we validate manually; platform JWT verification is disabled)
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Não autorizado' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, code: 401, error: 'Missing authorization header' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -118,8 +118,8 @@ serve(async (req) => {
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     if (userError || !user) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Sessão inválida' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, code: 401, error: 'Sessão inválida' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -128,8 +128,8 @@ serve(async (req) => {
 
     if (!clinicId || !testPhone) {
       return new Response(
-        JSON.stringify({ success: false, error: 'clinicId e testPhone são obrigatórios' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, code: 400, error: 'clinicId e testPhone são obrigatórios' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -141,8 +141,8 @@ serve(async (req) => {
 
     if (!hasAccess) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Sem acesso a esta clínica' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, code: 403, error: 'Sem acesso a esta clínica' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -155,8 +155,8 @@ serve(async (req) => {
 
     if (clinicError || !clinic) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Clínica não encontrada' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, code: 404, error: 'Clínica não encontrada' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -169,15 +169,15 @@ serve(async (req) => {
 
     if (configError || !evolutionConfig) {
       return new Response(
-        JSON.stringify({ success: false, error: 'WhatsApp não configurado para esta clínica' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, code: 400, error: 'WhatsApp não configurado para esta clínica' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!evolutionConfig.is_connected) {
       return new Response(
-        JSON.stringify({ success: false, error: 'WhatsApp desconectado. Reconecte nas Configurações.' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, code: 400, error: 'WhatsApp desconectado. Reconecte nas Configurações.' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -191,8 +191,8 @@ serve(async (req) => {
     const usage = usageData && usageData.length > 0 ? usageData[0] : null;
     if (usage && usage.max_allowed > 0 && usage.remaining <= 0) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Limite mensal de mensagens atingido' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, code: 429, error: 'Limite mensal de mensagens atingido' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -238,42 +238,32 @@ Equipe {clinica}`;
     );
 
     if (result.success) {
-      // Log in message_logs for quota tracking
-      await supabase
-        .from('message_logs')
-        .insert({
-          clinic_id: clinicId,
-          message_type: 'birthday_test',
-          phone: testPhone.replace(/\D/g, '').startsWith('55') 
-            ? testPhone.replace(/\D/g, '') 
-            : '55' + testPhone.replace(/\D/g, ''),
-          month_year: monthYear
-        });
-
+      // NÃO registrar em message_logs (não consumir créditos do sistema)
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           message: 'Mensagem de teste enviada com sucesso!',
-          details: result.response 
+          details: result.response,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     } else {
       return new Response(
-        JSON.stringify({ 
-          success: false, 
+        JSON.stringify({
+          success: false,
+          code: 400,
           error: result.error || 'Falha ao enviar mensagem',
-          details: result.response 
+          details: result.response,
         }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
   } catch (error: unknown) {
     console.error('[TEST] Error in send-birthday-test:', error);
     const errorMessage = error instanceof Error ? error.message : 'Erro interno';
-    return new Response(
-      JSON.stringify({ success: false, error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+      return new Response(
+        JSON.stringify({ success: false, code: 500, error: errorMessage }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
   }
 });
