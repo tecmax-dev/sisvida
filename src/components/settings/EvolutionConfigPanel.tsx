@@ -51,6 +51,70 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
     loadConfig();
   }, [clinicId]);
 
+  // Verificar status real da conexão periodicamente
+  useEffect(() => {
+    if (!config || !config.is_connected) return;
+
+    // Verificar status real ao carregar se estiver "conectado"
+    checkRealConnectionStatus();
+
+    // Verificar a cada 30 segundos
+    const interval = setInterval(checkRealConnectionStatus, 30000);
+    return () => clearInterval(interval);
+  }, [config?.id, config?.is_connected]);
+
+  const checkRealConnectionStatus = async () => {
+    if (!config) return;
+    
+    try {
+      const { data: result, error } = await supabase.functions.invoke('evolution-api', {
+        body: { clinicId, action: 'connectionState' },
+      });
+
+      if (error) {
+        console.error('[EvolutionConfig] Error checking status:', error);
+        return;
+      }
+      
+      const isConnected = 
+        result?.data?.instance?.state === "open" ||
+        result?.data?.state === "open" ||
+        result?.data?.status === "CONNECTED" ||
+        result?.data?.instance?.status === "CONNECTED";
+
+      // Se o status mudou, atualizar o banco e o estado local
+      if (isConnected !== config.is_connected) {
+        console.log(`[EvolutionConfig] Status changed: ${config.is_connected} -> ${isConnected}`);
+        
+        await supabase
+          .from("evolution_configs")
+          .update({
+            is_connected: isConnected,
+            connected_at: isConnected ? new Date().toISOString() : null,
+            phone_number: isConnected ? result?.data?.instance?.phoneNumber : null,
+          })
+          .eq("id", config.id);
+
+        setConfig({
+          ...config,
+          is_connected: isConnected,
+          connected_at: isConnected ? new Date().toISOString() : null,
+          phone_number: isConnected ? result?.data?.instance?.phoneNumber : null,
+        });
+
+        if (!isConnected) {
+          toast({
+            title: "WhatsApp Desconectado",
+            description: "A conexão foi perdida. Escaneie o QR Code novamente.",
+            variant: "destructive",
+          });
+        }
+      }
+    } catch (error) {
+      console.error('[EvolutionConfig] Error in checkRealConnectionStatus:', error);
+    }
+  };
+
   const loadConfig = async () => {
     setLoading(true);
     
