@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { 
   Cake, 
   CheckCircle2, 
@@ -14,7 +15,8 @@ import {
   Phone,
   Calendar,
   Send,
-  Loader2
+  Loader2,
+  TestTube2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -56,6 +58,10 @@ export default function BirthdayMessagesHistory() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [sendingManual, setSendingManual] = useState(false);
+  
+  // Test mode state
+  const [testPhone, setTestPhone] = useState("");
+  const [sendingTest, setSendingTest] = useState(false);
 
   useRealtimeSubscription({
     table: 'birthday_message_logs',
@@ -185,6 +191,59 @@ Equipe {clinica}`;
     }
   };
 
+  const handleTestSend = async () => {
+    if (!currentClinic || !testPhone.trim()) {
+      toast({
+        title: "Telefone obrigatório",
+        description: "Informe um número de telefone para teste.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Clean phone number - only digits
+    const cleanPhone = testPhone.replace(/\D/g, '');
+    if (cleanPhone.length < 10 || cleanPhone.length > 13) {
+      toast({
+        title: "Telefone inválido",
+        description: "O número deve ter entre 10 e 13 dígitos (DDD + número).",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setSendingTest(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-birthday-test', {
+        body: { 
+          clinicId: currentClinic.id, 
+          testPhone: cleanPhone 
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast({
+          title: "Teste enviado!",
+          description: data.message || "Mensagem de teste enviada com sucesso. Verifique o WhatsApp.",
+        });
+        setTestPhone("");
+      } else {
+        throw new Error(data?.error || 'Falha ao enviar');
+      }
+    } catch (error: any) {
+      console.error('Error sending test birthday message:', error);
+      toast({
+        title: "Erro no envio de teste",
+        description: error.message || "Não foi possível enviar a mensagem de teste.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingTest(false);
+    }
+  };
+
   const formatPhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 13) { // 55 + DDD + 9 digits
@@ -282,7 +341,44 @@ Equipe {clinica}`;
           </Dialog>
         </div>
       </CardHeader>
-      <CardContent className="pt-4">
+      <CardContent className="pt-4 space-y-4">
+        {/* Test Section */}
+        <div className="p-3 rounded-lg border border-dashed border-border/60 bg-muted/20">
+          <div className="flex items-center gap-2 mb-2">
+            <TestTube2 className="h-4 w-4 text-primary" />
+            <Label className="text-sm font-medium">Testar Envio</Label>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Envie uma mensagem de teste para validar a configuração. Apenas números (DDD + número). Ex: 11999999999
+          </p>
+          <div className="flex gap-2">
+            <Input
+              type="tel"
+              placeholder="Ex: 11999999999"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value.replace(/\D/g, '').slice(0, 13))}
+              className="flex-1"
+              maxLength={13}
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleTestSend}
+              disabled={sendingTest || !testPhone.trim()}
+              className="gap-2 shrink-0"
+            >
+              {sendingTest ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Enviar Teste
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 italic">
+            O envio de teste conta no limite mensal de mensagens.
+          </p>
+        </div>
         {loading ? (
           <div className="flex items-center justify-center py-8">
             <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />

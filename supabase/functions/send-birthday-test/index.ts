@@ -1,0 +1,279 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.7.1';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Logo padrão do sistema Eclini para cabeçalho de mensagens WhatsApp
+const DEFAULT_SYSTEM_LOGO = 'https://eclini.lovable.app/birthday-header.webp';
+
+interface EvolutionConfig {
+  api_url: string;
+  api_key: string;
+  instance_name: string;
+  is_connected: boolean;
+}
+
+// Format birthday message with placeholders
+function formatBirthdayMessage(template: string, patientName: string, clinicName: string): string {
+  return template
+    .replace(/{nome}/gi, patientName)
+    .replace(/{clinica}/gi, clinicName)
+    .replace(/{paciente}/gi, patientName);
+}
+
+async function sendWhatsAppWithImage(
+  config: EvolutionConfig,
+  phone: string,
+  imageUrl: string,
+  caption: string
+): Promise<{ success: boolean; response?: any; error?: string }> {
+  try {
+    let formattedPhone = phone.replace(/\D/g, '');
+    if (!formattedPhone.startsWith('55')) {
+      formattedPhone = '55' + formattedPhone;
+    }
+
+    console.log(`[TEST] Sending birthday WhatsApp with image to ${formattedPhone}`);
+    console.log(`[TEST] Image URL: ${imageUrl}`);
+    console.log(`[TEST] Caption: ${caption.substring(0, 50)}...`);
+
+    const response = await fetch(`${config.api_url}/message/sendMedia/${config.instance_name}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.api_key,
+      },
+      body: JSON.stringify({
+        number: formattedPhone,
+        mediatype: 'image',
+        media: imageUrl,
+        caption: caption,
+      }),
+    });
+
+    const responseText = await response.text();
+    console.log(`[TEST] Evolution API response status: ${response.status}`);
+    console.log(`[TEST] Evolution API response body: ${responseText}`);
+
+    let responseData;
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = responseText;
+    }
+
+    if (!response.ok) {
+      return { 
+        success: false, 
+        error: `API error ${response.status}: ${responseText}`,
+        response: responseData 
+      };
+    }
+
+    // Check if the response indicates success
+    // Evolution API may return 200 but with error in body
+    if (responseData?.error || responseData?.message?.includes('error')) {
+      return { 
+        success: false, 
+        error: responseData?.error || responseData?.message || 'Unknown error',
+        response: responseData 
+      };
+    }
+
+    return { success: true, response: responseData };
+  } catch (error) {
+    console.error('[TEST] Error sending WhatsApp with image:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    // Validate authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Não autorizado' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Get user session
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Sessão inválida' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Parse request body
+    const { clinicId, testPhone } = await req.json();
+
+    if (!clinicId || !testPhone) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'clinicId e testPhone são obrigatórios' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate user has access to clinic
+    const { data: hasAccess } = await supabase.rpc('has_clinic_access', {
+      _user_id: user.id,
+      _clinic_id: clinicId
+    });
+
+    if (!hasAccess) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Sem acesso a esta clínica' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch clinic data
+    const { data: clinic, error: clinicError } = await supabase
+      .from('clinics')
+      .select('id, name, birthday_message, logo_url')
+      .eq('id', clinicId)
+      .single();
+
+    if (clinicError || !clinic) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Clínica não encontrada' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch Evolution API config
+    const { data: evolutionConfig, error: configError } = await supabase
+      .from('evolution_configs')
+      .select('api_url, api_key, instance_name, is_connected')
+      .eq('clinic_id', clinicId)
+      .maybeSingle();
+
+    if (configError || !evolutionConfig) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'WhatsApp não configurado para esta clínica' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!evolutionConfig.is_connected) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'WhatsApp desconectado. Reconecte nas Configurações.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check message limit
+    const monthYear = new Date().toISOString().slice(0, 7);
+    const { data: usageData } = await supabase.rpc('get_clinic_message_usage', {
+      _clinic_id: clinicId,
+      _month_year: monthYear
+    });
+
+    const usage = usageData && usageData.length > 0 ? usageData[0] : null;
+    if (usage && usage.max_allowed > 0 && usage.remaining <= 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Limite mensal de mensagens atingido' }),
+        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Fetch first active professional's avatar for the header image
+    const { data: professional } = await supabase
+      .from('professionals')
+      .select('avatar_url')
+      .eq('clinic_id', clinicId)
+      .eq('is_active', true)
+      .not('avatar_url', 'is', null)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    // Use professional's avatar, clinic logo, or default system logo
+    const headerImageUrl = professional?.avatar_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
+
+    // Format message
+    const defaultMessage = `Olá {nome}! 🎂🎉
+
+A equipe da {clinica} deseja a você um feliz aniversário!
+
+Que este dia seja repleto de alegrias e realizações.
+
+Com carinho,
+Equipe {clinica}`;
+
+    const message = formatBirthdayMessage(
+      clinic.birthday_message || defaultMessage,
+      'Paciente Teste',
+      clinic.name
+    );
+
+    console.log(`[TEST] Sending test birthday message to ${testPhone}`);
+    console.log(`[TEST] Using header image: ${professional?.avatar_url ? 'professional avatar' : (clinic.logo_url ? 'clinic logo' : 'system default')}`);
+
+    // Send test message
+    const result = await sendWhatsAppWithImage(
+      evolutionConfig as EvolutionConfig,
+      testPhone,
+      headerImageUrl,
+      message
+    );
+
+    if (result.success) {
+      // Log in message_logs for quota tracking
+      await supabase
+        .from('message_logs')
+        .insert({
+          clinic_id: clinicId,
+          message_type: 'birthday_test',
+          phone: testPhone.replace(/\D/g, '').startsWith('55') 
+            ? testPhone.replace(/\D/g, '') 
+            : '55' + testPhone.replace(/\D/g, ''),
+          month_year: monthYear
+        });
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Mensagem de teste enviada com sucesso!',
+          details: result.response 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    } else {
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: result.error || 'Falha ao enviar mensagem',
+          details: result.response 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+  } catch (error: unknown) {
+    console.error('[TEST] Error in send-birthday-test:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Erro interno';
+    return new Response(
+      JSON.stringify({ success: false, error: errorMessage }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+});

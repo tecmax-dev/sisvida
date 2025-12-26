@@ -12,6 +12,9 @@ verify_jwt = false
 [functions.send-birthday-messages]
 verify_jwt = false
 
+[functions.send-birthday-test]
+verify_jwt = true
+
 [functions.evolution-api]
 verify_jwt = true
 
