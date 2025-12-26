@@ -2724,6 +2724,262 @@ export type Database = {
         }
         Relationships: []
       }
+      stock_alerts: {
+        Row: {
+          alert_type: string
+          clinic_id: string
+          created_at: string
+          id: string
+          is_read: boolean | null
+          message: string
+          product_id: string
+          resolved_at: string | null
+        }
+        Insert: {
+          alert_type: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message: string
+          product_id: string
+          resolved_at?: string | null
+        }
+        Update: {
+          alert_type?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          product_id?: string
+          resolved_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_alerts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_alerts_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "stock_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_categories: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_categories_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_movements: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          new_stock: number
+          notes: string | null
+          previous_stock: number
+          product_id: string
+          quantity: number
+          reason: string | null
+          reference_id: string | null
+          reference_type: string | null
+          supplier_id: string | null
+          total_cost: number | null
+          type: string
+          unit_cost: number | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_stock: number
+          notes?: string | null
+          previous_stock: number
+          product_id: string
+          quantity: number
+          reason?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          supplier_id?: string | null
+          total_cost?: number | null
+          type: string
+          unit_cost?: number | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          new_stock?: number
+          notes?: string | null
+          previous_stock?: number
+          product_id?: string
+          quantity?: number
+          reason?: string | null
+          reference_id?: string | null
+          reference_type?: string | null
+          supplier_id?: string | null
+          total_cost?: number | null
+          type?: string
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_movements_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "stock_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_movements_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      stock_products: {
+        Row: {
+          batch_number: string | null
+          category_id: string | null
+          clinic_id: string
+          cost_price: number | null
+          created_at: string
+          current_stock: number
+          description: string | null
+          expiry_date: string | null
+          id: string
+          is_active: boolean | null
+          location: string | null
+          max_stock: number | null
+          min_stock: number | null
+          name: string
+          sale_price: number | null
+          sku: string | null
+          supplier_id: string | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          batch_number?: string | null
+          category_id?: string | null
+          clinic_id: string
+          cost_price?: number | null
+          created_at?: string
+          current_stock?: number
+          description?: string | null
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          max_stock?: number | null
+          min_stock?: number | null
+          name: string
+          sale_price?: number | null
+          sku?: string | null
+          supplier_id?: string | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          batch_number?: string | null
+          category_id?: string | null
+          clinic_id?: string
+          cost_price?: number | null
+          created_at?: string
+          current_stock?: number
+          description?: string | null
+          expiry_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          location?: string | null
+          max_stock?: number | null
+          min_stock?: number | null
+          name?: string
+          sale_price?: number | null
+          sku?: string | null
+          supplier_id?: string | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "stock_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_products_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_products_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       subscription_plans: {
         Row: {
           created_at: string
@@ -2849,6 +3105,65 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      suppliers: {
+        Row: {
+          address: string | null
+          city: string | null
+          clinic_id: string
+          cnpj: string | null
+          contact_name: string | null
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          phone: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          clinic_id: string
+          cnpj?: string | null
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          clinic_id?: string
+          cnpj?: string | null
+          contact_name?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       system_features: {
         Row: {
