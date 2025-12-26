@@ -222,6 +222,8 @@ export default function PublicBooking() {
     }
   };
 
+  const [existingAppointmentsWithDuration, setExistingAppointmentsWithDuration] = useState<Array<{start_time: string, duration_minutes: number | null}>>([]);
+
   const fetchExistingAppointments = async () => {
     if (!clinic || !selectedProfessional || !selectedDate) return;
 
@@ -229,13 +231,14 @@ export default function PublicBooking() {
     
     const { data } = await supabase
       .from('appointments')
-      .select('start_time')
+      .select('start_time, duration_minutes')
       .eq('clinic_id', clinic.id)
       .eq('professional_id', selectedProfessional)
       .eq('appointment_date', dateStr)
       .in('status', ['scheduled', 'confirmed']);
 
     setExistingAppointments(data?.map(a => a.start_time.substring(0, 5)) || []);
+    setExistingAppointmentsWithDuration(data || []);
   };
 
   const appointmentDuration = useMemo(() => {
@@ -246,6 +249,27 @@ export default function PublicBooking() {
     const professional = professionals.find(p => p.id === selectedProfessional);
     return professional?.appointment_duration || 30;
   }, [selectedProcedure, selectedProfessional, procedures, professionals]);
+
+  // Helper to check if a time slot conflicts with existing appointments
+  const isSlotConflicting = (slotTime: string, slotDuration: number, existingAppts: Array<{start_time: string, duration_minutes: number | null}>, defaultDuration: number) => {
+    const [slotHour, slotMin] = slotTime.split(':').map(Number);
+    const slotStart = slotHour * 60 + slotMin;
+    const slotEnd = slotStart + slotDuration;
+
+    for (const appt of existingAppts) {
+      const apptTime = appt.start_time.substring(0, 5);
+      const [apptHour, apptMin] = apptTime.split(':').map(Number);
+      const apptStart = apptHour * 60 + apptMin;
+      const apptDuration = appt.duration_minutes || defaultDuration;
+      const apptEnd = apptStart + apptDuration;
+
+      // Check for overlap: slots conflict if one starts before the other ends
+      if (slotStart < apptEnd && slotEnd > apptStart) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   const availableTimeSlots = useMemo(() => {
     if (!selectedDate || !selectedProfessional) return [];
@@ -264,25 +288,39 @@ export default function PublicBooking() {
     
     const daySchedule = schedule[dayKey];
     const duration = appointmentDuration;
+    const defaultProfDuration = professional.appointment_duration || 30;
     const slots: string[] = [];
     
-    daySchedule.slots.forEach(slot => {
+    // Generate slots based on the professional's configured schedule slots
+    daySchedule.slots.forEach((slot: {start: string, end: string}) => {
       const [startHour, startMin] = slot.start.split(':').map(Number);
       const [endHour, endMin] = slot.end.split(':').map(Number);
       
-      let current = startHour * 60 + startMin;
-      const end = endHour * 60 + endMin;
+      const slotStartMinutes = startHour * 60 + startMin;
+      const slotEndMinutes = endHour * 60 + endMin;
       
-      while (current + duration <= end) {
+      // Use the professional's default appointment duration to determine slot intervals
+      // This ensures we only show slots that align with the professional's schedule
+      const slotInterval = defaultProfDuration;
+      
+      let current = slotStartMinutes;
+      
+      while (current + duration <= slotEndMinutes) {
         const hour = Math.floor(current / 60);
         const min = current % 60;
-        slots.push(`${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`);
-        current += duration;
+        const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+        
+        // Check if this slot conflicts with any existing appointment (considering duration)
+        if (!isSlotConflicting(timeStr, duration, existingAppointmentsWithDuration, defaultProfDuration)) {
+          slots.push(timeStr);
+        }
+        
+        current += slotInterval;
       }
     });
     
-    return slots.filter(slot => !existingAppointments.includes(slot));
-  }, [selectedDate, selectedProfessional, professionals, existingAppointments, appointmentDuration]);
+    return slots;
+  }, [selectedDate, selectedProfessional, professionals, existingAppointmentsWithDuration, appointmentDuration]);
 
   const appointmentTypes = useMemo(() => {
     if (!clinicHasTelemedicine) {
