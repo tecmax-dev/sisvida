@@ -283,7 +283,7 @@ export default function CalendarPage() {
     }
 
     return Array.from(new Set(slots)).sort();
-  }, [filterProfessional, isProfessionalOnly, loggedInProfessionalId, professionals, selectedDate]);
+  }, [activeAppointment, filterProfessional, formProfessional, isProfessionalOnly, loggedInProfessionalId, professionals, selectedDate]);
 
   const getDateRange = useCallback(() => {
     if (viewMode === "day") {
