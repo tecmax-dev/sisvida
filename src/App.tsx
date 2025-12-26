@@ -56,6 +56,7 @@ const ProceduresPage = lazy(() => import("./pages/dashboard/ProceduresPage"));
 const ProcedureEditPage = lazy(() => import("./pages/dashboard/ProcedureEditPage"));
 const SettingsPage = lazy(() => import("./pages/dashboard/SettingsPage"));
 const UsersManagementPage = lazy(() => import("./pages/dashboard/UsersManagementPage"));
+const PackagesPage = lazy(() => import("./pages/dashboard/PackagesPage"));
 const PatientAttachmentsPage = lazy(() => import("./pages/dashboard/PatientAttachmentsPage"));
 
 // Admin pages (8 páginas)
@@ -208,6 +209,7 @@ const App = () => (
                   <Route path="procedures/:id/edit" element={<ProcedureEditPage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="users" element={<UsersManagementPage />} />
+                  <Route path="packages" element={<PackagesPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

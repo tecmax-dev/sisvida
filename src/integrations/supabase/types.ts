@@ -1492,6 +1492,191 @@ export type Database = {
           },
         ]
       }
+      package_payments: {
+        Row: {
+          amount: number
+          clinic_id: string
+          created_at: string
+          due_date: string
+          financial_transaction_id: string | null
+          id: string
+          installment_number: number
+          notes: string | null
+          paid_date: string | null
+          patient_package_id: string
+          payment_method: string | null
+          status: string
+          total_installments: number
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          clinic_id: string
+          created_at?: string
+          due_date: string
+          financial_transaction_id?: string | null
+          id?: string
+          installment_number?: number
+          notes?: string | null
+          paid_date?: string | null
+          patient_package_id: string
+          payment_method?: string | null
+          status?: string
+          total_installments?: number
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          clinic_id?: string
+          created_at?: string
+          due_date?: string
+          financial_transaction_id?: string | null
+          id?: string
+          installment_number?: number
+          notes?: string | null
+          paid_date?: string | null
+          patient_package_id?: string
+          payment_method?: string | null
+          status?: string
+          total_installments?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_payments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_payments_financial_transaction_id_fkey"
+            columns: ["financial_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_payments_patient_package_id_fkey"
+            columns: ["patient_package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_sessions: {
+        Row: {
+          appointment_id: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          patient_package_id: string
+          professional_id: string | null
+          session_date: string
+          session_number: number
+        }
+        Insert: {
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          patient_package_id: string
+          professional_id?: string | null
+          session_date?: string
+          session_number: number
+        }
+        Update: {
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          patient_package_id?: string
+          professional_id?: string | null
+          session_date?: string
+          session_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_sessions_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_sessions_patient_package_id_fkey"
+            columns: ["patient_package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_sessions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_templates: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          price: number
+          procedure_id: string | null
+          total_sessions: number
+          updated_at: string
+          validity_days: number | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          price?: number
+          procedure_id?: string | null
+          total_sessions?: number
+          updated_at?: string
+          validity_days?: number | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          price?: number
+          procedure_id?: string | null
+          total_sessions?: number
+          updated_at?: string
+          validity_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_templates_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_templates_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_attachments: {
         Row: {
           clinic_id: string
@@ -1613,6 +1798,98 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_packages: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          expiry_date: string | null
+          id: string
+          name: string
+          notes: string | null
+          package_template_id: string | null
+          patient_id: string
+          price: number
+          procedure_id: string | null
+          purchase_date: string
+          remaining_sessions: number | null
+          status: string
+          total_sessions: number
+          updated_at: string
+          used_sessions: number
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expiry_date?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          package_template_id?: string | null
+          patient_id: string
+          price?: number
+          procedure_id?: string | null
+          purchase_date?: string
+          remaining_sessions?: number | null
+          status?: string
+          total_sessions?: number
+          updated_at?: string
+          used_sessions?: number
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          expiry_date?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          package_template_id?: string | null
+          patient_id?: string
+          price?: number
+          procedure_id?: string | null
+          purchase_date?: string
+          remaining_sessions?: number | null
+          status?: string
+          total_sessions?: number
+          updated_at?: string
+          used_sessions?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_packages_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_packages_package_template_id_fkey"
+            columns: ["package_template_id"]
+            isOneToOne: false
+            referencedRelation: "package_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_packages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_packages_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
             referencedColumns: ["id"]
           },
         ]
