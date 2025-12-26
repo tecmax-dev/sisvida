@@ -215,14 +215,24 @@ Equipe {clinica}`;
     setSendingTest(true);
     try {
       const { data, error } = await supabase.functions.invoke('send-birthday-test', {
-        body: { 
-          clinicId: currentClinic.id, 
-          testPhone: cleanPhone 
-        }
+        body: {
+          clinicId: currentClinic.id,
+          testPhone: cleanPhone,
+        },
       });
-      
-      if (error) throw error;
-      
+
+      if (error) {
+        // Supabase Functions errors often contain the real error payload in error.context
+        const ctx: any = (error as any).context;
+        const ctxBody = ctx?.body;
+        const serverMessage =
+          typeof ctxBody === 'string'
+            ? ctxBody
+            : ctxBody?.error || ctxBody?.message || ctxBody?.details?.error;
+
+        throw new Error(serverMessage || error.message || 'Falha ao enviar');
+      }
+
       if (data?.success) {
         toast({
           title: "Teste enviado!",
