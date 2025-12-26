@@ -214,12 +214,22 @@ Equipe {clinica}`;
     
     setSendingTest(true);
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+
+      if (!accessToken) {
+        throw new Error('Sessão expirada. Faça login novamente.');
+      }
+
       console.log('[BirthdayTest] Sending test to:', cleanPhone, 'clinic:', currentClinic.id);
-      
+
       const { data, error } = await supabase.functions.invoke('send-birthday-test', {
         body: {
           clinicId: currentClinic.id,
           testPhone: cleanPhone,
+        },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
@@ -227,10 +237,10 @@ Equipe {clinica}`;
 
       if (error) {
         console.error('[BirthdayTest] Error object:', JSON.stringify(error, null, 2));
-        
+
         // Try to extract the real error message from different possible locations
         let serverMessage = '';
-        
+
         // Check if error has context with response body
         if ((error as any).context) {
           const ctx = (error as any).context;
@@ -254,7 +264,7 @@ Equipe {clinica}`;
             }
           }
         }
-        
+
         throw new Error(serverMessage || error.message || 'Falha ao enviar');
       }
 
