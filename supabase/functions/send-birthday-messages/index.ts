@@ -45,7 +45,7 @@ async function sendWhatsAppWithImage(
   phone: string,
   imageUrl: string,
   caption: string
-): Promise<boolean> {
+): Promise<{ success: boolean; error?: string }> {
   try {
     let formattedPhone = phone.replace(/\D/g, '');
     if (!formattedPhone.startsWith('55')) {
@@ -68,16 +68,30 @@ async function sendWhatsAppWithImage(
       }),
     });
 
+    const responseText = await response.text();
+    console.log(`Evolution API response status: ${response.status}`);
+    console.log(`Evolution API response body: ${responseText}`);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('WhatsApp API error:', errorText);
-      return false;
+      console.error('WhatsApp API error:', responseText);
+      return { success: false, error: `API error ${response.status}: ${responseText}` };
     }
 
-    return true;
+    // Parse and check response for errors
+    try {
+      const responseData = JSON.parse(responseText);
+      if (responseData?.error || responseData?.message?.toLowerCase().includes('error')) {
+        console.error('WhatsApp API returned error in body:', responseData);
+        return { success: false, error: responseData?.error || responseData?.message };
+      }
+    } catch {
+      // Response is not JSON, which is fine
+    }
+
+    return { success: true };
   } catch (error) {
     console.error('Error sending WhatsApp with image:', error);
-    return false;
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
 
@@ -266,14 +280,18 @@ serve(async (req) => {
         );
 
         let success = false;
+        let errorMessage: string | null = null;
 
         // Sempre envia com imagem (headerImageUrl sempre terá um valor devido ao DEFAULT_SYSTEM_LOGO)
-        success = await sendWhatsAppWithImage(
+        const result = await sendWhatsAppWithImage(
           evolutionConfig as EvolutionConfig,
           patient.phone,
           headerImageUrl,
           message
         );
+        
+        success = result.success;
+        errorMessage = result.error || null;
 
         // Log the attempt
         const formattedPhone = patient.phone.replace(/\D/g, '');
@@ -285,7 +303,7 @@ serve(async (req) => {
             patient_name: patient.name,
             patient_phone: formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone,
             success: success,
-            error_message: success ? null : 'Failed to send WhatsApp message'
+            error_message: errorMessage
           });
 
         if (success) {
