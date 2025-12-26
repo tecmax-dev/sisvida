@@ -47,7 +47,7 @@ interface ClinicBirthdaySettings {
 }
 
 export default function BirthdayMessagesHistory() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, session } = useAuth();
   const { toast } = useToast();
   const [logs, setLogs] = useState<BirthdayLog[]>([]);
   const [loading, setLoading] = useState(true);
@@ -214,8 +214,16 @@ Equipe {clinica}`;
     
     setSendingTest(true);
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
+      // Prefer the in-memory session from AuthProvider (more reliable than getSession here)
+      let accessToken = session?.access_token;
+
+      if (!accessToken) {
+        const { data: refreshed, error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          throw new Error('Sessão expirada. Faça login novamente.');
+        }
+        accessToken = refreshed.session?.access_token;
+      }
 
       if (!accessToken) {
         throw new Error('Sessão expirada. Faça login novamente.');
