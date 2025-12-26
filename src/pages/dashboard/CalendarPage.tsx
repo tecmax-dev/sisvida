@@ -110,10 +110,8 @@ const appointmentTypes = [
 ];
 
 const defaultTimeSlots = [
-  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
-  "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
-  "17:00", "17:30", "18:00"
+  "08:00", "09:00", "10:00", "11:00", "12:00",
+  "13:00", "14:00", "15:00", "16:00", "17:00", "18:00",
 ];
 
 const statusConfig = {
@@ -261,18 +259,20 @@ export default function CalendarPage() {
       return defaultTimeSlots;
     }
 
-    const scheduleIsHourOnly = daySchedule.slots.every((s: any) =>
-      typeof s?.start === 'string' && typeof s?.end === 'string' && s.start.endsWith(':00') && s.end.endsWith(':00')
-    );
-
-    const interval = scheduleIsHourOnly ? 60 : 30;
+    // Regra solicitada: no painel de arraste/reagendamento, exibir apenas horas cheias.
+    // Se o profissional configurou horários “:30”, arredondamos para a próxima hora cheia.
+    const interval = 60;
     const slots: string[] = [];
 
+    const roundUpToHour = (minutes: number) => Math.ceil(minutes / 60) * 60;
+    const roundDownToHour = (minutes: number) => Math.floor(minutes / 60) * 60;
+
     for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
-      const [sh, sm] = s.start.split(':').map(Number);
-      const [eh, em] = s.end.split(':').map(Number);
-      let cur = sh * 60 + sm;
-      const end = eh * 60 + em;
+      const [sh, sm] = String(s.start).split(':').map(Number);
+      const [eh, em] = String(s.end).split(':').map(Number);
+
+      let cur = roundUpToHour(sh * 60 + sm);
+      const end = roundDownToHour(eh * 60 + em);
 
       while (cur < end) {
         const h = Math.floor(cur / 60);
