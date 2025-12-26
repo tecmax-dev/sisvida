@@ -109,7 +109,7 @@ const appointmentTypes = [
   { value: "telemedicine", label: "Telemedicina" },
 ];
 
-const timeSlots = [
+const defaultTimeSlots = [
   "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
   "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
   "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
@@ -140,6 +140,8 @@ interface Professional {
   id: string;
   name: string;
   specialty: string | null;
+  appointment_duration?: number | null;
+  schedule?: any | null;
 }
 
 interface Appointment {
@@ -229,6 +231,55 @@ export default function CalendarPage() {
   
   // Professional user state
   const [loggedInProfessionalId, setLoggedInProfessionalId] = useState<string | null>(null);
+
+  const timeSlots = useMemo(() => {
+    const getDayKey = (date: Date) => {
+      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      return dayKeys[date.getDay()];
+    };
+
+    // Prefer filtro de profissional; se estiver reagendando por dragdrop, use o profissional do agendamento.
+    // Caso contrário, quando o usuário é profissional, usar o próprio.
+    const selectedProfId =
+      activeAppointment?.professional_id ||
+      (filterProfessional !== 'all'
+        ? filterProfessional
+        : (isProfessionalOnly && loggedInProfessionalId ? loggedInProfessionalId : null));
+    if (!selectedProfId) return defaultTimeSlots;
+
+    const prof = professionals.find((p) => p.id === selectedProfId);
+    const schedule = prof?.schedule as any;
+    if (!schedule) return defaultTimeSlots;
+
+    const dayKey = getDayKey(selectedDate);
+    const daySchedule = schedule?.[dayKey];
+    if (!daySchedule?.enabled || !Array.isArray(daySchedule.slots) || daySchedule.slots.length === 0) {
+      return defaultTimeSlots;
+    }
+
+    const scheduleIsHourOnly = daySchedule.slots.every((s: any) =>
+      typeof s?.start === 'string' && typeof s?.end === 'string' && s.start.endsWith(':00') && s.end.endsWith(':00')
+    );
+
+    const interval = scheduleIsHourOnly ? 60 : 30;
+    const slots: string[] = [];
+
+    for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
+      const [sh, sm] = s.start.split(':').map(Number);
+      const [eh, em] = s.end.split(':').map(Number);
+      let cur = sh * 60 + sm;
+      const end = eh * 60 + em;
+
+      while (cur < end) {
+        const h = Math.floor(cur / 60);
+        const m = cur % 60;
+        slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+        cur += interval;
+      }
+    }
+
+    return Array.from(new Set(slots)).sort();
+  }, [filterProfessional, isProfessionalOnly, loggedInProfessionalId, professionals, selectedDate]);
 
   const getDateRange = useCallback(() => {
     if (viewMode === "day") {
@@ -350,7 +401,7 @@ export default function CalendarPage() {
 
       const { data: professionalsData, error: professionalsError } = await supabase
         .from('professionals')
-        .select('id, name, specialty')
+        .select('id, name, specialty, appointment_duration, schedule')
         .eq('clinic_id', currentClinic.id)
         .eq('is_active', true)
         .order('name');
