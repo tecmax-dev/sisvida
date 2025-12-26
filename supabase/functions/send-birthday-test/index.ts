@@ -75,11 +75,13 @@ async function sendWhatsAppWithImage(
 
     // Check if the response indicates success
     // Evolution API may return 200 but with error in body
-    if (responseData?.error || responseData?.message?.includes('error')) {
-      return { 
-        success: false, 
-        error: responseData?.error || responseData?.message || 'Unknown error',
-        response: responseData 
+    const msg = responseData?.message;
+    const msgText = typeof msg === 'string' ? msg : (msg ? JSON.stringify(msg) : '');
+    if (responseData?.error || (typeof msgText === 'string' && msgText.toLowerCase().includes('error'))) {
+      return {
+        success: false,
+        error: responseData?.error || msgText || 'Unknown error',
+        response: responseData,
       };
     }
 
