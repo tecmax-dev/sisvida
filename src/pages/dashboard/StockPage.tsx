@@ -153,9 +153,9 @@ export default function StockPage() {
       if (categoriesRes.error) throw categoriesRes.error;
       if (suppliersRes.error) throw suppliersRes.error;
 
-      setProducts(productsRes.data || []);
-      setCategories(categoriesRes.data || []);
-      setSuppliers(suppliersRes.data || []);
+      setProducts((productsRes.data as unknown as StockProduct[]) || []);
+      setCategories((categoriesRes.data as unknown as StockCategory[]) || []);
+      setSuppliers((suppliersRes.data as unknown as Supplier[]) || []);
     } catch (error: any) {
       toast.error("Erro ao carregar dados do estoque");
       console.error(error);
@@ -181,7 +181,7 @@ export default function StockPage() {
           break;
       }
 
-      const { error } = await supabase.from(table).delete().eq("id", deleteId);
+      const { error } = await (supabase.from(table as any) as any).delete().eq("id", deleteId);
       if (error) throw error;
 
       toast.success("Item excluído com sucesso");
