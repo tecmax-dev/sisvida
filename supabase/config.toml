@@ -13,7 +13,7 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.send-birthday-test]
-verify_jwt = true
+verify_jwt = false
 
 [functions.evolution-api]
 verify_jwt = true
