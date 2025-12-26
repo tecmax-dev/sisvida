@@ -211,19 +211,8 @@ serve(async (req) => {
       );
     }
 
-    // Fetch first active professional's avatar for the header image
-    const { data: professional } = await supabase
-      .from('professionals')
-      .select('avatar_url')
-      .eq('clinic_id', clinicId)
-      .eq('is_active', true)
-      .not('avatar_url', 'is', null)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    // Use professional's avatar, clinic logo, or default system logo
-    const headerImageUrl = professional?.avatar_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
+    // Sempre usar a imagem padrão do sistema para mensagens de aniversário
+    const headerImageUrl = DEFAULT_SYSTEM_LOGO;
 
     // Format message
     const defaultMessage = `Olá {nome}! 🎂🎉
@@ -242,7 +231,7 @@ Equipe {clinica}`;
     );
 
     console.log(`[TEST] Sending test birthday message to ${testPhone}`);
-    console.log(`[TEST] Using header image: ${professional?.avatar_url ? 'professional avatar' : (clinic.logo_url ? 'clinic logo' : 'system default')}`);
+    console.log(`[TEST] Using header image: system default (birthday-header.webp)`);
 
     // Send test message
     const result = await sendWhatsAppWithImage(

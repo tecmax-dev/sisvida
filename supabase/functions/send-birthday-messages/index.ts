@@ -199,21 +199,10 @@ serve(async (req) => {
         continue;
       }
 
-      // Fetch first active professional's avatar for the header image
-      const { data: professional } = await supabase
-        .from('professionals')
-        .select('avatar_url')
-        .eq('clinic_id', clinic.id)
-        .eq('is_active', true)
-        .not('avatar_url', 'is', null)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle();
+      // Sempre usar a imagem padrão do sistema para mensagens de aniversário
+      const headerImageUrl = DEFAULT_SYSTEM_LOGO;
 
-      // Use professional's avatar, clinic logo, or default system logo
-      const headerImageUrl = professional?.avatar_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
-
-      console.log(`[Clinic ${clinic.name}] Header image: ${professional?.avatar_url ? 'professional avatar' : (clinic.logo_url ? 'clinic logo' : 'system default')}`);
+      console.log(`[Clinic ${clinic.name}] Header image: system default (birthday-header.webp)`);
 
       // Check if we already sent birthday messages today for this clinic
       const { data: existingSent } = await supabase
