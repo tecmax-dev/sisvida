@@ -53,3 +53,6 @@ verify_jwt = true
 
 [functions.list-users-with-email]
 verify_jwt = true
+
+[functions.whatsapp-webhook]
+verify_jwt = false
