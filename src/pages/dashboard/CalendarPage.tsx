@@ -264,21 +264,19 @@ export default function CalendarPage() {
     const interval = 60;
     const slots: string[] = [];
 
-    const roundUpToHour = (minutes: number) => Math.ceil(minutes / 60) * 60;
-    const roundDownToHour = (minutes: number) => Math.floor(minutes / 60) * 60;
-
     for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
       const [sh, sm] = String(s.start).split(':').map(Number);
       const [eh, em] = String(s.end).split(':').map(Number);
 
-      let cur = roundUpToHour(sh * 60 + sm);
-      const end = roundDownToHour(eh * 60 + em);
+      // Início: arredondar para a hora cheia (floor para incluir a hora do início)
+      let cur = Math.floor((sh * 60 + sm) / 60) * 60;
+      // Fim: arredondar para a hora cheia (floor)
+      const end = Math.floor((eh * 60 + em) / 60) * 60;
 
       while (cur < end) {
         const h = Math.floor(cur / 60);
-        const m = cur % 60;
-        slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-        cur += interval;
+        slots.push(`${String(h).padStart(2, '0')}:00`);
+        cur += 60;
       }
     }
 
