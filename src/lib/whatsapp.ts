@@ -131,8 +131,31 @@ export function formatAppointmentReminder(
   date: string,
   time: string,
   professionalName: string,
-  confirmationLink?: string
+  confirmationLink?: string,
+  directReplyEnabled?: boolean
 ): string {
+  // If direct reply is enabled, use the new format without links
+  if (directReplyEnabled) {
+    const lines = [
+      `Olá ${patientName}! 👋`,
+      ``,
+      `Lembramos que você tem uma consulta agendada:`,
+      ``,
+      `📅 *Data:* ${date}`,
+      `🕐 *Horário:* ${time}`,
+      `👨‍⚕️ *Profissional:* ${professionalName}`,
+      `🏥 *Clínica:* ${clinicName}`,
+      ``,
+      `✅ *Responda SIM para confirmar*`,
+      `❌ *Responda NÃO para cancelar*`,
+      ``,
+      `Atenciosamente,`,
+      `Equipe ${clinicName}`,
+    ];
+    return lines.join('\n');
+  }
+
+  // Original format with link
   const lines = [
     `Olá ${patientName}! 👋`,
     ``,
