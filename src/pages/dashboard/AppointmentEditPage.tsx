@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Calendar, Clock, User, Stethoscope } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,7 @@ const appointmentTypes = [
   { value: "telemedicine", label: "Telemedicina" },
 ];
 
-const timeSlots = [
+const defaultTimeSlots = [
   "08:00", "08:30", "09:00", "09:30", "10:00", "10:30",
   "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
   "14:00", "14:30", "15:00", "15:30", "16:00", "16:30",
@@ -71,6 +71,7 @@ interface Professional {
   id: string;
   name: string;
   specialty: string | null;
+  schedule?: any | null;
 }
 
 export default function AppointmentEditPage() {
@@ -95,6 +96,50 @@ export default function AppointmentEditPage() {
   const [startTime, setStartTime] = useState("");
   const [type, setType] = useState("first_visit");
   const [notes, setNotes] = useState("");
+
+  // Generate time slots based on the professional's configured schedule
+  const timeSlots = useMemo(() => {
+    if (!professionalId || !appointmentDate) return defaultTimeSlots;
+
+    const prof = professionals.find((p) => p.id === professionalId);
+    const schedule = prof?.schedule as any;
+    if (!schedule) return defaultTimeSlots;
+
+    const getDayKey = (dateStr: string) => {
+      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      const date = new Date(dateStr + 'T12:00:00');
+      return dayKeys[date.getDay()];
+    };
+
+    const dayKey = getDayKey(appointmentDate);
+    const daySchedule = schedule?.[dayKey];
+    if (!daySchedule?.enabled || !Array.isArray(daySchedule.slots) || daySchedule.slots.length === 0) {
+      return defaultTimeSlots;
+    }
+
+    const scheduleIsHourOnly = daySchedule.slots.every((s: any) =>
+      typeof s?.start === 'string' && typeof s?.end === 'string' && s.start.endsWith(':00') && s.end.endsWith(':00')
+    );
+
+    const interval = scheduleIsHourOnly ? 60 : 30;
+    const slots: string[] = [];
+
+    for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
+      const [sh, sm] = s.start.split(':').map(Number);
+      const [eh, em] = s.end.split(':').map(Number);
+      let cur = sh * 60 + sm;
+      const end = eh * 60 + em;
+
+      while (cur < end) {
+        const h = Math.floor(cur / 60);
+        const m = cur % 60;
+        slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+        cur += interval;
+      }
+    }
+
+    return Array.from(new Set(slots)).sort();
+  }, [professionalId, appointmentDate, professionals]);
 
   useEffect(() => {
     if (currentClinic && id) {
@@ -167,7 +212,7 @@ export default function AppointmentEditPage() {
 
       const { data: professionalsData } = await supabase
         .from('professionals')
-        .select('id, name, specialty')
+        .select('id, name, specialty, schedule')
         .eq('clinic_id', currentClinic.id)
         .eq('is_active', true)
         .order('name');
