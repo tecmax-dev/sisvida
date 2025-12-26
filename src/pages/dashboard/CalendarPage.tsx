@@ -1627,69 +1627,117 @@ export default function CalendarPage() {
     );
   };
 
+  // Componente reutilizável para o painel de horários livres
+  const TimeSlotsPanel = ({ forDate }: { forDate: Date }) => {
+    const dateStr = forDate.toISOString().split('T')[0];
+    const dayAppointments = getAppointmentsForDate(forDate);
+    
+    return (
+      <div className="p-3 rounded-lg border border-dashed border-border/50 bg-muted/20">
+        <p className="text-xs text-muted-foreground font-medium mb-2 text-center">
+          Horários livres - {forDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}
+        </p>
+        <div className="grid grid-cols-4 gap-1">
+          {timeSlots.map((time) => {
+            const hasAppointment = dayAppointments.some(
+              apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled'
+            );
+            return (
+              <DroppableTimeSlot
+                key={time}
+                date={dateStr}
+                time={time}
+                disabled={hasAppointment}
+                isOccupied={hasAppointment}
+                onClick={() => {
+                  setSelectedDate(forDate);
+                  openNewAppointmentWithTime(time);
+                }}
+                className={cn(
+                  "p-1.5 text-center rounded-md border border-transparent text-xs",
+                  hasAppointment 
+                    ? "bg-muted/50 text-muted-foreground/50" 
+                    : "bg-background hover:bg-primary/10"
+                )}
+              />
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const WeekView = () => {
     const weekDaysData = getWeekDays();
 
     return (
-      <div className="grid grid-cols-7 gap-2">
-        {weekDaysData.map((date, i) => {
-          const dayAppointments = getAppointmentsForDate(date);
-          const isTodayDate = isToday(date);
-          const isSelectedDate = isSelected(date);
-          const dateStr = date.toISOString().split('T')[0];
+      <div className="flex gap-4">
+        {/* Painel de horários do dia selecionado */}
+        <div className="hidden lg:block w-48 flex-shrink-0">
+          <TimeSlotsPanel forDate={selectedDate} />
+        </div>
+        
+        {/* Grade da semana */}
+        <div className="flex-1 grid grid-cols-7 gap-2">
+          {weekDaysData.map((date, i) => {
+            const dayAppointments = getAppointmentsForDate(date);
+            const isTodayDate = isToday(date);
+            const isSelectedDate = isSelected(date);
+            const dateStr = date.toISOString().split('T')[0];
 
-          return (
-            <div key={i} className="min-h-[300px]">
-              <button
-                onClick={() => handleDayClick(date)}
-                className={cn(
-                  "w-full p-2 rounded-lg text-center mb-2 transition-colors",
-                  isTodayDate && "bg-primary/10",
-                  isSelectedDate && "bg-primary text-primary-foreground"
-                )}
-              >
-                <div className="text-xs text-muted-foreground">{weekDaysFull[i]}</div>
-                <div className="text-lg font-semibold">{date.getDate()}</div>
-              </button>
-              
-              {/* Droppable zone for the entire day */}
-              <DroppableTimeSlot 
-                date={dateStr} 
-                time="08:00" 
-                showTime={false}
-                isOccupied={dayAppointments.length >= 8}
-                className="space-y-1 min-h-[200px] p-1"
-              >
-                {dayAppointments.slice(0, 4).map((apt) => {
-                  const status = statusConfig[apt.status as keyof typeof statusConfig] || statusConfig.scheduled;
-                  const canDrag = apt.status !== "cancelled" && apt.status !== "completed" && apt.status !== "no_show" && apt.status !== "in_progress";
-                  
-                  return (
-                    <DraggableAppointment key={apt.id} appointment={apt}>
-                      <div
-                        onClick={() => canDrag ? openRescheduleDialog(apt) : undefined}
-                        className={cn(
-                          "p-2 rounded-lg text-xs transition-opacity",
-                          canDrag && "cursor-pointer hover:opacity-80",
-                          status.bgColor,
-                          apt.status === "cancelled" && "opacity-50"
-                        )}
-                      >
-                        <div className="font-medium truncate">{apt.start_time.slice(0, 5)}</div>
-                        <div className="truncate text-muted-foreground">{apt.patient?.name}</div>
-                      </div>
-                    </DraggableAppointment>
-                  );
-                })}
-                {dayAppointments.length > 4 && (
-                  <div className="text-xs text-center text-muted-foreground">
-                    +{dayAppointments.length - 4} mais
-                  </div>
-                )}
-              </DroppableTimeSlot>
-            </div>
-          );
-        })}
+            return (
+              <div key={i} className="min-h-[300px]">
+                <button
+                  onClick={() => handleDayClick(date)}
+                  className={cn(
+                    "w-full p-2 rounded-lg text-center mb-2 transition-colors",
+                    isTodayDate && "bg-primary/10",
+                    isSelectedDate && "bg-primary text-primary-foreground"
+                  )}
+                >
+                  <div className="text-xs text-muted-foreground">{weekDaysFull[i]}</div>
+                  <div className="text-lg font-semibold">{date.getDate()}</div>
+                </button>
+                
+                {/* Droppable zone for the entire day */}
+                <DroppableTimeSlot 
+                  date={dateStr} 
+                  time="08:00" 
+                  showTime={false}
+                  isOccupied={dayAppointments.length >= 8}
+                  className="space-y-1 min-h-[200px] p-1"
+                >
+                  {dayAppointments.slice(0, 4).map((apt) => {
+                    const status = statusConfig[apt.status as keyof typeof statusConfig] || statusConfig.scheduled;
+                    const canDrag = apt.status !== "cancelled" && apt.status !== "completed" && apt.status !== "no_show" && apt.status !== "in_progress";
+                    
+                    return (
+                      <DraggableAppointment key={apt.id} appointment={apt}>
+                        <div
+                          onClick={() => canDrag ? openRescheduleDialog(apt) : undefined}
+                          className={cn(
+                            "p-2 rounded-lg text-xs transition-opacity",
+                            canDrag && "cursor-pointer hover:opacity-80",
+                            status.bgColor,
+                            apt.status === "cancelled" && "opacity-50"
+                          )}
+                        >
+                          <div className="font-medium truncate">{apt.start_time.slice(0, 5)}</div>
+                          <div className="truncate text-muted-foreground">{apt.patient?.name}</div>
+                        </div>
+                      </DraggableAppointment>
+                    );
+                  })}
+                  {dayAppointments.length > 4 && (
+                    <div className="text-xs text-center text-muted-foreground">
+                      +{dayAppointments.length - 4} mais
+                    </div>
+                  )}
+                </DroppableTimeSlot>
+              </div>
+            );
+          })}
+        </div>
       </div>
     );
   };
@@ -1698,64 +1746,74 @@ export default function CalendarPage() {
     const days = getDaysInMonth(currentDate);
 
     return (
-      <div>
-        <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
-          {weekDays.map((day) => (
-            <div key={day} className="py-2 text-muted-foreground font-medium">
-              {day}
-            </div>
-          ))}
+      <div className="flex gap-4">
+        {/* Painel de horários do dia selecionado */}
+        <div className="hidden lg:block w-48 flex-shrink-0">
+          <TimeSlotsPanel forDate={selectedDate} />
         </div>
-        <div className="grid grid-cols-7 gap-1">
-          {days.map((item, i) => {
-            const dayAppointments = getAppointmentsForDate(item.date);
-            const isTodayDate = isToday(item.date);
-            const dateStr = item.date.toISOString().split('T')[0];
-            const isOccupied = dayAppointments.filter(a => a.status !== 'cancelled').length >= 10;
-            
-            return (
-              <DroppableTimeSlot
-                key={i}
-                date={dateStr}
-                time="08:00"
-                showTime={false}
-                isOccupied={isOccupied}
-                disabled={!item.isCurrentMonth}
-                className="p-0"
-              >
-                <button
-                  onClick={() => handleDayClick(item.date)}
-                  className={cn(
-                    "w-full aspect-square p-1 flex flex-col items-center justify-start text-sm rounded-lg transition-colors relative",
-                    item.isCurrentMonth
-                      ? "text-foreground hover:bg-muted"
-                      : "text-muted-foreground/40",
-                    isTodayDate && "bg-primary/10 text-primary font-semibold"
-                  )}
+        
+        {/* Grade do mês */}
+        <div className="flex-1">
+          <div className="grid grid-cols-7 gap-1 text-center text-xs mb-2">
+            {weekDays.map((day) => (
+              <div key={day} className="py-2 text-muted-foreground font-medium">
+                {day}
+              </div>
+            ))}
+          </div>
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((item, i) => {
+              const dayAppointments = getAppointmentsForDate(item.date);
+              const isTodayDate = isToday(item.date);
+              const isSelectedDate = isSelected(item.date);
+              const dateStr = item.date.toISOString().split('T')[0];
+              const isOccupied = dayAppointments.filter(a => a.status !== 'cancelled').length >= 10;
+              
+              return (
+                <DroppableTimeSlot
+                  key={i}
+                  date={dateStr}
+                  time="08:00"
+                  showTime={false}
+                  isOccupied={isOccupied}
+                  disabled={!item.isCurrentMonth}
+                  className="p-0"
                 >
-                  <span>{item.day}</span>
-                  {dayAppointments.length > 0 && (
-                    <div className="flex gap-0.5 mt-1">
-                      {dayAppointments.slice(0, 3).map((apt, j) => (
-                        <div
-                          key={j}
-                          className={cn(
-                            "w-1.5 h-1.5 rounded-full",
-                            apt.status === "cancelled" ? "bg-destructive" :
-                            apt.status === "confirmed" ? "bg-success" :
-                            apt.status === "completed" ? "bg-info" : "bg-warning"
-                          )}
-                        />
-                      ))}
-                      {dayAppointments.length > 3 && (
-                        <span className="text-[8px] text-muted-foreground">+{dayAppointments.length - 3}</span>
-                      )}
-                    </div>
-                  )}
-                </button>
-              </DroppableTimeSlot>
-            );
-          })}
+                  <button
+                    onClick={() => handleDayClick(item.date)}
+                    className={cn(
+                      "w-full aspect-square p-1 flex flex-col items-center justify-start text-sm rounded-lg transition-colors relative",
+                      item.isCurrentMonth
+                        ? "text-foreground hover:bg-muted"
+                        : "text-muted-foreground/40",
+                      isTodayDate && "bg-primary/10 text-primary font-semibold",
+                      isSelectedDate && item.isCurrentMonth && "ring-2 ring-primary"
+                    )}
+                  >
+                    <span>{item.day}</span>
+                    {dayAppointments.length > 0 && (
+                      <div className="flex gap-0.5 mt-1">
+                        {dayAppointments.slice(0, 3).map((apt, j) => (
+                          <div
+                            key={j}
+                            className={cn(
+                              "w-1.5 h-1.5 rounded-full",
+                              apt.status === "cancelled" ? "bg-destructive" :
+                              apt.status === "confirmed" ? "bg-success" :
+                              apt.status === "completed" ? "bg-info" : "bg-warning"
+                            )}
+                          />
+                        ))}
+                        {dayAppointments.length > 3 && (
+                          <span className="text-[8px] text-muted-foreground">+{dayAppointments.length - 3}</span>
+                        )}
+                      </div>
+                    )}
+                  </button>
+                </DroppableTimeSlot>
+              );
+            })}
+          </div>
         </div>
       </div>
     );
