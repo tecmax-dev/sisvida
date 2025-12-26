@@ -214,6 +214,8 @@ Equipe {clinica}`;
     
     setSendingTest(true);
     try {
+      console.log('[BirthdayTest] Sending test to:', cleanPhone, 'clinic:', currentClinic.id);
+      
       const { data, error } = await supabase.functions.invoke('send-birthday-test', {
         body: {
           clinicId: currentClinic.id,
@@ -221,15 +223,38 @@ Equipe {clinica}`;
         },
       });
 
-      if (error) {
-        // Supabase Functions errors often contain the real error payload in error.context
-        const ctx: any = (error as any).context;
-        const ctxBody = ctx?.body;
-        const serverMessage =
-          typeof ctxBody === 'string'
-            ? ctxBody
-            : ctxBody?.error || ctxBody?.message || ctxBody?.details?.error;
+      console.log('[BirthdayTest] Response:', { data, error });
 
+      if (error) {
+        console.error('[BirthdayTest] Error object:', JSON.stringify(error, null, 2));
+        
+        // Try to extract the real error message from different possible locations
+        let serverMessage = '';
+        
+        // Check if error has context with response body
+        if ((error as any).context) {
+          const ctx = (error as any).context;
+          if (typeof ctx === 'string') {
+            try {
+              const parsed = JSON.parse(ctx);
+              serverMessage = parsed.error || parsed.message || '';
+            } catch {
+              serverMessage = ctx;
+            }
+          } else if (ctx.body) {
+            if (typeof ctx.body === 'string') {
+              try {
+                const parsed = JSON.parse(ctx.body);
+                serverMessage = parsed.error || parsed.message || '';
+              } catch {
+                serverMessage = ctx.body;
+              }
+            } else {
+              serverMessage = ctx.body.error || ctx.body.message || '';
+            }
+          }
+        }
+        
         throw new Error(serverMessage || error.message || 'Falha ao enviar');
       }
 
@@ -243,7 +268,7 @@ Equipe {clinica}`;
         throw new Error(data?.error || 'Falha ao enviar');
       }
     } catch (error: any) {
-      console.error('Error sending test birthday message:', error);
+      console.error('[BirthdayTest] Catch error:', error);
       toast({
         title: "Erro no envio de teste",
         description: error.message || "Não foi possível enviar a mensagem de teste.",
