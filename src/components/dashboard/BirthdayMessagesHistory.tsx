@@ -12,7 +12,9 @@ import {
   RefreshCw, 
   Settings,
   Phone,
-  Calendar
+  Calendar,
+  Send,
+  Loader2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -53,6 +55,7 @@ export default function BirthdayMessagesHistory() {
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [sendingManual, setSendingManual] = useState(false);
 
   useRealtimeSubscription({
     table: 'birthday_message_logs',
@@ -153,6 +156,35 @@ Equipe {clinica}`;
     }
   };
 
+  const handleManualSend = async () => {
+    if (!currentClinic) return;
+    
+    setSendingManual(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-birthday-messages');
+      
+      if (error) throw error;
+      
+      const result = data as { sent?: number; errors?: number; skipped?: number };
+      
+      toast({
+        title: "Envio concluído",
+        description: `${result.sent || 0} mensagem(s) enviada(s), ${result.errors || 0} erro(s), ${result.skipped || 0} ignorado(s).`,
+      });
+      
+      fetchLogs();
+    } catch (error: any) {
+      console.error('Error sending birthday messages:', error);
+      toast({
+        title: "Erro ao enviar",
+        description: error.message || "Não foi possível enviar as mensagens de aniversário.",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingManual(false);
+    }
+  };
+
   const formatPhone = (phone: string) => {
     const cleaned = phone.replace(/\D/g, '');
     if (cleaned.length === 13) { // 55 + DDD + 9 digits
@@ -183,6 +215,20 @@ Equipe {clinica}`;
             className="h-8 w-8"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleManualSend}
+            disabled={sendingManual || !settings.birthday_enabled}
+            className="gap-2"
+          >
+            {sendingManual ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            Enviar Agora
           </Button>
           <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
             <DialogTrigger asChild>
