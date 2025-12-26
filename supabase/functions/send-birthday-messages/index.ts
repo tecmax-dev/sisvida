@@ -6,6 +6,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Logo padrão do sistema Eclini
+// Logo padrão do sistema Eclini - hospedada publicamente
+const DEFAULT_SYSTEM_LOGO = 'https://eclini.lovable.app/logo.png';
+
 interface EvolutionConfig {
   api_url: string;
   api_key: string;
@@ -193,10 +197,10 @@ serve(async (req) => {
         .limit(1)
         .maybeSingle();
 
-      // Use professional's avatar as the header image, fallback to clinic logo
-      const headerImageUrl = professional?.avatar_url || clinic.logo_url;
+      // Use professional's avatar, clinic logo, or default system logo
+      const headerImageUrl = professional?.avatar_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
 
-      console.log(`[Clinic ${clinic.name}] Header image: ${headerImageUrl ? 'professional avatar' : 'none'}`);
+      console.log(`[Clinic ${clinic.name}] Header image: ${professional?.avatar_url ? 'professional avatar' : (clinic.logo_url ? 'clinic logo' : 'system default')}`);
 
       // Check if we already sent birthday messages today for this clinic
       const { data: existingSent } = await supabase
@@ -264,21 +268,13 @@ serve(async (req) => {
 
         let success = false;
 
-        // Send with professional avatar or clinic logo if available, otherwise text only
-        if (headerImageUrl) {
-          success = await sendWhatsAppWithImage(
-            evolutionConfig as EvolutionConfig,
-            patient.phone,
-            headerImageUrl,
-            message
-          );
-        } else {
-          success = await sendWhatsAppText(
-            evolutionConfig as EvolutionConfig,
-            patient.phone,
-            message
-          );
-        }
+        // Sempre envia com imagem (headerImageUrl sempre terá um valor devido ao DEFAULT_SYSTEM_LOGO)
+        success = await sendWhatsAppWithImage(
+          evolutionConfig as EvolutionConfig,
+          patient.phone,
+          headerImageUrl,
+          message
+        );
 
         // Log the attempt
         const formattedPhone = patient.phone.replace(/\D/g, '');
