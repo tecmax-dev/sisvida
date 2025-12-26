@@ -101,6 +101,7 @@ serve(async (req) => {
   try {
     // Validate authentication (we validate manually; platform JWT verification is disabled)
     const authHeader = req.headers.get('Authorization');
+    console.log('[send-birthday-test] Authorization header present:', !!authHeader);
     if (!authHeader) {
       return new Response(
         JSON.stringify({ success: false, code: 401, error: 'Missing authorization header' }),
@@ -111,11 +112,14 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
+      global: { headers: { Authorization: authHeader } },
     });
 
     // Get user session
     const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError) {
+      console.log('[send-birthday-test] getUser error:', userError.message);
+    }
     if (userError || !user) {
       return new Response(
         JSON.stringify({ success: false, code: 401, error: 'Sessão inválida' }),
