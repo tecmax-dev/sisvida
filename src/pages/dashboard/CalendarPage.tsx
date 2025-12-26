@@ -197,6 +197,7 @@ export default function CalendarPage() {
   // WhatsApp state
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
   const [sendingTelemedicineLink, setSendingTelemedicineLink] = useState<string | null>(null);
+  const [directReplyEnabled, setDirectReplyEnabled] = useState(false);
   
   // Edit state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -410,6 +411,17 @@ export default function CalendarPage() {
       
       console.log('[DEBUG CalendarPage] professionals fetched:', professionalsData, 'error:', professionalsError);
       if (professionalsData) setProfessionals(professionalsData);
+
+      // Fetch evolution config for direct reply setting
+      const { data: evolutionConfig } = await supabase
+        .from('evolution_configs')
+        .select('direct_reply_enabled')
+        .eq('clinic_id', currentClinic.id)
+        .maybeSingle();
+      
+      if (evolutionConfig) {
+        setDirectReplyEnabled(evolutionConfig.direct_reply_enabled ?? false);
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -1171,9 +1183,9 @@ export default function CalendarPage() {
         month: 'long' 
       });
       
-      // Build confirmation link
+      // Build confirmation link only if direct reply is NOT enabled
       const baseUrl = window.location.origin;
-      const confirmationLink = appointment.confirmation_token 
+      const confirmationLink = (!directReplyEnabled && appointment.confirmation_token)
         ? `${baseUrl}/consulta/${appointment.confirmation_token}`
         : undefined;
       
@@ -1183,19 +1195,47 @@ export default function CalendarPage() {
         formattedDate,
         appointment.start_time.slice(0, 5),
         appointment.professional?.name || 'Profissional',
-        confirmationLink
+        confirmationLink,
+        directReplyEnabled
       );
 
       const { data, error } = await supabase.functions.invoke('send-whatsapp', {
-        body: { phone: patient.phone, message, clinicId: currentClinic?.id },
+        body: { 
+          phone: patient.phone, 
+          message, 
+          clinicId: currentClinic?.id,
+          type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder'
+        },
       });
 
       if (error) throw error;
 
       if (data?.success) {
+        // If direct reply is enabled, register pending confirmation
+        if (directReplyEnabled && currentClinic) {
+          const formattedPhone = patient.phone.replace(/\D/g, '');
+          const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone;
+          
+          // Calculate expiry time (1 hour before appointment)
+          const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.start_time}`);
+          const expiresAt = new Date(appointmentDateTime.getTime() - 60 * 60 * 1000);
+
+          await supabase
+            .from('pending_confirmations')
+            .insert({
+              clinic_id: currentClinic.id,
+              appointment_id: appointment.id,
+              phone: phoneWithCountry,
+              expires_at: expiresAt.toISOString(),
+              status: 'pending'
+            });
+        }
+
         toast({
           title: "Lembrete enviado",
-          description: `Mensagem enviada para ${patient.name}.`,
+          description: directReplyEnabled 
+            ? `Mensagem enviada para ${patient.name}. Aguardando resposta SIM ou NÃO.`
+            : `Mensagem enviada para ${patient.name}.`,
         });
       } else {
         throw new Error(data?.error || 'Erro ao enviar mensagem');
