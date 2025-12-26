@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   MessageSquare,
   Loader2,
@@ -16,6 +17,7 @@ import {
   X,
   Unplug,
   Plug,
+  Webhook,
 } from "lucide-react";
 
 interface EvolutionConfig {
@@ -28,6 +30,8 @@ interface EvolutionConfig {
   connected_at: string | null;
   phone_number: string | null;
   qr_code: string | null;
+  direct_reply_enabled: boolean;
+  webhook_url: string | null;
 }
 
 interface EvolutionConfigPanelProps {
@@ -40,6 +44,7 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
   const [generatingQR, setGeneratingQR] = useState(false);
+  const [settingWebhook, setSettingWebhook] = useState(false);
   const [config, setConfig] = useState<EvolutionConfig | null>(null);
   const [form, setForm] = useState({
     instance_name: "",
@@ -125,7 +130,11 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
       .maybeSingle();
 
     if (data) {
-      setConfig(data);
+      setConfig({
+        ...data,
+        direct_reply_enabled: data.direct_reply_enabled ?? false,
+        webhook_url: data.webhook_url ?? null,
+      } as EvolutionConfig);
       setForm({
         instance_name: data.instance_name,
         api_url: data.api_url,
@@ -364,6 +373,61 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
     }
   };
 
+  const handleToggleDirectReply = async () => {
+    if (!config) return;
+
+    const newValue = !config.direct_reply_enabled;
+    
+    try {
+      // If enabling, set up webhook first
+      if (newValue) {
+        setSettingWebhook(true);
+        
+        const { data: result, error } = await supabase.functions.invoke('evolution-api', {
+          body: { clinicId, action: 'setWebhook' },
+        });
+
+        if (error) throw error;
+        if (!result?.success) {
+          throw new Error(result?.error || 'Erro ao configurar webhook');
+        }
+
+        toast({
+          title: "Webhook configurado",
+          description: "O webhook foi configurado com sucesso na Evolution API.",
+        });
+      }
+
+      // Update direct_reply_enabled in database
+      const { error: updateError } = await supabase
+        .from("evolution_configs")
+        .update({ direct_reply_enabled: newValue })
+        .eq("id", config.id);
+
+      if (updateError) throw updateError;
+
+      setConfig({
+        ...config,
+        direct_reply_enabled: newValue,
+      });
+
+      toast({
+        title: newValue ? "Confirmação direta ativada" : "Confirmação direta desativada",
+        description: newValue 
+          ? "Pacientes podem responder SIM ou NÃO diretamente no WhatsApp." 
+          : "Os lembretes voltarão a incluir o link de confirmação.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao alterar configuração",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setSettingWebhook(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -525,6 +589,58 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
                 </div>
               )}
             </div>
+
+            {/* Direct Reply Configuration - Only show when connected */}
+            {config.is_connected && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <Webhook className="h-4 w-4" />
+                  Confirmação por Resposta Direta
+                </h4>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Ativar confirmação via WhatsApp</p>
+                      <p className="text-xs text-muted-foreground">
+                        Pacientes podem responder SIM ou NÃO diretamente no WhatsApp para confirmar ou cancelar consultas.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.direct_reply_enabled}
+                      onCheckedChange={handleToggleDirectReply}
+                      disabled={settingWebhook}
+                    />
+                  </div>
+
+                  {config.direct_reply_enabled && (
+                    <div className="p-4 bg-success/10 rounded-lg space-y-2">
+                      <div className="flex items-center gap-2 text-success">
+                        <Check className="h-4 w-4" />
+                        <span className="text-sm font-medium">Confirmação direta ativada</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Os lembretes incluirão instruções para o paciente responder SIM ou NÃO. 
+                        O sistema atualizará automaticamente o status da consulta.
+                      </p>
+                      {config.webhook_url && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          <strong>Webhook URL:</strong> {config.webhook_url}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {!config.direct_reply_enabled && (
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <p className="text-xs text-muted-foreground">
+                        Quando desativado, os lembretes incluirão um link para confirmação via página web.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </>
         )}
       </CardContent>

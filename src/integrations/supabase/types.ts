@@ -928,12 +928,14 @@ export type Database = {
           clinic_id: string
           connected_at: string | null
           created_at: string
+          direct_reply_enabled: boolean | null
           id: string
           instance_name: string
           is_connected: boolean | null
           phone_number: string | null
           qr_code: string | null
           updated_at: string
+          webhook_url: string | null
         }
         Insert: {
           api_key: string
@@ -941,12 +943,14 @@ export type Database = {
           clinic_id: string
           connected_at?: string | null
           created_at?: string
+          direct_reply_enabled?: boolean | null
           id?: string
           instance_name: string
           is_connected?: boolean | null
           phone_number?: string | null
           qr_code?: string | null
           updated_at?: string
+          webhook_url?: string | null
         }
         Update: {
           api_key?: string
@@ -954,12 +958,14 @@ export type Database = {
           clinic_id?: string
           connected_at?: string | null
           created_at?: string
+          direct_reply_enabled?: boolean | null
           id?: string
           instance_name?: string
           is_connected?: boolean | null
           phone_number?: string | null
           qr_code?: string | null
           updated_at?: string
+          webhook_url?: string | null
         }
         Relationships: [
           {
@@ -2092,6 +2098,54 @@ export type Database = {
           },
         ]
       }
+      pending_confirmations: {
+        Row: {
+          appointment_id: string
+          clinic_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          phone: string
+          sent_at: string
+          status: string
+        }
+        Insert: {
+          appointment_id: string
+          clinic_id: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          phone: string
+          sent_at?: string
+          status?: string
+        }
+        Update: {
+          appointment_id?: string
+          clinic_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          phone?: string
+          sent_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_confirmations_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_confirmations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plan_features: {
         Row: {
           created_at: string | null
@@ -3123,6 +3177,60 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_incoming_logs: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          id: string
+          message_text: string | null
+          phone: string
+          processed: boolean | null
+          processed_action: string | null
+          processed_appointment_id: string | null
+          raw_payload: Json | null
+          received_at: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          id?: string
+          message_text?: string | null
+          phone: string
+          processed?: boolean | null
+          processed_action?: string | null
+          processed_appointment_id?: string | null
+          raw_payload?: Json | null
+          received_at?: string
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          id?: string
+          message_text?: string | null
+          phone?: string
+          processed?: boolean | null
+          processed_action?: string | null
+          processed_appointment_id?: string | null
+          raw_payload?: Json | null
+          received_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_incoming_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_incoming_logs_processed_appointment_id_fkey"
+            columns: ["processed_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
             referencedColumns: ["id"]
           },
         ]

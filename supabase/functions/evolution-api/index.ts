@@ -8,7 +8,7 @@ const corsHeaders = {
 
 interface EvolutionRequest {
   clinicId: string;
-  action: 'fetchInstances' | 'create' | 'connect' | 'connectionState' | 'logout';
+  action: 'fetchInstances' | 'create' | 'connect' | 'connectionState' | 'logout' | 'setWebhook' | 'getWebhook';
   payload?: Record<string, unknown>;
 }
 
@@ -137,6 +137,35 @@ serve(async (req) => {
       case 'logout':
         evolutionUrl = `${api_url}/instance/logout/${instance_name}`;
         method = 'DELETE';
+        break;
+      
+      case 'setWebhook':
+        evolutionUrl = `${api_url}/webhook/set/${instance_name}`;
+        method = 'POST';
+        const webhookUrl = payload?.webhookUrl as string || `https://eahhszmbyxapxzilfdlo.functions.supabase.co/whatsapp-webhook`;
+        body = JSON.stringify({
+          webhook: {
+            enabled: true,
+            url: webhookUrl,
+            webhookByEvents: false,
+            webhookBase64: false,
+            events: [
+              'MESSAGES_UPSERT'
+            ]
+          }
+        });
+        
+        // Update webhook URL in database
+        await supabase
+          .from('evolution_configs')
+          .update({ webhook_url: webhookUrl })
+          .eq('clinic_id', clinicId);
+        
+        console.log(`[evolution-api] Setting webhook for ${instance_name} to ${webhookUrl}`);
+        break;
+      
+      case 'getWebhook':
+        evolutionUrl = `${api_url}/webhook/find/${instance_name}`;
         break;
       
       default:

@@ -132,8 +132,31 @@ function formatAppointmentReminder(
   date: string,
   time: string,
   professionalName: string,
-  confirmationLink?: string
+  confirmationLink?: string,
+  directReplyEnabled?: boolean
 ): string {
+  // If direct reply is enabled, use the new format without links
+  if (directReplyEnabled) {
+    const lines = [
+      `Olá ${patientName}! 👋`,
+      ``,
+      `Lembramos que você tem uma consulta agendada:`,
+      ``,
+      `📅 *Data:* ${date}`,
+      `🕐 *Horário:* ${time}`,
+      `👨‍⚕️ *Profissional:* ${professionalName}`,
+      `🏥 *Clínica:* ${clinicName}`,
+      ``,
+      `✅ *Responda SIM para confirmar*`,
+      `❌ *Responda NÃO para cancelar*`,
+      ``,
+      `Atenciosamente,`,
+      `Equipe ${clinicName}`,
+    ];
+    return lines.join('\n');
+  }
+
+  // Original format with link
   const lines = [
     `Olá ${patientName}! 👋`,
     ``,
@@ -228,7 +251,7 @@ serve(async (req) => {
       // Fetch clinic's Evolution API config
       const { data: evolutionConfig } = await supabase
         .from('evolution_configs')
-        .select('api_url, api_key, instance_name, is_connected')
+        .select('api_url, api_key, instance_name, is_connected, direct_reply_enabled')
         .eq('clinic_id', clinic.id)
         .maybeSingle();
 
@@ -237,6 +260,9 @@ serve(async (req) => {
         skippedCount++;
         continue;
       }
+
+      const directReplyEnabled = evolutionConfig.direct_reply_enabled || false;
+      console.log(`[Clinic ${clinic.name}] Direct reply enabled: ${directReplyEnabled}`);
 
       // Get appointments in the target window that haven't been reminded yet
       const { data: appointments, error: appointmentsError } = await supabase
@@ -292,8 +318,8 @@ serve(async (req) => {
         const dateFormatted = formatDateTime(appointmentDate, appointment.start_time);
         const time = appointment.start_time.substring(0, 5);
 
-        // Build confirmation link
-        const confirmationLink = appointment.confirmation_token 
+        // Build confirmation link (only if not using direct reply)
+        const confirmationLink = !directReplyEnabled && appointment.confirmation_token 
           ? `${baseUrl}/consulta/${appointment.confirmation_token}`
           : undefined;
 
@@ -304,7 +330,8 @@ serve(async (req) => {
           dateFormatted,
           time,
           professional?.name || 'Profissional',
-          confirmationLink
+          confirmationLink,
+          directReplyEnabled
         );
 
         let success = false;
@@ -325,13 +352,39 @@ serve(async (req) => {
             .update({ reminder_sent: true })
             .eq('id', appointment.id);
 
+          // If direct reply is enabled, register pending confirmation
+          if (directReplyEnabled) {
+            const formattedPhone = patient.phone.replace(/\D/g, '');
+            const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone;
+            
+            // Calculate expiry time (1 hour before appointment)
+            const appointmentDateTime = new Date(`${appointment.appointment_date}T${appointment.start_time}`);
+            const expiresAt = new Date(appointmentDateTime.getTime() - 60 * 60 * 1000); // 1 hour before
+
+            const { error: pendingError } = await supabase
+              .from('pending_confirmations')
+              .insert({
+                clinic_id: clinic.id,
+                appointment_id: appointment.id,
+                phone: phoneWithCountry,
+                expires_at: expiresAt.toISOString(),
+                status: 'pending'
+              });
+
+            if (pendingError) {
+              console.error(`Error creating pending confirmation for appointment ${appointment.id}:`, pendingError);
+            } else {
+              console.log(`✓ Pending confirmation registered for ${patient.name} (phone: ${phoneWithCountry})`);
+            }
+          }
+
           // Log the message
           const formattedPhone = patient.phone.replace(/\D/g, '');
           const { error: logError } = await supabase
             .from('message_logs')
             .insert({
               clinic_id: clinic.id,
-              message_type: 'reminder',
+              message_type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder',
               phone: formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone,
               month_year: monthYear
             });
