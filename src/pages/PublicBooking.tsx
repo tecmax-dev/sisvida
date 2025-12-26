@@ -95,6 +95,7 @@ export default function PublicBooking() {
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [procedureInsurancePrices, setProcedureInsurancePrices] = useState<ProcedureInsurancePrice[]>([]);
   const [existingAppointments, setExistingAppointments] = useState<string[]>([]);
+  const [existingAppointmentsWithDuration, setExistingAppointmentsWithDuration] = useState<Array<{ start_time: string; duration_minutes: number | null }>>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -222,8 +223,6 @@ export default function PublicBooking() {
     }
   };
 
-  const [existingAppointmentsWithDuration, setExistingAppointmentsWithDuration] = useState<Array<{start_time: string, duration_minutes: number | null}>>([]);
-
   const fetchExistingAppointments = async () => {
     if (!clinic || !selectedProfessional || !selectedDate) return;
 
@@ -299,10 +298,13 @@ export default function PublicBooking() {
       const slotStartMinutes = startHour * 60 + startMin;
       const slotEndMinutes = endHour * 60 + endMin;
       
-      // Use the professional's default appointment duration to determine slot intervals
-      // This ensures we only show slots that align with the professional's schedule
-      const slotInterval = defaultProfDuration;
-      
+      // Se o profissional configurou o turno apenas em hora cheia (ex: 08:00-12:00),
+      // não exibimos slots quebrados (:30).
+      const scheduleIsHourOnly = daySchedule.slots.every((s: { start: string; end: string }) =>
+        s.start.endsWith(':00') && s.end.endsWith(':00')
+      );
+
+      const slotInterval = scheduleIsHourOnly ? 60 : defaultProfDuration;
       let current = slotStartMinutes;
       
       while (current + duration <= slotEndMinutes) {
