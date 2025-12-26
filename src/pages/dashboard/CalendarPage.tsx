@@ -238,13 +238,17 @@ export default function CalendarPage() {
       return dayKeys[date.getDay()];
     };
 
-    // Prefer filtro de profissional; se estiver reagendando por dragdrop, use o profissional do agendamento.
-    // Caso contrário, quando o usuário é profissional, usar o próprio.
+    // Prioridade para definir de qual profissional vem a grade de horários:
+    // 1) Se estiver arrastando para reagendar: profissional do agendamento
+    // 2) Se houver profissional filtrado
+    // 3) Se estiver criando/editando: profissional selecionado no formulário
+    // 4) Se o usuário for um profissional: o próprio
     const selectedProfId =
       activeAppointment?.professional_id ||
       (filterProfessional !== 'all'
         ? filterProfessional
-        : (isProfessionalOnly && loggedInProfessionalId ? loggedInProfessionalId : null));
+        : (formProfessional || (isProfessionalOnly && loggedInProfessionalId ? loggedInProfessionalId : null)));
+
     if (!selectedProfId) return defaultTimeSlots;
 
     const prof = professionals.find((p) => p.id === selectedProfId);
