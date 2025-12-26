@@ -31,14 +31,34 @@ interface EvolutionWebhookPayload {
 }
 
 function normalizePhone(phone: string): string {
-  let cleaned = phone.replace(/\D/g, '');
-  // Remove @s.whatsapp.net suffix if present
-  cleaned = cleaned.replace(/@s\.whatsapp\.net$/, '');
-  // Add 55 if not present (Brazil)
-  if (!cleaned.startsWith('55')) {
-    cleaned = '55' + cleaned;
-  }
+  // Important: payload comes often as "55XXXXXXXXXXX@s.whatsapp.net"
+  let cleaned = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+  if (!cleaned.startsWith('55')) cleaned = '55' + cleaned;
   return cleaned;
+}
+
+function getBrazilPhoneVariants(phone55: string): string[] {
+  const cleaned = phone55.replace(/\D/g, '');
+  if (!cleaned.startsWith('55')) return [cleaned];
+
+  // Brazil format: 55 + DDD(2) + number(8 or 9)
+  const ddd = cleaned.slice(2, 4);
+  const rest = cleaned.slice(4);
+
+  const variants = new Set<string>();
+  variants.add(cleaned);
+
+  // If missing the leading '9' (8-digit local), try adding it
+  if (rest.length === 8) {
+    variants.add(`55${ddd}9${rest}`);
+  }
+
+  // If has 9 digits and starts with 9, try removing it (some providers strip it)
+  if (rest.length === 9 && rest.startsWith('9')) {
+    variants.add(`55${ddd}${rest.slice(1)}`);
+  }
+
+  return Array.from(variants);
 }
 
 function extractMessageText(data: EvolutionWebhookPayload['data']): string | null {
@@ -139,7 +159,10 @@ serve(async (req) => {
       );
     }
 
-    // Find pending confirmation for this phone
+    // Find pending confirmation for this phone (handle Brazil 9-digit variations)
+    const phoneCandidates = getBrazilPhoneVariants(phone);
+    console.log('[webhook] Phone candidates for lookup:', phoneCandidates);
+
     const { data: pendingConfirmations, error: pendingError } = await supabase
       .from('pending_confirmations')
       .select(`
@@ -148,7 +171,7 @@ serve(async (req) => {
         clinic_id,
         expires_at
       `)
-      .eq('phone', phone)
+      .in('phone', phoneCandidates)
       .eq('status', 'pending')
       .gt('expires_at', new Date().toISOString())
       .order('sent_at', { ascending: false })
