@@ -78,7 +78,7 @@ export function PatientPackageDialog({
   const [patients, setPatients] = useState<Patient[]>([]);
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [patientSearch, setPatientSearch] = useState("");
-  const [selectedTemplate, setSelectedTemplate] = useState<string>("");
+  const [selectedTemplate, setSelectedTemplate] = useState<string>("manual");
   const [paymentType, setPaymentType] = useState<"single" | "installments">("single");
   const [installments, setInstallments] = useState(1);
 
@@ -128,7 +128,7 @@ export function PatientPackageDialog({
         notes: "",
       });
       setPatientSearch("");
-      setSelectedTemplate("");
+      setSelectedTemplate("manual");
       setPaymentType("single");
       setInstallments(1);
     }
@@ -166,6 +166,11 @@ export function PatientPackageDialog({
 
   const handleTemplateSelect = (templateId: string) => {
     setSelectedTemplate(templateId);
+
+    if (templateId === "manual") {
+      return;
+    }
+
     const template = templates.find((t) => t.id === templateId);
     if (template) {
       setFormData({
@@ -197,7 +202,7 @@ export function PatientPackageDialog({
       const payload = {
         clinic_id: currentClinic.id,
         patient_id: formData.patient_id,
-        package_template_id: selectedTemplate || null,
+        package_template_id: selectedTemplate === "manual" ? null : selectedTemplate,
         name: formData.name,
         description: formData.description || null,
         procedure_id: formData.procedure_id || null,
@@ -362,7 +367,7 @@ export function PatientPackageDialog({
                   <SelectValue placeholder="Selecione um modelo ou preencha manualmente" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Preencher manualmente</SelectItem>
+                  <SelectItem value="manual">Preencher manualmente</SelectItem>
                   {templates.map((template) => (
                     <SelectItem key={template.id} value={template.id}>
                       {template.name} - {template.total_sessions} sessões - R$ {template.price.toFixed(2)}
@@ -399,14 +404,16 @@ export function PatientPackageDialog({
           <div className="space-y-2">
             <Label>Procedimento Vinculado</Label>
             <Select
-              value={formData.procedure_id}
-              onValueChange={(value) => setFormData({ ...formData, procedure_id: value })}
+              value={formData.procedure_id || "any"}
+              onValueChange={(value) =>
+                setFormData({ ...formData, procedure_id: value === "any" ? "" : value })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Qualquer procedimento" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Qualquer procedimento</SelectItem>
+                <SelectItem value="any">Qualquer procedimento</SelectItem>
                 {procedures.map((proc) => (
                   <SelectItem key={proc.id} value={proc.id}>
                     {proc.name}

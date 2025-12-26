@@ -190,14 +190,16 @@ export function PackageTemplateDialog({
           <div className="space-y-2">
             <Label htmlFor="procedure">Procedimento Vinculado</Label>
             <Select
-              value={formData.procedure_id}
-              onValueChange={(value) => setFormData({ ...formData, procedure_id: value })}
+              value={formData.procedure_id || "any"}
+              onValueChange={(value) =>
+                setFormData({ ...formData, procedure_id: value === "any" ? "" : value })
+              }
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione (opcional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Qualquer procedimento</SelectItem>
+                <SelectItem value="any">Qualquer procedimento</SelectItem>
                 {procedures.map((proc) => (
                   <SelectItem key={proc.id} value={proc.id}>
                     {proc.name}
