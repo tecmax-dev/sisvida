@@ -100,23 +100,32 @@ serve(async (req) => {
 
   try {
     // Validate authentication (we validate manually; platform JWT verification is disabled)
-    const authHeader = req.headers.get('Authorization');
-    console.log('[send-birthday-test] Authorization header present:', !!authHeader);
-    if (!authHeader) {
+    const rawAuthHeader = req.headers.get('authorization') ?? req.headers.get('Authorization');
+    console.log('[send-birthday-test] Authorization header present:', !!rawAuthHeader);
+
+    if (!rawAuthHeader) {
       return new Response(
         JSON.stringify({ success: false, code: 401, error: 'Missing authorization header' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    // Accept both "Bearer <token>" and "<token>" (some clients pass raw JWT)
+    const token = rawAuthHeader.toLowerCase().startsWith('bearer ')
+      ? rawAuthHeader.slice(7).trim()
+      : rawAuthHeader.trim();
+
+    console.log('[send-birthday-test] Auth header is bearer:', rawAuthHeader.toLowerCase().startsWith('bearer '));
+    console.log('[send-birthday-test] Token length:', token.length);
+
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
+      global: { headers: { Authorization: `Bearer ${token}` } },
     });
 
-    // Get user session
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    // Get user session (pass token explicitly to avoid relying on implicit header handling)
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
     if (userError) {
       console.log('[send-birthday-test] getUser error:', userError.message);
     }
