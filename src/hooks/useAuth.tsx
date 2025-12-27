@@ -27,6 +27,7 @@ interface Clinic {
 interface UserRole {
   clinic_id: string;
   role: 'owner' | 'admin' | 'receptionist' | 'professional' | 'administrative';
+  access_group_id: string | null;
   clinic: Clinic;
 }
 
@@ -109,6 +110,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .select(`
         clinic_id,
         role,
+        access_group_id,
         clinic:clinics (
           id,
           name,
@@ -127,6 +129,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const roles = data.map(item => ({
         clinic_id: item.clinic_id,
         role: item.role as UserRole['role'],
+        access_group_id: item.access_group_id as string | null,
         clinic: item.clinic as unknown as Clinic
       }));
       setUserRoles(roles);

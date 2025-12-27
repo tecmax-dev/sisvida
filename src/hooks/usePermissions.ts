@@ -2,30 +2,76 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// Legacy permission types for backward compatibility
+// All permission keys from the database
 export type Permission =
+  // Dashboard
   | "view_dashboard"
+  // Calendar/Scheduling
+  | "scheduling"
+  | "view_calendar"
   | "manage_calendar"
+  | "manage_waiting_list"
+  // Patients
+  | "patients"
   | "view_patients"
   | "manage_patients"
-  | "manage_professionals"
+  // Medical Records
+  | "medical_records"
   | "view_medical_records"
   | "manage_medical_records"
+  // Anamnesis
+  | "anamnesis"
   | "view_anamnesis"
   | "manage_anamnesis"
   | "manage_anamnesis_templates"
-  | "manage_waiting_list"
-  | "manage_insurance"
-  | "view_reports"
-  | "manage_subscription"
-  | "manage_settings"
-  | "manage_users"
+  // Prescriptions
+  | "prescriptions"
   | "view_prescriptions"
   | "manage_prescriptions"
+  // Procedures
+  | "procedures"
+  | "view_procedures"
+  | "manage_procedures"
+  // Packages
+  | "packages"
+  | "view_packages"
+  | "manage_packages"
+  // Professionals
+  | "professionals"
+  | "view_professionals"
+  | "manage_professionals"
+  // Reports
+  | "reports"
+  | "view_reports"
+  // Financial
+  | "financials"
   | "view_financials"
   | "manage_financials"
-  | "view_procedures"
-  | "manage_procedures";
+  | "cash_flow_monthly"
+  | "cash_flow_annual"
+  | "manage_cash_registers"
+  | "manage_categories"
+  | "manage_commissions"
+  | "manage_receivables"
+  | "manage_recurring"
+  | "manage_transfers"
+  | "reconciliation"
+  // Insurance
+  | "insurance"
+  | "view_insurance"
+  | "manage_insurance"
+  // Stock
+  | "stock"
+  | "view_stock"
+  | "manage_stock"
+  // Settings
+  | "settings"
+  | "manage_settings"
+  | "manage_users"
+  | "manage_subscription"
+  | "manage_integrations"
+  | "manage_api_keys"
+  | "manage_webhooks";
 
 // Legacy role permissions for backward compatibility (used when access_group_id is not set)
 const rolePermissions: Record<string, Permission[] | "*"> = {
@@ -33,36 +79,56 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
   admin: "*",
   receptionist: [
     "view_dashboard",
+    "scheduling",
+    "view_calendar",
     "manage_calendar",
+    "patients",
     "view_patients",
     "manage_patients",
+    "anamnesis",
     "view_anamnesis",
     "manage_anamnesis",
     "manage_waiting_list",
+    "procedures",
     "view_procedures",
   ],
   professional: [
     "view_dashboard",
+    "scheduling",
+    "view_calendar",
     "manage_calendar",
+    "patients",
     "view_patients",
+    "medical_records",
     "view_medical_records",
     "manage_medical_records",
+    "anamnesis",
     "view_anamnesis",
     "manage_anamnesis",
+    "prescriptions",
     "view_prescriptions",
     "manage_prescriptions",
+    "procedures",
     "view_procedures",
   ],
   administrative: [
     "view_dashboard",
+    "scheduling",
+    "view_calendar",
     "manage_calendar",
+    "patients",
     "view_patients",
     "manage_patients",
+    "anamnesis",
     "view_anamnesis",
     "manage_anamnesis",
     "manage_waiting_list",
+    "insurance",
+    "view_insurance",
     "manage_insurance",
+    "reports",
     "view_reports",
+    "procedures",
     "view_procedures",
   ],
 };
@@ -73,11 +139,11 @@ export function usePermissions() {
   // Get current role for the current clinic
   const currentUserRole = userRoles.find((r) => r.clinic_id === currentClinic?.id);
   const currentRole = currentUserRole?.role || null;
-  const accessGroupId = (currentUserRole as any)?.access_group_id || null;
+  const accessGroupId = currentUserRole?.access_group_id || null;
 
   // Fetch permissions from database when user has an access_group_id
-  const { data: dbPermissions } = useQuery({
-    queryKey: ['user-permissions', user?.id, currentClinic?.id],
+  const { data: dbPermissions, isLoading: permissionsLoading } = useQuery({
+    queryKey: ['user-permissions', user?.id, currentClinic?.id, accessGroupId],
     queryFn: async () => {
       if (!user?.id || !currentClinic?.id) return null;
       
@@ -93,7 +159,7 @@ export function usePermissions() {
 
       return new Set(data?.map((p: { permission_key: string }) => p.permission_key) || []);
     },
-    enabled: !!user?.id && !!currentClinic?.id && (!!accessGroupId || isSuperAdmin || currentRole === 'owner' || currentRole === 'admin'),
+    enabled: !!user?.id && !!currentClinic?.id && !!accessGroupId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
@@ -104,12 +170,14 @@ export function usePermissions() {
     // No role means no permissions
     if (!currentRole) return false;
 
-    // If using database permissions (access group or owner/admin)
-    if (dbPermissions) {
-      return dbPermissions.has(permission);
+    // If user has an access_group_id, ALWAYS use database permissions
+    if (accessGroupId) {
+      // While loading, deny access to prevent flickering
+      if (permissionsLoading) return false;
+      return dbPermissions?.has(permission) || false;
     }
 
-    // Fallback to legacy role-based permissions
+    // Fallback to legacy role-based permissions for users without access_group_id
     const permissions = rolePermissions[currentRole];
 
     // If permissions is "*", user has all permissions
@@ -127,19 +195,21 @@ export function usePermissions() {
     return permissions.every((p) => hasPermission(p));
   };
 
-  // Check if user is admin (owner or admin role)
-  const isAdmin = currentRole === "owner" || currentRole === "admin" || isSuperAdmin;
+  // Check if user is admin (owner or admin role without access_group_id restriction)
+  const isAdmin = (currentRole === "owner" || currentRole === "admin") && !accessGroupId || isSuperAdmin;
 
   // Check if user is a professional (professional role only)
   const isProfessionalOnly = currentRole === "professional" && !isSuperAdmin;
 
   return {
     currentRole,
+    accessGroupId,
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
     isAdmin,
     isProfessionalOnly,
+    permissionsLoading,
     dbPermissions, // Expose for debugging if needed
   };
 }

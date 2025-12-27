@@ -15,7 +15,9 @@ type AuditAction =
   | 'unblock_clinic'
   | 'manage_clinic_plan'
   | 'delete_clinic'
-  | 'new_user_signup';
+  | 'new_user_signup'
+  | 'create_user'
+  | 'update_user';
 
 type EntityType = 'clinic' | 'user' | 'super_admin' | 'system' | 'subscription';
 

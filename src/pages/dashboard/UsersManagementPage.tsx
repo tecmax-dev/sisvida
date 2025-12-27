@@ -20,11 +20,15 @@ interface ClinicUser {
   id: string;
   user_id: string;
   role: 'owner' | 'admin' | 'receptionist' | 'professional' | 'administrative';
+  access_group_id: string | null;
   created_at: string;
   profile: {
     name: string;
     phone: string | null;
     avatar_url: string | null;
+  } | null;
+  access_group?: {
+    name: string;
   } | null;
   email?: string;
 }
@@ -82,7 +86,9 @@ export default function UsersManagementPage() {
           id,
           user_id,
           role,
-          created_at
+          access_group_id,
+          created_at,
+          access_group:access_groups (name)
         `)
         .eq('clinic_id', currentClinic.id)
         .order('created_at', { ascending: false });
@@ -102,6 +108,7 @@ export default function UsersManagementPage() {
       const usersWithProfiles = rolesData?.map(role => ({
         ...role,
         profile: profilesData?.find(p => p.user_id === role.user_id) || null,
+        access_group: role.access_group as { name: string } | null,
       })) || [];
 
       setUsers(usersWithProfiles as ClinicUser[]);
@@ -213,7 +220,8 @@ export default function UsersManagementPage() {
                   <TableRow>
                     <TableHead>Usuário</TableHead>
                     <TableHead>Telefone</TableHead>
-                    <TableHead>Permissão</TableHead>
+                    <TableHead>Perfil</TableHead>
+                    <TableHead>Grupo de Acesso</TableHead>
                     <TableHead>Desde</TableHead>
                     <TableHead className="w-[100px]">Ações</TableHead>
                   </TableRow>
@@ -244,6 +252,15 @@ export default function UsersManagementPage() {
                           {clinicUser.role === 'owner' && <Shield className="h-3 w-3 mr-1" />}
                           {roleLabels[clinicUser.role] || clinicUser.role}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {clinicUser.access_group ? (
+                          <Badge variant="outline" className="text-xs">
+                            {clinicUser.access_group.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {format(new Date(clinicUser.created_at), "dd/MM/yyyy", { locale: ptBR })}
