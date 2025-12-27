@@ -318,10 +318,13 @@ export default function Auth() {
           }
         }
       } else if (view === "signup") {
-        // Gerar senha temporária (usuário definirá via link no email)
-        const tempPassword = crypto.randomUUID() + 'Aa1!';
-        const confirmationToken = crypto.randomUUID();
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+        // Gerar senha temporária
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+        let tempPassword = "";
+        for (let i = 0; i < 12; i++) {
+          tempPassword += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        tempPassword += "Aa1!";
         
         const { data, error } = await supabase.auth.signUp({
           email,
@@ -348,40 +351,30 @@ export default function Auth() {
         }
 
         if (data.user) {
-          // Salvar token de confirmação no banco
-          const { error: confirmError } = await supabase
-            .from('email_confirmations')
-            .insert({
-              user_id: data.user.id,
-              email: email,
-              token: confirmationToken,
-              expires_at: expiresAt,
-            });
-
-          if (confirmError) {
-            console.error('Erro ao salvar token de confirmação:', confirmError);
-          }
-
-          // Enviar email de confirmação personalizado
+          // Enviar credenciais por email
           try {
-            await supabase.functions.invoke('send-confirmation-email', {
+            await supabase.functions.invoke('send-user-credentials', {
               body: {
                 userEmail: email,
                 userName: name,
-                confirmationToken: confirmationToken,
+                tempPassword: tempPassword,
+                clinicName: "",
               },
             });
           } catch (emailError) {
-            console.error('Erro ao enviar email de confirmação:', emailError);
+            console.error('Erro ao enviar credenciais:', emailError);
           }
 
-          // Fazer logout para evitar sessão com usuário não confirmado
+          // Fazer logout para que o usuário faça login com as credenciais recebidas
           await supabase.auth.signOut();
 
-          // Redirecionar para página de aguardando confirmação
-          navigate("/aguardando-confirmacao", {
-            state: { email, name }
+          toast({
+            title: "Conta criada com sucesso!",
+            description: "Suas credenciais foram enviadas para seu email.",
           });
+
+          // Voltar para a tela de login
+          switchView("login");
         }
       }
     } catch (error: any) {

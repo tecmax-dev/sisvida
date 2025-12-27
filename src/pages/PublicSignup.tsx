@@ -138,28 +138,18 @@ export default function PublicSignup() {
       }
 
       if (data.user) {
-        // Create email confirmation token
-        const confirmationToken = crypto.randomUUID();
-        
+        // Send credentials email with temporary password
         try {
-          await supabase
-            .from("email_confirmations" as any)
-            .insert({
-              user_id: data.user.id,
-              email: formData.email,
-              token: confirmationToken,
-            });
-
-          // Send confirmation email via SMTP
-          await supabase.functions.invoke("send-confirmation-email", {
+          await supabase.functions.invoke("send-user-credentials", {
             body: {
               userEmail: formData.email,
               userName: formData.name,
-              confirmationToken: confirmationToken,
+              tempPassword: tempPassword,
+              clinicName: "",
             },
           });
-        } catch (confirmError) {
-          console.error("Failed to send confirmation email:", confirmError);
+        } catch (emailError) {
+          console.error("Failed to send credentials email:", emailError);
         }
 
         // Notify admin about new signup
@@ -177,26 +167,16 @@ export default function PublicSignup() {
           console.error("Failed to notify admin:", notifyError);
         }
 
-        // Send welcome email
-        try {
-          await supabase.functions.invoke("send-welcome-email", {
-            body: {
-              userEmail: formData.email,
-              userName: formData.name,
-              trialDays: 14,
-            },
-          });
-        } catch (emailError) {
-          console.error("Failed to send welcome email:", emailError);
-        }
+        // Sign out user after signup (they need to login with their credentials)
+        await supabase.auth.signOut();
 
         toast({
           title: "Conta criada com sucesso!",
-          description: "Verifique seu email para confirmar sua conta.",
+          description: "Suas credenciais de acesso foram enviadas para seu email.",
         });
 
-        navigate("/aguardando-confirmacao", { 
-          state: { email: formData.email, name: formData.name } 
+        navigate("/auth", { 
+          state: { email: formData.email, message: "Suas credenciais foram enviadas por email. Verifique sua caixa de entrada." } 
         });
       }
     } catch (error: any) {
