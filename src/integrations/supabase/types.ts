@@ -2985,6 +2985,167 @@ export type Database = {
         }
         Relationships: []
       }
+      quote_items: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          discount: number | null
+          id: string
+          item_type: string
+          name: string
+          procedure_id: string | null
+          product_id: string | null
+          quantity: number
+          quote_id: string
+          sort_order: number | null
+          total: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          discount?: number | null
+          id?: string
+          item_type: string
+          name: string
+          procedure_id?: string | null
+          product_id?: string | null
+          quantity?: number
+          quote_id: string
+          sort_order?: number | null
+          total: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          discount?: number | null
+          id?: string
+          item_type?: string
+          name?: string
+          procedure_id?: string | null
+          product_id?: string | null
+          quantity?: number
+          quote_id?: string
+          sort_order?: number | null
+          total?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quote_items_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "stock_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quote_items_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotes: {
+        Row: {
+          approved_at: string | null
+          clinic_id: string
+          converted_at: string | null
+          created_at: string | null
+          created_by: string | null
+          discount_type: string | null
+          discount_value: number | null
+          id: string
+          internal_notes: string | null
+          notes: string | null
+          patient_id: string
+          professional_id: string | null
+          quote_number: string
+          rejected_at: string | null
+          sent_at: string | null
+          status: string
+          subtotal: number
+          total: number
+          updated_at: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          clinic_id: string
+          converted_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          id?: string
+          internal_notes?: string | null
+          notes?: string | null
+          patient_id: string
+          professional_id?: string | null
+          quote_number: string
+          rejected_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          clinic_id?: string
+          converted_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          discount_type?: string | null
+          discount_value?: number | null
+          id?: string
+          internal_notes?: string | null
+          notes?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          quote_number?: string
+          rejected_at?: string | null
+          sent_at?: string | null
+          status?: string
+          subtotal?: number
+          total?: number
+          updated_at?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotes_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recurring_transactions: {
         Row: {
           amount: number
@@ -3306,11 +3467,13 @@ export type Database = {
           expiry_date: string | null
           id: string
           is_active: boolean | null
+          is_sellable: boolean | null
           location: string | null
           max_stock: number | null
           min_stock: number | null
           name: string
           sale_price: number | null
+          service_duration_minutes: number | null
           sku: string | null
           supplier_id: string | null
           unit: string | null
@@ -3327,11 +3490,13 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           is_active?: boolean | null
+          is_sellable?: boolean | null
           location?: string | null
           max_stock?: number | null
           min_stock?: number | null
           name: string
           sale_price?: number | null
+          service_duration_minutes?: number | null
           sku?: string | null
           supplier_id?: string | null
           unit?: string | null
@@ -3348,11 +3513,13 @@ export type Database = {
           expiry_date?: string | null
           id?: string
           is_active?: boolean | null
+          is_sellable?: boolean | null
           location?: string | null
           max_stock?: number | null
           min_stock?: number | null
           name?: string
           sale_price?: number | null
+          service_duration_minutes?: number | null
           sku?: string | null
           supplier_id?: string | null
           unit?: string | null
@@ -4015,6 +4182,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_quote_number: { Args: { p_clinic_id: string }; Returns: string }
       get_clinic_message_usage: {
         Args: { _clinic_id: string; _month_year?: string }
         Returns: {
