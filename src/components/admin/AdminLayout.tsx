@@ -19,6 +19,7 @@ import {
   Upload,
   Mail,
   Lock,
+  Bell,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +30,7 @@ const adminNavItems = [
   { path: "/admin/plans", label: "Planos", icon: CreditCard },
   { path: "/admin/features", label: "Recursos", icon: Layers },
   { path: "/admin/access-groups", label: "Grupos de Acesso", icon: Lock },
+  { path: "/admin/notifications", label: "Notificações", icon: Bell },
   { path: "/admin/upgrades", label: "Upgrades", icon: ArrowUpCircle, hasBadge: true },
   { path: "/admin/import", label: "Importar Dados", icon: Upload },
   { path: "/admin/smtp", label: "Email SMTP", icon: Mail },

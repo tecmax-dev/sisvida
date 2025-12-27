@@ -839,6 +839,45 @@ export type Database = {
           },
         ]
       }
+      clinic_notification_reads: {
+        Row: {
+          clinic_id: string
+          id: string
+          notification_id: string
+          read_at: string
+          user_id: string
+        }
+        Insert: {
+          clinic_id: string
+          id?: string
+          notification_id: string
+          read_at?: string
+          user_id: string
+        }
+        Update: {
+          clinic_id?: string
+          id?: string
+          notification_id?: string
+          read_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_notification_reads_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_notification_reads_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "system_notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinics: {
         Row: {
           address: string | null
@@ -3301,6 +3340,54 @@ export type Database = {
           is_active?: boolean | null
           key?: string
           name?: string
+        }
+        Relationships: []
+      }
+      system_notifications: {
+        Row: {
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          message: string
+          priority: string
+          scheduled_at: string | null
+          target_ids: string[] | null
+          target_type: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          message: string
+          priority?: string
+          scheduled_at?: string | null
+          target_ids?: string[] | null
+          target_type?: string
+          title: string
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          message?: string
+          priority?: string
+          scheduled_at?: string | null
+          target_ids?: string[] | null
+          target_type?: string
+          title?: string
+          type?: string
+          updated_at?: string
         }
         Relationships: []
       }

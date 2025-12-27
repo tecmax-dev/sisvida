@@ -71,6 +71,7 @@ const UpgradeRequestsPage = lazy(() => import("./pages/admin/UpgradeRequestsPage
 const AuditLogsPage = lazy(() => import("./pages/admin/AuditLogsPage"));
 const DataImportPage = lazy(() => import("./pages/admin/DataImportPage"));
 const SmtpSettingsPage = lazy(() => import("./pages/admin/SmtpSettingsPage"));
+const NotificationsPage = lazy(() => import("./pages/admin/NotificationsPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -175,6 +176,7 @@ const App = () => (
                   <Route path="plans" element={<PlansManagement />} />
                   <Route path="features" element={<FeaturesManagement />} />
                   <Route path="access-groups" element={<AccessGroupsPage />} />
+                  <Route path="notifications" element={<NotificationsPage />} />
                   <Route path="upgrades" element={<UpgradeRequestsPage />} />
                   <Route path="import" element={<DataImportPage />} />
                   <Route path="smtp" element={<SmtpSettingsPage />} />
