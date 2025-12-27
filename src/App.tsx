@@ -192,6 +192,8 @@ const App = () => (
                 <Route path="/profissional" element={<ProfessionalAuth />} />
                 <Route path="/profissional/painel" element={<ProfessionalDashboard />} />
                 <Route path="/profissional/atendimento/:appointmentId" element={<ProfessionalAppointment />} />
+                {/* Legacy panel route - redirect to professional dashboard */}
+                <Route path="/panel/:id" element={<ProfessionalDashboard />} />
                 <Route
                   path="/clinic-setup"
                   element={
