@@ -303,60 +303,62 @@ export default function DashboardOverview() {
   });
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-muted-foreground text-sm">
-            <GreetingIcon className="h-4 w-4" />
-            <span>{greeting.text}</span>
-            <span className="text-border">•</span>
-            <span>{format(currentTime, "EEEE, dd 'de' MMMM", { locale: ptBR })}</span>
+    <div className="min-h-full flex flex-col animate-fade-in">
+      {/* Hero Header with Primary Gradient */}
+      <div className="bg-gradient-to-r from-primary to-primary-dark -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 px-4 sm:px-6 lg:px-8 pt-6 pb-8 rounded-b-3xl shadow-lg mb-6">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-primary-foreground/80 text-sm">
+              <GreetingIcon className="h-4 w-4" />
+              <span>{greeting.text}</span>
+              <span className="opacity-60">•</span>
+              <span>{format(currentTime, "EEEE, dd 'de' MMMM", { locale: ptBR })}</span>
+            </div>
+            <h1 className="text-2xl lg:text-3xl font-bold text-primary-foreground">
+              Olá, {profile?.name?.split(' ')[0] || "Usuário"}! 👋
+            </h1>
+            <p className="text-primary-foreground/70">
+              Aqui está o resumo da sua clínica para hoje.
+            </p>
           </div>
-          <h1 className="text-2xl lg:text-3xl font-bold text-foreground">
-            Olá, {profile?.name?.split(' ')[0] || "Usuário"}! 👋
-          </h1>
-          <p className="text-muted-foreground">
-            Aqui está o resumo da sua clínica para hoje.
-          </p>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="icon" 
+              onClick={fetchDashboardData} 
+              title="Atualizar"
+              className="h-10 w-10 bg-white/10 border-white/20 text-primary-foreground hover:bg-white/20 hover:text-primary-foreground"
+            >
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button asChild className="h-10 bg-white text-primary hover:bg-white/90 shadow-md">
+              <Link to="/dashboard/calendar">
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Consulta
+              </Link>
+            </Button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="icon" 
-            onClick={fetchDashboardData} 
-            title="Atualizar"
-            className="h-10 w-10"
-          >
-            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-          <Button variant="hero" asChild className="h-10">
-            <Link to="/dashboard/calendar">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Consulta
-            </Link>
-          </Button>
+
+        {/* Realtime indicator inside header */}
+        <div className="flex items-center gap-2 text-sm mt-4 text-primary-foreground/70">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+          </span>
+          <span>Atualizações em tempo real ativas</span>
         </div>
       </div>
 
-      {/* Realtime indicator */}
-      <div className="flex items-center gap-2 text-sm">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
-        </span>
-        <span className="text-muted-foreground">Atualizações em tempo real ativas</span>
-      </div>
-
-      {/* Stats Grid */}
+      {/* Stats Grid - Elevated Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat, i) => (
           <Card 
             key={i} 
-            className="relative overflow-hidden border border-border/60 bg-card shadow-sm hover:shadow-md hover:border-primary/20 transition-all duration-300 group"
+            className="relative overflow-hidden border-0 bg-card shadow-md hover:shadow-lg transition-all duration-300 group"
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-40`} />
-            <div className="absolute top-0 right-0 w-24 h-24 rounded-full -translate-y-8 translate-x-8 bg-gradient-to-br from-foreground/[0.02] to-transparent" />
+            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-60`} />
+            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-foreground/[0.03] to-transparent" />
             <CardContent className="relative p-5">
               <div className="flex items-start justify-between">
                 <div className="space-y-1.5">
@@ -365,7 +367,7 @@ export default function DashboardOverview() {
                     {stat.value}
                   </p>
                 </div>
-                <div className={`w-11 h-11 rounded-xl ${stat.iconBg} flex items-center justify-center group-hover:scale-105 transition-transform duration-300`}>
+                <div className={`w-12 h-12 rounded-xl ${stat.iconBg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
                   <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
                 </div>
               </div>
@@ -374,36 +376,41 @@ export default function DashboardOverview() {
         ))}
       </div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - More Visual */}
       <div className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Ações Rápidas</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Ações Rápidas</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickActions.map((action, i) => (
             <Button 
               key={i}
               variant="outline" 
-              className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5 hover:border-primary/30 transition-all duration-200 group"
+              className="h-auto py-5 flex flex-col gap-3 bg-card border-border/50 hover:bg-primary/5 hover:border-primary/40 hover:shadow-md transition-all duration-200 group"
               asChild
             >
               <Link to={action.href}>
-                <action.icon className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span className="text-sm font-medium">{action.label}</span>
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                  <action.icon className="h-5 w-5 text-primary" />
+                </div>
+                <span className="text-sm font-medium text-foreground">{action.label}</span>
               </Link>
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Today's Appointments */}
-      <Card className="border border-border/60 bg-card shadow-sm">
-        <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/40">
+      {/* Today's Appointments - Enhanced Card */}
+      <Card className="border-0 bg-card shadow-md overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-3 bg-gradient-to-r from-primary/5 to-transparent border-b border-border/30">
           <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold text-foreground">Consultas de Hoje</CardTitle>
+            <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Consultas de Hoje
+            </CardTitle>
             <p className="text-sm text-muted-foreground">
               {todayAppointments.length} {todayAppointments.length === 1 ? 'consulta agendada' : 'consultas agendadas'}
             </p>
           </div>
-          <Button variant="ghost" size="sm" asChild className="text-primary hover:text-primary hover:bg-primary/5">
+          <Button variant="ghost" size="sm" asChild className="text-primary hover:text-primary hover:bg-primary/10">
             <Link to="/dashboard/calendar" className="flex items-center gap-1">
               Ver todas
               <ArrowRight className="h-4 w-4" />
@@ -476,6 +483,22 @@ export default function DashboardOverview() {
 
       {/* Birthday Messages History */}
       <BirthdayMessagesHistory />
+
+      {/* Footer with Primary Color */}
+      <div className="bg-gradient-to-r from-primary to-primary-dark -mx-4 sm:-mx-6 lg:-mx-8 mt-8 px-4 sm:px-6 lg:px-8 py-4 rounded-t-2xl">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-primary-foreground/80 text-sm">
+          <p>© {new Date().getFullYear()} Eclini - Sistema de Gestão para Clínicas</p>
+          <div className="flex items-center gap-4">
+            <span className="flex items-center gap-1">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+              </span>
+              Online
+            </span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
