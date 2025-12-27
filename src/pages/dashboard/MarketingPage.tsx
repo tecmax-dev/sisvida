@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Users, Send, Zap, Shield, BarChart, Plus } from "lucide-react";
 import { toast } from "sonner";
+import CampaignsPanel from "@/components/marketing/CampaignsPanel";
 
 function MarketingContent() {
   const { currentClinic } = useAuth();
@@ -80,27 +81,7 @@ function MarketingContent() {
           </TabsContent>
 
           <TabsContent value="campaigns">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Campanhas de Marketing</CardTitle>
-                  <CardDescription>
-                    Envie mensagens personalizadas para seus pacientes
-                  </CardDescription>
-                </div>
-                <Button onClick={handleComingSoon}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Campanha
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  <Send className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Crie campanhas via WhatsApp, SMS ou Email</p>
-                  <p className="text-sm mt-2">Funcionalidade em desenvolvimento</p>
-                </div>
-              </CardContent>
-            </Card>
+            <CampaignsPanel />
           </TabsContent>
 
           <TabsContent value="automations">
