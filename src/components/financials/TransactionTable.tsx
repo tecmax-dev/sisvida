@@ -15,11 +15,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MoreHorizontal, Search, Check, X, Trash2 } from "lucide-react";
+import { MoreHorizontal, Search, Check, X, Trash2, Receipt } from "lucide-react";
 import { FinancialExportButton } from "./FinancialExportButton";
 import { exportTransactions, TransactionData } from "@/lib/financialExportUtils";
 import { format } from "date-fns";
@@ -28,6 +29,7 @@ import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
+import { PaymentReceiptDialog } from "./PaymentReceiptDialog";
 
 interface TransactionTableProps {
   clinicId: string;
@@ -61,6 +63,8 @@ const paymentMethodLabels: Record<string, string> = {
 export function TransactionTable({ clinicId, filterType }: TransactionTableProps) {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
+  const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["financial-transactions", clinicId, filterType],
@@ -325,6 +329,21 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
                             </DropdownMenuItem>
                           </>
                         )}
+                        {transaction.type === "income" && transaction.status === "paid" && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedTransaction(transaction);
+                                setReceiptDialogOpen(true);
+                              }}
+                            >
+                              <Receipt className="h-4 w-4 mr-2" />
+                              Emitir Recibo
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
                           onClick={() => deleteMutation.mutate(transaction.id)}
@@ -345,6 +364,19 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
           </div>
         )}
       </CardContent>
+
+      {/* Payment Receipt Dialog */}
+      {selectedTransaction && (
+        <PaymentReceiptDialog
+          open={receiptDialogOpen}
+          onOpenChange={(open) => {
+            setReceiptDialogOpen(open);
+            if (!open) setSelectedTransaction(null);
+          }}
+          transaction={selectedTransaction}
+          clinicId={clinicId}
+        />
+      )}
     </Card>
   );
 }

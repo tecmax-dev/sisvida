@@ -280,3 +280,28 @@ export function formatTelemedicineInvite(
 
   return lines.join('\n');
 }
+
+export function formatPaymentReceipt(
+  patientName: string,
+  clinicName: string,
+  amount: string,
+  description: string,
+  date: string
+): string {
+  return `Olá ${patientName}! 👋
+
+📃 *Recibo de Pagamento*
+
+A ${clinicName} envia o comprovante do seu pagamento:
+
+💰 *Valor:* ${amount}
+📝 *Descrição:* ${description}
+📅 *Data:* ${date}
+
+📎 O recibo em PDF está anexado a esta mensagem.
+
+Agradecemos a preferência!
+
+Atenciosamente,
+Equipe ${clinicName}`;
+}
