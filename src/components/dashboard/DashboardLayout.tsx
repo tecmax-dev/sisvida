@@ -1,9 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { ChatWidget } from "@/components/chat/ChatWidget";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
+import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -350,8 +351,14 @@ export function DashboardLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-6 animate-fade-in">
-          <Outlet />
+        <main className="flex-1 p-4 lg:p-6">
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-64">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          }>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
 

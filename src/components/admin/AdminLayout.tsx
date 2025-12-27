@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/layout/Logo";
@@ -21,6 +21,7 @@ import {
   Lock,
   Bell,
   MessageCircle,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -152,8 +153,14 @@ export function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <Outlet />
+      <main className="flex-1 overflow-auto p-6">
+        <Suspense fallback={
+          <div className="flex items-center justify-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        }>
+          <Outlet />
+        </Suspense>
       </main>
     </div>
   );
