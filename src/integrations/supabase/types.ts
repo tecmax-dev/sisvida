@@ -4862,6 +4862,322 @@ export type Database = {
           },
         ]
       }
+      tiss_guide_items: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string
+          created_at: string
+          execution_date: string | null
+          gloss_code: string | null
+          gloss_reason: string | null
+          gloss_value: number | null
+          guide_id: string
+          id: string
+          notes: string | null
+          procedure_id: string | null
+          professional_id: string | null
+          quantity: number
+          status: string
+          total_value: number
+          tuss_code: string
+          tuss_description: string | null
+          unit_value: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id: string
+          created_at?: string
+          execution_date?: string | null
+          gloss_code?: string | null
+          gloss_reason?: string | null
+          gloss_value?: number | null
+          guide_id: string
+          id?: string
+          notes?: string | null
+          procedure_id?: string | null
+          professional_id?: string | null
+          quantity?: number
+          status?: string
+          total_value?: number
+          tuss_code: string
+          tuss_description?: string | null
+          unit_value?: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          execution_date?: string | null
+          gloss_code?: string | null
+          gloss_reason?: string | null
+          gloss_value?: number | null
+          guide_id?: string
+          id?: string
+          notes?: string | null
+          procedure_id?: string | null
+          professional_id?: string | null
+          quantity?: number
+          status?: string
+          total_value?: number
+          tuss_code?: string
+          tuss_description?: string | null
+          unit_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiss_guide_items_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiss_guide_items_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiss_guide_items_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "tiss_guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiss_guide_items_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiss_guide_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiss_guides: {
+        Row: {
+          authorization_date: string | null
+          authorization_number: string | null
+          beneficiary_card: string | null
+          beneficiary_name: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          execution_date: string | null
+          gloss_value: number | null
+          guide_number: string
+          guide_type: string
+          id: string
+          insurance_plan_id: string
+          main_guide_id: string | null
+          notes: string | null
+          paid_value: number | null
+          patient_id: string
+          provider_code: string | null
+          returned_at: string | null
+          sent_at: string | null
+          status: string
+          total_value: number | null
+          updated_at: string
+          xml_version: string | null
+        }
+        Insert: {
+          authorization_date?: string | null
+          authorization_number?: string | null
+          beneficiary_card?: string | null
+          beneficiary_name?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          execution_date?: string | null
+          gloss_value?: number | null
+          guide_number: string
+          guide_type: string
+          id?: string
+          insurance_plan_id: string
+          main_guide_id?: string | null
+          notes?: string | null
+          paid_value?: number | null
+          patient_id: string
+          provider_code?: string | null
+          returned_at?: string | null
+          sent_at?: string | null
+          status?: string
+          total_value?: number | null
+          updated_at?: string
+          xml_version?: string | null
+        }
+        Update: {
+          authorization_date?: string | null
+          authorization_number?: string | null
+          beneficiary_card?: string | null
+          beneficiary_name?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          execution_date?: string | null
+          gloss_value?: number | null
+          guide_number?: string
+          guide_type?: string
+          id?: string
+          insurance_plan_id?: string
+          main_guide_id?: string | null
+          notes?: string | null
+          paid_value?: number | null
+          patient_id?: string
+          provider_code?: string | null
+          returned_at?: string | null
+          sent_at?: string | null
+          status?: string
+          total_value?: number | null
+          updated_at?: string
+          xml_version?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiss_guides_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiss_guides_insurance_plan_id_fkey"
+            columns: ["insurance_plan_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiss_guides_main_guide_id_fkey"
+            columns: ["main_guide_id"]
+            isOneToOne: false
+            referencedRelation: "tiss_guides"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiss_guides_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiss_status_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          from_status: string | null
+          guide_id: string
+          id: string
+          notes: string | null
+          to_status: string
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          guide_id: string
+          id?: string
+          notes?: string | null
+          to_status: string
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          from_status?: string | null
+          guide_id?: string
+          id?: string
+          notes?: string | null
+          to_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiss_status_history_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "tiss_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiss_xml_files: {
+        Row: {
+          batch_id: string | null
+          clinic_id: string
+          created_at: string
+          file_hash: string | null
+          file_name: string
+          file_path: string | null
+          file_size: number | null
+          file_type: string
+          guide_id: string | null
+          id: string
+          processed_at: string | null
+          protocol_number: string | null
+          xml_content: string | null
+        }
+        Insert: {
+          batch_id?: string | null
+          clinic_id: string
+          created_at?: string
+          file_hash?: string | null
+          file_name: string
+          file_path?: string | null
+          file_size?: number | null
+          file_type: string
+          guide_id?: string | null
+          id?: string
+          processed_at?: string | null
+          protocol_number?: string | null
+          xml_content?: string | null
+        }
+        Update: {
+          batch_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          file_hash?: string | null
+          file_name?: string
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string
+          guide_id?: string | null
+          id?: string
+          processed_at?: string | null
+          protocol_number?: string | null
+          xml_content?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tiss_xml_files_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tiss_xml_files_guide_id_fkey"
+            columns: ["guide_id"]
+            isOneToOne: false
+            referencedRelation: "tiss_guides"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       totems: {
         Row: {
           clinic_id: string
@@ -4977,6 +5293,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tuss_codes: {
+        Row: {
+          category: string | null
+          code: string
+          created_at: string | null
+          description: string
+          id: string
+          is_active: boolean
+          table_type: string | null
+        }
+        Insert: {
+          category?: string | null
+          code: string
+          created_at?: string | null
+          description: string
+          id?: string
+          is_active?: boolean
+          table_type?: string | null
+        }
+        Update: {
+          category?: string | null
+          code?: string
+          created_at?: string | null
+          description?: string
+          id?: string
+          is_active?: boolean
+          table_type?: string | null
+        }
+        Relationships: []
       }
       upgrade_requests: {
         Row: {
@@ -5319,6 +5665,10 @@ export type Database = {
         }[]
       }
       generate_quote_number: { Args: { p_clinic_id: string }; Returns: string }
+      generate_tiss_guide_number: {
+        Args: { p_clinic_id: string; p_guide_type: string }
+        Returns: string
+      }
       get_applicable_repass_rule: {
         Args: {
           p_clinic_id: string

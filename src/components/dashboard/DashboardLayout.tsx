@@ -38,6 +38,10 @@ import {
   Warehouse,
   ShoppingBag,
   FileSpreadsheet,
+  Percent,
+  Monitor,
+  Megaphone,
+  FileCheck2,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -71,6 +75,10 @@ const navItems: NavItem[] = [
   { href: "/dashboard/packages", icon: Package, label: "Pacotes", permission: "view_stock" },
   { href: "/dashboard/stock", icon: Warehouse, label: "Estoque", permission: "view_stock" },
   { href: "/dashboard/financials", icon: DollarSign, label: "Financeiro", permission: "view_financials" },
+  { href: "/dashboard/repass", icon: Percent, label: "Repasse Médico", permission: "view_financials" },
+  { href: "/dashboard/queue", icon: Monitor, label: "Painel/Totem", permission: "view_dashboard" },
+  { href: "/dashboard/marketing", icon: Megaphone, label: "Marketing", permission: "view_dashboard" },
+  { href: "/dashboard/tiss", icon: FileCheck2, label: "TISS", permission: "view_financials" },
   { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios", permission: "view_reports" },
   { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano", permission: "manage_subscription" },
   // Intencionalmente sem permission aqui: o controle fino fica dentro da página
