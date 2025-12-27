@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuditLog } from "@/hooks/useAuditLog";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,10 +22,18 @@ import {
   Building2,
   Pencil,
   Mail,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from "lucide-react";
 import { EditUserEmailDialog } from "@/components/admin/EditUserEmailDialog";
+import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface UserWithEmail {
   id: string;
@@ -45,8 +54,10 @@ export default function UsersManagement() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithEmail | null>(null);
   const { logAction } = useAuditLog();
+  const { user: currentUser } = useAuth();
 
   useEffect(() => {
     fetchUsers();
@@ -82,6 +93,23 @@ export default function UsersManagement() {
   const handleEditEmail = (user: UserWithEmail) => {
     setSelectedUser(user);
     setEditDialogOpen(true);
+  };
+
+  const handleDeleteUser = (user: UserWithEmail) => {
+    setSelectedUser(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const canDeleteUser = (user: UserWithEmail): { allowed: boolean; reason?: string } => {
+    // Can't delete yourself
+    if (user.user_id === currentUser?.id) {
+      return { allowed: false, reason: "Você não pode excluir sua própria conta" };
+    }
+    // Can't delete super admins
+    if (user.isSuperAdmin) {
+      return { allowed: false, reason: "Não é permitido excluir Super Admins" };
+    }
+    return { allowed: true };
   };
 
   const filteredUsers = users.filter((user) =>
@@ -163,120 +191,174 @@ export default function UsersManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                              <span className="text-sm font-medium text-primary">
-                                {user.name.charAt(0).toUpperCase()}
-                              </span>
+                    {filteredUsers.map((user) => {
+                      const deleteCheck = canDeleteUser(user);
+                      return (
+                        <TableRow key={user.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                                <span className="text-sm font-medium text-primary">
+                                  {user.name.charAt(0).toUpperCase()}
+                                </span>
+                              </div>
+                              <p className="font-medium">{user.name}</p>
                             </div>
-                            <p className="font-medium">{user.name}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Mail className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="text-sm">{user.email}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {user.phone || "-"}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span>{user.clinicsCount}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          {user.isSuperAdmin ? (
-                            <Badge variant="default" className="bg-warning text-warning-foreground">
-                              <Shield className="h-3 w-3 mr-1" />
-                              Super Admin
-                            </Badge>
-                          ) : (
-                            <Badge variant="secondary">Usuário</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {new Date(user.created_at).toLocaleDateString('pt-BR')}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => handleEditEmail(user)}
-                            title="Editar email"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className="text-sm">{user.email}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {user.phone || "-"}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <div className="flex items-center justify-center gap-1.5">
+                              <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span>{user.clinicsCount}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {user.isSuperAdmin ? (
+                              <Badge variant="default" className="bg-warning text-warning-foreground">
+                                <Shield className="h-3 w-3 mr-1" />
+                                Super Admin
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">Usuário</Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center justify-center gap-1">
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleEditEmail(user)}
+                                title="Editar email"
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span>
+                                      <Button
+                                        size="icon"
+                                        variant="ghost"
+                                        onClick={() => handleDeleteUser(user)}
+                                        disabled={!deleteCheck.allowed}
+                                        className="text-destructive hover:text-destructive hover:bg-destructive/10 disabled:opacity-50"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                      </Button>
+                                    </span>
+                                  </TooltipTrigger>
+                                  {!deleteCheck.allowed && (
+                                    <TooltipContent>
+                                      <p>{deleteCheck.reason}</p>
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
 
               {/* Mobile/Tablet Cards */}
               <div className="lg:hidden space-y-4">
-                {filteredUsers.map((user) => (
-                  <div key={user.id} className="border rounded-lg p-4 space-y-3">
-                    {/* Header: Nome + Status */}
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                          <span className="text-sm font-medium text-primary">
-                            {user.name.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="font-medium">{user.name}</p>
-                          <div className="flex items-center gap-1 text-muted-foreground text-sm">
-                            <Mail className="h-3 w-3" />
-                            <span className="truncate max-w-[180px]">{user.email}</span>
+                {filteredUsers.map((user) => {
+                  const deleteCheck = canDeleteUser(user);
+                  return (
+                    <div key={user.id} className="border rounded-lg p-4 space-y-3">
+                      {/* Header: Nome + Status */}
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                            <span className="text-sm font-medium text-primary">
+                              {user.name.charAt(0).toUpperCase()}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <div className="flex items-center gap-1 text-muted-foreground text-sm">
+                              <Mail className="h-3 w-3" />
+                              <span className="truncate max-w-[180px]">{user.email}</span>
+                            </div>
                           </div>
                         </div>
+                        {user.isSuperAdmin ? (
+                          <Badge variant="default" className="bg-warning text-warning-foreground">
+                            <Shield className="h-3 w-3 mr-1" />
+                            Admin
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary">Usuário</Badge>
+                        )}
                       </div>
-                      {user.isSuperAdmin ? (
-                        <Badge variant="default" className="bg-warning text-warning-foreground">
-                          <Shield className="h-3 w-3 mr-1" />
-                          Admin
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary">Usuário</Badge>
-                      )}
-                    </div>
 
-                    {/* Info */}
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Telefone:</span>{" "}
-                        <span>{user.phone || "-"}</span>
+                      {/* Info */}
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Telefone:</span>{" "}
+                          <span>{user.phone || "-"}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                          <span>{user.clinicsCount} clínica{user.clinicsCount !== 1 ? "s" : ""}</span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span>{user.clinicsCount} clínica{user.clinicsCount !== 1 ? "s" : ""}</span>
-                      </div>
-                    </div>
 
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-2 border-t">
-                      <span className="text-xs text-muted-foreground">
-                        Cadastrado em {new Date(user.created_at).toLocaleDateString('pt-BR')}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => handleEditEmail(user)}
-                      >
-                        <Pencil className="h-4 w-4 mr-2" />
-                        Editar Email
-                      </Button>
+                      {/* Footer */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <span className="text-xs text-muted-foreground">
+                          Cadastrado em {new Date(user.created_at).toLocaleDateString('pt-BR')}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditEmail(user)}
+                          >
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Editar
+                          </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleDeleteUser(user)}
+                                    disabled={!deleteCheck.allowed}
+                                    className="text-destructive border-destructive/50 hover:bg-destructive/10 disabled:opacity-50"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </span>
+                              </TooltipTrigger>
+                              {!deleteCheck.allowed && (
+                                <TooltipContent>
+                                  <p>{deleteCheck.reason}</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </>
           )}
@@ -286,6 +368,13 @@ export default function UsersManagement() {
       <EditUserEmailDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
+        user={selectedUser}
+        onSuccess={fetchUsers}
+      />
+
+      <DeleteUserDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
         user={selectedUser}
         onSuccess={fetchUsers}
       />
