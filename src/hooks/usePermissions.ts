@@ -196,7 +196,8 @@ export function usePermissions() {
   };
 
   // Check if user is admin (owner or admin role without access_group_id restriction)
-  const isAdmin = (currentRole === "owner" || currentRole === "admin") && !accessGroupId || isSuperAdmin;
+  // Fixed operator precedence with explicit parentheses
+  const isAdmin = ((currentRole === "owner" || currentRole === "admin") && !accessGroupId) || isSuperAdmin;
 
   // Check if user is a professional (professional role only)
   const isProfessionalOnly = currentRole === "professional" && !isSuperAdmin;

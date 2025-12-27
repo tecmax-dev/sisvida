@@ -87,34 +87,68 @@ export default function UsersManagementPage() {
           user_id,
           role,
           access_group_id,
-          created_at,
-          access_group:access_groups (name)
+          created_at
         `)
         .eq('clinic_id', currentClinic.id)
         .order('created_at', { ascending: false });
 
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        console.error('Error fetching roles:', rolesError);
+        throw rolesError;
+      }
+
+      if (!rolesData || rolesData.length === 0) {
+        setUsers([]);
+        return;
+      }
 
       // Fetch profiles for these users
-      const userIds = rolesData?.map(r => r.user_id) || [];
+      const userIds = rolesData.map(r => r.user_id);
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, name, phone, avatar_url')
         .in('user_id', userIds);
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
+
+      // Fetch access groups separately for users that have access_group_id
+      const accessGroupIds = rolesData
+        .map(r => r.access_group_id)
+        .filter((id): id is string => !!id);
+
+      let accessGroupsMap: Record<string, { name: string }> = {};
+      
+      if (accessGroupIds.length > 0) {
+        const { data: accessGroupsData, error: accessGroupsError } = await supabase
+          .from('access_groups')
+          .select('id, name')
+          .in('id', accessGroupIds);
+
+        if (accessGroupsError) {
+          console.error('Error fetching access groups:', accessGroupsError);
+          // Don't throw - just continue without access groups
+        } else {
+          accessGroupsMap = (accessGroupsData || []).reduce((acc, group) => {
+            acc[group.id] = { name: group.name };
+            return acc;
+          }, {} as Record<string, { name: string }>);
+        }
+      }
 
       // Combine data
-      const usersWithProfiles = rolesData?.map(role => ({
+      const usersWithProfiles = rolesData.map(role => ({
         ...role,
         profile: profilesData?.find(p => p.user_id === role.user_id) || null,
-        access_group: role.access_group as { name: string } | null,
-      })) || [];
+        access_group: role.access_group_id ? accessGroupsMap[role.access_group_id] || null : null,
+      }));
 
       setUsers(usersWithProfiles as ClinicUser[]);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching users:', error);
-      toast.error('Erro ao carregar usuários');
+      toast.error(`Erro ao carregar usuários: ${error.message || 'Erro desconhecido'}`);
     } finally {
       setLoading(false);
     }
