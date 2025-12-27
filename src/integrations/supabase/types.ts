@@ -839,6 +839,160 @@ export type Database = {
           },
         ]
       }
+      chat_conversations: {
+        Row: {
+          clinic_id: string | null
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          id: string
+          last_message_at: string | null
+          status: string
+          updated_at: string
+          user_email: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          clinic_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          status?: string
+          updated_at?: string
+          user_email?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          clinic_id?: string | null
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          id?: string
+          last_message_at?: string | null
+          status?: string
+          updated_at?: string
+          user_email?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_conversations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          read_at: string | null
+          sender_id: string
+          sender_name: string | null
+          sender_type: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          read_at?: string | null
+          sender_id: string
+          sender_name?: string | null
+          sender_type: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          read_at?: string | null
+          sender_id?: string
+          sender_name?: string | null
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_settings: {
+        Row: {
+          auto_offline_message: string | null
+          created_at: string
+          id: string
+          is_enabled: boolean
+          manual_override: string | null
+          timezone: string | null
+          updated_at: string
+        }
+        Insert: {
+          auto_offline_message?: string | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          manual_override?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auto_offline_message?: string | null
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          manual_override?: string | null
+          timezone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chat_working_hours: {
+        Row: {
+          created_at: string
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean
+          start_time: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          day_of_week: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          start_time?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean
+          start_time?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       clinic_notification_reads: {
         Row: {
           clinic_id: string
