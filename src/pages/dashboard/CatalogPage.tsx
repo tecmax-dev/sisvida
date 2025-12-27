@@ -51,11 +51,11 @@ interface Product {
   id: string;
   name: string;
   description: string | null;
-  selling_price: number;
+  cost_price: number;
   current_stock: number;
-  minimum_stock: number;
+  minimum_stock?: number;
   is_active: boolean;
-  is_sellable: boolean;
+  is_sellable: boolean | null;
   category_id: string | null;
   category?: { name: string } | null;
 }
@@ -172,7 +172,7 @@ export default function CatalogPage() {
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const sellableProducts = products.filter(p => p.is_sellable);
+  const sellableProducts = products.filter(p => p.is_sellable === true);
 
   // Stats
   const stats = {
@@ -413,17 +413,17 @@ export default function CatalogPage() {
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant={product.current_stock <= product.minimum_stock ? "destructive" : "secondary"}
+                          variant={product.current_stock <= (product.minimum_stock || 0) ? "destructive" : "secondary"}
                         >
                           {product.current_stock}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {formatCurrency(product.selling_price)}
+                        {formatCurrency(product.cost_price)}
                       </TableCell>
                       <TableCell>
                         <Switch
-                          checked={product.is_sellable}
+                          checked={product.is_sellable ?? false}
                           onCheckedChange={(checked) =>
                             toggleSellableMutation.mutate({ id: product.id, is_sellable: checked })
                           }
@@ -456,13 +456,19 @@ export default function CatalogPage() {
       {/* Dialogs */}
       <ProcedureDialog
         open={procedureDialogOpen}
-        onOpenChange={setProcedureDialogOpen}
-        procedure={selectedProcedure}
-        clinicId={currentClinic?.id || ''}
-        onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ["catalog-procedures"] });
-          setProcedureDialogOpen(false);
+        onOpenChange={(open) => {
+          setProcedureDialogOpen(open);
+          if (!open) {
+            queryClient.invalidateQueries({ queryKey: ["catalog-procedures"] });
+          }
         }}
+        procedure={selectedProcedure ? {
+          ...selectedProcedure,
+          description: selectedProcedure.description || null,
+          category: selectedProcedure.category || null,
+          color: selectedProcedure.category || '#3B82F6',
+        } : null}
+        clinicId={currentClinic?.id || ''}
       />
 
       <ProductDialog
