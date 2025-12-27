@@ -15,6 +15,7 @@ export type Permission =
   | "patients"
   | "view_patients"
   | "manage_patients"
+  | "delete_patients"
   // Medical Records
   | "medical_records"
   | "view_medical_records"
