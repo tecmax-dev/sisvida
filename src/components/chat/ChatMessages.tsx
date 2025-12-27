@@ -2,6 +2,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { AttachmentPreview } from './AttachmentPreview';
 
 interface Message {
   id: string;
@@ -10,6 +11,10 @@ interface Message {
   message: string;
   is_read: boolean;
   created_at: string;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
+  attachment_size?: number | null;
 }
 
 interface ChatMessagesProps {
@@ -32,6 +37,7 @@ export const ChatMessages = ({ messages }: ChatMessagesProps) => {
       {messages.map((msg) => {
         const isUser = msg.sender_type === 'user';
         const isSystem = msg.sender_type === 'system';
+        const hasAttachment = msg.attachment_url && msg.attachment_name && msg.attachment_type;
 
         if (isSystem) {
           return (
@@ -59,6 +65,7 @@ export const ChatMessages = ({ messages }: ChatMessagesProps) => {
                 {msg.sender_name}
               </span>
             )}
+            
             <div
               className={cn(
                 'px-3 py-2 rounded-2xl',
@@ -67,10 +74,27 @@ export const ChatMessages = ({ messages }: ChatMessagesProps) => {
                   : 'bg-muted text-foreground rounded-bl-md'
               )}
             >
-              <p className="text-sm whitespace-pre-wrap break-words">
-                {escapeHtml(msg.message)}
-              </p>
+              {/* Attachment */}
+              {hasAttachment && (
+                <div className="mb-2">
+                  <AttachmentPreview
+                    url={msg.attachment_url!}
+                    name={msg.attachment_name!}
+                    type={msg.attachment_type!}
+                    size={msg.attachment_size || 0}
+                    isUser={isUser}
+                  />
+                </div>
+              )}
+              
+              {/* Message text */}
+              {msg.message && (
+                <p className="text-sm whitespace-pre-wrap break-words">
+                  {escapeHtml(msg.message)}
+                </p>
+              )}
             </div>
+            
             <div className="flex items-center gap-1 mt-1 px-2">
               <span className="text-[10px] text-muted-foreground">
                 {formatTime(msg.created_at)}
