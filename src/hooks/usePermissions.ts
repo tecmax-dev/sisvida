@@ -2,16 +2,21 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
-// All permission keys from the database
+// All permission keys from the database (permission_definitions table)
 export type Permission =
   // Dashboard
   | "view_dashboard"
+  | "dashboard_default"
+  | "dashboard_financial"
+  | "dashboard_charts"
   // Calendar/Scheduling
   | "scheduling"
   | "view_calendar"
   | "manage_calendar"
   | "manage_waiting_list"
-  // Patients
+  | "view_schedules"
+  | "view_professional_schedule"
+  // Patients/Clients
   | "patients"
   | "view_patients"
   | "manage_patients"
@@ -25,6 +30,7 @@ export type Permission =
   | "view_anamnesis"
   | "manage_anamnesis"
   | "manage_anamnesis_templates"
+  | "anamnesis_forms"
   // Prescriptions
   | "prescriptions"
   | "view_prescriptions"
@@ -50,17 +56,19 @@ export type Permission =
   | "manage_financials"
   | "cash_flow_monthly"
   | "cash_flow_annual"
-  | "manage_cash_registers"
-  | "manage_categories"
-  | "manage_commissions"
-  | "manage_receivables"
-  | "manage_recurring"
-  | "manage_transfers"
-  | "reconciliation"
+  | "cashier"
+  | "manage_cashier"
+  | "financial_categories"
+  | "financial_accounts"
+  | "payables"
+  | "receivables"
+  | "recurring_transactions"
+  | "view_commissions"
   // Insurance
   | "insurance"
   | "view_insurance"
   | "manage_insurance"
+  | "insurance_plans"
   // Stock
   | "stock"
   | "view_stock"
@@ -72,7 +80,97 @@ export type Permission =
   | "manage_subscription"
   | "manage_integrations"
   | "manage_api_keys"
-  | "manage_webhooks";
+  | "manage_webhooks"
+  | "company_data"
+  | "email_settings"
+  | "whatsapp_settings"
+  | "change_password"
+  // Access/Permissions
+  | "access_groups"
+  // Cadastros Gerais
+  | "custom_fields"
+  | "holidays"
+  | "rooms"
+  | "service_groups"
+  | "sms_templates"
+  | "tags"
+  // Consulta
+  | "view_audit"
+  | "view_budgets"
+  // Legacy aliases (for backward compatibility)
+  | "manage_cash_registers"
+  | "manage_categories"
+  | "manage_commissions"
+  | "manage_receivables"
+  | "manage_recurring"
+  | "manage_transfers"
+  | "reconciliation";
+
+/**
+ * Permission alias mapping: maps legacy/incorrect keys to correct database keys.
+ * This ensures backward compatibility with existing code that uses old permission names.
+ */
+const permissionAliases: Record<string, string> = {
+  // Insurance aliases
+  "manage_insurance": "insurance_plans",
+  "view_insurance": "insurance_plans",
+  "insurance": "insurance_plans",
+  
+  // Stock aliases
+  "stock": "view_stock",
+  
+  // Financial aliases
+  "manage_cash_registers": "manage_cashier",
+  "manage_categories": "financial_categories",
+  "manage_commissions": "view_commissions",
+  "manage_receivables": "receivables",
+  "manage_recurring": "recurring_transactions",
+  "manage_transfers": "manage_financials",
+  "reconciliation": "manage_financials",
+  
+  // Patients aliases
+  "patients": "view_patients",
+  
+  // Medical records aliases
+  "medical_records": "view_medical_records",
+  
+  // Anamnesis aliases
+  "anamnesis": "view_anamnesis",
+  
+  // Prescriptions aliases
+  "prescriptions": "view_prescriptions",
+  
+  // Procedures aliases
+  "procedures": "view_procedures",
+  
+  // Packages aliases
+  "packages": "view_stock", // Packages typically require stock view permission
+  "view_packages": "view_stock",
+  "manage_packages": "manage_stock",
+  
+  // Professionals aliases
+  "professionals": "manage_professionals",
+  "view_professionals": "manage_professionals",
+  
+  // Reports aliases
+  "reports": "view_reports",
+  
+  // Financials aliases
+  "financials": "view_financials",
+  
+  // Settings aliases
+  "settings": "manage_settings",
+  "manage_integrations": "manage_settings",
+  "manage_api_keys": "manage_settings",
+  "manage_webhooks": "manage_settings",
+};
+
+/**
+ * Resolves a permission key to its canonical form using aliases.
+ */
+function resolvePermission(permission: string): string {
+  return permissionAliases[permission] || permission;
+}
 
 // Legacy role permissions for backward compatibility (used when access_group_id is not set)
 const rolePermissions: Record<string, Permission[] | "*"> = {
@@ -83,33 +181,26 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
     "scheduling",
     "view_calendar",
     "manage_calendar",
-    "patients",
     "view_patients",
     "manage_patients",
-    "anamnesis",
     "view_anamnesis",
     "manage_anamnesis",
     "manage_waiting_list",
-    "procedures",
     "view_procedures",
+    "insurance_plans",
   ],
   professional: [
     "view_dashboard",
     "scheduling",
     "view_calendar",
     "manage_calendar",
-    "patients",
     "view_patients",
-    "medical_records",
     "view_medical_records",
     "manage_medical_records",
-    "anamnesis",
     "view_anamnesis",
     "manage_anamnesis",
-    "prescriptions",
     "view_prescriptions",
     "manage_prescriptions",
-    "procedures",
     "view_procedures",
   ],
   administrative: [
@@ -117,19 +208,13 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
     "scheduling",
     "view_calendar",
     "manage_calendar",
-    "patients",
     "view_patients",
     "manage_patients",
-    "anamnesis",
     "view_anamnesis",
     "manage_anamnesis",
     "manage_waiting_list",
-    "insurance",
-    "view_insurance",
-    "manage_insurance",
-    "reports",
+    "insurance_plans",
     "view_reports",
-    "procedures",
     "view_procedures",
   ],
 };
@@ -171,11 +256,16 @@ export function usePermissions() {
     // No role means no permissions
     if (!currentRole) return false;
 
+    // Resolve the permission to its canonical form
+    const resolvedPermission = resolvePermission(permission);
+
     // If user has an access_group_id, ALWAYS use database permissions
     if (accessGroupId) {
       // While loading, deny access to prevent flickering
       if (permissionsLoading) return false;
-      return dbPermissions?.has(permission) || false;
+      
+      // Check both the original permission and the resolved one
+      return dbPermissions?.has(permission) || dbPermissions?.has(resolvedPermission) || false;
     }
 
     // Fallback to legacy role-based permissions for users without access_group_id
@@ -184,8 +274,8 @@ export function usePermissions() {
     // If permissions is "*", user has all permissions
     if (permissions === "*") return true;
 
-    // Check if the permission is in the role's permission list
-    return permissions?.includes(permission) || false;
+    // Check if the permission is in the role's permission list (check both original and resolved)
+    return permissions?.includes(permission) || permissions?.includes(resolvedPermission as Permission) || false;
   };
 
   const hasAnyPermission = (permissions: Permission[]): boolean => {
