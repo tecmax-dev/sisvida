@@ -353,16 +353,29 @@ export default function Auth() {
         if (data.user) {
           // Enviar credenciais por email
           try {
-            await supabase.functions.invoke('send-user-credentials', {
-              body: {
-                userEmail: email,
-                userName: name,
-                tempPassword: tempPassword,
-                clinicName: "",
-              },
-            });
+            const { error: credentialsError } = await supabase.functions.invoke(
+              "send-user-credentials",
+              {
+                body: {
+                  userEmail: email,
+                  userName: name,
+                  tempPassword: tempPassword,
+                  clinicName: "",
+                },
+              }
+            );
+
+            if (credentialsError) {
+              throw credentialsError;
+            }
           } catch (emailError) {
-            console.error('Erro ao enviar credenciais:', emailError);
+            console.error("Erro ao enviar credenciais:", emailError);
+            toast({
+              title: "Conta criada, mas email não enviado",
+              description:
+                "Não foi possível enviar sua senha temporária. Tente novamente.",
+              variant: "destructive",
+            });
           }
 
           // Fazer logout para que o usuário faça login com as credenciais recebidas
