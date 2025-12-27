@@ -128,6 +128,30 @@ export default function PublicSignup() {
       }
 
       if (data.user) {
+        // Create email confirmation token
+        const confirmationToken = crypto.randomUUID();
+        
+        try {
+          await supabase
+            .from("email_confirmations" as any)
+            .insert({
+              user_id: data.user.id,
+              email: formData.email,
+              token: confirmationToken,
+            });
+
+          // Send confirmation email via SMTP
+          await supabase.functions.invoke("send-confirmation-email", {
+            body: {
+              userEmail: formData.email,
+              userName: formData.name,
+              confirmationToken: confirmationToken,
+            },
+          });
+        } catch (confirmError) {
+          console.error("Failed to send confirmation email:", confirmError);
+        }
+
         // Notify admin about new signup
         try {
           await supabase.functions.invoke("notify-new-signup", {
@@ -158,7 +182,7 @@ export default function PublicSignup() {
 
         toast({
           title: "Conta criada com sucesso!",
-          description: "Vamos configurar sua clínica agora.",
+          description: "Enviamos um email de confirmação para você. Verifique sua caixa de entrada.",
         });
 
         navigate("/clinic-setup");
