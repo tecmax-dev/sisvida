@@ -64,9 +64,9 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
   const [editingRule, setEditingRule] = useState<RepassRule | null>(null);
 
   const [formData, setFormData] = useState({
-    professional_id: "",
-    procedure_id: "",
-    insurance_plan_id: "",
+    professional_id: "_all",
+    procedure_id: "_all",
+    insurance_plan_id: "_all",
     calculation_type: "percentage" as 'percentage' | 'fixed',
     value: "",
     priority: "0",
@@ -153,14 +153,17 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
     },
   });
 
+  // Helper to convert _all to null for database
+  const toDbValue = (val: string) => (val === "_all" || val === "" ? null : val);
+
   // Create mutation
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { error } = await supabase.from("medical_repass_rules").insert({
         clinic_id: clinicId,
-        professional_id: data.professional_id || null,
-        procedure_id: data.procedure_id || null,
-        insurance_plan_id: data.insurance_plan_id || null,
+        professional_id: toDbValue(data.professional_id),
+        procedure_id: toDbValue(data.procedure_id),
+        insurance_plan_id: toDbValue(data.insurance_plan_id),
         calculation_type: data.calculation_type,
         value: parseFloat(data.value),
         priority: parseInt(data.priority),
@@ -187,9 +190,9 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
       const { error } = await supabase
         .from("medical_repass_rules")
         .update({
-          professional_id: data.professional_id || null,
-          procedure_id: data.procedure_id || null,
-          insurance_plan_id: data.insurance_plan_id || null,
+          professional_id: toDbValue(data.professional_id),
+          procedure_id: toDbValue(data.procedure_id),
+          insurance_plan_id: toDbValue(data.insurance_plan_id),
           calculation_type: data.calculation_type,
           value: parseFloat(data.value),
           priority: parseInt(data.priority),
@@ -233,9 +236,9 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
     setDialogOpen(false);
     setEditingRule(null);
     setFormData({
-      professional_id: "",
-      procedure_id: "",
-      insurance_plan_id: "",
+      professional_id: "_all",
+      procedure_id: "_all",
+      insurance_plan_id: "_all",
       calculation_type: "percentage",
       value: "",
       priority: "0",
@@ -249,9 +252,9 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
   const handleEdit = (rule: RepassRule) => {
     setEditingRule(rule);
     setFormData({
-      professional_id: rule.professional_id || "",
-      procedure_id: rule.procedure_id || "",
-      insurance_plan_id: rule.insurance_plan_id || "",
+      professional_id: rule.professional_id || "_all",
+      procedure_id: rule.procedure_id || "_all",
+      insurance_plan_id: rule.insurance_plan_id || "_all",
       calculation_type: rule.calculation_type,
       value: rule.value.toString(),
       priority: rule.priority.toString(),
@@ -396,7 +399,7 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
                   <SelectValue placeholder="Todos os profissionais" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os profissionais</SelectItem>
+                  <SelectItem value="_all">Todos os profissionais</SelectItem>
                   {professionals.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
@@ -414,7 +417,7 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
                   <SelectValue placeholder="Todos os procedimentos" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os procedimentos</SelectItem>
+                  <SelectItem value="_all">Todos os procedimentos</SelectItem>
                   {procedures.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
@@ -432,7 +435,7 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
                   <SelectValue placeholder="Todos os convênios" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos os convênios</SelectItem>
+                  <SelectItem value="_all">Todos os convênios</SelectItem>
                   {insurancePlans.map((p) => (
                     <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
