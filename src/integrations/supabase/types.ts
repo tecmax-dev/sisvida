@@ -677,6 +677,68 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_flows: {
+        Row: {
+          channel: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          delay_hours: number | null
+          deleted_at: string | null
+          execution_count: number | null
+          id: string
+          is_active: boolean
+          last_executed_at: string | null
+          message_template: string
+          name: string
+          trigger_config: Json | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          delay_hours?: number | null
+          deleted_at?: string | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean
+          last_executed_at?: string | null
+          message_template: string
+          name: string
+          trigger_config?: Json | null
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          delay_hours?: number | null
+          deleted_at?: string | null
+          execution_count?: number | null
+          id?: string
+          is_active?: boolean
+          last_executed_at?: string | null
+          message_template?: string
+          name?: string
+          trigger_config?: Json | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_flows_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       birthday_message_logs: {
         Row: {
           clinic_id: string
@@ -724,6 +786,78 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaigns: {
+        Row: {
+          channel: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          delivered_count: number | null
+          description: string | null
+          failed_count: number | null
+          id: string
+          message_template: string
+          name: string
+          scheduled_at: string | null
+          segment_id: string | null
+          sent_count: number | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          channel: string
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          delivered_count?: number | null
+          description?: string | null
+          failed_count?: number | null
+          id?: string
+          message_template: string
+          name: string
+          scheduled_at?: string | null
+          segment_id?: string | null
+          sent_count?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          channel?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          delivered_count?: number | null
+          description?: string | null
+          failed_count?: number | null
+          id?: string
+          message_template?: string
+          name?: string
+          scheduled_at?: string | null
+          segment_id?: string | null
+          sent_count?: number | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaigns_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaigns_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "patient_segments"
             referencedColumns: ["id"]
           },
         ]
@@ -1733,6 +1867,63 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketing_consents: {
+        Row: {
+          channel: string
+          clinic_id: string
+          consent_date: string
+          consent_type: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          patient_id: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          source: string | null
+        }
+        Insert: {
+          channel: string
+          clinic_id: string
+          consent_date?: string
+          consent_type: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          patient_id: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          source?: string | null
+        }
+        Update: {
+          channel?: string
+          clinic_id?: string
+          consent_date?: string
+          consent_type?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          patient_id?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketing_consents_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketing_consents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -2821,6 +3012,62 @@ export type Database = {
             columns: ["procedure_id"]
             isOneToOne: false
             referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_segments: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          description: string | null
+          filter_criteria: Json
+          id: string
+          is_active: boolean
+          is_dynamic: boolean
+          last_calculated_at: string | null
+          name: string
+          patient_count: number | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          filter_criteria?: Json
+          id?: string
+          is_active?: boolean
+          is_dynamic?: boolean
+          last_calculated_at?: string | null
+          name: string
+          patient_count?: number | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          description?: string | null
+          filter_criteria?: Json
+          id?: string
+          is_active?: boolean
+          is_dynamic?: boolean
+          last_calculated_at?: string | null
+          name?: string
+          patient_count?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_segments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
@@ -3919,6 +4166,45 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      segment_patients: {
+        Row: {
+          added_at: string
+          id: string
+          patient_id: string
+          removed_at: string | null
+          segment_id: string
+        }
+        Insert: {
+          added_at?: string
+          id?: string
+          patient_id: string
+          removed_at?: string | null
+          segment_id: string
+        }
+        Update: {
+          added_at?: string
+          id?: string
+          patient_id?: string
+          removed_at?: string | null
+          segment_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "segment_patients_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "segment_patients_segment_id_fkey"
+            columns: ["segment_id"]
+            isOneToOne: false
+            referencedRelation: "patient_segments"
             referencedColumns: ["id"]
           },
         ]
