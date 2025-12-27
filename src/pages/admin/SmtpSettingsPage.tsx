@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Mail, 
   Server, 
@@ -20,7 +22,10 @@ import {
   AlertCircle,
   Eye,
   EyeOff,
-  Shield
+  Shield,
+  Zap,
+  PartyPopper,
+  MailCheck
 } from "lucide-react";
 
 interface SmtpSettings {
@@ -68,6 +73,12 @@ export default function SmtpSettingsPage() {
   const [testEmail, setTestEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [hasExistingSettings, setHasExistingSettings] = useState(false);
+  
+  // Resend test states
+  const [resendTestEmail, setResendTestEmail] = useState("");
+  const [resendTestName, setResendTestName] = useState("");
+  const [resendTestType, setResendTestType] = useState<"welcome" | "confirmation">("welcome");
+  const [isTestingResend, setIsTestingResend] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -225,6 +236,49 @@ export default function SmtpSettingsPage() {
     }
   };
 
+  const handleTestResend = async () => {
+    if (!resendTestEmail || !resendTestName) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Informe email e nome para o teste.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestingResend(true);
+
+    try {
+      const functionName = resendTestType === "welcome" ? "send-welcome-email" : "send-confirmation-email";
+      
+      const body = resendTestType === "welcome" 
+        ? { userEmail: resendTestEmail, userName: resendTestName, trialDays: 14 }
+        : { userEmail: resendTestEmail, userName: resendTestName, confirmationToken: "test-token-" + Date.now() };
+
+      const { data, error } = await supabase.functions.invoke(functionName, { body });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "Email enviado com sucesso!",
+          description: `Email de ${resendTestType === "welcome" ? "boas-vindas" : "confirmação"} enviado para ${resendTestEmail}`,
+        });
+      } else {
+        throw new Error(data?.error || data?.details || "Falha no envio");
+      }
+    } catch (error: any) {
+      console.error("Error testing Resend:", error);
+      toast({
+        title: "Erro no envio",
+        description: error.message || "Não foi possível enviar o email de teste.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsTestingResend(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -238,12 +292,122 @@ export default function SmtpSettingsPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <Mail className="h-6 w-6" />
-          Configurações de Email (SMTP)
+          Configurações de Email
         </h1>
         <p className="text-muted-foreground mt-1">
-          Configure o servidor SMTP para envio de emails do sistema (boas-vindas, notificações, etc.)
+          Configure SMTP ou teste o envio via Resend API
         </p>
       </div>
+
+      <Tabs defaultValue="resend" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="resend" className="flex items-center gap-2">
+            <Zap className="h-4 w-4" />
+            Resend API
+          </TabsTrigger>
+          <TabsTrigger value="smtp" className="flex items-center gap-2">
+            <Server className="h-4 w-4" />
+            SMTP (Legado)
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Resend API Tab */}
+        <TabsContent value="resend" className="space-y-6">
+          <Alert className="bg-primary/5 border-primary/20">
+            <Zap className="h-4 w-4 text-primary" />
+            <AlertDescription>
+              O sistema agora usa <strong>Resend API</strong> para envio de emails, garantindo melhor 
+              entregabilidade e encoding correto de caracteres especiais.
+            </AlertDescription>
+          </Alert>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Send className="h-5 w-5" />
+                Testar Envio de Email
+              </CardTitle>
+              <CardDescription>
+                Envie um email de teste para verificar se o Resend está funcionando corretamente
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="resend-email">Email de destino *</Label>
+                  <Input
+                    id="resend-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    value={resendTestEmail}
+                    onChange={(e) => setResendTestEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="resend-name">Nome do destinatário *</Label>
+                  <Input
+                    id="resend-name"
+                    placeholder="João Silva"
+                    value={resendTestName}
+                    onChange={(e) => setResendTestName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tipo de email</Label>
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    variant={resendTestType === "welcome" ? "default" : "outline"}
+                    onClick={() => setResendTestType("welcome")}
+                    className="flex-1"
+                  >
+                    <PartyPopper className="mr-2 h-4 w-4" />
+                    Boas-vindas
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={resendTestType === "confirmation" ? "default" : "outline"}
+                    onClick={() => setResendTestType("confirmation")}
+                    className="flex-1"
+                  >
+                    <MailCheck className="mr-2 h-4 w-4" />
+                    Confirmação
+                  </Button>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleTestResend}
+                disabled={isTestingResend || !resendTestEmail || !resendTestName}
+                className="w-full"
+                size="lg"
+              >
+                {isTestingResend ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Enviar Email de Teste
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* SMTP Tab */}
+        <TabsContent value="smtp" className="space-y-6">
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              As configurações SMTP são mantidas como backup. O sistema agora prioriza o envio via Resend API.
+            </AlertDescription>
+          </Alert>
 
       <div className="grid gap-6">
         {/* Status Card */}
@@ -499,6 +663,8 @@ export default function SmtpSettingsPage() {
           </Button>
         </div>
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
