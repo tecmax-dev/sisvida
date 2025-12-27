@@ -2,12 +2,20 @@ import { useAuth } from "@/hooks/useAuth";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Send, Zap, Shield, BarChart } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Send, Zap, Shield, BarChart, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 function MarketingContent() {
   const { currentClinic } = useAuth();
 
   if (!currentClinic) return null;
+
+  const handleComingSoon = () => {
+    toast.info("Funcionalidade em desenvolvimento", {
+      description: "Esta funcionalidade estará disponível em breve."
+    });
+  };
 
   return (
     <RoleGuard permission="view_dashboard">
@@ -45,11 +53,17 @@ function MarketingContent() {
 
           <TabsContent value="segments">
             <Card>
-              <CardHeader>
-                <CardTitle>Segmentos de Pacientes</CardTitle>
-                <CardDescription>
-                  Crie segmentos dinâmicos baseados em critérios específicos
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Segmentos de Pacientes</CardTitle>
+                  <CardDescription>
+                    Crie segmentos dinâmicos baseados em critérios específicos
+                  </CardDescription>
+                </div>
+                <Button onClick={handleComingSoon}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Segmento
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-12 text-muted-foreground">
@@ -67,11 +81,17 @@ function MarketingContent() {
 
           <TabsContent value="campaigns">
             <Card>
-              <CardHeader>
-                <CardTitle>Campanhas de Marketing</CardTitle>
-                <CardDescription>
-                  Envie mensagens personalizadas para seus pacientes
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Campanhas de Marketing</CardTitle>
+                  <CardDescription>
+                    Envie mensagens personalizadas para seus pacientes
+                  </CardDescription>
+                </div>
+                <Button onClick={handleComingSoon}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Campanha
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-12 text-muted-foreground">
@@ -85,11 +105,17 @@ function MarketingContent() {
 
           <TabsContent value="automations">
             <Card>
-              <CardHeader>
-                <CardTitle>Fluxos de Automação</CardTitle>
-                <CardDescription>
-                  Configure mensagens automáticas baseadas em eventos
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Fluxos de Automação</CardTitle>
+                  <CardDescription>
+                    Configure mensagens automáticas baseadas em eventos
+                  </CardDescription>
+                </div>
+                <Button onClick={handleComingSoon}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Automação
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-12 text-muted-foreground">
