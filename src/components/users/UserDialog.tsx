@@ -447,8 +447,8 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
                     Grupo de Acesso
                   </FormLabel>
                   <Select 
-                    onValueChange={field.onChange} 
-                    value={field.value || ""}
+                    onValueChange={(value) => field.onChange(value === "none" ? "" : value)} 
+                    value={field.value || "none"}
                     disabled={isOwner}
                   >
                     <FormControl>
@@ -457,7 +457,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">
+                      <SelectItem value="none">
                         <span className="text-muted-foreground">Nenhum (usar perfil base)</span>
                       </SelectItem>
                       {accessGroups?.map((group) => (
