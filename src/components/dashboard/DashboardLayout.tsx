@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
+import NotificationBell from "@/components/notifications/NotificationBell";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { Logo } from "@/components/layout/Logo";
@@ -332,10 +333,7 @@ export function DashboardLayout() {
 
           <div className="flex-1" />
 
-          <Button variant="ghost" size="icon" className="relative h-9 w-9">
-            <Bell className="h-4 w-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-primary rounded-full animate-pulse" />
-          </Button>
+          <NotificationBell />
         </header>
 
         {/* Page content */}
