@@ -110,18 +110,42 @@ class ErrorBoundary extends React.Component<
 
   render() {
     if (this.state.hasError) {
+      const showDetails =
+        import.meta.env.DEV ||
+        (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("debug"));
+
       return (
         <div className="min-h-screen flex items-center justify-center bg-background">
           <div className="text-center p-8 max-w-md">
-            <h1 className="text-2xl font-bold text-foreground mb-4">
-              Algo deu errado
-            </h1>
+            <h1 className="text-2xl font-bold text-foreground mb-4">Algo deu errado</h1>
             <p className="text-muted-foreground mb-6">
               Ocorreu um erro inesperado. Por favor, recarregue a página.
             </p>
-            <Button onClick={() => window.location.reload()}>
-              Recarregar página
-            </Button>
+
+            {showDetails && this.state.error && (
+              <details className="text-left mb-6 rounded-md border bg-card p-4">
+                <summary className="cursor-pointer text-sm font-medium text-foreground">
+                  Ver detalhes do erro
+                </summary>
+                <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap break-words text-xs text-muted-foreground">
+{this.state.error?.stack || this.state.error?.message}
+                </pre>
+              </details>
+            )}
+
+            <div className="flex items-center justify-center gap-3">
+              <Button onClick={() => window.location.reload()}>Recarregar página</Button>
+              {showDetails && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    this.setState({ hasError: false, error: null });
+                  }}
+                >
+                  Tentar novamente
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       );
