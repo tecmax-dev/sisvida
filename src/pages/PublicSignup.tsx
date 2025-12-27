@@ -140,16 +140,29 @@ export default function PublicSignup() {
       if (data.user) {
         // Send credentials email with temporary password
         try {
-          await supabase.functions.invoke("send-user-credentials", {
-            body: {
-              userEmail: formData.email,
-              userName: formData.name,
-              tempPassword: tempPassword,
-              clinicName: "",
-            },
-          });
+          const { error: credentialsError } = await supabase.functions.invoke(
+            "send-user-credentials",
+            {
+              body: {
+                userEmail: formData.email,
+                userName: formData.name,
+                tempPassword: tempPassword,
+                clinicName: "",
+              },
+            }
+          );
+
+          if (credentialsError) {
+            throw credentialsError;
+          }
         } catch (emailError) {
           console.error("Failed to send credentials email:", emailError);
+          toast({
+            title: "Conta criada, mas email não enviado",
+            description:
+              "Não foi possível enviar sua senha temporária. Tente novamente ou contate o suporte.",
+            variant: "destructive",
+          });
         }
 
         // Notify admin about new signup
