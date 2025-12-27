@@ -1,8 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, Check, Star, Users, Shield } from "lucide-react";
-// Imagem do dashboard gerada por IA com sidebar branca e tema teal
-const dashboardMockup = "https://eahhszmbyxapxzilfdlo.supabase.co/storage/v1/object/public/carousel-images/hero-mockup-1766508040326.png";
+import heroMockupScreens from "@/assets/hero-mockup-screens.png";
 
 const highlights = [
   "Agenda online 24h",
@@ -101,16 +100,16 @@ export function HeroSection() {
 
           {/* Right Column - Mockup */}
           <div className="order-1 lg:order-2 flex justify-center lg:justify-end">
-            <div className="relative w-full max-w-lg lg:max-w-xl">
-              <div className="overflow-hidden rounded-2xl shadow-2xl border border-border animate-float">
+            <div className="relative w-full max-w-2xl lg:max-w-3xl xl:max-w-4xl">
+              <div className="animate-fade-in" style={{ animationDelay: '300ms' }}>
                 <img 
-                  src={dashboardMockup}
-                  alt="Painel de agenda do Eclini - Sistema de gestão para clínicas"
-                  className="w-full h-auto"
+                  src={heroMockupScreens}
+                  alt="Múltiplas telas do sistema Eclini - Dashboard, agenda, teleconsulta e relatórios"
+                  className="w-full h-auto object-contain"
                 />
               </div>
               {/* Decorative elements */}
-              <div className="absolute -z-10 inset-0 bg-gradient-to-br from-primary/20 via-transparent to-accent/20 rounded-3xl blur-3xl scale-110" />
+              <div className="absolute -z-10 inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 rounded-3xl blur-3xl scale-110" />
             </div>
           </div>
         </div>
