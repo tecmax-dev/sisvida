@@ -192,10 +192,12 @@ export default function PublicSignup() {
 
         toast({
           title: "Conta criada com sucesso!",
-          description: "Enviamos um email de confirmação para você. Verifique sua caixa de entrada.",
+          description: "Verifique seu email para confirmar sua conta.",
         });
 
-        navigate("/clinic-setup");
+        navigate("/aguardando-confirmacao", { 
+          state: { email: formData.email, name: formData.name } 
+        });
       }
     } catch (error: any) {
       console.error("Signup error:", error);
