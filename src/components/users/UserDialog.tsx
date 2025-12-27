@@ -5,6 +5,7 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useAuditLog } from "@/hooks/useAuditLog";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
@@ -31,13 +32,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle, Shield } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface ClinicUser {
   id: string;
   user_id: string;
   role: 'owner' | 'admin' | 'receptionist' | 'professional' | 'administrative';
+  access_group_id?: string | null;
   created_at: string;
   profile: {
     name: string;
@@ -59,6 +61,7 @@ const createUserSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   phone: z.string().optional(),
   role: z.enum(['admin', 'professional', 'administrative', 'receptionist']),
+  access_group_id: z.string().optional(),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional(),
 });
 
@@ -67,6 +70,7 @@ const editUserSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
   phone: z.string().optional(),
   role: z.enum(['admin', 'professional', 'administrative', 'receptionist']),
+  access_group_id: z.string().optional(),
 });
 
 type CreateFormData = z.infer<typeof createUserSchema>;
@@ -90,6 +94,24 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
   const isEditing = !!clinicUser;
   const isOwner = clinicUser?.role === 'owner';
 
+  // Fetch access groups for this clinic
+  const { data: accessGroups } = useQuery({
+    queryKey: ['access-groups', clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('access_groups')
+        .select('id, name, description, is_system')
+        .or(`clinic_id.eq.${clinicId},is_system.eq.true`)
+        .eq('is_active', true)
+        .order('is_system', { ascending: false })
+        .order('name');
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && !!clinicId,
+  });
+
   const form = useForm<FormData>({
     resolver: zodResolver(isEditing ? editUserSchema : createUserSchema),
     defaultValues: {
@@ -97,6 +119,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
       name: "",
       phone: "",
       role: "receptionist",
+      access_group_id: "",
       password: "",
     },
   });
@@ -108,6 +131,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         name: clinicUser.profile?.name || "",
         phone: clinicUser.profile?.phone || "",
         role: clinicUser.role === 'owner' ? 'admin' : clinicUser.role,
+        access_group_id: clinicUser.access_group_id || "",
       });
     } else {
       form.reset({
@@ -115,6 +139,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         name: "",
         phone: "",
         role: "receptionist",
+        access_group_id: "",
         password: "",
       });
     }
@@ -150,10 +175,13 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
     setLoading(true);
     try {
       if (isEditing && clinicUser) {
-        // Update user role
+        // Update user role and access_group_id
         const { error: roleError } = await supabase
           .from('user_roles')
-          .update({ role: data.role })
+          .update({ 
+            role: data.role,
+            access_group_id: data.access_group_id || null
+          })
           .eq('id', clinicUser.id);
 
         if (roleError) throw roleError;
@@ -170,13 +198,14 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         if (profileError) throw profileError;
 
         await logAction({
-          action: 'view_users_list',
+          action: 'update_user',
           entityType: 'user',
           entityId: clinicUser.id,
           details: {
             user_name: data.name,
             new_role: data.role,
             previous_role: clinicUser.role,
+            access_group_id: data.access_group_id || null,
           },
         });
 
@@ -211,13 +240,14 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
           throw new Error('Falha ao criar usuário');
         }
 
-        // Create user role for the clinic
+        // Create user role for the clinic with access_group_id
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
             user_id: authData.user.id,
             clinic_id: clinicId,
             role: data.role,
+            access_group_id: createData.access_group_id || null,
           });
 
         if (roleError) throw roleError;
@@ -251,13 +281,14 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         }
 
         await logAction({
-          action: 'create_super_admin',
+          action: 'create_user',
           entityType: 'user',
           entityId: authData.user.id,
           details: {
             user_name: createData.name,
             user_email: createData.email,
             role: createData.role,
+            access_group_id: createData.access_group_id || null,
             clinic_id: clinicId,
           },
         });
@@ -275,7 +306,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>
             {isEditing ? 'Editar Usuário' : 'Novo Usuário'}
@@ -379,7 +410,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
               name="role"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nível de Permissão</FormLabel>
+                  <FormLabel>Perfil Base</FormLabel>
                   <Select 
                     onValueChange={field.onChange} 
                     value={field.value}
@@ -387,7 +418,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
                   >
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione o nível" />
+                        <SelectValue placeholder="Selecione o perfil" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -398,6 +429,50 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
                       ))}
                     </SelectContent>
                   </Select>
+                  <FormDescription>
+                    Define o perfil base do usuário. Use o grupo de acesso para permissões granulares.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="access_group_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Grupo de Acesso
+                  </FormLabel>
+                  <Select 
+                    onValueChange={field.onChange} 
+                    value={field.value || ""}
+                    disabled={isOwner}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um grupo (opcional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="">
+                        <span className="text-muted-foreground">Nenhum (usar perfil base)</span>
+                      </SelectItem>
+                      {accessGroups?.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          <div className="flex items-center gap-2">
+                            {group.is_system && <Shield className="h-3 w-3 text-primary" />}
+                            <span>{group.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Quando definido, as permissões do grupo sobrescrevem o perfil base.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
