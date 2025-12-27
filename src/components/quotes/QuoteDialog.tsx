@@ -368,12 +368,12 @@ export function QuoteDialog({ open, onOpenChange, quote, onSuccess }: QuoteDialo
             {/* Professional Selection */}
             <div className="space-y-2">
               <Label>Profissional (opcional)</Label>
-              <Select value={professionalId} onValueChange={setProfessionalId}>
+              <Select value={professionalId || "none"} onValueChange={(v) => setProfessionalId(v === "none" ? "" : v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um profissional" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="none">Nenhum</SelectItem>
                   {professionals.map((prof) => (
                     <SelectItem key={prof.id} value={prof.id}>
                       {prof.name}
