@@ -1909,6 +1909,361 @@ export type Database = {
           },
         ]
       }
+      medical_repass_items: {
+        Row: {
+          appointment_id: string | null
+          calculated_amount: number
+          clinic_id: string
+          created_at: string
+          gross_amount: number
+          id: string
+          insurance_plan_id: string | null
+          notes: string | null
+          period_id: string
+          procedure_id: string | null
+          professional_id: string
+          rule_id: string | null
+          rule_snapshot: Json
+          status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          calculated_amount: number
+          clinic_id: string
+          created_at?: string
+          gross_amount: number
+          id?: string
+          insurance_plan_id?: string | null
+          notes?: string | null
+          period_id: string
+          procedure_id?: string | null
+          professional_id: string
+          rule_id?: string | null
+          rule_snapshot: Json
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          calculated_amount?: number
+          clinic_id?: string
+          created_at?: string
+          gross_amount?: number
+          id?: string
+          insurance_plan_id?: string | null
+          notes?: string | null
+          period_id?: string
+          procedure_id?: string | null
+          professional_id?: string
+          rule_id?: string | null
+          rule_snapshot?: Json
+          status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_repass_items_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_items_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_items_insurance_plan_id_fkey"
+            columns: ["insurance_plan_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_items_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "medical_repass_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_items_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_items_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_items_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "medical_repass_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_items_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_repass_payments: {
+        Row: {
+          cash_register_id: string | null
+          clinic_id: string
+          created_at: string
+          financial_transaction_id: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          payment_method: string | null
+          period_id: string
+          professional_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          cash_register_id?: string | null
+          clinic_id: string
+          created_at?: string
+          financial_transaction_id?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_method?: string | null
+          period_id: string
+          professional_id: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          cash_register_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          financial_transaction_id?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_method?: string | null
+          period_id?: string
+          professional_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_repass_payments_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_payments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_payments_financial_transaction_id_fkey"
+            columns: ["financial_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_payments_period_id_fkey"
+            columns: ["period_id"]
+            isOneToOne: false
+            referencedRelation: "medical_repass_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_payments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_repass_periods: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          calculated_at: string | null
+          calculated_by: string | null
+          clinic_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          notes: string | null
+          paid_at: string | null
+          paid_by: string | null
+          reference_month: number
+          reference_year: number
+          status: string
+          total_gross: number | null
+          total_repass: number | null
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          calculated_at?: string | null
+          calculated_by?: string | null
+          clinic_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          reference_month: number
+          reference_year: number
+          status?: string
+          total_gross?: number | null
+          total_repass?: number | null
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          calculated_at?: string | null
+          calculated_by?: string | null
+          clinic_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_by?: string | null
+          reference_month?: number
+          reference_year?: number
+          status?: string
+          total_gross?: number | null
+          total_repass?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_repass_periods_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      medical_repass_rules: {
+        Row: {
+          calculation_type: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          effective_from: string
+          effective_until: string | null
+          id: string
+          insurance_plan_id: string | null
+          is_active: boolean
+          notes: string | null
+          priority: number
+          procedure_id: string | null
+          professional_id: string | null
+          updated_at: string
+          value: number
+          version: number
+        }
+        Insert: {
+          calculation_type: string
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          insurance_plan_id?: string | null
+          is_active?: boolean
+          notes?: string | null
+          priority?: number
+          procedure_id?: string | null
+          professional_id?: string | null
+          updated_at?: string
+          value: number
+          version?: number
+        }
+        Update: {
+          calculation_type?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          effective_from?: string
+          effective_until?: string | null
+          id?: string
+          insurance_plan_id?: string | null
+          is_active?: boolean
+          notes?: string | null
+          priority?: number
+          procedure_id?: string | null
+          professional_id?: string | null
+          updated_at?: string
+          value?: number
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medical_repass_rules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_rules_insurance_plan_id_fkey"
+            columns: ["insurance_plan_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_rules_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_repass_rules_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_logs: {
         Row: {
           clinic_id: string
@@ -4411,6 +4766,20 @@ export type Database = {
     }
     Functions: {
       generate_quote_number: { Args: { p_clinic_id: string }; Returns: string }
+      get_applicable_repass_rule: {
+        Args: {
+          p_clinic_id: string
+          p_date?: string
+          p_insurance_plan_id?: string
+          p_procedure_id?: string
+          p_professional_id: string
+        }
+        Returns: {
+          calculation_type: string
+          rule_id: string
+          value: number
+        }[]
+      }
       get_clinic_message_usage: {
         Args: { _clinic_id: string; _month_year?: string }
         Returns: {

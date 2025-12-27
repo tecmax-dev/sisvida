@@ -65,7 +65,10 @@ const PatientAttachmentsPage = lazy(() => import("./pages/dashboard/PatientAttac
 const StockPage = lazy(() => import("./pages/dashboard/StockPage"));
 const CatalogPage = lazy(() => import("./pages/dashboard/CatalogPage"));
 const QuotesPage = lazy(() => import("./pages/dashboard/QuotesPage"));
-
+const RepassPage = lazy(() => import("./pages/dashboard/RepassPage"));
+const QueueManagementPage = lazy(() => import("./pages/dashboard/QueueManagementPage"));
+const MarketingPage = lazy(() => import("./pages/dashboard/MarketingPage"));
+const TissPage = lazy(() => import("./pages/dashboard/TissPage"));
 // Admin pages (9 páginas)
 const SuperAdminDashboard = lazy(() => import("./pages/admin/SuperAdminDashboard"));
 const ClinicsManagement = lazy(() => import("./pages/admin/ClinicsManagement"));
@@ -255,6 +258,10 @@ const App = () => (
                   <Route path="stock" element={<StockPage />} />
                   <Route path="catalog" element={<CatalogPage />} />
                   <Route path="quotes" element={<QuotesPage />} />
+                  <Route path="repass" element={<RepassPage />} />
+                  <Route path="queue" element={<QueueManagementPage />} />
+                  <Route path="marketing" element={<MarketingPage />} />
+                  <Route path="tiss" element={<TissPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
