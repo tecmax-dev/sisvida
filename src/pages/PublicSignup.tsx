@@ -7,16 +7,25 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/layout/Logo";
-import { ArrowRight, Eye, EyeOff, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowRight, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { z } from "zod";
 
 const signupSchema = z.object({
   name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
   email: z.string().email("Email inválido"),
   phone: z.string().min(14, "Telefone inválido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
   businessType: z.string().min(1, "Selecione o tipo de negócio"),
 });
+
+// Generate a secure temporary password
+function generateTempPassword(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+  let password = "";
+  for (let i = 0; i < 16; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}
 
 const businessTypes = [
   { value: "consultorio", label: "Consultório individual (1 profissional)" },
@@ -57,7 +66,6 @@ export default function PublicSignup() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -65,7 +73,6 @@ export default function PublicSignup() {
     name: "",
     email: "",
     phone: "",
-    password: "",
     businessType: "",
   });
 
@@ -101,9 +108,12 @@ export default function PublicSignup() {
     setIsLoading(true);
 
     try {
+      // Generate temporary password for the user
+      const tempPassword = generateTempPassword();
+      
       const { data, error } = await supabase.auth.signUp({
         email: formData.email,
-        password: formData.password,
+        password: tempPassword,
         options: {
           emailRedirectTo: `${window.location.origin}/clinic-setup`,
           data: {
@@ -262,27 +272,6 @@ export default function PublicSignup() {
               {errors.phone && <p className="text-sm text-destructive">{errors.phone}</p>}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Mínimo 6 caracteres"
-                  value={formData.password}
-                  onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
-                  className={`h-12 pr-12 ${errors.password ? "border-destructive" : ""}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-              {errors.password && <p className="text-sm text-destructive">{errors.password}</p>}
-            </div>
 
             <div className="space-y-2">
               <Label htmlFor="businessType">Tipo de negócio</Label>
