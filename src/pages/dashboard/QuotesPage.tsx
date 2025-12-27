@@ -66,7 +66,7 @@ import {
   printQuote,
   QuoteData,
 } from "@/lib/quoteUtils";
-import { sendWhatsAppDocument, formatQuote } from "@/lib/whatsapp";
+import { sendWhatsAppDocument } from "@/lib/whatsapp";
 import {
   Dialog,
   DialogContent,
@@ -258,23 +258,43 @@ export default function QuotesPage() {
     setSendingWhatsApp(quote.id);
     try {
       const data = await loadQuoteData(quote);
-      const { base64, fileName } = await generateQuotePDF(data);
+      const { blob, fileName } = await generateQuotePDF(data);
       
-      const message = formatQuote(
-        quote.patient.name,
-        currentClinic?.name || '',
-        formatCurrency(quote.total),
-        quote.quote_number,
-        quote.valid_until ? format(new Date(quote.valid_until), "dd/MM/yyyy") : undefined
-      );
+      // Convert blob to base64
+      const reader = new FileReader();
+      const base64Promise = new Promise<string>((resolve) => {
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+        reader.readAsDataURL(blob);
+      });
+      const pdfBase64 = await base64Promise;
+      
+      const validUntilText = quote.valid_until 
+        ? format(new Date(quote.valid_until), "dd/MM/yyyy") 
+        : undefined;
+      
+      const caption = `Olá ${quote.patient.name}! 👋
+
+📋 *Orçamento ${quote.quote_number}*
+
+A ${currentClinic?.name || ''} envia o orçamento solicitado:
+
+💰 *Valor Total:* ${formatCurrency(quote.total)}
+${validUntilText ? `📅 *Válido até:* ${validUntilText}` : ''}
+
+📎 O orçamento em PDF está anexado a esta mensagem.
+
+Atenciosamente,
+Equipe ${currentClinic?.name || ''}`;
 
       const result = await sendWhatsAppDocument({
         clinicId: currentClinic?.id || '',
         phone: quote.patient.phone,
-        caption: message,
-        base64,
+        pdfBase64,
         fileName,
-        mimetype: 'application/pdf',
+        caption,
       });
 
       if (result.success) {
@@ -282,7 +302,7 @@ export default function QuotesPage() {
         // Update status to sent
         updateStatusMutation.mutate({ quoteId: quote.id, status: 'sent' });
       } else {
-        toast.error(result.message || "Erro ao enviar");
+        toast.error(result.error || "Erro ao enviar");
       }
     } catch (error: any) {
       toast.error(error.message || "Erro ao enviar orçamento");

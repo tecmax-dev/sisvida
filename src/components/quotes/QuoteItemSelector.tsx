@@ -27,8 +27,9 @@ interface Product {
   id: string;
   name: string;
   description?: string | null;
-  selling_price: number;
+  cost_price: number;
   current_stock: number;
+  is_sellable?: boolean;
 }
 
 interface SelectedItem {
@@ -113,7 +114,7 @@ export function QuoteItemSelector({ open, onOpenChange, onSelect }: QuoteItemSel
       id: product.id,
       name: product.name,
       description: product.description,
-      unit_price: product.selling_price,
+      unit_price: product.cost_price,
       quantity: 1,
       item_type: 'product',
       product_id: product.id,
@@ -216,7 +217,7 @@ export function QuoteItemSelector({ open, onOpenChange, onSelect }: QuoteItemSel
                     </div>
                     <div className="flex items-center gap-3 ml-4">
                       <span className="font-semibold text-primary">
-                        {formatCurrency(product.selling_price)}
+                        {formatCurrency(product.cost_price)}
                       </span>
                       <Button
                         size="sm"
