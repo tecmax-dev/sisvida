@@ -29,6 +29,9 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [fromExpiredLink, setFromExpiredLink] = useState(false);
   const [isFirstAccess, setIsFirstAccess] = useState(false);
+  
+  // useRef para controlar o fluxo de primeiro acesso - atualizado imediatamente sem re-render
+  const isFirstAccessFlowRef = useRef(false);
   const [errors, setErrors] = useState<{ 
     email?: string; 
     password?: string; 
@@ -90,8 +93,8 @@ export default function Auth() {
 
   useEffect(() => {
     const checkUserAndRedirect = async (userId: string) => {
-      // Verificar ref antes de redirecionar
-      if (isRecoveryFlowRef.current) return;
+      // Verificar refs antes de redirecionar
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
       
       // Verificar se é super admin
       const { data: superAdminData } = await supabase
@@ -100,8 +103,8 @@ export default function Auth() {
         .eq('user_id', userId)
         .maybeSingle();
       
-      // Verificar ref novamente após a query assíncrona
-      if (isRecoveryFlowRef.current) return;
+      // Verificar refs novamente após a query assíncrona
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
       
       if (superAdminData) {
         navigate("/admin");
@@ -115,8 +118,8 @@ export default function Auth() {
         .eq('user_id', userId)
         .limit(1);
       
-      // Verificar ref novamente
-      if (isRecoveryFlowRef.current) return;
+      // Verificar refs novamente
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
       
       // Se tem pelo menos uma clínica, vai para dashboard
       if (rolesData && rolesData.length > 0) {
@@ -135,8 +138,8 @@ export default function Auth() {
         return;
       }
       
-      // Verificar ref (síncrono e confiável)
-      if (isRecoveryFlowRef.current) return;
+      // Verificar refs (síncrono e confiável)
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
       
       // Verificar URL hash como fallback
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -150,8 +153,8 @@ export default function Auth() {
       
       if (session?.user) {
         setTimeout(() => {
-          // Verificar ref novamente antes de redirecionar
-          if (!isRecoveryFlowRef.current) {
+          // Verificar refs novamente antes de redirecionar
+          if (!isRecoveryFlowRef.current && !isFirstAccessFlowRef.current) {
             checkUserAndRedirect(session.user.id);
           }
         }, 0);
@@ -160,8 +163,8 @@ export default function Auth() {
 
     // Verificar sessão existente
     supabase.auth.getSession().then(({ data: { session } }) => {
-      // Verificar ref ANTES de redirecionar
-      if (isRecoveryFlowRef.current) return;
+      // Verificar refs ANTES de redirecionar
+      if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
       
       // Verificar URL hash como dupla checagem
       const hashParams = new URLSearchParams(window.location.hash.substring(1));
@@ -331,6 +334,7 @@ export default function Auth() {
 
           // Se password_changed é false ou null, é primeiro acesso
           if (!(profileData as any)?.password_changed) {
+            isFirstAccessFlowRef.current = true; // Bloquear redirecionamento
             setIsFirstAccess(true);
             setView("first-access");
             setPassword("");
@@ -361,6 +365,7 @@ export default function Auth() {
           description: "Sua senha pessoal foi definida.",
         });
 
+        isFirstAccessFlowRef.current = false; // Liberar redirecionamento
         setIsFirstAccess(false);
         
         // Redirecionar para a área correta
