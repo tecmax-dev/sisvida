@@ -170,28 +170,49 @@ const getWelcomeEmailTemplate = (userName: string, trialDays: number): string =>
 
 const handler = async (req: Request): Promise<Response> => {
   console.log("[send-welcome-email] Request received");
-  
+
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // RFC2047 base64 for headers (avoids quoted-printable line break issues)
+  const encodeSubjectB64 = (subject: string) => {
+    const bytes = new TextEncoder().encode(subject);
+    let binary = "";
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return `=?UTF-8?B?${btoa(binary)}?=`;
+  };
+
+  const toBase64Utf8 = (input: string) => {
+    const bytes = new TextEncoder().encode(input);
+    let binary = "";
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary);
+  };
+
+  const wrapBase64 = (b64: string, lineLen = 76) => {
+    const out: string[] = [];
+    for (let i = 0; i < b64.length; i += lineLen) out.push(b64.slice(i, i + lineLen));
+    return out.join("\r\n");
+  };
+
   try {
     const { userEmail, userName, trialDays = 14 }: WelcomeEmailRequest = await req.json();
-    
+
     console.log(`[send-welcome-email] Sending to: ${userEmail}, name: ${userName}`);
 
     if (!userEmail || !userName) {
       console.error("[send-welcome-email] Missing required fields");
       return new Response(
         JSON.stringify({ error: "Email e nome são obrigatórios" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
     // Create Supabase client with service role to bypass RLS
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
     // Fetch SMTP settings
@@ -206,7 +227,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("[send-welcome-email] Error fetching SMTP settings:", smtpError);
       return new Response(
         JSON.stringify({ error: "Erro ao buscar configurações SMTP", details: smtpError.message }),
-        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
@@ -214,7 +235,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.warn("[send-welcome-email] No SMTP settings configured");
       return new Response(
         JSON.stringify({ error: "Configurações SMTP não encontradas. Configure no painel de administração." }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
+        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
@@ -235,17 +256,17 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Generate email HTML
     const htmlContent = getWelcomeEmailTemplate(userName, trialDays);
+    const htmlB64 = wrapBase64(toBase64Utf8(htmlContent));
 
-    // Send email with proper UTF-8 encoding
+    // Send email with definitive UTF-8 handling (base64 body + RFC2047 subject)
     await client.send({
       from: `${smtpSettings.from_name} <${smtpSettings.from_email}>`,
       to: userEmail,
-      subject: `Bem-vindo(a) ao Eclini, ${userName}! Seu periodo de teste comecou`,
-      html: htmlContent,
+      subject: encodeSubjectB64(`🎉 Bem-vindo(a) ao Eclini, ${userName}! Seu período de teste começou`),
       mimeContent: [
         {
-          mimeType: "text/html; charset=utf-8",
-          content: htmlContent,
+          mimeType: 'text/html; charset="utf-8"',
+          content: htmlB64,
           transferEncoding: "base64",
         },
       ],
@@ -257,14 +278,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(
       JSON.stringify({ success: true, message: "Email enviado com sucesso" }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
-
   } catch (error: any) {
     console.error("[send-welcome-email] Error:", error);
     return new Response(
       JSON.stringify({ error: "Erro ao enviar email", details: error.message }),
-      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   }
 };
