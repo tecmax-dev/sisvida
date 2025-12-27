@@ -161,8 +161,12 @@ serve(async (req) => {
       );
     }
 
-    // Fetch clinic data
-    const { data: clinic, error: clinicError } = await supabase
+    // Create admin client with service_role to bypass RLS for configs
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const adminClient = createClient(supabaseUrl, serviceRoleKey);
+
+    // Fetch clinic data using admin client
+    const { data: clinic, error: clinicError } = await adminClient
       .from('clinics')
       .select('id, name, birthday_message, logo_url')
       .eq('id', clinicId)
@@ -175,14 +179,15 @@ serve(async (req) => {
       );
     }
 
-    // Fetch Evolution API config
-    const { data: evolutionConfig, error: configError } = await supabase
+    // Fetch Evolution API config using admin client (bypasses RLS)
+    const { data: evolutionConfig, error: configError } = await adminClient
       .from('evolution_configs')
       .select('api_url, api_key, instance_name, is_connected')
       .eq('clinic_id', clinicId)
       .maybeSingle();
 
     if (configError || !evolutionConfig) {
+      console.log('[send-birthday-test] Evolution config error:', configError?.message);
       return new Response(
         JSON.stringify({ success: false, code: 400, error: 'WhatsApp não configurado para esta clínica' }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
