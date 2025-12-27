@@ -179,7 +179,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <RoleGuard permission="manage_settings">
+    <RoleGuard permissions={["manage_settings", "change_password"]}>
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
@@ -187,6 +187,8 @@ export default function SettingsPage() {
           Personalize as configurações da sua clínica
         </p>
       </div>
+
+      <RoleGuard permission="manage_settings">
 
       {/* Clinic Info */}
       <Card>
@@ -502,6 +504,13 @@ export default function SettingsPage() {
       {/* Webhooks */}
       <WebhooksPanel />
 
+      <div className="flex justify-end">
+        <Button variant="hero" onClick={handleSave} disabled={saving}>
+          {saving ? "Salvando..." : "Salvar alterações"}
+        </Button>
+      </div>
+      </RoleGuard>
+
       {/* Password Change - Protected by change_password permission */}
       {hasPermission('change_password') && (
         <Card>
@@ -554,12 +563,6 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       )}
-
-      <div className="flex justify-end">
-        <Button variant="hero" onClick={handleSave} disabled={saving}>
-          {saving ? "Salvando..." : "Salvar alterações"}
-        </Button>
-      </div>
     </div>
     </RoleGuard>
   );
