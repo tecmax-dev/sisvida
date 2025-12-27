@@ -164,13 +164,19 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate email HTML
     const htmlContent = getConfirmationEmailTemplate(userName, confirmationUrl);
 
-    // Send email
+    // Send email with proper UTF-8 encoding
     await client.send({
       from: `${smtpSettings.from_name} <${smtpSettings.from_email}>`,
       to: userEmail,
-      subject: `📧 Confirme seu email - Eclini`,
-      content: "auto",
+      subject: "Confirme seu email - Eclini",
       html: htmlContent,
+      mimeContent: [
+        {
+          mimeType: "text/html; charset=utf-8",
+          content: htmlContent,
+          transferEncoding: "base64",
+        },
+      ],
     });
 
     await client.close();
