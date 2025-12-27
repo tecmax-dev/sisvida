@@ -325,12 +325,12 @@ export default function Auth() {
         if (signInData.user) {
           const { data: profileData } = await supabase
             .from('profiles')
-            .select('password_changed')
+            .select('*')
             .eq('user_id', signInData.user.id)
             .single();
 
           // Se password_changed é false ou null, é primeiro acesso
-          if (!profileData?.password_changed) {
+          if (!(profileData as any)?.password_changed) {
             setIsFirstAccess(true);
             setView("first-access");
             setPassword("");
@@ -476,6 +476,7 @@ export default function Auth() {
       case "signup": return "Crie sua conta";
       case "forgot-password": return "Esqueceu a senha?";
       case "reset-password": return "Redefinir senha";
+      case "first-access": return "Crie sua senha pessoal";
     }
   };
 
@@ -485,6 +486,7 @@ export default function Auth() {
       case "signup": return "Comece a gerenciar sua clínica hoje";
       case "forgot-password": return "Digite seu email para receber o link de recuperação";
       case "reset-password": return "Digite sua nova senha";
+      case "first-access": return "Para sua segurança, crie uma senha pessoal";
     }
   };
 
@@ -623,6 +625,75 @@ export default function Auth() {
               <Button type="submit" className="w-full" size="lg" disabled={loading}>
                 {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Redefinir senha
+              </Button>
+            </form>
+          )}
+
+          {/* First Access - Create Personal Password */}
+          {view === "first-access" && (
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-sm text-primary dark:bg-primary/5">
+                <p className="font-medium mb-1">🔐 Primeiro acesso detectado</p>
+                <p className="text-muted-foreground">
+                  Você está usando uma senha temporária. Por segurança, crie uma senha pessoal agora.
+                </p>
+              </div>
+
+              <div>
+                <Label htmlFor="password">Nova senha</Label>
+                <div className="relative mt-1.5">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className={`pl-10 pr-10 ${errors.password ? "border-destructive" : ""}`}
+                  />
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="mt-1 text-sm text-destructive">{errors.password}</p>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
+                <div className="relative mt-1.5">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••"
+                    className={`pl-10 pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                  />
+                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {errors.confirmPassword && (
+                  <p className="mt-1 text-sm text-destructive">{errors.confirmPassword}</p>
+                )}
+              </div>
+
+              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Criar minha senha
               </Button>
             </form>
           )}
