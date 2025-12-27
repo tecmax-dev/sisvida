@@ -67,7 +67,9 @@ const navItems: NavItem[] = [
   { href: "/dashboard/financials", icon: DollarSign, label: "Financeiro", permission: "view_financials" },
   { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios", permission: "view_reports" },
   { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano", permission: "manage_subscription" },
-  { href: "/dashboard/settings", icon: Settings, label: "Configurações", permission: "manage_settings" },
+  // Intencionalmente sem permission aqui: o controle fino fica dentro da página
+  // (ex.: usuários sem manage_settings podem entrar só para alterar a própria senha)
+  { href: "/dashboard/settings", icon: Settings, label: "Configurações" },
 ];
 
 const adminNavItems: NavItem[] = [
