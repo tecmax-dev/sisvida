@@ -52,6 +52,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -149,6 +150,7 @@ const patientSchema = z.object({
 
 export default function PatientsPage() {
   const { currentClinic } = useAuth();
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -558,13 +560,14 @@ export default function PatientsPage() {
           </p>
           <RealtimeIndicator className="mt-2" />
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="hero">
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Paciente
-            </Button>
-          </DialogTrigger>
+        {hasPermission("manage_patients") && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="hero">
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Paciente
+              </Button>
+            </DialogTrigger>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Cadastrar Paciente</DialogTitle>
@@ -694,6 +697,7 @@ export default function PatientsPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {/* Search */}
@@ -773,32 +777,44 @@ export default function PatientsPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="bg-popover">
-                      <DropdownMenuItem onClick={() => handleViewProfile(patient)}>
-                        <User className="h-4 w-4 mr-2" />
-                        Ver perfil
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleScheduleAppointment(patient)}>
-                        <Calendar className="h-4 w-4 mr-2" />
-                        Agendar consulta
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleOpenEdit(patient)}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openAnamnesisDialog(patient)}>
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Enviar Anamnese
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate(`/dashboard/patients/${patient.id}/attachments`)}>
-                        <Paperclip className="h-4 w-4 mr-2" />
-                        Anexos
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        className="text-destructive"
-                        onClick={() => handleOpenDelete(patient)}
-                      >
-                        Excluir
-                      </DropdownMenuItem>
+                      {hasPermission("view_patients") && (
+                        <DropdownMenuItem onClick={() => handleViewProfile(patient)}>
+                          <User className="h-4 w-4 mr-2" />
+                          Ver perfil
+                        </DropdownMenuItem>
+                      )}
+                      {hasPermission("manage_calendar") && (
+                        <DropdownMenuItem onClick={() => handleScheduleAppointment(patient)}>
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Agendar consulta
+                        </DropdownMenuItem>
+                      )}
+                      {hasPermission("manage_patients") && (
+                        <DropdownMenuItem onClick={() => handleOpenEdit(patient)}>
+                          <FileText className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                      )}
+                      {hasPermission("manage_anamnesis") && (
+                        <DropdownMenuItem onClick={() => openAnamnesisDialog(patient)}>
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Enviar Anamnese
+                        </DropdownMenuItem>
+                      )}
+                      {hasPermission("view_patients") && (
+                        <DropdownMenuItem onClick={() => navigate(`/dashboard/patients/${patient.id}/attachments`)}>
+                          <Paperclip className="h-4 w-4 mr-2" />
+                          Anexos
+                        </DropdownMenuItem>
+                      )}
+                      {hasPermission("delete_patients") && (
+                        <DropdownMenuItem 
+                          className="text-destructive"
+                          onClick={() => handleOpenDelete(patient)}
+                        >
+                          Excluir
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
