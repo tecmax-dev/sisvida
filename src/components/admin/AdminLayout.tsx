@@ -96,7 +96,7 @@ export function AdminLayout() {
           </div>
         </div>
         
-        <nav className="flex-1 p-3 space-y-1">
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {adminNavItems.map((item) => {
             const isActive = location.pathname === item.path;
             const showBadge = (item as any).hasBadge && pendingUpgrades > 0;
@@ -105,15 +105,15 @@ export function AdminLayout() {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                  "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
                   isActive
-                    ? "bg-sidebar-primary text-sidebar-primary-foreground"
-                    : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    ? "bg-white/20 text-white shadow-sm"
+                    : "text-white/90 hover:bg-white/10 hover:text-white"
                 )}
               >
                 <div className="flex items-center gap-3">
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
+                  <item.icon className="h-4 w-4 flex-shrink-0" />
+                  <span>{item.label}</span>
                 </div>
                 {showBadge && (
                   <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
@@ -125,17 +125,17 @@ export function AdminLayout() {
           })}
         </nav>
 
-        <div className="p-3 border-t border-sidebar-border space-y-2">
+        <div className="p-3 border-t border-white/10 space-y-2">
           <Link
             to="/dashboard"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-sidebar-foreground hover:bg-sidebar-accent transition-colors"
+            className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-white/90 hover:bg-white/10 hover:text-white transition-colors"
           >
             <ChevronRight className="h-4 w-4" />
             Ir para Dashboard
           </Link>
           
           <div className="px-3 py-2 text-sm">
-            <p className="text-sidebar-foreground font-medium truncate">
+            <p className="text-white font-medium truncate">
               {profile?.name || "Admin"}
             </p>
           </div>
@@ -144,7 +144,7 @@ export function AdminLayout() {
             variant="ghost"
             size="sm"
             onClick={handleSignOut}
-            className="w-full justify-start text-sidebar-foreground hover:text-destructive hover:bg-destructive/10"
+            className="w-full justify-start text-white/90 hover:text-red-300 hover:bg-red-500/20"
           >
             <LogOut className="h-4 w-4 mr-2" />
             Sair
