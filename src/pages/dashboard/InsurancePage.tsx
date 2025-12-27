@@ -229,7 +229,7 @@ export default function InsurancePage() {
   };
 
   return (
-    <RoleGuard permission="manage_insurance">
+    <RoleGuard permission="insurance_plans">
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
