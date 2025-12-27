@@ -35,6 +35,17 @@ import { toast } from "sonner";
 import { Loader2, AlertTriangle, Shield } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+// Generate a secure temporary password
+function generateTempPassword(): string {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+  let password = "";
+  for (let i = 0; i < 12; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  // Ensure password meets requirements (uppercase, lowercase, number, special)
+  return password + "Aa1!";
+}
+
 interface ClinicUser {
   id: string;
   user_id: string;
@@ -215,10 +226,13 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         // Create new user - cast to CreateFormData since we're in create mode
         const createData = data as CreateFormData;
         
+        // Generate temp password if not provided
+        const tempPassword = createData.password || generateTempPassword();
+        
         // First, create auth user
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email: createData.email,
-          password: createData.password || Math.random().toString(36).slice(-8) + 'A1!',
+          password: tempPassword,
           options: {
             emailRedirectTo: `${window.location.origin}/auth`,
             data: {
@@ -280,6 +294,33 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
           }
         }
 
+        // Get clinic name for the email
+        let clinicName = "";
+        try {
+          const { data: clinicData } = await supabase
+            .from('clinics')
+            .select('name')
+            .eq('id', clinicId)
+            .single();
+          clinicName = clinicData?.name || "";
+        } catch (e) {
+          console.error('Error fetching clinic name:', e);
+        }
+
+        // Send email with credentials
+        try {
+          await supabase.functions.invoke('send-user-credentials', {
+            body: {
+              userEmail: createData.email,
+              userName: createData.name,
+              tempPassword: tempPassword,
+              clinicName: clinicName,
+            },
+          });
+        } catch (emailError) {
+          console.error('Error sending credentials email:', emailError);
+        }
+
         await logAction({
           action: 'create_user',
           entityType: 'user',
@@ -293,7 +334,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
           },
         });
 
-        toast.success('Usuário criado com sucesso. Um email de confirmação foi enviado.');
+        toast.success('Usuário criado com sucesso! As credenciais foram enviadas por email.');
         onClose(true);
       }
     } catch (error: any) {
