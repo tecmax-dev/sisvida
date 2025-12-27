@@ -2992,6 +2992,7 @@ export type Database = {
           email_confirmed: boolean | null
           id: string
           name: string
+          password_changed: boolean | null
           phone: string | null
           updated_at: string
           user_id: string
@@ -3002,6 +3003,7 @@ export type Database = {
           email_confirmed?: boolean | null
           id?: string
           name: string
+          password_changed?: boolean | null
           phone?: string | null
           updated_at?: string
           user_id: string
@@ -3012,6 +3014,7 @@ export type Database = {
           email_confirmed?: boolean | null
           id?: string
           name?: string
+          password_changed?: boolean | null
           phone?: string | null
           updated_at?: string
           user_id?: string
