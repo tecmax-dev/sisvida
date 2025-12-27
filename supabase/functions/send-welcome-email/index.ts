@@ -236,13 +236,19 @@ const handler = async (req: Request): Promise<Response> => {
     // Generate email HTML
     const htmlContent = getWelcomeEmailTemplate(userName, trialDays);
 
-    // Send email
+    // Send email with proper UTF-8 encoding
     await client.send({
       from: `${smtpSettings.from_name} <${smtpSettings.from_email}>`,
       to: userEmail,
-      subject: `🎉 Bem-vindo(a) ao Eclini, ${userName}! Seu período de teste começou`,
-      content: "auto",
+      subject: `Bem-vindo(a) ao Eclini, ${userName}! Seu periodo de teste comecou`,
       html: htmlContent,
+      mimeContent: [
+        {
+          mimeType: "text/html; charset=utf-8",
+          content: htmlContent,
+          transferEncoding: "base64",
+        },
+      ],
     });
 
     await client.close();
