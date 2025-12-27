@@ -13,7 +13,7 @@ import dashboardMockup from "@/assets/dashboard-mockup.png";
 const emailSchema = z.string().email("Email inválido");
 const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres");
 
-type AuthView = "login" | "signup" | "forgot-password" | "reset-password";
+type AuthView = "login" | "signup" | "forgot-password" | "reset-password" | "first-access";
 
 export default function Auth() {
   const [searchParams] = useSearchParams();
@@ -28,6 +28,7 @@ export default function Auth() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [fromExpiredLink, setFromExpiredLink] = useState(false);
+  const [isFirstAccess, setIsFirstAccess] = useState(false);
   const [errors, setErrors] = useState<{ 
     email?: string; 
     password?: string; 
@@ -180,7 +181,7 @@ export default function Auth() {
   const validateForm = () => {
     const newErrors: typeof errors = {};
     
-    if (view !== "reset-password") {
+    if (view !== "reset-password" && view !== "first-access") {
       try {
         emailSchema.parse(email);
       } catch (e) {
@@ -190,7 +191,7 @@ export default function Auth() {
       }
     }
 
-    if (view === "login" || view === "reset-password") {
+    if (view === "login" || view === "reset-password" || view === "first-access") {
       try {
         passwordSchema.parse(password);
       } catch (e) {
@@ -200,7 +201,7 @@ export default function Auth() {
       }
     }
 
-    if (view === "reset-password") {
+    if (view === "reset-password" || view === "first-access") {
       if (password !== confirmPassword) {
         newErrors.confirmPassword = "As senhas não coincidem";
       }
@@ -301,7 +302,7 @@ export default function Auth() {
 
     try {
       if (view === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
@@ -316,7 +317,67 @@ export default function Auth() {
           } else {
             throw error;
           }
+          setLoading(false);
+          return;
         }
+
+        // Após login bem-sucedido, verificar se é primeiro acesso
+        if (signInData.user) {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('password_changed')
+            .eq('user_id', signInData.user.id)
+            .single();
+
+          // Se password_changed é false ou null, é primeiro acesso
+          if (!profileData?.password_changed) {
+            setIsFirstAccess(true);
+            setView("first-access");
+            setPassword("");
+            setConfirmPassword("");
+            setLoading(false);
+            return;
+          }
+        }
+      } else if (view === "first-access") {
+        // Criar nova senha pessoal
+        const { error: updateError } = await supabase.auth.updateUser({
+          password: password,
+        });
+
+        if (updateError) throw updateError;
+
+        // Marcar que a senha foi alterada
+        const { data: userData } = await supabase.auth.getUser();
+        if (userData.user) {
+          await supabase
+            .from('profiles')
+            .update({ password_changed: true } as any)
+            .eq('user_id', userData.user.id);
+        }
+
+        toast({
+          title: "Senha criada com sucesso!",
+          description: "Sua senha pessoal foi definida.",
+        });
+
+        setIsFirstAccess(false);
+        
+        // Redirecionar para a área correta
+        if (userData.user) {
+          const { data: rolesData } = await supabase
+            .from('user_roles')
+            .select('clinic_id')
+            .eq('user_id', userData.user.id)
+            .limit(1);
+
+          if (rolesData && rolesData.length > 0) {
+            navigate("/dashboard");
+          } else {
+            navigate("/clinic-setup");
+          }
+        }
+        return;
       } else if (view === "signup") {
         // Gerar senha temporária
         const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
