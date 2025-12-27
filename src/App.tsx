@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LoadingFallback } from "@/components/ui/loading-fallback";
 import { Button } from "./components/ui/button";
+import { RedirectDoubleDashboard } from "@/components/routing/RedirectDoubleDashboard";
 
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -171,6 +172,8 @@ const App = () => (
                 <Route path="/cadastro" element={<PublicSignup />} />
                 <Route path="/aguardando-confirmacao" element={<AwaitingConfirmation />} />
                 <Route path="/confirm-email" element={<ConfirmEmail />} />
+                {/* Compat: corrige URLs duplicadas /dashboard/dashboard/... */}
+                <Route path="/dashboard/dashboard/*" element={<RedirectDoubleDashboard />} />
                 {/* Public booking (both legacy and current URLs) */}
                 <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />
                 <Route path="/booking/:clinicSlug" element={<PublicBooking />} />
