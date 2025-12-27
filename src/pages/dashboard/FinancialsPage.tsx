@@ -14,6 +14,8 @@ import { TransfersPanel } from "@/components/financials/TransfersPanel";
 import { RecurringPanel } from "@/components/financials/RecurringPanel";
 import { CommissionsPanel } from "@/components/financials/CommissionsPanel";
 import { ReconciliationPanel } from "@/components/financials/ReconciliationPanel";
+import { ChartOfAccountsPanel } from "@/components/financials/ChartOfAccountsPanel";
+import { CostCentersPanel } from "@/components/financials/CostCentersPanel";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -28,7 +30,9 @@ import {
   Receipt,
   FileCheck,
   RefreshCw,
-  Users
+  Users,
+  FolderTree,
+  Building2
 } from "lucide-react";
 
 function FinancialsContent() {
@@ -109,6 +113,14 @@ function FinancialsContent() {
                 <Users className="h-4 w-4" />
                 <span className="hidden sm:inline">Comissões</span>
               </TabsTrigger>
+              <TabsTrigger value="accounts" className="gap-2">
+                <FolderTree className="h-4 w-4" />
+                <span className="hidden sm:inline">Plano de Contas</span>
+              </TabsTrigger>
+              <TabsTrigger value="costcenters" className="gap-2">
+                <Building2 className="h-4 w-4" />
+                <span className="hidden sm:inline">Centros de Custo</span>
+              </TabsTrigger>
             </TabsList>
             <ScrollBar orientation="horizontal" />
           </ScrollArea>
@@ -163,6 +175,16 @@ function FinancialsContent() {
           {/* Comissões */}
           <TabsContent value="commissions">
             <CommissionsPanel clinicId={currentClinic.id} />
+          </TabsContent>
+
+          {/* Plano de Contas */}
+          <TabsContent value="accounts">
+            <ChartOfAccountsPanel clinicId={currentClinic.id} />
+          </TabsContent>
+
+          {/* Centros de Custo */}
+          <TabsContent value="costcenters">
+            <CostCentersPanel clinicId={currentClinic.id} />
           </TabsContent>
         </Tabs>
 

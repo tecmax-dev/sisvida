@@ -839,6 +839,69 @@ export type Database = {
           },
         ]
       }
+      chart_of_accounts: {
+        Row: {
+          account_code: string
+          account_name: string
+          account_type: string
+          clinic_id: string
+          created_at: string
+          deleted_at: string | null
+          full_path: string | null
+          hierarchy_level: number
+          id: string
+          is_active: boolean
+          is_synthetic: boolean
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_code: string
+          account_name: string
+          account_type: string
+          clinic_id: string
+          created_at?: string
+          deleted_at?: string | null
+          full_path?: string | null
+          hierarchy_level?: number
+          id?: string
+          is_active?: boolean
+          is_synthetic?: boolean
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_code?: string
+          account_name?: string
+          account_type?: string
+          clinic_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          full_path?: string | null
+          hierarchy_level?: number
+          id?: string
+          is_active?: boolean
+          is_synthetic?: boolean
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_conversations: {
         Row: {
           clinic_id: string | null
@@ -1213,6 +1276,63 @@ export type Database = {
         }
         Relationships: []
       }
+      cost_centers: {
+        Row: {
+          clinic_id: string
+          code: string
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          hierarchy_level: number
+          id: string
+          is_active: boolean
+          name: string
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          code: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          hierarchy_level?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          code?: string
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          hierarchy_level?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_centers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_centers_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_settings: {
         Row: {
           attendance_template: string | null
@@ -1416,6 +1536,7 @@ export type Database = {
       }
       financial_transactions: {
         Row: {
+          account_id: string | null
           amount: number
           appointment_id: string | null
           bank_reference: string | null
@@ -1440,6 +1561,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          account_id?: string | null
           amount: number
           appointment_id?: string | null
           bank_reference?: string | null
@@ -1464,6 +1586,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          account_id?: string | null
           amount?: number
           appointment_id?: string | null
           bank_reference?: string | null
@@ -1488,6 +1611,13 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "financial_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "financial_transactions_appointment_id_fkey"
             columns: ["appointment_id"]
@@ -3897,6 +4027,68 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      transaction_cost_centers: {
+        Row: {
+          account_id: string | null
+          amount: number
+          clinic_id: string
+          cost_center_id: string
+          created_at: string
+          id: string
+          percentage: number
+          transaction_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          amount: number
+          clinic_id: string
+          cost_center_id: string
+          created_at?: string
+          id?: string
+          percentage: number
+          transaction_id: string
+        }
+        Update: {
+          account_id?: string | null
+          amount?: number
+          clinic_id?: string
+          cost_center_id?: string
+          created_at?: string
+          id?: string
+          percentage?: number
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_cost_centers_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_cost_centers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_cost_centers_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_cost_centers_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
             referencedColumns: ["id"]
           },
         ]
