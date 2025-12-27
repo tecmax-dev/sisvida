@@ -35,6 +35,7 @@ const AwaitingConfirmation = lazy(() => import("./pages/AwaitingConfirmation"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
+const ProfessionalAppointment = lazy(() => import("./pages/ProfessionalAppointment"));
 
 // Dashboard pages (20 páginas)
 const DashboardOverview = lazy(() => import("./pages/dashboard/DashboardOverview"));
@@ -160,6 +161,7 @@ const App = () => (
                 {/* Professional Portal */}
                 <Route path="/profissional" element={<ProfessionalAuth />} />
                 <Route path="/profissional/painel" element={<ProfessionalDashboard />} />
+                <Route path="/profissional/atendimento/:appointmentId" element={<ProfessionalAppointment />} />
                 <Route
                   path="/clinic-setup"
                   element={
