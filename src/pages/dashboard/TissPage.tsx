@@ -3,12 +3,20 @@ import { RoleGuard } from "@/components/auth/RoleGuard";
 import { FeatureGate } from "@/components/features/FeatureGate";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { FileText, Send, AlertTriangle, History, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { FileText, Send, AlertTriangle, History, Settings, Plus } from "lucide-react";
+import { toast } from "sonner";
 
 function TissContent() {
   const { currentClinic } = useAuth();
 
   if (!currentClinic) return null;
+
+  const handleComingSoon = () => {
+    toast.info("Funcionalidade em desenvolvimento", {
+      description: "Esta funcionalidade estará disponível em breve."
+    });
+  };
 
   return (
     <RoleGuard permission="view_financials">
@@ -46,11 +54,17 @@ function TissContent() {
 
           <TabsContent value="guides">
             <Card>
-              <CardHeader>
-                <CardTitle>Guias TISS</CardTitle>
-                <CardDescription>
-                  Crie e gerencie guias SP/SADT, Consultas e Internações
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Guias TISS</CardTitle>
+                  <CardDescription>
+                    Crie e gerencie guias SP/SADT, Consultas e Internações
+                  </CardDescription>
+                </div>
+                <Button onClick={handleComingSoon}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Guia
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-12 text-muted-foreground">
@@ -70,11 +84,17 @@ function TissContent() {
 
           <TabsContent value="submissions">
             <Card>
-              <CardHeader>
-                <CardTitle>Lotes de Envio</CardTitle>
-                <CardDescription>
-                  Gerencie envios de lotes XML para operadoras
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Lotes de Envio</CardTitle>
+                  <CardDescription>
+                    Gerencie envios de lotes XML para operadoras
+                  </CardDescription>
+                </div>
+                <Button onClick={handleComingSoon}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Lote
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-12 text-muted-foreground">
@@ -88,11 +108,17 @@ function TissContent() {
 
           <TabsContent value="gloss">
             <Card>
-              <CardHeader>
-                <CardTitle>Controle de Glosas</CardTitle>
-                <CardDescription>
-                  Acompanhe e conteste glosas recebidas
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Controle de Glosas</CardTitle>
+                  <CardDescription>
+                    Acompanhe e conteste glosas recebidas
+                  </CardDescription>
+                </div>
+                <Button onClick={handleComingSoon}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Contestação
+                </Button>
               </CardHeader>
               <CardContent>
                 <div className="text-center py-12 text-muted-foreground">
