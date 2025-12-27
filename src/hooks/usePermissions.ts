@@ -94,6 +94,7 @@ export type Permission =
   | "email_settings"
   | "whatsapp_settings"
   | "change_password"
+  | "manage_whatsapp_header"
   // Access/Permissions
   | "access_groups"
   // Cadastros Gerais

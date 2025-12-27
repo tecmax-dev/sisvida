@@ -23,6 +23,7 @@ interface ClinicWithReminder {
   reminder_enabled: boolean;
   reminder_hours: number;
   logo_url: string | null;
+  whatsapp_header_image_url: string | null;
 }
 
 // Converter horário UTC para horário de Bahia, Brasil (UTC-3)
@@ -195,7 +196,7 @@ serve(async (req) => {
     // Get clinics with reminders enabled
     const { data: clinics, error: clinicsError } = await supabase
       .from('clinics')
-      .select('id, name, slug, reminder_enabled, reminder_hours, logo_url')
+      .select('id, name, slug, reminder_enabled, reminder_hours, logo_url, whatsapp_header_image_url')
       .eq('reminder_enabled', true);
 
     if (clinicsError) {
@@ -336,8 +337,8 @@ serve(async (req) => {
 
         let success = false;
         
-        // Sempre envia com imagem: usa logo da clínica ou logo padrão do sistema
-        const logoUrl = clinic.logo_url || DEFAULT_SYSTEM_LOGO;
+        // Usar imagem personalizada da clínica, ou logo da clínica, ou imagem padrão do sistema
+        const logoUrl = clinic.whatsapp_header_image_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
         success = await sendWhatsAppWithImage(
           evolutionConfig as EvolutionConfig,
           patient.phone,

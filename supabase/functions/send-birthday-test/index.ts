@@ -168,7 +168,7 @@ serve(async (req) => {
     // Fetch clinic data using admin client
     const { data: clinic, error: clinicError } = await adminClient
       .from('clinics')
-      .select('id, name, birthday_message, logo_url')
+      .select('id, name, birthday_message, logo_url, whatsapp_header_image_url')
       .eq('id', clinicId)
       .single();
 
@@ -216,8 +216,8 @@ serve(async (req) => {
       );
     }
 
-    // Sempre usar a imagem padrão do sistema para mensagens de aniversário
-    const headerImageUrl = DEFAULT_SYSTEM_LOGO;
+    // Usar imagem personalizada da clínica, ou logo da clínica, ou imagem padrão do sistema
+    const headerImageUrl = clinic.whatsapp_header_image_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
 
     // Format message
     const defaultMessage = `Olá {nome}! 🎂🎉
@@ -236,7 +236,7 @@ Equipe {clinica}`;
     );
 
     console.log(`[TEST] Sending test birthday message to ${testPhone}`);
-    console.log(`[TEST] Using header image: system default (birthday-header.webp)`);
+    console.log(`[TEST] Using header image: ${clinic.whatsapp_header_image_url ? 'custom' : clinic.logo_url ? 'logo' : 'system default'}`);
 
     // Send test message
     const result = await sendWhatsAppWithImage(

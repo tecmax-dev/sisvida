@@ -138,14 +138,15 @@ serve(async (req) => {
       .eq('clinic_id', clinicId)
       .maybeSingle();
 
-    // Fetch clinic logo
+    // Fetch clinic logo and custom header
     const { data: clinicData } = await supabase
       .from('clinics')
-      .select('logo_url')
+      .select('logo_url, whatsapp_header_image_url')
       .eq('id', clinicId)
       .maybeSingle();
 
-    const logoUrl = clinicData?.logo_url || DEFAULT_SYSTEM_LOGO;
+    // Usar imagem personalizada da clínica, ou logo da clínica, ou imagem padrão do sistema
+    const logoUrl = clinicData?.whatsapp_header_image_url || clinicData?.logo_url || DEFAULT_SYSTEM_LOGO;
 
     if (configError) {
       console.error('Error fetching evolution config:', configError);

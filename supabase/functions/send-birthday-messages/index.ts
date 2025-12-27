@@ -22,6 +22,7 @@ interface ClinicWithBirthday {
   birthday_enabled: boolean;
   birthday_message: string;
   logo_url: string | null;
+  whatsapp_header_image_url: string | null;
 }
 
 // Get Brazil time (UTC-3)
@@ -153,7 +154,7 @@ serve(async (req) => {
     // Get clinics with birthday messages enabled
     const { data: clinics, error: clinicsError } = await supabase
       .from('clinics')
-      .select('id, name, birthday_enabled, birthday_message, logo_url')
+      .select('id, name, birthday_enabled, birthday_message, logo_url, whatsapp_header_image_url')
       .eq('birthday_enabled', true);
 
     if (clinicsError) {
@@ -199,10 +200,10 @@ serve(async (req) => {
         continue;
       }
 
-      // Sempre usar a imagem padrão do sistema para mensagens de aniversário
-      const headerImageUrl = DEFAULT_SYSTEM_LOGO;
+      // Usar imagem personalizada da clínica, ou logo da clínica, ou imagem padrão do sistema
+      const headerImageUrl = clinic.whatsapp_header_image_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
 
-      console.log(`[Clinic ${clinic.name}] Header image: system default (birthday-header.webp)`);
+      console.log(`[Clinic ${clinic.name}] Header image: ${clinic.whatsapp_header_image_url ? 'custom' : clinic.logo_url ? 'logo' : 'system default'}`);
 
       // Check if we already sent birthday messages today for this clinic
       const { data: existingSent } = await supabase
