@@ -183,8 +183,8 @@ export default function ProfessionalDashboard() {
   };
 
   const openAppointmentPanel = (appointment: Appointment) => {
-    setSelectedAppointment(appointment);
-    setAppointmentPanelOpen(true);
+    // Navigate to the new appointment page
+    navigate(`/profissional/atendimento/${appointment.id}`);
   };
 
   const handleAppointmentUpdate = async () => {
