@@ -190,7 +190,7 @@ export default function Auth() {
       }
     }
 
-    if (view === "login" || view === "signup" || view === "reset-password") {
+    if (view === "login" || view === "reset-password") {
       try {
         passwordSchema.parse(password);
       } catch (e) {
@@ -318,13 +318,16 @@ export default function Auth() {
           }
         }
       } else if (view === "signup") {
-        const redirectUrl = `${window.location.origin}/dashboard`;
+        // Gerar senha temporária (usuário definirá via link no email)
+        const tempPassword = crypto.randomUUID() + 'Aa1!';
+        const confirmationToken = crypto.randomUUID();
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
         
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
-          password,
+          password: tempPassword,
           options: {
-            emailRedirectTo: redirectUrl,
+            emailRedirectTo: `${window.location.origin}/`,
             data: {
               name: name,
             },
@@ -341,12 +344,44 @@ export default function Auth() {
           } else {
             throw error;
           }
-        } else {
-          toast({
-            title: "Conta criada com sucesso!",
-            description: "Você já pode fazer login.",
+          return;
+        }
+
+        if (data.user) {
+          // Salvar token de confirmação no banco
+          const { error: confirmError } = await supabase
+            .from('email_confirmations')
+            .insert({
+              user_id: data.user.id,
+              email: email,
+              token: confirmationToken,
+              expires_at: expiresAt,
+            });
+
+          if (confirmError) {
+            console.error('Erro ao salvar token de confirmação:', confirmError);
+          }
+
+          // Enviar email de confirmação personalizado
+          try {
+            await supabase.functions.invoke('send-confirmation-email', {
+              body: {
+                userEmail: email,
+                userName: name,
+                confirmationToken: confirmationToken,
+              },
+            });
+          } catch (emailError) {
+            console.error('Erro ao enviar email de confirmação:', emailError);
+          }
+
+          // Fazer logout para evitar sessão com usuário não confirmado
+          await supabase.auth.signOut();
+
+          // Redirecionar para página de aguardando confirmação
+          navigate("/aguardando-confirmacao", {
+            state: { email, name }
           });
-          setView("login");
         }
       }
     } catch (error: any) {
@@ -562,10 +597,10 @@ export default function Auth() {
                   )}
                 </div>
 
-                <div>
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Senha</Label>
-                    {view === "login" && (
+                {view === "login" && (
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Senha</Label>
                       <button
                         type="button"
                         onClick={() => switchView("forgot-password")}
@@ -573,34 +608,34 @@ export default function Auth() {
                       >
                         Esqueceu a senha?
                       </button>
+                    </div>
+                    <div className="relative mt-1.5">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="mt-1 text-sm text-destructive">{errors.password}</p>
                     )}
                   </div>
-                  <div className="relative mt-1.5">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      autoComplete={view === "login" ? "current-password" : "new-password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="••••••••"
-                      className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <p className="mt-1 text-sm text-destructive">{errors.password}</p>
-                  )}
-                </div>
+                )}
 
                 <Button type="submit" className="w-full" size="lg" disabled={loading}>
                   {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
