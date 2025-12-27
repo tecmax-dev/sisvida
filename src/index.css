@@ -68,15 +68,15 @@
     
     --radius: 0.75rem;
     
-    /* Sidebar - Clean White Professional Theme */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 210 25% 35%;
-    --sidebar-primary: 174 62% 47%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 174 50% 96%;
-    --sidebar-accent-foreground: 174 50% 30%;
-    --sidebar-border: 210 20% 92%;
-    --sidebar-ring: 174 62% 47%;
+    /* Sidebar - Teal/Green Professional Theme */
+    --sidebar-background: 174 62% 35%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 174 62% 35%;
+    --sidebar-accent: 174 62% 42%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 174 62% 30%;
+    --sidebar-ring: 0 0% 100%;
     
     /* Custom Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(174 62% 47%) 0%, hsl(174 62% 60%) 100%);
