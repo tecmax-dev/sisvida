@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import NotificationBell from "@/components/notifications/NotificationBell";
+import { ChatWidget } from "@/components/chat/ChatWidget";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { Logo } from "@/components/layout/Logo";
@@ -341,6 +342,9 @@ export function DashboardLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Chat Widget */}
+      <ChatWidget />
     </div>
   );
 }

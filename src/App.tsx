@@ -72,6 +72,7 @@ const AuditLogsPage = lazy(() => import("./pages/admin/AuditLogsPage"));
 const DataImportPage = lazy(() => import("./pages/admin/DataImportPage"));
 const SmtpSettingsPage = lazy(() => import("./pages/admin/SmtpSettingsPage"));
 const NotificationsPage = lazy(() => import("./pages/admin/NotificationsPage"));
+const ChatSupportPage = lazy(() => import("./pages/admin/ChatSupportPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -181,6 +182,7 @@ const App = () => (
                   <Route path="import" element={<DataImportPage />} />
                   <Route path="smtp" element={<SmtpSettingsPage />} />
                   <Route path="audit" element={<AuditLogsPage />} />
+                  <Route path="chat" element={<ChatSupportPage />} />
                 </Route>
                 {/* Dashboard Routes */}
                 <Route
