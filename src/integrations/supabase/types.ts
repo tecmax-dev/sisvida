@@ -2564,6 +2564,50 @@ export type Database = {
           },
         ]
       }
+      panels: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          display_config: Json | null
+          id: string
+          is_active: boolean
+          name: string
+          queue_ids: string[] | null
+          token: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          display_config?: Json | null
+          id?: string
+          is_active?: boolean
+          name: string
+          queue_ids?: string[] | null
+          token?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          display_config?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          queue_ids?: string[] | null
+          token?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panels_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_attachments: {
         Row: {
           clinic_id: string
@@ -3506,6 +3550,152 @@ export type Database = {
         }
         Relationships: []
       }
+      queue_calls: {
+        Row: {
+          appointment_id: string | null
+          attended_at: string | null
+          called_at: string | null
+          checked_in_at: string
+          clinic_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          patient_id: string | null
+          professional_id: string | null
+          queue_id: string
+          room_name: string | null
+          service_time_seconds: number | null
+          status: string
+          ticket_number: number
+          ticket_prefix: string | null
+          wait_time_seconds: number | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          attended_at?: string | null
+          called_at?: string | null
+          checked_in_at?: string
+          clinic_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          patient_id?: string | null
+          professional_id?: string | null
+          queue_id: string
+          room_name?: string | null
+          service_time_seconds?: number | null
+          status?: string
+          ticket_number: number
+          ticket_prefix?: string | null
+          wait_time_seconds?: number | null
+        }
+        Update: {
+          appointment_id?: string | null
+          attended_at?: string | null
+          called_at?: string | null
+          checked_in_at?: string
+          clinic_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          patient_id?: string | null
+          professional_id?: string | null
+          queue_id?: string
+          room_name?: string | null
+          service_time_seconds?: number | null
+          status?: string
+          ticket_number?: number
+          ticket_prefix?: string | null
+          wait_time_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queue_calls_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_calls_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_calls_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_calls_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "queue_calls_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "queues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      queues: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          current_ticket: number | null
+          deleted_at: string | null
+          display_mode: string
+          id: string
+          is_active: boolean
+          name: string
+          queue_type: string
+          ticket_prefix: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          current_ticket?: number | null
+          deleted_at?: string | null
+          display_mode?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          queue_type?: string
+          ticket_prefix?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          current_ticket?: number | null
+          deleted_at?: string | null
+          display_mode?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          queue_type?: string
+          ticket_prefix?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "queues_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quote_items: {
         Row: {
           created_at: string | null
@@ -4386,6 +4576,60 @@ export type Database = {
           },
         ]
       }
+      totems: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          last_heartbeat_at: string | null
+          location: string | null
+          name: string
+          queue_id: string | null
+          token: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_heartbeat_at?: string | null
+          location?: string | null
+          name: string
+          queue_id?: string | null
+          token?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_heartbeat_at?: string | null
+          location?: string | null
+          name?: string
+          queue_id?: string | null
+          token?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "totems_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "totems_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "queues"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transaction_cost_centers: {
         Row: {
           account_id: string | null
@@ -4566,6 +4810,9 @@ export type Database = {
           preferred_dates: string[] | null
           preferred_times: string[] | null
           professional_id: string | null
+          queue_id: string | null
+          ticket_number: number | null
+          ticket_prefix: string | null
         }
         Insert: {
           clinic_id: string
@@ -4578,6 +4825,9 @@ export type Database = {
           preferred_dates?: string[] | null
           preferred_times?: string[] | null
           professional_id?: string | null
+          queue_id?: string | null
+          ticket_number?: number | null
+          ticket_prefix?: string | null
         }
         Update: {
           clinic_id?: string
@@ -4590,6 +4840,9 @@ export type Database = {
           preferred_dates?: string[] | null
           preferred_times?: string[] | null
           professional_id?: string | null
+          queue_id?: string | null
+          ticket_number?: number | null
+          ticket_prefix?: string | null
         }
         Relationships: [
           {
@@ -4611,6 +4864,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "waiting_list_queue_id_fkey"
+            columns: ["queue_id"]
+            isOneToOne: false
+            referencedRelation: "queues"
             referencedColumns: ["id"]
           },
         ]
@@ -4765,6 +5025,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_queue_ticket: {
+        Args: { p_queue_id: string }
+        Returns: {
+          ticket_number: number
+          ticket_prefix: string
+        }[]
+      }
       generate_quote_number: { Args: { p_clinic_id: string }; Returns: string }
       get_applicable_repass_rule: {
         Args: {
