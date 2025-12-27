@@ -2,21 +2,30 @@ import { useAuth } from "@/hooks/useAuth";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { FeatureGate } from "@/components/features/FeatureGate";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { FileText, Send, AlertTriangle, History, Settings, Plus } from "lucide-react";
-import { toast } from "sonner";
+import { FileText, Send, AlertTriangle, Settings, Loader2 } from "lucide-react";
+import { TissGuidesPanel } from "@/components/tiss/TissGuidesPanel";
+import { TissSubmissionsPanel } from "@/components/tiss/TissSubmissionsPanel";
+import { TissGlossesPanel } from "@/components/tiss/TissGlossesPanel";
+import { TissSettingsPanel } from "@/components/tiss/TissSettingsPanel";
 
 function TissContent() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, loading } = useAuth();
 
-  if (!currentClinic) return null;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
-  const handleComingSoon = () => {
-    toast.info("Funcionalidade em desenvolvimento", {
-      description: "Esta funcionalidade estará disponível em breve."
-    });
-  };
+  if (!currentClinic) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        Nenhuma clínica selecionada
+      </div>
+    );
+  }
 
   return (
     <RoleGuard permission="view_financials">
@@ -42,10 +51,6 @@ function TissContent() {
               <AlertTriangle className="h-4 w-4" />
               Glosas
             </TabsTrigger>
-            <TabsTrigger value="history" className="gap-2">
-              <History className="h-4 w-4" />
-              Histórico
-            </TabsTrigger>
             <TabsTrigger value="settings" className="gap-2">
               <Settings className="h-4 w-4" />
               Configurações
@@ -53,122 +58,19 @@ function TissContent() {
           </TabsList>
 
           <TabsContent value="guides">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Guias TISS</CardTitle>
-                  <CardDescription>
-                    Crie e gerencie guias SP/SADT, Consultas e Internações
-                  </CardDescription>
-                </div>
-                <Button onClick={handleComingSoon}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Guia
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Tipos de guias suportados:</p>
-                  <ul className="mt-2 space-y-1 text-sm">
-                    <li>• SP/SADT - Serviço Profissional / Serviço Auxiliar de Diagnóstico e Terapia</li>
-                    <li>• Consulta</li>
-                    <li>• Internação</li>
-                    <li>• Honorários</li>
-                  </ul>
-                  <p className="mt-4 text-sm">Funcionalidade em desenvolvimento</p>
-                </div>
-              </CardContent>
-            </Card>
+            <TissGuidesPanel clinicId={currentClinic.id} />
           </TabsContent>
 
           <TabsContent value="submissions">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Lotes de Envio</CardTitle>
-                  <CardDescription>
-                    Gerencie envios de lotes XML para operadoras
-                  </CardDescription>
-                </div>
-                <Button onClick={handleComingSoon}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Lote
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  <Send className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Controle de envios por operadora</p>
-                  <p className="text-sm mt-2">Funcionalidade em desenvolvimento</p>
-                </div>
-              </CardContent>
-            </Card>
+            <TissSubmissionsPanel clinicId={currentClinic.id} />
           </TabsContent>
 
           <TabsContent value="gloss">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Controle de Glosas</CardTitle>
-                  <CardDescription>
-                    Acompanhe e conteste glosas recebidas
-                  </CardDescription>
-                </div>
-                <Button onClick={handleComingSoon}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nova Contestação
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  <AlertTriangle className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Gerencie glosas com motivos padronizados ANS</p>
-                  <p className="text-sm mt-2">Funcionalidade em desenvolvimento</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="history">
-            <Card>
-              <CardHeader>
-                <CardTitle>Histórico de Guias</CardTitle>
-                <CardDescription>
-                  Visualize o histórico completo de alterações
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Rastreabilidade completa de todas as guias</p>
-                  <p className="text-sm mt-2">Funcionalidade em desenvolvimento</p>
-                </div>
-              </CardContent>
-            </Card>
+            <TissGlossesPanel clinicId={currentClinic.id} />
           </TabsContent>
 
           <TabsContent value="settings">
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurações TISS</CardTitle>
-                <CardDescription>
-                  Configure dados do prestador e operadoras
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-muted-foreground">
-                  <Settings className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Configure:</p>
-                  <ul className="mt-2 space-y-1 text-sm">
-                    <li>• Código do prestador ANS</li>
-                    <li>• Versão do padrão TISS</li>
-                    <li>• Operadoras cadastradas</li>
-                  </ul>
-                  <p className="mt-4 text-sm">Funcionalidade em desenvolvimento</p>
-                </div>
-              </CardContent>
-            </Card>
+            <TissSettingsPanel clinicId={currentClinic.id} />
           </TabsContent>
         </Tabs>
       </div>
