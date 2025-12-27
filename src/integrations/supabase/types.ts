@@ -1287,6 +1287,36 @@ export type Database = {
           },
         ]
       }
+      email_confirmations: {
+        Row: {
+          confirmed_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          confirmed_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          confirmed_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       evolution_configs: {
         Row: {
           api_key: string
@@ -2959,6 +2989,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          email_confirmed: boolean | null
           id: string
           name: string
           phone: string | null
@@ -2968,6 +2999,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          email_confirmed?: boolean | null
           id?: string
           name: string
           phone?: string | null
@@ -2977,6 +3009,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          email_confirmed?: boolean | null
           id?: string
           name?: string
           phone?: string | null

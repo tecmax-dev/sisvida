@@ -7,6 +7,16 @@ import { Loader2, CheckCircle2, XCircle, Mail } from "lucide-react";
 
 type ConfirmationStatus = "loading" | "success" | "error" | "expired" | "already_confirmed";
 
+interface EmailConfirmation {
+  id: string;
+  user_id: string;
+  email: string;
+  token: string;
+  created_at: string;
+  confirmed_at: string | null;
+  expires_at: string;
+}
+
 export default function ConfirmEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -25,8 +35,8 @@ export default function ConfirmEmail() {
 
       try {
         // Find pending confirmation by token
-        const { data: confirmation, error: fetchError } = await supabase
-          .from("email_confirmations")
+        const { data, error: fetchError } = await supabase
+          .from("email_confirmations" as any)
           .select("*")
           .eq("token", token)
           .maybeSingle();
@@ -37,6 +47,8 @@ export default function ConfirmEmail() {
           setErrorMessage("Erro ao verificar token.");
           return;
         }
+
+        const confirmation = data as unknown as EmailConfirmation | null;
 
         if (!confirmation) {
           setStatus("error");
@@ -62,7 +74,7 @@ export default function ConfirmEmail() {
 
         // Confirm email
         const { error: updateError } = await supabase
-          .from("email_confirmations")
+          .from("email_confirmations" as any)
           .update({ confirmed_at: new Date().toISOString() })
           .eq("id", confirmation.id);
 
@@ -77,7 +89,7 @@ export default function ConfirmEmail() {
         if (confirmation.user_id) {
           await supabase
             .from("profiles")
-            .update({ email_confirmed: true })
+            .update({ email_confirmed: true } as any)
             .eq("user_id", confirmation.user_id);
         }
 
