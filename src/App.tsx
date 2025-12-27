@@ -31,6 +31,7 @@ const PublicSignup = lazy(() => import("./pages/PublicSignup"));
 const ProfessionalProfile = lazy(() => import("./pages/ProfessionalProfile"));
 const TelemedicinePatient = lazy(() => import("./pages/TelemedicinePatient"));
 const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail"));
+const AwaitingConfirmation = lazy(() => import("./pages/AwaitingConfirmation"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -143,6 +144,7 @@ const App = () => (
                 <Route path="/instalar" element={<InstallPage />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/cadastro" element={<PublicSignup />} />
+                <Route path="/aguardando-confirmacao" element={<AwaitingConfirmation />} />
                 <Route path="/confirm-email" element={<ConfirmEmail />} />
                 {/* Public booking (both legacy and current URLs) */}
                 <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />

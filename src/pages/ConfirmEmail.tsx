@@ -95,9 +95,9 @@ export default function ConfirmEmail() {
 
         setStatus("success");
 
-        // Redirect to dashboard after 3 seconds
+        // Redirect to clinic setup after 3 seconds
         setTimeout(() => {
-          navigate("/dashboard");
+          navigate("/clinic-setup");
         }, 3000);
 
       } catch (error: any) {
@@ -139,10 +139,10 @@ export default function ConfirmEmail() {
                 Email confirmado!
               </h1>
               <p className="text-muted-foreground mb-6">
-                Sua conta foi ativada com sucesso. Você será redirecionado em instantes...
+                Sua conta foi ativada com sucesso. Você será redirecionado para configurar sua clínica...
               </p>
-              <Button onClick={() => navigate("/dashboard")} className="w-full">
-                Ir para o Dashboard
+              <Button onClick={() => navigate("/clinic-setup")} className="w-full">
+                Configurar minha clínica
               </Button>
             </>
           )}
