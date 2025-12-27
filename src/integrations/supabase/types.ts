@@ -1357,6 +1357,7 @@ export type Database = {
           reminder_hours: number | null
           slug: string
           updated_at: string
+          whatsapp_header_image_url: string | null
         }
         Insert: {
           address?: string | null
@@ -1382,6 +1383,7 @@ export type Database = {
           reminder_hours?: number | null
           slug: string
           updated_at?: string
+          whatsapp_header_image_url?: string | null
         }
         Update: {
           address?: string | null
@@ -1407,6 +1409,7 @@ export type Database = {
           reminder_hours?: number | null
           slug?: string
           updated_at?: string
+          whatsapp_header_image_url?: string | null
         }
         Relationships: []
       }

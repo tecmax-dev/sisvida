@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
@@ -29,6 +29,10 @@ export default function SettingsPage() {
   const [mapViewType, setMapViewType] = useState("streetview");
   const [customMapEmbedUrl, setCustomMapEmbedUrl] = useState("");
   
+  // WhatsApp header image state
+  const [whatsappHeaderImage, setWhatsappHeaderImage] = useState<string | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  
   // Password change state
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,7 +45,7 @@ export default function SettingsPage() {
       
       const { data, error } = await supabase
         .from('clinics')
-        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url')
+        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url, whatsapp_header_image_url')
         .eq('id', currentClinic.id)
         .single();
       
@@ -52,6 +56,7 @@ export default function SettingsPage() {
         setReminderTime(String(data.reminder_hours || 24));
         setMapViewType(data.map_view_type || "streetview");
         setCustomMapEmbedUrl(data.custom_map_embed_url || "");
+        setWhatsappHeaderImage(data.whatsapp_header_image_url || null);
       }
     };
     
@@ -124,6 +129,109 @@ export default function SettingsPage() {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  // Handle WhatsApp header image upload
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!currentClinic?.id || !event.target.files || !event.target.files[0]) return;
+    
+    const file = event.target.files[0];
+    
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Arquivo inválido",
+        description: "Por favor, selecione uma imagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "A imagem deve ter no máximo 5MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setUploadingImage(true);
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentClinic.id}/whatsapp-header.${fileExt}`;
+      
+      // Upload to storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('clinic-assets')
+        .upload(fileName, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('clinic-assets')
+        .getPublicUrl(fileName);
+      
+      // Update clinic record
+      const { error: updateError } = await supabase
+        .from('clinics')
+        .update({ whatsapp_header_image_url: publicUrl })
+        .eq('id', currentClinic.id);
+      
+      if (updateError) throw updateError;
+      
+      setWhatsappHeaderImage(publicUrl);
+      
+      toast({
+        title: "Imagem enviada",
+        description: "A imagem do cabeçalho WhatsApp foi atualizada com sucesso.",
+      });
+    } catch (error: any) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Erro ao enviar imagem",
+        description: error.message || "Não foi possível enviar a imagem.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Handle WhatsApp header image removal
+  const handleRemoveImage = async () => {
+    if (!currentClinic?.id) return;
+    
+    try {
+      // Remove from storage
+      const { error: deleteError } = await supabase.storage
+        .from('clinic-assets')
+        .remove([`${currentClinic.id}/whatsapp-header.jpg`, `${currentClinic.id}/whatsapp-header.png`, `${currentClinic.id}/whatsapp-header.webp`]);
+      
+      // Update clinic record (ignore storage delete error as file might not exist)
+      const { error: updateError } = await supabase
+        .from('clinics')
+        .update({ whatsapp_header_image_url: null })
+        .eq('id', currentClinic.id);
+      
+      if (updateError) throw updateError;
+      
+      setWhatsappHeaderImage(null);
+      
+      toast({
+        title: "Imagem removida",
+        description: "A imagem do cabeçalho WhatsApp foi removida. Será usada a imagem padrão do sistema.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao remover imagem",
+        description: error.message || "Não foi possível remover a imagem.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -282,6 +390,90 @@ export default function SettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* WhatsApp Header Image - Protected by manage_whatsapp_header permission */}
+      {hasPermission('manage_whatsapp_header') && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <ImageIcon className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Imagem do Cabeçalho WhatsApp</CardTitle>
+                <CardDescription>
+                  Personalize a imagem que aparece nos lembretes e mensagens de aniversário
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              {/* Preview */}
+              <div className="w-full sm:w-48 h-32 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
+                {whatsappHeaderImage ? (
+                  <img 
+                    src={whatsappHeaderImage} 
+                    alt="Cabeçalho WhatsApp" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="text-center p-4">
+                    <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">Imagem padrão do sistema</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Actions */}
+              <div className="flex-1 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Esta imagem será exibida no topo das mensagens de lembrete de consulta e felicitações de aniversário enviadas via WhatsApp.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Recomendação: Imagem com proporção 16:9, tamanho máximo 5MB.
+                </p>
+                
+                <div className="flex gap-2">
+                  <label className="cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      disabled={uploadingImage}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={uploadingImage}
+                      asChild
+                    >
+                      <span>
+                        <Upload className="h-4 w-4 mr-2" />
+                        {uploadingImage ? "Enviando..." : "Enviar imagem"}
+                      </span>
+                    </Button>
+                  </label>
+                  
+                  {whatsappHeaderImage && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemoveImage}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remover
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Working Hours */}
       <Card>
