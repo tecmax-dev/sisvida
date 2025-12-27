@@ -847,6 +847,8 @@ export type Database = {
           created_at: string
           id: string
           last_message_at: string | null
+          sector_id: string | null
+          sector_name: string | null
           status: string
           updated_at: string
           user_email: string | null
@@ -860,6 +862,8 @@ export type Database = {
           created_at?: string
           id?: string
           last_message_at?: string | null
+          sector_id?: string | null
+          sector_name?: string | null
           status?: string
           updated_at?: string
           user_email?: string | null
@@ -873,6 +877,8 @@ export type Database = {
           created_at?: string
           id?: string
           last_message_at?: string | null
+          sector_id?: string | null
+          sector_name?: string | null
           status?: string
           updated_at?: string
           user_email?: string | null
@@ -887,10 +893,21 @@ export type Database = {
             referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "chat_conversations_sector_id_fkey"
+            columns: ["sector_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sectors"
+            referencedColumns: ["id"]
+          },
         ]
       }
       chat_messages: {
         Row: {
+          attachment_name: string | null
+          attachment_size: number | null
+          attachment_type: string | null
+          attachment_url: string | null
           conversation_id: string
           created_at: string
           id: string
@@ -902,6 +919,10 @@ export type Database = {
           sender_type: string
         }
         Insert: {
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_type?: string | null
+          attachment_url?: string | null
           conversation_id: string
           created_at?: string
           id?: string
@@ -913,6 +934,10 @@ export type Database = {
           sender_type: string
         }
         Update: {
+          attachment_name?: string | null
+          attachment_size?: number | null
+          attachment_type?: string | null
+          attachment_url?: string | null
           conversation_id?: string
           created_at?: string
           id?: string
@@ -969,6 +994,45 @@ export type Database = {
           title?: string
           updated_at?: string
           usage_count?: number
+        }
+        Relationships: []
+      }
+      chat_sectors: {
+        Row: {
+          color: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          order_index: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          order_index?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          order_index?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }

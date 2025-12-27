@@ -12,6 +12,10 @@ interface Message {
   is_read: boolean;
   read_at: string | null;
   created_at: string;
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_type?: string | null;
+  attachment_size?: number | null;
 }
 
 interface Conversation {
@@ -23,6 +27,15 @@ interface Conversation {
   status: 'open' | 'closed' | 'pending';
   last_message_at: string;
   created_at: string;
+  sector_id: string | null;
+  sector_name: string | null;
+}
+
+interface AttachmentData {
+  url: string;
+  name: string;
+  type: string;
+  size: number;
 }
 
 export const useChatConversation = () => {
@@ -32,12 +45,11 @@ export const useChatConversation = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch or create conversation
-  const getOrCreateConversation = useCallback(async () => {
+  // Fetch existing conversation
+  const fetchExistingConversation = useCallback(async () => {
     if (!user) return null;
 
     try {
-      // Try to find existing open conversation
       const { data: existingConv, error: fetchError } = await supabase
         .from('chat_conversations')
         .select('*')
@@ -58,7 +70,18 @@ export const useChatConversation = () => {
         return conv;
       }
 
-      // Create new conversation
+      return null;
+    } catch (error) {
+      console.error('Error fetching conversation:', error);
+      return null;
+    }
+  }, [user]);
+
+  // Initialize with sector selection
+  const initializeWithSector = useCallback(async (sectorId: string, sectorName: string) => {
+    if (!user) return null;
+
+    try {
       const { data: newConv, error: createError } = await supabase
         .from('chat_conversations')
         .insert({
@@ -67,6 +90,8 @@ export const useChatConversation = () => {
           user_email: user.email,
           clinic_id: currentClinic?.id || null,
           status: 'open',
+          sector_id: sectorId,
+          sector_name: sectorName,
         })
         .select()
         .single();
@@ -80,7 +105,7 @@ export const useChatConversation = () => {
       setConversation(conv);
       return conv;
     } catch (error) {
-      console.error('Error getting/creating conversation:', error);
+      console.error('Error creating conversation with sector:', error);
       return null;
     }
   }, [user, profile, currentClinic]);
@@ -98,7 +123,11 @@ export const useChatConversation = () => {
 
       if (error) throw error;
 
-      setMessages(data as Message[]);
+      const typedMessages: Message[] = (data || []).map((m) => ({
+        ...m,
+        sender_type: m.sender_type as 'user' | 'support' | 'system',
+      }));
+      setMessages(typedMessages);
 
       // Count unread messages from support
       const unread = data?.filter(
@@ -110,21 +139,15 @@ export const useChatConversation = () => {
     }
   }, [conversation?.id]);
 
-  // Send a message
+  // Send a text message
   const sendMessage = useCallback(async (text: string) => {
-    if (!user || !text.trim()) return null;
+    if (!user || !text.trim() || !conversation) return null;
 
     try {
-      let conv = conversation;
-      if (!conv) {
-        conv = await getOrCreateConversation();
-        if (!conv) return null;
-      }
-
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
-          conversation_id: conv.id,
+          conversation_id: conversation.id,
           sender_type: 'user',
           sender_id: user.id,
           sender_name: profile?.name || user.email?.split('@')[0] || 'Usuário',
@@ -139,14 +162,53 @@ export const useChatConversation = () => {
       await supabase
         .from('chat_conversations')
         .update({ last_message_at: new Date().toISOString() })
-        .eq('id', conv.id);
+        .eq('id', conversation.id);
 
       return data;
     } catch (error) {
       console.error('Error sending message:', error);
       return null;
     }
-  }, [user, profile, conversation, getOrCreateConversation]);
+  }, [user, profile, conversation]);
+
+  // Send message with attachment
+  const sendMessageWithAttachment = useCallback(async (
+    text: string,
+    attachment: AttachmentData
+  ) => {
+    if (!user || !conversation) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert({
+          conversation_id: conversation.id,
+          sender_type: 'user',
+          sender_id: user.id,
+          sender_name: profile?.name || user.email?.split('@')[0] || 'Usuário',
+          message: text.trim(),
+          attachment_url: attachment.url,
+          attachment_name: attachment.name,
+          attachment_type: attachment.type,
+          attachment_size: attachment.size,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Update conversation last_message_at
+      await supabase
+        .from('chat_conversations')
+        .update({ last_message_at: new Date().toISOString() })
+        .eq('id', conversation.id);
+
+      return data;
+    } catch (error) {
+      console.error('Error sending message with attachment:', error);
+      return null;
+    }
+  }, [user, profile, conversation]);
 
   // Mark messages as read
   const markAsRead = useCallback(async () => {
@@ -170,14 +232,14 @@ export const useChatConversation = () => {
   useEffect(() => {
     const init = async () => {
       setIsLoading(true);
-      await getOrCreateConversation();
+      await fetchExistingConversation();
       setIsLoading(false);
     };
 
     if (user) {
       init();
     }
-  }, [user, getOrCreateConversation]);
+  }, [user, fetchExistingConversation]);
 
   // Fetch messages when conversation changes
   useEffect(() => {
@@ -222,6 +284,8 @@ export const useChatConversation = () => {
     isLoading,
     unreadCount,
     sendMessage,
+    sendMessageWithAttachment,
+    initializeWithSector,
     markAsRead,
     refetch: fetchMessages,
   };

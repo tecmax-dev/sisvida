@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Settings, Users, Clock, Power, Save, Loader2, X, Send, Zap, Plus, Pencil, Trash2 } from 'lucide-react';
+import { MessageCircle, Settings, Users, Clock, Power, Save, Loader2, X, Send, Zap, Plus, Pencil, Trash2, Layers, Paperclip, FileText, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
@@ -17,6 +17,8 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import { useChatAttachment } from '@/hooks/useChatAttachment';
+import { AttachmentPreview } from '@/components/chat/AttachmentPreview';
 
 interface Conversation {
   id: string;
@@ -26,6 +28,8 @@ interface Conversation {
   status: 'open' | 'closed' | 'pending';
   last_message_at: string;
   created_at: string;
+  sector_id: string | null;
+  sector_name: string | null;
 }
 
 interface Message {
@@ -37,6 +41,10 @@ interface Message {
   message: string;
   is_read: boolean;
   created_at: string;
+  attachment_url: string | null;
+  attachment_name: string | null;
+  attachment_type: string | null;
+  attachment_size: number | null;
 }
 
 interface ChatSettings {
@@ -65,7 +73,19 @@ interface QuickResponse {
   usage_count: number;
 }
 
+interface Sector {
+  id: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  color: string | null;
+  is_active: boolean;
+  order_index: number;
+}
+
 const dayNames = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const iconOptions = ['HelpCircle', 'Stethoscope', 'Calendar', 'CreditCard', 'Settings', 'MessageCircle'];
+const colorOptions = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 const ChatSupportPage = () => {
   const { user, profile } = useAuth();
@@ -75,11 +95,16 @@ const ChatSupportPage = () => {
   const [settings, setSettings] = useState<ChatSettings | null>(null);
   const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
   const [quickResponses, setQuickResponses] = useState<QuickResponse[]>([]);
+  const [sectors, setSectors] = useState<Sector[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [replyText, setReplyText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'closed'>('open');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { uploadAttachment, isUploading, progress, isImage, formatFileSize } = useChatAttachment();
   
   // Quick response dialog state
   const [quickResponseDialogOpen, setQuickResponseDialogOpen] = useState(false);
@@ -89,6 +114,16 @@ const ChatSupportPage = () => {
     content: '',
     shortcut: '',
     category: '',
+  });
+
+  // Sector dialog state
+  const [sectorDialogOpen, setSectorDialogOpen] = useState(false);
+  const [editingSector, setEditingSector] = useState<Sector | null>(null);
+  const [sectorForm, setSectorForm] = useState({
+    name: '',
+    description: '',
+    icon: 'HelpCircle',
+    color: '#3B82F6',
   });
 
   // Fetch all data
@@ -141,6 +176,15 @@ const ChatSupportPage = () => {
 
       if (quickError) throw quickError;
       setQuickResponses(quickData || []);
+
+      // Fetch sectors
+      const { data: sectorsData, error: sectorsError } = await supabase
+        .from('chat_sectors')
+        .select('*')
+        .order('order_index');
+
+      if (sectorsError) throw sectorsError;
+      setSectors(sectorsData || []);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erro ao carregar dados');
@@ -283,16 +327,32 @@ const ChatSupportPage = () => {
 
   // Send reply
   const handleSendReply = async () => {
-    if (!selectedConversation || !replyText.trim() || !user) return;
+    if (!selectedConversation || (!replyText.trim() && !selectedFile) || !user) return;
 
     setIsSending(true);
     try {
+      let attachmentData = null;
+
+      // Upload file if selected
+      if (selectedFile) {
+        attachmentData = await uploadAttachment(selectedFile, selectedConversation.id);
+        if (!attachmentData) {
+          toast.error('Erro ao enviar anexo');
+          setIsSending(false);
+          return;
+        }
+      }
+
       const { error } = await supabase.from('chat_messages').insert({
         conversation_id: selectedConversation.id,
         sender_type: 'support',
         sender_id: user.id,
         sender_name: profile?.name || 'Suporte',
         message: replyText.trim(),
+        attachment_url: attachmentData?.url || null,
+        attachment_name: attachmentData?.name || null,
+        attachment_type: attachmentData?.type || null,
+        attachment_size: attachmentData?.size || null,
       });
 
       if (error) throw error;
@@ -304,11 +364,27 @@ const ChatSupportPage = () => {
         .eq('id', selectedConversation.id);
 
       setReplyText('');
+      setSelectedFile(null);
     } catch (error) {
       console.error('Error sending reply:', error);
       toast.error('Erro ao enviar mensagem');
     } finally {
       setIsSending(false);
+    }
+  };
+
+  // File selection handler
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error('Arquivo muito grande. Máximo: 10MB');
+        return;
+      }
+      setSelectedFile(file);
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
@@ -403,8 +479,8 @@ const ChatSupportPage = () => {
     }
   };
 
-  // Open edit dialog
-  const openEditDialog = (response: QuickResponse) => {
+  // Quick response dialog helpers
+  const openEditQuickResponseDialog = (response: QuickResponse) => {
     setEditingQuickResponse(response);
     setQuickResponseForm({
       title: response.title,
@@ -415,11 +491,110 @@ const ChatSupportPage = () => {
     setQuickResponseDialogOpen(true);
   };
 
-  // Open new dialog
-  const openNewDialog = () => {
+  const openNewQuickResponseDialog = () => {
     setEditingQuickResponse(null);
     setQuickResponseForm({ title: '', content: '', shortcut: '', category: '' });
     setQuickResponseDialogOpen(true);
+  };
+
+  // Save sector
+  const handleSaveSector = async () => {
+    if (!sectorForm.name.trim()) {
+      toast.error('Nome é obrigatório');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (editingSector) {
+        const { error } = await supabase
+          .from('chat_sectors')
+          .update({
+            name: sectorForm.name.trim(),
+            description: sectorForm.description.trim() || null,
+            icon: sectorForm.icon,
+            color: sectorForm.color,
+          })
+          .eq('id', editingSector.id);
+
+        if (error) throw error;
+        toast.success('Setor atualizado');
+      } else {
+        const maxOrder = Math.max(...sectors.map(s => s.order_index), -1);
+        const { error } = await supabase.from('chat_sectors').insert({
+          name: sectorForm.name.trim(),
+          description: sectorForm.description.trim() || null,
+          icon: sectorForm.icon,
+          color: sectorForm.color,
+          order_index: maxOrder + 1,
+          created_by: user?.id,
+        });
+
+        if (error) throw error;
+        toast.success('Setor criado');
+      }
+
+      setSectorDialogOpen(false);
+      setEditingSector(null);
+      setSectorForm({ name: '', description: '', icon: 'HelpCircle', color: '#3B82F6' });
+      fetchData();
+    } catch (error) {
+      console.error('Error saving sector:', error);
+      toast.error('Erro ao salvar setor');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Delete sector
+  const handleDeleteSector = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('chat_sectors')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success('Setor excluído');
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting sector:', error);
+      toast.error('Erro ao excluir setor');
+    }
+  };
+
+  // Toggle sector active status
+  const handleToggleSector = async (sector: Sector) => {
+    try {
+      const { error } = await supabase
+        .from('chat_sectors')
+        .update({ is_active: !sector.is_active })
+        .eq('id', sector.id);
+
+      if (error) throw error;
+      fetchData();
+    } catch (error) {
+      console.error('Error toggling sector:', error);
+      toast.error('Erro ao alterar status');
+    }
+  };
+
+  // Sector dialog helpers
+  const openEditSectorDialog = (sector: Sector) => {
+    setEditingSector(sector);
+    setSectorForm({
+      name: sector.name,
+      description: sector.description || '',
+      icon: sector.icon || 'HelpCircle',
+      color: sector.color || '#3B82F6',
+    });
+    setSectorDialogOpen(true);
+  };
+
+  const openNewSectorDialog = () => {
+    setEditingSector(null);
+    setSectorForm({ name: '', description: '', icon: 'HelpCircle', color: '#3B82F6' });
+    setSectorDialogOpen(true);
   };
 
   // Close conversation
@@ -479,6 +654,10 @@ const ChatSupportPage = () => {
           <TabsTrigger value="conversations" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Conversas
+          </TabsTrigger>
+          <TabsTrigger value="sectors" className="flex items-center gap-2">
+            <Layers className="h-4 w-4" />
+            Setores
           </TabsTrigger>
           <TabsTrigger value="quick" className="flex items-center gap-2">
             <Zap className="h-4 w-4" />
@@ -554,6 +733,11 @@ const ChatSupportPage = () => {
                               {conv.status === 'open' ? 'Aberta' : 'Encerrada'}
                             </Badge>
                           </div>
+                          {conv.sector_name && (
+                            <Badge variant="outline" className="text-xs mb-1">
+                              {conv.sector_name}
+                            </Badge>
+                          )}
                           <p className="text-xs text-muted-foreground truncate">
                             {conv.user_email}
                           </p>
@@ -578,8 +762,13 @@ const ChatSupportPage = () => {
                         <CardTitle className="text-sm">
                           {selectedConversation.user_name || 'Usuário'}
                         </CardTitle>
-                        <CardDescription>
+                        <CardDescription className="flex items-center gap-2">
                           {selectedConversation.user_email}
+                          {selectedConversation.sector_name && (
+                            <Badge variant="outline" className="text-xs">
+                              {selectedConversation.sector_name}
+                            </Badge>
+                          )}
                         </CardDescription>
                       </div>
                       <div className="flex gap-2">
@@ -620,7 +809,21 @@ const ChatSupportPage = () => {
                                   : 'bg-primary text-primary-foreground rounded-br-md'
                               )}
                             >
-                              <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                              {/* Attachment */}
+                              {msg.attachment_url && msg.attachment_name && msg.attachment_type && (
+                                <div className="mb-2">
+                                  <AttachmentPreview
+                                    url={msg.attachment_url}
+                                    name={msg.attachment_name}
+                                    type={msg.attachment_type}
+                                    size={msg.attachment_size || 0}
+                                    isUser={msg.sender_type === 'user'}
+                                  />
+                                </div>
+                              )}
+                              {msg.message && (
+                                <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -629,14 +832,14 @@ const ChatSupportPage = () => {
 
                     {selectedConversation.status === 'open' && (
                       <div className="p-3 border-t space-y-2">
-                        {/* Quick Responses Dropdown */}
-                        {activeQuickResponses.length > 0 && (
-                          <div className="flex gap-2 flex-wrap">
+                        {/* Quick Responses & Attachment */}
+                        <div className="flex gap-2 flex-wrap items-center">
+                          {activeQuickResponses.length > 0 && (
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="sm">
                                   <Zap className="h-3 w-3 mr-1" />
-                                  Respostas Rápidas
+                                  Respostas
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="start" className="w-64">
@@ -654,8 +857,45 @@ const ChatSupportPage = () => {
                                 ))}
                               </DropdownMenuContent>
                             </DropdownMenu>
-                          </div>
-                        )}
+                          )}
+                          
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*,.pdf,.doc,.docx"
+                            onChange={handleFileSelect}
+                            className="hidden"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
+                          >
+                            <Paperclip className="h-3 w-3 mr-1" />
+                            Anexar
+                          </Button>
+
+                          {selectedFile && (
+                            <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded text-xs">
+                              {isImage(selectedFile.type) ? (
+                                <ImageIcon className="h-3 w-3" />
+                              ) : (
+                                <FileText className="h-3 w-3" />
+                              )}
+                              <span className="truncate max-w-[100px]">{selectedFile.name}</span>
+                              <span className="text-muted-foreground">({formatFileSize(selectedFile.size)})</span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-4 w-4"
+                                onClick={() => setSelectedFile(null)}
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          )}
+                        </div>
                         
                         <div className="flex gap-2">
                           <Input
@@ -669,8 +909,8 @@ const ChatSupportPage = () => {
                               }
                             }}
                           />
-                          <Button onClick={handleSendReply} disabled={isSending}>
-                            {isSending ? (
+                          <Button onClick={handleSendReply} disabled={isSending || isUploading}>
+                            {isSending || isUploading ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                               <Send className="h-4 w-4" />
@@ -690,6 +930,81 @@ const ChatSupportPage = () => {
           </div>
         </TabsContent>
 
+        {/* Sectors Tab */}
+        <TabsContent value="sectors">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Setores</CardTitle>
+                  <CardDescription>
+                    Organize as conversas por departamento
+                  </CardDescription>
+                </div>
+                <Button onClick={openNewSectorDialog}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Setor
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {sectors.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhum setor cadastrado
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sectors.map((sector) => (
+                    <div
+                      key={sector.id}
+                      className={cn(
+                        'p-4 border rounded-lg flex items-center gap-4',
+                        !sector.is_active && 'opacity-50'
+                      )}
+                    >
+                      <div
+                        className="h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: `${sector.color || '#3B82F6'}20` }}
+                      >
+                        <Layers 
+                          className="h-5 w-5" 
+                          style={{ color: sector.color || '#3B82F6' }}
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium">{sector.name}</h4>
+                        {sector.description && (
+                          <p className="text-sm text-muted-foreground">{sector.description}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={sector.is_active}
+                          onCheckedChange={() => handleToggleSector(sector)}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => openEditSectorDialog(sector)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteSector(sector.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* Quick Responses Tab */}
         <TabsContent value="quick">
           <Card>
@@ -701,7 +1016,7 @@ const ChatSupportPage = () => {
                     Crie respostas pré-definidas para agilizar o atendimento
                   </CardDescription>
                 </div>
-                <Button onClick={openNewDialog}>
+                <Button onClick={openNewQuickResponseDialog}>
                   <Plus className="h-4 w-4 mr-2" />
                   Nova Resposta
                 </Button>
@@ -752,7 +1067,7 @@ const ChatSupportPage = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => openEditDialog(response)}
+                            onClick={() => openEditQuickResponseDialog(response)}
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -908,7 +1223,7 @@ const ChatSupportPage = () => {
                       disabled={!hour.is_active}
                       className="w-32"
                     />
-                    <span className="text-muted-foreground">até</span>
+                    <span>às</span>
                     <Input
                       type="time"
                       value={hour.end_time}
@@ -947,28 +1262,24 @@ const ChatSupportPage = () => {
               {editingQuickResponse ? 'Editar Resposta Rápida' : 'Nova Resposta Rápida'}
             </DialogTitle>
             <DialogDescription>
-              Crie uma resposta pré-definida para usar no chat
+              Crie uma resposta pré-definida para agilizar o atendimento
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Título *</Label>
+              <Label>Título</Label>
               <Input
                 value={quickResponseForm.title}
-                onChange={(e) =>
-                  setQuickResponseForm({ ...quickResponseForm, title: e.target.value })
-                }
-                placeholder="Ex: Saudação inicial"
+                onChange={(e) => setQuickResponseForm({ ...quickResponseForm, title: e.target.value })}
+                placeholder="Ex: Boas-vindas"
               />
             </div>
             <div className="space-y-2">
-              <Label>Conteúdo *</Label>
+              <Label>Conteúdo</Label>
               <Textarea
                 value={quickResponseForm.content}
-                onChange={(e) =>
-                  setQuickResponseForm({ ...quickResponseForm, content: e.target.value })
-                }
-                placeholder="Digite o texto da resposta..."
+                onChange={(e) => setQuickResponseForm({ ...quickResponseForm, content: e.target.value })}
+                placeholder="Digite o conteúdo da resposta..."
                 rows={4}
               />
             </div>
@@ -977,23 +1288,16 @@ const ChatSupportPage = () => {
                 <Label>Atalho (opcional)</Label>
                 <Input
                   value={quickResponseForm.shortcut}
-                  onChange={(e) =>
-                    setQuickResponseForm({ ...quickResponseForm, shortcut: e.target.value })
-                  }
+                  onChange={(e) => setQuickResponseForm({ ...quickResponseForm, shortcut: e.target.value })}
                   placeholder="Ex: ola"
                 />
-                <p className="text-xs text-muted-foreground">
-                  Digite /{quickResponseForm.shortcut || 'atalho'} para usar
-                </p>
               </div>
               <div className="space-y-2">
                 <Label>Categoria (opcional)</Label>
                 <Input
                   value={quickResponseForm.category}
-                  onChange={(e) =>
-                    setQuickResponseForm({ ...quickResponseForm, category: e.target.value })
-                  }
-                  placeholder="Ex: Saudações"
+                  onChange={(e) => setQuickResponseForm({ ...quickResponseForm, category: e.target.value })}
+                  placeholder="Ex: Saudação"
                 />
               </div>
             </div>
@@ -1003,11 +1307,65 @@ const ChatSupportPage = () => {
               Cancelar
             </Button>
             <Button onClick={handleSaveQuickResponse} disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
+              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Sector Dialog */}
+      <Dialog open={sectorDialogOpen} onOpenChange={setSectorDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {editingSector ? 'Editar Setor' : 'Novo Setor'}
+            </DialogTitle>
+            <DialogDescription>
+              Organize as conversas por departamento
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome</Label>
+              <Input
+                value={sectorForm.name}
+                onChange={(e) => setSectorForm({ ...sectorForm, name: e.target.value })}
+                placeholder="Ex: Financeiro"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Descrição (opcional)</Label>
+              <Textarea
+                value={sectorForm.description}
+                onChange={(e) => setSectorForm({ ...sectorForm, description: e.target.value })}
+                placeholder="Ex: Dúvidas sobre pagamentos e cobranças"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Cor</Label>
+              <div className="flex gap-2">
+                {colorOptions.map((color) => (
+                  <button
+                    key={color}
+                    onClick={() => setSectorForm({ ...sectorForm, color })}
+                    className={cn(
+                      'h-8 w-8 rounded-full border-2 transition-all',
+                      sectorForm.color === color ? 'border-foreground scale-110' : 'border-transparent'
+                    )}
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSectorDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveSector} disabled={isSaving}>
+              {isSaving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Salvar
             </Button>
           </DialogFooter>
