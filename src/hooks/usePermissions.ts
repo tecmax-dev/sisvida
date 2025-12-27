@@ -14,6 +14,7 @@ export type Permission =
   | "view_calendar"
   | "manage_calendar"
   | "manage_waiting_list"
+  | "view_waiting_list"
   | "view_schedules"
   | "view_professional_schedule"
   // Patients/Clients
@@ -21,6 +22,10 @@ export type Permission =
   | "view_patients"
   | "manage_patients"
   | "delete_patients"
+  // Attachments
+  | "view_attachments"
+  | "manage_attachments"
+  | "delete_attachments"
   // Medical Records
   | "medical_records"
   | "view_medical_records"
@@ -82,6 +87,24 @@ export type Permission =
   | "send_budget_whatsapp"
   | "approve_budgets"
   | "convert_budgets"
+  // Marketing
+  | "view_marketing"
+  | "manage_marketing"
+  | "manage_campaigns"
+  | "manage_automations"
+  | "manage_segments"
+  // TISS
+  | "view_tiss"
+  | "manage_tiss"
+  | "manage_tiss_guides"
+  | "manage_tiss_glosses"
+  // Repasse
+  | "view_repass"
+  | "manage_repass"
+  | "manage_repass_rules"
+  // Queue/Atendimento
+  | "view_queue"
+  | "manage_queue"
   // Settings
   | "settings"
   | "manage_settings"
@@ -90,6 +113,7 @@ export type Permission =
   | "manage_integrations"
   | "manage_api_keys"
   | "manage_webhooks"
+  | "manage_access_groups"
   | "company_data"
   | "email_settings"
   | "whatsapp_settings"
