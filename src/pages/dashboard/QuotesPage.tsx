@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -100,6 +101,7 @@ interface Quote {
 
 export default function QuotesPage() {
   const { currentClinic } = useAuth();
+  const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
   
   const [search, setSearch] = useState("");
@@ -355,10 +357,12 @@ Equipe ${currentClinic?.name || ''}`;
             Gerencie os orçamentos da sua clínica
           </p>
         </div>
-        <Button onClick={() => { setSelectedQuote(null); setDialogOpen(true); }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Orçamento
-        </Button>
+        {hasPermission("manage_budgets") && (
+          <Button onClick={() => { setSelectedQuote(null); setDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Orçamento
+          </Button>
+        )}
       </div>
 
       {/* Stats */}
@@ -492,10 +496,12 @@ Equipe ${currentClinic?.name || ''}`;
                           <Eye className="h-4 w-4 mr-2" />
                           Visualizar
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleEdit(quote)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
+                        {hasPermission("manage_budgets") && (
+                          <DropdownMenuItem onClick={() => handleEdit(quote)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => handlePrint(quote)}>
                           <Printer className="h-4 w-4 mr-2" />
@@ -505,19 +511,21 @@ Equipe ${currentClinic?.name || ''}`;
                           <Download className="h-4 w-4 mr-2" />
                           Baixar PDF
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleSendWhatsApp(quote)}
-                          disabled={sendingWhatsApp === quote.id}
-                        >
-                          {sendingWhatsApp === quote.id ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          ) : (
-                            <Send className="h-4 w-4 mr-2" />
-                          )}
-                          Enviar WhatsApp
-                        </DropdownMenuItem>
+                        {hasPermission("send_budget_whatsapp") && (
+                          <DropdownMenuItem 
+                            onClick={() => handleSendWhatsApp(quote)}
+                            disabled={sendingWhatsApp === quote.id}
+                          >
+                            {sendingWhatsApp === quote.id ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4 mr-2" />
+                            )}
+                            Enviar WhatsApp
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
-                        {quote.status !== 'approved' && (
+                        {hasPermission("approve_budgets") && quote.status !== 'approved' && (
                           <DropdownMenuItem 
                             onClick={() => updateStatusMutation.mutate({ quoteId: quote.id, status: 'approved' })}
                           >
@@ -525,7 +533,7 @@ Equipe ${currentClinic?.name || ''}`;
                             Marcar como Aprovado
                           </DropdownMenuItem>
                         )}
-                        {quote.status !== 'rejected' && (
+                        {hasPermission("approve_budgets") && quote.status !== 'rejected' && (
                           <DropdownMenuItem 
                             onClick={() => updateStatusMutation.mutate({ quoteId: quote.id, status: 'rejected' })}
                           >
@@ -533,14 +541,18 @@ Equipe ${currentClinic?.name || ''}`;
                             Marcar como Rejeitado
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => { setQuoteToDelete(quote); setDeleteDialogOpen(true); }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir
-                        </DropdownMenuItem>
+                        {hasPermission("manage_budgets") && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => { setQuoteToDelete(quote); setDeleteDialogOpen(true); }}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>

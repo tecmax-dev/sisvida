@@ -59,6 +59,8 @@ const UsersManagementPage = lazy(() => import("./pages/dashboard/UsersManagement
 const PackagesPage = lazy(() => import("./pages/dashboard/PackagesPage"));
 const PatientAttachmentsPage = lazy(() => import("./pages/dashboard/PatientAttachmentsPage"));
 const StockPage = lazy(() => import("./pages/dashboard/StockPage"));
+const CatalogPage = lazy(() => import("./pages/dashboard/CatalogPage"));
+const QuotesPage = lazy(() => import("./pages/dashboard/QuotesPage"));
 
 // Admin pages (9 páginas)
 const SuperAdminDashboard = lazy(() => import("./pages/admin/SuperAdminDashboard"));
@@ -218,6 +220,8 @@ const App = () => (
                   <Route path="users" element={<UsersManagementPage />} />
                   <Route path="packages" element={<PackagesPage />} />
                   <Route path="stock" element={<StockPage />} />
+                  <Route path="catalog" element={<CatalogPage />} />
+                  <Route path="quotes" element={<QuotesPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

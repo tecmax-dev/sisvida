@@ -36,6 +36,8 @@ import {
   Package,
   PanelLeft,
   Warehouse,
+  ShoppingBag,
+  FileSpreadsheet,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -64,6 +66,8 @@ const navItems: NavItem[] = [
   { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "manage_waiting_list" },
   { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "insurance_plans" },
   { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
+  { href: "/dashboard/catalog", icon: ShoppingBag, label: "Catálogo", permission: "view_catalog" },
+  { href: "/dashboard/quotes", icon: FileSpreadsheet, label: "Orçamentos", permission: "view_budgets" },
   { href: "/dashboard/packages", icon: Package, label: "Pacotes", permission: "view_stock" },
   { href: "/dashboard/stock", icon: Warehouse, label: "Estoque", permission: "view_stock" },
   { href: "/dashboard/financials", icon: DollarSign, label: "Financeiro", permission: "view_financials" },

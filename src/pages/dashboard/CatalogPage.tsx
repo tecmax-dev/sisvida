@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,7 @@ interface Product {
 
 export default function CatalogPage() {
   const { currentClinic } = useAuth();
+  const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
   
   const [search, setSearch] = useState("");
@@ -254,20 +256,22 @@ export default function CatalogPage() {
             </div>
           </div>
 
-          <Button 
-            onClick={() => {
-              if (tab === 'services') {
-                setSelectedProcedure(null);
-                setProcedureDialogOpen(true);
-              } else {
-                setSelectedProduct(null);
-                setProductDialogOpen(true);
-              }
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            {tab === 'services' ? 'Novo Serviço' : 'Novo Produto'}
-          </Button>
+          {hasPermission("manage_catalog") && (
+            <Button 
+              onClick={() => {
+                if (tab === 'services') {
+                  setSelectedProcedure(null);
+                  setProcedureDialogOpen(true);
+                } else {
+                  setSelectedProduct(null);
+                  setProductDialogOpen(true);
+                }
+              }}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {tab === 'services' ? 'Novo Serviço' : 'Novo Produto'}
+            </Button>
+          )}
         </div>
 
         {/* Services Tab */}
@@ -283,10 +287,12 @@ export default function CatalogPage() {
               <p className="text-muted-foreground mb-4">
                 Cadastre procedimentos para incluir nos orçamentos
               </p>
-              <Button onClick={() => { setSelectedProcedure(null); setProcedureDialogOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Serviço
-              </Button>
+              {hasPermission("manage_catalog") && (
+                <Button onClick={() => { setSelectedProcedure(null); setProcedureDialogOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Serviço
+                </Button>
+              )}
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
@@ -373,10 +379,12 @@ export default function CatalogPage() {
               <p className="text-muted-foreground mb-4">
                 Cadastre produtos no estoque e marque-os como disponíveis para venda
               </p>
-              <Button onClick={() => { setSelectedProduct(null); setProductDialogOpen(true); }}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Produto
-              </Button>
+              {hasPermission("manage_catalog") && (
+                <Button onClick={() => { setSelectedProduct(null); setProductDialogOpen(true); }}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Produto
+                </Button>
+              )}
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
