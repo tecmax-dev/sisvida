@@ -73,6 +73,15 @@ export type Permission =
   | "stock"
   | "view_stock"
   | "manage_stock"
+  // Catalog
+  | "view_catalog"
+  | "manage_catalog"
+  // Budgets/Quotes
+  | "view_budgets"
+  | "manage_budgets"
+  | "send_budget_whatsapp"
+  | "approve_budgets"
+  | "convert_budgets"
   // Settings
   | "settings"
   | "manage_settings"
@@ -96,7 +105,6 @@ export type Permission =
   | "tags"
   // Consulta
   | "view_audit"
-  | "view_budgets"
   // Legacy aliases (for backward compatibility)
   | "manage_cash_registers"
   | "manage_categories"
@@ -188,6 +196,9 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
     "manage_waiting_list",
     "view_procedures",
     "insurance_plans",
+    "view_catalog",
+    "view_budgets",
+    "manage_budgets",
   ],
   professional: [
     "view_dashboard",
@@ -202,6 +213,8 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
     "view_prescriptions",
     "manage_prescriptions",
     "view_procedures",
+    "view_catalog",
+    "view_budgets",
   ],
   administrative: [
     "view_dashboard",
@@ -216,6 +229,13 @@ const rolePermissions: Record<string, Permission[] | "*"> = {
     "insurance_plans",
     "view_reports",
     "view_procedures",
+    "view_catalog",
+    "manage_catalog",
+    "view_budgets",
+    "manage_budgets",
+    "send_budget_whatsapp",
+    "approve_budgets",
+    "convert_budgets",
   ],
 };
 
