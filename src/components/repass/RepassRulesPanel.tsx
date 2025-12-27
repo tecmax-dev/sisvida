@@ -77,9 +77,11 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
   });
 
   // Fetch rules
-  const { data: rules = [], isLoading } = useQuery({
+  const { data: rules = [], isLoading, isError } = useQuery({
     queryKey: ["repass-rules", clinicId],
     queryFn: async () => {
+      if (!clinicId) return [];
+      
       const { data, error } = await supabase
         .from("medical_repass_rules")
         .select(`
@@ -92,9 +94,15 @@ export function RepassRulesPanel({ clinicId }: RepassRulesPanelProps) {
         .is("deleted_at", null)
         .order("priority", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching repass rules:", error);
+        throw error;
+      }
       return data as RepassRule[];
     },
+    enabled: !!clinicId,
+    retry: 1,
+    staleTime: 30000,
   });
 
   // Fetch professionals

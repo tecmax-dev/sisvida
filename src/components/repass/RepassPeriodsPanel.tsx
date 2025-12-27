@@ -68,9 +68,11 @@ export function RepassPeriodsPanel({ clinicId }: RepassPeriodsPanelProps) {
   const [selectedYear, setSelectedYear] = useState(currentDate.getFullYear().toString());
 
   // Fetch periods
-  const { data: periods = [], isLoading } = useQuery({
+  const { data: periods = [], isLoading, isError } = useQuery({
     queryKey: ["repass-periods", clinicId],
     queryFn: async () => {
+      if (!clinicId) return [];
+      
       const { data, error } = await supabase
         .from("medical_repass_periods")
         .select("*")
@@ -79,9 +81,15 @@ export function RepassPeriodsPanel({ clinicId }: RepassPeriodsPanelProps) {
         .order("reference_year", { ascending: false })
         .order("reference_month", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching repass periods:", error);
+        throw error;
+      }
       return data as RepassPeriod[];
     },
+    enabled: !!clinicId,
+    retry: 1,
+    staleTime: 30000,
   });
 
   // Create period mutation
