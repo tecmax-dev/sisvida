@@ -100,7 +100,7 @@ interface Quote {
 }
 
 export default function QuotesPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, loading: authLoading } = useAuth();
   const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
   
@@ -114,7 +114,7 @@ export default function QuotesPage() {
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
 
-  const { data: quotes = [], isLoading } = useQuery({
+  const { data: quotes = [], isLoading, error: queryError } = useQuery({
     queryKey: ["quotes", currentClinic?.id, statusFilter],
     queryFn: async () => {
       if (!currentClinic?.id) return [];
@@ -138,6 +138,41 @@ export default function QuotesPage() {
     },
     enabled: !!currentClinic?.id,
   });
+
+  // Loading state while auth is loading
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Show message if no clinic is selected
+  if (!currentClinic) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <FileText className="h-12 w-12 text-muted-foreground/50 mb-4" />
+        <h3 className="text-lg font-medium">Nenhuma clínica selecionada</h3>
+        <p className="text-muted-foreground">
+          Selecione uma clínica para visualizar os orçamentos.
+        </p>
+      </div>
+    );
+  }
+
+  // Show error if query failed
+  if (queryError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <FileText className="h-12 w-12 text-destructive/50 mb-4" />
+        <h3 className="text-lg font-medium text-destructive">Erro ao carregar orçamentos</h3>
+        <p className="text-muted-foreground">
+          {(queryError as Error).message || "Ocorreu um erro inesperado. Tente novamente."}
+        </p>
+      </div>
+    );
+  }
 
   const deleteMutation = useMutation({
     mutationFn: async (quoteId: string) => {
