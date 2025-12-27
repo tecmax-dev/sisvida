@@ -1,6 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -175,27 +174,6 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // RFC2047 base64 for headers (avoids quoted-printable line break issues)
-  const encodeSubjectB64 = (subject: string) => {
-    const bytes = new TextEncoder().encode(subject);
-    let binary = "";
-    for (const b of bytes) binary += String.fromCharCode(b);
-    return `=?UTF-8?B?${btoa(binary)}?=`;
-  };
-
-  const toBase64Utf8 = (input: string) => {
-    const bytes = new TextEncoder().encode(input);
-    let binary = "";
-    for (const b of bytes) binary += String.fromCharCode(b);
-    return btoa(binary);
-  };
-
-  const wrapBase64 = (b64: string, lineLen = 76) => {
-    const out: string[] = [];
-    for (let i = 0; i < b64.length; i += lineLen) out.push(b64.slice(i, i + lineLen));
-    return out.join("\r\n");
-  };
-
   try {
     const { userEmail, userName, trialDays = 14 }: WelcomeEmailRequest = await req.json();
 
@@ -209,75 +187,38 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create Supabase client with service role to bypass RLS
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-
-    // Fetch SMTP settings
-    const { data: smtpSettings, error: smtpError } = await supabase
-      .from("smtp_settings")
-      .select("*")
-      .eq("is_active", true)
-      .limit(1)
-      .maybeSingle();
-
-    if (smtpError) {
-      console.error("[send-welcome-email] Error fetching SMTP settings:", smtpError);
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendApiKey) {
+      console.error("[send-welcome-email] RESEND_API_KEY not configured");
       return new Response(
-        JSON.stringify({ error: "Erro ao buscar configurações SMTP", details: smtpError.message }),
+        JSON.stringify({ error: "RESEND_API_KEY não configurada" }),
         { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    if (!smtpSettings) {
-      console.warn("[send-welcome-email] No SMTP settings configured");
+    const resend = new Resend(resendApiKey);
+
+    const htmlContent = getWelcomeEmailTemplate(userName, trialDays);
+
+    const { data, error } = await resend.emails.send({
+      from: "Eclini <onboarding@resend.dev>",
+      to: [userEmail],
+      subject: `🎉 Bem-vindo(a) ao Eclini, ${userName}! Seu período de teste começou`,
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error("[send-welcome-email] Resend error:", error);
       return new Response(
-        JSON.stringify({ error: "Configurações SMTP não encontradas. Configure no painel de administração." }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } },
+        JSON.stringify({ error: "Erro ao enviar email", details: error.message }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } },
       );
     }
 
-    console.log(`[send-welcome-email] Using SMTP: ${smtpSettings.host}:${smtpSettings.port}`);
-
-    // Configure SMTP client
-    const client = new SMTPClient({
-      connection: {
-        hostname: smtpSettings.host,
-        port: smtpSettings.port,
-        tls: smtpSettings.encryption === "ssl",
-        auth: {
-          username: smtpSettings.username,
-          password: smtpSettings.password,
-        },
-      },
-    });
-
-    // Generate email HTML
-    const htmlContent = getWelcomeEmailTemplate(userName, trialDays);
-    const htmlB64 = wrapBase64(toBase64Utf8(htmlContent));
-
-    // Send email with definitive UTF-8 handling (base64 body + RFC2047 subject)
-    await client.send({
-      from: `${smtpSettings.from_name} <${smtpSettings.from_email}>`,
-      to: userEmail,
-      subject: encodeSubjectB64(`🎉 Bem-vindo(a) ao Eclini, ${userName}! Seu período de teste começou`),
-      mimeContent: [
-        {
-          mimeType: 'text/html; charset="utf-8"',
-          content: htmlB64,
-          transferEncoding: "base64",
-        },
-      ],
-    });
-
-    await client.close();
-
-    console.log(`[send-welcome-email] Email sent successfully to ${userEmail}`);
+    console.log(`[send-welcome-email] Email sent successfully to ${userEmail}`, data);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Email enviado com sucesso" }),
+      JSON.stringify({ success: true, message: "Email enviado com sucesso", id: data?.id }),
       { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } },
     );
   } catch (error: any) {
