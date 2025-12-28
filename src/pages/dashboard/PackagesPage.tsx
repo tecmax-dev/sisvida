@@ -221,7 +221,7 @@ export default function PackagesPage() {
   const completedPackages = packages.filter(p => p.status === "completed").length;
 
   return (
-    <RoleGuard permission="view_stock">
+    <RoleGuard permission="view_packages">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

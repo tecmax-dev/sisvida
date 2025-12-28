@@ -13,7 +13,7 @@ function MarketingContent() {
   if (!currentClinic) return null;
 
   return (
-    <RoleGuard permission="view_dashboard">
+    <RoleGuard permission="view_marketing">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Marketing e CRM</h1>

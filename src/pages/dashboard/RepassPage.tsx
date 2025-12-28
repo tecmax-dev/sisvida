@@ -26,7 +26,7 @@ function RepassContent() {
   }
 
   return (
-    <RoleGuard permission="view_financials">
+    <RoleGuard permission="view_repass">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Repasse Médico</h1>

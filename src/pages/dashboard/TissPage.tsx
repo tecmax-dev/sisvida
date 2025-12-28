@@ -28,7 +28,7 @@ function TissContent() {
   }
 
   return (
-    <RoleGuard permission="view_financials">
+    <RoleGuard permission="view_tiss">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">TISS - Faturamento ANS</h1>

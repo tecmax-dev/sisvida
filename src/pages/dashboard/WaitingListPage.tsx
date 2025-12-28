@@ -45,6 +45,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { FeatureGate } from "@/components/features/FeatureGate";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 interface Patient {
   id: string;
@@ -461,8 +462,10 @@ function WaitingListContent() {
 
 export default function WaitingListPage() {
   return (
-    <FeatureGate feature="waiting_list" showUpgradePrompt>
-      <WaitingListContent />
-    </FeatureGate>
+    <RoleGuard permission="view_waiting_list">
+      <FeatureGate feature="waiting_list" showUpgradePrompt>
+        <WaitingListContent />
+      </FeatureGate>
+    </RoleGuard>
   );
 }
