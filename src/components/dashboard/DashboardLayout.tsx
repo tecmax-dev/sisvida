@@ -2,7 +2,7 @@ import { useState, useEffect, Suspense } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { ChatWidget } from "@/components/chat/ChatWidget";
-import { MaintenanceBanner } from "@/components/MaintenanceBanner";
+import { MaintenanceClinicOverlay } from "@/components/MaintenanceClinicOverlay";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { Loader2 } from "lucide-react";
@@ -325,9 +325,9 @@ export function DashboardLayout() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Maintenance Banner - shows when in maintenance mode (not blocked) */}
+        {/* Maintenance Overlay - blocks access when in maintenance mode */}
         {currentClinic?.is_maintenance && !currentClinic?.is_blocked && (
-          <MaintenanceBanner reason={currentClinic.maintenance_reason} />
+          <MaintenanceClinicOverlay reason={currentClinic.maintenance_reason} />
         )}
         
         {/* Top bar */}
