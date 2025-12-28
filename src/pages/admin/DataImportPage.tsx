@@ -22,7 +22,10 @@ import {
   FileText,
   Layers,
   Sparkles,
+  Info,
+  Check,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   PatientImportRow,
   MedicalRecordImportRow,
@@ -711,6 +714,95 @@ export default function DataImportPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Format Guide */}
+      <Collapsible defaultOpen={false}>
+        <Card className="border-primary/20 bg-primary/5">
+          <CollapsibleTrigger asChild>
+            <CardHeader className="cursor-pointer hover:bg-primary/10 transition-colors py-3">
+              <CardTitle className="text-sm flex items-center gap-2 font-medium">
+                <Info className="h-4 w-4 text-primary" />
+                Guia de Formatos de Arquivo para Importação
+                <Badge variant="outline" className="ml-auto text-xs">
+                  Clique para expandir
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <CardContent className="pt-0 pb-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                {/* XLSX Recommended */}
+                <div className="bg-success/10 border border-success/30 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileSpreadsheet className="h-5 w-5 text-success" />
+                    <span className="font-semibold">XLSX (Excel)</span>
+                    <Badge className="bg-success text-success-foreground text-xs">Recomendado</Badge>
+                  </div>
+                  <ul className="text-sm space-y-1.5 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                      <span>Suporte a múltiplas abas (Pacientes + Prontuários em um único arquivo)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                      <span>Preserva formatação de datas corretamente</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                      <span>Caracteres especiais e acentos preservados</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                      <span>CPF com zeros à esquerda não são perdidos</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <Check className="h-4 w-4 text-success mt-0.5 shrink-0" />
+                      <span>Detecção automática do tipo de dados</span>
+                    </li>
+                  </ul>
+                </div>
+
+                {/* CSV Limitations */}
+                <div className="bg-warning/10 border border-warning/30 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-warning" />
+                    <span className="font-semibold">CSV</span>
+                    <Badge variant="outline" className="text-xs border-warning/50 text-warning">Limitações</Badge>
+                  </div>
+                  <ul className="text-sm space-y-1.5 text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                      <span>Apenas uma tabela por arquivo (não suporta múltiplas abas)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                      <span>Problemas com acentos dependendo da codificação (UTF-8 vs ANSI)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                      <span>Datas podem ser mal interpretadas pelo Excel</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                      <span>CPF pode perder zeros à esquerda (ex: 012.345.678-90 → 12345678-90)</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+                      <span>Delimitador pode variar (vírgula vs ponto-e-vírgula)</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              
+              <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1.5">
+                <Info className="h-3.5 w-3.5" />
+                Para a <strong>Importação Inteligente</strong>, utilize sempre arquivos <strong>.xlsx</strong> com abas separadas para Pacientes e Prontuários.
+              </p>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       {/* Import Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "combined" | "patients" | "records")}>
