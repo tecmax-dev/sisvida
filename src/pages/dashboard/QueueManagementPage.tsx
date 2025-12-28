@@ -264,7 +264,7 @@ function QueueManagementContent() {
   const baseUrl = window.location.origin;
 
   return (
-    <RoleGuard permission="view_dashboard">
+    <RoleGuard permission="view_queue">
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Painel de Atendimento</h1>

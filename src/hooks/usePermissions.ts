@@ -177,9 +177,7 @@ const permissionAliases: Record<string, string> = {
   "procedures": "view_procedures",
   
   // Packages aliases
-  "packages": "view_stock", // Packages typically require stock view permission
-  "view_packages": "view_stock",
-  "manage_packages": "manage_stock",
+  "packages": "view_packages",
   
   // Professionals aliases
   "professionals": "manage_professionals",
