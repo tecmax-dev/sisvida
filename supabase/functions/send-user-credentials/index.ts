@@ -140,7 +140,7 @@ const handler = async (req: Request): Promise<Response> => {
     const htmlContent = getCredentialsEmailTemplate(userName, userEmail, tempPassword, clinicName || "", loginUrl);
 
     const { data, error } = await resend.emails.send({
-      from: "Eclini <onboarding@resend.dev>",
+      from: "Eclini <noreply@eclini.com.br>",
       to: [userEmail],
       subject: "🔐 Suas credenciais de acesso - Eclini",
       html: htmlContent,
