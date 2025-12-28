@@ -862,17 +862,27 @@ export default function ClinicsManagement() {
                       {filteredClinics.map((clinic) => (
                         <TableRow 
                           key={clinic.id} 
-                          className={`transition-colors ${clinic.is_blocked ? "bg-destructive/5 hover:bg-destructive/10" : "hover:bg-muted/30"}`}
+                          className={`transition-colors ${
+                            clinic.is_blocked 
+                              ? "bg-destructive/5 hover:bg-destructive/10" 
+                              : clinic.is_maintenance 
+                                ? "bg-warning/5 hover:bg-warning/10" 
+                                : "hover:bg-muted/30"
+                          }`}
                         >
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <div className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
                                 clinic.is_blocked 
                                   ? "bg-destructive/10 text-destructive" 
-                                  : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
+                                  : clinic.is_maintenance
+                                    ? "bg-warning/10 text-warning"
+                                    : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
                               }`}>
                                 {clinic.is_blocked ? (
                                   <Ban className="h-5 w-5" />
+                                ) : clinic.is_maintenance ? (
+                                  <Wrench className="h-5 w-5" />
                                 ) : (
                                   <Building2 className="h-5 w-5" />
                                 )}
@@ -888,6 +898,11 @@ export default function ClinicsManagement() {
                               <Badge variant="destructive" className="gap-1.5">
                                 <Ban className="h-3 w-3" />
                                 Bloqueada
+                              </Badge>
+                            ) : clinic.is_maintenance ? (
+                              <Badge className="bg-warning/10 text-warning border-warning/20 gap-1.5">
+                                <Wrench className="h-3 w-3" />
+                                Manutenção
                               </Badge>
                             ) : (
                               <Badge className="bg-success/10 text-success border-success/20 gap-1.5">
@@ -966,6 +981,26 @@ export default function ClinicsManagement() {
                                     >
                                       <Ban className="h-4 w-4 mr-2" />
                                       Bloquear
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
+                                  {clinic.is_maintenance ? (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleOpenMaintenanceDialog(clinic)}
+                                      className="text-success focus:text-success"
+                                      disabled={clinic.is_blocked}
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Desativar Manutenção
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem 
+                                      onClick={() => handleOpenMaintenanceDialog(clinic)}
+                                      className="text-warning focus:text-warning"
+                                      disabled={clinic.is_blocked}
+                                    >
+                                      <Wrench className="h-4 w-4 mr-2" />
+                                      Ativar Manutenção
                                     </DropdownMenuItem>
                                   )}
                                   <DropdownMenuSeparator />
