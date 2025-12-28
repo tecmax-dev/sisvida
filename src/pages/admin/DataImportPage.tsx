@@ -24,8 +24,10 @@ import {
   Sparkles,
   Info,
   Check,
+  ArrowDownToLine,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import DataExportPanel from "@/components/admin/DataExportPanel";
 import {
   PatientImportRow,
   MedicalRecordImportRow,
@@ -53,7 +55,7 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"combined" | "patients" | "records">("combined");
+  const [activeTab, setActiveTab] = useState<"export" | "combined" | "patients" | "records">("export");
   
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
@@ -804,9 +806,13 @@ export default function DataImportPage() {
         </Card>
       </Collapsible>
 
-      {/* Import Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "combined" | "patients" | "records")}>
+      {/* Import/Export Tabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "combined" | "patients" | "records")}>
         <TabsList>
+          <TabsTrigger value="export" className="gap-2">
+            <ArrowDownToLine className="h-4 w-4" />
+            Exportar Dados
+          </TabsTrigger>
           <TabsTrigger value="combined" className="gap-2">
             <Sparkles className="h-4 w-4" />
             Importação Inteligente
@@ -820,6 +826,19 @@ export default function DataImportPage() {
             Só Prontuários
           </TabsTrigger>
         </TabsList>
+
+        {/* Export Tab */}
+        <TabsContent value="export" className="space-y-4">
+          {selectedClinicId && selectedClinic ? (
+            <DataExportPanel clinicId={selectedClinicId} clinicName={selectedClinic.name} />
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Selecione uma clínica para exportar os dados
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
         {/* Combined Import Tab */}
         <TabsContent value="combined" className="space-y-4">
