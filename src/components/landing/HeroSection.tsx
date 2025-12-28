@@ -15,7 +15,8 @@ export function HeroSection() {
   const { data: settings, isLoading } = useHeroSettings();
 
   // Use settings from DB or fallback to defaults
-  const title = settings?.title || "Simplifique a gestão\nda sua clínica";
+  const title = settings?.title || "Simplifique a gestão";
+  const subtitle = settings?.subtitle || "da sua clínica";
   const description = settings?.description || "Organize agendamentos, automatize lembretes e gerencie seu negócio em um só lugar. Junte-se a milhares de profissionais de saúde.";
   const highlights = settings?.highlights?.length ? settings.highlights : defaultHighlights;
   const primaryButtonText = settings?.primary_button_text || "Começar grátis por 7 dias";
@@ -81,10 +82,9 @@ export function HeroSection() {
     }
   };
 
-  // Parse title for styling (first line normal, rest highlighted)
-  const titleLines = title.split('\n');
-  const firstLine = titleLines[0] || '';
-  const highlightedLine = titleLines.slice(1).join(' ') || '';
+  // Title is main line, subtitle is highlighted line
+  const firstLine = title;
+  const highlightedLine = subtitle;
 
   if (isLoading) {
     return (
