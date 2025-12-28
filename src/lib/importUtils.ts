@@ -2,13 +2,14 @@ import * as XLSX from 'xlsx';
 
 export interface PatientImportRow {
   nome: string;
-  telefone: string;
+  telefone?: string;
   email?: string;
   cpf?: string;
   data_nascimento?: string;
   endereco?: string;
   observacoes?: string;
 }
+
 
 export interface MedicalRecordImportRow {
   cpf_paciente?: string;
@@ -116,41 +117,45 @@ export function parseDate(dateStr: string): string | null {
 }
 
 // Validate patient row
+// Observação: na importação, telefone pode estar ausente (algumas bases legadas não possuem contato).
+// Mantemos como *warning* para permitir importar e completar depois.
 export function validatePatientRow(row: PatientImportRow): ValidationResult {
   const errors: string[] = [];
   const warnings: string[] = [];
-  
+
   if (!row.nome?.trim()) {
     errors.push('Nome é obrigatório');
   }
-  
-  if (!row.telefone) {
-    errors.push('Telefone é obrigatório');
-  } else if (!validatePhone(row.telefone)) {
-    errors.push('Telefone inválido (deve ter 10-11 dígitos)');
+
+  const phone = row.telefone?.trim() || '';
+  if (!phone) {
+    warnings.push('Telefone ausente (opcional na importação)');
+  } else if (!validatePhone(phone)) {
+    warnings.push('Telefone inválido (deve ter 10-11 dígitos)');
   }
-  
+
   if (row.cpf && !validateCPF(row.cpf)) {
     errors.push('CPF inválido');
   }
-  
+
   if (row.data_nascimento) {
     const parsed = parseDate(row.data_nascimento);
     if (!parsed) {
       warnings.push('Data de nascimento em formato não reconhecido');
     }
   }
-  
+
   if (row.email && !row.email.includes('@')) {
     warnings.push('Email parece inválido');
   }
-  
+
   return {
     isValid: errors.length === 0,
     errors,
     warnings,
   };
 }
+
 
 // Validate medical record row
 export function validateMedicalRecordRow(row: MedicalRecordImportRow): ValidationResult {
