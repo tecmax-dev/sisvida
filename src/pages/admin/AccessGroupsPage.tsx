@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { 
   Plus, 
@@ -17,7 +19,8 @@ import {
   Loader2,
   Shield,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Lock
 } from "lucide-react";
 import {
   AlertDialog,
@@ -44,6 +47,13 @@ interface PermissionDefinition {
   order_index: number;
 }
 
+interface AvailablePermission {
+  permission_key: string;
+  permission_name: string;
+  category: string;
+  feature_name: string | null;
+}
+
 interface AccessGroup {
   id: string;
   name: string;
@@ -58,9 +68,15 @@ interface GroupedPermissions {
   [category: string]: PermissionDefinition[];
 }
 
+interface GroupedAvailablePermissions {
+  [category: string]: AvailablePermission[];
+}
+
 export default function AccessGroupsPage() {
+  const { currentClinic, isSuperAdmin } = useAuth();
   const [groups, setGroups] = useState<AccessGroup[]>([]);
   const [permissions, setPermissions] = useState<PermissionDefinition[]>([]);
+  const [availablePermissions, setAvailablePermissions] = useState<Set<string>>(new Set());
   const [selectedGroup, setSelectedGroup] = useState<AccessGroup | null>(null);
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
   const [groupName, setGroupName] = useState("");
@@ -73,7 +89,7 @@ export default function AccessGroupsPage() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [currentClinic?.id]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -97,6 +113,21 @@ export default function AccessGroupsPage() {
 
       setGroups(groupsRes.data || []);
       setPermissions(permissionsRes.data || []);
+      
+      // Fetch available permissions for the clinic's plan (if not super admin)
+      if (currentClinic?.id && !isSuperAdmin) {
+        const { data: availablePerms, error: availableError } = await supabase
+          .rpc('get_available_permissions_for_clinic', { _clinic_id: currentClinic.id });
+        
+        if (availableError) {
+          console.error('Error fetching available permissions:', availableError);
+        } else {
+          setAvailablePermissions(new Set((availablePerms || []).map((p: AvailablePermission) => p.permission_key)));
+        }
+      } else {
+        // Super admin has access to all permissions
+        setAvailablePermissions(new Set((permissionsRes.data || []).map(p => p.key)));
+      }
       
       // Expand all categories by default
       const categories = new Set((permissionsRes.data || []).map(p => p.category));
@@ -145,6 +176,9 @@ export default function AccessGroupsPage() {
   };
 
   const handleTogglePermission = (permissionKey: string) => {
+    // Only allow toggle if permission is available in the plan
+    if (!availablePermissions.has(permissionKey)) return;
+    
     setSelectedPermissions(prev => {
       const newSet = new Set(prev);
       if (newSet.has(permissionKey)) {
@@ -158,11 +192,15 @@ export default function AccessGroupsPage() {
 
   const handleToggleCategory = (category: string) => {
     const categoryPermissions = groupedPermissions[category];
-    const allSelected = categoryPermissions.every(p => selectedPermissions.has(p.key));
+    // Only consider available permissions
+    const availableCategoryPerms = categoryPermissions.filter(p => availablePermissions.has(p.key));
+    if (availableCategoryPerms.length === 0) return;
+    
+    const allSelected = availableCategoryPerms.every(p => selectedPermissions.has(p.key));
     
     setSelectedPermissions(prev => {
       const newSet = new Set(prev);
-      categoryPermissions.forEach(p => {
+      availableCategoryPerms.forEach(p => {
         if (allSelected) {
           newSet.delete(p.key);
         } else {
@@ -286,8 +324,10 @@ export default function AccessGroupsPage() {
 
   const categoryPermissionCount = (category: string) => {
     const categoryPerms = groupedPermissions[category] || [];
-    const selectedCount = categoryPerms.filter(p => selectedPermissions.has(p.key)).length;
-    return { selected: selectedCount, total: categoryPerms.length };
+    const availableCategoryPerms = categoryPerms.filter(p => availablePermissions.has(p.key));
+    const selectedCount = availableCategoryPerms.filter(p => selectedPermissions.has(p.key)).length;
+    const unavailableCount = categoryPerms.length - availableCategoryPerms.length;
+    return { selected: selectedCount, total: availableCategoryPerms.length, unavailable: unavailableCount };
   };
 
   if (loading) {
@@ -421,10 +461,11 @@ export default function AccessGroupsPage() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {Object.entries(groupedPermissions).map(([category, categoryPermissions]) => {
-                  const { selected, total } = categoryPermissionCount(category);
-                  const allSelected = selected === total;
+                  const { selected, total, unavailable } = categoryPermissionCount(category);
+                  const allSelected = total > 0 && selected === total;
                   const someSelected = selected > 0 && selected < total;
                   const isExpanded = expandedCategories.has(category);
+                  const hasUnavailable = unavailable > 0;
 
                   return (
                     <Card key={category} className="border shadow-sm">
@@ -437,9 +478,22 @@ export default function AccessGroupsPage() {
                                   checked={allSelected}
                                   onCheckedChange={() => handleToggleCategory(category)}
                                   onClick={(e) => e.stopPropagation()}
+                                  disabled={total === 0}
                                   className={someSelected ? 'data-[state=checked]:bg-primary/50' : ''}
                                 />
                                 <CardTitle className="text-sm font-medium">{category}</CardTitle>
+                                {hasUnavailable && (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Lock className="h-3 w-3 text-muted-foreground" />
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>{unavailable} permissão(ões) requer upgrade do plano</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                )}
                               </div>
                               <div className="flex items-center gap-2">
                                 <Badge variant="outline" className="text-xs">
@@ -457,28 +511,48 @@ export default function AccessGroupsPage() {
                         <CollapsibleContent>
                           <Separator />
                           <CardContent className="py-3 px-4 space-y-2">
-                            {categoryPermissions.map((perm) => (
-                              <div key={perm.id} className="flex items-start gap-2">
-                                <Checkbox
-                                  id={perm.key}
-                                  checked={selectedPermissions.has(perm.key)}
-                                  onCheckedChange={() => handleTogglePermission(perm.key)}
-                                />
-                                <div className="grid gap-0.5 leading-none">
-                                  <Label
-                                    htmlFor={perm.key}
-                                    className="text-sm font-normal cursor-pointer"
-                                  >
-                                    {perm.name}
-                                  </Label>
-                                  {perm.description && (
-                                    <p className="text-xs text-muted-foreground">
-                                      {perm.description}
-                                    </p>
-                                  )}
+                            {categoryPermissions.map((perm) => {
+                              const isAvailable = availablePermissions.has(perm.key);
+                              return (
+                                <div key={perm.id} className={`flex items-start gap-2 ${!isAvailable ? 'opacity-50' : ''}`}>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <span>
+                                          <Checkbox
+                                            id={perm.key}
+                                            checked={selectedPermissions.has(perm.key)}
+                                            onCheckedChange={() => handleTogglePermission(perm.key)}
+                                            disabled={!isAvailable}
+                                          />
+                                        </span>
+                                      </TooltipTrigger>
+                                      {!isAvailable && (
+                                        <TooltipContent>
+                                          <p>Requer upgrade do plano</p>
+                                        </TooltipContent>
+                                      )}
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <div className="grid gap-0.5 leading-none">
+                                    <Label
+                                      htmlFor={perm.key}
+                                      className={`text-sm font-normal ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
+                                    >
+                                      {perm.name}
+                                      {!isAvailable && (
+                                        <Lock className="inline-block ml-1 h-3 w-3 text-muted-foreground" />
+                                      )}
+                                    </Label>
+                                    {perm.description && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {perm.description}
+                                      </p>
+                                    )}
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </CardContent>
                         </CollapsibleContent>
                       </Collapsible>
