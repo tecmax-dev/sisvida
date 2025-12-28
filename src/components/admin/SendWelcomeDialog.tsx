@@ -38,7 +38,8 @@ interface ClinicUser {
     name: string | null;
     phone: string | null;
   } | null;
-  email?: string;
+  email: string;
+  name: string | null; // Nome da edge function
 }
 
 function generateTempPassword(): string {
@@ -115,20 +116,25 @@ export function SendWelcomeDialog({
         profileMap.set(p.user_id, { name: p.name, phone: p.phone });
       });
 
-      const emailMap = new Map<string, string>();
+      const emailMap = new Map<string, { email: string; name: string | null }>();
       if (emailsData?.users) {
         emailsData.users.forEach((u: any) => {
           // A edge function retorna user_id como identificador do auth
-          emailMap.set(u.user_id, u.email);
+          emailMap.set(u.user_id, { email: u.email, name: u.name });
         });
       }
 
-      const usersWithEmail = roles.map((r) => ({
-        user_id: r.user_id,
-        role: r.role,
-        profile: profileMap.get(r.user_id) || null,
-        email: emailMap.get(r.user_id) || "",
-      }));
+      const usersWithEmail = roles.map((r) => {
+        const emailData = emailMap.get(r.user_id);
+        const localProfile = profileMap.get(r.user_id);
+        return {
+          user_id: r.user_id,
+          role: r.role,
+          profile: localProfile || null,
+          email: emailData?.email || "",
+          name: localProfile?.name || emailData?.name || null,
+        };
+      });
 
       setClinicUsers(usersWithEmail);
     } catch (error) {
@@ -144,7 +150,7 @@ export function SendWelcomeDialog({
     const user = clinicUsers.find((u) => u.user_id === userId);
     if (user) {
       setEmail(user.email || "");
-      setName(user.profile?.name || "");
+      setName(user.name || user.profile?.name || "");
     }
   };
 
@@ -336,7 +342,7 @@ export function SendWelcomeDialog({
                         <div className="flex flex-col items-start">
                           <div className="flex items-center gap-2">
                             <span className="font-semibold">
-                              {user.profile?.name || user.email || "Usuário sem identificação"}
+                              {user.name || user.profile?.name || user.email || "Usuário sem identificação"}
                             </span>
                             <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
                               {roleLabels[user.role] || user.role}
