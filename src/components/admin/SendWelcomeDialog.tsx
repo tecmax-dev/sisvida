@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog,
@@ -12,14 +12,33 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, Mail, Copy, Check, Eye, EyeOff, RefreshCw, Send } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Loader2, Mail, Copy, Check, Eye, EyeOff, RefreshCw, Send, UserPlus, Users } from "lucide-react";
 import { toast } from "sonner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface SendWelcomeDialogProps {
   open: boolean;
   onClose: () => void;
   clinicName: string;
   clinicId: string;
+}
+
+interface ClinicUser {
+  user_id: string;
+  role: string;
+  profile: {
+    name: string | null;
+    phone: string | null;
+  } | null;
+  email?: string;
 }
 
 function generateTempPassword(): string {
@@ -37,13 +56,78 @@ export function SendWelcomeDialog({
   clinicName,
   clinicId,
 }: SendWelcomeDialogProps) {
+  const [mode, setMode] = useState<"existing" | "new">("existing");
+  const [clinicUsers, setClinicUsers] = useState<ClinicUser[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [tempPassword, setTempPassword] = useState(generateTempPassword());
   const [showPassword, setShowPassword] = useState(true);
   const [isSending, setSending] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [createUser, setCreateUser] = useState(true);
+
+  // Carregar usuários da clínica
+  useEffect(() => {
+    if (open && clinicId) {
+      fetchClinicUsers();
+    }
+  }, [open, clinicId]);
+
+  const fetchClinicUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      // Buscar roles dos usuários da clínica
+      const { data: roles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select(`
+          user_id,
+          role,
+          profiles:user_id (name, phone)
+        `)
+        .eq("clinic_id", clinicId);
+
+      if (rolesError) throw rolesError;
+
+      // Buscar emails dos usuários
+      const { data: emailsData, error: emailsError } = await supabase.functions.invoke(
+        "list-users-with-email"
+      );
+
+      if (emailsError) {
+        console.warn("Não foi possível buscar emails:", emailsError);
+      }
+
+      const emailMap = new Map<string, string>();
+      if (emailsData?.users) {
+        emailsData.users.forEach((u: any) => {
+          emailMap.set(u.id, u.email);
+        });
+      }
+
+      const usersWithEmail = (roles || []).map((r: any) => ({
+        ...r,
+        profile: r.profiles,
+        email: emailMap.get(r.user_id) || "",
+      }));
+
+      setClinicUsers(usersWithEmail);
+    } catch (error) {
+      console.error("Erro ao carregar usuários:", error);
+      toast.error("Erro ao carregar usuários da clínica");
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleUserSelect = (userId: string) => {
+    setSelectedUserId(userId);
+    const user = clinicUsers.find((u) => u.user_id === userId);
+    if (user) {
+      setEmail(user.email || "");
+      setName(user.profile?.name || "");
+    }
+  };
 
   const handleRegeneratePassword = () => {
     setTempPassword(generateTempPassword());
@@ -67,8 +151,8 @@ export function SendWelcomeDialog({
     setSending(true);
 
     try {
-      // Se createUser estiver ativo, criar o usuário primeiro
-      if (createUser) {
+      // Se for novo usuário, criar primeiro
+      if (mode === "new") {
         // Criar usuário no Supabase Auth
         const { data: authData, error: authError } = await supabase.auth.signUp({
           email,
@@ -125,12 +209,7 @@ export function SendWelcomeDialog({
       if (error) throw error;
 
       toast.success("Email de boas-vindas enviado com sucesso!");
-      onClose();
-      
-      // Reset form
-      setEmail("");
-      setName("");
-      setTempPassword(generateTempPassword());
+      handleClose();
     } catch (error: any) {
       console.error("Erro ao enviar:", error);
       toast.error(error.message || "Erro ao enviar email de boas-vindas");
@@ -141,17 +220,25 @@ export function SendWelcomeDialog({
 
   const handleClose = () => {
     if (!isSending) {
+      setMode("existing");
+      setSelectedUserId("");
       setEmail("");
       setName("");
       setTempPassword(generateTempPassword());
-      setCreateUser(true);
       onClose();
     }
   };
 
+  const roleLabels: Record<string, string> = {
+    owner: "Proprietário",
+    admin: "Administrador",
+    user: "Usuário",
+    professional: "Profissional",
+  };
+
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5 text-primary" />
@@ -164,6 +251,90 @@ export function SendWelcomeDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Seleção de modo */}
+          <RadioGroup
+            value={mode}
+            onValueChange={(v) => {
+              setMode(v as "existing" | "new");
+              setSelectedUserId("");
+              setEmail("");
+              setName("");
+            }}
+            className="grid grid-cols-2 gap-4"
+          >
+            <div className="relative">
+              <RadioGroupItem
+                value="existing"
+                id="mode-existing"
+                className="peer sr-only"
+              />
+              <Label
+                htmlFor="mode-existing"
+                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+              >
+                <Users className="mb-3 h-6 w-6" />
+                <span className="text-sm font-medium">Usuário Existente</span>
+              </Label>
+            </div>
+            <div className="relative">
+              <RadioGroupItem
+                value="new"
+                id="mode-new"
+                className="peer sr-only"
+              />
+              <Label
+                htmlFor="mode-new"
+                className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer"
+              >
+                <UserPlus className="mb-3 h-6 w-6" />
+                <span className="text-sm font-medium">Novo Usuário</span>
+              </Label>
+            </div>
+          </RadioGroup>
+
+          {/* Seleção de usuário existente */}
+          {mode === "existing" && (
+            <div className="space-y-2">
+              <Label>Selecionar usuário</Label>
+              {loadingUsers ? (
+                <div className="space-y-2">
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : clinicUsers.length === 0 ? (
+                <Alert>
+                  <AlertDescription>
+                    Nenhum usuário encontrado nesta clínica. Crie um novo usuário.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                <Select value={selectedUserId} onValueChange={handleUserSelect}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um usuário..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clinicUsers.map((user) => (
+                      <SelectItem key={user.user_id} value={user.user_id}>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">
+                            {user.profile?.name || "Sem nome"}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            ({roleLabels[user.role] || user.role})
+                          </span>
+                          {user.email && (
+                            <span className="text-xs text-muted-foreground">
+                              - {user.email}
+                            </span>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="email">Email do responsável</Label>
             <Input
@@ -173,7 +344,7 @@ export function SendWelcomeDialog({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
-              disabled={isSending}
+              disabled={isSending || (mode === "existing" && !!selectedUserId)}
             />
           </div>
 
@@ -186,7 +357,7 @@ export function SendWelcomeDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               required
-              disabled={isSending}
+              disabled={isSending || (mode === "existing" && !!selectedUserId)}
             />
           </div>
 
@@ -245,19 +416,13 @@ export function SendWelcomeDialog({
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="createUser"
-              checked={createUser}
-              onChange={(e) => setCreateUser(e.target.checked)}
-              disabled={isSending}
-              className="h-4 w-4 rounded border-input"
-            />
-            <Label htmlFor="createUser" className="text-sm font-normal cursor-pointer">
-              Criar usuário no sistema (se não existir)
-            </Label>
-          </div>
+          {mode === "new" && (
+            <Alert className="bg-warning/10 border-warning/20">
+              <AlertDescription className="text-sm">
+                Um novo usuário será criado com a role de <strong>Proprietário</strong> para esta clínica.
+              </AlertDescription>
+            </Alert>
+          )}
 
           <Alert className="bg-info/10 border-info/20">
             <AlertDescription className="text-sm text-info">
@@ -275,7 +440,10 @@ export function SendWelcomeDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSending}>
+            <Button 
+              type="submit" 
+              disabled={isSending || (mode === "existing" && !selectedUserId)}
+            >
               {isSending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
