@@ -332,16 +332,18 @@ export function SendWelcomeDialog({
                   <SelectContent>
                     {clinicUsers.map((user) => (
                       <SelectItem key={user.user_id} value={user.user_id}>
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">
-                            {user.profile?.name || "Sem nome"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            ({roleLabels[user.role] || user.role})
-                          </span>
-                          {user.email && (
+                        <div className="flex flex-col items-start">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold">
+                              {user.profile?.name || user.email || "Usuário sem identificação"}
+                            </span>
+                            <span className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                              {roleLabels[user.role] || user.role}
+                            </span>
+                          </div>
+                          {user.email && user.profile?.name && (
                             <span className="text-xs text-muted-foreground">
-                              - {user.email}
+                              {user.email}
                             </span>
                           )}
                         </div>
