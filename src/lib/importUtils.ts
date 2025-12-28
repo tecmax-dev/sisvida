@@ -201,21 +201,47 @@ export interface MultiSheetParseResult {
   records: ImportRow<MedicalRecordImportRow>[];
 }
 
+// Normalize column header for comparison (removes accents, converts to lowercase, replaces spaces with underscores)
+function normalizeColumnHeader(header: string): string {
+  return String(header)
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9]/g, '_') // Replace non-alphanumeric with underscore
+    .replace(/_+/g, '_') // Remove duplicate underscores
+    .replace(/^_|_$/g, ''); // Trim underscores at start/end
+}
+
 // Detect sheet type based on columns
 function detectSheetType(columns: string[]): DetectedSheetType {
-  const lowerColumns = columns.map(c => String(c).toLowerCase().trim());
+  const normalizedColumns = columns.map(normalizeColumnHeader);
   
-  // Patient indicators
-  const patientIndicators = ['nome', 'telefone', 'celular', 'cpf', 'nascimento', 'data_nascimento', 'email'];
+  // Patient indicators - includes exported column names
+  const patientIndicators = [
+    'nome', 'telefone', 'celular', 'cpf', 'email',
+    'nascimento', 'data_nascimento', 'data_de_nascimento',
+    'endereco', 'observacoes', 'notas'
+  ];
   const patientMatches = patientIndicators.filter(ind => 
-    lowerColumns.some(col => col.includes(ind))
+    normalizedColumns.some(col => col.includes(ind))
   ).length;
   
-  // Medical record indicators
-  const recordIndicators = ['queixa', 'diagnostico', 'diagnóstico', 'tratamento', 'prescricao', 'prescrição', 
-    'data_registro', 'evolucao', 'evolução', 'prontuario', 'prontuário', 'cpf_paciente', 'nome_paciente'];
+  // Medical record indicators - includes exported column names
+  const recordIndicators = [
+    'queixa', 'queixa_principal',
+    'diagnostico', 'diagnostico',
+    'tratamento', 'plano_de_tratamento',
+    'prescricao', 'prescricao',
+    'data_registro', 'data_do_registro',
+    'evolucao', 'evolucao',
+    'prontuario', 'prontuario',
+    'cpf_paciente', 'cpf_do_paciente',
+    'nome_paciente', 'nome_do_paciente',
+    'paciente'
+  ];
   const recordMatches = recordIndicators.filter(ind => 
-    lowerColumns.some(col => col.includes(ind))
+    normalizedColumns.some(col => col.includes(ind))
   ).length;
   
   // If has specific record columns, it's records
@@ -333,30 +359,81 @@ export function generateCombinedTemplate(): ArrayBuffer {
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
 }
 
+// Helper to get value from row with multiple possible keys
+function getRowValue(row: Record<string, unknown>, keys: string[]): string {
+  for (const key of keys) {
+    // Try exact match first
+    if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
+      return String(row[key]).trim();
+    }
+    // Try case-insensitive match
+    const foundKey = Object.keys(row).find(k => 
+      normalizeColumnHeader(k) === normalizeColumnHeader(key)
+    );
+    if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') {
+      return String(row[foundKey]).trim();
+    }
+  }
+  return '';
+}
+
 // Map raw row to PatientImportRow
 export function mapPatientRow(row: Record<string, unknown>): PatientImportRow {
   return {
-    nome: String(row.nome || row.Nome || row.NOME || '').trim(),
-    telefone: String(row.telefone || row.Telefone || row.TELEFONE || row.celular || row.Celular || '').trim(),
-    email: String(row.email || row.Email || row.EMAIL || '').trim() || undefined,
-    cpf: String(row.cpf || row.CPF || row.Cpf || '').trim() || undefined,
-    data_nascimento: String(row.data_nascimento || row.nascimento || row.Nascimento || row.DATA_NASCIMENTO || '').trim() || undefined,
-    endereco: String(row.endereco || row.Endereco || row.ENDERECO || row.endereço || '').trim() || undefined,
-    observacoes: String(row.observacoes || row.Observacoes || row.OBSERVACOES || row.notas || row.Notas || '').trim() || undefined,
+    nome: getRowValue(row, ['nome', 'Nome', 'NOME', 'Paciente', 'paciente']),
+    telefone: getRowValue(row, ['telefone', 'Telefone', 'TELEFONE', 'celular', 'Celular', 'CELULAR', 'Whatsapp', 'whatsapp']),
+    email: getRowValue(row, ['email', 'Email', 'EMAIL', 'e-mail', 'E-mail']) || undefined,
+    cpf: getRowValue(row, ['cpf', 'CPF', 'Cpf']) || undefined,
+    data_nascimento: getRowValue(row, [
+      'data_nascimento', 'Data de Nascimento', 'Data Nascimento', 'nascimento', 
+      'Nascimento', 'DATA_NASCIMENTO', 'datanascimento'
+    ]) || undefined,
+    endereco: getRowValue(row, [
+      'endereco', 'Endereco', 'ENDERECO', 'endereço', 'Endereço', 
+      'Endereço', 'endereco_completo', 'Endereço Completo'
+    ]) || undefined,
+    observacoes: getRowValue(row, [
+      'observacoes', 'Observacoes', 'OBSERVACOES', 'observações', 'Observações',
+      'notas', 'Notas', 'NOTAS', 'obs', 'Obs'
+    ]) || undefined,
   };
 }
 
 // Map raw row to MedicalRecordImportRow
 export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecordImportRow {
   return {
-    cpf_paciente: String(row.cpf_paciente || row.cpf || row.CPF || '').trim() || undefined,
-    nome_paciente: String(row.nome_paciente || row.paciente || row.Paciente || row.nome || row.Nome || '').trim() || undefined,
-    data_registro: String(row.data_registro || row.data || row.Data || row.DATA || '').trim(),
-    queixa: String(row.queixa || row.Queixa || row.QUEIXA || '').trim() || undefined,
-    diagnostico: String(row.diagnostico || row.Diagnostico || row.DIAGNOSTICO || row.diagnóstico || '').trim() || undefined,
-    tratamento: String(row.tratamento || row.Tratamento || row.TRATAMENTO || '').trim() || undefined,
-    prescricao: String(row.prescricao || row.Prescricao || row.PRESCRICAO || row.prescrição || '').trim() || undefined,
-    observacoes: String(row.observacoes || row.Observacoes || row.OBSERVACOES || row.notas || '').trim() || undefined,
+    cpf_paciente: getRowValue(row, [
+      'cpf_paciente', 'CPF Paciente', 'cpf paciente', 'cpf do paciente',
+      'CPF do Paciente', 'cpf', 'CPF'
+    ]) || undefined,
+    nome_paciente: getRowValue(row, [
+      'nome_paciente', 'Nome Paciente', 'nome paciente', 'nome do paciente',
+      'Nome do Paciente', 'Paciente', 'paciente', 'nome', 'Nome'
+    ]) || undefined,
+    data_registro: getRowValue(row, [
+      'data_registro', 'Data do Registro', 'data do registro', 'Data Registro',
+      'data', 'Data', 'DATA', 'data_consulta', 'Data Consulta'
+    ]),
+    queixa: getRowValue(row, [
+      'queixa', 'Queixa', 'QUEIXA', 'Queixa Principal', 'queixa_principal',
+      'queixa principal', 'Chief Complaint'
+    ]) || undefined,
+    diagnostico: getRowValue(row, [
+      'diagnostico', 'Diagnostico', 'DIAGNOSTICO', 'diagnóstico', 'Diagnóstico',
+      'diagnosis', 'Diagnosis'
+    ]) || undefined,
+    tratamento: getRowValue(row, [
+      'tratamento', 'Tratamento', 'TRATAMENTO', 'Plano de Tratamento',
+      'plano_de_tratamento', 'plano de tratamento', 'treatment'
+    ]) || undefined,
+    prescricao: getRowValue(row, [
+      'prescricao', 'Prescricao', 'PRESCRICAO', 'prescrição', 'Prescrição',
+      'prescription', 'Prescription', 'Medicamentos', 'medicamentos'
+    ]) || undefined,
+    observacoes: getRowValue(row, [
+      'observacoes', 'Observacoes', 'OBSERVACOES', 'observações', 'Observações',
+      'notas', 'Notas', 'NOTAS', 'obs', 'Obs', 'notes', 'Notes'
+    ]) || undefined,
   };
 }
 
