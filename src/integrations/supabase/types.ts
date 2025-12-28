@@ -1348,7 +1348,11 @@ export type Database = {
           enforce_schedule_validation: boolean | null
           id: string
           is_blocked: boolean | null
+          is_maintenance: boolean | null
           logo_url: string | null
+          maintenance_at: string | null
+          maintenance_by: string | null
+          maintenance_reason: string | null
           map_view_type: string | null
           name: string
           opening_time: string | null
@@ -1374,7 +1378,11 @@ export type Database = {
           enforce_schedule_validation?: boolean | null
           id?: string
           is_blocked?: boolean | null
+          is_maintenance?: boolean | null
           logo_url?: string | null
+          maintenance_at?: string | null
+          maintenance_by?: string | null
+          maintenance_reason?: string | null
           map_view_type?: string | null
           name: string
           opening_time?: string | null
@@ -1400,7 +1408,11 @@ export type Database = {
           enforce_schedule_validation?: boolean | null
           id?: string
           is_blocked?: boolean | null
+          is_maintenance?: boolean | null
           logo_url?: string | null
+          maintenance_at?: string | null
+          maintenance_by?: string | null
+          maintenance_reason?: string | null
           map_view_type?: string | null
           name?: string
           opening_time?: string | null

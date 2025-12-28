@@ -90,6 +90,10 @@ interface Clinic {
   blocked_at: string | null;
   blocked_reason: string | null;
   blocked_by: string | null;
+  is_maintenance: boolean;
+  maintenance_at: string | null;
+  maintenance_reason: string | null;
+  maintenance_by: string | null;
 }
 
 interface SubscriptionPlan {
@@ -146,6 +150,8 @@ interface ClinicCardProps {
   onManagePlan: (clinic: ClinicWithCounts) => void;
   onBlock: (clinic: ClinicWithCounts) => void;
   onUnblock: (clinic: ClinicWithCounts) => void;
+  onMaintenance: (clinic: ClinicWithCounts) => void;
+  onRemoveMaintenance: (clinic: ClinicWithCounts) => void;
   onDelete: (clinic: ClinicWithCounts) => void;
   getStatusBadge: (status: string) => React.ReactNode;
 }
@@ -155,51 +161,79 @@ const ClinicCard = ({
   onAccess, 
   onManagePlan, 
   onBlock, 
-  onUnblock, 
+  onUnblock,
+  onMaintenance,
+  onRemoveMaintenance,
   onDelete,
   getStatusBadge 
-}: ClinicCardProps) => (
-  <div className={`group relative overflow-hidden rounded-xl border p-5 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
-    clinic.is_blocked 
-      ? "bg-warning/5 border-warning/30" 
-      : "bg-card border-border hover:border-primary/30"
-  }`}>
-    {/* Decorative gradient */}
-    <div className={`absolute top-0 left-0 right-0 h-1 ${
-      clinic.is_blocked ? "bg-warning" : "bg-gradient-to-r from-primary to-primary-glow"
-    }`} />
-    
-    {/* Header */}
-    <div className="flex items-start justify-between gap-3 mb-4">
-      <div className="flex items-center gap-3 min-w-0">
-        <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
-          clinic.is_blocked 
-            ? "bg-warning/10 text-warning" 
-            : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
-        }`}>
-          {clinic.is_blocked ? (
-            <Wrench className="h-6 w-6" />
+}: ClinicCardProps) => {
+  const getClinicStatus = () => {
+    if (clinic.is_blocked) return 'blocked';
+    if (clinic.is_maintenance) return 'maintenance';
+    return 'active';
+  };
+
+  const status = getClinicStatus();
+
+  return (
+    <div className={`group relative overflow-hidden rounded-xl border p-5 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
+      status === 'blocked' 
+        ? "bg-destructive/5 border-destructive/30" 
+        : status === 'maintenance'
+        ? "bg-warning/5 border-warning/30"
+        : "bg-card border-border hover:border-primary/30"
+    }`}>
+      {/* Decorative gradient */}
+      <div className={`absolute top-0 left-0 right-0 h-1 ${
+        status === 'blocked' 
+          ? "bg-destructive" 
+          : status === 'maintenance' 
+          ? "bg-warning" 
+          : "bg-gradient-to-r from-primary to-primary-glow"
+      }`} />
+      
+      {/* Header */}
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
+            status === 'blocked'
+              ? "bg-destructive/10 text-destructive"
+              : status === 'maintenance' 
+              ? "bg-warning/10 text-warning" 
+              : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
+          }`}>
+            {status === 'blocked' ? (
+              <Ban className="h-6 w-6" />
+            ) : status === 'maintenance' ? (
+              <Wrench className="h-6 w-6" />
+            ) : (
+              <Building2 className="h-6 w-6" />
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-foreground truncate">{clinic.name}</p>
+            <code className="text-xs text-muted-foreground font-mono">/{clinic.slug}</code>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1 items-end shrink-0">
+          {status === 'blocked' ? (
+            <Badge variant="destructive" className="gap-1.5">
+              <Ban className="h-3 w-3" />
+              Bloqueada
+            </Badge>
+          ) : status === 'maintenance' ? (
+            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 gap-1.5">
+              <Wrench className="h-3 w-3" />
+              Manutenção
+            </Badge>
           ) : (
-            <Building2 className="h-6 w-6" />
+            <Badge className="bg-success/10 text-success border-success/20 gap-1.5">
+              <CheckCircle className="h-3 w-3" />
+              Ativa
+            </Badge>
           )}
         </div>
-        <div className="min-w-0">
-          <p className="font-semibold text-foreground truncate">{clinic.name}</p>
-          <code className="text-xs text-muted-foreground font-mono">/{clinic.slug}</code>
-        </div>
       </div>
-      {clinic.is_blocked ? (
-        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 gap-1.5 shrink-0">
-          <Wrench className="h-3 w-3" />
-          Manutenção
-        </Badge>
-      ) : (
-        <Badge className="bg-success/10 text-success border-success/20 gap-1.5 shrink-0">
-          <CheckCircle className="h-3 w-3" />
-          Ativa
-        </Badge>
-      )}
-    </div>
     
     {/* Metrics */}
     <div className="grid grid-cols-3 gap-3 mb-4">
@@ -244,58 +278,100 @@ const ClinicCard = ({
       </span>
     </div>
     
-    {/* Actions */}
-    <div className="flex items-center gap-2">
-      <Button 
-        size="sm" 
-        variant="outline" 
-        className="flex-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
-        onClick={() => onManagePlan(clinic)}
-      >
-        <CreditCard className="h-4 w-4 mr-2" />
-        Plano
-      </Button>
-      <Button 
-        size="sm" 
-        variant="outline"
-        className={clinic.is_blocked 
-          ? "text-success hover:bg-success/10 hover:border-success/30" 
-          : "text-warning hover:bg-warning/10 hover:border-warning/30"
-        }
-        onClick={() => clinic.is_blocked ? onUnblock(clinic) : onBlock(clinic)}
-        title={clinic.is_blocked ? "Desativar manutenção" : "Ativar manutenção"}
-      >
-        {clinic.is_blocked ? <CheckCircle className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
-      </Button>
-      <Button 
-        size="sm" 
-        variant="outline"
-        className="text-destructive hover:bg-destructive/10 hover:border-destructive/30"
-        onClick={() => onDelete(clinic)}
-      >
-        <Trash2 className="h-4 w-4" />
-      </Button>
-      <Button 
-        size="sm" 
-        className="flex-1 bg-primary hover:bg-primary/90"
-        onClick={() => onAccess(clinic)}
-      >
-        <ExternalLink className="h-4 w-4 mr-2" />
-        Acessar
-      </Button>
+      {/* Actions */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button 
+          size="sm" 
+          variant="outline" 
+          className="flex-1 hover:bg-primary/5 hover:text-primary hover:border-primary/30"
+          onClick={() => onManagePlan(clinic)}
+        >
+          <CreditCard className="h-4 w-4 mr-2" />
+          Plano
+        </Button>
+        
+        {/* Maintenance toggle */}
+        {clinic.is_maintenance ? (
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="text-success hover:bg-success/10 hover:border-success/30"
+            onClick={() => onRemoveMaintenance(clinic)}
+            title="Desativar manutenção"
+          >
+            <CheckCircle className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="text-warning hover:bg-warning/10 hover:border-warning/30"
+            onClick={() => onMaintenance(clinic)}
+            title="Ativar manutenção"
+            disabled={clinic.is_blocked}
+          >
+            <Wrench className="h-4 w-4" />
+          </Button>
+        )}
+        
+        {/* Block toggle */}
+        {clinic.is_blocked ? (
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="text-success hover:bg-success/10 hover:border-success/30"
+            onClick={() => onUnblock(clinic)}
+            title="Desbloquear"
+          >
+            <Ban className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button 
+            size="sm" 
+            variant="outline"
+            className="text-destructive hover:bg-destructive/10 hover:border-destructive/30"
+            onClick={() => onBlock(clinic)}
+            title="Bloquear (inadimplência)"
+          >
+            <Ban className="h-4 w-4" />
+          </Button>
+        )}
+        
+        <Button 
+          size="sm" 
+          variant="outline"
+          className="text-destructive hover:bg-destructive/10 hover:border-destructive/30"
+          onClick={() => onDelete(clinic)}
+          title="Excluir"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+        <Button 
+          size="sm" 
+          className="flex-1 bg-primary hover:bg-primary/90"
+          onClick={() => onAccess(clinic)}
+        >
+          <ExternalLink className="h-4 w-4 mr-2" />
+          Acessar
+        </Button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 export default function ClinicsManagement() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   
-  // Block/Unblock dialogs
+  // Block/Unblock dialogs (inadimplência - bloqueia totalmente)
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [unblockDialogOpen, setUnblockDialogOpen] = useState(false);
   const [selectedClinic, setSelectedClinic] = useState<ClinicWithCounts | null>(null);
   const [blockReason, setBlockReason] = useState("");
+  
+  // Maintenance dialogs (manutenção - apenas aviso)
+  const [maintenanceDialogOpen, setMaintenanceDialogOpen] = useState(false);
+  const [maintenanceReason, setMaintenanceReason] = useState("");
   
   // Plan management dialog
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
@@ -359,6 +435,7 @@ export default function ClinicsManagement() {
           return {
             ...clinic,
             is_blocked: clinic.is_blocked || false,
+            is_maintenance: clinic.is_maintenance || false,
             patientsCount: patientsRes.count || 0,
             appointmentsCount: appointmentsRes.count || 0,
             professionalsCount: professionalsRes.count || 0,
@@ -419,6 +496,55 @@ export default function ClinicsManagement() {
     },
     onError: (error: Error) => {
       toast.error(`Erro ao desbloquear: ${error.message}`);
+    },
+  });
+
+  // Maintenance mutation (ativar manutenção)
+  const maintenanceMutation = useMutation({
+    mutationFn: async ({ clinicId, reason }: { clinicId: string; reason: string }) => {
+      const { error } = await supabase
+        .from('clinics')
+        .update({
+          is_maintenance: true,
+          maintenance_at: new Date().toISOString(),
+          maintenance_reason: reason || "Manutenção em andamento",
+          maintenance_by: user?.id,
+        })
+        .eq('id', clinicId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-clinics"] });
+      toast.success("Modo manutenção ativado");
+      setMaintenanceDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao ativar manutenção: ${error.message}`);
+    },
+  });
+
+  // Remove maintenance mutation
+  const removeMaintenanceMutation = useMutation({
+    mutationFn: async (clinicId: string) => {
+      const { error } = await supabase
+        .from('clinics')
+        .update({
+          is_maintenance: false,
+          maintenance_at: null,
+          maintenance_reason: null,
+          maintenance_by: null,
+        })
+        .eq('id', clinicId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-clinics"] });
+      toast.success("Modo manutenção desativado");
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao desativar manutenção: ${error.message}`);
     },
   });
 
@@ -510,6 +636,8 @@ export default function ClinicsManagement() {
       logo_url: null,
       is_blocked: clinic.is_blocked,
       blocked_reason: clinic.blocked_reason,
+      is_maintenance: clinic.is_maintenance,
+      maintenance_reason: clinic.maintenance_reason,
     });
     
     toast.success(`Acessando: ${clinic.name}`);
@@ -540,6 +668,12 @@ export default function ClinicsManagement() {
     setDeleteDialogOpen(true);
   };
 
+  const handleOpenMaintenanceDialog = (clinic: ClinicWithCounts) => {
+    setSelectedClinic(clinic);
+    setMaintenanceReason("");
+    setMaintenanceDialogOpen(true);
+  };
+
   const handleBlockClinic = () => {
     if (!selectedClinic) return;
     blockMutation.mutate({ clinicId: selectedClinic.id, reason: blockReason });
@@ -548,6 +682,15 @@ export default function ClinicsManagement() {
   const handleUnblockClinic = () => {
     if (!selectedClinic) return;
     unblockMutation.mutate(selectedClinic.id);
+  };
+
+  const handleMaintenanceClinic = () => {
+    if (!selectedClinic) return;
+    maintenanceMutation.mutate({ clinicId: selectedClinic.id, reason: maintenanceReason });
+  };
+
+  const handleRemoveMaintenance = (clinic: ClinicWithCounts) => {
+    removeMaintenanceMutation.mutate(clinic.id);
   };
 
   const handleSavePlan = () => {
@@ -586,9 +729,9 @@ export default function ClinicsManagement() {
   const totalPatients = clinics.reduce((sum, c) => sum + c.patientsCount, 0);
   const totalProfessionals = clinics.reduce((sum, c) => sum + c.professionalsCount, 0);
   const totalAppointments = clinics.reduce((sum, c) => sum + c.appointmentsCount, 0);
-  const activeClinics = clinics.filter(c => !c.is_blocked).length;
+  const activeClinics = clinics.filter(c => !c.is_blocked && !c.is_maintenance).length;
 
-  const isLoaderVisible = blockMutation.isPending || unblockMutation.isPending || savePlanMutation.isPending || deleteMutation.isPending;
+  const isLoaderVisible = blockMutation.isPending || unblockMutation.isPending || maintenanceMutation.isPending || removeMaintenanceMutation.isPending || savePlanMutation.isPending || deleteMutation.isPending;
 
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
@@ -862,6 +1005,8 @@ export default function ClinicsManagement() {
                     onManagePlan={handleOpenPlanDialog}
                     onBlock={handleOpenBlockDialog}
                     onUnblock={handleOpenUnblockDialog}
+                    onMaintenance={handleOpenMaintenanceDialog}
+                    onRemoveMaintenance={handleRemoveMaintenance}
                     onDelete={handleOpenDeleteDialog}
                     getStatusBadge={getStatusBadge}
                   />
@@ -872,41 +1017,91 @@ export default function ClinicsManagement() {
         </CardContent>
       </Card>
 
-      {/* Block Dialog */}
+      {/* Block Dialog (Inadimplência - Bloqueia totalmente) */}
       <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <div className="p-2 rounded-lg bg-destructive/10">
+                <Ban className="h-5 w-5" />
+              </div>
+              Bloquear Clínica
+            </DialogTitle>
+            <DialogDescription>
+              Esta ação irá <strong>bloquear totalmente</strong> o acesso de todos os usuários da clínica "{selectedClinic?.name}".
+              Use para casos de inadimplência ou violação de termos.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="blockReason">Motivo do bloqueio</Label>
+              <Textarea
+                id="blockReason"
+                placeholder="Ex: Inadimplência, pagamento pendente há 30 dias..."
+                value={blockReason}
+                onChange={(e) => setBlockReason(e.target.value)}
+                className="resize-none"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setBlockDialogOpen(false)} className="w-full sm:w-auto">
+              Cancelar
+            </Button>
+            <Button 
+              variant="destructive"
+              className="w-full sm:w-auto"
+              onClick={handleBlockClinic}
+              disabled={blockMutation.isPending}
+            >
+              {blockMutation.isPending ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Ban className="h-4 w-4 mr-2" />
+              )}
+              Bloquear Clínica
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Maintenance Dialog (Manutenção - Apenas aviso) */}
+      <Dialog open={maintenanceDialogOpen} onOpenChange={setMaintenanceDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-warning">
               <div className="p-2 rounded-lg bg-warning/10">
                 <Wrench className="h-5 w-5" />
               </div>
-              Colocar em Manutenção
+              Modo Manutenção
             </DialogTitle>
             <DialogDescription>
-              Esta ação irá colocar a clínica "{selectedClinic?.name}" em modo de manutenção. 
-              Os usuários verão um aviso amigável no sistema.
+              Esta ação exibirá um <strong>aviso amigável</strong> no sistema, mas os usuários continuarão tendo acesso.
+              Ideal para ajustes corretivos ou atualizações.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
             {/* Predefined reasons */}
             <div className="space-y-2">
-              <Label>Motivo da manutenção</Label>
+              <Label>Selecione o motivo</Label>
               <div className="grid grid-cols-1 gap-2">
                 {[
-                  { icon: Settings, label: "Ajustes no sistema", value: "Estamos realizando ajustes no sistema." },
-                  { icon: DollarSign, label: "Pendência financeira", value: "Pendência financeira. Entre em contato com o suporte." },
+                  { icon: Settings, label: "Ajustes no sistema", value: "Estamos realizando ajustes para melhorar sua experiência." },
                   { icon: Wrench, label: "Manutenção corretiva", value: "Manutenção corretiva em andamento." },
                   { icon: Clock, label: "Atualização programada", value: "Atualização programada do sistema." },
                 ].map((option) => (
                   <button
                     key={option.value}
                     type="button"
-                    onClick={() => setBlockReason(option.value)}
+                    onClick={() => setMaintenanceReason(option.value)}
                     className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
-                      blockReason === option.value 
-                        ? "border-primary bg-primary/5 text-primary" 
-                        : "border-border hover:border-primary/50 hover:bg-muted/50"
+                      maintenanceReason === option.value 
+                        ? "border-warning bg-warning/5 text-warning" 
+                        : "border-border hover:border-warning/50 hover:bg-muted/50"
                     }`}
                   >
                     <option.icon className="h-4 w-4 shrink-0" />
@@ -918,12 +1113,12 @@ export default function ClinicsManagement() {
             
             {/* Custom reason */}
             <div className="space-y-2">
-              <Label htmlFor="blockReason">Ou digite um motivo personalizado</Label>
+              <Label htmlFor="maintenanceReason">Ou digite uma mensagem personalizada</Label>
               <Textarea
-                id="blockReason"
-                placeholder="Motivo personalizado..."
-                value={blockReason}
-                onChange={(e) => setBlockReason(e.target.value)}
+                id="maintenanceReason"
+                placeholder="Mensagem para os usuários..."
+                value={maintenanceReason}
+                onChange={(e) => setMaintenanceReason(e.target.value)}
                 className="resize-none"
                 rows={2}
               />
@@ -931,16 +1126,16 @@ export default function ClinicsManagement() {
           </div>
 
           <DialogFooter className="flex-col sm:flex-row gap-2">
-            <Button variant="outline" onClick={() => setBlockDialogOpen(false)} className="w-full sm:w-auto">
+            <Button variant="outline" onClick={() => setMaintenanceDialogOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
             <Button 
               variant="default"
               className="w-full sm:w-auto bg-warning hover:bg-warning/90 text-warning-foreground"
-              onClick={handleBlockClinic}
-              disabled={blockMutation.isPending}
+              onClick={handleMaintenanceClinic}
+              disabled={maintenanceMutation.isPending}
             >
-              {blockMutation.isPending ? (
+              {maintenanceMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
                 <Wrench className="h-4 w-4 mr-2" />
