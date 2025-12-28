@@ -247,7 +247,9 @@ export default function DataImportPage() {
         const patientData = {
           clinic_id: selectedClinicId,
           name: row.data.nome.trim(),
-          phone: formatPhone(row.data.telefone),
+          // Telefone pode estar ausente na planilha; o banco exige string,
+          // então gravamos "" para permitir importar e completar depois.
+          phone: row.data.telefone ? formatPhone(row.data.telefone) : "",
           email: row.data.email?.trim() || null,
           cpf: row.data.cpf ? formatCPF(row.data.cpf) : null,
           birth_date: row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null,
@@ -515,7 +517,9 @@ export default function DataImportPage() {
         const { error } = await supabase.from('patients').insert({
           clinic_id: selectedClinicId,
           name: row.data.nome.trim(),
-          phone: formatPhone(row.data.telefone),
+          // Telefone pode estar ausente na planilha; o banco exige string,
+          // então gravamos "" para permitir importar e completar depois.
+          phone: row.data.telefone ? formatPhone(row.data.telefone) : "",
           email: row.data.email?.trim() || null,
           cpf: row.data.cpf ? formatCPF(row.data.cpf) : null,
           birth_date: row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null,
