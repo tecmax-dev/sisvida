@@ -43,6 +43,7 @@ import {
   formatPhone,
   formatCPF,
   parseDate,
+  getDetectedColumnsInfo,
 } from "@/lib/importUtils";
 
 interface Clinic {
@@ -113,13 +114,31 @@ export default function DataImportPage() {
       
       const sheetsInfo = result.sheets.map(s => `${s.name} (${s.type === 'patients' ? 'Pacientes' : s.type === 'records' ? 'Prontuários' : 'Desconhecido'})`);
       
+      // Check for unrecognized sheets
+      const unknownSheets = result.sheets.filter(s => s.type === 'unknown');
+      
       if (result.patients.length > 0 || result.records.length > 0) {
         toast.success(
           `Detectado: ${result.patients.length} pacientes e ${result.records.length} prontuários`,
           { description: `Abas encontradas: ${sheetsInfo.join(', ')}` }
         );
+        
+        if (unknownSheets.length > 0) {
+          unknownSheets.forEach(sheet => {
+            toast.warning(`Aba "${sheet.name}" não reconhecida (${sheet.rowCount} linhas)`, {
+              description: `Colunas: ${getDetectedColumnsInfo(sheet.columns)}`,
+              duration: 10000,
+            });
+          });
+        }
       } else {
-        toast.warning('Não foi possível detectar automaticamente. Verifique os nomes das colunas.');
+        // All sheets unknown - show detailed info
+        result.sheets.forEach(sheet => {
+          toast.error(`Aba "${sheet.name}" não reconhecida (${sheet.rowCount} linhas)`, {
+            description: `Colunas encontradas: ${getDetectedColumnsInfo(sheet.columns)}. Use a importação separada para forçar o tipo.`,
+            duration: 15000,
+          });
+        });
       }
     } catch (error) {
       console.error('Error parsing file:', error);

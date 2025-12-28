@@ -213,43 +213,90 @@ function normalizeColumnHeader(header: string): string {
     .replace(/^_|_$/g, ''); // Trim underscores at start/end
 }
 
-// Detect sheet type based on columns
-function detectSheetType(columns: string[]): DetectedSheetType {
+// Detect sheet type based on columns and sheet name
+export function detectSheetType(columns: string[], sheetName?: string): DetectedSheetType {
   const normalizedColumns = columns.map(normalizeColumnHeader);
+  const normalizedSheetName = sheetName ? normalizeColumnHeader(sheetName) : '';
   
-  // Patient indicators - includes exported column names
+  // First try to detect by sheet name (fallback)
+  const patientSheetNames = ['pacientes', 'paciente', 'patients', 'patient', 'cadastro', 'clientes'];
+  const recordSheetNames = ['prontuarios', 'prontuario', 'records', 'medical_records', 'evolucoes', 'atendimentos'];
+  
+  // Patient indicators - expanded list with many variations
   const patientIndicators = [
+    // Portuguese
     'nome', 'telefone', 'celular', 'cpf', 'email',
     'nascimento', 'data_nascimento', 'data_de_nascimento',
-    'endereco', 'observacoes', 'notas'
+    'endereco', 'observacoes', 'notas', 'criado', 'criado_em',
+    'convenio', 'plano', 'rg', 'sexo', 'genero',
+    // English
+    'name', 'phone', 'cell', 'mobile', 'birth', 'birthdate', 'date_of_birth',
+    'address', 'notes', 'created', 'created_at', 'insurance', 'gender',
+    // Common variations
+    'fone', 'whatsapp', 'zap', 'contato', 'contact'
   ];
   const patientMatches = patientIndicators.filter(ind => 
     normalizedColumns.some(col => col.includes(ind))
   ).length;
   
-  // Medical record indicators - includes exported column names
+  // Medical record indicators - expanded list
   const recordIndicators = [
-    'queixa', 'queixa_principal',
-    'diagnostico', 'diagnostico',
-    'tratamento', 'plano_de_tratamento',
-    'prescricao', 'prescricao',
-    'data_registro', 'data_do_registro',
-    'evolucao', 'evolucao',
-    'prontuario', 'prontuario',
+    // Portuguese
+    'queixa', 'queixa_principal', 'motivo_consulta',
+    'diagnostico', 'cid', 'doenca',
+    'tratamento', 'plano_de_tratamento', 'conduta',
+    'prescricao', 'receita', 'medicamento',
+    'data_registro', 'data_do_registro', 'data_atendimento', 'data_consulta',
+    'evolucao', 'anamnese', 'exame_fisico',
+    'prontuario', 'registro_medico', 'ficha',
     'cpf_paciente', 'cpf_do_paciente',
     'nome_paciente', 'nome_do_paciente',
-    'paciente'
+    // English
+    'chief_complaint', 'complaint', 'reason',
+    'diagnosis', 'disease', 'condition',
+    'treatment', 'treatment_plan', 'plan',
+    'prescription', 'medication', 'medicine',
+    'record_date', 'visit_date', 'appointment_date',
+    'evolution', 'progress', 'progress_note',
+    'medical_record', 'chart', 'patient_name', 'patient_cpf'
   ];
   const recordMatches = recordIndicators.filter(ind => 
     normalizedColumns.some(col => col.includes(ind))
   ).length;
   
-  // If has specific record columns, it's records
+  // Strong record-specific columns (if any of these exist, it's likely records)
+  const strongRecordIndicators = ['queixa', 'diagnostico', 'tratamento', 'prescricao', 'evolucao', 
+    'chief_complaint', 'diagnosis', 'treatment', 'prescription', 'anamnese'];
+  const hasStrongRecordColumn = strongRecordIndicators.some(ind =>
+    normalizedColumns.some(col => col.includes(ind))
+  );
+  
+  // If has strong record columns, it's definitely records
+  if (hasStrongRecordColumn) return 'records';
+  
+  // If has 2+ record indicators, it's records
   if (recordMatches >= 2) return 'records';
+  
   // If has patient columns but no record-specific ones
   if (patientMatches >= 2 && recordMatches < 2) return 'patients';
   
+  // Fallback to sheet name detection
+  if (patientSheetNames.some(n => normalizedSheetName.includes(n))) return 'patients';
+  if (recordSheetNames.some(n => normalizedSheetName.includes(n))) return 'records';
+  
+  // Last resort: if has nome/name and telefone/phone but nothing record-specific
+  const hasNameAndPhone = normalizedColumns.some(c => c.includes('nome') || c.includes('name')) &&
+                          normalizedColumns.some(c => c.includes('telefone') || c.includes('phone') || c.includes('celular'));
+  if (hasNameAndPhone && recordMatches === 0) return 'patients';
+  
   return 'unknown';
+}
+
+// Get detected columns info for debugging
+export function getDetectedColumnsInfo(columns: string[]): string {
+  const first5 = columns.slice(0, 5).join(', ');
+  const remaining = columns.length > 5 ? ` (+${columns.length - 5} mais)` : '';
+  return first5 + remaining;
 }
 
 // Parse single sheet
@@ -299,7 +346,7 @@ export function parseMultiSheetSpreadsheet(file: ArrayBuffer): MultiSheetParseRe
     
     // Get columns from first row
     const columns = Object.keys(jsonData[0]);
-    const sheetType = detectSheetType(columns);
+    const sheetType = detectSheetType(columns, sheetName);
     
     sheets.push({
       name: sheetName,
@@ -380,21 +427,44 @@ function getRowValue(row: Record<string, unknown>, keys: string[]): string {
 // Map raw row to PatientImportRow
 export function mapPatientRow(row: Record<string, unknown>): PatientImportRow {
   return {
-    nome: getRowValue(row, ['nome', 'Nome', 'NOME', 'Paciente', 'paciente']),
-    telefone: getRowValue(row, ['telefone', 'Telefone', 'TELEFONE', 'celular', 'Celular', 'CELULAR', 'Whatsapp', 'whatsapp']),
-    email: getRowValue(row, ['email', 'Email', 'EMAIL', 'e-mail', 'E-mail']) || undefined,
-    cpf: getRowValue(row, ['cpf', 'CPF', 'Cpf']) || undefined,
+    nome: getRowValue(row, [
+      'nome', 'Nome', 'NOME', 'Paciente', 'paciente', 'PACIENTE',
+      'name', 'Name', 'NAME', 'patient', 'Patient', 'PATIENT',
+      'nome_completo', 'Nome Completo', 'full_name', 'Full Name',
+      'cliente', 'Cliente', 'CLIENTE', 'client', 'Client'
+    ]),
+    telefone: getRowValue(row, [
+      'telefone', 'Telefone', 'TELEFONE', 'celular', 'Celular', 'CELULAR',
+      'whatsapp', 'Whatsapp', 'WHATSAPP', 'zap', 'Zap',
+      'phone', 'Phone', 'PHONE', 'cell', 'Cell', 'mobile', 'Mobile',
+      'fone', 'Fone', 'FONE', 'contato', 'Contato', 'contact', 'Contact'
+    ]),
+    email: getRowValue(row, [
+      'email', 'Email', 'EMAIL', 'e-mail', 'E-mail', 'E-MAIL',
+      'correio', 'Correio', 'mail', 'Mail'
+    ]) || undefined,
+    cpf: getRowValue(row, [
+      'cpf', 'CPF', 'Cpf', 'documento', 'Documento', 'DOCUMENTO',
+      'document', 'Document', 'tax_id', 'Tax ID'
+    ]) || undefined,
     data_nascimento: getRowValue(row, [
       'data_nascimento', 'Data de Nascimento', 'Data Nascimento', 'nascimento', 
-      'Nascimento', 'DATA_NASCIMENTO', 'datanascimento'
+      'Nascimento', 'DATA_NASCIMENTO', 'datanascimento', 'DataNascimento',
+      'birth_date', 'Birth Date', 'birthdate', 'Birthdate', 'BIRTH_DATE',
+      'data_nasc', 'Data Nasc', 'dt_nascimento', 'Dt Nascimento',
+      'aniversario', 'Aniversario', 'birthday', 'Birthday'
     ]) || undefined,
     endereco: getRowValue(row, [
       'endereco', 'Endereco', 'ENDERECO', 'endereço', 'Endereço', 
-      'Endereço', 'endereco_completo', 'Endereço Completo'
+      'endereco_completo', 'Endereço Completo', 'logradouro', 'Logradouro',
+      'address', 'Address', 'ADDRESS', 'full_address', 'Full Address',
+      'rua', 'Rua', 'street', 'Street'
     ]) || undefined,
     observacoes: getRowValue(row, [
       'observacoes', 'Observacoes', 'OBSERVACOES', 'observações', 'Observações',
-      'notas', 'Notas', 'NOTAS', 'obs', 'Obs'
+      'notas', 'Notas', 'NOTAS', 'obs', 'Obs', 'OBS',
+      'notes', 'Notes', 'NOTES', 'comments', 'Comments',
+      'anotacoes', 'Anotacoes', 'anotações', 'Anotações'
     ]) || undefined,
   };
 }
@@ -404,35 +474,52 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
   return {
     cpf_paciente: getRowValue(row, [
       'cpf_paciente', 'CPF Paciente', 'cpf paciente', 'cpf do paciente',
-      'CPF do Paciente', 'cpf', 'CPF'
+      'CPF do Paciente', 'cpf', 'CPF', 'patient_cpf', 'Patient CPF',
+      'documento_paciente', 'Documento Paciente'
     ]) || undefined,
     nome_paciente: getRowValue(row, [
       'nome_paciente', 'Nome Paciente', 'nome paciente', 'nome do paciente',
-      'Nome do Paciente', 'Paciente', 'paciente', 'nome', 'Nome'
+      'Nome do Paciente', 'Paciente', 'paciente', 'nome', 'Nome',
+      'patient_name', 'Patient Name', 'patient', 'Patient',
+      'cliente', 'Cliente', 'client', 'Client'
     ]) || undefined,
     data_registro: getRowValue(row, [
       'data_registro', 'Data do Registro', 'data do registro', 'Data Registro',
-      'data', 'Data', 'DATA', 'data_consulta', 'Data Consulta'
+      'data', 'Data', 'DATA', 'data_consulta', 'Data Consulta',
+      'data_atendimento', 'Data Atendimento', 'Data do Atendimento',
+      'record_date', 'Record Date', 'visit_date', 'Visit Date',
+      'appointment_date', 'Appointment Date', 'date', 'Date',
+      'criado_em', 'Criado em', 'Criado Em', 'created_at', 'Created At'
     ]),
     queixa: getRowValue(row, [
       'queixa', 'Queixa', 'QUEIXA', 'Queixa Principal', 'queixa_principal',
-      'queixa principal', 'Chief Complaint'
+      'queixa principal', 'motivo_consulta', 'Motivo Consulta', 'Motivo da Consulta',
+      'chief_complaint', 'Chief Complaint', 'complaint', 'Complaint',
+      'reason', 'Reason', 'motivo', 'Motivo'
     ]) || undefined,
     diagnostico: getRowValue(row, [
       'diagnostico', 'Diagnostico', 'DIAGNOSTICO', 'diagnóstico', 'Diagnóstico',
-      'diagnosis', 'Diagnosis'
+      'diagnosis', 'Diagnosis', 'DIAGNOSIS', 'cid', 'CID', 'hipotese', 'Hipótese',
+      'doenca', 'Doença', 'disease', 'Disease', 'condition', 'Condition'
     ]) || undefined,
     tratamento: getRowValue(row, [
       'tratamento', 'Tratamento', 'TRATAMENTO', 'Plano de Tratamento',
-      'plano_de_tratamento', 'plano de tratamento', 'treatment'
+      'plano_de_tratamento', 'plano de tratamento', 'plano_tratamento',
+      'treatment', 'Treatment', 'TREATMENT', 'treatment_plan', 'Treatment Plan',
+      'conduta', 'Conduta', 'plan', 'Plan', 'plano', 'Plano'
     ]) || undefined,
     prescricao: getRowValue(row, [
       'prescricao', 'Prescricao', 'PRESCRICAO', 'prescrição', 'Prescrição',
-      'prescription', 'Prescription', 'Medicamentos', 'medicamentos'
+      'prescription', 'Prescription', 'PRESCRIPTION',
+      'medicamentos', 'Medicamentos', 'medications', 'Medications',
+      'receita', 'Receita', 'recipe', 'remedio', 'Remédio', 'remedios', 'Remédios'
     ]) || undefined,
     observacoes: getRowValue(row, [
       'observacoes', 'Observacoes', 'OBSERVACOES', 'observações', 'Observações',
-      'notas', 'Notas', 'NOTAS', 'obs', 'Obs', 'notes', 'Notes'
+      'notas', 'Notas', 'NOTAS', 'obs', 'Obs', 'OBS',
+      'notes', 'Notes', 'NOTES', 'comments', 'Comments',
+      'anotacoes', 'Anotacoes', 'anotações', 'Anotações',
+      'evolucao', 'Evolução', 'evolution', 'Evolution'
     ]) || undefined,
   };
 }
