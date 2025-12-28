@@ -368,6 +368,74 @@ export function parseMultiSheetSpreadsheet(file: ArrayBuffer): MultiSheetParseRe
   return { sheets, patients, records };
 }
 
+// Force parse a specific sheet as a specific type
+export function forceParseSheetAsType(
+  file: ArrayBuffer, 
+  sheetIndex: number, 
+  forceType: 'patients' | 'records'
+): { patients: ImportRow<PatientImportRow>[]; records: ImportRow<MedicalRecordImportRow>[] } {
+  const workbook = XLSX.read(file, { type: 'array' });
+  
+  if (sheetIndex >= workbook.SheetNames.length) {
+    return { patients: [], records: [] };
+  }
+  
+  const sheetName = workbook.SheetNames[sheetIndex];
+  const worksheet = workbook.Sheets[sheetName];
+  
+  if (forceType === 'patients') {
+    const parsed = parseSheet(worksheet, validatePatientRow, mapPatientRow);
+    return { patients: parsed, records: [] };
+  } else {
+    const parsed = parseSheet(worksheet, validateMedicalRecordRow, mapMedicalRecordRow);
+    return { patients: [], records: parsed };
+  }
+}
+
+// Parse all sheets forcing all unknown ones as a specific type
+export function parseWithForcedType(
+  file: ArrayBuffer, 
+  forceUnknownAs: 'patients' | 'records'
+): MultiSheetParseResult {
+  const workbook = XLSX.read(file, { type: 'array' });
+  
+  const sheets: DetectedSheet[] = [];
+  let patients: ImportRow<PatientImportRow>[] = [];
+  let records: ImportRow<MedicalRecordImportRow>[] = [];
+  
+  for (const sheetName of workbook.SheetNames) {
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+    
+    if (jsonData.length === 0) continue;
+    
+    const columns = Object.keys(jsonData[0]);
+    let sheetType = detectSheetType(columns, sheetName);
+    
+    // Force unknown sheets to the specified type
+    if (sheetType === 'unknown') {
+      sheetType = forceUnknownAs;
+    }
+    
+    sheets.push({
+      name: sheetName,
+      type: sheetType,
+      columns,
+      rowCount: jsonData.length,
+    });
+    
+    if (sheetType === 'patients') {
+      const parsed = parseSheet(worksheet, validatePatientRow, mapPatientRow);
+      patients = [...patients, ...parsed];
+    } else if (sheetType === 'records') {
+      const parsed = parseSheet(worksheet, validateMedicalRecordRow, mapMedicalRecordRow);
+      records = [...records, ...parsed];
+    }
+  }
+  
+  return { sheets, patients, records };
+}
+
 // Generate combined template with both sheets
 export function generateCombinedTemplate(): ArrayBuffer {
   const wb = XLSX.utils.book_new();

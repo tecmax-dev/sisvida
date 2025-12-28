@@ -35,6 +35,7 @@ import {
   DetectedSheet,
   parseSpreadsheet,
   parseMultiSheetSpreadsheet,
+  parseWithForcedType,
   validatePatientRow,
   validateMedicalRecordRow,
   mapPatientRow,
@@ -61,6 +62,7 @@ export default function DataImportPage() {
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
   const [importWithRecords, setImportWithRecords] = useState(true);
+  const [lastFileBuffer, setLastFileBuffer] = useState<ArrayBuffer | null>(null);
   
   // Patient import state
   const [patientRows, setPatientRows] = useState<ImportRow<PatientImportRow>[]>([]);
@@ -106,6 +108,8 @@ export default function DataImportPage() {
     
     try {
       const buffer = await file.arrayBuffer();
+      // Store buffer for potential forced re-parsing
+      setLastFileBuffer(buffer);
       const result = parseMultiSheetSpreadsheet(buffer);
       
       setDetectedSheets(result.sheets);
@@ -147,6 +151,31 @@ export default function DataImportPage() {
     
     event.target.value = '';
   }, []);
+
+  // Force re-parse unknown sheets as a specific type
+  const forceConvertAs = useCallback((forceType: 'patients' | 'records') => {
+    if (!lastFileBuffer) {
+      toast.error('Nenhum arquivo carregado');
+      return;
+    }
+    
+    try {
+      const result = parseWithForcedType(lastFileBuffer, forceType);
+      
+      setDetectedSheets(result.sheets);
+      setPatientRows(result.patients);
+      setRecordRows(result.records);
+      
+      const typeLabel = forceType === 'patients' ? 'Pacientes' : 'Prontuários';
+      toast.success(
+        `Convertido como ${typeLabel}: ${result.patients.length} pacientes e ${result.records.length} prontuários`,
+        { description: 'Abas não reconhecidas foram convertidas automaticamente' }
+      );
+    } catch (error) {
+      console.error('Error forcing type:', error);
+      toast.error('Erro ao converter arquivo');
+    }
+  }, [lastFileBuffer]);
 
   const handlePatientFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -922,14 +951,45 @@ export default function DataImportPage() {
                       <Badge
                         key={sheet.name}
                         variant={sheet.type === 'patients' ? 'default' : sheet.type === 'records' ? 'secondary' : 'outline'}
+                        className={sheet.type === 'unknown' ? 'border-warning text-warning' : ''}
                       >
                         {sheet.name}: {sheet.rowCount} linhas
                         {sheet.type === 'patients' && ' (Pacientes)'}
                         {sheet.type === 'records' && ' (Prontuários)'}
-                        {sheet.type === 'unknown' && ' (Não reconhecido)'}
+                        {sheet.type === 'unknown' && ' ⚠️ Não reconhecido'}
                       </Badge>
                     ))}
                   </div>
+                  
+                  {/* Force Conversion Buttons - Show when there are unknown sheets */}
+                  {detectedSheets.some(s => s.type === 'unknown') && (
+                    <div className="pt-3 border-t border-border/50 space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        <AlertTriangle className="h-4 w-4 inline mr-1 text-warning" />
+                        Algumas abas não foram reconhecidas automaticamente. Escolha como converter:
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => forceConvertAs('patients')}
+                          className="gap-2"
+                        >
+                          <Users className="h-4 w-4" />
+                          Converter como Pacientes
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => forceConvertAs('records')}
+                          className="gap-2"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Converter como Prontuários
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
