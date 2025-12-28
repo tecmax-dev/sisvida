@@ -1835,6 +1835,69 @@ export type Database = {
           },
         ]
       }
+      hero_settings: {
+        Row: {
+          background_effect: string | null
+          created_at: string
+          description: string | null
+          hero_image_url: string | null
+          highlights: Json | null
+          id: string
+          is_active: boolean | null
+          primary_button_link: string | null
+          primary_button_text: string | null
+          secondary_button_link: string | null
+          secondary_button_text: string | null
+          show_floating_badges: boolean | null
+          show_social_proof: boolean | null
+          social_proof_rating: number | null
+          social_proof_users: number | null
+          subtitle: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          background_effect?: string | null
+          created_at?: string
+          description?: string | null
+          hero_image_url?: string | null
+          highlights?: Json | null
+          id?: string
+          is_active?: boolean | null
+          primary_button_link?: string | null
+          primary_button_text?: string | null
+          secondary_button_link?: string | null
+          secondary_button_text?: string | null
+          show_floating_badges?: boolean | null
+          show_social_proof?: boolean | null
+          social_proof_rating?: number | null
+          social_proof_users?: number | null
+          subtitle?: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          background_effect?: string | null
+          created_at?: string
+          description?: string | null
+          hero_image_url?: string | null
+          highlights?: Json | null
+          id?: string
+          is_active?: boolean | null
+          primary_button_link?: string | null
+          primary_button_text?: string | null
+          secondary_button_link?: string | null
+          secondary_button_text?: string | null
+          show_floating_badges?: boolean | null
+          show_social_proof?: boolean | null
+          social_proof_rating?: number | null
+          social_proof_users?: number | null
+          subtitle?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       icd10_codes: {
         Row: {
           category: string | null
