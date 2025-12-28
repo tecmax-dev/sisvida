@@ -961,12 +961,12 @@ export default function DataImportPage() {
                     ))}
                   </div>
                   
-                  {/* Force Conversion Buttons - Show when there are unknown sheets */}
-                  {detectedSheets.some(s => s.type === 'unknown') && (
+                  {/* Force Conversion Buttons */}
+                  {(lastFileBuffer && (detectedSheets.some(s => s.type === 'unknown') || (recordRows.length === 0 && detectedSheets.some(s => s.name.toLowerCase().includes('pront'))))) && (
                     <div className="pt-3 border-t border-border/50 space-y-2">
                       <p className="text-sm text-muted-foreground">
                         <AlertTriangle className="h-4 w-4 inline mr-1 text-warning" />
-                        Algumas abas não foram reconhecidas automaticamente. Escolha como converter:
+                        Se os prontuários não foram reconhecidos (ou vieram vazios), você pode forçar a conversão das abas:
                       </p>
                       <div className="flex flex-wrap gap-2">
                         <Button

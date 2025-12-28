@@ -217,12 +217,25 @@ function normalizeColumnHeader(header: string): string {
 export function detectSheetType(columns: string[], sheetName?: string): DetectedSheetType {
   const normalizedColumns = columns.map(normalizeColumnHeader);
   const normalizedSheetName = sheetName ? normalizeColumnHeader(sheetName) : '';
-  
-  // First try to detect by sheet name (fallback)
-  const patientSheetNames = ['pacientes', 'paciente', 'patients', 'patient', 'cadastro', 'clientes'];
-  const recordSheetNames = ['prontuarios', 'prontuario', 'records', 'medical_records', 'evolucoes', 'atendimentos'];
-  
-  // Patient indicators - expanded list with many variations
+
+  // Sheet name signals (highest priority)
+  const patientSheetNames = ['pacientes', 'paciente', 'patients', 'patient', 'cadastro', 'clientes', 'clientes_pacientes'];
+  const recordSheetNames = [
+    'prontuarios',
+    'prontuario',
+    'records',
+    'medical_records',
+    'medicalrecord',
+    'evolucoes',
+    'evolucao',
+    'atendimentos',
+    'consultas',
+  ];
+
+  if (recordSheetNames.some((n) => normalizedSheetName.includes(n))) return 'records';
+  if (patientSheetNames.some((n) => normalizedSheetName.includes(n))) return 'patients';
+
+  // Patient indicators
   const patientIndicators = [
     // Portuguese
     'nome', 'telefone', 'celular', 'cpf', 'email',
@@ -233,13 +246,13 @@ export function detectSheetType(columns: string[], sheetName?: string): Detected
     'name', 'phone', 'cell', 'mobile', 'birth', 'birthdate', 'date_of_birth',
     'address', 'notes', 'created', 'created_at', 'insurance', 'gender',
     // Common variations
-    'fone', 'whatsapp', 'zap', 'contato', 'contact'
+    'fone', 'whatsapp', 'zap', 'contato', 'contact',
   ];
-  const patientMatches = patientIndicators.filter(ind => 
-    normalizedColumns.some(col => col.includes(ind))
+  const patientMatches = patientIndicators.filter((ind) =>
+    normalizedColumns.some((col) => col.includes(ind))
   ).length;
-  
-  // Medical record indicators - expanded list
+
+  // Medical record indicators
   const recordIndicators = [
     // Portuguese
     'queixa', 'queixa_principal', 'motivo_consulta',
@@ -254,41 +267,38 @@ export function detectSheetType(columns: string[], sheetName?: string): Detected
     // English
     'chief_complaint', 'complaint', 'reason',
     'diagnosis', 'disease', 'condition',
-    'treatment', 'treatment_plan', 'plan',
+    'treatment', 'treatment_plan',
     'prescription', 'medication', 'medicine',
     'record_date', 'visit_date', 'appointment_date',
     'evolution', 'progress', 'progress_note',
-    'medical_record', 'chart', 'patient_name', 'patient_cpf'
+    'medical_record', 'chart', 'patient_name', 'patient_cpf',
   ];
-  const recordMatches = recordIndicators.filter(ind => 
-    normalizedColumns.some(col => col.includes(ind))
+  const recordMatches = recordIndicators.filter((ind) =>
+    normalizedColumns.some((col) => col.includes(ind))
   ).length;
-  
+
   // Strong record-specific columns (if any of these exist, it's likely records)
-  const strongRecordIndicators = ['queixa', 'diagnostico', 'tratamento', 'prescricao', 'evolucao', 
-    'chief_complaint', 'diagnosis', 'treatment', 'prescription', 'anamnese'];
-  const hasStrongRecordColumn = strongRecordIndicators.some(ind =>
-    normalizedColumns.some(col => col.includes(ind))
+  const strongRecordIndicators = [
+    'queixa', 'diagnostico', 'tratamento', 'prescricao', 'evolucao', 'anamnese',
+    'chief_complaint', 'diagnosis', 'treatment', 'prescription',
+  ];
+  const hasStrongRecordColumn = strongRecordIndicators.some((ind) =>
+    normalizedColumns.some((col) => col.includes(ind))
   );
-  
-  // If has strong record columns, it's definitely records
   if (hasStrongRecordColumn) return 'records';
-  
+
   // If has 2+ record indicators, it's records
   if (recordMatches >= 2) return 'records';
-  
+
   // If has patient columns but no record-specific ones
   if (patientMatches >= 2 && recordMatches < 2) return 'patients';
-  
-  // Fallback to sheet name detection
-  if (patientSheetNames.some(n => normalizedSheetName.includes(n))) return 'patients';
-  if (recordSheetNames.some(n => normalizedSheetName.includes(n))) return 'records';
-  
+
   // Last resort: if has nome/name and telefone/phone but nothing record-specific
-  const hasNameAndPhone = normalizedColumns.some(c => c.includes('nome') || c.includes('name')) &&
-                          normalizedColumns.some(c => c.includes('telefone') || c.includes('phone') || c.includes('celular'));
+  const hasNameAndPhone =
+    normalizedColumns.some((c) => c.includes('nome') || c.includes('name')) &&
+    normalizedColumns.some((c) => c.includes('telefone') || c.includes('phone') || c.includes('celular'));
   if (hasNameAndPhone && recordMatches === 0) return 'patients';
-  
+
   return 'unknown';
 }
 
@@ -543,11 +553,16 @@ export function mapPatientRow(row: Record<string, unknown>): PatientImportRow {
     telefone: getRowValue(row, [
       // Portuguese
       'telefone', 'Telefone', 'TELEFONE',
+      'telefones', 'Telefones', 'TELEFONES',
+      'telefone(s)', 'Telefone(s)', 'TELEFONE(S)',
       'telefone_1', 'Telefone 1', 'Telefone1', 'Tel 1', 'Tel1',
       'telefone_principal', 'Telefone Principal',
       'celular', 'Celular', 'CELULAR',
+      'celulares', 'Celulares',
+      'celular(s)', 'Celular(s)',
       'celular_1', 'Celular 1', 'Celular1',
       'whatsapp', 'Whatsapp', 'WHATSAPP',
+      'whats', 'Whats',
       'fone', 'Fone', 'FONE',
       'tel', 'Tel', 'TEL', 'telefone_contato', 'Telefone Contato',
       // English
