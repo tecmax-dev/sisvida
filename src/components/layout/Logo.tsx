@@ -4,9 +4,10 @@ interface LogoProps {
   variant?: "light" | "dark";
   size?: "sm" | "md" | "lg";
   showText?: boolean;
+  customSrc?: string;
 }
 
-export function Logo({ variant = "dark", size = "md", showText = true }: LogoProps) {
+export function Logo({ variant = "dark", size = "md", showText = true, customSrc }: LogoProps) {
   const sizes = {
     sm: { img: "h-8", text: "text-lg" },
     md: { img: "h-10", text: "text-xl" },
@@ -16,7 +17,7 @@ export function Logo({ variant = "dark", size = "md", showText = true }: LogoPro
   return (
     <Link to="/" className="flex items-center gap-2 group">
       <img 
-        src="/logo.png" 
+        src={customSrc || "/logo.png"} 
         alt="Eclini" 
         className={`${sizes[size].img} w-auto object-contain`}
       />

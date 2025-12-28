@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
+import ecliniDashboardLogo from "@/assets/eclini-dashboard-logo.png";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -177,7 +178,7 @@ export function DashboardLayout() {
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
-            {!sidebarCollapsed && <Logo size="md" />}
+            {!sidebarCollapsed && <Logo size="md" customSrc={ecliniDashboardLogo} />}
             {sidebarCollapsed && (
               <div className="w-full flex justify-center">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center shadow-sm">
