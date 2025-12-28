@@ -144,7 +144,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           cnpj,
           logo_url,
           is_blocked,
-          blocked_reason
+          blocked_reason,
+          is_maintenance,
+          maintenance_reason
         )
       `)
       .eq('user_id', userId);
