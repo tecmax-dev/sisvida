@@ -962,11 +962,11 @@ export default function DataImportPage() {
                   </div>
                   
                   {/* Force Conversion Buttons */}
-                  {(lastFileBuffer && (detectedSheets.some(s => s.type === 'unknown') || (recordRows.length === 0 && detectedSheets.some(s => s.name.toLowerCase().includes('pront'))))) && (
+                  {(lastFileBuffer && detectedSheets.length > 0 && recordRows.length === 0) && (
                     <div className="pt-3 border-t border-border/50 space-y-2">
                       <p className="text-sm text-muted-foreground">
                         <AlertTriangle className="h-4 w-4 inline mr-1 text-warning" />
-                        Se os prontuários não foram reconhecidos (ou vieram vazios), você pode forçar a conversão das abas:
+                        Não detectamos prontuários nesta importação. Se sua planilha tiver uma aba de prontuários, você pode forçar a conversão.
                       </p>
                       <div className="flex flex-wrap gap-2">
                         <Button

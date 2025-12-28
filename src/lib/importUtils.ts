@@ -309,15 +309,76 @@ export function getDetectedColumnsInfo(columns: string[]): string {
   return first5 + remaining;
 }
 
+// Extract rows from a worksheet even when the header is not on the first row
+function extractSheetRows(worksheet: XLSX.WorkSheet): { rows: Record<string, unknown>[]; columns: string[] } {
+  // Read as matrix (rows/cols), keeping blanks
+  const matrix = XLSX.utils.sheet_to_json(worksheet, {
+    header: 1,
+    defval: '',
+    blankrows: false,
+  }) as unknown[][];
+
+  const nonEmptyCount = (r: unknown[]) => r.filter((c) => String(c ?? '').trim() !== '').length;
+
+  // Pick header row: first row with enough cells OR the densest row
+  let headerRowIndex = -1;
+  let bestIdx = -1;
+  let bestScore = 0;
+
+  for (let i = 0; i < matrix.length; i++) {
+    const row = matrix[i] as unknown[];
+    const score = nonEmptyCount(row);
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = i;
+    }
+    if (score >= 2) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+
+  if (headerRowIndex === -1) headerRowIndex = bestIdx;
+  if (headerRowIndex === -1) return { rows: [], columns: [] };
+
+  const rawHeader = (matrix[headerRowIndex] as unknown[]).map((c) => String(c ?? '').trim());
+  const columns = rawHeader.filter((h) => h !== '');
+
+  // If headers are empty/meaningless, we can't map reliably
+  if (columns.length === 0) return { rows: [], columns: [] };
+
+  const rows: Record<string, unknown>[] = [];
+
+  for (let i = headerRowIndex + 1; i < matrix.length; i++) {
+    const rowArr = matrix[i] as unknown[];
+    // stop at fully empty row blocks
+    if (nonEmptyCount(rowArr) === 0) continue;
+
+    const obj: Record<string, unknown> = {};
+    for (let c = 0; c < rawHeader.length; c++) {
+      const key = rawHeader[c];
+      if (!key) continue;
+      obj[key] = rowArr[c];
+    }
+
+    // Ignore rows that are empty after mapping
+    if (Object.values(obj).every((v) => String(v ?? '').trim() === '')) continue;
+
+    rows.push(obj);
+  }
+
+  return { rows, columns };
+}
+
 // Parse single sheet
 function parseSheet<T>(
   worksheet: XLSX.WorkSheet,
   validateRow: (row: T) => ValidationResult,
   mapRow: (row: Record<string, unknown>) => T
 ): ImportRow<T>[] {
-  const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
-  
-  return jsonData.map((row, index) => {
+  const { rows } = extractSheetRows(worksheet);
+
+  return rows.map((row, index) => {
     const mappedData = mapRow(row);
     const validation = validateRow(mappedData);
     return {
@@ -343,106 +404,114 @@ export function parseSpreadsheet<T>(
 // Parse multi-sheet Excel file with auto-detection
 export function parseMultiSheetSpreadsheet(file: ArrayBuffer): MultiSheetParseResult {
   const workbook = XLSX.read(file, { type: 'array' });
-  
+
   const sheets: DetectedSheet[] = [];
   let patients: ImportRow<PatientImportRow>[] = [];
   let records: ImportRow<MedicalRecordImportRow>[] = [];
-  
+
   for (const sheetName of workbook.SheetNames) {
     const worksheet = workbook.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
-    
-    if (jsonData.length === 0) continue;
-    
-    // Get columns from first row
-    const columns = Object.keys(jsonData[0]);
+    const { rows, columns } = extractSheetRows(worksheet);
+
+    if (rows.length === 0 || columns.length === 0) continue;
+
     const sheetType = detectSheetType(columns, sheetName);
-    
+
     sheets.push({
       name: sheetName,
       type: sheetType,
       columns,
-      rowCount: jsonData.length,
+      rowCount: rows.length,
     });
-    
-    // Parse based on detected type
+
     if (sheetType === 'patients') {
-      const parsed = parseSheet(worksheet, validatePatientRow, mapPatientRow);
+      const parsed = rows.map((row, index) => {
+        const mappedData = mapPatientRow(row);
+        const validation = validatePatientRow(mappedData);
+        return { rowNumber: index + 2, data: mappedData, validation };
+      });
       patients = [...patients, ...parsed];
     } else if (sheetType === 'records') {
-      const parsed = parseSheet(worksheet, validateMedicalRecordRow, mapMedicalRecordRow);
+      const parsed = rows.map((row, index) => {
+        const mappedData = mapMedicalRecordRow(row);
+        const validation = validateMedicalRecordRow(mappedData);
+        return { rowNumber: index + 2, data: mappedData, validation };
+      });
       records = [...records, ...parsed];
     }
   }
-  
+
   return { sheets, patients, records };
 }
 
 // Force parse a specific sheet as a specific type
 export function forceParseSheetAsType(
-  file: ArrayBuffer, 
-  sheetIndex: number, 
+  file: ArrayBuffer,
+  sheetIndex: number,
   forceType: 'patients' | 'records'
 ): { patients: ImportRow<PatientImportRow>[]; records: ImportRow<MedicalRecordImportRow>[] } {
   const workbook = XLSX.read(file, { type: 'array' });
-  
+
   if (sheetIndex >= workbook.SheetNames.length) {
     return { patients: [], records: [] };
   }
-  
+
   const sheetName = workbook.SheetNames[sheetIndex];
   const worksheet = workbook.Sheets[sheetName];
-  
+
   if (forceType === 'patients') {
     const parsed = parseSheet(worksheet, validatePatientRow, mapPatientRow);
     return { patients: parsed, records: [] };
-  } else {
-    const parsed = parseSheet(worksheet, validateMedicalRecordRow, mapMedicalRecordRow);
-    return { patients: [], records: parsed };
   }
+
+  const parsed = parseSheet(worksheet, validateMedicalRecordRow, mapMedicalRecordRow);
+  return { patients: [], records: parsed };
 }
 
 // Parse all sheets forcing all unknown ones as a specific type
 export function parseWithForcedType(
-  file: ArrayBuffer, 
+  file: ArrayBuffer,
   forceUnknownAs: 'patients' | 'records'
 ): MultiSheetParseResult {
   const workbook = XLSX.read(file, { type: 'array' });
-  
+
   const sheets: DetectedSheet[] = [];
   let patients: ImportRow<PatientImportRow>[] = [];
   let records: ImportRow<MedicalRecordImportRow>[] = [];
-  
+
   for (const sheetName of workbook.SheetNames) {
     const worksheet = workbook.Sheets[sheetName];
-    const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
-    
-    if (jsonData.length === 0) continue;
-    
-    const columns = Object.keys(jsonData[0]);
+    const { rows, columns } = extractSheetRows(worksheet);
+
+    if (rows.length === 0 || columns.length === 0) continue;
+
     let sheetType = detectSheetType(columns, sheetName);
-    
-    // Force unknown sheets to the specified type
-    if (sheetType === 'unknown') {
-      sheetType = forceUnknownAs;
-    }
-    
+    if (sheetType === 'unknown') sheetType = forceUnknownAs;
+
     sheets.push({
       name: sheetName,
       type: sheetType,
       columns,
-      rowCount: jsonData.length,
+      rowCount: rows.length,
     });
-    
+
     if (sheetType === 'patients') {
-      const parsed = parseSheet(worksheet, validatePatientRow, mapPatientRow);
+      const parsed = rows.map((row, index) => {
+        const mappedData = mapPatientRow(row);
+        const validation = validatePatientRow(mappedData);
+        return { rowNumber: index + 2, data: mappedData, validation };
+      });
       patients = [...patients, ...parsed];
     } else if (sheetType === 'records') {
-      const parsed = parseSheet(worksheet, validateMedicalRecordRow, mapMedicalRecordRow);
+      const parsed = rows.map((row, index) => {
+        const mappedData = mapMedicalRecordRow(row);
+        const validation = validateMedicalRecordRow(mappedData);
+        return { rowNumber: index + 2, data: mappedData, validation };
+      });
       records = [...records, ...parsed];
     }
   }
-  
+
   return { sheets, patients, records };
 }
 
