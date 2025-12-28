@@ -5715,6 +5715,15 @@ export type Database = {
           value: number
         }[]
       }
+      get_available_permissions_for_clinic: {
+        Args: { _clinic_id: string }
+        Returns: {
+          category: string
+          feature_name: string
+          permission_key: string
+          permission_name: string
+        }[]
+      }
       get_clinic_message_usage: {
         Args: { _clinic_id: string; _month_year?: string }
         Returns: {
