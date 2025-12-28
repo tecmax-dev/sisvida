@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { toast } from "sonner";
@@ -96,6 +97,8 @@ interface Supplier {
 
 export default function StockPage() {
   const { currentClinic } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canManageStock = hasPermission("manage_stock");
   const [products, setProducts] = useState<StockProduct[]>([]);
   const [categories, setCategories] = useState<StockCategory[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -334,7 +337,7 @@ export default function StockPage() {
               />
             </div>
 
-            {activeTab === "products" && (
+            {activeTab === "products" && canManageStock && (
               <Button onClick={() => {
                 setSelectedProduct(null);
                 setProductDialogOpen(true);
@@ -343,7 +346,7 @@ export default function StockPage() {
                 Novo Produto
               </Button>
             )}
-            {activeTab === "categories" && (
+            {activeTab === "categories" && canManageStock && (
               <Button onClick={() => {
                 setSelectedCategory(null);
                 setCategoryDialogOpen(true);
@@ -352,7 +355,7 @@ export default function StockPage() {
                 Nova Categoria
               </Button>
             )}
-            {activeTab === "suppliers" && (
+            {activeTab === "suppliers" && canManageStock && (
               <Button onClick={() => {
                 setSelectedSupplier(null);
                 setSupplierDialogOpen(true);
@@ -438,51 +441,53 @@ export default function StockPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-green-600"
-                              onClick={() => openMovementDialog(product, "entry")}
-                              title="Entrada"
-                            >
-                              <ArrowDownCircle className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-red-600"
-                              onClick={() => openMovementDialog(product, "exit")}
-                              title="Saída"
-                            >
-                              <ArrowUpCircle className="h-4 w-4" />
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
-                                  <MoreVertical className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => {
-                                    setSelectedProduct(product);
-                                    setProductDialogOpen(true);
-                                  }}
-                                >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={() => confirmDelete("product", product.id)}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                          {canManageStock && (
+                            <div className="flex items-center justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-green-600"
+                                onClick={() => openMovementDialog(product, "entry")}
+                                title="Entrada"
+                              >
+                                <ArrowDownCircle className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-red-600"
+                                onClick={() => openMovementDialog(product, "exit")}
+                                title="Saída"
+                              >
+                                <ArrowUpCircle className="h-4 w-4" />
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <MoreVertical className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      setSelectedProduct(product);
+                                      setProductDialogOpen(true);
+                                    }}
+                                  >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Editar
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onClick={() => confirmDelete("product", product.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Excluir
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -539,31 +544,33 @@ export default function StockPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedCategory(category);
-                                  setCategoryDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => confirmDelete("category", category.id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {canManageStock && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedCategory(category);
+                                    setCategoryDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => confirmDelete("category", category.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))
@@ -623,31 +630,33 @@ export default function StockPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setSelectedSupplier(supplier);
-                                  setSupplierDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="h-4 w-4 mr-2" />
-                                Editar
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => confirmDelete("supplier", supplier.id)}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          {canManageStock && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    setSelectedSupplier(supplier);
+                                    setSupplierDialogOpen(true);
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => confirmDelete("supplier", supplier.id)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
                         </TableCell>
                       </TableRow>
                     ))

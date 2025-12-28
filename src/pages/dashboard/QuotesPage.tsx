@@ -479,7 +479,7 @@ Equipe ${currentClinic?.name || ''}`;
               ? "Tente ajustar os filtros" 
               : "Comece criando seu primeiro orçamento"}
           </p>
-          {!search && statusFilter === 'all' && (
+          {!search && statusFilter === 'all' && hasPermission("manage_budgets") && (
             <Button onClick={() => { setSelectedQuote(null); setDialogOpen(true); }}>
               <Plus className="h-4 w-4 mr-2" />
               Novo Orçamento

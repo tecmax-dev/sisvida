@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -38,11 +39,14 @@ interface Procedure {
 
 export default function ProceduresPage() {
   const { currentClinic } = useAuth();
+  const { hasPermission } = usePermissions();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [procedureToDelete, setProcedureToDelete] = useState<Procedure | null>(null);
+
+  const canManageProcedures = hasPermission("manage_procedures");
 
   const { data: procedures, isLoading } = useQuery({
     queryKey: ["procedures", currentClinic?.id],
@@ -138,10 +142,12 @@ export default function ProceduresPage() {
               Gerencie os procedimentos e serviços da clínica
             </p>
           </div>
-          <Button onClick={handleNewProcedure}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Procedimento
-          </Button>
+          {canManageProcedures && (
+            <Button onClick={handleNewProcedure}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Procedimento
+            </Button>
+          )}
         </div>
 
         <div className="relative max-w-sm">
@@ -166,10 +172,12 @@ export default function ProceduresPage() {
               <p className="text-muted-foreground mb-4">
                 Nenhum procedimento encontrado
               </p>
-              <Button onClick={handleNewProcedure}>
-                <Plus className="h-4 w-4 mr-2" />
-                Criar primeiro procedimento
-              </Button>
+              {canManageProcedures && (
+                <Button onClick={handleNewProcedure}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Criar primeiro procedimento
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -193,24 +201,26 @@ export default function ProceduresPage() {
                         </Badge>
                       )}
                     </div>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleEdit(procedure)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => handleDelete(procedure)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {canManageProcedures && (
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => handleEdit(procedure)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                          onClick={() => handleDelete(procedure)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -230,18 +240,20 @@ export default function ProceduresPage() {
                         {formatCurrency(procedure.price)}
                       </span>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() =>
-                        toggleActiveMutation.mutate({
-                          id: procedure.id,
-                          is_active: !procedure.is_active,
-                        })
-                      }
-                    >
-                      {procedure.is_active ? "Desativar" : "Ativar"}
-                    </Button>
+                    {canManageProcedures && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          toggleActiveMutation.mutate({
+                            id: procedure.id,
+                            is_active: !procedure.is_active,
+                          })
+                        }
+                      >
+                        {procedure.is_active ? "Desativar" : "Ativar"}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
