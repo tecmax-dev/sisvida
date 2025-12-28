@@ -1007,9 +1007,8 @@ export default function ClinicsManagement() {
                                   <DropdownMenuSeparator />
                                   {clinic.is_maintenance ? (
                                     <DropdownMenuItem 
-                                      onClick={() => handleOpenMaintenanceDialog(clinic)}
+                                      onClick={() => handleRemoveMaintenance(clinic)}
                                       className="text-success focus:text-success"
-                                      disabled={clinic.is_blocked}
                                     >
                                       <CheckCircle className="h-4 w-4 mr-2" />
                                       Desativar Manutenção
