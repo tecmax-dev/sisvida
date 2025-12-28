@@ -239,76 +239,146 @@ export default function DataImportPage() {
     
     // Step 2: Import records if enabled
     if (importWithRecords && validRecords.length > 0) {
-      // Also fetch existing patients for record linking
+      // Fetch ALL existing patients for this clinic with complete data
       const { data: existingPatients } = await supabase
         .from('patients')
         .select('id, name, cpf')
         .eq('clinic_id', selectedClinicId);
       
+      // Build maps for patient lookup - CPF is the PRIMARY identifier
+      const cpfToPatientId = new Map<string, string>();
+      const nameToPatientIds = new Map<string, string[]>(); // Name can have multiple patients
+      
       existingPatients?.forEach(p => {
+        // CPF map - only if CPF exists (unique identifier)
         if (p.cpf) {
-          importedPatientsMap.set(p.cpf.replace(/\D/g, ''), p.id);
+          const cleanCPF = p.cpf.replace(/\D/g, '');
+          cpfToPatientId.set(cleanCPF, p.id);
         }
-        importedPatientsNameMap.set(p.name.toLowerCase().trim(), p.id);
+        // Name map - track ALL patients with same name (for duplicate detection)
+        const normalizedName = p.name.toLowerCase().trim();
+        const existingIds = nameToPatientIds.get(normalizedName) || [];
+        existingIds.push(p.id);
+        nameToPatientIds.set(normalizedName, existingIds);
       });
       
-    let autoCreatedPatients = 0;
+      // Also add patients imported in step 1 to the maps
+      for (const [cpf, id] of importedPatientsMap.entries()) {
+        cpfToPatientId.set(cpf, id);
+      }
+      for (const [name, id] of importedPatientsNameMap.entries()) {
+        const existingIds = nameToPatientIds.get(name) || [];
+        if (!existingIds.includes(id)) {
+          existingIds.push(id);
+          nameToPatientIds.set(name, existingIds);
+        }
+      }
+      
+      let autoCreatedPatients = 0;
+      let skippedAmbiguous = 0;
       
       for (const row of validRecords) {
         let patientId: string | undefined;
+        let matchMethod: 'cpf' | 'name_unique' | 'created' | 'none' = 'none';
         
-        if (row.data.cpf_paciente) {
-          const cleanCPF = row.data.cpf_paciente.replace(/\D/g, '');
-          patientId = importedPatientsMap.get(cleanCPF);
+        const cleanCPF = row.data.cpf_paciente?.replace(/\D/g, '') || '';
+        const normalizedName = row.data.nome_paciente?.toLowerCase().trim() || '';
+        
+        // PRIORITY 1: Match by CPF (most reliable - unique identifier)
+        if (cleanCPF && cleanCPF.length >= 11) {
+          patientId = cpfToPatientId.get(cleanCPF);
+          if (patientId) {
+            matchMethod = 'cpf';
+          }
         }
         
-        if (!patientId && row.data.nome_paciente) {
-          patientId = importedPatientsNameMap.get(row.data.nome_paciente.toLowerCase().trim());
+        // PRIORITY 2: Match by name ONLY if name is unique in the clinic
+        if (!patientId && normalizedName) {
+          const matchingPatients = nameToPatientIds.get(normalizedName) || [];
+          
+          if (matchingPatients.length === 1) {
+            // Only ONE patient with this name - safe to match
+            patientId = matchingPatients[0];
+            matchMethod = 'name_unique';
+          } else if (matchingPatients.length > 1) {
+            // MULTIPLE patients with same name - CANNOT match without CPF
+            // Skip this record to avoid wrong association
+            console.warn(`[IMPORT SAFETY] Prontuário ignorado: múltiplos pacientes com nome "${row.data.nome_paciente}". Forneça CPF para vincular corretamente.`);
+            skippedAmbiguous++;
+            errors++;
+            processedItems++;
+            setCombinedProgress((processedItems / totalItems) * 100);
+            continue;
+          }
         }
         
-        // Auto-create patient if not found
-        if (!patientId && row.data.nome_paciente) {
-          try {
-            const formattedCpf = row.data.cpf_paciente ? formatCPF(row.data.cpf_paciente) : undefined;
-            const newPatientData: { clinic_id: string; name: string; phone: string; cpf?: string } = {
-              clinic_id: selectedClinicId,
-              name: row.data.nome_paciente.trim(),
-              phone: '',
-            };
-            if (formattedCpf) {
-              newPatientData.cpf = formattedCpf;
-            }
-            
-            const { data: newPatient, error: createError } = await supabase
-              .from('patients')
-              .insert([newPatientData])
-              .select('id')
-              .single();
-            
-            if (!createError && newPatient) {
-              patientId = newPatient.id;
-              autoCreatedPatients++;
-              
-              // Add to maps for future records
-              if (newPatientData.cpf) {
-                importedPatientsMap.set(newPatientData.cpf.replace(/\D/g, ''), newPatient.id);
+        // PRIORITY 3: Auto-create patient if not found
+        // Only create if we have BOTH name AND CPF (to ensure uniqueness)
+        // OR if name doesn't exist at all in the clinic
+        if (!patientId && normalizedName) {
+          const existingWithSameName = nameToPatientIds.get(normalizedName) || [];
+          
+          // Safe to create: either has CPF (unique) or name doesn't exist
+          const canCreate = cleanCPF.length >= 11 || existingWithSameName.length === 0;
+          
+          if (canCreate) {
+            try {
+              const formattedCpf = cleanCPF.length >= 11 ? formatCPF(row.data.cpf_paciente!) : undefined;
+              const newPatientData: { clinic_id: string; name: string; phone: string; cpf?: string } = {
+                clinic_id: selectedClinicId,
+                name: row.data.nome_paciente!.trim(),
+                phone: '',
+              };
+              if (formattedCpf) {
+                newPatientData.cpf = formattedCpf;
               }
-              importedPatientsNameMap.set(row.data.nome_paciente.toLowerCase().trim(), newPatient.id);
-            } else if (createError?.message.includes('CPF_DUPLICADO')) {
-              // Try to get existing patient
-              const { data: existingPatient } = await supabase
+              
+              const { data: newPatient, error: createError } = await supabase
                 .from('patients')
+                .insert([newPatientData])
                 .select('id')
-                .eq('clinic_id', selectedClinicId)
-                .eq('cpf', newPatientData.cpf)
                 .single();
               
-              if (existingPatient) {
-                patientId = existingPatient.id;
+              if (!createError && newPatient) {
+                patientId = newPatient.id;
+                autoCreatedPatients++;
+                matchMethod = 'created';
+                
+                // Update maps for subsequent records
+                if (formattedCpf) {
+                  cpfToPatientId.set(cleanCPF, newPatient.id);
+                }
+                const existingNames = nameToPatientIds.get(normalizedName) || [];
+                existingNames.push(newPatient.id);
+                nameToPatientIds.set(normalizedName, existingNames);
+                
+              } else if (createError?.message.includes('CPF_DUPLICADO')) {
+                // CPF already exists - fetch the existing patient
+                const { data: existingPatient } = await supabase
+                  .from('patients')
+                  .select('id')
+                  .eq('clinic_id', selectedClinicId)
+                  .eq('cpf', newPatientData.cpf)
+                  .single();
+                
+                if (existingPatient) {
+                  patientId = existingPatient.id;
+                  matchMethod = 'cpf';
+                  // Update map
+                  cpfToPatientId.set(cleanCPF, existingPatient.id);
+                }
               }
+            } catch (err) {
+              console.error('[IMPORT ERROR] Erro ao criar paciente:', err);
             }
-          } catch (err) {
-            console.error('Error creating patient:', err);
+          } else {
+            // Cannot create: name exists but no CPF to differentiate
+            console.warn(`[IMPORT SAFETY] Prontuário ignorado: paciente "${row.data.nome_paciente}" já existe. Forneça CPF para criar novo ou vincular.`);
+            skippedAmbiguous++;
+            errors++;
+            processedItems++;
+            setCombinedProgress((processedItems / totalItems) * 100);
+            continue;
           }
         }
         
@@ -346,6 +416,10 @@ export default function DataImportPage() {
       
       if (autoCreatedPatients > 0) {
         toast.info(`${autoCreatedPatients} pacientes criados automaticamente durante importação`);
+      }
+      
+      if (skippedAmbiguous > 0) {
+        toast.warning(`${skippedAmbiguous} prontuários ignorados por ambiguidade de paciente. Inclua CPF na planilha para vincular corretamente.`);
       }
     }
     
@@ -442,81 +516,114 @@ export default function DataImportPage() {
       .select('id, name, cpf')
       .eq('clinic_id', selectedClinicId);
     
-    const patientsMap = new Map<string, string>();
-    const patientsNameMap = new Map<string, string>();
+    // Build maps for patient lookup - CPF is the PRIMARY identifier
+    const cpfToPatientId = new Map<string, string>();
+    const nameToPatientIds = new Map<string, string[]>();
     
     patients?.forEach(p => {
       if (p.cpf) {
-        patientsMap.set(p.cpf.replace(/\D/g, ''), p.id);
+        const cleanCPF = p.cpf.replace(/\D/g, '');
+        cpfToPatientId.set(cleanCPF, p.id);
       }
-      patientsNameMap.set(p.name.toLowerCase().trim(), p.id);
+      const normalizedName = p.name.toLowerCase().trim();
+      const existingIds = nameToPatientIds.get(normalizedName) || [];
+      existingIds.push(p.id);
+      nameToPatientIds.set(normalizedName, existingIds);
     });
     
     let imported = 0;
     let errors = 0;
     let autoCreatedPatients = 0;
+    let skippedAmbiguous = 0;
     
     for (const row of validRows) {
-      // Find patient by CPF or name
       let patientId: string | undefined;
       
-      if (row.data.cpf_paciente) {
-        const cleanCPF = row.data.cpf_paciente.replace(/\D/g, '');
-        patientId = patientsMap.get(cleanCPF);
+      const cleanCPF = row.data.cpf_paciente?.replace(/\D/g, '') || '';
+      const normalizedName = row.data.nome_paciente?.toLowerCase().trim() || '';
+      
+      // PRIORITY 1: Match by CPF (most reliable)
+      if (cleanCPF && cleanCPF.length >= 11) {
+        patientId = cpfToPatientId.get(cleanCPF);
       }
       
-      if (!patientId && row.data.nome_paciente) {
-        patientId = patientsNameMap.get(row.data.nome_paciente.toLowerCase().trim());
+      // PRIORITY 2: Match by name ONLY if unique
+      if (!patientId && normalizedName) {
+        const matchingPatients = nameToPatientIds.get(normalizedName) || [];
+        
+        if (matchingPatients.length === 1) {
+          patientId = matchingPatients[0];
+        } else if (matchingPatients.length > 1) {
+          console.warn(`[IMPORT SAFETY] Prontuário ignorado: múltiplos pacientes com nome "${row.data.nome_paciente}"`);
+          skippedAmbiguous++;
+          errors++;
+          setRecordProgress(((imported + errors) / validRows.length) * 100);
+          continue;
+        }
       }
       
-      // Auto-create patient if not found
-      if (!patientId && row.data.nome_paciente) {
-        try {
-          const formattedCpf = row.data.cpf_paciente ? formatCPF(row.data.cpf_paciente) : undefined;
-          const newPatientData: { clinic_id: string; name: string; phone: string; cpf?: string } = {
-            clinic_id: selectedClinicId,
-            name: row.data.nome_paciente.trim(),
-            phone: '',
-          };
-          if (formattedCpf) {
-            newPatientData.cpf = formattedCpf;
-          }
-          
-          const { data: newPatient, error: createError } = await supabase
-            .from('patients')
-            .insert([newPatientData])
-            .select('id')
-            .single();
-          
-          if (!createError && newPatient) {
-            patientId = newPatient.id;
-            autoCreatedPatients++;
-            
-            // Add to maps for future records
-            if (newPatientData.cpf) {
-              patientsMap.set(newPatientData.cpf.replace(/\D/g, ''), newPatient.id);
+      // PRIORITY 3: Auto-create patient with safety checks
+      if (!patientId && normalizedName) {
+        const existingWithSameName = nameToPatientIds.get(normalizedName) || [];
+        const canCreate = cleanCPF.length >= 11 || existingWithSameName.length === 0;
+        
+        if (canCreate) {
+          try {
+            const formattedCpf = cleanCPF.length >= 11 ? formatCPF(row.data.cpf_paciente!) : undefined;
+            const newPatientData: { clinic_id: string; name: string; phone: string; cpf?: string } = {
+              clinic_id: selectedClinicId,
+              name: row.data.nome_paciente!.trim(),
+              phone: '',
+            };
+            if (formattedCpf) {
+              newPatientData.cpf = formattedCpf;
             }
-            patientsNameMap.set(row.data.nome_paciente.toLowerCase().trim(), newPatient.id);
-          } else if (createError?.message.includes('CPF_DUPLICADO')) {
-            // Try to get existing patient
-            const { data: existingPatient } = await supabase
+            
+            const { data: newPatient, error: createError } = await supabase
               .from('patients')
+              .insert([newPatientData])
               .select('id')
-              .eq('clinic_id', selectedClinicId)
-              .eq('cpf', newPatientData.cpf)
               .single();
             
-            if (existingPatient) {
-              patientId = existingPatient.id;
+            if (!createError && newPatient) {
+              patientId = newPatient.id;
+              autoCreatedPatients++;
+              
+              if (formattedCpf) {
+                cpfToPatientId.set(cleanCPF, newPatient.id);
+              }
+              const existingNames = nameToPatientIds.get(normalizedName) || [];
+              existingNames.push(newPatient.id);
+              nameToPatientIds.set(normalizedName, existingNames);
+              
+            } else if (createError?.message.includes('CPF_DUPLICADO')) {
+              const { data: existingPatient } = await supabase
+                .from('patients')
+                .select('id')
+                .eq('clinic_id', selectedClinicId)
+                .eq('cpf', newPatientData.cpf)
+                .single();
+              
+              if (existingPatient) {
+                patientId = existingPatient.id;
+                cpfToPatientId.set(cleanCPF, existingPatient.id);
+              }
             }
+          } catch (err) {
+            console.error('[IMPORT ERROR] Erro ao criar paciente:', err);
           }
-        } catch (err) {
-          console.error('Error creating patient:', err);
+        } else {
+          console.warn(`[IMPORT SAFETY] Prontuário ignorado: paciente "${row.data.nome_paciente}" já existe sem CPF`);
+          skippedAmbiguous++;
+          errors++;
+          setRecordProgress(((imported + errors) / validRows.length) * 100);
+          continue;
         }
       }
       
       if (!patientId) {
         errors++;
+        setRecordProgress(((imported + errors) / validRows.length) * 100);
         continue;
       }
       
@@ -549,6 +656,10 @@ export default function DataImportPage() {
     
     if (autoCreatedPatients > 0) {
       toast.info(`${autoCreatedPatients} pacientes criados automaticamente`);
+    }
+    
+    if (skippedAmbiguous > 0) {
+      toast.warning(`${skippedAmbiguous} prontuários ignorados por ambiguidade. Inclua CPF para vincular corretamente.`);
     }
     
     if (errors > 0) {
