@@ -28,6 +28,8 @@ export function HeroSection() {
   const showSocialProof = settings?.show_social_proof ?? true;
   const socialProofUsers = settings?.social_proof_users || 10000;
   const socialProofRating = settings?.social_proof_rating || 4.9;
+  const badge1Text = settings?.badge_1_text || "Online 24h";
+  const badge2Text = settings?.badge_2_text || "100% Seguro";
 
   const renderBackground = () => {
     switch (backgroundEffect) {
@@ -207,14 +209,14 @@ export function HeroSection() {
                     <div className="absolute -top-4 -right-4 bg-background/90 backdrop-blur-md rounded-xl px-4 py-2 shadow-lg border border-border/50 animate-float hidden lg:block">
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        <span className="text-sm font-medium">Online 24h</span>
+                        <span className="text-sm font-medium">{badge1Text}</span>
                       </div>
                     </div>
                     
                     <div className="absolute -bottom-4 -left-4 bg-background/90 backdrop-blur-md rounded-xl px-4 py-2 shadow-lg border border-border/50 animate-float hidden lg:block" style={{ animationDelay: '1s' }}>
                       <div className="flex items-center gap-2">
                         <Check className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium">100% Seguro</span>
+                        <span className="text-sm font-medium">{badge2Text}</span>
                       </div>
                     </div>
                   </>

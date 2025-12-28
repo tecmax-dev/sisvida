@@ -1838,6 +1838,8 @@ export type Database = {
       hero_settings: {
         Row: {
           background_effect: string | null
+          badge_1_text: string | null
+          badge_2_text: string | null
           created_at: string
           description: string | null
           hero_image_url: string | null
@@ -1858,6 +1860,8 @@ export type Database = {
         }
         Insert: {
           background_effect?: string | null
+          badge_1_text?: string | null
+          badge_2_text?: string | null
           created_at?: string
           description?: string | null
           hero_image_url?: string | null
@@ -1878,6 +1882,8 @@ export type Database = {
         }
         Update: {
           background_effect?: string | null
+          badge_1_text?: string | null
+          badge_2_text?: string | null
           created_at?: string
           description?: string | null
           hero_image_url?: string | null
