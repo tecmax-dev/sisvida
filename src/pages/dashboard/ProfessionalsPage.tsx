@@ -159,6 +159,8 @@ export default function ProfessionalsPage() {
     refetch: refetchSubscription,
   } = useSubscription();
   const { hasFeature } = usePlanFeatures();
+  const { hasPermission } = usePermissions();
+  const canManageProfessionals = hasPermission("manage_professionals");
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [clinicUsers, setClinicUsers] = useState<ClinicUser[]>([]);
   const [loading, setLoading] = useState(true);
@@ -714,7 +716,7 @@ export default function ProfessionalsPage() {
   const usagePercentage = subscription ? (activeProfessionals / maxProfessionals) * 100 : 0;
 
   return (
-    <RoleGuard permission="manage_professionals">
+    <RoleGuard permission="view_professionals">
     <div className="space-y-6">
       {/* Limit Alert */}
       {subscription && isAtLimit && (
@@ -747,14 +749,15 @@ export default function ProfessionalsPage() {
             </div>
           )}
         </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="hero" disabled={!canAddProfessional && !!subscription}>
-              <Plus className="h-4 w-4 mr-2" />
-              Novo Profissional
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh]">
+        {canManageProfessionals && (
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="hero" disabled={!canAddProfessional && !!subscription}>
+                <Plus className="h-4 w-4 mr-2" />
+                Novo Profissional
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[90vh]">
             <DialogHeader>
               <DialogTitle>Cadastrar Profissional</DialogTitle>
             </DialogHeader>
@@ -936,6 +939,7 @@ export default function ProfessionalsPage() {
             </ScrollArea>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       {loading ? (
@@ -1005,14 +1009,18 @@ export default function ProfessionalsPage() {
                         <CalendarDays className="h-4 w-4 mr-2" />
                         Ver agenda
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleOpenEdit(professional)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => openScheduleDialog(professional)}>
-                        <Settings className="h-4 w-4 mr-2" />
-                        Configurar horários
-                      </DropdownMenuItem>
+                      {canManageProfessionals && (
+                        <>
+                          <DropdownMenuItem onClick={() => handleOpenEdit(professional)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openScheduleDialog(professional)}>
+                            <Settings className="h-4 w-4 mr-2" />
+                            Configurar horários
+                          </DropdownMenuItem>
+                        </>
+                      )}
                       {professional.slug && (
                         <>
                           <DropdownMenuSeparator />
@@ -1032,14 +1040,18 @@ export default function ProfessionalsPage() {
                           </DropdownMenuItem>
                         </>
                       )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        className={professional.is_active ? "text-destructive" : "text-green-600"}
-                        onClick={() => handleOpenDeactivate(professional)}
-                      >
-                        <UserX className="h-4 w-4 mr-2" />
-                        {professional.is_active ? "Desativar" : "Ativar"}
-                      </DropdownMenuItem>
+                      {canManageProfessionals && (
+                        <>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className={professional.is_active ? "text-destructive" : "text-green-600"}
+                            onClick={() => handleOpenDeactivate(professional)}
+                          >
+                            <UserX className="h-4 w-4 mr-2" />
+                            {professional.is_active ? "Desativar" : "Ativar"}
+                          </DropdownMenuItem>
+                        </>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -1070,10 +1082,12 @@ export default function ProfessionalsPage() {
           <CardContent className="py-12 text-center text-muted-foreground">
             <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
             <p className="mb-4">Nenhum profissional cadastrado</p>
-            <Button variant="outline" onClick={() => setDialogOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar profissional
-            </Button>
+            {canManageProfessionals && (
+              <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar profissional
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

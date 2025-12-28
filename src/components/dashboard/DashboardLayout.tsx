@@ -63,7 +63,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard", icon: Home, label: "Visão Geral", permission: "view_dashboard" },
   { href: "/dashboard/calendar", icon: Calendar, label: "Agenda", permission: "scheduling" },
   { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients" },
-  { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais", permission: "manage_professionals" },
+  { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais", permission: "view_professionals" },
   { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
   { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
   { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "anamnesis_forms" },
