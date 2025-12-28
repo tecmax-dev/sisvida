@@ -44,6 +44,8 @@ export default function HeroSettingsPage() {
     show_social_proof: true,
     social_proof_users: 2500,
     social_proof_rating: 4.9,
+    badge_1_text: "Online 24h",
+    badge_2_text: "100% Seguro",
   });
 
   const [newHighlight, setNewHighlight] = useState("");
@@ -71,6 +73,8 @@ export default function HeroSettingsPage() {
         show_social_proof: settings.show_social_proof ?? true,
         social_proof_users: settings.social_proof_users || 2500,
         social_proof_rating: settings.social_proof_rating || 4.9,
+        badge_1_text: settings.badge_1_text || "Online 24h",
+        badge_2_text: settings.badge_2_text || "100% Seguro",
       });
     }
   }, [settings]);
@@ -401,7 +405,7 @@ export default function HeroSettingsPage() {
                   <div className="space-y-0.5">
                     <Label>Mostrar Badges Flutuantes</Label>
                     <p className="text-sm text-muted-foreground">
-                      Badges "Online 24h" e "100% Seguro"
+                      Badges que aparecem sobre a imagem da hero
                     </p>
                   </div>
                   <Switch
@@ -409,6 +413,31 @@ export default function HeroSettingsPage() {
                     onCheckedChange={(checked) => setFormData(prev => ({ ...prev, show_floating_badges: checked }))}
                   />
                 </div>
+
+                {formData.show_floating_badges && (
+                  <div className="grid gap-4 sm:grid-cols-2 pt-4 border-t">
+                    <div className="space-y-2">
+                      <Label htmlFor="badge_1_text">Texto do Badge 1</Label>
+                      <Input
+                        id="badge_1_text"
+                        value={formData.badge_1_text || ""}
+                        onChange={(e) => setFormData(prev => ({ ...prev, badge_1_text: e.target.value }))}
+                        placeholder="Online 24h"
+                      />
+                      <p className="text-xs text-muted-foreground">Badge superior direito (com indicador verde)</p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="badge_2_text">Texto do Badge 2</Label>
+                      <Input
+                        id="badge_2_text"
+                        value={formData.badge_2_text || ""}
+                        onChange={(e) => setFormData(prev => ({ ...prev, badge_2_text: e.target.value }))}
+                        placeholder="100% Seguro"
+                      />
+                      <p className="text-xs text-muted-foreground">Badge inferior esquerdo (com ícone de check)</p>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

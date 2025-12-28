@@ -18,6 +18,8 @@ export interface HeroSettings {
   show_social_proof: boolean | null;
   social_proof_users: number | null;
   social_proof_rating: number | null;
+  badge_1_text: string | null;
+  badge_2_text: string | null;
   is_active: boolean | null;
   created_at: string;
   updated_at: string;
