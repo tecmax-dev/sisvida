@@ -1630,6 +1630,35 @@ export type Database = {
           },
         ]
       }
+      feature_permissions: {
+        Row: {
+          created_at: string | null
+          feature_id: string
+          id: string
+          permission_key: string
+        }
+        Insert: {
+          created_at?: string | null
+          feature_id: string
+          id?: string
+          permission_key: string
+        }
+        Update: {
+          created_at?: string | null
+          feature_id?: string
+          id?: string
+          permission_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_permissions_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "system_features"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_categories: {
         Row: {
           clinic_id: string
