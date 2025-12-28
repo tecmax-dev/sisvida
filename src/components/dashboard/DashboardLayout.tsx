@@ -2,6 +2,7 @@ import { useState, useEffect, Suspense } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { ChatWidget } from "@/components/chat/ChatWidget";
+import { MaintenanceBanner } from "@/components/MaintenanceBanner";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { Loader2 } from "lucide-react";
@@ -324,6 +325,11 @@ export function DashboardLayout() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
+        {/* Maintenance Banner */}
+        {currentClinic?.is_blocked && (
+          <MaintenanceBanner reason={currentClinic.blocked_reason} />
+        )}
+        
         {/* Top bar */}
         <header className="sticky top-0 z-30 flex items-center gap-4 px-4 lg:px-6 h-14 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 border-b border-border/50">
           <Button

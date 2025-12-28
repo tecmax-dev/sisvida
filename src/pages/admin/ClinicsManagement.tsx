@@ -69,6 +69,10 @@ import {
   TrendingUp,
   Activity,
   RefreshCw,
+  Wrench,
+  Settings,
+  DollarSign,
+  Clock,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -157,12 +161,12 @@ const ClinicCard = ({
 }: ClinicCardProps) => (
   <div className={`group relative overflow-hidden rounded-xl border p-5 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 ${
     clinic.is_blocked 
-      ? "bg-destructive/5 border-destructive/30" 
+      ? "bg-warning/5 border-warning/30" 
       : "bg-card border-border hover:border-primary/30"
   }`}>
     {/* Decorative gradient */}
     <div className={`absolute top-0 left-0 right-0 h-1 ${
-      clinic.is_blocked ? "bg-destructive" : "bg-gradient-to-r from-primary to-primary-glow"
+      clinic.is_blocked ? "bg-warning" : "bg-gradient-to-r from-primary to-primary-glow"
     }`} />
     
     {/* Header */}
@@ -170,11 +174,11 @@ const ClinicCard = ({
       <div className="flex items-center gap-3 min-w-0">
         <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm ${
           clinic.is_blocked 
-            ? "bg-destructive/10 text-destructive" 
+            ? "bg-warning/10 text-warning" 
             : "bg-gradient-to-br from-primary/20 to-primary/10 text-primary"
         }`}>
           {clinic.is_blocked ? (
-            <Ban className="h-6 w-6" />
+            <Wrench className="h-6 w-6" />
           ) : (
             <Building2 className="h-6 w-6" />
           )}
@@ -185,9 +189,9 @@ const ClinicCard = ({
         </div>
       </div>
       {clinic.is_blocked ? (
-        <Badge variant="destructive" className="gap-1.5 shrink-0">
-          <Ban className="h-3 w-3" />
-          Bloqueada
+        <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 gap-1.5 shrink-0">
+          <Wrench className="h-3 w-3" />
+          Manutenção
         </Badge>
       ) : (
         <Badge className="bg-success/10 text-success border-success/20 gap-1.5 shrink-0">
@@ -251,25 +255,18 @@ const ClinicCard = ({
         <CreditCard className="h-4 w-4 mr-2" />
         Plano
       </Button>
-      {clinic.is_blocked ? (
-        <Button 
-          size="sm" 
-          variant="outline"
-          className="text-success hover:bg-success/10 hover:border-success/30"
-          onClick={() => onUnblock(clinic)}
-        >
-          <CheckCircle className="h-4 w-4" />
-        </Button>
-      ) : (
-        <Button 
-          size="sm" 
-          variant="outline"
-          className="text-destructive hover:bg-destructive/10 hover:border-destructive/30"
-          onClick={() => onBlock(clinic)}
-        >
-          <Ban className="h-4 w-4" />
-        </Button>
-      )}
+      <Button 
+        size="sm" 
+        variant="outline"
+        className={clinic.is_blocked 
+          ? "text-success hover:bg-success/10 hover:border-success/30" 
+          : "text-warning hover:bg-warning/10 hover:border-warning/30"
+        }
+        onClick={() => clinic.is_blocked ? onUnblock(clinic) : onBlock(clinic)}
+        title={clinic.is_blocked ? "Desativar manutenção" : "Ativar manutenção"}
+      >
+        {clinic.is_blocked ? <CheckCircle className="h-4 w-4" /> : <Wrench className="h-4 w-4" />}
+      </Button>
       <Button 
         size="sm" 
         variant="outline"
@@ -879,46 +876,76 @@ export default function ClinicsManagement() {
       <Dialog open={blockDialogOpen} onOpenChange={setBlockDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
-              <div className="p-2 rounded-lg bg-destructive/10">
-                <AlertTriangle className="h-5 w-5" />
+            <DialogTitle className="flex items-center gap-2 text-warning">
+              <div className="p-2 rounded-lg bg-warning/10">
+                <Wrench className="h-5 w-5" />
               </div>
-              Bloquear Clínica
+              Colocar em Manutenção
             </DialogTitle>
             <DialogDescription>
-              Esta ação irá bloquear o acesso de todos os usuários da clínica "{selectedClinic?.name}".
+              Esta ação irá colocar a clínica "{selectedClinic?.name}" em modo de manutenção. 
+              Os usuários verão um aviso amigável no sistema.
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-4 py-4">
+            {/* Predefined reasons */}
             <div className="space-y-2">
-              <Label htmlFor="blockReason">Motivo do bloqueio</Label>
+              <Label>Motivo da manutenção</Label>
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  { icon: Settings, label: "Ajustes no sistema", value: "Estamos realizando ajustes no sistema." },
+                  { icon: DollarSign, label: "Pendência financeira", value: "Pendência financeira. Entre em contato com o suporte." },
+                  { icon: Wrench, label: "Manutenção corretiva", value: "Manutenção corretiva em andamento." },
+                  { icon: Clock, label: "Atualização programada", value: "Atualização programada do sistema." },
+                ].map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => setBlockReason(option.value)}
+                    className={`flex items-center gap-3 p-3 rounded-lg border text-left transition-colors ${
+                      blockReason === option.value 
+                        ? "border-primary bg-primary/5 text-primary" 
+                        : "border-border hover:border-primary/50 hover:bg-muted/50"
+                    }`}
+                  >
+                    <option.icon className="h-4 w-4 shrink-0" />
+                    <span className="text-sm font-medium">{option.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            {/* Custom reason */}
+            <div className="space-y-2">
+              <Label htmlFor="blockReason">Ou digite um motivo personalizado</Label>
               <Textarea
                 id="blockReason"
-                placeholder="Ex: Inadimplência, pagamento pendente..."
+                placeholder="Motivo personalizado..."
                 value={blockReason}
                 onChange={(e) => setBlockReason(e.target.value)}
                 className="resize-none"
-                rows={3}
+                rows={2}
               />
             </div>
           </div>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setBlockDialogOpen(false)}>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setBlockDialogOpen(false)} className="w-full sm:w-auto">
               Cancelar
             </Button>
             <Button 
-              variant="destructive" 
+              variant="default"
+              className="w-full sm:w-auto bg-warning hover:bg-warning/90 text-warning-foreground"
               onClick={handleBlockClinic}
               disabled={blockMutation.isPending}
             >
               {blockMutation.isPending ? (
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               ) : (
-                <Ban className="h-4 w-4 mr-2" />
+                <Wrench className="h-4 w-4 mr-2" />
               )}
-              Confirmar Bloqueio
+              Ativar Manutenção
             </Button>
           </DialogFooter>
         </DialogContent>
