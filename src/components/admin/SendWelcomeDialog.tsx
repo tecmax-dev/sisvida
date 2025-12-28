@@ -80,16 +80,28 @@ export function SendWelcomeDialog({
       // Buscar roles dos usuários da clínica
       const { data: roles, error: rolesError } = await supabase
         .from("user_roles")
-        .select(`
-          user_id,
-          role,
-          profiles:user_id (name, phone)
-        `)
+        .select("user_id, role")
         .eq("clinic_id", clinicId);
 
       if (rolesError) throw rolesError;
 
-      // Buscar emails dos usuários
+      if (!roles || roles.length === 0) {
+        setClinicUsers([]);
+        return;
+      }
+
+      // Buscar perfis dos usuários
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles, error: profilesError } = await supabase
+        .from("profiles")
+        .select("user_id, name, phone")
+        .in("user_id", userIds);
+
+      if (profilesError) {
+        console.warn("Erro ao buscar perfis:", profilesError);
+      }
+
+      // Buscar emails dos usuários via edge function
       const { data: emailsData, error: emailsError } = await supabase.functions.invoke(
         "list-users-with-email"
       );
@@ -98,6 +110,11 @@ export function SendWelcomeDialog({
         console.warn("Não foi possível buscar emails:", emailsError);
       }
 
+      const profileMap = new Map<string, { name: string | null; phone: string | null }>();
+      (profiles || []).forEach((p: any) => {
+        profileMap.set(p.user_id, { name: p.name, phone: p.phone });
+      });
+
       const emailMap = new Map<string, string>();
       if (emailsData?.users) {
         emailsData.users.forEach((u: any) => {
@@ -105,9 +122,10 @@ export function SendWelcomeDialog({
         });
       }
 
-      const usersWithEmail = (roles || []).map((r: any) => ({
-        ...r,
-        profile: r.profiles,
+      const usersWithEmail = roles.map((r) => ({
+        user_id: r.user_id,
+        role: r.role,
+        profile: profileMap.get(r.user_id) || null,
         email: emailMap.get(r.user_id) || "",
       }));
 
