@@ -475,18 +475,57 @@ export function generateCombinedTemplate(): ArrayBuffer {
 }
 
 // Helper to get value from row with multiple possible keys
+function coerceCellToString(value: unknown): string {
+  if (value === null || value === undefined) return '';
+
+  // Excel sometimes yields numbers (or scientific notation strings)
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return String(Math.trunc(value));
+  }
+
+  const str = String(value).trim();
+
+  // Handle scientific notation like "7.1999999999E10"
+  if (/^[+-]?(\d+\.?\d*|\d*\.?\d+)[eE][+-]?\d+$/.test(str)) {
+    const n = Number(str);
+    if (Number.isFinite(n)) return String(Math.trunc(n));
+  }
+
+  return str;
+}
+
+function isEmptyLike(value: string): boolean {
+  const v = value.trim().toLowerCase();
+  return (
+    v === '' ||
+    v === '-' ||
+    v === '—' ||
+    v === 'null' ||
+    v === 'undefined' ||
+    v === 'n/a' ||
+    v === 'na' ||
+    v === 'sem' ||
+    v === 'sem telefone' ||
+    v === 'sem celular'
+  );
+}
+
+// Helper to get value from row with multiple possible keys
 function getRowValue(row: Record<string, unknown>, keys: string[]): string {
   for (const key of keys) {
     // Try exact match first
-    if (row[key] !== undefined && row[key] !== null && row[key] !== '') {
-      return String(row[key]).trim();
+    if (row[key] !== undefined && row[key] !== null) {
+      const raw = coerceCellToString(row[key]);
+      if (!isEmptyLike(raw)) return raw;
     }
-    // Try case-insensitive match
-    const foundKey = Object.keys(row).find(k => 
-      normalizeColumnHeader(k) === normalizeColumnHeader(key)
+
+    // Try case-insensitive/normalized match
+    const foundKey = Object.keys(row).find(
+      (k) => normalizeColumnHeader(k) === normalizeColumnHeader(key)
     );
-    if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null && row[foundKey] !== '') {
-      return String(row[foundKey]).trim();
+    if (foundKey && row[foundKey] !== undefined && row[foundKey] !== null) {
+      const raw = coerceCellToString(row[foundKey]);
+      if (!isEmptyLike(raw)) return raw;
     }
   }
   return '';
@@ -502,10 +541,21 @@ export function mapPatientRow(row: Record<string, unknown>): PatientImportRow {
       'cliente', 'Cliente', 'CLIENTE', 'client', 'Client'
     ]),
     telefone: getRowValue(row, [
-      'telefone', 'Telefone', 'TELEFONE', 'celular', 'Celular', 'CELULAR',
-      'whatsapp', 'Whatsapp', 'WHATSAPP', 'zap', 'Zap',
-      'phone', 'Phone', 'PHONE', 'cell', 'Cell', 'mobile', 'Mobile',
-      'fone', 'Fone', 'FONE', 'contato', 'Contato', 'contact', 'Contact'
+      // Portuguese
+      'telefone', 'Telefone', 'TELEFONE',
+      'telefone_1', 'Telefone 1', 'Telefone1', 'Tel 1', 'Tel1',
+      'telefone_principal', 'Telefone Principal',
+      'celular', 'Celular', 'CELULAR',
+      'celular_1', 'Celular 1', 'Celular1',
+      'whatsapp', 'Whatsapp', 'WHATSAPP',
+      'fone', 'Fone', 'FONE',
+      'tel', 'Tel', 'TEL', 'telefone_contato', 'Telefone Contato',
+      // English
+      'phone', 'Phone', 'PHONE',
+      'mobile', 'Mobile', 'MOBILE',
+      'cell', 'Cell',
+      // Other
+      'zap', 'Zap', 'contato', 'Contato', 'contact', 'Contact',
     ]),
     email: getRowValue(row, [
       'email', 'Email', 'EMAIL', 'e-mail', 'E-mail', 'E-MAIL',
@@ -516,14 +566,14 @@ export function mapPatientRow(row: Record<string, unknown>): PatientImportRow {
       'document', 'Document', 'tax_id', 'Tax ID'
     ]) || undefined,
     data_nascimento: getRowValue(row, [
-      'data_nascimento', 'Data de Nascimento', 'Data Nascimento', 'nascimento', 
+      'data_nascimento', 'Data de Nascimento', 'Data Nascimento', 'nascimento',
       'Nascimento', 'DATA_NASCIMENTO', 'datanascimento', 'DataNascimento',
       'birth_date', 'Birth Date', 'birthdate', 'Birthdate', 'BIRTH_DATE',
       'data_nasc', 'Data Nasc', 'dt_nascimento', 'Dt Nascimento',
       'aniversario', 'Aniversario', 'birthday', 'Birthday'
     ]) || undefined,
     endereco: getRowValue(row, [
-      'endereco', 'Endereco', 'ENDERECO', 'endereço', 'Endereço', 
+      'endereco', 'Endereco', 'ENDERECO', 'endereço', 'Endereço',
       'endereco_completo', 'Endereço Completo', 'logradouro', 'Logradouro',
       'address', 'Address', 'ADDRESS', 'full_address', 'Full Address',
       'rua', 'Rua', 'street', 'Street'
