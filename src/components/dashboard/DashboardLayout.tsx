@@ -325,9 +325,9 @@ export function DashboardLayout() {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Maintenance Banner */}
-        {currentClinic?.is_blocked && (
-          <MaintenanceBanner reason={currentClinic.blocked_reason} />
+        {/* Maintenance Banner - shows when in maintenance mode (not blocked) */}
+        {currentClinic?.is_maintenance && !currentClinic?.is_blocked && (
+          <MaintenanceBanner reason={currentClinic.maintenance_reason} />
         )}
         
         {/* Top bar */}

@@ -23,6 +23,8 @@ interface Clinic {
   logo_url: string | null;
   is_blocked?: boolean;
   blocked_reason?: string | null;
+  is_maintenance?: boolean;
+  maintenance_reason?: string | null;
 }
 
 interface UserRole {
