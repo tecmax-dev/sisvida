@@ -73,9 +73,11 @@ import {
   Settings,
   DollarSign,
   Clock,
+  Mail,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { SendWelcomeDialog } from "@/components/admin/SendWelcomeDialog";
 
 interface Clinic {
   id: string;
@@ -153,6 +155,7 @@ interface ClinicCardProps {
   onMaintenance: (clinic: ClinicWithCounts) => void;
   onRemoveMaintenance: (clinic: ClinicWithCounts) => void;
   onDelete: (clinic: ClinicWithCounts) => void;
+  onSendWelcome: (clinic: ClinicWithCounts) => void;
   getStatusBadge: (status: string) => React.ReactNode;
 }
 
@@ -165,6 +168,7 @@ const ClinicCard = ({
   onMaintenance,
   onRemoveMaintenance,
   onDelete,
+  onSendWelcome,
   getStatusBadge 
 }: ClinicCardProps) => {
   const getClinicStatus = () => {
@@ -340,6 +344,15 @@ const ClinicCard = ({
         <Button 
           size="sm" 
           variant="outline"
+          className="text-info hover:bg-info/10 hover:border-info/30"
+          onClick={() => onSendWelcome(clinic)}
+          title="Enviar boas-vindas"
+        >
+          <Mail className="h-4 w-4" />
+        </Button>
+        <Button 
+          size="sm" 
+          variant="outline"
           className="text-destructive hover:bg-destructive/10 hover:border-destructive/30"
           onClick={() => onDelete(clinic)}
           title="Excluir"
@@ -381,6 +394,9 @@ export default function ClinicsManagement() {
   // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [confirmClinicName, setConfirmClinicName] = useState("");
+  
+  // Welcome dialog
+  const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
   
   const { setCurrentClinic, user } = useAuth();
   const { logAction } = useAuditLog();
@@ -672,6 +688,11 @@ export default function ClinicsManagement() {
     setSelectedClinic(clinic);
     setMaintenanceReason("");
     setMaintenanceDialogOpen(true);
+  };
+
+  const handleOpenWelcomeDialog = (clinic: ClinicWithCounts) => {
+    setSelectedClinic(clinic);
+    setWelcomeDialogOpen(true);
   };
 
   const handleBlockClinic = () => {
@@ -1005,6 +1026,14 @@ export default function ClinicsManagement() {
                                   )}
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem 
+                                    onClick={() => handleOpenWelcomeDialog(clinic)}
+                                    className="text-info focus:text-info"
+                                  >
+                                    <Mail className="h-4 w-4 mr-2" />
+                                    Enviar Boas-vindas
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
                                     onClick={() => handleOpenDeleteDialog(clinic)}
                                     className="text-destructive focus:text-destructive"
                                   >
@@ -1043,6 +1072,7 @@ export default function ClinicsManagement() {
                     onMaintenance={handleOpenMaintenanceDialog}
                     onRemoveMaintenance={handleRemoveMaintenance}
                     onDelete={handleOpenDeleteDialog}
+                    onSendWelcome={handleOpenWelcomeDialog}
                     getStatusBadge={getStatusBadge}
                   />
                 ))}
@@ -1357,6 +1387,14 @@ export default function ClinicsManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Welcome Email Dialog */}
+      <SendWelcomeDialog
+        open={welcomeDialogOpen}
+        onClose={() => setWelcomeDialogOpen(false)}
+        clinicName={selectedClinic?.name || ""}
+        clinicId={selectedClinic?.id || ""}
+      />
     </div>
   );
 }
