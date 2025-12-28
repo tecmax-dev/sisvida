@@ -1,5 +1,6 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionTimeout } from "./useSessionTimeout";
 import { SessionExpiryWarning } from "@/components/auth/SessionExpiryWarning";
@@ -56,6 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [rolesLoaded, setRolesLoaded] = useState(false);
+  
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Função de logout
   const handleSignOut = async () => {
@@ -71,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const {
     saveLoginTime,
     clearSessionData,
-    renewSession,
+    renewSession: baseRenewSession,
     showWarning,
     timeRemaining,
   } = useSessionTimeout({
@@ -81,6 +85,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onExpire: handleSignOut,
     enabled: !!user
   });
+
+  // Função de renovar sessão com redirecionamento para o dashboard
+  const handleRenewSession = useCallback(() => {
+    baseRenewSession();
+    
+    // Se o usuário não está no dashboard, redireciona para lá
+    const isOnDashboard = location.pathname.startsWith('/dashboard');
+    const isOnAdmin = location.pathname.startsWith('/admin');
+    const isOnProfessional = location.pathname.startsWith('/profissional');
+    
+    if (!isOnDashboard && !isOnAdmin && !isOnProfessional) {
+      if (isSuperAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [baseRenewSession, location.pathname, isSuperAdmin, navigate]);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -236,7 +258,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       <SessionExpiryWarning
         open={showWarning}
         timeRemaining={timeRemaining}
-        onRenew={renewSession}
+        onRenew={handleRenewSession}
         onLogout={signOut}
       />
     </AuthContext.Provider>
