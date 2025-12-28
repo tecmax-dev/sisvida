@@ -25,6 +25,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +48,8 @@ const insuranceSchema = z.object({
 
 export default function InsurancePage() {
   const { currentClinic } = useAuth();
+  const { hasPermission } = usePermissions();
+  const canManageInsurance = hasPermission("insurance_plans");
   const { toast } = useToast();
   const [insurances, setInsurances] = useState<InsurancePlan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -238,10 +241,12 @@ export default function InsurancePage() {
             Gerencie os convênios aceitos pela clínica
           </p>
         </div>
-        <Button variant="hero" onClick={() => handleOpenDialog()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Convênio
-        </Button>
+        {canManageInsurance && (
+          <Button variant="hero" onClick={() => handleOpenDialog()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Convênio
+          </Button>
+        )}
       </div>
 
       {/* Dialog for Create/Edit */}
@@ -326,31 +331,33 @@ export default function InsurancePage() {
                       {insurance.patient_count || 0} pacientes
                     </div>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleOpenDialog(insurance)}>
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => handleToggleActive(insurance)}
-                        disabled={togglingId === insurance.id}
-                      >
-                        {togglingId === insurance.id ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : insurance.is_active ? (
-                          <XCircle className="h-4 w-4 mr-2" />
-                        ) : (
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                        )}
-                        {insurance.is_active ? "Desativar" : "Ativar"}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  {canManageInsurance && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenDialog(insurance)}>
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleToggleActive(insurance)}
+                          disabled={togglingId === insurance.id}
+                        >
+                          {togglingId === insurance.id ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : insurance.is_active ? (
+                            <XCircle className="h-4 w-4 mr-2" />
+                          ) : (
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                          )}
+                          {insurance.is_active ? "Desativar" : "Ativar"}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </div>
 
                 {insurance.code && (
@@ -378,10 +385,12 @@ export default function InsurancePage() {
           <CardContent className="py-12 text-center text-muted-foreground">
             <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
             <p className="mb-4">Nenhum convênio cadastrado</p>
-            <Button variant="outline" onClick={() => handleOpenDialog()}>
-              <Plus className="h-4 w-4 mr-2" />
-              Adicionar convênio
-            </Button>
+            {canManageInsurance && (
+              <Button variant="outline" onClick={() => handleOpenDialog()}>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar convênio
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}

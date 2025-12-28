@@ -823,10 +823,12 @@ export default function PatientsPage() {
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <p className="mb-4">Nenhum paciente encontrado</p>
-              <Button variant="outline" onClick={() => setDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar paciente
-              </Button>
+              {hasPermission("manage_patients") && (
+                <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Adicionar paciente
+                </Button>
+              )}
             </div>
           )}
         </CardContent>
