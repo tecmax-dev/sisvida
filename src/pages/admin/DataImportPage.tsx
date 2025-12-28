@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { 
   Upload, 
@@ -18,12 +20,16 @@ import {
   Loader2,
   Users,
   FileText,
+  Layers,
+  Sparkles,
 } from "lucide-react";
 import {
   PatientImportRow,
   MedicalRecordImportRow,
   ImportRow,
+  DetectedSheet,
   parseSpreadsheet,
+  parseMultiSheetSpreadsheet,
   validatePatientRow,
   validateMedicalRecordRow,
   mapPatientRow,
@@ -44,7 +50,11 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"patients" | "records">("patients");
+  const [activeTab, setActiveTab] = useState<"combined" | "patients" | "records">("combined");
+  
+  // Auto-detection state
+  const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
+  const [importWithRecords, setImportWithRecords] = useState(true);
   
   // Patient import state
   const [patientRows, setPatientRows] = useState<ImportRow<PatientImportRow>[]>([]);
@@ -55,6 +65,10 @@ export default function DataImportPage() {
   const [recordRows, setRecordRows] = useState<ImportRow<MedicalRecordImportRow>[]>([]);
   const [importingRecords, setImportingRecords] = useState(false);
   const [recordProgress, setRecordProgress] = useState(0);
+  
+  // Combined import state
+  const [importingCombined, setImportingCombined] = useState(false);
+  const [combinedProgress, setCombinedProgress] = useState(0);
 
   // Fetch clinics on mount
   useEffect(() => {
@@ -79,6 +93,37 @@ export default function DataImportPage() {
     }
   };
 
+  // Handle combined file upload with auto-detection
+  const handleCombinedFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const buffer = await file.arrayBuffer();
+      const result = parseMultiSheetSpreadsheet(buffer);
+      
+      setDetectedSheets(result.sheets);
+      setPatientRows(result.patients);
+      setRecordRows(result.records);
+      
+      const sheetsInfo = result.sheets.map(s => `${s.name} (${s.type === 'patients' ? 'Pacientes' : s.type === 'records' ? 'Prontuários' : 'Desconhecido'})`);
+      
+      if (result.patients.length > 0 || result.records.length > 0) {
+        toast.success(
+          `Detectado: ${result.patients.length} pacientes e ${result.records.length} prontuários`,
+          { description: `Abas encontradas: ${sheetsInfo.join(', ')}` }
+        );
+      } else {
+        toast.warning('Não foi possível detectar automaticamente. Verifique os nomes das colunas.');
+      }
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      toast.error('Erro ao ler arquivo. Verifique o formato.');
+    }
+    
+    event.target.value = '';
+  }, []);
+
   const handlePatientFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -87,6 +132,7 @@ export default function DataImportPage() {
       const buffer = await file.arrayBuffer();
       const rows = parseSpreadsheet<PatientImportRow>(buffer, validatePatientRow, mapPatientRow);
       setPatientRows(rows);
+      setDetectedSheets([]);
       toast.success(`${rows.length} linhas carregadas`);
     } catch (error) {
       console.error('Error parsing file:', error);
@@ -104,6 +150,7 @@ export default function DataImportPage() {
       const buffer = await file.arrayBuffer();
       const rows = parseSpreadsheet<MedicalRecordImportRow>(buffer, validateMedicalRecordRow, mapMedicalRecordRow);
       setRecordRows(rows);
+      setDetectedSheets([]);
       toast.success(`${rows.length} linhas carregadas`);
     } catch (error) {
       console.error('Error parsing file:', error);
@@ -112,6 +159,166 @@ export default function DataImportPage() {
     
     event.target.value = '';
   }, []);
+
+  // Combined import - patients first, then records
+  const importCombined = async () => {
+    if (!selectedClinicId) {
+      toast.error('Selecione uma clínica');
+      return;
+    }
+    
+    const validPatients = patientRows.filter(r => r.validation.isValid);
+    const validRecords = recordRows.filter(r => r.validation.isValid);
+    
+    if (validPatients.length === 0 && validRecords.length === 0) {
+      toast.error('Nenhum registro válido para importar');
+      return;
+    }
+    
+    setImportingCombined(true);
+    setCombinedProgress(0);
+    
+    const totalItems = validPatients.length + (importWithRecords ? validRecords.length : 0);
+    let processedItems = 0;
+    let importedPatients = 0;
+    let importedRecords = 0;
+    let errors = 0;
+    
+    // Map to track imported patients by CPF and name for record linking
+    const importedPatientsMap = new Map<string, string>();
+    const importedPatientsNameMap = new Map<string, string>();
+    
+    // Step 1: Import patients
+    for (const row of validPatients) {
+      try {
+        const patientData = {
+          clinic_id: selectedClinicId,
+          name: row.data.nome.trim(),
+          phone: formatPhone(row.data.telefone),
+          email: row.data.email?.trim() || null,
+          cpf: row.data.cpf ? formatCPF(row.data.cpf) : null,
+          birth_date: row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null,
+          address: row.data.endereco?.trim() || null,
+          notes: row.data.observacoes?.trim() || null,
+        };
+        
+        const { data, error } = await supabase.from('patients').insert(patientData).select('id').single();
+        
+        if (error) {
+          if (error.message.includes('CPF_DUPLICADO')) {
+            // Get existing patient ID for record linking
+            const { data: existingPatient } = await supabase
+              .from('patients')
+              .select('id')
+              .eq('clinic_id', selectedClinicId)
+              .eq('cpf', patientData.cpf)
+              .single();
+            
+            if (existingPatient) {
+              if (patientData.cpf) {
+                importedPatientsMap.set(patientData.cpf.replace(/\D/g, ''), existingPatient.id);
+              }
+              importedPatientsNameMap.set(row.data.nome.toLowerCase().trim(), existingPatient.id);
+            }
+          }
+          errors++;
+        } else if (data) {
+          importedPatients++;
+          if (patientData.cpf) {
+            importedPatientsMap.set(patientData.cpf.replace(/\D/g, ''), data.id);
+          }
+          importedPatientsNameMap.set(row.data.nome.toLowerCase().trim(), data.id);
+        }
+      } catch (err) {
+        errors++;
+      }
+      
+      processedItems++;
+      setCombinedProgress((processedItems / totalItems) * 100);
+    }
+    
+    // Step 2: Import records if enabled
+    if (importWithRecords && validRecords.length > 0) {
+      // Also fetch existing patients for record linking
+      const { data: existingPatients } = await supabase
+        .from('patients')
+        .select('id, name, cpf')
+        .eq('clinic_id', selectedClinicId);
+      
+      existingPatients?.forEach(p => {
+        if (p.cpf) {
+          importedPatientsMap.set(p.cpf.replace(/\D/g, ''), p.id);
+        }
+        importedPatientsNameMap.set(p.name.toLowerCase().trim(), p.id);
+      });
+      
+      let notFoundRecords = 0;
+      
+      for (const row of validRecords) {
+        let patientId: string | undefined;
+        
+        if (row.data.cpf_paciente) {
+          const cleanCPF = row.data.cpf_paciente.replace(/\D/g, '');
+          patientId = importedPatientsMap.get(cleanCPF);
+        }
+        
+        if (!patientId && row.data.nome_paciente) {
+          patientId = importedPatientsNameMap.get(row.data.nome_paciente.toLowerCase().trim());
+        }
+        
+        if (!patientId) {
+          notFoundRecords++;
+          errors++;
+          processedItems++;
+          setCombinedProgress((processedItems / totalItems) * 100);
+          continue;
+        }
+        
+        try {
+          const { error } = await supabase.from('medical_records').insert({
+            clinic_id: selectedClinicId,
+            patient_id: patientId,
+            record_date: parseDate(row.data.data_registro) || new Date().toISOString().split('T')[0],
+            chief_complaint: row.data.queixa?.trim() || null,
+            diagnosis: row.data.diagnostico?.trim() || null,
+            treatment_plan: row.data.tratamento?.trim() || null,
+            prescription: row.data.prescricao?.trim() || null,
+            notes: row.data.observacoes?.trim() || null,
+          });
+          
+          if (error) {
+            errors++;
+          } else {
+            importedRecords++;
+          }
+        } catch (err) {
+          errors++;
+        }
+        
+        processedItems++;
+        setCombinedProgress((processedItems / totalItems) * 100);
+      }
+      
+      if (notFoundRecords > 0) {
+        toast.warning(`${notFoundRecords} prontuários ignorados - pacientes não encontrados`);
+      }
+    }
+    
+    setImportingCombined(false);
+    setPatientRows([]);
+    setRecordRows([]);
+    setDetectedSheets([]);
+    
+    const resultMessage = importWithRecords 
+      ? `${importedPatients} pacientes e ${importedRecords} prontuários importados`
+      : `${importedPatients} pacientes importados`;
+    
+    if (errors > 0) {
+      toast.warning(`Importação concluída: ${resultMessage}. ${errors} erros.`);
+    } else {
+      toast.success(`${resultMessage} com sucesso!`);
+    }
+  };
 
   const importPatients = async () => {
     if (!selectedClinicId) {
@@ -303,17 +510,250 @@ export default function DataImportPage() {
       </Card>
 
       {/* Import Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "patients" | "records")}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "combined" | "patients" | "records")}>
         <TabsList>
+          <TabsTrigger value="combined" className="gap-2">
+            <Sparkles className="h-4 w-4" />
+            Importação Inteligente
+          </TabsTrigger>
           <TabsTrigger value="patients" className="gap-2">
             <Users className="h-4 w-4" />
-            Pacientes
+            Só Pacientes
           </TabsTrigger>
           <TabsTrigger value="records" className="gap-2">
             <FileText className="h-4 w-4" />
-            Prontuários
+            Só Prontuários
           </TabsTrigger>
         </TabsList>
+
+        {/* Combined Import Tab */}
+        <TabsContent value="combined" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Layers className="h-5 w-5" />
+                Importação com Detecção Automática
+              </CardTitle>
+              <CardDescription>
+                Faça upload de uma planilha com múltiplas abas - o sistema detecta automaticamente pacientes e prontuários
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => downloadTemplate('combined')}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Baixar Modelo Completo
+                </Button>
+                
+                <label>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={handleCombinedFile}
+                    className="hidden"
+                    disabled={!selectedClinicId}
+                  />
+                  <Button
+                    variant="default"
+                    className="gap-2"
+                    disabled={!selectedClinicId}
+                    asChild
+                  >
+                    <span>
+                      <Upload className="h-4 w-4" />
+                      Carregar Planilha
+                    </span>
+                  </Button>
+                </label>
+              </div>
+
+              {!selectedClinicId && (
+                <p className="text-sm text-warning">
+                  Selecione uma clínica antes de carregar o arquivo
+                </p>
+              )}
+
+              {/* Detected Sheets Info */}
+              {detectedSheets.length > 0 && (
+                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                  <h4 className="font-medium text-sm flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Abas Detectadas
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {detectedSheets.map((sheet) => (
+                      <Badge
+                        key={sheet.name}
+                        variant={sheet.type === 'patients' ? 'default' : sheet.type === 'records' ? 'secondary' : 'outline'}
+                      >
+                        {sheet.name}: {sheet.rowCount} linhas
+                        {sheet.type === 'patients' && ' (Pacientes)'}
+                        {sheet.type === 'records' && ' (Prontuários)'}
+                        {sheet.type === 'unknown' && ' (Não reconhecido)'}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Summary and Import Options */}
+              {(patientRows.length > 0 || recordRows.length > 0) && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-4 flex-wrap">
+                      {patientRows.length > 0 && (
+                        <Badge variant="default" className="bg-success">
+                          <Users className="h-3 w-3 mr-1" />
+                          {validPatientCount} pacientes válidos
+                        </Badge>
+                      )}
+                      {recordRows.length > 0 && (
+                        <Badge variant="secondary">
+                          <FileText className="h-3 w-3 mr-1" />
+                          {validRecordCount} prontuários válidos
+                        </Badge>
+                      )}
+                    </div>
+
+                    {recordRows.length > 0 && patientRows.length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          id="import-records"
+                          checked={importWithRecords}
+                          onCheckedChange={setImportWithRecords}
+                        />
+                        <Label htmlFor="import-records" className="text-sm">
+                          Importar prontuários junto
+                        </Label>
+                      </div>
+                    )}
+                  </div>
+
+                  {importingCombined && (
+                    <Progress value={combinedProgress} />
+                  )}
+
+                  <Button
+                    onClick={importCombined}
+                    disabled={importingCombined || (validPatientCount === 0 && validRecordCount === 0)}
+                    className="gap-2"
+                  >
+                    {importingCombined ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    Importar Tudo
+                  </Button>
+
+                  {/* Preview Tables */}
+                  {patientRows.length > 0 && (
+                    <div className="space-y-2">
+                      <h5 className="text-sm font-medium flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Preview Pacientes ({patientRows.length})
+                      </h5>
+                      <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-12">#</TableHead>
+                              <TableHead>Nome</TableHead>
+                              <TableHead>Telefone</TableHead>
+                              <TableHead>CPF</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {patientRows.slice(0, 10).map((row) => (
+                              <TableRow key={row.rowNumber} className={!row.validation.isValid ? 'bg-destructive/5' : ''}>
+                                <TableCell className="text-muted-foreground text-xs">{row.rowNumber}</TableCell>
+                                <TableCell className="font-medium text-sm">{row.data.nome}</TableCell>
+                                <TableCell className="text-sm">{row.data.telefone}</TableCell>
+                                <TableCell className="text-sm">{row.data.cpf || '-'}</TableCell>
+                                <TableCell>
+                                  {row.validation.isValid ? (
+                                    <CheckCircle2 className="h-4 w-4 text-success" />
+                                  ) : (
+                                    <AlertCircle className="h-4 w-4 text-destructive" />
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      {patientRows.length > 10 && (
+                        <p className="text-xs text-muted-foreground">
+                          +{patientRows.length - 10} linhas adicionais
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {recordRows.length > 0 && (
+                    <div className="space-y-2">
+                      <h5 className="text-sm font-medium flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Preview Prontuários ({recordRows.length})
+                      </h5>
+                      <div className="border rounded-lg overflow-hidden max-h-48 overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-12">#</TableHead>
+                              <TableHead>Paciente</TableHead>
+                              <TableHead>Data</TableHead>
+                              <TableHead>Queixa</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {recordRows.slice(0, 10).map((row) => (
+                              <TableRow key={row.rowNumber} className={!row.validation.isValid ? 'bg-destructive/5' : ''}>
+                                <TableCell className="text-muted-foreground text-xs">{row.rowNumber}</TableCell>
+                                <TableCell className="font-medium text-sm">{row.data.nome_paciente || row.data.cpf_paciente || '-'}</TableCell>
+                                <TableCell className="text-sm">{row.data.data_registro}</TableCell>
+                                <TableCell className="text-sm max-w-[150px] truncate">{row.data.queixa || '-'}</TableCell>
+                                <TableCell>
+                                  {row.validation.isValid ? (
+                                    <CheckCircle2 className="h-4 w-4 text-success" />
+                                  ) : (
+                                    <AlertCircle className="h-4 w-4 text-destructive" />
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                      {recordRows.length > 10 && (
+                        <p className="text-xs text-muted-foreground">
+                          +{recordRows.length - 10} linhas adicionais
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="bg-muted/50 rounded-lg p-4">
+                <h4 className="font-medium text-sm mb-2">Como funciona:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <strong>Detecção automática:</strong> O sistema identifica abas de pacientes e prontuários pelas colunas</li>
+                  <li>• <strong>Importação sequencial:</strong> Pacientes são importados primeiro, depois os prontuários são vinculados</li>
+                  <li>• <strong>Vinculação inteligente:</strong> Prontuários são ligados aos pacientes por CPF ou nome</li>
+                  <li>• <strong>Colunas de pacientes:</strong> nome, telefone, cpf, email, data_nascimento, endereco</li>
+                  <li>• <strong>Colunas de prontuários:</strong> cpf_paciente ou nome_paciente, data_registro, queixa, diagnostico, tratamento</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="patients" className="space-y-4">
           <Card>

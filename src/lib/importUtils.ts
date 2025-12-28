@@ -185,7 +185,67 @@ export function validateMedicalRecordRow(row: MedicalRecordImportRow): Validatio
   };
 }
 
-// Parse Excel/CSV file
+// Detected sheet types
+export type DetectedSheetType = 'patients' | 'records' | 'unknown';
+
+export interface DetectedSheet {
+  name: string;
+  type: DetectedSheetType;
+  columns: string[];
+  rowCount: number;
+}
+
+export interface MultiSheetParseResult {
+  sheets: DetectedSheet[];
+  patients: ImportRow<PatientImportRow>[];
+  records: ImportRow<MedicalRecordImportRow>[];
+}
+
+// Detect sheet type based on columns
+function detectSheetType(columns: string[]): DetectedSheetType {
+  const lowerColumns = columns.map(c => String(c).toLowerCase().trim());
+  
+  // Patient indicators
+  const patientIndicators = ['nome', 'telefone', 'celular', 'cpf', 'nascimento', 'data_nascimento', 'email'];
+  const patientMatches = patientIndicators.filter(ind => 
+    lowerColumns.some(col => col.includes(ind))
+  ).length;
+  
+  // Medical record indicators
+  const recordIndicators = ['queixa', 'diagnostico', 'diagnóstico', 'tratamento', 'prescricao', 'prescrição', 
+    'data_registro', 'evolucao', 'evolução', 'prontuario', 'prontuário', 'cpf_paciente', 'nome_paciente'];
+  const recordMatches = recordIndicators.filter(ind => 
+    lowerColumns.some(col => col.includes(ind))
+  ).length;
+  
+  // If has specific record columns, it's records
+  if (recordMatches >= 2) return 'records';
+  // If has patient columns but no record-specific ones
+  if (patientMatches >= 2 && recordMatches < 2) return 'patients';
+  
+  return 'unknown';
+}
+
+// Parse single sheet
+function parseSheet<T>(
+  worksheet: XLSX.WorkSheet,
+  validateRow: (row: T) => ValidationResult,
+  mapRow: (row: Record<string, unknown>) => T
+): ImportRow<T>[] {
+  const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+  
+  return jsonData.map((row, index) => {
+    const mappedData = mapRow(row);
+    const validation = validateRow(mappedData);
+    return {
+      rowNumber: index + 2,
+      data: mappedData,
+      validation,
+    };
+  });
+}
+
+// Parse Excel/CSV file (single sheet - legacy)
 export function parseSpreadsheet<T>(
   file: ArrayBuffer,
   validateRow: (row: T) => ValidationResult,
@@ -194,17 +254,83 @@ export function parseSpreadsheet<T>(
   const workbook = XLSX.read(file, { type: 'array' });
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
-  const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+  return parseSheet(worksheet, validateRow, mapRow);
+}
+
+// Parse multi-sheet Excel file with auto-detection
+export function parseMultiSheetSpreadsheet(file: ArrayBuffer): MultiSheetParseResult {
+  const workbook = XLSX.read(file, { type: 'array' });
   
-  return jsonData.map((row, index) => {
-    const mappedData = mapRow(row);
-    const validation = validateRow(mappedData);
-    return {
-      rowNumber: index + 2, // +2 because of header row and 0-indexing
-      data: mappedData,
-      validation,
-    };
-  });
+  const sheets: DetectedSheet[] = [];
+  let patients: ImportRow<PatientImportRow>[] = [];
+  let records: ImportRow<MedicalRecordImportRow>[] = [];
+  
+  for (const sheetName of workbook.SheetNames) {
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet) as Record<string, unknown>[];
+    
+    if (jsonData.length === 0) continue;
+    
+    // Get columns from first row
+    const columns = Object.keys(jsonData[0]);
+    const sheetType = detectSheetType(columns);
+    
+    sheets.push({
+      name: sheetName,
+      type: sheetType,
+      columns,
+      rowCount: jsonData.length,
+    });
+    
+    // Parse based on detected type
+    if (sheetType === 'patients') {
+      const parsed = parseSheet(worksheet, validatePatientRow, mapPatientRow);
+      patients = [...patients, ...parsed];
+    } else if (sheetType === 'records') {
+      const parsed = parseSheet(worksheet, validateMedicalRecordRow, mapMedicalRecordRow);
+      records = [...records, ...parsed];
+    }
+  }
+  
+  return { sheets, patients, records };
+}
+
+// Generate combined template with both sheets
+export function generateCombinedTemplate(): ArrayBuffer {
+  const wb = XLSX.utils.book_new();
+  
+  // Patients sheet
+  const patientsData = [
+    {
+      nome: 'João Silva',
+      telefone: '71999999999',
+      email: 'joao@email.com',
+      cpf: '000.000.000-00',
+      data_nascimento: '1990-01-15',
+      endereco: 'Rua Exemplo, 123',
+      observacoes: 'Paciente VIP',
+    },
+  ];
+  const wsPatients = XLSX.utils.json_to_sheet(patientsData);
+  XLSX.utils.book_append_sheet(wb, wsPatients, 'Pacientes');
+  
+  // Medical records sheet
+  const recordsData = [
+    {
+      cpf_paciente: '000.000.000-00',
+      nome_paciente: 'João Silva',
+      data_registro: '2024-01-15',
+      queixa: 'Dor de cabeça persistente',
+      diagnostico: 'Cefaleia tensional',
+      tratamento: 'Repouso e hidratação',
+      prescricao: 'Dipirona 500mg 8/8h por 3 dias',
+      observacoes: 'Retorno em 15 dias',
+    },
+  ];
+  const wsRecords = XLSX.utils.json_to_sheet(recordsData);
+  XLSX.utils.book_append_sheet(wb, wsRecords, 'Prontuarios');
+  
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
 }
 
 // Map raw row to PatientImportRow
@@ -274,13 +400,26 @@ export function generateMedicalRecordTemplate(): ArrayBuffer {
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
 }
 
-export function downloadTemplate(type: 'patients' | 'records') {
-  const buffer = type === 'patients' ? generatePatientTemplate() : generateMedicalRecordTemplate();
+export function downloadTemplate(type: 'patients' | 'records' | 'combined') {
+  let buffer: ArrayBuffer;
+  let filename: string;
+  
+  if (type === 'combined') {
+    buffer = generateCombinedTemplate();
+    filename = 'modelo_importacao_completa.xlsx';
+  } else if (type === 'patients') {
+    buffer = generatePatientTemplate();
+    filename = 'modelo_pacientes.xlsx';
+  } else {
+    buffer = generateMedicalRecordTemplate();
+    filename = 'modelo_prontuarios.xlsx';
+  }
+  
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = type === 'patients' ? 'modelo_pacientes.xlsx' : 'modelo_prontuarios.xlsx';
+  a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
 }
