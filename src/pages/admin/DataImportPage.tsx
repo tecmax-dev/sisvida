@@ -252,7 +252,7 @@ export default function DataImportPage() {
         importedPatientsNameMap.set(p.name.toLowerCase().trim(), p.id);
       });
       
-      let notFoundRecords = 0;
+    let autoCreatedPatients = 0;
       
       for (const row of validRecords) {
         let patientId: string | undefined;
@@ -266,8 +266,53 @@ export default function DataImportPage() {
           patientId = importedPatientsNameMap.get(row.data.nome_paciente.toLowerCase().trim());
         }
         
+        // Auto-create patient if not found
+        if (!patientId && row.data.nome_paciente) {
+          try {
+            const formattedCpf = row.data.cpf_paciente ? formatCPF(row.data.cpf_paciente) : undefined;
+            const newPatientData: { clinic_id: string; name: string; phone: string; cpf?: string } = {
+              clinic_id: selectedClinicId,
+              name: row.data.nome_paciente.trim(),
+              phone: '',
+            };
+            if (formattedCpf) {
+              newPatientData.cpf = formattedCpf;
+            }
+            
+            const { data: newPatient, error: createError } = await supabase
+              .from('patients')
+              .insert([newPatientData])
+              .select('id')
+              .single();
+            
+            if (!createError && newPatient) {
+              patientId = newPatient.id;
+              autoCreatedPatients++;
+              
+              // Add to maps for future records
+              if (newPatientData.cpf) {
+                importedPatientsMap.set(newPatientData.cpf.replace(/\D/g, ''), newPatient.id);
+              }
+              importedPatientsNameMap.set(row.data.nome_paciente.toLowerCase().trim(), newPatient.id);
+            } else if (createError?.message.includes('CPF_DUPLICADO')) {
+              // Try to get existing patient
+              const { data: existingPatient } = await supabase
+                .from('patients')
+                .select('id')
+                .eq('clinic_id', selectedClinicId)
+                .eq('cpf', newPatientData.cpf)
+                .single();
+              
+              if (existingPatient) {
+                patientId = existingPatient.id;
+              }
+            }
+          } catch (err) {
+            console.error('Error creating patient:', err);
+          }
+        }
+        
         if (!patientId) {
-          notFoundRecords++;
           errors++;
           processedItems++;
           setCombinedProgress((processedItems / totalItems) * 100);
@@ -299,8 +344,8 @@ export default function DataImportPage() {
         setCombinedProgress((processedItems / totalItems) * 100);
       }
       
-      if (notFoundRecords > 0) {
-        toast.warning(`${notFoundRecords} prontuários ignorados - pacientes não encontrados`);
+      if (autoCreatedPatients > 0) {
+        toast.info(`${autoCreatedPatients} pacientes criados automaticamente durante importação`);
       }
     }
     
@@ -409,7 +454,7 @@ export default function DataImportPage() {
     
     let imported = 0;
     let errors = 0;
-    let notFound = 0;
+    let autoCreatedPatients = 0;
     
     for (const row of validRows) {
       // Find patient by CPF or name
@@ -424,8 +469,53 @@ export default function DataImportPage() {
         patientId = patientsNameMap.get(row.data.nome_paciente.toLowerCase().trim());
       }
       
+      // Auto-create patient if not found
+      if (!patientId && row.data.nome_paciente) {
+        try {
+          const formattedCpf = row.data.cpf_paciente ? formatCPF(row.data.cpf_paciente) : undefined;
+          const newPatientData: { clinic_id: string; name: string; phone: string; cpf?: string } = {
+            clinic_id: selectedClinicId,
+            name: row.data.nome_paciente.trim(),
+            phone: '',
+          };
+          if (formattedCpf) {
+            newPatientData.cpf = formattedCpf;
+          }
+          
+          const { data: newPatient, error: createError } = await supabase
+            .from('patients')
+            .insert([newPatientData])
+            .select('id')
+            .single();
+          
+          if (!createError && newPatient) {
+            patientId = newPatient.id;
+            autoCreatedPatients++;
+            
+            // Add to maps for future records
+            if (newPatientData.cpf) {
+              patientsMap.set(newPatientData.cpf.replace(/\D/g, ''), newPatient.id);
+            }
+            patientsNameMap.set(row.data.nome_paciente.toLowerCase().trim(), newPatient.id);
+          } else if (createError?.message.includes('CPF_DUPLICADO')) {
+            // Try to get existing patient
+            const { data: existingPatient } = await supabase
+              .from('patients')
+              .select('id')
+              .eq('clinic_id', selectedClinicId)
+              .eq('cpf', newPatientData.cpf)
+              .single();
+            
+            if (existingPatient) {
+              patientId = existingPatient.id;
+            }
+          }
+        } catch (err) {
+          console.error('Error creating patient:', err);
+        }
+      }
+      
       if (!patientId) {
-        notFound++;
         errors++;
         continue;
       }
@@ -457,9 +547,11 @@ export default function DataImportPage() {
     setImportingRecords(false);
     setRecordRows([]);
     
-    if (notFound > 0) {
-      toast.warning(`${imported} prontuários importados. ${notFound} pacientes não encontrados.`);
-    } else if (errors > 0) {
+    if (autoCreatedPatients > 0) {
+      toast.info(`${autoCreatedPatients} pacientes criados automaticamente`);
+    }
+    
+    if (errors > 0) {
       toast.warning(`${imported} prontuários importados, ${errors} erros`);
     } else {
       toast.success(`${imported} prontuários importados com sucesso!`);
