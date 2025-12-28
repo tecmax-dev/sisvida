@@ -118,7 +118,8 @@ export function SendWelcomeDialog({
       const emailMap = new Map<string, string>();
       if (emailsData?.users) {
         emailsData.users.forEach((u: any) => {
-          emailMap.set(u.id, u.email);
+          // A edge function retorna user_id como identificador do auth
+          emailMap.set(u.user_id, u.email);
         });
       }
 
