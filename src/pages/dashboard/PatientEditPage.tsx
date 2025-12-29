@@ -16,6 +16,7 @@ import { PatientAnamnesisModal } from "@/components/patients/modals/PatientAnamn
 import { PatientPrescriptionModal } from "@/components/patients/modals/PatientPrescriptionModal";
 import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
+import { DependentsPanel } from "@/components/patients/DependentsPanel";
 
 interface InsurancePlan {
   id: string;
@@ -428,17 +429,30 @@ export default function PatientEditPage() {
 
       {/* Tab Content */}
       {activeTab === 'cadastro' && (
-        <div className="bg-card rounded-lg border p-6">
-          <form onSubmit={handleSubmit}>
-            <PatientFormFields
-              formData={formData}
-              setFormData={setFormData}
-              errors={errors}
-              insurancePlans={insurancePlans}
-              onCepLookup={handleCepLookup}
-              cepLoading={cepLoading}
-            />
-          </form>
+        <div className="space-y-6">
+          <div className="bg-card rounded-lg border p-6">
+            <form onSubmit={handleSubmit}>
+              <PatientFormFields
+                formData={formData}
+                setFormData={setFormData}
+                errors={errors}
+                insurancePlans={insurancePlans}
+                onCepLookup={handleCepLookup}
+                cepLoading={cepLoading}
+              />
+            </form>
+          </div>
+
+          {/* Painel de Dependentes */}
+          {id && currentClinic && (
+            <div className="bg-card rounded-lg border p-6">
+              <DependentsPanel
+                patientId={id}
+                clinicId={currentClinic.id}
+                patientPhone={formData.phone}
+              />
+            </div>
+          )}
         </div>
       )}
 

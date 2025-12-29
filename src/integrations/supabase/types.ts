@@ -3380,6 +3380,69 @@ export type Database = {
           },
         ]
       }
+      patient_dependents: {
+        Row: {
+          birth_date: string | null
+          card_expires_at: string | null
+          card_number: string | null
+          clinic_id: string
+          cpf: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          patient_id: string
+          relationship: string | null
+          updated_at: string
+        }
+        Insert: {
+          birth_date?: string | null
+          card_expires_at?: string | null
+          card_number?: string | null
+          clinic_id: string
+          cpf?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          patient_id: string
+          relationship?: string | null
+          updated_at?: string
+        }
+        Update: {
+          birth_date?: string | null
+          card_expires_at?: string | null
+          card_number?: string | null
+          clinic_id?: string
+          cpf?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          patient_id?: string
+          relationship?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_dependents_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_dependents_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_folders: {
         Row: {
           clinic_id: string
