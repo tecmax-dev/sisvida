@@ -3,10 +3,29 @@ import * as XLSX from 'xlsx';
 export interface PatientImportRow {
   nome: string;
   telefone?: string;
+  telefone_fixo?: string;
   email?: string;
   cpf?: string;
+  rg?: string;
   data_nascimento?: string;
+  sexo?: string;
+  estado_civil?: string;
+  naturalidade?: string;
+  profissao?: string;
+  escolaridade?: string;
+  nome_mae?: string;
+  nome_pai?: string;
+  cep?: string;
+  rua?: string;
+  numero?: string;
+  complemento?: string;
+  bairro?: string;
+  cidade?: string;
+  estado?: string;
   endereco?: string;
+  convenio?: string;
+  tipo_sanguineo?: string;
+  indicacao?: string;
   observacoes?: string;
 }
 
@@ -685,10 +704,27 @@ export function generateCombinedTemplate(): ArrayBuffer {
     {
       nome: 'João Silva',
       telefone: '71999999999',
+      telefone_fixo: '7133334444',
       email: 'joao@email.com',
       cpf: '000.000.000-00',
+      rg: '1234567890',
       data_nascimento: '1990-01-15',
-      endereco: 'Rua Exemplo, 123',
+      sexo: 'Masculino',
+      estado_civil: 'Casado',
+      naturalidade: 'Salvador - BA',
+      profissao: 'Engenheiro',
+      escolaridade: 'Superior Completo',
+      nome_mae: 'Maria Silva',
+      nome_pai: 'José Silva',
+      cep: '40000-000',
+      rua: 'Rua Exemplo',
+      numero: '123',
+      complemento: 'Apto 101',
+      bairro: 'Centro',
+      cidade: 'Salvador',
+      estado: 'BA',
+      convenio: 'Unimed',
+      indicacao: 'Google',
       observacoes: 'Paciente VIP',
     },
   ];
@@ -787,27 +823,29 @@ export function mapPatientRow(row: Record<string, unknown>): PatientImportRow {
       'cliente', 'Cliente', 'CLIENTE', 'client', 'Client'
     ]),
     telefone: getRowValue(row, [
-      // Portuguese
       'telefone', 'Telefone', 'TELEFONE',
       'telefones', 'Telefones', 'TELEFONES',
-      'telefone(s)', 'Telefone(s)', 'TELEFONE(S)',
       'telefone_1', 'Telefone 1', 'Telefone1', 'Tel 1', 'Tel1',
       'telefone_principal', 'Telefone Principal',
       'celular', 'Celular', 'CELULAR',
       'celulares', 'Celulares',
-      'celular(s)', 'Celular(s)',
       'celular_1', 'Celular 1', 'Celular1',
       'whatsapp', 'Whatsapp', 'WHATSAPP',
       'whats', 'Whats',
       'fone', 'Fone', 'FONE',
       'tel', 'Tel', 'TEL', 'telefone_contato', 'Telefone Contato',
-      // English
       'phone', 'Phone', 'PHONE',
       'mobile', 'Mobile', 'MOBILE',
       'cell', 'Cell',
-      // Other
       'zap', 'Zap', 'contato', 'Contato', 'contact', 'Contact',
     ]),
+    telefone_fixo: getRowValue(row, [
+      'telefone_fixo', 'Telefone Fixo', 'TELEFONE_FIXO',
+      'fixo', 'Fixo', 'FIXO', 'landline', 'Landline',
+      'residencial', 'Residencial', 'tel_fixo', 'Tel Fixo',
+      'telefone_residencial', 'Telefone Residencial',
+      'telefone_2', 'Telefone 2', 'Telefone2', 'Tel 2', 'Tel2',
+    ]) || undefined,
     email: getRowValue(row, [
       'email', 'Email', 'EMAIL', 'e-mail', 'E-mail', 'E-MAIL',
       'correio', 'Correio', 'mail', 'Mail'
@@ -816,6 +854,10 @@ export function mapPatientRow(row: Record<string, unknown>): PatientImportRow {
       'cpf', 'CPF', 'Cpf', 'documento', 'Documento', 'DOCUMENTO',
       'document', 'Document', 'tax_id', 'Tax ID'
     ]) || undefined,
+    rg: getRowValue(row, [
+      'rg', 'RG', 'Rg', 'identidade', 'Identidade', 'IDENTIDADE',
+      'documento_identidade', 'Documento Identidade'
+    ]) || undefined,
     data_nascimento: getRowValue(row, [
       'data_nascimento', 'Data de Nascimento', 'Data Nascimento', 'nascimento',
       'Nascimento', 'DATA_NASCIMENTO', 'datanascimento', 'DataNascimento',
@@ -823,11 +865,82 @@ export function mapPatientRow(row: Record<string, unknown>): PatientImportRow {
       'data_nasc', 'Data Nasc', 'dt_nascimento', 'Dt Nascimento',
       'aniversario', 'Aniversario', 'birthday', 'Birthday'
     ]) || undefined,
+    sexo: getRowValue(row, [
+      'sexo', 'Sexo', 'SEXO', 'genero', 'Genero', 'Gênero', 'gênero',
+      'gender', 'Gender', 'GENDER', 'sex', 'Sex'
+    ]) || undefined,
+    estado_civil: getRowValue(row, [
+      'estado_civil', 'Estado Civil', 'ESTADO_CIVIL', 'estadocivil',
+      'marital_status', 'Marital Status', 'situacao_conjugal'
+    ]) || undefined,
+    naturalidade: getRowValue(row, [
+      'naturalidade', 'Naturalidade', 'NATURALIDADE',
+      'birthplace', 'Birthplace', 'local_nascimento', 'Local Nascimento'
+    ]) || undefined,
+    profissao: getRowValue(row, [
+      'profissao', 'Profissão', 'Profissao', 'PROFISSAO',
+      'profession', 'Profession', 'ocupacao', 'Ocupação', 'Ocupacao',
+      'occupation', 'Occupation', 'trabalho', 'Trabalho'
+    ]) || undefined,
+    escolaridade: getRowValue(row, [
+      'escolaridade', 'Escolaridade', 'ESCOLARIDADE',
+      'education', 'Education', 'grau_instrucao', 'Grau Instrução'
+    ]) || undefined,
+    nome_mae: getRowValue(row, [
+      'nome_mae', 'Nome Mãe', 'Nome Mae', 'NOME_MAE', 'mae', 'Mãe', 'Mae',
+      'mother_name', 'Mother Name', 'nome_da_mae', 'Nome da Mãe'
+    ]) || undefined,
+    nome_pai: getRowValue(row, [
+      'nome_pai', 'Nome Pai', 'NOME_PAI', 'pai', 'Pai',
+      'father_name', 'Father Name', 'nome_do_pai', 'Nome do Pai'
+    ]) || undefined,
+    cep: getRowValue(row, [
+      'cep', 'CEP', 'Cep', 'codigo_postal', 'Código Postal',
+      'zip', 'ZIP', 'zip_code', 'Zip Code', 'postal_code'
+    ]) || undefined,
+    rua: getRowValue(row, [
+      'rua', 'Rua', 'RUA', 'logradouro', 'Logradouro', 'LOGRADOURO',
+      'street', 'Street', 'STREET', 'endereco_rua', 'Endereço Rua'
+    ]) || undefined,
+    numero: getRowValue(row, [
+      'numero', 'Numero', 'Número', 'NUMERO', 'num', 'Num', 'NUM',
+      'number', 'Number', 'NUMBER', 'numero_endereco', 'Número Endereço',
+      'n', 'nº', 'Nº'
+    ]) || undefined,
+    complemento: getRowValue(row, [
+      'complemento', 'Complemento', 'COMPLEMENTO',
+      'complement', 'Complement', 'apto', 'Apto', 'apartamento', 'Apartamento'
+    ]) || undefined,
+    bairro: getRowValue(row, [
+      'bairro', 'Bairro', 'BAIRRO',
+      'neighborhood', 'Neighborhood', 'district', 'District'
+    ]) || undefined,
+    cidade: getRowValue(row, [
+      'cidade', 'Cidade', 'CIDADE', 'municipio', 'Município', 'Municipio',
+      'city', 'City', 'CITY'
+    ]) || undefined,
+    estado: getRowValue(row, [
+      'estado', 'Estado', 'ESTADO', 'uf', 'UF', 'Uf',
+      'state', 'State', 'STATE'
+    ]) || undefined,
     endereco: getRowValue(row, [
       'endereco', 'Endereco', 'ENDERECO', 'endereço', 'Endereço',
-      'endereco_completo', 'Endereço Completo', 'logradouro', 'Logradouro',
-      'address', 'Address', 'ADDRESS', 'full_address', 'Full Address',
-      'rua', 'Rua', 'street', 'Street'
+      'endereco_completo', 'Endereço Completo',
+      'address', 'Address', 'ADDRESS', 'full_address', 'Full Address'
+    ]) || undefined,
+    convenio: getRowValue(row, [
+      'convenio', 'Convênio', 'Convenio', 'CONVENIO',
+      'plano', 'Plano', 'PLANO', 'plano_saude', 'Plano de Saúde',
+      'insurance', 'Insurance', 'health_plan', 'Health Plan'
+    ]) || undefined,
+    tipo_sanguineo: getRowValue(row, [
+      'tipo_sanguineo', 'Tipo Sanguíneo', 'Tipo Sanguineo', 'TIPO_SANGUINEO',
+      'sangue', 'Sangue', 'blood_type', 'Blood Type', 'grupo_sanguineo'
+    ]) || undefined,
+    indicacao: getRowValue(row, [
+      'indicacao', 'Indicação', 'Indicacao', 'INDICACAO',
+      'referral', 'Referral', 'como_conheceu', 'Como Conheceu',
+      'origem', 'Origem', 'source', 'Source'
     ]) || undefined,
     observacoes: getRowValue(row, [
       'observacoes', 'Observacoes', 'OBSERVACOES', 'observações', 'Observações',
@@ -1041,10 +1154,27 @@ export function generatePatientTemplate(): ArrayBuffer {
     {
       nome: 'João Silva',
       telefone: '71999999999',
+      telefone_fixo: '7133334444',
       email: 'joao@email.com',
       cpf: '000.000.000-00',
+      rg: '1234567890',
       data_nascimento: '1990-01-15',
-      endereco: 'Rua Exemplo, 123',
+      sexo: 'Masculino',
+      estado_civil: 'Casado',
+      naturalidade: 'Salvador - BA',
+      profissao: 'Engenheiro',
+      escolaridade: 'Superior Completo',
+      nome_mae: 'Maria Silva',
+      nome_pai: 'José Silva',
+      cep: '40000-000',
+      rua: 'Rua Exemplo',
+      numero: '123',
+      complemento: 'Apto 101',
+      bairro: 'Centro',
+      cidade: 'Salvador',
+      estado: 'BA',
+      convenio: 'Unimed',
+      indicacao: 'Google',
       observacoes: 'Paciente VIP',
     },
   ];
