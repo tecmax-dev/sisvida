@@ -45,6 +45,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -67,6 +68,7 @@ interface Template {
 
 export default function AnamneseTemplatesPage() {
   const { currentClinic, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const { toast } = useToast();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -473,8 +475,14 @@ export default function AnamneseTemplatesPage() {
     </Tabs>
   );
 
+  const canView = hasPermission("view_anamnesis_templates") || hasPermission("manage_anamnesis_templates");
+  const canEdit = hasPermission("edit_anamnesis_templates") || hasPermission("manage_anamnesis_templates");
+  const canDelete = hasPermission("delete_anamnesis_templates") || hasPermission("manage_anamnesis_templates");
+  const canSendWhatsApp = hasPermission("send_anamnesis_whatsapp") || hasPermission("manage_anamnesis_templates");
+  const canCreate = hasPermission("manage_anamnesis_templates");
+
   return (
-    <RoleGuard permission="manage_anamnesis_templates">
+    <RoleGuard permission="view_anamnesis_templates">
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -483,10 +491,12 @@ export default function AnamneseTemplatesPage() {
             Crie e gerencie formulários personalizados
           </p>
         </div>
-        <Button variant="hero" onClick={handleOpenCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Template
-        </Button>
+        {canCreate && (
+          <Button variant="hero" onClick={handleOpenCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Template
+          </Button>
+        )}
       </div>
 
       {/* Search */}
@@ -550,21 +560,27 @@ export default function AnamneseTemplatesPage() {
                         <Eye className="h-4 w-4 mr-2" />
                         Pré-visualizar
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleOpenEdit(template)}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDuplicate(template)}>
-                        <Copy className="h-4 w-4 mr-2" />
-                        Duplicar
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleOpenDelete(template)}
-                        className="text-destructive focus:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Excluir
-                      </DropdownMenuItem>
+                      {canEdit && (
+                        <DropdownMenuItem onClick={() => handleOpenEdit(template)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </DropdownMenuItem>
+                      )}
+                      {canCreate && (
+                        <DropdownMenuItem onClick={() => handleDuplicate(template)}>
+                          <Copy className="h-4 w-4 mr-2" />
+                          Duplicar
+                        </DropdownMenuItem>
+                      )}
+                      {canDelete && (
+                        <DropdownMenuItem
+                          onClick={() => handleOpenDelete(template)}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>

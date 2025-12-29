@@ -35,6 +35,10 @@ export type Permission =
   | "view_anamnesis"
   | "manage_anamnesis"
   | "manage_anamnesis_templates"
+  | "view_anamnesis_templates"
+  | "edit_anamnesis_templates"
+  | "delete_anamnesis_templates"
+  | "send_anamnesis_whatsapp"
   | "anamnesis_forms"
   // Prescriptions
   | "prescriptions"
