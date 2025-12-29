@@ -120,9 +120,10 @@ interface AppointmentRecord {
 }
 
 interface AIExtractedIntent {
-  intent: 'schedule' | 'cancel' | 'reschedule' | 'list' | 'info' | 'help' | 'confirm' | 'deny' | 'select_option' | 'unknown';
+  intent: 'schedule' | 'cancel' | 'reschedule' | 'list' | 'info' | 'query_schedule' | 'help' | 'confirm' | 'deny' | 'select_option' | 'unknown';
   entities: {
     professional_name?: string;
+    specialty?: string;
     date?: string;
     time?: string;
     option_number?: number;
@@ -288,36 +289,47 @@ async function getAIIntent(
       contextInfo += `\nHorários disponíveis: ${availableTimes.map((t, i) => `${i + 1}. ${t.formatted}`).join(', ')}`;
     }
 
-    const systemPrompt = `Você é um assistente de agendamento médico via WhatsApp. Interprete a mensagem e extraia a intenção.
+    const systemPrompt = `Você é um assistente de agendamento médico via WhatsApp, inteligente e dinâmico. Interprete a mensagem e extraia a intenção.
 
 Estado atual: ${context}${contextInfo}
 
-Regras de interpretação:
+INTERPRETAÇÃO DE INTENÇÕES:
 - Número sozinho (1, 2, 3...) = select_option com option_number
 - "sim", "confirmo", "ok", "👍", "s" = confirm
 - "não", "nao", "n", "❌" = deny
 - Pedir para agendar/marcar = schedule
 - Pedir para cancelar/desmarcar = cancel  
 - Pedir para reagendar/remarcar = reschedule
-- Ver consultas = list
+- Ver consultas/agendamentos = list
 - CPF tem 11 dígitos
-- Se mencionar nome de profissional, extrair professional_name
+
+EXTRAÇÃO DE ENTIDADES:
+- Se mencionar nome de profissional (dr., dra., doutor, doutora, + nome), extrair professional_name
+- Se mencionar especialidade (dentista, médico, psicólogo, fisioterapeuta), extrair specialty
 - Se mencionar data (amanhã, segunda, dia 15), extrair date
 - Se mencionar horário (14h, duas da tarde), extrair time
 
-IMPORTANTE - Perguntas informativas (intent=info):
-- Perguntas sobre "como faço", "como funciona", "preciso de ajuda com", "o que é", "onde fica" = info
-- Perguntas sobre carteirinha, renovação, documentos, procedimentos = info
-- Para intent=info, SEMPRE forneça uma friendly_response útil respondendo a pergunta do usuário
+CONSULTAS SOBRE HORÁRIOS (intent=query_schedule):
+- "que dia dr. X atende?" → query_schedule + professional_name
+- "quais horários de dra. Y?" → query_schedule + professional_name
+- "quando o dentista atende?" → query_schedule + specialty:"dentista"
+- "horários disponíveis do dr. Z" → query_schedule + professional_name
+- "dias de atendimento" → query_schedule
 
-Exemplos de info:
-- "como atualizo minha carteirinha?" → info + friendly_response explicando que deve entrar em contato com a clínica
-- "a carteirinha venceu, o que faço?" → info + friendly_response sobre renovação
-- "como funciona o agendamento?" → info + friendly_response explicando o processo
-- "preciso de atestado" → info + friendly_response orientando
+PERGUNTAS INFORMATIVAS (intent=info):
+- "como faço para...", "como funciona", "o que é", "onde fica" = info
+- Perguntas sobre carteirinha, renovação, documentos = info
+- Para info, forneça friendly_response útil
+
+EXEMPLOS:
+- "quero marcar com dr. João amanhã" → schedule + professional_name:"João" + date:"amanhã"
+- "que dia o Dr. Alcides atende?" → query_schedule + professional_name:"Alcides"
+- "horários da dra. Daniela?" → query_schedule + professional_name:"Daniela"
+- "quando o dentista atende?" → query_schedule + specialty:"dentista"
+- "tem médico segunda?" → query_schedule + specialty:"médico" + date:"segunda"
 
 Retorne APENAS JSON:
-{"intent":"schedule|cancel|reschedule|list|info|help|confirm|deny|select_option|unknown","entities":{"professional_name":"...","date":"...","time":"...","option_number":N,"cpf":"..."},"confidence":0.0-1.0,"friendly_response":"resposta amigável e útil"}`;
+{"intent":"schedule|cancel|reschedule|list|info|query_schedule|help|confirm|deny|select_option|unknown","entities":{"professional_name":"...","specialty":"...","date":"...","time":"...","option_number":N,"cpf":"..."},"confidence":0.0-1.0,"friendly_response":"resposta amigável"}`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -359,11 +371,52 @@ Retorne APENAS JSON:
   }
 }
 
+// Format professional schedule for display
+function formatProfessionalSchedule(schedule: Record<string, { enabled: boolean; slots: Array<{ start: string; end: string }> }> | null): string {
+  if (!schedule) return 'Horários não configurados.';
+  
+  const dayNames: Record<string, string> = {
+    monday: 'Segunda',
+    tuesday: 'Terça',
+    wednesday: 'Quarta',
+    thursday: 'Quinta',
+    friday: 'Sexta',
+    saturday: 'Sábado',
+    sunday: 'Domingo'
+  };
+  
+  const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  const lines: string[] = [];
+  
+  for (const day of dayOrder) {
+    const dayConfig = schedule[day];
+    if (dayConfig?.enabled && dayConfig.slots?.length > 0) {
+      const slots = dayConfig.slots.map(s => `${s.start.slice(0,5)} às ${s.end.slice(0,5)}`).join(', ');
+      lines.push(`📅 *${dayNames[day]}*: ${slots}`);
+    }
+  }
+  
+  return lines.length > 0 ? lines.join('\n') : 'Sem horários configurados.';
+}
+
+// Find professionals by specialty
+function findProfessionalsBySpecialty(
+  specialty: string,
+  professionals: Array<{ id: string; name: string; specialty: string; schedule?: any }>
+): Array<{ id: string; name: string; specialty: string; schedule?: any }> {
+  const normalizedSearch = specialty.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  return professionals.filter(p => {
+    const normalizedSpecialty = p.specialty?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') || '';
+    return normalizedSpecialty.includes(normalizedSearch) || normalizedSearch.includes(normalizedSpecialty);
+  });
+}
+
 // Helper to find professional by name using fuzzy match
 function findProfessionalByName(
   name: string,
-  professionals: Array<{ id: string; name: string; specialty: string }>
-): { id: string; name: string; specialty: string } | null {
+  professionals: Array<{ id: string; name: string; specialty: string; schedule?: any }>
+): { id: string; name: string; specialty: string; schedule?: any } | null {
   if (!name || !professionals || professionals.length === 0) return null;
   
   const normalizedSearch = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
@@ -646,6 +699,73 @@ async function handleBookingFlow(
         '📅 Para *agendar*, *cancelar* ou *consultar* suas consultas, basta me informar seu CPF.';
       
       await sendWhatsAppMessage(config, phone, infoMsg);
+      return { handled: true, newState: session.state };
+    }
+
+    // Handle QUERY_SCHEDULE intent - respond with professional schedules without requiring CPF
+    if (aiResult.intent === 'query_schedule') {
+      console.log('[booking] AI detected query_schedule intent');
+      
+      // Fetch professionals with schedules
+      const { data: professionals } = await supabase
+        .from('professionals')
+        .select('id, name, schedule, professional_specialties(specialties(name))')
+        .eq('clinic_id', config.clinic_id)
+        .eq('is_active', true);
+      
+      if (!professionals || professionals.length === 0) {
+        await sendWhatsAppMessage(config, phone, '❌ Não encontramos profissionais disponíveis no momento.');
+        return { handled: true, newState: session.state };
+      }
+
+      // Format professionals with specialty
+      const formattedProfessionals = professionals.map((p: any) => ({
+        id: p.id as string,
+        name: p.name as string,
+        specialty: (p.professional_specialties as any)?.[0]?.specialties?.name || 'Especialidade não informada',
+        schedule: p.schedule
+      }));
+
+      let responseMsg = '';
+
+      // Check if looking for specific professional by name
+      if (aiResult.entities?.professional_name) {
+        const found = findProfessionalByName(aiResult.entities.professional_name, formattedProfessionals);
+        if (found) {
+          const scheduleText = formatProfessionalSchedule(found.schedule as any);
+          responseMsg = `📋 *Horários de ${found.name}*\n${found.specialty}\n\n${scheduleText}`;
+        } else {
+          responseMsg = `❌ Não encontrei um profissional com esse nome.\n\n*Profissionais disponíveis:*\n${formattedProfessionals.map((p: any, i: number) => `${i + 1}. ${p.name} - ${p.specialty}`).join('\n')}`;
+        }
+      }
+      // Check if looking by specialty
+      else if (aiResult.entities?.specialty) {
+        const found = findProfessionalsBySpecialty(aiResult.entities.specialty, formattedProfessionals);
+        if (found.length > 0) {
+          responseMsg = `📋 *Profissionais de ${aiResult.entities.specialty}:*\n\n`;
+          for (const prof of found) {
+            const scheduleText = formatProfessionalSchedule(prof.schedule as any);
+            responseMsg += `👨‍⚕️ *${prof.name}*\n${scheduleText}\n\n`;
+          }
+        } else {
+          responseMsg = `❌ Não encontrei profissionais dessa especialidade.\n\n*Profissionais disponíveis:*\n${formattedProfessionals.map((p: any, i: number) => `${i + 1}. ${p.name} - ${p.specialty}`).join('\n')}`;
+        }
+      }
+      // List all professionals
+      else {
+        responseMsg = `📋 *Nossos Profissionais e Horários:*\n\n`;
+        for (const prof of formattedProfessionals.slice(0, 5)) { // Limit to 5 to avoid too long message
+          const scheduleText = formatProfessionalSchedule(prof.schedule as any);
+          responseMsg += `👨‍⚕️ *${prof.name}* (${prof.specialty})\n${scheduleText}\n\n`;
+        }
+        if (formattedProfessionals.length > 5) {
+          responseMsg += `_...e mais ${formattedProfessionals.length - 5} profissional(is)._\n`;
+        }
+      }
+
+      responseMsg += '\n💡 Para *agendar* uma consulta, me informe seu CPF.';
+      
+      await sendWhatsAppMessage(config, phone, responseMsg);
       return { handled: true, newState: session.state };
     }
 
