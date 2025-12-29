@@ -1189,8 +1189,32 @@ async function handleConfirmAppointment(
   if (appointmentError) {
     console.error('[booking] Error creating appointment:', appointmentError);
     
+    // Check for CPF restriction limit error
+    if (appointmentError.message?.includes('LIMITE_AGENDAMENTO_CPF')) {
+      const limitMatch = appointmentError.message.match(/limite de (\d+) agendamento/i);
+      const limit = limitMatch ? limitMatch[1] : '1';
+      await sendWhatsAppMessage(config, phone, 
+        `❌ Você já atingiu o limite de *${limit} agendamento(s)* com este profissional neste mês.\n\nPor favor, escolha outro profissional ou aguarde o próximo mês.`
+      );
+      await updateSession(supabase, session.id, { state: 'SELECT_PROFESSIONAL' });
+      return { handled: true, newState: 'SELECT_PROFESSIONAL' };
+    }
+    
+    // Check for slot conflict
     if (appointmentError.code === '23505' || appointmentError.message?.includes('conflict')) {
       await sendWhatsAppMessage(config, phone, MESSAGES.slotTaken);
+      return { handled: true, newState: 'SELECT_TIME' };
+    }
+
+    // Check for holiday restriction
+    if (appointmentError.message?.includes('FERIADO')) {
+      await sendWhatsAppMessage(config, phone, `❌ Não é possível agendar nesta data pois é feriado.\n\nEscolha outra data.`);
+      return { handled: true, newState: 'SELECT_DATE' };
+    }
+
+    // Check for schedule validation error
+    if (appointmentError.message?.includes('HORARIO_INVALIDO')) {
+      await sendWhatsAppMessage(config, phone, `❌ Este horário não está disponível.\n\nEscolha outro horário.`);
       return { handled: true, newState: 'SELECT_TIME' };
     }
 
