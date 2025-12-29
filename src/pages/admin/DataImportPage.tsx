@@ -590,48 +590,57 @@ export default function DataImportPage() {
         existingProfessionals?.forEach(p => {
           professionalNameToId.set(p.name.toLowerCase().trim(), p.id);
         });
-        
-        // Find professionals that need to be created
-        const professionalsToCreate: Array<{ clinic_id: string; name: string; is_active: boolean }> = [];
-        for (const profNameLower of uniqueProfessionalNames) {
-          if (!professionalNameToId.has(profNameLower)) {
-            // Find original case name from records
-            const originalName = validRecords.find(
-              r => r.data.nome_profissional?.toLowerCase().trim() === profNameLower
-            )?.data.nome_profissional?.trim();
+      
+      // Find professionals that need to be created
+      const professionalsToCreate: Array<{ clinic_id: string; name: string; is_active: boolean; slug: string }> = [];
+      for (const profNameLower of uniqueProfessionalNames) {
+        if (!professionalNameToId.has(profNameLower)) {
+          // Find original case name from records
+          const originalName = validRecords.find(
+            r => r.data.nome_profissional?.toLowerCase().trim() === profNameLower
+          )?.data.nome_profissional?.trim();
+          
+          if (originalName) {
+            // Generate slug from name
+            const slug = originalName
+              .toLowerCase()
+              .normalize('NFD')
+              .replace(/[\u0300-\u036f]/g, '')
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-|-$/g, '');
             
-            if (originalName) {
-              professionalsToCreate.push({
-                clinic_id: selectedClinicId,
-                name: originalName,
-                is_active: true,
-              });
-            }
-          }
-        }
-        
-        // Batch create professionals
-        if (professionalsToCreate.length > 0) {
-          try {
-            const { data: createdProfessionals, error } = await supabase
-              .from('professionals')
-              .insert(professionalsToCreate)
-              .select('id, name');
-            
-            if (!error && createdProfessionals) {
-              createdProfessionals.forEach(p => {
-                professionalNameToId.set(p.name.toLowerCase().trim(), p.id);
-              });
-              toast.info(`${createdProfessionals.length} profissionais criados automaticamente`);
-            } else if (error) {
-              console.error('[PROFESSIONAL CREATE ERROR]', error.message);
-            }
-          } catch (err) {
-            console.error('[PROFESSIONAL CREATE EXCEPTION]', err);
+            professionalsToCreate.push({
+              clinic_id: selectedClinicId,
+              name: originalName,
+              is_active: true,
+              slug,
+            });
           }
         }
       }
-      // ============ END PROFESSIONAL CREATION LOGIC ============
+      
+      // Batch create professionals
+      if (professionalsToCreate.length > 0) {
+        try {
+          const { data: createdProfessionals, error } = await supabase
+            .from('professionals')
+            .insert(professionalsToCreate)
+            .select('id, name');
+          
+          if (!error && createdProfessionals) {
+            createdProfessionals.forEach(p => {
+              professionalNameToId.set(p.name.toLowerCase().trim(), p.id);
+            });
+            toast.info(`${createdProfessionals.length} profissionais criados automaticamente`);
+          } else if (error) {
+            console.error('[PROFESSIONAL CREATE ERROR]', error.message);
+          }
+        } catch (err) {
+          console.error('[PROFESSIONAL CREATE EXCEPTION]', err);
+        }
+      }
+    }
+    // ============ END PROFESSIONAL CREATION LOGIC ============
       
       let autoCreatedPatients = 0;
       let skippedAmbiguous = 0;
@@ -1089,47 +1098,56 @@ export default function DataImportPage() {
         professionalNameToId.set(p.name.toLowerCase().trim(), p.id);
       });
       
-      // Find professionals that need to be created
-      const professionalsToCreate: Array<{ clinic_id: string; name: string; is_active: boolean }> = [];
-      for (const profNameLower of uniqueProfessionalNames) {
-        if (!professionalNameToId.has(profNameLower)) {
-          // Find original case name from records
-          const originalName = validRows.find(
-            r => r.data.nome_profissional?.toLowerCase().trim() === profNameLower
-          )?.data.nome_profissional?.trim();
+    // Find professionals that need to be created
+    const professionalsToCreate: Array<{ clinic_id: string; name: string; is_active: boolean; slug: string }> = [];
+    for (const profNameLower of uniqueProfessionalNames) {
+      if (!professionalNameToId.has(profNameLower)) {
+        // Find original case name from records
+        const originalName = validRows.find(
+          r => r.data.nome_profissional?.toLowerCase().trim() === profNameLower
+        )?.data.nome_profissional?.trim();
+        
+        if (originalName) {
+          // Generate slug from name
+          const slug = originalName
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
           
-          if (originalName) {
-            professionalsToCreate.push({
-              clinic_id: selectedClinicId,
-              name: originalName,
-              is_active: true,
-            });
-          }
-        }
-      }
-      
-      // Batch create professionals
-      if (professionalsToCreate.length > 0) {
-        try {
-          const { data: createdProfessionals, error } = await supabase
-            .from('professionals')
-            .insert(professionalsToCreate)
-            .select('id, name');
-          
-          if (!error && createdProfessionals) {
-            createdProfessionals.forEach(p => {
-              professionalNameToId.set(p.name.toLowerCase().trim(), p.id);
-            });
-            toast.info(`${createdProfessionals.length} profissionais criados automaticamente`);
-          } else if (error) {
-            console.error('[PROFESSIONAL CREATE ERROR]', error.message);
-          }
-        } catch (err) {
-          console.error('[PROFESSIONAL CREATE EXCEPTION]', err);
+          professionalsToCreate.push({
+            clinic_id: selectedClinicId,
+            name: originalName,
+            is_active: true,
+            slug,
+          });
         }
       }
     }
-    // ============ END PROFESSIONAL CREATION LOGIC ============
+    
+    // Batch create professionals
+    if (professionalsToCreate.length > 0) {
+      try {
+        const { data: createdProfessionals, error } = await supabase
+          .from('professionals')
+          .insert(professionalsToCreate)
+          .select('id, name');
+        
+        if (!error && createdProfessionals) {
+          createdProfessionals.forEach(p => {
+            professionalNameToId.set(p.name.toLowerCase().trim(), p.id);
+          });
+          toast.info(`${createdProfessionals.length} profissionais criados automaticamente`);
+        } else if (error) {
+          console.error('[PROFESSIONAL CREATE ERROR]', error.message);
+        }
+      } catch (err) {
+        console.error('[PROFESSIONAL CREATE EXCEPTION]', err);
+      }
+    }
+  }
+  // ============ END PROFESSIONAL CREATION LOGIC ============
     
     let imported = 0;
     let errors = 0;
