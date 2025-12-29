@@ -6222,8 +6222,10 @@ export type Database = {
         Row: {
           action_type: string | null
           available_dates: Json | null
+          available_dependents: Json | null
           available_professionals: Json | null
           available_times: Json | null
+          booking_for: string | null
           clinic_id: string
           created_at: string | null
           expires_at: string
@@ -6234,6 +6236,8 @@ export type Database = {
           phone: string
           selected_appointment_id: string | null
           selected_date: string | null
+          selected_dependent_id: string | null
+          selected_dependent_name: string | null
           selected_procedure_id: string | null
           selected_professional_id: string | null
           selected_professional_name: string | null
@@ -6244,8 +6248,10 @@ export type Database = {
         Insert: {
           action_type?: string | null
           available_dates?: Json | null
+          available_dependents?: Json | null
           available_professionals?: Json | null
           available_times?: Json | null
+          booking_for?: string | null
           clinic_id: string
           created_at?: string | null
           expires_at?: string
@@ -6256,6 +6262,8 @@ export type Database = {
           phone: string
           selected_appointment_id?: string | null
           selected_date?: string | null
+          selected_dependent_id?: string | null
+          selected_dependent_name?: string | null
           selected_procedure_id?: string | null
           selected_professional_id?: string | null
           selected_professional_name?: string | null
@@ -6266,8 +6274,10 @@ export type Database = {
         Update: {
           action_type?: string | null
           available_dates?: Json | null
+          available_dependents?: Json | null
           available_professionals?: Json | null
           available_times?: Json | null
+          booking_for?: string | null
           clinic_id?: string
           created_at?: string | null
           expires_at?: string
@@ -6278,6 +6288,8 @@ export type Database = {
           phone?: string
           selected_appointment_id?: string | null
           selected_date?: string | null
+          selected_dependent_id?: string | null
+          selected_dependent_name?: string | null
           selected_procedure_id?: string | null
           selected_professional_id?: string | null
           selected_professional_name?: string | null
