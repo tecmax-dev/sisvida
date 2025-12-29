@@ -38,6 +38,7 @@ interface DependentsPanelProps {
   patientId: string;
   clinicId: string;
   patientPhone?: string;
+  autoOpenForm?: boolean;
 }
 
 const RELATIONSHIPS = [
@@ -60,13 +61,14 @@ const formatCPF = (value: string): string => {
     .substring(0, 14);
 };
 
-export function DependentsPanel({ patientId, clinicId, patientPhone }: DependentsPanelProps) {
+export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenForm = false }: DependentsPanelProps) {
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dependentToDelete, setDependentToDelete] = useState<Dependent | null>(null);
+  const [hasCheckedAutoOpen, setHasCheckedAutoOpen] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -90,6 +92,14 @@ export function DependentsPanel({ patientId, clinicId, patientPhone }: Dependent
 
       if (error) throw error;
       setDependents(data || []);
+      
+      // Auto-open form if requested and no dependents exist
+      if (autoOpenForm && !hasCheckedAutoOpen) {
+        setHasCheckedAutoOpen(true);
+        if (!data || data.length === 0) {
+          setIsAdding(true);
+        }
+      }
     } catch (error) {
       console.error("Error fetching dependents:", error);
       toast({
