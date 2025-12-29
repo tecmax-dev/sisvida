@@ -574,14 +574,37 @@ export default function PatientsPage() {
     // Email search (case-insensitive)
     const emailMatch = patient.email?.toLowerCase().includes(searchNormalized);
     
-    // Phone search: normalize both search term and stored phone
-    const phoneDigits = patient.phone?.replace(/\D/g, '') || '';
-    const phoneMatch = searchDigitsNormalized.length >= 3 && (
-      phoneDigits.includes(searchDigitsNormalized) ||
-      searchDigitsNormalized.includes(phoneDigits) ||
-      // Also try matching by suffix (last 8-9 digits) for partial matches
-      (searchDigitsNormalized.length >= 8 && phoneDigits.endsWith(searchDigitsNormalized.slice(-9)))
+    // Phone search: normalize both stored phone and search term
+    const phoneDigits = normalizePhone(patient.phone || '');
+
+    const phoneSearchVariants = Array.from(
+      new Set(
+        [searchDigitsNormalized, searchDigits].filter(Boolean).flatMap((d) => {
+          const digits = d.replace(/\D/g, '');
+          // If user typed something starting with 55, also try without 55 (covers DDI inputs and pasted values)
+          if (digits.startsWith('55') && digits.length >= 11) return [digits, digits.slice(2)];
+          return [digits];
+        })
+      )
     );
+
+    const phoneMatch =
+      phoneSearchVariants.some((variant) => {
+        if (variant.length < 3) return false;
+        if (!phoneDigits) return false;
+
+        // direct contains
+        if (phoneDigits.includes(variant)) return true;
+
+        // suffix match for partial inputs (e.g., without DDD)
+        if (variant.length >= 8) {
+          const last8 = variant.slice(-8);
+          const last9 = variant.length >= 9 ? variant.slice(-9) : '';
+          return phoneDigits.endsWith(last9 || last8) || phoneDigits.endsWith(last8);
+        }
+
+        return false;
+      });
     
     // CPF search: compare only digits
     const cpfDigits = patient.cpf?.replace(/\D/g, '') || '';
@@ -746,7 +769,7 @@ export default function PatientsPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por nome, email ou telefone..."
+              placeholder="Buscar por nome, email, CPF ou telefone (com/sem 55)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-9"
