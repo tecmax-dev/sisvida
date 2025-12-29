@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 interface ImportProgressCardProps {
   isImporting: boolean;
   progress: number;
-  importType: 'patients' | 'records' | 'combined' | 'contacts';
+  importType: 'patients' | 'records' | 'combined' | 'contacts' | 'dependents';
   totalItems?: number;
   importedCount?: number;
   errorsCount?: number;
@@ -47,6 +47,8 @@ export function ImportProgressCard({
         return { icon: Zap, label: 'Importação Combinada', color: 'text-primary' };
       case 'contacts':
         return { icon: Phone, label: 'Contatos', color: 'text-primary' };
+      case 'dependents':
+        return { icon: Users, label: 'Dependentes', color: 'text-primary' };
     }
   };
 
