@@ -10,6 +10,7 @@ import { PricingSection } from "@/components/landing/PricingSection";
 import { TestimonialsSection } from "@/components/landing/TestimonialsSection";
 import { FAQSection } from "@/components/landing/FAQSection";
 import { CTASection } from "@/components/landing/CTASection";
+import CarouselBannerSection from "@/components/landing/CarouselBannerSection";
 
 const Index = () => {
   return (
@@ -17,6 +18,7 @@ const Index = () => {
       <Header />
       <main className="flex-1">
         <HeroSection />
+        <CarouselBannerSection />
         <StatsSection />
         <HowItWorksSection />
         <SpecialtiesSection />

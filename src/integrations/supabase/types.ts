@@ -862,6 +862,57 @@ export type Database = {
           },
         ]
       }
+      carousel_banners: {
+        Row: {
+          background_color: string | null
+          button_link: string | null
+          button_text: string | null
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string
+          is_active: boolean
+          order_index: number
+          overlay_opacity: number | null
+          subtitle: string | null
+          text_color: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          background_color?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url: string
+          is_active?: boolean
+          order_index?: number
+          overlay_opacity?: number | null
+          subtitle?: string | null
+          text_color?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          background_color?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          order_index?: number
+          overlay_opacity?: number | null
+          subtitle?: string | null
+          text_color?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cash_registers: {
         Row: {
           account_number: string | null
