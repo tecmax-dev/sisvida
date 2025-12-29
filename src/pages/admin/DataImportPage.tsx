@@ -445,6 +445,72 @@ export default function DataImportPage() {
         }
       }
       
+      // ============ PROFESSIONAL CREATION LOGIC ============
+      // Extract unique professional names from records
+      const uniqueProfessionalNames = new Set<string>();
+      for (const row of validRecords) {
+        const profName = row.data.nome_profissional?.trim();
+        if (profName) {
+          uniqueProfessionalNames.add(profName.toLowerCase());
+        }
+      }
+      
+      // Build map of professional name -> id
+      const professionalNameToId = new Map<string, string>();
+      
+      if (uniqueProfessionalNames.size > 0) {
+        // Fetch existing professionals for this clinic
+        const { data: existingProfessionals } = await supabase
+          .from('professionals')
+          .select('id, name')
+          .eq('clinic_id', selectedClinicId);
+        
+        existingProfessionals?.forEach(p => {
+          professionalNameToId.set(p.name.toLowerCase().trim(), p.id);
+        });
+        
+        // Find professionals that need to be created
+        const professionalsToCreate: Array<{ clinic_id: string; name: string; is_active: boolean }> = [];
+        for (const profNameLower of uniqueProfessionalNames) {
+          if (!professionalNameToId.has(profNameLower)) {
+            // Find original case name from records
+            const originalName = validRecords.find(
+              r => r.data.nome_profissional?.toLowerCase().trim() === profNameLower
+            )?.data.nome_profissional?.trim();
+            
+            if (originalName) {
+              professionalsToCreate.push({
+                clinic_id: selectedClinicId,
+                name: originalName,
+                is_active: true,
+              });
+            }
+          }
+        }
+        
+        // Batch create professionals
+        if (professionalsToCreate.length > 0) {
+          try {
+            const { data: createdProfessionals, error } = await supabase
+              .from('professionals')
+              .insert(professionalsToCreate)
+              .select('id, name');
+            
+            if (!error && createdProfessionals) {
+              createdProfessionals.forEach(p => {
+                professionalNameToId.set(p.name.toLowerCase().trim(), p.id);
+              });
+              toast.info(`${createdProfessionals.length} profissionais criados automaticamente`);
+            } else if (error) {
+              console.error('[PROFESSIONAL CREATE ERROR]', error.message);
+            }
+          } catch (err) {
+            console.error('[PROFESSIONAL CREATE EXCEPTION]', err);
+          }
+        }
+      }
+      // ============ END PROFESSIONAL CREATION LOGIC ============
+      
       let autoCreatedPatients = 0;
       let skippedAmbiguous = 0;
       
@@ -452,6 +518,7 @@ export default function DataImportPage() {
       const recordsToInsert: Array<{
         clinic_id: string;
         patient_id: string;
+        professional_id?: string | null;
         record_date: string;
         chief_complaint: string | null;
         diagnosis: string | null;
@@ -508,9 +575,14 @@ export default function DataImportPage() {
           }
 
           // Patient found, add record directly
+          // Get professional_id if professional name is provided
+          const profNameLower = row.data.nome_profissional?.toLowerCase().trim();
+          const professionalId = profNameLower ? professionalNameToId.get(profNameLower) : undefined;
+          
           recordsToInsert.push({
             clinic_id: selectedClinicId,
             patient_id: patientId,
+            professional_id: professionalId || null,
             record_date: parsedRecordDate,
             chief_complaint: row.data.queixa?.trim() || null,
             diagnosis: row.data.diagnostico?.trim() || null,
@@ -614,9 +686,14 @@ export default function DataImportPage() {
               continue;
             }
 
+            // Get professional_id if professional name is provided
+            const profNameLower = row.data.nome_profissional?.toLowerCase().trim();
+            const professionalId = profNameLower ? professionalNameToId.get(profNameLower) : undefined;
+            
             recordsToInsert.push({
               clinic_id: selectedClinicId,
               patient_id: patientId,
+              professional_id: professionalId || null,
               record_date: parsedRecordDate,
               chief_complaint: row.data.queixa?.trim() || null,
               diagnosis: row.data.diagnostico?.trim() || null,
@@ -819,6 +896,72 @@ export default function DataImportPage() {
       nameToPatientIds.set(normalizedName, existingIds);
     });
     
+    // ============ PROFESSIONAL CREATION LOGIC ============
+    // Extract unique professional names from records
+    const uniqueProfessionalNames = new Set<string>();
+    for (const row of validRows) {
+      const profName = row.data.nome_profissional?.trim();
+      if (profName) {
+        uniqueProfessionalNames.add(profName.toLowerCase());
+      }
+    }
+    
+    // Build map of professional name -> id
+    const professionalNameToId = new Map<string, string>();
+    
+    if (uniqueProfessionalNames.size > 0) {
+      // Fetch existing professionals for this clinic
+      const { data: existingProfessionals } = await supabase
+        .from('professionals')
+        .select('id, name')
+        .eq('clinic_id', selectedClinicId);
+      
+      existingProfessionals?.forEach(p => {
+        professionalNameToId.set(p.name.toLowerCase().trim(), p.id);
+      });
+      
+      // Find professionals that need to be created
+      const professionalsToCreate: Array<{ clinic_id: string; name: string; is_active: boolean }> = [];
+      for (const profNameLower of uniqueProfessionalNames) {
+        if (!professionalNameToId.has(profNameLower)) {
+          // Find original case name from records
+          const originalName = validRows.find(
+            r => r.data.nome_profissional?.toLowerCase().trim() === profNameLower
+          )?.data.nome_profissional?.trim();
+          
+          if (originalName) {
+            professionalsToCreate.push({
+              clinic_id: selectedClinicId,
+              name: originalName,
+              is_active: true,
+            });
+          }
+        }
+      }
+      
+      // Batch create professionals
+      if (professionalsToCreate.length > 0) {
+        try {
+          const { data: createdProfessionals, error } = await supabase
+            .from('professionals')
+            .insert(professionalsToCreate)
+            .select('id, name');
+          
+          if (!error && createdProfessionals) {
+            createdProfessionals.forEach(p => {
+              professionalNameToId.set(p.name.toLowerCase().trim(), p.id);
+            });
+            toast.info(`${createdProfessionals.length} profissionais criados automaticamente`);
+          } else if (error) {
+            console.error('[PROFESSIONAL CREATE ERROR]', error.message);
+          }
+        } catch (err) {
+          console.error('[PROFESSIONAL CREATE EXCEPTION]', err);
+        }
+      }
+    }
+    // ============ END PROFESSIONAL CREATION LOGIC ============
+    
     let imported = 0;
     let errors = 0;
     let autoCreatedPatients = 0;
@@ -829,6 +972,7 @@ export default function DataImportPage() {
     const recordsToInsert: Array<{
       clinic_id: string;
       patient_id: string;
+      professional_id?: string | null;
       record_date: string;
       chief_complaint: string | null;
       diagnosis: string | null;
@@ -979,9 +1123,14 @@ export default function DataImportPage() {
             continue;
           }
 
+          // Get professional_id if professional name is provided
+          const profNameLower = row.data.nome_profissional?.toLowerCase().trim();
+          const professionalId = profNameLower ? professionalNameToId.get(profNameLower) : undefined;
+          
           recordsToInsert.push({
             clinic_id: selectedClinicId,
             patient_id: patientId,
+            professional_id: professionalId || null,
             record_date: parsedRecordDate,
             chief_complaint: row.data.queixa?.trim() || null,
             diagnosis: row.data.diagnostico?.trim() || null,
