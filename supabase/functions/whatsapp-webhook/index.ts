@@ -952,6 +952,15 @@ async function handleConfirmReschedule(
         );
         return { handled: true, newState: 'RESCHEDULE_SELECT_TIME' };
       }
+
+      // Check for expired patient card
+      if (error.message?.includes('CARTEIRINHA_VENCIDA')) {
+        await sendWhatsAppMessage(config, phone, 
+          `❌ Sua carteirinha digital está *vencida*.\n\nPor favor, entre em contato com a clínica para renovar sua carteirinha antes de reagendar.`
+        );
+        await updateSession(supabase, session.id, { state: 'FINISHED' });
+        return { handled: true, newState: 'FINISHED' };
+      }
       
       await sendWhatsAppMessage(config, phone, MESSAGES.error);
       return { handled: true, newState: 'MAIN_MENU' };
@@ -1254,6 +1263,15 @@ async function handleConfirmAppointment(
     if (appointmentError.message?.includes('HORARIO_INVALIDO')) {
       await sendWhatsAppMessage(config, phone, `❌ Este horário não está disponível.\n\nEscolha outro horário.`);
       return { handled: true, newState: 'SELECT_TIME' };
+    }
+
+    // Check for expired patient card
+    if (appointmentError.message?.includes('CARTEIRINHA_VENCIDA')) {
+      await sendWhatsAppMessage(config, phone, 
+        `❌ Sua carteirinha digital está *vencida*.\n\nPor favor, entre em contato com a clínica para renovar sua carteirinha antes de agendar.`
+      );
+      await updateSession(supabase, session.id, { state: 'FINISHED' });
+      return { handled: true, newState: 'FINISHED' };
     }
 
     await sendWhatsAppMessage(config, phone, MESSAGES.error);
