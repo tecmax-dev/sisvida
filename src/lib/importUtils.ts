@@ -14,6 +14,7 @@ export interface PatientImportRow {
 export interface MedicalRecordImportRow {
   cpf_paciente?: string;
   nome_paciente?: string;
+  nome_profissional?: string;
   data_registro: string;
   queixa?: string;
   diagnostico?: string;
@@ -699,6 +700,7 @@ export function generateCombinedTemplate(): ArrayBuffer {
     {
       cpf_paciente: '000.000.000-00',
       nome_paciente: 'João Silva',
+      profissional: 'Dr. Carlos Andrade',
       data_registro: '2024-01-15',
       queixa: 'Dor de cabeça persistente',
       diagnostico: 'Cefaleia tensional',
@@ -979,6 +981,17 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
     'date_added'
   ]);
 
+  // Extract professional name
+  const professionalName = getRowValue(row, [
+    'profissional', 'Profissional', 'PROFISSIONAL', 'professional', 'Professional',
+    'medico', 'Medico', 'MEDICO', 'médico', 'Médico', 'doctor', 'Doctor',
+    'physician', 'Physician', 'physician_name', 'Physician Name',
+    'responsavel', 'Responsavel', 'RESPONSAVEL', 'responsável', 'Responsável',
+    'atendente', 'Atendente', 'ATENDENTE',
+    'nome_profissional', 'Nome Profissional', 'nome_medico', 'Nome Médico',
+    'dr', 'Dr', 'dra', 'Dra', 'doutor', 'Doutor', 'doutora', 'Doutora'
+  ]) || undefined;
+
   return {
     cpf_paciente: getRowValue(row, [
       'cpf_paciente', 'CPF Paciente', 'cpf paciente', 'cpf do paciente',
@@ -986,6 +999,7 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
       'documento_paciente', 'Documento Paciente', 'documento', 'Documento'
     ]) || undefined,
     nome_paciente: patientName,
+    nome_profissional: professionalName,
     data_registro: recordDate,
     // Use iClinic data if available, otherwise fallback to standard columns
     queixa: iClinicData.queixa || getRowValue(row, [
@@ -1046,6 +1060,7 @@ export function generateMedicalRecordTemplate(): ArrayBuffer {
     {
       cpf_paciente: '000.000.000-00',
       nome_paciente: 'João Silva',
+      profissional: 'Dr. Carlos Andrade',
       data_registro: '2024-01-15',
       queixa: 'Dor de cabeça persistente',
       diagnostico: 'Cefaleia tensional',
