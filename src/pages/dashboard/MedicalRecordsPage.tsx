@@ -204,9 +204,10 @@ export default function MedicalRecordsPage() {
       `)
       .eq('clinic_id', currentClinic.id)
       .eq('patient_id', selectedPatient.id)
+      .order('record_date', { ascending: false })
       .order('created_at', { ascending: false });
 
-    setRecords(data as MedicalRecord[] || []);
+    setRecords((data as MedicalRecord[]) || []);
   };
 
   const fetchPatientDocuments = async () => {
@@ -530,7 +531,7 @@ export default function MedicalRecordsPage() {
                       <div className="flex items-center justify-between w-full pr-4">
                         <div className="text-left">
                           <p className="font-medium text-foreground">
-                            {format(new Date(record.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                            {format(parseISO(record.record_date), "dd/MM/yyyy", { locale: ptBR })}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {record.professional?.name || "Profissional não informado"}
