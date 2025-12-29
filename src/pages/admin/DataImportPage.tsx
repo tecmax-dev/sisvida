@@ -26,6 +26,7 @@ import {
   Check,
   ArrowDownToLine,
   StopCircle,
+  Phone,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import DataExportPanel from "@/components/admin/DataExportPanel";
@@ -33,6 +34,7 @@ import { ImportProgressCard } from "@/components/admin/ImportProgressCard";
 import {
   PatientImportRow,
   MedicalRecordImportRow,
+  ContactImportRow,
   ImportRow,
   DetectedSheet,
   parseSpreadsheet,
@@ -40,8 +42,10 @@ import {
   parseWithForcedType,
   validatePatientRow,
   validateMedicalRecordRow,
+  validateContactRow,
   mapPatientRow,
   mapMedicalRecordRow,
+  mapContactRow,
   downloadTemplate,
   formatPhone,
   formatCPF,
@@ -59,7 +63,7 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"export" | "combined" | "patients" | "records">("export");
+  const [activeTab, setActiveTab] = useState<"export" | "combined" | "patients" | "records" | "contacts">("export");
   
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
@@ -75,6 +79,11 @@ export default function DataImportPage() {
   const [recordRows, setRecordRows] = useState<ImportRow<MedicalRecordImportRow>[]>([]);
   const [importingRecords, setImportingRecords] = useState(false);
   const [recordProgress, setRecordProgress] = useState(0);
+  
+  // Contact import state
+  const [contactRows, setContactRows] = useState<ImportRow<ContactImportRow>[]>([]);
+  const [importingContacts, setImportingContacts] = useState(false);
+  const [contactProgress, setContactProgress] = useState(0);
   
   // Combined import state
   const [importingCombined, setImportingCombined] = useState(false);
@@ -232,7 +241,22 @@ export default function DataImportPage() {
     event.target.value = '';
   }, []);
 
-  // Combined import - patients first, then records
+  const handleContactsFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const buffer = await file.arrayBuffer();
+      const rows = parseSpreadsheet<ContactImportRow>(buffer, validateContactRow, mapContactRow);
+      setContactRows(rows);
+      toast.success(`${rows.length} linhas carregadas`);
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      toast.error('Erro ao ler arquivo. Verifique o formato.');
+    }
+    
+    event.target.value = '';
+  }, []);
   const importCombined = async () => {
     if (!selectedClinicId) {
       toast.error('Selecione uma clínica');
@@ -902,9 +926,125 @@ export default function DataImportPage() {
     }
   };
 
+  // Import contacts and link to existing patients
+  const importContacts = async () => {
+    if (!selectedClinicId) {
+      toast.error('Selecione uma clínica');
+      return;
+    }
+    
+    const validContacts = contactRows.filter(r => r.validation.isValid);
+    
+    if (validContacts.length === 0) {
+      toast.error('Nenhum contato válido para importar');
+      return;
+    }
+    
+    resetCancellation();
+    setImportingContacts(true);
+    setContactProgress(0);
+    
+    let updated = 0;
+    let notFound = 0;
+    let errors = 0;
+    
+    // Fetch all existing patients for this clinic
+    const { data: existingPatients } = await supabase
+      .from('patients')
+      .select('id, name, cpf')
+      .eq('clinic_id', selectedClinicId);
+    
+    // Build maps for patient lookup
+    const cpfToPatientId = new Map<string, string>();
+    const nameToPatientId = new Map<string, string>();
+    
+    existingPatients?.forEach(p => {
+      if (p.cpf) {
+        const cleanCPF = p.cpf.replace(/\D/g, '');
+        cpfToPatientId.set(cleanCPF, p.id);
+      }
+      nameToPatientId.set(p.name.toLowerCase().trim(), p.id);
+    });
+    
+    for (let i = 0; i < validContacts.length; i++) {
+      if (cancelImportRef.current) {
+        toast.info(`Importação cancelada. ${updated} contatos atualizados antes do cancelamento.`);
+        break;
+      }
+      
+      const row = validContacts[i];
+      const cleanCPF = row.data.cpf?.replace(/\D/g, '') || '';
+      const normalizedName = row.data.nome?.toLowerCase().trim() || '';
+      
+      let patientId: string | undefined;
+      
+      // Priority 1: Match by CPF
+      if (cleanCPF && cleanCPF.length >= 11) {
+        patientId = cpfToPatientId.get(cleanCPF);
+      }
+      
+      // Priority 2: Match by name
+      if (!patientId && normalizedName) {
+        patientId = nameToPatientId.get(normalizedName);
+      }
+      
+      if (patientId) {
+        // Build update object with only provided fields
+        const updateData: Record<string, string> = {};
+        
+        if (row.data.telefone) {
+          updateData.phone = formatPhone(row.data.telefone);
+        }
+        if (row.data.telefone_fixo) {
+          updateData.landline = formatPhone(row.data.telefone_fixo);
+        }
+        if (row.data.email) {
+          updateData.email = row.data.email.trim();
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          try {
+            const { error } = await supabase
+              .from('patients')
+              .update(updateData)
+              .eq('id', patientId);
+            
+            if (error) {
+              console.error('[UPDATE ERROR]', error.message);
+              errors++;
+            } else {
+              updated++;
+            }
+          } catch (err) {
+            console.error('[UPDATE EXCEPTION]', err);
+            errors++;
+          }
+        }
+      } else {
+        notFound++;
+      }
+      
+      setContactProgress(((i + 1) / validContacts.length) * 100);
+    }
+    
+    setImportingContacts(false);
+    setContactRows([]);
+    
+    if (cancelImportRef.current) {
+      return;
+    }
+    
+    if (notFound > 0 || errors > 0) {
+      toast.warning(`${updated} contatos atualizados, ${notFound} pacientes não encontrados, ${errors} erros`);
+    } else {
+      toast.success(`${updated} contatos atualizados com sucesso!`);
+    }
+  };
+
   const selectedClinic = clinics.find(c => c.id === selectedClinicId);
   const validPatientCount = patientRows.filter(r => r.validation.isValid).length;
   const validRecordCount = recordRows.filter(r => r.validation.isValid).length;
+  const validContactCount = contactRows.filter(r => r.validation.isValid).length;
 
   return (
     <div className="p-6 space-y-6">
@@ -1035,8 +1175,8 @@ export default function DataImportPage() {
       </Collapsible>
 
       {/* Import/Export Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "combined" | "patients" | "records")}>
-        <TabsList>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "combined" | "patients" | "records" | "contacts")}>
+        <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="export" className="gap-2">
             <ArrowDownToLine className="h-4 w-4" />
             Exportar Dados
@@ -1052,6 +1192,10 @@ export default function DataImportPage() {
           <TabsTrigger value="records" className="gap-2">
             <FileText className="h-4 w-4" />
             Só Prontuários
+          </TabsTrigger>
+          <TabsTrigger value="contacts" className="gap-2">
+            <Phone className="h-4 w-4" />
+            Atualizar Contatos
           </TabsTrigger>
         </TabsList>
 
@@ -1625,6 +1769,161 @@ export default function DataImportPage() {
                   <li>• Se não encontrar, tentamos pelo <strong>nome exato</strong></li>
                   <li>• Pacientes não encontrados serão ignorados na importação</li>
                   <li>• Importe os pacientes primeiro se eles não existirem</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Contacts Import Tab */}
+        <TabsContent value="contacts" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Phone className="h-5 w-5" />
+                Importar e Atualizar Contatos
+              </CardTitle>
+              <CardDescription>
+                Atualize telefone, telefone fixo e email de pacientes existentes vinculando por CPF ou nome
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => downloadTemplate('contacts')}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Baixar Modelo
+                </Button>
+                
+                <label>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleContactsFile}
+                    className="hidden"
+                    disabled={!selectedClinicId}
+                  />
+                  <Button
+                    variant="default"
+                    className="gap-2"
+                    disabled={!selectedClinicId}
+                    asChild
+                  >
+                    <span>
+                      <Upload className="h-4 w-4" />
+                      Carregar Planilha
+                    </span>
+                  </Button>
+                </label>
+              </div>
+
+              {!selectedClinicId && (
+                <p className="text-sm text-warning">
+                  Selecione uma clínica antes de carregar o arquivo
+                </p>
+              )}
+
+              {/* Preview Table */}
+              {contactRows.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline">{contactRows.length} linhas</Badge>
+                      <Badge variant="default" className="bg-success">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        {validContactCount} válidos
+                      </Badge>
+                      {contactRows.length - validContactCount > 0 && (
+                        <Badge variant="destructive">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          {contactRows.length - validContactCount} com erros
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <Button
+                      onClick={importContacts}
+                      disabled={importingContacts || validContactCount === 0}
+                      className="gap-2"
+                    >
+                      {importingContacts ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      Atualizar {validContactCount} contatos
+                    </Button>
+                  </div>
+
+                  <ImportProgressCard
+                    isImporting={importingContacts}
+                    progress={contactProgress}
+                    importType="contacts"
+                    totalItems={validContactCount}
+                    isCancelled={importCancelled}
+                    onCancel={cancelImport}
+                  />
+
+                  <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">#</TableHead>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>CPF</TableHead>
+                          <TableHead>Telefone</TableHead>
+                          <TableHead>Fixo</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {contactRows.slice(0, 100).map((row) => (
+                          <TableRow key={row.rowNumber} className={!row.validation.isValid ? 'bg-destructive/5' : ''}>
+                            <TableCell className="text-muted-foreground">{row.rowNumber}</TableCell>
+                            <TableCell className="font-medium">{row.data.nome || '-'}</TableCell>
+                            <TableCell>{row.data.cpf || '-'}</TableCell>
+                            <TableCell>{row.data.telefone || '-'}</TableCell>
+                            <TableCell>{row.data.telefone_fixo || '-'}</TableCell>
+                            <TableCell className="max-w-[200px] truncate">{row.data.email || '-'}</TableCell>
+                            <TableCell>
+                              {row.validation.isValid ? (
+                                <div className="flex items-center gap-1 text-success">
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  <span className="text-xs">Válido</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-destructive">
+                                  <AlertCircle className="h-4 w-4" />
+                                  <span className="text-xs">{row.validation.errors[0]}</span>
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {contactRows.length > 100 && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      Mostrando 100 de {contactRows.length} linhas
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="bg-muted/50 rounded-lg p-4">
+                <h4 className="font-medium text-sm mb-2">Como funciona a atualização de contatos:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Primeiro tentamos vincular pelo <strong>CPF do paciente</strong></li>
+                  <li>• Se não encontrar, tentamos pelo <strong>nome exato</strong></li>
+                  <li>• Apenas os campos preenchidos na planilha serão atualizados</li>
+                  <li>• Pacientes não encontrados serão ignorados na importação</li>
+                  <li>• Os pacientes já devem existir no sistema para atualizar seus contatos</li>
                 </ul>
               </div>
             </CardContent>
