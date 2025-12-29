@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
-import { 
-  Search, 
-  Plus, 
-  Phone, 
+import {
+  Search,
+  Plus,
+  Phone,
   Mail,
   MoreVertical,
   Calendar,
@@ -18,6 +18,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -155,11 +163,18 @@ export default function PatientsPage() {
   const navigate = useNavigate();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
+
+  // Search + pagination (server-side)
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
+  const [totalPatients, setTotalPatients] = useState(0);
+
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
   // Selected patient for actions
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   
@@ -194,40 +209,108 @@ export default function PatientsPage() {
   const [editInsurancePlanId, setEditInsurancePlanId] = useState("");
   const [editErrors, setEditErrors] = useState<{ name?: string; phone?: string; email?: string; cpf?: string; address?: string; notes?: string }>({});
 
+  // Debounce search to avoid hammering the backend on each keystroke
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [searchTerm]);
+
+  const normalizePhoneDigits = (value: string): string => value.replace(/\D/g, "");
+
+  const buildPhoneSearchVariants = (digitsRaw: string): string[] => {
+    if (!digitsRaw) return [];
+
+    const digits = digitsRaw.startsWith("55") && digitsRaw.length > 11 ? digitsRaw.slice(2) : digitsRaw;
+
+    const variants = new Set<string>();
+    variants.add(digits);
+    variants.add(digitsRaw);
+
+    // If we have a BR 11-digit phone, add formatted variant to match stored formatted values
+    if (digits.length === 11) {
+      variants.add(formatPhone(digits));
+    }
+
+    // If user pasted with 55 + 11 digits (13 total), also add formatted without 55
+    if (digitsRaw.length === 13 && digits.length === 11) {
+      variants.add(formatPhone(digits));
+    }
+
+    return Array.from(variants).filter((v) => v.length >= 3);
+  };
+
   const fetchPatients = useCallback(async () => {
     if (!currentClinic) return;
-    
+
     setLoading(true);
-    
+
     try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select(`
-          id,
-          name,
-          email,
-          phone,
-          cpf,
-          address,
-          birth_date,
-          notes,
-          insurance_plan_id,
-          created_at,
-          insurance_plan:insurance_plans (
-            name
-          )
-        `)
-        .eq('clinic_id', currentClinic.id)
-        .order('name');
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const safeSearch = debouncedSearch.replace(/,/g, " ");
+      const searchDigits = normalizePhoneDigits(safeSearch);
+      const phoneVariants = buildPhoneSearchVariants(searchDigits);
+
+      let query = supabase
+        .from("patients")
+        .select(
+          `
+            id,
+            name,
+            email,
+            phone,
+            cpf,
+            address,
+            birth_date,
+            notes,
+            insurance_plan_id,
+            created_at,
+            insurance_plan:insurance_plans ( name )
+          `,
+          { count: "exact" }
+        )
+        .eq("clinic_id", currentClinic.id);
+
+      if (safeSearch.length > 0) {
+        const text = `%${safeSearch}%`;
+
+        const orParts: string[] = [
+          `name.ilike.${text}`,
+          `email.ilike.${text}`,
+        ];
+
+        // CPF: try both raw and only-digits
+        if (searchDigits.length >= 3) {
+          orParts.push(`cpf.ilike.%${searchDigits}%`);
+        }
+
+        // Phone: try raw term and digit-based/format variants
+        orParts.push(`phone.ilike.${text}`);
+        for (const v of phoneVariants) {
+          orParts.push(`phone.ilike.%${v}%`);
+        }
+
+        query = query.or(orParts.join(","));
+      }
+
+      const { data, error, count } = await query
+        .order("name")
+        .range(from, to);
 
       if (error) throw error;
-      setPatients(data as Patient[]);
+
+      setPatients((data as Patient[]) || []);
+      setTotalPatients(count || 0);
     } catch (error) {
       console.error("Error fetching patients:", error);
     } finally {
       setLoading(false);
     }
-  }, [currentClinic]);
+  }, [currentClinic, debouncedSearch, page, pageSize]);
 
   useEffect(() => {
     if (currentClinic) {
@@ -543,75 +626,13 @@ export default function PatientsPage() {
     }
   };
 
-  // Normalize text: lowercase, remove accents, trim
-  const normalizeText = (text: string): string => {
-    return text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .trim();
-  };
+  const pageCount = Math.max(1, Math.ceil(totalPatients / pageSize));
+  const showingFrom = totalPatients === 0 ? 0 : (page - 1) * pageSize + 1;
+  const showingTo = Math.min(page * pageSize, totalPatients);
 
-  // Normalize phone: remove non-digits and strip leading 55 (Brazil DDI) if present
-  const normalizePhone = (phone: string): string => {
-    const digits = phone.replace(/\D/g, '');
-    // If starts with 55 and has more than 11 digits, remove the 55
-    if (digits.startsWith('55') && digits.length > 11) {
-      return digits.slice(2);
-    }
-    return digits;
-  };
+  const canPrev = page > 1;
+  const canNext = page < pageCount;
 
-  const filteredPatients = patients.filter((patient) => {
-    const searchNormalized = normalizeText(searchTerm);
-    const searchDigits = searchTerm.replace(/\D/g, '');
-    const searchDigitsNormalized = normalizePhone(searchTerm);
-    
-    // Name search (case-insensitive, accent-insensitive)
-    const patientNameNormalized = normalizeText(patient.name);
-    const nameMatch = patientNameNormalized.includes(searchNormalized);
-    
-    // Email search (case-insensitive)
-    const emailMatch = patient.email?.toLowerCase().includes(searchNormalized);
-    
-    // Phone search: normalize both stored phone and search term
-    const phoneDigits = normalizePhone(patient.phone || '');
-
-    const phoneSearchVariants = Array.from(
-      new Set(
-        [searchDigitsNormalized, searchDigits].filter(Boolean).flatMap((d) => {
-          const digits = d.replace(/\D/g, '');
-          // If user typed something starting with 55, also try without 55 (covers DDI inputs and pasted values)
-          if (digits.startsWith('55') && digits.length >= 11) return [digits, digits.slice(2)];
-          return [digits];
-        })
-      )
-    );
-
-    const phoneMatch =
-      phoneSearchVariants.some((variant) => {
-        if (variant.length < 3) return false;
-        if (!phoneDigits) return false;
-
-        // direct contains
-        if (phoneDigits.includes(variant)) return true;
-
-        // suffix match for partial inputs (e.g., without DDD)
-        if (variant.length >= 8) {
-          const last8 = variant.slice(-8);
-          const last9 = variant.length >= 9 ? variant.slice(-9) : '';
-          return phoneDigits.endsWith(last9 || last8) || phoneDigits.endsWith(last8);
-        }
-
-        return false;
-      });
-    
-    // CPF search: compare only digits
-    const cpfDigits = patient.cpf?.replace(/\D/g, '') || '';
-    const cpfMatch = searchDigits.length >= 3 && cpfDigits.includes(searchDigits);
-    
-    return nameMatch || emailMatch || phoneMatch || cpfMatch;
-  });
 
   return (
     <div className="space-y-6">
@@ -780,109 +801,146 @@ export default function PatientsPage() {
 
       {/* Patients List */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">
-            {filteredPatients.length} paciente{filteredPatients.length !== 1 ? "s" : ""}
-          </CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <CardTitle className="text-lg">Pacientes</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {totalPatients > 0
+                ? `Mostrando ${showingFrom}-${showingTo} de ${totalPatients}`
+                : "0 pacientes"}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={String(pageSize)}
+              onValueChange={(val) => {
+                setPageSize(Number(val));
+                setPage(1);
+              }}
+            >
+              <SelectTrigger className="h-9 w-[150px]">
+                <SelectValue placeholder="Por página" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="25">25 / página</SelectItem>
+                <SelectItem value="50">50 / página</SelectItem>
+                <SelectItem value="100">100 / página</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!canPrev || loading}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              Anterior
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!canNext || loading}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Próxima
+            </Button>
+          </div>
         </CardHeader>
+
         <CardContent>
           {loading ? (
             <div className="text-center py-12 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
               Carregando pacientes...
             </div>
-          ) : filteredPatients.length > 0 ? (
-            <div className="space-y-3">
-              {filteredPatients.map((patient) => (
-                <div
-                  key={patient.id}
-                  className="flex flex-col sm:flex-row sm:items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all"
-                >
-                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <span className="text-lg font-semibold text-primary">
-                      {patient.name.split(" ").map((n) => n[0]).slice(0, 2).join("")}
-                    </span>
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium text-foreground">{patient.name}</p>
-                      {patient.birth_date && (
-                        <Badge variant="outline" className="text-xs">
-                          {calculateAge(patient.birth_date)} anos
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-3 mt-1">
-                      {patient.email && (
-                        <span className="text-sm text-muted-foreground flex items-center gap-1">
-                          <Mail className="h-3.5 w-3.5" />
-                          {patient.email}
+          ) : patients.length > 0 ? (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead className="hidden md:table-cell">Email</TableHead>
+                  <TableHead className="hidden lg:table-cell">Convênio</TableHead>
+                  <TableHead className="w-[60px]"></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {patients.map((patient) => (
+                  <TableRow key={patient.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <span className="truncate">{patient.name}</span>
+                        {patient.birth_date && (
+                          <Badge variant="outline" className="text-xs">
+                            {calculateAge(patient.birth_date)} anos
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>{patient.phone}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <span className="text-muted-foreground">{patient.email || "—"}</span>
+                    </TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {patient.insurance_plan ? (
+                        <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground font-medium">
+                          {patient.insurance_plan.name}
                         </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
                       )}
-                      <span className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Phone className="h-3.5 w-3.5" />
-                        {patient.phone}
-                      </span>
-                    </div>
-                  </div>
-
-                  {patient.insurance_plan && (
-                    <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground font-medium">
-                      {patient.insurance_plan.name}
-                    </span>
-                  )}
-
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="shrink-0">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-popover">
-                      {hasPermission("view_patients") && (
-                        <DropdownMenuItem onClick={() => handleViewProfile(patient)}>
-                          <User className="h-4 w-4 mr-2" />
-                          Ver perfil
-                        </DropdownMenuItem>
-                      )}
-                      {hasPermission("manage_calendar") && (
-                        <DropdownMenuItem onClick={() => handleScheduleAppointment(patient)}>
-                          <Calendar className="h-4 w-4 mr-2" />
-                          Agendar consulta
-                        </DropdownMenuItem>
-                      )}
-                      {hasPermission("manage_patients") && (
-                        <DropdownMenuItem onClick={() => handleOpenEdit(patient)}>
-                          <FileText className="h-4 w-4 mr-2" />
-                          Editar
-                        </DropdownMenuItem>
-                      )}
-                      {hasPermission("manage_anamnesis") && (
-                        <DropdownMenuItem onClick={() => openAnamnesisDialog(patient)}>
-                          <MessageCircle className="h-4 w-4 mr-2" />
-                          Enviar Anamnese
-                        </DropdownMenuItem>
-                      )}
-                      {hasPermission("view_patients") && (
-                        <DropdownMenuItem onClick={() => navigate(`/dashboard/patients/${patient.id}/attachments`)}>
-                          <Paperclip className="h-4 w-4 mr-2" />
-                          Anexos
-                        </DropdownMenuItem>
-                      )}
-                      {hasPermission("delete_patients") && (
-                        <DropdownMenuItem 
-                          className="text-destructive"
-                          onClick={() => handleOpenDelete(patient)}
-                        >
-                          Excluir
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
-            </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="shrink-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="bg-popover">
+                          {hasPermission("view_patients") && (
+                            <DropdownMenuItem onClick={() => handleViewProfile(patient)}>
+                              <User className="h-4 w-4 mr-2" />
+                              Ver perfil
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission("manage_calendar") && (
+                            <DropdownMenuItem onClick={() => handleScheduleAppointment(patient)}>
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Agendar consulta
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission("manage_patients") && (
+                            <DropdownMenuItem onClick={() => handleOpenEdit(patient)}>
+                              <FileText className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission("manage_anamnesis") && (
+                            <DropdownMenuItem onClick={() => openAnamnesisDialog(patient)}>
+                              <MessageCircle className="h-4 w-4 mr-2" />
+                              Enviar Anamnese
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission("view_patients") && (
+                            <DropdownMenuItem onClick={() => navigate(`/dashboard/patients/${patient.id}/attachments`)}>
+                              <Paperclip className="h-4 w-4 mr-2" />
+                              Anexos
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission("delete_patients") && (
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleOpenDelete(patient)}>
+                              Excluir
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
               <p className="mb-4">Nenhum paciente encontrado</p>
