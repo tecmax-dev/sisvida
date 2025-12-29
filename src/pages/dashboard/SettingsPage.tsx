@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2 } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
@@ -38,6 +38,10 @@ export default function SettingsPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [savingPassword, setSavingPassword] = useState(false);
 
+  // CPF appointment limit state
+  const [maxCpfAppointments, setMaxCpfAppointments] = useState<number | null>(null);
+  const [savingCpfLimit, setSavingCpfLimit] = useState(false);
+
   // Load clinic settings
   useEffect(() => {
     const loadClinicSettings = async () => {
@@ -45,7 +49,7 @@ export default function SettingsPage() {
       
       const { data, error } = await supabase
         .from('clinics')
-        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url, whatsapp_header_image_url')
+        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url, whatsapp_header_image_url, max_appointments_per_cpf_month')
         .eq('id', currentClinic.id)
         .single();
       
@@ -57,6 +61,7 @@ export default function SettingsPage() {
         setMapViewType(data.map_view_type || "streetview");
         setCustomMapEmbedUrl(data.custom_map_embed_url || "");
         setWhatsappHeaderImage(data.whatsapp_header_image_url || null);
+        setMaxCpfAppointments(data.max_appointments_per_cpf_month);
       }
     };
     
@@ -539,6 +544,86 @@ export default function SettingsPage() {
               <p className="text-sm text-amber-800 dark:text-amber-200">
                 ⚠️ <strong>Atenção:</strong> Esta regra se aplica a todos os usuários, 
                 incluindo profissionais, atendentes e administradores.
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* CPF Appointment Limit */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Users className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Limite de Agendamentos por CPF</CardTitle>
+              <CardDescription>
+                Restrinja a quantidade de agendamentos mensais por paciente
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="maxCpfAppointments">Máximo de agendamentos por mês (por profissional)</Label>
+            <div className="flex gap-3 items-center">
+              <Input
+                id="maxCpfAppointments"
+                type="number"
+                min="0"
+                placeholder="Sem limite"
+                value={maxCpfAppointments || ""}
+                onChange={(e) => setMaxCpfAppointments(e.target.value ? parseInt(e.target.value) : null)}
+                className="w-32"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={savingCpfLimit}
+                onClick={async () => {
+                  if (!currentClinic?.id) return;
+                  setSavingCpfLimit(true);
+                  try {
+                    const { error } = await supabase
+                      .from('clinics')
+                      .update({ max_appointments_per_cpf_month: maxCpfAppointments || null })
+                      .eq('id', currentClinic.id);
+                    
+                    if (error) throw error;
+                    
+                    toast({
+                      title: "Configuração salva",
+                      description: maxCpfAppointments 
+                        ? `Limite de ${maxCpfAppointments} agendamento(s) por CPF/mês definido.`
+                        : "Limite de agendamentos removido.",
+                    });
+                  } catch (error: any) {
+                    toast({
+                      title: "Erro ao salvar",
+                      description: error.message || "Não foi possível salvar a configuração.",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setSavingCpfLimit(false);
+                  }
+                }}
+              >
+                {savingCpfLimit ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Define quantas vezes um mesmo CPF pode agendar com cada profissional por mês. 
+              Deixe em branco ou 0 para não limitar.
+            </p>
+          </div>
+          
+          {maxCpfAppointments && maxCpfAppointments > 0 && (
+            <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+              <p className="text-sm text-blue-800 dark:text-blue-200">
+                ℹ️ Cada paciente poderá agendar no máximo <strong>{maxCpfAppointments} vez(es)</strong> com 
+                cada profissional por mês. A validação ocorre tanto no sistema quanto nos agendamentos via WhatsApp.
               </p>
             </div>
           )}
