@@ -370,6 +370,12 @@ async function handleBookingFlow(
 
   // Handle based on current state
   switch (session.state) {
+    case 'INIT':
+      // First message after session created - send welcome and wait for CPF
+      await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
+      await sendWhatsAppMessage(config, phone, MESSAGES.welcome);
+      return { handled: true, newState: 'WAITING_CPF' };
+    
     case 'WAITING_CPF':
       return await handleWaitingCpf(supabase, config, phone, messageText, session);
     
@@ -394,6 +400,8 @@ async function handleBookingFlow(
       return { handled: true, newState: 'WAITING_CPF' };
     
     default:
+      console.log(`[booking] Unknown state: ${session.state}, resetting to WAITING_CPF`);
+      await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
       await sendWhatsAppMessage(config, phone, MESSAGES.welcome);
       return { handled: true, newState: 'WAITING_CPF' };
   }
