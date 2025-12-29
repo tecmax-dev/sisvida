@@ -1943,6 +1943,59 @@ export type Database = {
         }
         Relationships: []
       }
+      import_logs: {
+        Row: {
+          clinic_id: string
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          error_count: number
+          error_details: Json | null
+          file_name: string | null
+          id: string
+          import_type: string
+          status: string
+          success_count: number
+          total_rows: number
+        }
+        Insert: {
+          clinic_id: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_count?: number
+          error_details?: Json | null
+          file_name?: string | null
+          id?: string
+          import_type: string
+          status?: string
+          success_count?: number
+          total_rows?: number
+        }
+        Update: {
+          clinic_id?: string
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          error_count?: number
+          error_details?: Json | null
+          file_name?: string | null
+          id?: string
+          import_type?: string
+          status?: string
+          success_count?: number
+          total_rows?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insurance_plans: {
         Row: {
           clinic_id: string
