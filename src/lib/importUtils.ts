@@ -1125,15 +1125,23 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
     'date_added'
   ]);
 
-  // Extract professional name
+  // Extract professional name - include iClinic column names
   const professionalName = getRowValue(row, [
     'profissional', 'Profissional', 'PROFISSIONAL', 'professional', 'Professional',
     'medico', 'Medico', 'MEDICO', 'médico', 'Médico', 'doctor', 'Doctor',
-    'physician', 'Physician', 'physician_name', 'Physician Name',
+    'physician', 'Physician', 'physician_name', 'Physician Name', 'physician_Name',
     'responsavel', 'Responsavel', 'RESPONSAVEL', 'responsável', 'Responsável',
     'atendente', 'Atendente', 'ATENDENTE',
     'nome_profissional', 'Nome Profissional', 'nome_medico', 'Nome Médico',
-    'dr', 'Dr', 'dra', 'Dra', 'doutor', 'Doutor', 'doutora', 'Doutora'
+    'dr', 'Dr', 'dra', 'Dra', 'doutor', 'Doutor', 'doutora', 'Doutora',
+    // iClinic specific columns
+    'user_name', 'User Name', 'userName', 'user name',
+    'created_by', 'Created By', 'createdBy', 'criado_por', 'Criado Por',
+    'author', 'Author', 'autor', 'Autor',
+    'attendant', 'Attendant', 'attendant_name', 'Attendant Name',
+    'provider', 'Provider', 'provider_name', 'Provider Name',
+    'staff', 'Staff', 'staff_name', 'Staff Name',
+    'clinician', 'Clinician', 'clinician_name', 'Clinician Name'
   ]) || undefined;
 
   // Helper to normalize and get value
