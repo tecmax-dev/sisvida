@@ -11,6 +11,7 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
+  MessageCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,7 @@ import {
   AnamneseResponseForm,
   Answer,
 } from "@/components/anamnesis/AnamneseResponseForm";
+import { SendAnamnesisWhatsAppDialog } from "@/components/anamnesis/SendAnamnesisWhatsAppDialog";
 
 interface Template {
   id: string;
@@ -79,7 +81,9 @@ export default function AnamneseTemplatesPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const [sendTemplate, setSendTemplate] = useState<Template | null>(null);
 
   // Form state
   const [formTitle, setFormTitle] = useState("");
@@ -477,8 +481,8 @@ export default function AnamneseTemplatesPage() {
 
   const canView = hasPermission("view_anamnesis_templates") || hasPermission("manage_anamnesis_templates");
   const canEdit = hasPermission("edit_anamnesis_templates") || hasPermission("manage_anamnesis_templates");
-  const canDelete = hasPermission("delete_anamnesis_templates") || hasPermission("manage_anamnesis_templates");
-  const canSendWhatsApp = hasPermission("send_anamnesis_whatsapp") || hasPermission("manage_anamnesis_templates");
+  const canDelete = hasPermission("delete_anamnesis_templates");
+  const canSendWhatsApp = hasPermission("send_anamnesis_whatsapp");
   const canCreate = hasPermission("manage_anamnesis_templates");
 
   return (
@@ -560,6 +564,17 @@ export default function AnamneseTemplatesPage() {
                         <Eye className="h-4 w-4 mr-2" />
                         Pré-visualizar
                       </DropdownMenuItem>
+                      {canSendWhatsApp && (
+                        <DropdownMenuItem
+                          onClick={() => {
+                            setSendTemplate(template);
+                            setSendDialogOpen(true);
+                          }}
+                        >
+                          <MessageCircle className="h-4 w-4 mr-2" />
+                          Enviar por WhatsApp
+                        </DropdownMenuItem>
+                      )}
                       {canEdit && (
                         <DropdownMenuItem onClick={() => handleOpenEdit(template)}>
                           <Edit className="h-4 w-4 mr-2" />
@@ -700,6 +715,21 @@ export default function AnamneseTemplatesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Send WhatsApp Dialog */}
+      {currentClinic && sendTemplate && (
+        <SendAnamnesisWhatsAppDialog
+          open={sendDialogOpen}
+          onOpenChange={(open) => {
+            setSendDialogOpen(open);
+            if (!open) setSendTemplate(null);
+          }}
+          clinicId={currentClinic.id}
+          clinicName={currentClinic.name}
+          templateId={sendTemplate.id}
+          templateTitle={sendTemplate.title}
+        />
+      )}
     </div>
     </RoleGuard>
   );
