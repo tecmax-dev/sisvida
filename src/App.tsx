@@ -35,6 +35,7 @@ const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail"));
 const AwaitingConfirmation = lazy(() => import("./pages/AwaitingConfirmation"));
 const PublicPanel = lazy(() => import("./pages/PublicPanel"));
 const PublicTotem = lazy(() => import("./pages/PublicTotem"));
+const CardValidation = lazy(() => import("./pages/CardValidation"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -201,6 +202,7 @@ const App = () => (
                 {/* Public Panel and Totem routes */}
                 <Route path="/panel/:token" element={<PublicPanel />} />
                 <Route path="/totem/:token" element={<PublicTotem />} />
+                <Route path="/card/:token" element={<CardValidation />} />
                 <Route
                   path="/clinic-setup"
                   element={
