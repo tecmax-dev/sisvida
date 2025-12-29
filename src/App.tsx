@@ -72,6 +72,7 @@ import QueueManagementPage from "./pages/dashboard/QueueManagementPage";
 import MarketingPage from "./pages/dashboard/MarketingPage";
 import TissPage from "./pages/dashboard/TissPage";
 import HolidaysPage from "./pages/dashboard/HolidaysPage";
+import PanelBannersPage from "./pages/dashboard/PanelBannersPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -270,6 +271,7 @@ const App = () => (
                   <Route path="quotes" element={<QuotesPage />} />
                   <Route path="repass" element={<RepassPage />} />
                   <Route path="queue" element={<QueueManagementPage />} />
+                  <Route path="panel-banners" element={<PanelBannersPage />} />
                   <Route path="marketing" element={<MarketingPage />} />
                   <Route path="tiss" element={<TissPage />} />
                   <Route path="holidays" element={<HolidaysPage />} />
