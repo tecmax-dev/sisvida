@@ -463,9 +463,146 @@ export interface MultiSheetParseResult {
   records: ImportRow<MedicalRecordImportRow>[];
 }
 
+// Header mapping for legacy/alternative column names to standard names
+const HEADER_MAPPINGS: Record<string, string> = {
+  // CPF variations
+  'nrcpf': 'cpf',
+  'nr_cpf': 'cpf',
+  'cpf_numero': 'cpf',
+  'num_cpf': 'cpf',
+  
+  // Nome variations
+  'nmsocio': 'nome',
+  'nm_socio': 'nome',
+  'nmpaciente': 'nome',
+  'nm_paciente': 'nome',
+  'nmcliente': 'nome',
+  'nm_cliente': 'nome',
+  'nmnome': 'nome',
+  'nm_nome': 'nome',
+  
+  // Sindicalização (pode ser usado como indicação ou observação)
+  'cdsindicalizacao': 'indicacao',
+  'cd_sindicalizacao': 'indicacao',
+  
+  // Endereço variations
+  'nmendereco': 'endereco',
+  'nm_endereco': 'endereco',
+  'dsendereco': 'endereco',
+  'ds_endereco': 'endereco',
+  
+  // Bairro variations
+  'nmbairro': 'bairro',
+  'nm_bairro': 'bairro',
+  'dsbairro': 'bairro',
+  'ds_bairro': 'bairro',
+  
+  // Email variations
+  'nmemail': 'email',
+  'nm_email': 'email',
+  'dsemail': 'email',
+  'ds_email': 'email',
+  
+  // Telefone variations
+  'nrfone': 'telefone',
+  'nr_fone': 'telefone',
+  'nrtelefone': 'telefone',
+  'nr_telefone': 'telefone',
+  'nrcel': 'telefone',
+  'nr_cel': 'telefone',
+  'nrcelular': 'telefone',
+  'nr_celular': 'telefone',
+  
+  // Data nascimento variations
+  'dtnascimento': 'data_nascimento',
+  'dt_nascimento': 'data_nascimento',
+  'dtnasc': 'data_nascimento',
+  'dt_nasc': 'data_nascimento',
+  
+  // Nome pai variations
+  'nmpai': 'nome_pai',
+  'nm_pai': 'nome_pai',
+  'dspai': 'nome_pai',
+  'ds_pai': 'nome_pai',
+  
+  // Nome mãe variations
+  'nmmae': 'nome_mae',
+  'nm_mae': 'nome_mae',
+  'dsmae': 'nome_mae',
+  'ds_mae': 'nome_mae',
+  
+  // RG variations
+  'nrrg': 'rg',
+  'nr_rg': 'rg',
+  'dsrg': 'rg',
+  'ds_rg': 'rg',
+  
+  // Sexo variations
+  'cdsexo': 'sexo',
+  'cd_sexo': 'sexo',
+  'dssexo': 'sexo',
+  'ds_sexo': 'sexo',
+  
+  // Estado civil variations
+  'cdestadocivil': 'estado_civil',
+  'cd_estado_civil': 'estado_civil',
+  'dsestadocivil': 'estado_civil',
+  'ds_estado_civil': 'estado_civil',
+  
+  // Cidade variations
+  'nmcidade': 'cidade',
+  'nm_cidade': 'cidade',
+  'dscidade': 'cidade',
+  'ds_cidade': 'cidade',
+  
+  // Estado/UF variations
+  'cduf': 'estado',
+  'cd_uf': 'estado',
+  'sguf': 'estado',
+  'sg_uf': 'estado',
+  'nmestado': 'estado',
+  'nm_estado': 'estado',
+  
+  // CEP variations
+  'nrcep': 'cep',
+  'nr_cep': 'cep',
+  'cdcep': 'cep',
+  'cd_cep': 'cep',
+  
+  // Observações variations
+  'dsobservacao': 'observacoes',
+  'ds_observacao': 'observacoes',
+  'dsobservacoes': 'observacoes',
+  'ds_observacoes': 'observacoes',
+  'txobservacao': 'observacoes',
+  'tx_observacao': 'observacoes',
+  
+  // Convênio variations
+  'nmconvenio': 'convenio',
+  'nm_convenio': 'convenio',
+  'dsconvenio': 'convenio',
+  'ds_convenio': 'convenio',
+  'cdconvenio': 'convenio',
+  'cd_convenio': 'convenio',
+  
+  // Profissão variations
+  'nmprofissao': 'profissao',
+  'nm_profissao': 'profissao',
+  'dsprofissao': 'profissao',
+  'ds_profissao': 'profissao',
+  
+  // Data registro (para prontuários)
+  'dtregistro': 'data_registro',
+  'dt_registro': 'data_registro',
+  'dtatendimento': 'data_registro',
+  'dt_atendimento': 'data_registro',
+  'dtconsulta': 'data_registro',
+  'dt_consulta': 'data_registro',
+};
+
 // Normalize column header for comparison (removes accents, converts to lowercase, replaces spaces with underscores)
 function normalizeColumnHeader(header: string): string {
-  return String(header)
+  const normalized = String(header)
     .toLowerCase()
     .trim()
     .normalize('NFD')
@@ -473,6 +610,39 @@ function normalizeColumnHeader(header: string): string {
     .replace(/[^a-z0-9]/g, '_') // Replace non-alphanumeric with underscore
     .replace(/_+/g, '_') // Remove duplicate underscores
     .replace(/^_|_$/g, ''); // Trim underscores at start/end
+  
+  // Check if there's a mapping for this header
+  return HEADER_MAPPINGS[normalized] || normalized;
+}
+
+// Convert headers in a row object to standard format
+export function convertRowHeaders(row: Record<string, unknown>): Record<string, unknown> {
+  const converted: Record<string, unknown> = {};
+  
+  for (const [key, value] of Object.entries(row)) {
+    const normalizedKey = normalizeColumnHeader(key);
+    // If key was converted, use the new key; otherwise keep original
+    const newKey = HEADER_MAPPINGS[normalizedKey] ? normalizedKey : key;
+    converted[newKey] = value;
+  }
+  
+  return converted;
+}
+
+// Get list of recognized header mappings for UI display
+export function getHeaderMappings(): { original: string; converted: string }[] {
+  const uniqueMappings = new Map<string, string>();
+  
+  for (const [original, converted] of Object.entries(HEADER_MAPPINGS)) {
+    if (!uniqueMappings.has(converted)) {
+      uniqueMappings.set(converted, original.toUpperCase());
+    }
+  }
+  
+  return Array.from(uniqueMappings.entries()).map(([converted, original]) => ({
+    original,
+    converted,
+  }));
 }
 
 // Detect sheet type based on columns and sheet name
