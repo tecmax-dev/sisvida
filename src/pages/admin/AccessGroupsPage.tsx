@@ -3,24 +3,38 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
+import { Switch } from "@/components/ui/switch";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   Plus, 
   Search, 
   Save, 
   Trash2, 
-  FileText,
+  Users,
   Loader2,
   Shield,
-  ChevronDown,
-  ChevronRight,
-  Lock
+  Lock,
+  Calendar,
+  FileText,
+  Settings,
+  CreditCard,
+  Package,
+  BarChart3,
+  UserPlus,
+  ClipboardList,
+  Eye,
+  Edit,
+  Trash,
+  Send,
+  CheckCircle2,
+  Info
 } from "lucide-react";
 import {
   AlertDialog,
@@ -32,11 +46,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
 
 interface PermissionDefinition {
   id: string;
@@ -68,9 +77,60 @@ interface GroupedPermissions {
   [category: string]: PermissionDefinition[];
 }
 
-interface GroupedAvailablePermissions {
-  [category: string]: AvailablePermission[];
-}
+// Map categories to friendly icons
+const categoryIcons: Record<string, React.ReactNode> = {
+  'Agendamento': <Calendar className="h-5 w-5" />,
+  'Atendimento': <ClipboardList className="h-5 w-5" />,
+  'Clientes': <Users className="h-5 w-5" />,
+  'Cadastros Gerais': <FileText className="h-5 w-5" />,
+  'Configurações': <Settings className="h-5 w-5" />,
+  'Financeiro': <CreditCard className="h-5 w-5" />,
+  'Caixa': <CreditCard className="h-5 w-5" />,
+  'Análise': <BarChart3 className="h-5 w-5" />,
+  'Dashboard': <BarChart3 className="h-5 w-5" />,
+  'Consulta': <Eye className="h-5 w-5" />,
+  'Catálogo': <Package className="h-5 w-5" />,
+  'Profissionais': <UserPlus className="h-5 w-5" />,
+  'Prontuário': <FileText className="h-5 w-5" />,
+  'Marketing': <Send className="h-5 w-5" />,
+  'Assinatura': <CreditCard className="h-5 w-5" />,
+  'Estoque': <Package className="h-5 w-5" />,
+  'Repasse': <CreditCard className="h-5 w-5" />,
+  'TISS': <FileText className="h-5 w-5" />,
+  'Anamnese': <ClipboardList className="h-5 w-5" />,
+};
+
+// Friendly category descriptions
+const categoryDescriptions: Record<string, string> = {
+  'Agendamento': 'Controle de acesso à agenda e lista de espera',
+  'Atendimento': 'Gerenciamento da fila de atendimento',
+  'Clientes': 'Cadastro e gestão de pacientes',
+  'Cadastros Gerais': 'Configurações de anamnese, feriados, convênios, etc.',
+  'Configurações': 'Configurações gerais do sistema',
+  'Financeiro': 'Controle financeiro e transações',
+  'Caixa': 'Abertura e fechamento de caixa',
+  'Análise': 'Relatórios e fluxo de caixa',
+  'Dashboard': 'Painéis de visualização',
+  'Consulta': 'Consultas e visualizações de dados',
+  'Catálogo': 'Produtos e serviços',
+  'Profissionais': 'Gestão de profissionais',
+  'Prontuário': 'Prontuário eletrônico',
+  'Marketing': 'Campanhas e automações',
+  'Assinatura': 'Gestão do plano',
+  'Estoque': 'Controle de estoque',
+  'Repasse': 'Repasse de comissões',
+  'TISS': 'Guias e faturamento TISS',
+  'Anamnese': 'Templates e respostas de anamnese',
+};
+
+// Permission action icons
+const getPermissionIcon = (key: string) => {
+  if (key.startsWith('view_') || key.includes('visualizar')) return <Eye className="h-4 w-4 text-blue-500" />;
+  if (key.startsWith('manage_') || key.startsWith('edit_')) return <Edit className="h-4 w-4 text-amber-500" />;
+  if (key.startsWith('delete_')) return <Trash className="h-4 w-4 text-red-500" />;
+  if (key.startsWith('send_')) return <Send className="h-4 w-4 text-green-500" />;
+  return <CheckCircle2 className="h-4 w-4 text-primary" />;
+};
 
 export default function AccessGroupsPage() {
   const { currentClinic, isSuperAdmin } = useAuth();
@@ -82,10 +142,10 @@ export default function AccessGroupsPage() {
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [permissionSearch, setPermissionSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchData();
@@ -128,10 +188,6 @@ export default function AccessGroupsPage() {
         // Super admin has access to all permissions
         setAvailablePermissions(new Set((permissionsRes.data || []).map(p => p.key)));
       }
-      
-      // Expand all categories by default
-      const categories = new Set((permissionsRes.data || []).map(p => p.category));
-      setExpandedCategories(categories);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Erro ao carregar dados');
@@ -190,21 +246,19 @@ export default function AccessGroupsPage() {
     });
   };
 
-  const handleToggleCategory = (category: string) => {
+  const handleToggleCategory = (category: string, enable: boolean) => {
     const categoryPermissions = groupedPermissions[category];
     // Only consider available permissions
     const availableCategoryPerms = categoryPermissions.filter(p => availablePermissions.has(p.key));
     if (availableCategoryPerms.length === 0) return;
     
-    const allSelected = availableCategoryPerms.every(p => selectedPermissions.has(p.key));
-    
     setSelectedPermissions(prev => {
       const newSet = new Set(prev);
       availableCategoryPerms.forEach(p => {
-        if (allSelected) {
-          newSet.delete(p.key);
-        } else {
+        if (enable) {
           newSet.add(p.key);
+        } else {
+          newSet.delete(p.key);
         }
       });
       return newSet;
@@ -306,29 +360,29 @@ export default function AccessGroupsPage() {
     }
   };
 
-  const toggleCategoryExpanded = (category: string) => {
-    setExpandedCategories(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(category)) {
-        newSet.delete(category);
-      } else {
-        newSet.add(category);
-      }
-      return newSet;
-    });
-  };
-
   const filteredGroups = groups.filter(g => 
     g.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const categoryPermissionCount = (category: string) => {
+  const categoryPermissionStats = (category: string) => {
     const categoryPerms = groupedPermissions[category] || [];
     const availableCategoryPerms = categoryPerms.filter(p => availablePermissions.has(p.key));
     const selectedCount = availableCategoryPerms.filter(p => selectedPermissions.has(p.key)).length;
     const unavailableCount = categoryPerms.length - availableCategoryPerms.length;
-    return { selected: selectedCount, total: availableCategoryPerms.length, unavailable: unavailableCount };
+    const allSelected = availableCategoryPerms.length > 0 && selectedCount === availableCategoryPerms.length;
+    return { selected: selectedCount, total: availableCategoryPerms.length, unavailable: unavailableCount, allSelected };
   };
+
+  // Filter permissions by search
+  const filteredCategories = Object.entries(groupedPermissions).filter(([category, perms]) => {
+    if (!permissionSearch) return true;
+    const searchLower = permissionSearch.toLowerCase();
+    if (category.toLowerCase().includes(searchLower)) return true;
+    return perms.some(p => 
+      p.name.toLowerCase().includes(searchLower) || 
+      p.description?.toLowerCase().includes(searchLower)
+    );
+  });
 
   if (loading) {
     return (
@@ -343,78 +397,86 @@ export default function AccessGroupsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Shield className="h-8 w-8 text-primary" />
+          <div className="p-3 rounded-xl bg-primary/10">
+            <Shield className="h-8 w-8 text-primary" />
+          </div>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">GRUPO DE ACESSO</h1>
+            <h1 className="text-2xl font-bold text-foreground">Grupos de Acesso</h1>
             <p className="text-sm text-muted-foreground">
-              Gerencie as permissões de acesso dos usuários
+              Configure quais funcionalidades cada perfil de usuário pode acessar
             </p>
           </div>
         </div>
         
-        <div className="flex items-center gap-2">
-          <Button onClick={handleNewGroup} className="gap-2">
-            <Plus className="h-4 w-4" />
-            NOVO GRUPO DE ACESSO
-          </Button>
-        </div>
-      </div>
-
-      {/* Search and Count */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar grupo..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Badge variant="secondary" className="text-sm">
-          TOTAL: {filteredGroups.length} grupo(s)
-        </Badge>
+        <Button onClick={handleNewGroup} className="gap-2">
+          <Plus className="h-4 w-4" />
+          Novo Grupo
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Groups List */}
         <div className="lg:col-span-1">
-          <Card>
-            <CardHeader className="py-3">
-              <CardTitle className="text-sm font-medium">Grupos</CardTitle>
+          <Card className="h-fit">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Grupos Cadastrados
+              </CardTitle>
+              <CardDescription>
+                Selecione um grupo para editar
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y divide-border max-h-[600px] overflow-y-auto">
-                {filteredGroups.map((group) => (
-                  <button
-                    key={group.id}
-                    onClick={() => handleSelectGroup(group)}
-                    className={`w-full px-4 py-3 text-left hover:bg-accent/50 transition-colors ${
-                      selectedGroup?.id === group.id ? 'bg-accent' : ''
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{group.name}</span>
-                      {group.is_system && (
-                        <Badge variant="outline" className="text-xs ml-auto">
-                          Sistema
-                        </Badge>
-                      )}
-                    </div>
-                    {group.description && (
-                      <p className="text-xs text-muted-foreground mt-1 truncate">
-                        {group.description}
-                      </p>
-                    )}
-                  </button>
-                ))}
-                {filteredGroups.length === 0 && (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    Nenhum grupo encontrado
-                  </div>
-                )}
+              <div className="px-4 pb-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar grupo..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-9"
+                  />
+                </div>
               </div>
+              <Separator />
+              <ScrollArea className="h-[400px]">
+                <div className="divide-y divide-border">
+                  {filteredGroups.map((group) => (
+                    <button
+                      key={group.id}
+                      onClick={() => handleSelectGroup(group)}
+                      className={`w-full px-4 py-3 text-left hover:bg-accent/50 transition-colors ${
+                        selectedGroup?.id === group.id ? 'bg-primary/10 border-l-2 border-primary' : ''
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className={`p-1.5 rounded-lg ${selectedGroup?.id === group.id ? 'bg-primary/20' : 'bg-muted'}`}>
+                          <Users className="h-3.5 w-3.5 text-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <span className="font-medium text-sm block truncate">{group.name}</span>
+                          {group.description && (
+                            <p className="text-xs text-muted-foreground truncate">
+                              {group.description}
+                            </p>
+                          )}
+                        </div>
+                        {group.is_system && (
+                          <Badge variant="secondary" className="text-xs shrink-0">
+                            Padrão
+                          </Badge>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                  {filteredGroups.length === 0 && (
+                    <div className="p-4 text-center text-sm text-muted-foreground">
+                      Nenhum grupo encontrado
+                    </div>
+                  )}
+                </div>
+              </ScrollArea>
             </CardContent>
           </Card>
         </div>
@@ -423,13 +485,21 @@ export default function AccessGroupsPage() {
         <div className="lg:col-span-3 space-y-4">
           {/* Group Form */}
           <Card>
-            <CardContent className="pt-6">
+            <CardHeader className="pb-4">
+              <CardTitle className="text-base">
+                {selectedGroup ? 'Editar Grupo' : 'Novo Grupo'}
+              </CardTitle>
+              <CardDescription>
+                Defina um nome e descrição para identificar este grupo de usuários
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="groupName">Nome do Grupo*</Label>
+                  <Label htmlFor="groupName">Nome do Grupo *</Label>
                   <Input
                     id="groupName"
-                    placeholder="Digite o nome do grupo"
+                    placeholder="Ex: Recepcionistas, Médicos, Administradores..."
                     value={groupName}
                     onChange={(e) => setGroupName(e.target.value)}
                   />
@@ -438,7 +508,7 @@ export default function AccessGroupsPage() {
                   <Label htmlFor="groupDescription">Descrição</Label>
                   <Input
                     id="groupDescription"
-                    placeholder="Descrição opcional"
+                    placeholder="Breve descrição das responsabilidades..."
                     value={groupDescription}
                     onChange={(e) => setGroupDescription(e.target.value)}
                   />
@@ -447,115 +517,161 @@ export default function AccessGroupsPage() {
             </CardContent>
           </Card>
 
-          {/* Permissions Grid */}
+          {/* Permissions Section */}
           <Card>
-            <CardHeader className="py-3">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Shield className="h-4 w-4" />
-                Permissões
-                <Badge variant="secondary" className="ml-2">
-                  {selectedPermissions.size} selecionadas
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Shield className="h-4 w-4" />
+                    Permissões do Grupo
+                  </CardTitle>
+                  <CardDescription>
+                    Ative ou desative as funcionalidades que este grupo pode acessar
+                  </CardDescription>
+                </div>
+                <Badge variant="outline" className="self-start sm:self-auto">
+                  {selectedPermissions.size} permissões ativas
                 </Badge>
-              </CardTitle>
+              </div>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                {Object.entries(groupedPermissions).map(([category, categoryPermissions]) => {
-                  const { selected, total, unavailable } = categoryPermissionCount(category);
-                  const allSelected = total > 0 && selected === total;
-                  const someSelected = selected > 0 && selected < total;
-                  const isExpanded = expandedCategories.has(category);
-                  const hasUnavailable = unavailable > 0;
+            <CardContent className="space-y-4">
+              {/* Permission search */}
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar permissão..."
+                  value={permissionSearch}
+                  onChange={(e) => setPermissionSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+
+              {/* Info banner */}
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 border">
+                <Info className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+                <div className="text-sm text-muted-foreground">
+                  <p><strong>Como funciona:</strong> Use o interruptor de cada categoria para ativar/desativar todas as permissões de uma vez, ou marque permissões individuais abaixo de cada categoria.</p>
+                </div>
+              </div>
+
+              {/* Categories Grid */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {filteredCategories.map(([category, categoryPermissions]) => {
+                  const stats = categoryPermissionStats(category);
+                  const hasUnavailable = stats.unavailable > 0;
+                  const icon = categoryIcons[category] || <Shield className="h-5 w-5" />;
+                  const description = categoryDescriptions[category] || '';
+
+                  // Filter permissions by search within category
+                  const filteredPerms = permissionSearch
+                    ? categoryPermissions.filter(p => 
+                        p.name.toLowerCase().includes(permissionSearch.toLowerCase()) ||
+                        p.description?.toLowerCase().includes(permissionSearch.toLowerCase())
+                      )
+                    : categoryPermissions;
+
+                  if (filteredPerms.length === 0 && permissionSearch) return null;
 
                   return (
-                    <Card key={category} className="border shadow-sm">
-                      <Collapsible open={isExpanded} onOpenChange={() => toggleCategoryExpanded(category)}>
-                        <CollapsibleTrigger asChild>
-                          <CardHeader className="py-3 px-4 cursor-pointer hover:bg-accent/30 transition-colors">
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <Checkbox
-                                  checked={allSelected}
-                                  onCheckedChange={() => handleToggleCategory(category)}
-                                  onClick={(e) => e.stopPropagation()}
-                                  disabled={total === 0}
-                                  className={someSelected ? 'data-[state=checked]:bg-primary/50' : ''}
-                                />
-                                <CardTitle className="text-sm font-medium">{category}</CardTitle>
-                                {hasUnavailable && (
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Lock className="h-3 w-3 text-muted-foreground" />
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>{unavailable} permissão(ões) requer upgrade do plano</p>
-                                      </TooltipContent>
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant="outline" className="text-xs">
-                                  {selected}/{total}
-                                </Badge>
-                                {isExpanded ? (
-                                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <Card key={category} className="overflow-hidden">
+                      {/* Category Header */}
+                      <div className="p-4 bg-muted/30 border-b">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 rounded-lg bg-background shadow-sm">
+                              {icon}
+                            </div>
+                            <div className="min-w-0">
+                              <h3 className="font-semibold text-sm truncate">{category}</h3>
+                              {description && (
+                                <p className="text-xs text-muted-foreground truncate">{description}</p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 shrink-0">
+                            {hasUnavailable && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Lock className="h-4 w-4 text-muted-foreground" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{stats.unavailable} permissão(ões) requer upgrade do plano</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-muted-foreground">
+                                {stats.selected}/{stats.total}
+                              </span>
+                              <Switch
+                                checked={stats.allSelected}
+                                onCheckedChange={(checked) => handleToggleCategory(category, checked)}
+                                disabled={stats.total === 0}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Permissions List */}
+                      <div className="p-4 space-y-3">
+                        {(filteredPerms.length > 0 ? filteredPerms : categoryPermissions).map((perm) => {
+                          const isAvailable = availablePermissions.has(perm.key);
+                          const isSelected = selectedPermissions.has(perm.key);
+                          
+                          return (
+                            <div 
+                              key={perm.id} 
+                              className={`flex items-start gap-3 p-2 rounded-lg transition-colors ${
+                                isSelected ? 'bg-primary/5' : 'hover:bg-muted/50'
+                              } ${!isAvailable ? 'opacity-50' : ''}`}
+                            >
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span>
+                                      <Checkbox
+                                        id={perm.key}
+                                        checked={isSelected}
+                                        onCheckedChange={() => handleTogglePermission(perm.key)}
+                                        disabled={!isAvailable}
+                                        className="mt-0.5"
+                                      />
+                                    </span>
+                                  </TooltipTrigger>
+                                  {!isAvailable && (
+                                    <TooltipContent>
+                                      <p>Requer upgrade do plano</p>
+                                    </TooltipContent>
+                                  )}
+                                </Tooltip>
+                              </TooltipProvider>
+                              <div className="flex-1 min-w-0">
+                                <Label
+                                  htmlFor={perm.key}
+                                  className={`text-sm font-medium flex items-center gap-2 ${
+                                    isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'
+                                  }`}
+                                >
+                                  {getPermissionIcon(perm.key)}
+                                  <span className="truncate">{perm.name}</span>
+                                  {!isAvailable && (
+                                    <Lock className="h-3 w-3 text-muted-foreground shrink-0" />
+                                  )}
+                                </Label>
+                                {perm.description && (
+                                  <p className="text-xs text-muted-foreground mt-0.5">
+                                    {perm.description}
+                                  </p>
                                 )}
                               </div>
                             </div>
-                          </CardHeader>
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <Separator />
-                          <CardContent className="py-3 px-4 space-y-2">
-                            {categoryPermissions.map((perm) => {
-                              const isAvailable = availablePermissions.has(perm.key);
-                              return (
-                                <div key={perm.id} className={`flex items-start gap-2 ${!isAvailable ? 'opacity-50' : ''}`}>
-                                  <TooltipProvider>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <span>
-                                          <Checkbox
-                                            id={perm.key}
-                                            checked={selectedPermissions.has(perm.key)}
-                                            onCheckedChange={() => handleTogglePermission(perm.key)}
-                                            disabled={!isAvailable}
-                                          />
-                                        </span>
-                                      </TooltipTrigger>
-                                      {!isAvailable && (
-                                        <TooltipContent>
-                                          <p>Requer upgrade do plano</p>
-                                        </TooltipContent>
-                                      )}
-                                    </Tooltip>
-                                  </TooltipProvider>
-                                  <div className="grid gap-0.5 leading-none">
-                                    <Label
-                                      htmlFor={perm.key}
-                                      className={`text-sm font-normal ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
-                                    >
-                                      {perm.name}
-                                      {!isAvailable && (
-                                        <Lock className="inline-block ml-1 h-3 w-3 text-muted-foreground" />
-                                      )}
-                                    </Label>
-                                    {perm.description && (
-                                      <p className="text-xs text-muted-foreground">
-                                        {perm.description}
-                                      </p>
-                                    )}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </CardContent>
-                        </CollapsibleContent>
-                      </Collapsible>
+                          );
+                        })}
+                      </div>
                     </Card>
                   );
                 })}
@@ -564,7 +680,7 @@ export default function AccessGroupsPage() {
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2">
             {selectedGroup && !selectedGroup.is_system && (
               <Button
                 variant="destructive"
@@ -572,7 +688,7 @@ export default function AccessGroupsPage() {
                 className="gap-2"
               >
                 <Trash2 className="h-4 w-4" />
-                EXCLUIR
+                Excluir Grupo
               </Button>
             )}
             <Button
@@ -581,7 +697,7 @@ export default function AccessGroupsPage() {
               className="gap-2"
             >
               <Plus className="h-4 w-4" />
-              NOVO
+              Novo Grupo
             </Button>
             <Button
               onClick={handleSave}
@@ -593,7 +709,7 @@ export default function AccessGroupsPage() {
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              SALVAR
+              Salvar Alterações
             </Button>
           </div>
         </div>
