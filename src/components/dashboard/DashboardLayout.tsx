@@ -70,7 +70,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
   { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
   { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "anamnesis_forms" },
-  { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates de Anamnese", permission: "manage_anamnesis_templates" },
+  { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates de Anamnese", permission: "view_anamnesis_templates" },
   { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "view_waiting_list" },
   { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "insurance_plans" },
   { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
