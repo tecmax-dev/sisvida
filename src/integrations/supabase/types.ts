@@ -1293,6 +1293,50 @@ export type Database = {
         }
         Relationships: []
       }
+      clinic_holidays: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          holiday_date: string
+          id: string
+          is_recurring: boolean | null
+          name: string
+          recurring_day: number | null
+          recurring_month: number | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          holiday_date: string
+          id?: string
+          is_recurring?: boolean | null
+          name: string
+          recurring_day?: number | null
+          recurring_month?: number | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          holiday_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          name?: string
+          recurring_day?: number | null
+          recurring_month?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_holidays_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clinic_notification_reads: {
         Row: {
           clinic_id: string
@@ -1340,12 +1384,14 @@ export type Database = {
           blocked_at: string | null
           blocked_by: string | null
           blocked_reason: string | null
+          city: string | null
           closing_time: string | null
           cnpj: string | null
           created_at: string
           custom_map_embed_url: string | null
           email: string | null
           enforce_schedule_validation: boolean | null
+          holidays_enabled: boolean | null
           id: string
           is_blocked: boolean | null
           is_maintenance: boolean | null
@@ -1360,6 +1406,7 @@ export type Database = {
           reminder_enabled: boolean | null
           reminder_hours: number | null
           slug: string
+          state_code: string | null
           updated_at: string
           whatsapp_header_image_url: string | null
         }
@@ -1370,12 +1417,14 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          city?: string | null
           closing_time?: string | null
           cnpj?: string | null
           created_at?: string
           custom_map_embed_url?: string | null
           email?: string | null
           enforce_schedule_validation?: boolean | null
+          holidays_enabled?: boolean | null
           id?: string
           is_blocked?: boolean | null
           is_maintenance?: boolean | null
@@ -1390,6 +1439,7 @@ export type Database = {
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
           slug: string
+          state_code?: string | null
           updated_at?: string
           whatsapp_header_image_url?: string | null
         }
@@ -1400,12 +1450,14 @@ export type Database = {
           blocked_at?: string | null
           blocked_by?: string | null
           blocked_reason?: string | null
+          city?: string | null
           closing_time?: string | null
           cnpj?: string | null
           created_at?: string
           custom_map_embed_url?: string | null
           email?: string | null
           enforce_schedule_validation?: boolean | null
+          holidays_enabled?: boolean | null
           id?: string
           is_blocked?: boolean | null
           is_maintenance?: boolean | null
@@ -1420,6 +1472,7 @@ export type Database = {
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
           slug?: string
+          state_code?: string | null
           updated_at?: string
           whatsapp_header_image_url?: string | null
         }
@@ -2658,6 +2711,78 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      municipal_holidays: {
+        Row: {
+          city: string
+          created_at: string
+          holiday_date: string
+          id: string
+          is_recurring: boolean | null
+          name: string
+          recurring_day: number | null
+          recurring_month: number | null
+          state_code: string
+          year: number
+        }
+        Insert: {
+          city: string
+          created_at?: string
+          holiday_date: string
+          id?: string
+          is_recurring?: boolean | null
+          name: string
+          recurring_day?: number | null
+          recurring_month?: number | null
+          state_code: string
+          year: number
+        }
+        Update: {
+          city?: string
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          name?: string
+          recurring_day?: number | null
+          recurring_month?: number | null
+          state_code?: string
+          year?: number
+        }
+        Relationships: []
+      }
+      national_holidays: {
+        Row: {
+          created_at: string
+          holiday_date: string
+          id: string
+          is_recurring: boolean | null
+          name: string
+          recurring_day: number | null
+          recurring_month: number | null
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          holiday_date: string
+          id?: string
+          is_recurring?: boolean | null
+          name: string
+          recurring_day?: number | null
+          recurring_month?: number | null
+          year: number
+        }
+        Update: {
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          name?: string
+          recurring_day?: number | null
+          recurring_month?: number | null
+          year?: number
+        }
+        Relationships: []
       }
       odontogram_records: {
         Row: {
@@ -4450,6 +4575,42 @@ export type Database = {
         }
         Relationships: []
       }
+      state_holidays: {
+        Row: {
+          created_at: string
+          holiday_date: string
+          id: string
+          is_recurring: boolean | null
+          name: string
+          recurring_day: number | null
+          recurring_month: number | null
+          state_code: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          holiday_date: string
+          id?: string
+          is_recurring?: boolean | null
+          name: string
+          recurring_day?: number | null
+          recurring_month?: number | null
+          state_code: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          holiday_date?: string
+          id?: string
+          is_recurring?: boolean | null
+          name?: string
+          recurring_day?: number | null
+          recurring_month?: number | null
+          state_code?: string
+          year?: number
+        }
+        Relationships: []
+      }
       stock_alerts: {
         Row: {
           alert_type: string
@@ -5880,6 +6041,14 @@ export type Database = {
       is_clinic_admin: {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean
+      }
+      is_holiday: {
+        Args: { p_clinic_id: string; p_date: string }
+        Returns: {
+          holiday_name: string
+          holiday_type: string
+          is_holiday: boolean
+        }[]
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       user_has_permission: {
