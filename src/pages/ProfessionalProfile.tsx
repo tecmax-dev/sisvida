@@ -426,7 +426,8 @@ export default function ProfessionalProfile() {
   };
 
   const isHoliday = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    // Avoid timezone shifts from toISOString(); we need the user's local calendar date.
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     return holidays.has(dateStr);
   };
 
@@ -1031,7 +1032,7 @@ export default function ProfessionalProfile() {
                                   className={cn(
                                     "w-full h-full rounded-md text-sm font-medium transition-colors",
                                     holiday
-                                      ? "bg-red-100 dark:bg-red-950/30 text-red-400 dark:text-red-500 cursor-not-allowed"
+                                      ? "bg-destructive/10 text-destructive/70 dark:bg-destructive/15 dark:text-destructive/70 cursor-not-allowed"
                                       : disabled 
                                         ? "text-muted-foreground/40 cursor-not-allowed" 
                                         : "hover:bg-primary/10",

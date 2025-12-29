@@ -474,7 +474,8 @@ export default function PublicBooking() {
   };
 
   const isHoliday = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    // Avoid timezone shifts from toISOString(); we need the user's local calendar date.
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     return holidays.has(dateStr);
   };
 
@@ -944,7 +945,7 @@ export default function PublicBooking() {
                               className={cn(
                                 "w-full h-full rounded-md text-sm font-medium transition-colors",
                                 isHoliday(date)
-                                  ? "bg-red-100 text-red-400 cursor-not-allowed dark:bg-red-950/30 dark:text-red-400/60"
+                                  ? "bg-destructive/10 text-destructive/70 cursor-not-allowed dark:bg-destructive/15 dark:text-destructive/70"
                                   : isDateDisabled(date) 
                                     ? "text-muted-foreground/40 cursor-not-allowed" 
                                     : "hover:bg-primary/10",
