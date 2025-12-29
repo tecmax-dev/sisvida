@@ -669,8 +669,7 @@ export default function DataImportPage() {
         
         const row = validRecords[i];
         const cleanCPF = row.data.cpf_paciente?.replace(/\D/g, '') || '';
-        const normalizedName = row.data.nome_paciente?.toLowerCase().trim() || '';
-        
+        const normalizedName = normalizeNameForComparison(row.data.nome_paciente || '');
         let patientId: string | undefined;
         
         // PRIORITY 1: Match by CPF
@@ -1169,7 +1168,7 @@ export default function DataImportPage() {
       
       const row = validRows[i];
       const cleanCPF = row.data.cpf_paciente?.replace(/\D/g, '') || '';
-      const normalizedName = row.data.nome_paciente?.toLowerCase().trim() || '';
+      const normalizedName = normalizeNameForComparison(row.data.nome_paciente || '');
       
       let patientId: string | undefined;
       

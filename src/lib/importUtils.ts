@@ -98,6 +98,7 @@ export function normalizeNameForComparison(name: string): string {
     .trim()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/[^a-z0-9\s]/g, ' ') // Remove punctuation/symbols (keep letters/numbers/spaces)
     .replace(/\s+/g, ' ') // Normalize multiple spaces to single
     .trim();
 }
