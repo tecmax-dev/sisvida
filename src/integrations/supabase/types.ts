@@ -3100,6 +3100,71 @@ export type Database = {
           },
         ]
       }
+      panel_banners: {
+        Row: {
+          background_color: string | null
+          button_link: string | null
+          button_text: string | null
+          clinic_id: string
+          created_at: string
+          description: string | null
+          duration_seconds: number | null
+          id: string
+          image_url: string
+          is_active: boolean
+          order_index: number
+          overlay_opacity: number | null
+          subtitle: string | null
+          text_color: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          background_color?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          clinic_id: string
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          image_url: string
+          is_active?: boolean
+          order_index?: number
+          overlay_opacity?: number | null
+          subtitle?: string | null
+          text_color?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          background_color?: string | null
+          button_link?: string | null
+          button_text?: string | null
+          clinic_id?: string
+          created_at?: string
+          description?: string | null
+          duration_seconds?: number | null
+          id?: string
+          image_url?: string
+          is_active?: boolean
+          order_index?: number
+          overlay_opacity?: number | null
+          subtitle?: string | null
+          text_color?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "panel_banners_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       panels: {
         Row: {
           clinic_id: string
