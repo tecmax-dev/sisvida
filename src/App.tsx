@@ -190,6 +190,8 @@ const App = () => (
                 <Route path="/consulta/:token" element={<AppointmentConfirmation />} />
                 {/* Telemedicine patient room */}
                 <Route path="/telemedicina/:token" element={<TelemedicinePatient />} />
+                {/* Debug XLS - temporary */}
+                <Route path="/debug-xls" element={<DebugXlsPage />} />
                 {/* Professional Portal */}
                 <Route path="/profissional" element={<ProfessionalAuth />} />
                 <Route path="/profissional/painel" element={<ProfessionalDashboard />} />
