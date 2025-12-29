@@ -50,6 +50,16 @@ export interface ContactImportRow {
   email?: string;
 }
 
+export interface DependentImportRow {
+  nome_dependente: string;
+  cpf_titular?: string;
+  nome_titular?: string;
+  cpf_dependente?: string;
+  data_nascimento?: string;
+  parentesco?: string;
+  observacoes?: string;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
@@ -332,6 +342,41 @@ export function validateContactRow(row: ContactImportRow): ValidationResult {
   };
 }
 
+// Validate dependent row
+export function validateDependentRow(row: DependentImportRow): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  if (!row.nome_dependente?.trim()) {
+    errors.push('Nome do dependente é obrigatório');
+  }
+  
+  if (!row.cpf_titular && !row.nome_titular) {
+    errors.push('CPF ou Nome do titular é obrigatório para vincular');
+  }
+  
+  if (row.cpf_titular && !validateCPF(row.cpf_titular)) {
+    errors.push('CPF do titular inválido');
+  }
+  
+  if (row.cpf_dependente && !validateCPF(row.cpf_dependente)) {
+    warnings.push('CPF do dependente inválido');
+  }
+  
+  if (row.data_nascimento) {
+    const parsed = parseDate(row.data_nascimento);
+    if (!parsed) {
+      warnings.push('Data de nascimento em formato não reconhecido');
+    }
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
 // Map contact row from spreadsheet
 export function mapContactRow(row: Record<string, unknown>): ContactImportRow {
   return {
@@ -358,6 +403,46 @@ export function mapContactRow(row: Record<string, unknown>): ContactImportRow {
     email: getRowValue(row, [
       'email', 'Email', 'EMAIL', 'e-mail', 'E-mail', 'E-MAIL',
       'correio', 'Correio', 'mail', 'Mail', 'MAIL'
+    ]) || undefined,
+  };
+}
+
+// Map dependent row from spreadsheet
+export function mapDependentRow(row: Record<string, unknown>): DependentImportRow {
+  return {
+    nome_dependente: getRowValue(row, [
+      'nome_dependente', 'Nome Dependente', 'NOME_DEPENDENTE', 'nome do dependente',
+      'dependente', 'Dependente', 'DEPENDENTE', 'nome', 'Nome', 'NOME',
+      'dependent_name', 'Dependent Name'
+    ]),
+    cpf_titular: getRowValue(row, [
+      'cpf_titular', 'CPF Titular', 'CPF_TITULAR', 'cpf do titular',
+      'cpf_paciente', 'CPF Paciente', 'cpf paciente', 'titular_cpf',
+      'patient_cpf', 'cpf_responsavel', 'CPF Responsável'
+    ]) || undefined,
+    nome_titular: getRowValue(row, [
+      'nome_titular', 'Nome Titular', 'NOME_TITULAR', 'nome do titular',
+      'titular', 'Titular', 'TITULAR', 'nome_paciente', 'Nome Paciente',
+      'paciente', 'Paciente', 'responsavel', 'Responsável', 'Responsavel',
+      'patient_name', 'Patient Name'
+    ]) || undefined,
+    cpf_dependente: getRowValue(row, [
+      'cpf_dependente', 'CPF Dependente', 'CPF_DEPENDENTE', 'cpf do dependente',
+      'cpf', 'CPF', 'documento_dependente', 'Documento Dependente'
+    ]) || undefined,
+    data_nascimento: getRowValue(row, [
+      'data_nascimento', 'Data Nascimento', 'Data de Nascimento', 'DATA_NASCIMENTO',
+      'nascimento', 'Nascimento', 'birth_date', 'birthdate',
+      'data_nasc', 'dt_nascimento'
+    ]) || undefined,
+    parentesco: getRowValue(row, [
+      'parentesco', 'Parentesco', 'PARENTESCO', 'grau_parentesco', 'Grau Parentesco',
+      'relacao', 'Relação', 'Relacao', 'relationship', 'Relationship',
+      'tipo', 'Tipo', 'vinculo', 'Vínculo', 'Vinculo'
+    ]) || undefined,
+    observacoes: getRowValue(row, [
+      'observacoes', 'Observações', 'Observacoes', 'OBSERVACOES',
+      'notas', 'Notas', 'notes', 'Notes', 'obs', 'Obs'
     ]) || undefined,
   };
 }
@@ -1295,7 +1380,35 @@ export function generateContactTemplate(): ArrayBuffer {
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
 }
 
-export function downloadTemplate(type: 'patients' | 'records' | 'combined' | 'contacts') {
+export function generateDependentTemplate(): ArrayBuffer {
+  const template = [
+    {
+      nome_dependente: 'Maria Silva',
+      cpf_titular: '000.000.000-00',
+      nome_titular: 'João Silva',
+      cpf_dependente: '111.111.111-11',
+      data_nascimento: '2015-05-20',
+      parentesco: 'Filho(a)',
+      observacoes: 'Menor de idade',
+    },
+    {
+      nome_dependente: 'Pedro Silva',
+      cpf_titular: '000.000.000-00',
+      nome_titular: 'João Silva',
+      cpf_dependente: '',
+      data_nascimento: '2018-08-10',
+      parentesco: 'Filho(a)',
+      observacoes: '',
+    },
+  ];
+  
+  const ws = XLSX.utils.json_to_sheet(template);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Dependentes');
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+}
+
+export function downloadTemplate(type: 'patients' | 'records' | 'combined' | 'contacts' | 'dependents') {
   let buffer: ArrayBuffer;
   let filename: string;
   
@@ -1308,6 +1421,9 @@ export function downloadTemplate(type: 'patients' | 'records' | 'combined' | 'co
   } else if (type === 'contacts') {
     buffer = generateContactTemplate();
     filename = 'modelo_contatos.xlsx';
+  } else if (type === 'dependents') {
+    buffer = generateDependentTemplate();
+    filename = 'modelo_dependentes.xlsx';
   } else {
     buffer = generateMedicalRecordTemplate();
     filename = 'modelo_prontuarios.xlsx';

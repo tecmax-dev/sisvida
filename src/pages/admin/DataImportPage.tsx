@@ -28,6 +28,7 @@ import {
   StopCircle,
   Phone,
   History,
+  UserPlus,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import DataExportPanel from "@/components/admin/DataExportPanel";
@@ -37,6 +38,7 @@ import {
   PatientImportRow,
   MedicalRecordImportRow,
   ContactImportRow,
+  DependentImportRow,
   ImportRow,
   DetectedSheet,
   parseSpreadsheet,
@@ -45,9 +47,11 @@ import {
   validatePatientRow,
   validateMedicalRecordRow,
   validateContactRow,
+  validateDependentRow,
   mapPatientRow,
   mapMedicalRecordRow,
   mapContactRow,
+  mapDependentRow,
   downloadTemplate,
   formatPhone,
   formatCPF,
@@ -66,7 +70,7 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"export" | "combined" | "patients" | "records" | "contacts" | "history">("export");
+  const [activeTab, setActiveTab] = useState<"export" | "combined" | "patients" | "records" | "contacts" | "dependents" | "history">("export");
   
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
@@ -87,6 +91,11 @@ export default function DataImportPage() {
   const [contactRows, setContactRows] = useState<ImportRow<ContactImportRow>[]>([]);
   const [importingContacts, setImportingContacts] = useState(false);
   const [contactProgress, setContactProgress] = useState(0);
+  
+  // Dependent import state
+  const [dependentRows, setDependentRows] = useState<ImportRow<DependentImportRow>[]>([]);
+  const [importingDependents, setImportingDependents] = useState(false);
+  const [dependentProgress, setDependentProgress] = useState(0);
   
   // Combined import state
   const [importingCombined, setImportingCombined] = useState(false);
@@ -310,6 +319,23 @@ export default function DataImportPage() {
       const buffer = await file.arrayBuffer();
       const rows = parseSpreadsheet<ContactImportRow>(buffer, validateContactRow, mapContactRow);
       setContactRows(rows);
+      toast.success(`${rows.length} linhas carregadas`);
+    } catch (error) {
+      console.error('Error parsing file:', error);
+      toast.error('Erro ao ler arquivo. Verifique o formato.');
+    }
+    
+    event.target.value = '';
+  }, []);
+
+  const handleDependentsFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    try {
+      const buffer = await file.arrayBuffer();
+      const rows = parseSpreadsheet<DependentImportRow>(buffer, validateDependentRow, mapDependentRow);
+      setDependentRows(rows);
       toast.success(`${rows.length} linhas carregadas`);
     } catch (error) {
       console.error('Error parsing file:', error);
@@ -1511,10 +1537,185 @@ export default function DataImportPage() {
     }
   };
 
+  // Import dependents and link to existing patients
+  const importDependents = async () => {
+    if (!selectedClinicId) {
+      toast.error('Selecione uma clínica');
+      return;
+    }
+    
+    const validDependents = dependentRows.filter(r => r.validation.isValid);
+    
+    if (validDependents.length === 0) {
+      toast.error('Nenhum dependente válido para importar');
+      return;
+    }
+    
+    resetCancellation();
+    setImportingDependents(true);
+    setDependentProgress(0);
+    
+    // Create import log
+    const logId = await createImportLog('dependents');
+    
+    let imported = 0;
+    let notFound = 0;
+    let errors = 0;
+    
+    // Fetch all existing patients for this clinic
+    const { data: existingPatients } = await supabase
+      .from('patients')
+      .select('id, name, cpf')
+      .eq('clinic_id', selectedClinicId);
+    
+    // Build maps for patient lookup
+    const cpfToPatientId = new Map<string, string>();
+    const nameToPatientId = new Map<string, string>();
+    
+    existingPatients?.forEach(p => {
+      if (p.cpf) {
+        const cleanCPF = p.cpf.replace(/\D/g, '');
+        cpfToPatientId.set(cleanCPF, p.id);
+      }
+      nameToPatientId.set(normalizeNameForComparison(p.name), p.id);
+    });
+    
+    // Map relationship values
+    const relationshipMap: Record<string, string> = {
+      'filho': 'child',
+      'filha': 'child',
+      'filho(a)': 'child',
+      'criança': 'child',
+      'child': 'child',
+      'cônjuge': 'spouse',
+      'conjuge': 'spouse',
+      'esposo': 'spouse',
+      'esposa': 'spouse',
+      'marido': 'spouse',
+      'spouse': 'spouse',
+      'pai': 'parent',
+      'mãe': 'parent',
+      'mae': 'parent',
+      'parent': 'parent',
+      'irmão': 'sibling',
+      'irmã': 'sibling',
+      'irmao': 'sibling',
+      'irma': 'sibling',
+      'sibling': 'sibling',
+      'outro': 'other',
+      'outros': 'other',
+      'other': 'other',
+    };
+    
+    const BATCH_SIZE = 50;
+    const dependentsToInsert: Array<{
+      clinic_id: string;
+      patient_id: string;
+      name: string;
+      cpf: string | null;
+      birth_date: string | null;
+      relationship: string;
+      notes: string | null;
+    }> = [];
+    
+    for (let i = 0; i < validDependents.length; i++) {
+      if (cancelImportRef.current) {
+        break;
+      }
+      
+      const row = validDependents[i];
+      const cleanCPFTitular = row.data.cpf_titular?.replace(/\D/g, '') || '';
+      const normalizedTitularName = normalizeNameForComparison(row.data.nome_titular || '');
+      
+      let patientId: string | undefined;
+      
+      // Priority 1: Match by CPF
+      if (cleanCPFTitular && cleanCPFTitular.length >= 11) {
+        patientId = cpfToPatientId.get(cleanCPFTitular);
+      }
+      
+      // Priority 2: Match by name
+      if (!patientId && normalizedTitularName) {
+        patientId = nameToPatientId.get(normalizedTitularName);
+      }
+      
+      if (patientId) {
+        const parsedBirthDate = row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null;
+        const normalizedRelationship = row.data.parentesco?.toLowerCase().trim() || '';
+        const mappedRelationship = relationshipMap[normalizedRelationship] || 'other';
+        
+        dependentsToInsert.push({
+          clinic_id: selectedClinicId,
+          patient_id: patientId,
+          name: row.data.nome_dependente.trim(),
+          cpf: row.data.cpf_dependente ? formatCPF(row.data.cpf_dependente) : null,
+          birth_date: parsedBirthDate,
+          relationship: mappedRelationship,
+          notes: row.data.observacoes?.trim() || null,
+        });
+      } else {
+        notFound++;
+      }
+      
+      setDependentProgress(((i + 1) / validDependents.length) * 50);
+    }
+    
+    // Batch insert dependents
+    for (let i = 0; i < dependentsToInsert.length; i += BATCH_SIZE) {
+      if (cancelImportRef.current) {
+        toast.info(`Importação cancelada. ${imported} dependentes importados antes do cancelamento.`);
+        break;
+      }
+      
+      const batch = dependentsToInsert.slice(i, i + BATCH_SIZE);
+      
+      try {
+        const { data, error } = await supabase
+          .from('patient_dependents')
+          .insert(batch)
+          .select('id');
+        
+        if (error) {
+          console.error('[DEPENDENT BATCH ERROR]', error.message);
+          errors += batch.length;
+        } else {
+          imported += data?.length || batch.length;
+        }
+      } catch (err) {
+        console.error('[DEPENDENT BATCH EXCEPTION]', err);
+        errors += batch.length;
+      }
+      
+      setDependentProgress(50 + ((i + batch.length) / dependentsToInsert.length) * 50);
+    }
+    
+    // Update import log
+    await updateImportLog(logId, {
+      total_rows: validDependents.length,
+      success_count: imported,
+      error_count: errors + notFound,
+      status: cancelImportRef.current ? 'cancelled' : 'completed',
+    });
+    
+    setImportingDependents(false);
+    setDependentRows([]);
+    
+    if (cancelImportRef.current) {
+      return;
+    }
+    
+    if (notFound > 0 || errors > 0) {
+      toast.warning(`${imported} dependentes importados, ${notFound} titulares não encontrados, ${errors} erros`);
+    } else {
+      toast.success(`${imported} dependentes importados com sucesso!`);
+    }
+  };
+
   const selectedClinic = clinics.find(c => c.id === selectedClinicId);
   const validPatientCount = patientRows.filter(r => r.validation.isValid).length;
   const validRecordCount = recordRows.filter(r => r.validation.isValid).length;
   const validContactCount = contactRows.filter(r => r.validation.isValid).length;
+  const validDependentCount = dependentRows.filter(r => r.validation.isValid).length;
 
   return (
     <div className="p-6 space-y-6">
@@ -1645,7 +1846,7 @@ export default function DataImportPage() {
       </Collapsible>
 
       {/* Import/Export Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "combined" | "patients" | "records" | "contacts" | "history")}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "combined" | "patients" | "records" | "contacts" | "dependents" | "history")}>
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="export" className="gap-2">
             <ArrowDownToLine className="h-4 w-4" />
@@ -1666,6 +1867,10 @@ export default function DataImportPage() {
           <TabsTrigger value="contacts" className="gap-2">
             <Phone className="h-4 w-4" />
             Atualizar Contatos
+          </TabsTrigger>
+          <TabsTrigger value="dependents" className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            Dependentes
           </TabsTrigger>
           <TabsTrigger value="history" className="gap-2">
             <History className="h-4 w-4" />
@@ -2400,6 +2605,157 @@ export default function DataImportPage() {
                   <li>• Apenas os campos preenchidos na planilha serão atualizados</li>
                   <li>• Pacientes não encontrados serão ignorados na importação</li>
                   <li>• Os pacientes já devem existir no sistema para atualizar seus contatos</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Dependents Import Tab */}
+        <TabsContent value="dependents" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base flex items-center gap-2">
+                <UserPlus className="h-5 w-5" />
+                Importar Dependentes
+              </CardTitle>
+              <CardDescription>
+                Vincule dependentes aos pacientes titulares por CPF ou nome
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => downloadTemplate('dependents')}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Baixar Modelo
+                </Button>
+                
+                <label>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={handleDependentsFile}
+                    className="hidden"
+                    disabled={!selectedClinicId}
+                  />
+                  <Button
+                    variant="default"
+                    className="gap-2"
+                    disabled={!selectedClinicId}
+                    asChild
+                  >
+                    <span>
+                      <Upload className="h-4 w-4" />
+                      Carregar Planilha
+                    </span>
+                  </Button>
+                </label>
+              </div>
+
+              {!selectedClinicId && (
+                <p className="text-sm text-warning">
+                  Selecione uma clínica antes de carregar o arquivo
+                </p>
+              )}
+
+              {dependentRows.length > 0 && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Badge variant="outline">{dependentRows.length} linhas</Badge>
+                      <Badge variant="default" className="bg-success">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        {validDependentCount} válidos
+                      </Badge>
+                      {dependentRows.length - validDependentCount > 0 && (
+                        <Badge variant="destructive">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          {dependentRows.length - validDependentCount} com erros
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <Button
+                      onClick={importDependents}
+                      disabled={importingDependents || validDependentCount === 0}
+                      className="gap-2"
+                    >
+                      {importingDependents ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      Importar {validDependentCount} dependentes
+                    </Button>
+                  </div>
+
+                  <ImportProgressCard
+                    isImporting={importingDependents}
+                    progress={dependentProgress}
+                    importType="dependents"
+                    totalItems={validDependentCount}
+                    isCancelled={importCancelled}
+                    onCancel={cancelImport}
+                  />
+
+                  <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12">#</TableHead>
+                          <TableHead>Dependente</TableHead>
+                          <TableHead>CPF Titular</TableHead>
+                          <TableHead>Nome Titular</TableHead>
+                          <TableHead>Parentesco</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {dependentRows.slice(0, 100).map((row) => (
+                          <TableRow key={row.rowNumber} className={!row.validation.isValid ? 'bg-destructive/5' : ''}>
+                            <TableCell className="text-muted-foreground">{row.rowNumber}</TableCell>
+                            <TableCell className="font-medium">{row.data.nome_dependente || '-'}</TableCell>
+                            <TableCell>{row.data.cpf_titular || '-'}</TableCell>
+                            <TableCell>{row.data.nome_titular || '-'}</TableCell>
+                            <TableCell>{row.data.parentesco || '-'}</TableCell>
+                            <TableCell>
+                              {row.validation.isValid ? (
+                                <div className="flex items-center gap-1 text-success">
+                                  <CheckCircle2 className="h-4 w-4" />
+                                  <span className="text-xs">Válido</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-destructive">
+                                  <AlertCircle className="h-4 w-4" />
+                                  <span className="text-xs">{row.validation.errors[0]}</span>
+                                </div>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                  
+                  {dependentRows.length > 100 && (
+                    <p className="text-sm text-muted-foreground text-center">
+                      Mostrando 100 de {dependentRows.length} linhas
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="bg-muted/50 rounded-lg p-4">
+                <h4 className="font-medium text-sm mb-2">Como funciona a vinculação:</h4>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Primeiro tentamos vincular pelo <strong>CPF do titular</strong></li>
+                  <li>• Se não encontrar, tentamos pelo <strong>nome do titular</strong></li>
+                  <li>• Titulares não encontrados serão ignorados na importação</li>
+                  <li>• Os pacientes titulares já devem existir no sistema</li>
                 </ul>
               </div>
             </CardContent>
