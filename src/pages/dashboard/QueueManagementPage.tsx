@@ -34,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Plus, Edit2, Trash2, Monitor, Smartphone, Users, Bell, Copy } from "lucide-react";
+import { CallsPanel } from "@/components/queue/CallsPanel";
 
 interface Queue {
   id: string;
@@ -476,17 +477,7 @@ function QueueManagementContent() {
 
           {/* Chamadas */}
           <TabsContent value="calls">
-            <Card>
-              <CardHeader>
-                <CardTitle>Chamadas do Dia</CardTitle>
-                <CardDescription>Histórico de chamadas de pacientes</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  As chamadas serão exibidas aqui quando pacientes fizerem check-in
-                </div>
-              </CardContent>
-            </Card>
+            <CallsPanel clinicId={currentClinic.id} queues={queues} />
           </TabsContent>
         </Tabs>
 
