@@ -1335,20 +1335,53 @@ async function handleSelectDate(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const choice = parseInt(messageText.trim());
   const dates = session.available_dates || [];
 
+  // 1) Numeric selection
+  let choice = parseInt(messageText.trim());
+
+  // 2) Natural language via AI (e.g. "amanhã", "quarta", "dia 15")
+  if (isNaN(choice) && dates.length > 0) {
+    const aiResult = await getAIIntent(
+      messageText,
+      'SELECT_DATE',
+      undefined,
+      dates
+    );
+    console.log('[date] AI result:', aiResult);
+
+    if (aiResult.confidence >= 0.6) {
+      if (typeof aiResult.entities?.option_number === 'number') {
+        choice = aiResult.entities.option_number;
+      } else if (aiResult.entities?.date) {
+        const raw = aiResult.entities.date.trim();
+        // If AI returns ISO date, match directly
+        const isoMatch = raw.match(/^\d{4}-\d{2}-\d{2}$/);
+        if (isoMatch) {
+          const idx = dates.findIndex((d) => d.date === raw);
+          if (idx >= 0) choice = idx + 1;
+        }
+      }
+    }
+  }
+
   if (isNaN(choice) || choice < 1 || choice > dates.length) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
+    await sendWhatsAppMessage(
+      config,
+      phone,
+      MESSAGES.invalidOption +
+        MESSAGES.hintSelectOption +
+        "\n\n_Se preferir, você pode escrever a data (ex: 'amanhã', 'quarta')._"
+    );
     return { handled: true, newState: 'SELECT_DATE' };
   }
 
   const selected = dates[choice - 1];
 
   const availableTimes = await getAvailableTimes(
-    supabase, 
-    config.clinic_id, 
-    session.selected_professional_id!, 
+    supabase,
+    config.clinic_id,
+    session.selected_professional_id!,
     selected.date
   );
 
@@ -1363,7 +1396,11 @@ async function handleSelectDate(
     available_times: availableTimes,
   });
 
-  await sendWhatsAppMessage(config, phone, MESSAGES.selectTime(availableTimes) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
+  await sendWhatsAppMessage(
+    config,
+    phone,
+    MESSAGES.selectTime(availableTimes) + MESSAGES.hintSelectOption + MESSAGES.hintMenu
+  );
   return { handled: true, newState: 'SELECT_TIME' };
 }
 
@@ -1374,11 +1411,48 @@ async function handleSelectTime(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const choice = parseInt(messageText.trim());
   const times = session.available_times || [];
 
+  // 1) Numeric selection
+  let choice = parseInt(messageText.trim());
+
+  // 2) Natural language via AI (e.g. "14h", "duas da tarde")
+  if (isNaN(choice) && times.length > 0) {
+    const aiResult = await getAIIntent(
+      messageText,
+      'SELECT_TIME',
+      undefined,
+      undefined,
+      times
+    );
+    console.log('[time] AI result:', aiResult);
+
+    if (aiResult.confidence >= 0.6) {
+      if (typeof aiResult.entities?.option_number === 'number') {
+        choice = aiResult.entities.option_number;
+      } else if (aiResult.entities?.time) {
+        const raw = aiResult.entities.time.trim().toLowerCase();
+        const m1 = raw.match(/^(\d{1,2})(?::(\d{2}))?$/);
+        const m2 = raw.match(/^(\d{1,2})h(?:(\d{2}))?$/);
+        const hh = m1?.[1] ?? m2?.[1];
+        const mm = m1?.[2] ?? m2?.[2] ?? '00';
+        if (hh) {
+          const normalized = `${String(parseInt(hh)).padStart(2, '0')}:${mm}`;
+          const idx = times.findIndex((t) => t.time.startsWith(normalized));
+          if (idx >= 0) choice = idx + 1;
+        }
+      }
+    }
+  }
+
   if (isNaN(choice) || choice < 1 || choice > times.length) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
+    await sendWhatsAppMessage(
+      config,
+      phone,
+      MESSAGES.invalidOption +
+        MESSAGES.hintSelectOption +
+        "\n\n_Se preferir, você pode escrever o horário (ex: '14h', '10:30')._"
+    );
     return { handled: true, newState: 'SELECT_TIME' };
   }
 
@@ -1389,12 +1463,16 @@ async function handleSelectTime(
     selected_time: selected.time,
   });
 
-  await sendWhatsAppMessage(config, phone, MESSAGES.confirmAppointment({
-    patientName: session.patient_name || '',
-    professionalName: session.selected_professional_name || '',
-    date: formatDate(session.selected_date!),
-    time: selected.formatted,
-  }) + MESSAGES.hintConfirm);
+  await sendWhatsAppMessage(
+    config,
+    phone,
+    MESSAGES.confirmAppointment({
+      patientName: session.patient_name || '',
+      professionalName: session.selected_professional_name || '',
+      date: formatDate(session.selected_date!),
+      time: selected.formatted,
+    }) + MESSAGES.hintYesNo
+  );
 
   return { handled: true, newState: 'CONFIRM_APPOINTMENT' };
 }
