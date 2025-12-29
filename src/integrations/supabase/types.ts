@@ -1405,6 +1405,7 @@ export type Database = {
           phone: string | null
           reminder_enabled: boolean | null
           reminder_hours: number | null
+          restrict_one_appointment_per_cpf_month: boolean | null
           slug: string
           state_code: string | null
           updated_at: string
@@ -1438,6 +1439,7 @@ export type Database = {
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
+          restrict_one_appointment_per_cpf_month?: boolean | null
           slug: string
           state_code?: string | null
           updated_at?: string
@@ -1471,6 +1473,7 @@ export type Database = {
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
+          restrict_one_appointment_per_cpf_month?: boolean | null
           slug?: string
           state_code?: string | null
           updated_at?: string
