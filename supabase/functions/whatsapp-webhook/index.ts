@@ -1247,24 +1247,30 @@ serve(async (req) => {
     let clinicId = confirmResult.clinicId;
 
     if (!confirmResult.handled) {
-      // Try to find config by instance name - use .limit(1) since there may be multiple clinics with same instance
+      // Find config by instance name - each clinic should have unique instance name
       const { data: configByInstance, error: configError } = await supabase
         .from('evolution_configs')
         .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled')
         .eq('instance_name', payload.instance)
         .eq('is_connected', true)
-        .eq('direct_reply_enabled', true)
-        .limit(1);
+        .eq('direct_reply_enabled', true);
 
       if (configError) {
         console.error('[webhook] Error fetching config:', configError);
+      }
+
+      // If multiple clinics share same instance, log warning
+      if (configByInstance && configByInstance.length > 1) {
+        console.warn(`[webhook] WARNING: Multiple clinics (${configByInstance.length}) share the same instance "${payload.instance}". ` +
+          `Each clinic should have a unique Evolution instance for proper routing. ` +
+          `Using first match: clinic_id=${configByInstance[0].clinic_id}`);
       }
 
       const configData = configByInstance && configByInstance.length > 0 
         ? (configByInstance[0] as EvolutionConfig) 
         : null;
 
-      console.log(`[webhook] Found config for instance ${payload.instance}:`, configData ? 'yes' : 'no');
+      console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
 
       if (configData) {
         clinicId = configData.clinic_id;
