@@ -368,7 +368,7 @@ export default function MedicalRecordsPage() {
 
   const filteredPatients = patients.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.phone.includes(searchQuery)
+    (p.phone && p.phone.includes(searchQuery))
   );
 
   const startRecordFromAppointment = (appointment: Appointment) => {
