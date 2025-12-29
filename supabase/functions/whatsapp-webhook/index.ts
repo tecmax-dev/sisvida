@@ -1010,6 +1010,21 @@ async function handleSelectProfessional(
 
   const selected = professionals[choice - 1];
 
+  // Check CPF appointment limit BEFORE proceeding with date selection
+  const limitCheck = await checkCpfAppointmentLimit(
+    supabase,
+    config.clinic_id,
+    session.patient_id!,
+    selected.id
+  );
+
+  if (limitCheck.limitReached) {
+    await sendWhatsAppMessage(config, phone, 
+      `❌ Você já atingiu o limite de *${limitCheck.maxAllowed} agendamento(s)* com *${selected.name}* neste mês.\n\nPor favor, escolha outro profissional.`
+    );
+    return { handled: true, newState: 'SELECT_PROFESSIONAL' };
+  }
+
   const availableDates = await getAvailableDates(supabase, config.clinic_id, selected.id);
 
   if (availableDates.length === 0) {
@@ -1448,6 +1463,75 @@ async function getAvailableTimes(
   }
 
   return times.slice(0, 10);
+}
+
+async function checkCpfAppointmentLimit(
+  supabase: SupabaseClient,
+  clinicId: string,
+  patientId: string,
+  professionalId: string
+): Promise<{ limitReached: boolean; maxAllowed: number }> {
+  // Get clinic's CPF appointment limit setting
+  const { data: clinic } = await supabase
+    .from('clinics')
+    .select('max_appointments_per_cpf_month')
+    .eq('id', clinicId)
+    .single();
+
+  const maxAllowed = (clinic as { max_appointments_per_cpf_month: number | null } | null)?.max_appointments_per_cpf_month;
+  
+  // If no limit configured (NULL or 0), allow
+  if (!maxAllowed || maxAllowed === 0) {
+    return { limitReached: false, maxAllowed: 0 };
+  }
+
+  // Get patient CPF
+  const { data: patient } = await supabase
+    .from('patients')
+    .select('cpf')
+    .eq('id', patientId)
+    .single();
+
+  const patientCpf = (patient as { cpf: string | null } | null)?.cpf;
+
+  // If no CPF, can't validate - allow
+  if (!patientCpf) {
+    return { limitReached: false, maxAllowed };
+  }
+
+  // Calculate month boundaries
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+
+  // Count existing appointments in the same month for same professional and CPF
+  const { data: existingAppointments, error } = await supabase
+    .from('appointments')
+    .select('id, patient:patients!inner(cpf)')
+    .eq('clinic_id', clinicId)
+    .eq('professional_id', professionalId)
+    .gte('appointment_date', monthStart)
+    .lte('appointment_date', monthEnd)
+    .neq('status', 'cancelled');
+
+  if (error) {
+    console.error('[booking] Error checking CPF limit:', error);
+    return { limitReached: false, maxAllowed };
+  }
+
+  // Filter by matching CPF
+  const matchingAppointments = (existingAppointments || []).filter((apt: { patient: { cpf: string } }) => 
+    apt.patient?.cpf === patientCpf
+  );
+
+  const currentCount = matchingAppointments.length;
+
+  console.log(`[booking] CPF limit check: patient=${patientId}, professional=${professionalId}, month=${monthStart}, count=${currentCount}, max=${maxAllowed}`);
+
+  return { 
+    limitReached: currentCount >= maxAllowed, 
+    maxAllowed 
+  };
 }
 
 async function checkSlotAvailability(
