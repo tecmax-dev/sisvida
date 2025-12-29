@@ -83,7 +83,7 @@ export function formatCPF(cpf: string): string {
   return cleanCPF.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
 }
 
-// Parse date from various formats
+// Parse date from various formats to YYYY-MM-DD
 export function parseDate(dateStr: string): string | null {
   if (!dateStr) return null;
   
@@ -131,6 +131,16 @@ export function parseDate(dateStr: string): string | null {
   }
   
   return null;
+}
+
+// Format date from YYYY-MM-DD to DD/MM/YYYY for display
+export function formatDateBR(dateStr: string | null): string {
+  if (!dateStr) return '';
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) {
+    return `${match[3]}/${match[2]}/${match[1]}`;
+  }
+  return dateStr;
 }
 
 // Validate patient row
