@@ -90,6 +90,18 @@ export function validateCPF(cpf: string): boolean {
   return true;
 }
 
+// Normalize name for comparison (removes accents, extra spaces, converts to lowercase)
+export function normalizeNameForComparison(name: string): string {
+  if (!name) return '';
+  return name
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove accents
+    .replace(/\s+/g, ' ') // Normalize multiple spaces to single
+    .trim();
+}
+
 // Phone validation (Brazilian format)
 export function validatePhone(phone: string): boolean {
   if (!phone) return false;
