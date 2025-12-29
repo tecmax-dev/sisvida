@@ -792,6 +792,37 @@ function isEmptyLike(value: string): boolean {
   );
 }
 
+// Normalize line breaks in text content for proper display
+function normalizeLineBreaks(text: string): string {
+  if (!text) return text;
+  
+  return text
+    // Convert HTML line breaks to newlines
+    .replace(/<br\s*\/?>/gi, '\n')
+    // Convert HTML paragraphs to double newlines
+    .replace(/<\/p>\s*<p[^>]*>/gi, '\n\n')
+    .replace(/<p[^>]*>/gi, '')
+    .replace(/<\/p>/gi, '\n')
+    // Convert Windows line breaks (CRLF) to Unix (LF)
+    .replace(/\r\n/g, '\n')
+    // Convert old Mac line breaks (CR) to Unix (LF)
+    .replace(/\r/g, '\n')
+    // Convert escaped newlines
+    .replace(/\\n/g, '\n')
+    // Convert double backslash-n (from some exports)
+    .replace(/\\\\n/g, '\n')
+    // Remove other HTML tags but preserve content
+    .replace(/<[^>]+>/g, '')
+    // Normalize multiple consecutive newlines (max 2)
+    .replace(/\n{3,}/g, '\n\n')
+    // Trim whitespace from each line
+    .split('\n')
+    .map(line => line.trim())
+    .join('\n')
+    // Final trim
+    .trim();
+}
+
 // Helper to get value from row with multiple possible keys
 function getRowValue(row: Record<string, unknown>, keys: string[]): string {
   for (const key of keys) {
@@ -1105,6 +1136,22 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
     'dr', 'Dr', 'dra', 'Dra', 'doutor', 'Doutor', 'doutora', 'Doutora'
   ]) || undefined;
 
+  // Helper to normalize and get value
+  const getTextValue = (keys: string[]): string | undefined => {
+    const raw = getRowValue(row, keys);
+    return raw ? normalizeLineBreaks(raw) : undefined;
+  };
+
+  // Normalize iClinic data fields
+  const normalizedIClinic = {
+    queixa: iClinicData.queixa ? normalizeLineBreaks(iClinicData.queixa) : undefined,
+    diagnostico: iClinicData.diagnostico ? normalizeLineBreaks(iClinicData.diagnostico) : undefined,
+    tratamento: iClinicData.tratamento ? normalizeLineBreaks(iClinicData.tratamento) : undefined,
+    prescricao: iClinicData.prescricao ? normalizeLineBreaks(iClinicData.prescricao) : undefined,
+    historia: iClinicData.historia ? normalizeLineBreaks(iClinicData.historia) : undefined,
+    exame_fisico: iClinicData.exame_fisico ? normalizeLineBreaks(iClinicData.exame_fisico) : undefined,
+  };
+
   return {
     cpf_paciente: getRowValue(row, [
       'cpf_paciente', 'CPF Paciente', 'cpf paciente', 'cpf do paciente',
@@ -1114,37 +1161,37 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
     nome_paciente: patientName,
     nome_profissional: professionalName,
     data_registro: recordDate,
-    // Use iClinic data if available, otherwise fallback to standard columns
-    queixa: iClinicData.queixa || getRowValue(row, [
+    // Use iClinic data if available, otherwise fallback to standard columns (with line break normalization)
+    queixa: normalizedIClinic.queixa || getTextValue([
       'queixa', 'Queixa', 'QUEIXA', 'Queixa Principal', 'queixa_principal',
       'queixa principal', 'motivo_consulta', 'Motivo Consulta', 'Motivo da Consulta',
       'chief_complaint', 'Chief Complaint', 'complaint', 'Complaint',
       'reason', 'Reason', 'motivo', 'Motivo'
-    ]) || undefined,
-    diagnostico: iClinicData.diagnostico || getRowValue(row, [
+    ]),
+    diagnostico: normalizedIClinic.diagnostico || getTextValue([
       'diagnostico', 'Diagnostico', 'DIAGNOSTICO', 'diagnóstico', 'Diagnóstico',
       'diagnosis', 'Diagnosis', 'DIAGNOSIS', 'cid', 'CID', 'hipotese', 'Hipótese',
       'doenca', 'Doença', 'disease', 'Disease', 'condition', 'Condition'
-    ]) || undefined,
-    tratamento: iClinicData.tratamento || getRowValue(row, [
+    ]),
+    tratamento: normalizedIClinic.tratamento || getTextValue([
       'tratamento', 'Tratamento', 'TRATAMENTO', 'Plano de Tratamento',
       'plano_de_tratamento', 'plano de tratamento', 'plano_tratamento',
       'treatment', 'Treatment', 'TREATMENT', 'treatment_plan', 'Treatment Plan',
       'conduta', 'Conduta', 'plan', 'Plan', 'plano', 'Plano'
-    ]) || undefined,
-    prescricao: iClinicData.prescricao || getRowValue(row, [
+    ]),
+    prescricao: normalizedIClinic.prescricao || getTextValue([
       'prescricao', 'Prescricao', 'PRESCRICAO', 'prescrição', 'Prescrição',
       'prescription', 'Prescription', 'PRESCRIPTION',
       'medicamentos', 'Medicamentos', 'medications', 'Medications',
       'receita', 'Receita', 'recipe', 'remedio', 'Remédio', 'remedios', 'Remédios'
-    ]) || undefined,
+    ]),
     // For observacoes, use iClinic historia (História), exame_fisico, or standard columns, or mainContent
-    observacoes: iClinicData.historia || iClinicData.exame_fisico || getRowValue(row, [
+    observacoes: normalizedIClinic.historia || normalizedIClinic.exame_fisico || getTextValue([
       'observacoes', 'Observacoes', 'OBSERVACOES', 'observações', 'Observações',
       'notas', 'Notas', 'NOTAS', 'obs', 'Obs', 'OBS',
       'notes', 'Notes', 'NOTES', 'comments', 'Comments',
       'anotacoes', 'Anotacoes', 'anotações', 'Anotações',
-    ]) || mainContent || undefined,
+    ]) || (mainContent ? normalizeLineBreaks(mainContent) : undefined),
   };
 }
 
