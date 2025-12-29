@@ -11,6 +11,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
+import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -309,22 +310,17 @@ export default function DependentsPage() {
                             {dependent.card_number ? (
                               <span className="text-sm">{dependent.card_number}</span>
                             ) : (
-                              <span className="text-muted-foreground">—</span>
+                              <span className="text-muted-foreground text-sm">Sem carteirinha</span>
                             )}
-                            {dependent.card_expires_at && (
-                              <div className="flex items-center gap-1">
-                                {expired ? (
-                                  <Badge variant="destructive" className="text-xs gap-1">
-                                    <AlertCircle className="h-3 w-3" />
-                                    Vencida {formatDate(dependent.card_expires_at)}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">
-                                    Vence: {formatDate(dependent.card_expires_at)}
-                                  </span>
-                                )}
-                              </div>
-                            )}
+                            <div>
+                              <InlineCardExpiryEdit
+                                entityId={dependent.id}
+                                entityType="dependent"
+                                currentExpiryDate={dependent.card_expires_at}
+                                cardNumber={dependent.card_number}
+                                onUpdate={fetchDependents}
+                              />
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>

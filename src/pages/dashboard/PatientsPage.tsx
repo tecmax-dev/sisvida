@@ -15,6 +15,7 @@ import {
   Paperclip,
   Users,
 } from "lucide-react";
+import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -914,25 +915,13 @@ export default function PatientsPage() {
                       )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
-                      {patient.card_expires_at ? (
-                        (() => {
-                          const expiryDate = new Date(patient.card_expires_at);
-                          const isExpired = expiryDate < new Date();
-                          const daysUntilExpiry = Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                          const isExpiringSoon = daysUntilExpiry <= 30 && daysUntilExpiry > 0;
-                          
-                          return (
-                            <Badge 
-                              variant={isExpired ? "destructive" : isExpiringSoon ? "secondary" : "outline"}
-                              className={`text-xs ${isExpiringSoon && !isExpired ? "bg-warning text-warning-foreground" : ""}`}
-                            >
-                              {isExpired ? "Vencida" : format(expiryDate, "dd/MM/yyyy", { locale: ptBR })}
-                            </Badge>
-                          );
-                        })()
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
+                      <InlineCardExpiryEdit
+                        entityId={patient.id}
+                        entityType="patient"
+                        currentExpiryDate={patient.card_expires_at || null}
+                        cardNumber={patient.card_number}
+                        onUpdate={fetchPatients}
+                      />
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
