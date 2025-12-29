@@ -105,14 +105,18 @@ export default function HolidaysPage() {
   const [municipalHolidays, setMunicipalHolidays] = useState<Holiday[]>([]);
   const [clinicHolidays, setClinicHolidays] = useState<ClinicHoliday[]>([]);
 
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [clinicDialogOpen, setClinicDialogOpen] = useState(false);
+  const [stateDialogOpen, setStateDialogOpen] = useState(false);
+  const [municipalDialogOpen, setMunicipalDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [selectedHoliday, setSelectedHoliday] = useState<ClinicHoliday | null>(null);
+  const [selectedHoliday, setSelectedHoliday] = useState<{ id: string; name: string; type: "clinic" | "state" | "municipal" } | null>(null);
 
   // Form state
   const [newHolidayName, setNewHolidayName] = useState("");
   const [newHolidayDate, setNewHolidayDate] = useState("");
   const [newHolidayRecurring, setNewHolidayRecurring] = useState(false);
+  const [newHolidayStateCode, setNewHolidayStateCode] = useState<string>("");
+  const [newHolidayCity, setNewHolidayCity] = useState<string>("");
 
   useEffect(() => {
     if (currentClinic) {
@@ -222,7 +226,7 @@ export default function HolidaysPage() {
     }
   };
 
-  const handleCreateHoliday = async () => {
+  const handleCreateClinicHoliday = async () => {
     if (!currentClinic || !newHolidayName || !newHolidayDate) return;
 
     setSaving(true);
@@ -249,7 +253,94 @@ export default function HolidaysPage() {
         description: "O feriado foi adicionado com sucesso.",
       });
 
-      setDialogOpen(false);
+      setClinicDialogOpen(false);
+      resetForm();
+      fetchAllHolidays();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao cadastrar",
+        description: error.message?.includes("duplicate") 
+          ? "Já existe um feriado nesta data." 
+          : error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateStateHoliday = async () => {
+    if (!newHolidayName || !newHolidayDate || !newHolidayStateCode) return;
+
+    setSaving(true);
+    try {
+      const date = parseISO(newHolidayDate);
+      const insertData: any = {
+        state_code: newHolidayStateCode,
+        name: newHolidayName.trim(),
+        holiday_date: newHolidayDate,
+        is_recurring: newHolidayRecurring,
+      };
+
+      if (newHolidayRecurring) {
+        insertData.recurring_month = date.getMonth() + 1;
+        insertData.recurring_day = date.getDate();
+      }
+
+      const { error } = await supabase.from("state_holidays").insert(insertData);
+
+      if (error) throw error;
+
+      toast({
+        title: "Feriado estadual cadastrado",
+        description: "O feriado foi adicionado com sucesso.",
+      });
+
+      setStateDialogOpen(false);
+      resetForm();
+      fetchAllHolidays();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao cadastrar",
+        description: error.message?.includes("duplicate") 
+          ? "Já existe um feriado nesta data." 
+          : error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateMunicipalHoliday = async () => {
+    if (!newHolidayName || !newHolidayDate || !newHolidayStateCode || !newHolidayCity) return;
+
+    setSaving(true);
+    try {
+      const date = parseISO(newHolidayDate);
+      const insertData: any = {
+        state_code: newHolidayStateCode,
+        city: newHolidayCity.trim(),
+        name: newHolidayName.trim(),
+        holiday_date: newHolidayDate,
+        is_recurring: newHolidayRecurring,
+      };
+
+      if (newHolidayRecurring) {
+        insertData.recurring_month = date.getMonth() + 1;
+        insertData.recurring_day = date.getDate();
+      }
+
+      const { error } = await supabase.from("municipal_holidays").insert(insertData);
+
+      if (error) throw error;
+
+      toast({
+        title: "Feriado municipal cadastrado",
+        description: "O feriado foi adicionado com sucesso.",
+      });
+
+      setMunicipalDialogOpen(false);
       resetForm();
       fetchAllHolidays();
     } catch (error: any) {
@@ -270,8 +361,14 @@ export default function HolidaysPage() {
 
     setSaving(true);
     try {
+      const tableName = selectedHoliday.type === "clinic" 
+        ? "clinic_holidays" 
+        : selectedHoliday.type === "state" 
+          ? "state_holidays" 
+          : "municipal_holidays";
+
       const { error } = await supabase
-        .from("clinic_holidays")
+        .from(tableName)
         .delete()
         .eq("id", selectedHoliday.id);
 
@@ -300,6 +397,8 @@ export default function HolidaysPage() {
     setNewHolidayName("");
     setNewHolidayDate("");
     setNewHolidayRecurring(false);
+    setNewHolidayStateCode("");
+    setNewHolidayCity("");
   };
 
   const formatDate = (dateStr: string) => {
@@ -310,10 +409,11 @@ export default function HolidaysPage() {
     }
   };
 
-  const HolidayTable = ({ holidays, type, showDelete = false }: { 
+  const HolidayTable = ({ holidays, type, showDelete = false, deleteType }: { 
     holidays: Holiday[]; 
     type: "nacional" | "estadual" | "municipal" | "clinica";
     showDelete?: boolean;
+    deleteType?: "clinic" | "state" | "municipal";
   }) => (
     <Table>
       <TableHeader>
@@ -344,13 +444,13 @@ export default function HolidaysPage() {
                   <Badge variant="outline">Único</Badge>
                 )}
               </TableCell>
-              {showDelete && (
+              {showDelete && deleteType && (
                 <TableCell>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => {
-                      setSelectedHoliday(holiday as ClinicHoliday);
+                      setSelectedHoliday({ id: holiday.id, name: holiday.name, type: deleteType });
                       setDeleteDialogOpen(true);
                     }}
                     className="text-destructive hover:text-destructive"
@@ -485,18 +585,84 @@ export default function HolidaysPage() {
 
           <TabsContent value="state">
             <Card>
-              <CardHeader>
-                <CardTitle>Feriados Estaduais</CardTitle>
-                <CardDescription>
-                  {stateCode 
-                    ? `Feriados do estado ${BRAZILIAN_STATES.find(s => s.code === stateCode)?.name || stateCode}`
-                    : "Configure o estado da clínica para ver os feriados estaduais"
-                  }
-                </CardDescription>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Feriados Estaduais</CardTitle>
+                  <CardDescription>
+                    {stateCode 
+                      ? `Feriados do estado ${BRAZILIAN_STATES.find(s => s.code === stateCode)?.name || stateCode}`
+                      : "Configure o estado da clínica para ver os feriados estaduais"
+                    }
+                  </CardDescription>
+                </div>
+                <Dialog open={stateDialogOpen} onOpenChange={(open) => { setStateDialogOpen(open); if (!open) resetForm(); }}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Feriado Estadual
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Novo Feriado Estadual</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div>
+                        <Label>Estado</Label>
+                        <Select value={newHolidayStateCode} onValueChange={setNewHolidayStateCode}>
+                          <SelectTrigger className="mt-1.5">
+                            <SelectValue placeholder="Selecione o estado" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BRAZILIAN_STATES.map((state) => (
+                              <SelectItem key={state.code} value={state.code}>
+                                {state.name} ({state.code})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Nome do Feriado</Label>
+                        <Input
+                          value={newHolidayName}
+                          onChange={(e) => setNewHolidayName(e.target.value)}
+                          placeholder="Ex: Revolução Constitucionalista"
+                          className="mt-1.5"
+                        />
+                      </div>
+                      <div>
+                        <Label>Data</Label>
+                        <Input
+                          type="date"
+                          value={newHolidayDate}
+                          onChange={(e) => setNewHolidayDate(e.target.value)}
+                          className="mt-1.5"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={newHolidayRecurring}
+                          onCheckedChange={setNewHolidayRecurring}
+                        />
+                        <Label>Repetir todos os anos</Label>
+                      </div>
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setStateDialogOpen(false)}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleCreateStateHoliday} disabled={saving || !newHolidayName || !newHolidayDate || !newHolidayStateCode}>
+                          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Cadastrar
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </CardHeader>
               <CardContent>
                 {stateCode ? (
-                  <HolidayTable holidays={stateHolidays} type="estadual" />
+                  <HolidayTable holidays={stateHolidays} type="estadual" showDelete deleteType="state" />
                 ) : (
                   <div className="text-center py-8 text-muted-foreground">
                     <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -509,49 +675,54 @@ export default function HolidaysPage() {
 
           <TabsContent value="municipal">
             <Card>
-              <CardHeader>
-                <CardTitle>Feriados Municipais</CardTitle>
-                <CardDescription>
-                  {city && stateCode
-                    ? `Feriados de ${city} - ${stateCode}`
-                    : "Configure estado e cidade para ver os feriados municipais"
-                  }
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {city && stateCode ? (
-                  <HolidayTable holidays={municipalHolidays} type="municipal" />
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    Configure estado e cidade nas configurações acima
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="clinic">
-            <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <div>
-                  <CardTitle>Feriados da Clínica</CardTitle>
+                  <CardTitle>Feriados Municipais</CardTitle>
                   <CardDescription>
-                    Feriados customizados específicos desta clínica
+                    {city && stateCode
+                      ? `Feriados de ${city} - ${stateCode}`
+                      : "Configure estado e cidade para ver os feriados municipais"
+                    }
                   </CardDescription>
                 </div>
-                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <Dialog open={municipalDialogOpen} onOpenChange={(open) => { setMunicipalDialogOpen(open); if (!open) resetForm(); }}>
                   <DialogTrigger asChild>
                     <Button>
                       <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Feriado
+                      Adicionar Feriado Municipal
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
                     <DialogHeader>
-                      <DialogTitle>Novo Feriado</DialogTitle>
+                      <DialogTitle>Novo Feriado Municipal</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <Label>Estado</Label>
+                          <Select value={newHolidayStateCode} onValueChange={setNewHolidayStateCode}>
+                            <SelectTrigger className="mt-1.5">
+                              <SelectValue placeholder="Selecione o estado" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {BRAZILIAN_STATES.map((state) => (
+                                <SelectItem key={state.code} value={state.code}>
+                                  {state.name} ({state.code})
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Cidade</Label>
+                          <Input
+                            value={newHolidayCity}
+                            onChange={(e) => setNewHolidayCity(e.target.value)}
+                            placeholder="Nome da cidade"
+                            className="mt-1.5"
+                          />
+                        </div>
+                      </div>
                       <div>
                         <Label>Nome do Feriado</Label>
                         <Input
@@ -578,10 +749,10 @@ export default function HolidaysPage() {
                         <Label>Repetir todos os anos</Label>
                       </div>
                       <div className="flex justify-end gap-2 pt-4">
-                        <Button variant="outline" onClick={() => setDialogOpen(false)}>
+                        <Button variant="outline" onClick={() => setMunicipalDialogOpen(false)}>
                           Cancelar
                         </Button>
-                        <Button onClick={handleCreateHoliday} disabled={saving || !newHolidayName || !newHolidayDate}>
+                        <Button onClick={handleCreateMunicipalHoliday} disabled={saving || !newHolidayName || !newHolidayDate || !newHolidayStateCode || !newHolidayCity}>
                           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                           Cadastrar
                         </Button>
@@ -591,7 +762,79 @@ export default function HolidaysPage() {
                 </Dialog>
               </CardHeader>
               <CardContent>
-                <HolidayTable holidays={clinicHolidays} type="clinica" showDelete />
+                {city && stateCode ? (
+                  <HolidayTable holidays={municipalHolidays} type="municipal" showDelete deleteType="municipal" />
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    Configure estado e cidade nas configurações acima
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="clinic">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Feriados da Clínica</CardTitle>
+                  <CardDescription>
+                    Feriados customizados específicos desta clínica
+                  </CardDescription>
+                </div>
+                <Dialog open={clinicDialogOpen} onOpenChange={(open) => { setClinicDialogOpen(open); if (!open) resetForm(); }}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Adicionar Feriado
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Novo Feriado da Clínica</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div>
+                        <Label>Nome do Feriado</Label>
+                        <Input
+                          value={newHolidayName}
+                          onChange={(e) => setNewHolidayName(e.target.value)}
+                          placeholder="Ex: Recesso Interno"
+                          className="mt-1.5"
+                        />
+                      </div>
+                      <div>
+                        <Label>Data</Label>
+                        <Input
+                          type="date"
+                          value={newHolidayDate}
+                          onChange={(e) => setNewHolidayDate(e.target.value)}
+                          className="mt-1.5"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={newHolidayRecurring}
+                          onCheckedChange={setNewHolidayRecurring}
+                        />
+                        <Label>Repetir todos os anos</Label>
+                      </div>
+                      <div className="flex justify-end gap-2 pt-4">
+                        <Button variant="outline" onClick={() => setClinicDialogOpen(false)}>
+                          Cancelar
+                        </Button>
+                        <Button onClick={handleCreateClinicHoliday} disabled={saving || !newHolidayName || !newHolidayDate}>
+                          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Cadastrar
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </CardHeader>
+              <CardContent>
+                <HolidayTable holidays={clinicHolidays} type="clinica" showDelete deleteType="clinic" />
               </CardContent>
             </Card>
           </TabsContent>
