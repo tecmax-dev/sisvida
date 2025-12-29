@@ -617,14 +617,30 @@ async function handleBookingFlow(
   console.log(`[booking] AI intent: ${aiResult.intent}, confidence: ${aiResult.confidence}, state: ${session.state}`);
 
   // Handle high-confidence AI intents that can override current state
-  if (aiResult.confidence >= 0.7) {
-    // Extract CPF from AI if detected
-    if (aiResult.entities?.cpf && session.state === 'WAITING_CPF') {
+  if (aiResult.confidence >= 0.6) {
+    // Extract CPF from AI if detected (any state)
+    if (aiResult.entities?.cpf) {
       const cleanCpf = aiResult.entities.cpf.replace(/\D/g, '');
       if (CPF_REGEX.test(cleanCpf) && validateCpf(cleanCpf)) {
         console.log('[booking] AI detected valid CPF:', cleanCpf.slice(0, 3) + '***');
-        // Let handleWaitingCpf process it
         return await handleWaitingCpf(supabase, config, phone, cleanCpf, session);
+      }
+    }
+
+    // Handle greeting or schedule intent at WAITING_CPF state - respond friendly and ask for CPF
+    if (session.state === 'WAITING_CPF' || session.state === 'INIT') {
+      if (aiResult.intent === 'schedule' || aiResult.intent === 'help' || aiResult.intent === 'unknown') {
+        // Use AI's friendly response if available, otherwise use default welcome
+        const friendlyIntro = aiResult.friendly_response || 
+          '👋 Olá! Que bom ter você aqui! Sou o assistente virtual de agendamentos.';
+        
+        const msg = `${friendlyIntro}\n\n` +
+          '📋 Para agendar, cancelar ou consultar suas consultas, preciso primeiro confirmar sua identidade.\n\n' +
+          MESSAGES.hintCpf;
+        
+        await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
+        await sendWhatsAppMessage(config, phone, msg);
+        return { handled: true, newState: 'WAITING_CPF' };
       }
     }
 
