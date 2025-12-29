@@ -55,6 +55,9 @@ interface Clinic {
   logo_url: string | null;
   map_view_type: string | null;
   custom_map_embed_url: string | null;
+  holidays_enabled: boolean | null;
+  state_code: string | null;
+  city: string | null;
 }
 
 interface Professional {
@@ -126,6 +129,7 @@ export default function ProfessionalProfile() {
   const [searchingPatient, setSearchingPatient] = useState(false);
   const [patientFound, setPatientFound] = useState(false);
   const [cpfError, setCpfError] = useState("");
+  const [holidays, setHolidays] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchData();
@@ -145,7 +149,7 @@ export default function ProfessionalProfile() {
       // Fetch clinic
       const { data: clinicData, error: clinicError } = await supabase
         .from('clinics')
-        .select('id, name, slug, phone, address, logo_url, map_view_type, custom_map_embed_url')
+        .select('id, name, slug, phone, address, logo_url, map_view_type, custom_map_embed_url, holidays_enabled, state_code, city')
         .eq('slug', clinicSlug)
         .single();
 
@@ -214,10 +218,99 @@ export default function ProfessionalProfile() {
         .eq('is_active', true);
 
       setInsurancePlans(insuranceData || []);
+
+      // Fetch holidays if enabled
+      if (clinicData.holidays_enabled !== false) {
+        await fetchHolidays(clinicData);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHolidays = async (clinicData: Clinic) => {
+    try {
+      const holidayDates = new Set<string>();
+      const currentYear = new Date().getFullYear();
+      const years = [currentYear, currentYear + 1, currentYear + 2];
+
+      // Fetch national holidays
+      const { data: nationalHolidays } = await supabase
+        .from('national_holidays')
+        .select('holiday_date, is_recurring, recurring_month, recurring_day');
+
+      nationalHolidays?.forEach((h: any) => {
+        if (h.is_recurring && h.recurring_month && h.recurring_day) {
+          years.forEach(year => {
+            const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+            holidayDates.add(dateStr);
+          });
+        } else if (h.holiday_date) {
+          holidayDates.add(h.holiday_date);
+        }
+      });
+
+      // Fetch state holidays if clinic has state configured
+      if (clinicData.state_code) {
+        const { data: stateHolidays } = await supabase
+          .from('state_holidays')
+          .select('holiday_date, is_recurring, recurring_month, recurring_day')
+          .eq('state_code', clinicData.state_code);
+
+        stateHolidays?.forEach((h: any) => {
+          if (h.is_recurring && h.recurring_month && h.recurring_day) {
+            years.forEach(year => {
+              const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+              holidayDates.add(dateStr);
+            });
+          } else if (h.holiday_date) {
+            holidayDates.add(h.holiday_date);
+          }
+        });
+      }
+
+      // Fetch municipal holidays if clinic has state and city configured
+      if (clinicData.state_code && clinicData.city) {
+        const { data: municipalHolidays } = await supabase
+          .from('municipal_holidays')
+          .select('holiday_date, is_recurring, recurring_month, recurring_day')
+          .eq('state_code', clinicData.state_code)
+          .eq('city', clinicData.city);
+
+        municipalHolidays?.forEach((h: any) => {
+          if (h.is_recurring && h.recurring_month && h.recurring_day) {
+            years.forEach(year => {
+              const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+              holidayDates.add(dateStr);
+            });
+          } else if (h.holiday_date) {
+            holidayDates.add(h.holiday_date);
+          }
+        });
+      }
+
+      // Fetch clinic-specific holidays
+      const { data: clinicHolidays } = await supabase
+        .from('clinic_holidays')
+        .select('holiday_date, is_recurring, recurring_month, recurring_day')
+        .eq('clinic_id', clinicData.id);
+
+      clinicHolidays?.forEach((h: any) => {
+        if (h.is_recurring && h.recurring_month && h.recurring_day) {
+          years.forEach(year => {
+            const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+            holidayDates.add(dateStr);
+          });
+        } else if (h.holiday_date) {
+          holidayDates.add(h.holiday_date);
+        }
+      });
+
+      setHolidays(holidayDates);
+    } catch (error) {
+      console.error('Error fetching holidays:', error);
     }
   };
 
@@ -332,11 +425,17 @@ export default function ProfessionalProfile() {
     return days;
   };
 
+  const isHoliday = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return holidays.has(dateStr);
+  };
+
   const isDateDisabled = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (date < today) return true;
     if (!isDayAvailable(date)) return true;
+    if (isHoliday(date)) return true;
     return false;
   };
 
@@ -919,27 +1018,34 @@ export default function ProfessionalProfile() {
                         ))}
                       </div>
                       <div className="grid grid-cols-7 gap-1">
-                        {getDaysInMonth(currentMonth).map((date, index) => (
-                          <div key={index} className="aspect-square">
-                            {date && (
-                              <button
-                                onClick={() => !isDateDisabled(date) && setSelectedDate(date)}
-                                disabled={isDateDisabled(date)}
-                                className={cn(
-                                  "w-full h-full rounded-md text-sm font-medium transition-colors",
-                                  isDateDisabled(date) 
-                                    ? "text-muted-foreground/40 cursor-not-allowed" 
-                                    : "hover:bg-primary/10",
-                                  selectedDate?.toDateString() === date.toDateString() 
-                                    ? "bg-primary text-primary-foreground hover:bg-primary" 
-                                    : ""
-                                )}
-                              >
-                                {date.getDate()}
-                              </button>
-                            )}
-                          </div>
-                        ))}
+                        {getDaysInMonth(currentMonth).map((date, index) => {
+                          const holiday = date ? isHoliday(date) : false;
+                          const disabled = date ? isDateDisabled(date) : true;
+                          return (
+                            <div key={index} className="aspect-square">
+                              {date && (
+                                <button
+                                  onClick={() => !disabled && setSelectedDate(date)}
+                                  disabled={disabled}
+                                  title={holiday ? "Feriado" : undefined}
+                                  className={cn(
+                                    "w-full h-full rounded-md text-sm font-medium transition-colors",
+                                    holiday
+                                      ? "bg-red-100 dark:bg-red-950/30 text-red-400 dark:text-red-500 cursor-not-allowed"
+                                      : disabled 
+                                        ? "text-muted-foreground/40 cursor-not-allowed" 
+                                        : "hover:bg-primary/10",
+                                    !holiday && selectedDate?.toDateString() === date.toDateString() 
+                                      ? "bg-primary text-primary-foreground hover:bg-primary" 
+                                      : ""
+                                  )}
+                                >
+                                  {date.getDate()}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </div>
