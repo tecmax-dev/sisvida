@@ -33,6 +33,8 @@ const ProfessionalProfile = lazy(() => import("./pages/ProfessionalProfile"));
 const TelemedicinePatient = lazy(() => import("./pages/TelemedicinePatient"));
 const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail"));
 const AwaitingConfirmation = lazy(() => import("./pages/AwaitingConfirmation"));
+const PublicPanel = lazy(() => import("./pages/PublicPanel"));
+const PublicTotem = lazy(() => import("./pages/PublicTotem"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -194,8 +196,9 @@ const App = () => (
                 <Route path="/profissional" element={<ProfessionalAuth />} />
                 <Route path="/profissional/painel" element={<ProfessionalDashboard />} />
                 <Route path="/profissional/atendimento/:appointmentId" element={<ProfessionalAppointment />} />
-                {/* Legacy panel route - redirect to professional dashboard */}
-                <Route path="/panel/:id" element={<ProfessionalDashboard />} />
+                {/* Public Panel and Totem routes */}
+                <Route path="/panel/:token" element={<PublicPanel />} />
+                <Route path="/totem/:token" element={<PublicTotem />} />
                 <Route
                   path="/clinic-setup"
                   element={
