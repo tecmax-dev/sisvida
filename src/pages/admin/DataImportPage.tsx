@@ -1110,9 +1110,14 @@ export default function DataImportPage() {
           continue;
         }
 
+        // Get professional_id if professional name is provided
+        const profNameLower = row.data.nome_profissional?.toLowerCase().trim();
+        const professionalId = profNameLower ? professionalNameToId.get(profNameLower) : undefined;
+
         recordsToInsert.push({
           clinic_id: selectedClinicId,
           patient_id: patientId,
+          professional_id: professionalId || null,
           record_date: parsedRecordDate,
           chief_complaint: row.data.queixa?.trim() || null,
           diagnosis: row.data.diagnostico?.trim() || null,
