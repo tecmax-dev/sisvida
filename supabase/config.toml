@@ -60,8 +60,20 @@ verify_jwt = true
 [functions.whatsapp-webhook]
 verify_jwt = false
 
+[functions.whatsapp-ai-assistant]
+verify_jwt = false
+
 [functions.delete-user]
 verify_jwt = true
 
 [functions.send-confirmation-email]
+verify_jwt = false
+
+[functions.send-card-expiry-notifications]
+verify_jwt = false
+
+[functions.send-user-credentials]
+verify_jwt = false
+
+[functions.public-panel-data]
 verify_jwt = false

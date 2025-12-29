@@ -116,6 +116,18 @@ interface AppointmentRecord {
   professional?: { name?: string };
 }
 
+interface AIExtractedIntent {
+  intent: 'schedule' | 'cancel' | 'reschedule' | 'list' | 'help' | 'confirm' | 'deny' | 'select_option' | 'unknown';
+  entities: {
+    professional_name?: string;
+    date?: string;
+    time?: string;
+    option_number?: number;
+    cpf?: string;
+  };
+  confidence: number;
+  friendly_response?: string;
+}
 // ==========================================
 // UTILITY FUNCTIONS
 // ==========================================
@@ -241,6 +253,128 @@ async function sendWhatsAppMessage(
     console.error('[booking] Error sending WhatsApp:', error);
     return false;
   }
+}
+
+// ==========================================
+// AI ASSISTANT INTEGRATION
+// ==========================================
+
+async function getAIIntent(
+  message: string,
+  context: string,
+  availableProfessionals?: Array<{ name: string; specialty: string }>,
+  availableDates?: Array<{ date: string; formatted: string; weekday: string }>,
+  availableTimes?: Array<{ time: string; formatted: string }>
+): Promise<AIExtractedIntent> {
+  try {
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.log('[ai] LOVABLE_API_KEY not configured, falling back to regex');
+      return { intent: 'unknown', entities: {}, confidence: 0 };
+    }
+
+    // Build context info for the AI
+    let contextInfo = '';
+    if (availableProfessionals && availableProfessionals.length > 0) {
+      contextInfo += `\nProfissionais disponíveis: ${availableProfessionals.map((p, i) => `${i + 1}. ${p.name}`).join(', ')}`;
+    }
+    if (availableDates && availableDates.length > 0) {
+      contextInfo += `\nDatas disponíveis: ${availableDates.map((d, i) => `${i + 1}. ${d.formatted} (${d.weekday})`).join(', ')}`;
+    }
+    if (availableTimes && availableTimes.length > 0) {
+      contextInfo += `\nHorários disponíveis: ${availableTimes.map((t, i) => `${i + 1}. ${t.formatted}`).join(', ')}`;
+    }
+
+    const systemPrompt = `Você é um assistente de agendamento médico via WhatsApp. Interprete a mensagem e extraia a intenção.
+
+Estado atual: ${context}${contextInfo}
+
+Regras:
+- Número sozinho (1, 2, 3...) = select_option com option_number
+- "sim", "confirmo", "ok", "👍", "s" = confirm
+- "não", "nao", "n", "cancelar", "❌" = deny
+- Pedir para agendar/marcar = schedule
+- Pedir para cancelar/desmarcar = cancel
+- Pedir para reagendar/remarcar = reschedule
+- Ver consultas = list
+- CPF tem 11 dígitos
+- Se mencionar nome de profissional, extrair professional_name
+- Se mencionar data (amanhã, segunda, dia 15), extrair date
+- Se mencionar horário (14h, duas da tarde), extrair time
+
+Retorne APENAS JSON:
+{"intent":"schedule|cancel|reschedule|list|help|confirm|deny|select_option|unknown","entities":{"professional_name":"...","date":"...","time":"...","option_number":N,"cpf":"..."},"confidence":0.0-1.0,"friendly_response":"resposta se não entendeu"}`;
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('[ai] Gateway error:', response.status);
+      return { intent: 'unknown', entities: {}, confidence: 0 };
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    
+    console.log('[ai] Raw response:', content);
+
+    // Parse JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log('[ai] Parsed intent:', parsed);
+      return parsed;
+    }
+    
+    return { intent: 'unknown', entities: {}, confidence: 0 };
+  } catch (error) {
+    console.error('[ai] Error:', error);
+    return { intent: 'unknown', entities: {}, confidence: 0 };
+  }
+}
+
+// Helper to find professional by name using fuzzy match
+function findProfessionalByName(
+  name: string,
+  professionals: Array<{ id: string; name: string; specialty: string }>
+): { id: string; name: string; specialty: string } | null {
+  if (!name || !professionals || professionals.length === 0) return null;
+  
+  const normalizedSearch = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  // Try exact match first
+  const exact = professionals.find(p => 
+    p.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === normalizedSearch
+  );
+  if (exact) return exact;
+  
+  // Try partial match
+  const partial = professionals.find(p => {
+    const normalizedName = p.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    return normalizedName.includes(normalizedSearch) || normalizedSearch.includes(normalizedName);
+  });
+  if (partial) return partial;
+  
+  // Try first name match
+  const firstName = normalizedSearch.split(' ')[0];
+  const byFirstName = professionals.find(p => {
+    const profFirstName = p.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').split(' ')[0];
+    return profFirstName === firstName;
+  });
+  
+  return byFirstName || null;
 }
 
 // ==========================================
@@ -608,8 +742,8 @@ async function handleConfirmIdentity(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
+  // First try regex
   if (POSITIVE_REGEX.test(messageText)) {
-    // Go to main menu instead of directly to professional selection
     await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
     await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'MAIN_MENU' };
@@ -621,7 +755,24 @@ async function handleConfirmIdentity(
     return { handled: true, newState: 'FINISHED' };
   }
 
-  await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* ou *NÃO*.` + MESSAGES.hintYesNo);
+  // Try AI for natural language confirmation
+  const aiResult = await getAIIntent(messageText, 'CONFIRM_IDENTITY');
+  console.log('[identity] AI result:', aiResult);
+
+  if (aiResult.confidence >= 0.7) {
+    if (aiResult.intent === 'confirm') {
+      await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
+      await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
+      return { handled: true, newState: 'MAIN_MENU' };
+    }
+    if (aiResult.intent === 'deny') {
+      await updateSession(supabase, session.id, { state: 'FINISHED' });
+      await sendWhatsAppMessage(config, phone, MESSAGES.identityDenied);
+      return { handled: true, newState: 'FINISHED' };
+    }
+  }
+
+  await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* para confirmar ou *NÃO* para encerrar.` + MESSAGES.hintYesNo);
   return { handled: true, newState: 'CONFIRM_IDENTITY' };
 }
 
@@ -638,8 +789,37 @@ async function handleMainMenu(
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   const choice = messageText.trim();
 
-  // Option 1: New appointment
+  // Try AI intent extraction for natural language
+  let intent: 'schedule' | 'cancel' | 'reschedule' | 'list' | null = null;
+  
+  // First check traditional patterns
   if (choice === '1') {
+    intent = 'schedule';
+  } else if (choice === '2') {
+    intent = 'cancel';
+  } else if (choice === '3') {
+    intent = 'reschedule';
+  } else {
+    // Try AI for natural language
+    const aiResult = await getAIIntent(messageText, 'MAIN_MENU');
+    console.log('[menu] AI result:', aiResult);
+    
+    if (aiResult.confidence >= 0.7) {
+      if (aiResult.intent === 'schedule') intent = 'schedule';
+      else if (aiResult.intent === 'cancel') intent = 'cancel';
+      else if (aiResult.intent === 'reschedule') intent = 'reschedule';
+      else if (aiResult.intent === 'list') intent = 'reschedule'; // Show appointments for listing too
+      else if (aiResult.intent === 'select_option' && aiResult.entities.option_number) {
+        const num = aiResult.entities.option_number;
+        if (num === 1) intent = 'schedule';
+        else if (num === 2) intent = 'cancel';
+        else if (num === 3) intent = 'reschedule';
+      }
+    }
+  }
+
+  // Handle schedule intent
+  if (intent === 'schedule') {
     const { data: professionals, error } = await supabase
       .from('professionals')
       .select('id, name, specialty, is_active')
@@ -668,8 +848,8 @@ async function handleMainMenu(
     return { handled: true, newState: 'SELECT_PROFESSIONAL' };
   }
 
-  // Option 2: Cancel appointment
-  if (choice === '2') {
+  // Handle cancel intent
+  if (intent === 'cancel') {
     const appointments = await getPatientAppointments(supabase, config.clinic_id, session.patient_id!);
     
     if (appointments.length === 0) {
@@ -687,8 +867,8 @@ async function handleMainMenu(
     return { handled: true, newState: 'LIST_APPOINTMENTS' };
   }
 
-  // Option 3: Reschedule appointment
-  if (choice === '3') {
+  // Handle reschedule intent
+  if (intent === 'reschedule') {
     const appointments = await getPatientAppointments(supabase, config.clinic_id, session.patient_id!);
     
     if (appointments.length === 0) {
@@ -706,7 +886,10 @@ async function handleMainMenu(
     return { handled: true, newState: 'LIST_APPOINTMENTS' };
   }
 
-  await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
+  // Fallback - didn't understand
+  await sendWhatsAppMessage(config, phone, 
+    `Não entendi. Por favor, escolha uma opção:\n\n1️⃣ Agendar\n2️⃣ Cancelar\n3️⃣ Reagendar\n\n_Ou diga o que deseja fazer (ex: "quero marcar consulta")_` + MESSAGES.hintMenu
+  );
   return { handled: true, newState: 'MAIN_MENU' };
 }
 
@@ -1055,15 +1238,47 @@ async function handleSelectProfessional(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const choice = parseInt(messageText.trim());
   const professionals = session.available_professionals || [];
+  let selected: { id: string; name: string; specialty: string } | null = null;
 
-  if (isNaN(choice) || choice < 1 || choice > professionals.length) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
-    return { handled: true, newState: 'SELECT_PROFESSIONAL' };
+  // First try numeric selection
+  const numericChoice = parseInt(messageText.trim());
+  if (!isNaN(numericChoice) && numericChoice >= 1 && numericChoice <= professionals.length) {
+    selected = professionals[numericChoice - 1];
   }
 
-  const selected = professionals[choice - 1];
+  // If not numeric, try AI to extract professional name
+  if (!selected) {
+    const aiResult = await getAIIntent(
+      messageText, 
+      'SELECT_PROFESSIONAL',
+      professionals
+    );
+    console.log('[professional] AI result:', aiResult);
+
+    if (aiResult.confidence >= 0.6) {
+      // Try to match by name
+      if (aiResult.entities.professional_name) {
+        selected = findProfessionalByName(aiResult.entities.professional_name, professionals);
+      }
+      // Try option number from AI
+      if (!selected && aiResult.intent === 'select_option' && aiResult.entities.option_number) {
+        const num = aiResult.entities.option_number;
+        if (num >= 1 && num <= professionals.length) {
+          selected = professionals[num - 1];
+        }
+      }
+    }
+  }
+
+  if (!selected) {
+    await sendWhatsAppMessage(config, phone, 
+      `Não encontrei o profissional. Por favor, escolha pelo *número* ou digite o *nome*:\n\n${
+        professionals.map((p, i) => `${i + 1}️⃣ ${p.name}`).join('\n')
+      }` + MESSAGES.hintMenu
+    );
+    return { handled: true, newState: 'SELECT_PROFESSIONAL' };
+  }
 
   // Check CPF appointment limit BEFORE proceeding with date selection
   const limitCheck = await checkCpfAppointmentLimit(
@@ -1080,6 +1295,20 @@ async function handleSelectProfessional(
     return { handled: true, newState: 'SELECT_PROFESSIONAL' };
   }
 
+  // Check for expired patient card
+  const { data: cardCheck } = await supabase.rpc('is_patient_card_valid', {
+    p_patient_id: session.patient_id,
+    p_clinic_id: config.clinic_id
+  });
+
+  if (cardCheck && cardCheck[0] && cardCheck[0].card_number && !cardCheck[0].is_valid) {
+    await sendWhatsAppMessage(config, phone, 
+      `❌ Sua carteirinha (${cardCheck[0].card_number}) está vencida.\n\nPor favor, renove sua carteirinha para agendar consultas.`
+    );
+    await updateSession(supabase, session.id, { state: 'FINISHED' });
+    return { handled: true, newState: 'FINISHED' };
+  }
+
   const availableDates = await getAvailableDates(supabase, config.clinic_id, selected.id);
 
   if (availableDates.length === 0) {
@@ -1094,7 +1323,7 @@ async function handleSelectProfessional(
     available_dates: availableDates,
   });
 
-  await sendWhatsAppMessage(config, phone, MESSAGES.professionalSelected(selected.name));
+  await sendWhatsAppMessage(config, phone, `✅ Selecionado: *Dr(a). ${selected.name}*\n\nAgora escolha a data:`);
   await sendWhatsAppMessage(config, phone, MESSAGES.selectDate(availableDates) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
   return { handled: true, newState: 'SELECT_DATE' };
 }
