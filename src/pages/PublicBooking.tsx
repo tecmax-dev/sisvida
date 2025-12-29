@@ -50,6 +50,9 @@ interface Clinic {
   logo_url: string | null;
   opening_time: string | null;
   closing_time: string | null;
+  holidays_enabled: boolean | null;
+  state_code: string | null;
+  city: string | null;
 }
 
 interface Professional {
@@ -100,6 +103,7 @@ export default function PublicBooking() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [clinicHasTelemedicine, setClinicHasTelemedicine] = useState(false);
+  const [holidays, setHolidays] = useState<Set<string>>(new Set());
   
   // Calendar
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -216,10 +220,99 @@ export default function PublicBooking() {
         
         setProcedureInsurancePrices(pricesData || []);
       }
+
+      // Fetch holidays if enabled
+      if (clinicData.holidays_enabled !== false) {
+        await fetchHolidays(clinicData);
+      }
     } catch (error) {
       console.error('Error fetching clinic data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchHolidays = async (clinicData: Clinic) => {
+    try {
+      const holidayDates = new Set<string>();
+      const currentYear = new Date().getFullYear();
+      const years = [currentYear, currentYear + 1];
+
+      // Fetch national holidays
+      const { data: nationalHolidays } = await supabase
+        .from('national_holidays')
+        .select('holiday_date, is_recurring, recurring_month, recurring_day');
+
+      nationalHolidays?.forEach((h: any) => {
+        if (h.is_recurring && h.recurring_month && h.recurring_day) {
+          years.forEach(year => {
+            const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+            holidayDates.add(dateStr);
+          });
+        } else if (h.holiday_date) {
+          holidayDates.add(h.holiday_date);
+        }
+      });
+
+      // Fetch state holidays if clinic has state configured
+      if (clinicData.state_code) {
+        const { data: stateHolidays } = await supabase
+          .from('state_holidays')
+          .select('holiday_date, is_recurring, recurring_month, recurring_day')
+          .eq('state_code', clinicData.state_code);
+
+        stateHolidays?.forEach((h: any) => {
+          if (h.is_recurring && h.recurring_month && h.recurring_day) {
+            years.forEach(year => {
+              const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+              holidayDates.add(dateStr);
+            });
+          } else if (h.holiday_date) {
+            holidayDates.add(h.holiday_date);
+          }
+        });
+      }
+
+      // Fetch municipal holidays if clinic has state and city configured
+      if (clinicData.state_code && clinicData.city) {
+        const { data: municipalHolidays } = await supabase
+          .from('municipal_holidays')
+          .select('holiday_date, is_recurring, recurring_month, recurring_day')
+          .eq('state_code', clinicData.state_code)
+          .eq('city', clinicData.city);
+
+        municipalHolidays?.forEach((h: any) => {
+          if (h.is_recurring && h.recurring_month && h.recurring_day) {
+            years.forEach(year => {
+              const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+              holidayDates.add(dateStr);
+            });
+          } else if (h.holiday_date) {
+            holidayDates.add(h.holiday_date);
+          }
+        });
+      }
+
+      // Fetch clinic-specific holidays
+      const { data: clinicHolidays } = await supabase
+        .from('clinic_holidays')
+        .select('holiday_date, is_recurring, recurring_month, recurring_day')
+        .eq('clinic_id', clinicData.id);
+
+      clinicHolidays?.forEach((h: any) => {
+        if (h.is_recurring && h.recurring_month && h.recurring_day) {
+          years.forEach(year => {
+            const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+            holidayDates.add(dateStr);
+          });
+        } else if (h.holiday_date) {
+          holidayDates.add(h.holiday_date);
+        }
+      });
+
+      setHolidays(holidayDates);
+    } catch (error) {
+      console.error('Error fetching holidays:', error);
     }
   };
 
@@ -380,11 +473,17 @@ export default function PublicBooking() {
     return days;
   };
 
+  const isHoliday = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0];
+    return holidays.has(dateStr);
+  };
+
   const isDateDisabled = (date: Date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (date < today) return true;
     if (!isDayAvailable(date)) return true;
+    if (isHoliday(date)) return true;
     return false;
   };
 
@@ -836,16 +935,19 @@ export default function PublicBooking() {
                     </div>
                     <div className="grid grid-cols-7 gap-1">
                       {getDaysInMonth(currentMonth).map((date, index) => (
-                        <div key={index} className="aspect-square">
+                        <div key={index} className="aspect-square relative">
                           {date && (
                             <button
                               onClick={() => !isDateDisabled(date) && setSelectedDate(date)}
                               disabled={isDateDisabled(date)}
+                              title={isHoliday(date) ? "Feriado" : undefined}
                               className={cn(
                                 "w-full h-full rounded-md text-sm font-medium transition-colors",
-                                isDateDisabled(date) 
-                                  ? "text-muted-foreground/40 cursor-not-allowed" 
-                                  : "hover:bg-primary/10",
+                                isHoliday(date)
+                                  ? "bg-red-100 text-red-400 cursor-not-allowed dark:bg-red-950/30 dark:text-red-400/60"
+                                  : isDateDisabled(date) 
+                                    ? "text-muted-foreground/40 cursor-not-allowed" 
+                                    : "hover:bg-primary/10",
                                 selectedDate?.toDateString() === date.toDateString() 
                                   ? "bg-primary text-primary-foreground hover:bg-primary" 
                                   : ""
