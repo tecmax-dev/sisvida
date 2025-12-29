@@ -472,6 +472,9 @@ export default function DataImportPage() {
         }
       }
       
+      console.log('[IMPORT DEBUG] Unique professional names found:', Array.from(uniqueProfessionalNames));
+      console.log('[IMPORT DEBUG] Sample record data:', validRecords[0]?.data);
+      
       // Build map of professional name -> id
       const professionalNameToId = new Map<string, string>();
       
