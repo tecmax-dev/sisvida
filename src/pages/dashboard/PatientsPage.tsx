@@ -543,12 +543,26 @@ export default function PatientsPage() {
     }
   };
 
-  const filteredPatients = patients.filter(
-    (patient) =>
-      patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (patient.email && patient.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      patient.phone.includes(searchTerm)
-  );
+  const filteredPatients = patients.filter((patient) => {
+    const searchLower = searchTerm.toLowerCase().trim();
+    const searchDigits = searchTerm.replace(/\D/g, ''); // Remove non-digits for phone/cpf search
+    
+    // Name search (case-insensitive)
+    const nameMatch = patient.name.toLowerCase().includes(searchLower);
+    
+    // Email search (case-insensitive)
+    const emailMatch = patient.email?.toLowerCase().includes(searchLower);
+    
+    // Phone search: compare only digits to handle formatted/unformatted input
+    const phoneDigits = patient.phone?.replace(/\D/g, '') || '';
+    const phoneMatch = searchDigits.length >= 3 && phoneDigits.includes(searchDigits);
+    
+    // CPF search: compare only digits
+    const cpfDigits = patient.cpf?.replace(/\D/g, '') || '';
+    const cpfMatch = searchDigits.length >= 3 && cpfDigits.includes(searchDigits);
+    
+    return nameMatch || emailMatch || phoneMatch || cpfMatch;
+  });
 
   return (
     <div className="space-y-6">
