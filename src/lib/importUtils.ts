@@ -562,6 +562,11 @@ export function generateCombinedTemplate(): ArrayBuffer {
 function coerceCellToString(value: unknown): string {
   if (value === null || value === undefined) return '';
 
+  // Excel can yield Date objects when cells are typed as dates
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().split('T')[0];
+  }
+
   // Excel sometimes yields numbers (or scientific notation strings)
   if (typeof value === 'number' && Number.isFinite(value)) {
     return String(Math.trunc(value));
@@ -726,7 +731,11 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
       'notas', 'Notas', 'NOTAS', 'obs', 'Obs', 'OBS',
       'notes', 'Notes', 'NOTES', 'comments', 'Comments',
       'anotacoes', 'Anotacoes', 'anotações', 'Anotações',
-      'evolucao', 'Evolução', 'evolution', 'Evolution'
+      // Common "free text" columns from other systems
+      'descricao', 'Descrição', 'descrição', 'descricao_do_registro', 'descricao_registro',
+      'texto', 'Texto', 'conteudo', 'Conteúdo', 'historico', 'Histórico', 'resumo',
+      // Evolution-style notes
+      'evolucao', 'Evolução', 'evolution', 'Evolution',
     ]) || undefined,
   };
 }
