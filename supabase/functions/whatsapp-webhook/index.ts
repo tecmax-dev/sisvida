@@ -976,7 +976,7 @@ async function getOrCreateSession(
   clinicId: string,
   phone: string
 ): Promise<BookingSession | null> {
-  const { data: session } = await supabase
+  const { data: session, error } = await supabase
     .from('whatsapp_booking_sessions')
     .select('*')
     .eq('clinic_id', clinicId)
@@ -987,7 +987,21 @@ async function getOrCreateSession(
     .limit(1)
     .maybeSingle();
 
-  return session as BookingSession | null;
+  if (error) {
+    console.error('[booking] Error fetching session:', error);
+    return null;
+  }
+
+  if (session) {
+    return session as BookingSession;
+  }
+
+  try {
+    return await createOrResetSession(supabase, clinicId, phone, 'INIT');
+  } catch (e) {
+    console.error('[booking] Error creating session:', e);
+    return null;
+  }
 }
 
 async function createOrResetSession(
