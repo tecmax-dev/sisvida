@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import DataExportPanel from "@/components/admin/DataExportPanel";
+import { ImportProgressCard } from "@/components/admin/ImportProgressCard";
 import {
   PatientImportRow,
   MedicalRecordImportRow,
@@ -1217,26 +1218,14 @@ export default function DataImportPage() {
                     )}
                   </div>
 
-                  {importingCombined && (
-                    <div className="space-y-2">
-                      <Progress value={combinedProgress} />
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(combinedProgress)}% concluído
-                        </span>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={cancelImport}
-                          disabled={importCancelled}
-                          className="gap-1"
-                        >
-                          <StopCircle className="h-3 w-3" />
-                          {importCancelled ? 'Cancelando...' : 'Parar Importação'}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                  <ImportProgressCard
+                    isImporting={importingCombined}
+                    progress={combinedProgress}
+                    importType="combined"
+                    totalItems={validPatientCount + (importWithRecords ? validRecordCount : 0)}
+                    isCancelled={importCancelled}
+                    onCancel={cancelImport}
+                  />
 
                   <Button
                     onClick={importCombined}
@@ -1438,26 +1427,14 @@ export default function DataImportPage() {
                     </Button>
                   </div>
 
-                  {importingPatients && (
-                    <div className="space-y-2">
-                      <Progress value={patientProgress} />
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(patientProgress)}% concluído
-                        </span>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={cancelImport}
-                          disabled={importCancelled}
-                          className="gap-1"
-                        >
-                          <StopCircle className="h-3 w-3" />
-                          {importCancelled ? 'Cancelando...' : 'Parar Importação'}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                  <ImportProgressCard
+                    isImporting={importingPatients}
+                    progress={patientProgress}
+                    importType="patients"
+                    totalItems={validPatientCount}
+                    isCancelled={importCancelled}
+                    onCancel={cancelImport}
+                  />
 
                   <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
                     <Table>
@@ -1597,26 +1574,14 @@ export default function DataImportPage() {
                     </Button>
                   </div>
 
-                  {importingRecords && (
-                    <div className="space-y-2">
-                      <Progress value={recordProgress} />
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs text-muted-foreground">
-                          {Math.round(recordProgress)}% concluído
-                        </span>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={cancelImport}
-                          disabled={importCancelled}
-                          className="gap-1"
-                        >
-                          <StopCircle className="h-3 w-3" />
-                          {importCancelled ? 'Cancelando...' : 'Parar Importação'}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                  <ImportProgressCard
+                    isImporting={importingRecords}
+                    progress={recordProgress}
+                    importType="records"
+                    totalItems={validRecordCount}
+                    isCancelled={importCancelled}
+                    onCancel={cancelImport}
+                  />
 
                   <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
                     <Table>
