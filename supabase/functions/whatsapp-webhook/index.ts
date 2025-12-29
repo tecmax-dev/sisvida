@@ -1225,27 +1225,45 @@ serve(async (req) => {
     let clinicId = confirmResult.clinicId;
 
     if (!confirmResult.handled) {
-      const { data: configByInstance } = await supabase
+      // Try to find config by instance name - use .limit(1) since there may be multiple clinics with same instance
+      const { data: configByInstance, error: configError } = await supabase
         .from('evolution_configs')
         .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled')
         .eq('instance_name', payload.instance)
         .eq('is_connected', true)
-        .maybeSingle();
+        .eq('direct_reply_enabled', true)
+        .limit(1);
 
-      const configData = configByInstance as EvolutionConfig | null;
+      if (configError) {
+        console.error('[webhook] Error fetching config:', configError);
+      }
+
+      const configData = configByInstance && configByInstance.length > 0 
+        ? (configByInstance[0] as EvolutionConfig) 
+        : null;
+
+      console.log(`[webhook] Found config for instance ${payload.instance}:`, configData ? 'yes' : 'no');
 
       if (configData) {
         clinicId = configData.clinic_id;
+        console.log(`[webhook] Processing booking flow for clinic ${clinicId}`);
 
         const session = await getOrCreateSession(supabase, clinicId, phone);
+        console.log(`[webhook] Session state: ${session?.state ?? 'null'}`);
 
-        await handleBookingFlow(
-          supabase,
-          configData,
-          phone,
-          messageText,
-          session
-        );
+        if (session) {
+          await handleBookingFlow(
+            supabase,
+            configData,
+            phone,
+            messageText,
+            session
+          );
+        } else {
+          console.error('[webhook] Failed to get or create session');
+        }
+      } else {
+        console.log(`[webhook] No config found with direct_reply_enabled for instance: ${payload.instance}`);
       }
     }
 
