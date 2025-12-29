@@ -5925,6 +5925,95 @@ export type Database = {
           },
         ]
       }
+      whatsapp_booking_sessions: {
+        Row: {
+          available_dates: Json | null
+          available_professionals: Json | null
+          available_times: Json | null
+          clinic_id: string
+          created_at: string | null
+          expires_at: string
+          id: string
+          patient_id: string | null
+          patient_name: string | null
+          phone: string
+          selected_date: string | null
+          selected_procedure_id: string | null
+          selected_professional_id: string | null
+          selected_professional_name: string | null
+          selected_time: string | null
+          state: string
+          updated_at: string | null
+        }
+        Insert: {
+          available_dates?: Json | null
+          available_professionals?: Json | null
+          available_times?: Json | null
+          clinic_id: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          patient_id?: string | null
+          patient_name?: string | null
+          phone: string
+          selected_date?: string | null
+          selected_procedure_id?: string | null
+          selected_professional_id?: string | null
+          selected_professional_name?: string | null
+          selected_time?: string | null
+          state?: string
+          updated_at?: string | null
+        }
+        Update: {
+          available_dates?: Json | null
+          available_professionals?: Json | null
+          available_times?: Json | null
+          clinic_id?: string
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          patient_id?: string | null
+          patient_name?: string | null
+          phone?: string
+          selected_date?: string | null
+          selected_procedure_id?: string | null
+          selected_professional_id?: string | null
+          selected_professional_name?: string | null
+          selected_time?: string | null
+          state?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_booking_sessions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_booking_sessions_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_booking_sessions_selected_procedure_id_fkey"
+            columns: ["selected_procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_booking_sessions_selected_professional_id_fkey"
+            columns: ["selected_professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       whatsapp_incoming_logs: {
         Row: {
           clinic_id: string | null
