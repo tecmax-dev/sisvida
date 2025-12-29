@@ -402,7 +402,7 @@ export default function ClinicsManagement() {
   
   // Settings dialog
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
-  const [restrictCpfPerMonth, setRestrictCpfPerMonth] = useState(false);
+  const [maxCpfAppointments, setMaxCpfAppointments] = useState<number | null>(null);
   
   const { setCurrentClinic, user } = useAuth();
   const { logAction } = useAuditLog();
@@ -642,11 +642,11 @@ export default function ClinicsManagement() {
 
   // Settings mutation
   const saveSettingsMutation = useMutation({
-    mutationFn: async ({ clinicId, restrictCpf }: { clinicId: string; restrictCpf: boolean }) => {
+    mutationFn: async ({ clinicId, maxAppointments }: { clinicId: string; maxAppointments: number | null }) => {
       const { error } = await supabase
         .from('clinics')
         .update({
-          restrict_one_appointment_per_cpf_month: restrictCpf,
+          max_appointments_per_cpf_month: maxAppointments,
         })
         .eq('id', clinicId);
 
@@ -728,17 +728,17 @@ export default function ClinicsManagement() {
     // Fetch current settings
     const { data } = await supabase
       .from('clinics')
-      .select('restrict_one_appointment_per_cpf_month')
+      .select('max_appointments_per_cpf_month')
       .eq('id', clinic.id)
       .single();
     
-    setRestrictCpfPerMonth(data?.restrict_one_appointment_per_cpf_month || false);
+    setMaxCpfAppointments(data?.max_appointments_per_cpf_month || null);
     setSettingsDialogOpen(true);
   };
 
   const handleSaveSettings = () => {
     if (!selectedClinic) return;
-    saveSettingsMutation.mutate({ clinicId: selectedClinic.id, restrictCpf: restrictCpfPerMonth });
+    saveSettingsMutation.mutate({ clinicId: selectedClinic.id, maxAppointments: maxCpfAppointments });
   };
 
   const handleBlockClinic = () => {
@@ -1462,21 +1462,33 @@ export default function ClinicsManagement() {
           
           <div className="space-y-6 py-4">
             {/* CPF Restriction Setting */}
-            <div className="flex items-start justify-between gap-4 p-4 bg-muted/50 rounded-xl border border-border/50">
+            <div className="p-4 bg-muted/50 rounded-xl border border-border/50 space-y-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-primary" />
-                  <Label className="font-medium">Limitar agendamento por CPF</Label>
+                  <Label className="font-medium">Limite de agendamentos por CPF</Label>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Permite apenas um agendamento por CPF por mês para cada profissional.
-                  Evita duplicidade de consultas no mesmo período.
+                  Define o número máximo de agendamentos que um paciente (por CPF) pode ter 
+                  com o mesmo profissional no mesmo mês. Deixe vazio para ilimitado.
                 </p>
               </div>
-              <Switch
-                checked={restrictCpfPerMonth}
-                onCheckedChange={setRestrictCpfPerMonth}
-              />
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  min={0}
+                  placeholder="Ilimitado"
+                  value={maxCpfAppointments ?? ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setMaxCpfAppointments(val === "" ? null : parseInt(val, 10));
+                  }}
+                  className="w-32"
+                />
+                <span className="text-sm text-muted-foreground">
+                  agendamento(s) por mês
+                </span>
+              </div>
             </div>
           </div>
 

@@ -1400,12 +1400,12 @@ export type Database = {
           maintenance_by: string | null
           maintenance_reason: string | null
           map_view_type: string | null
+          max_appointments_per_cpf_month: number | null
           name: string
           opening_time: string | null
           phone: string | null
           reminder_enabled: boolean | null
           reminder_hours: number | null
-          restrict_one_appointment_per_cpf_month: boolean | null
           slug: string
           state_code: string | null
           updated_at: string
@@ -1434,12 +1434,12 @@ export type Database = {
           maintenance_by?: string | null
           maintenance_reason?: string | null
           map_view_type?: string | null
+          max_appointments_per_cpf_month?: number | null
           name: string
           opening_time?: string | null
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
-          restrict_one_appointment_per_cpf_month?: boolean | null
           slug: string
           state_code?: string | null
           updated_at?: string
@@ -1468,12 +1468,12 @@ export type Database = {
           maintenance_by?: string | null
           maintenance_reason?: string | null
           map_view_type?: string | null
+          max_appointments_per_cpf_month?: number | null
           name?: string
           opening_time?: string | null
           phone?: string | null
           reminder_enabled?: boolean | null
           reminder_hours?: number | null
-          restrict_one_appointment_per_cpf_month?: boolean | null
           slug?: string
           state_code?: string | null
           updated_at?: string
