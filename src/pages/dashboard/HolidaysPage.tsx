@@ -323,6 +323,7 @@ export default function HolidaysPage() {
         city: newHolidayCity.trim(),
         name: newHolidayName.trim(),
         holiday_date: newHolidayDate,
+        year: date.getFullYear(),
         is_recurring: newHolidayRecurring,
       };
 
