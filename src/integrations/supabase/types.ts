@@ -862,6 +862,47 @@ export type Database = {
           },
         ]
       }
+      card_expiry_notifications: {
+        Row: {
+          card_id: string
+          created_at: string
+          days_before_expiry: number | null
+          error_message: string | null
+          id: string
+          notification_type: string
+          sent_at: string
+          success: boolean
+        }
+        Insert: {
+          card_id: string
+          created_at?: string
+          days_before_expiry?: number | null
+          error_message?: string | null
+          id?: string
+          notification_type: string
+          sent_at?: string
+          success?: boolean
+        }
+        Update: {
+          card_id?: string
+          created_at?: string
+          days_before_expiry?: number | null
+          error_message?: string | null
+          id?: string
+          notification_type?: string
+          sent_at?: string
+          success?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_expiry_notifications_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "patient_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       carousel_banners: {
         Row: {
           background_color: string | null
@@ -3272,6 +3313,66 @@ export type Database = {
           },
           {
             foreignKeyName: "patient_attachments_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      patient_cards: {
+        Row: {
+          card_number: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          is_active: boolean
+          issued_at: string
+          notes: string | null
+          patient_id: string
+          qr_code_token: string
+          updated_at: string
+        }
+        Insert: {
+          card_number: string
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at: string
+          id?: string
+          is_active?: boolean
+          issued_at?: string
+          notes?: string | null
+          patient_id: string
+          qr_code_token?: string
+          updated_at?: string
+        }
+        Update: {
+          card_number?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean
+          issued_at?: string
+          notes?: string | null
+          patient_id?: string
+          qr_code_token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_cards_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_cards_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
@@ -6201,6 +6302,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_card_number: { Args: { p_clinic_id: string }; Returns: string }
       generate_queue_ticket: {
         Args: { p_queue_id: string }
         Returns: {
@@ -6265,6 +6367,15 @@ export type Database = {
           holiday_name: string
           holiday_type: string
           is_holiday: boolean
+        }[]
+      }
+      is_patient_card_valid: {
+        Args: { p_clinic_id: string; p_patient_id: string }
+        Returns: {
+          card_number: string
+          days_until_expiry: number
+          expires_at: string
+          is_valid: boolean
         }[]
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }

@@ -15,6 +15,7 @@ import { PatientRecordsModal } from "@/components/patients/modals/PatientRecords
 import { PatientAnamnesisModal } from "@/components/patients/modals/PatientAnamnesisModal";
 import { PatientPrescriptionModal } from "@/components/patients/modals/PatientPrescriptionModal";
 import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
+import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
 
 interface InsurancePlan {
   id: string;
@@ -135,6 +136,7 @@ export default function PatientEditPage() {
   const [anamnesisModalOpen, setAnamnesisModalOpen] = useState(false);
   const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
   const [appointmentsModalOpen, setAppointmentsModalOpen] = useState(false);
+  const [cardsModalOpen, setCardsModalOpen] = useState(false);
 
   // Permission checks for restricted tabs
   const canViewMedicalRecords = hasPermission('view_medical_records');
@@ -272,6 +274,8 @@ export default function PatientEditPage() {
       setAppointmentsModalOpen(true);
     } else if (tab === 'prescricoes') {
       setPrescriptionModalOpen(true);
+    } else if (tab === 'carteirinha') {
+      setCardsModalOpen(true);
     }
   };
 
@@ -463,6 +467,13 @@ export default function PatientEditPage() {
       <PatientAppointmentsModal
         open={appointmentsModalOpen}
         onOpenChange={setAppointmentsModalOpen}
+        patientId={id || ''}
+        patientName={formData.name}
+      />
+
+      <PatientCardsModal
+        open={cardsModalOpen}
+        onOpenChange={setCardsModalOpen}
         patientId={id || ''}
         patientName={formData.name}
       />
