@@ -487,37 +487,56 @@ Escolha o profissional desejado digitando o *número*:\n\n`;
     return msg.trim();
   },
 
-  noProfessionals: `😔 No momento não temos profissionais disponíveis para agendamento.
+  noProfessionals: `😔 Poxa, que pena! No momento não conseguimos encontrar profissionais disponíveis para agendamento.
 
-Por favor, tente novamente mais tarde ou entre em contato conosco.`,
+Mas não desanime! Isso pode ser temporário. Tente novamente mais tarde ou entre em contato conosco por telefone que teremos prazer em ajudá-lo(a). 💙`,
 
-  professionalSelected: (name: string) => `Você escolheu *Dr(a). ${name}*.
+  professionalSelected: (name: string) => `Ótima escolha! ✨ Você selecionou *Dr(a). ${name}*.
 
-Agora vamos escolher a data disponível.`,
+Agora vamos encontrar a melhor data para você! 📅`,
 
   selectDate: (dates: Array<{ formatted: string; weekday: string }>) => {
-    let msg = `📅 Escolha a data desejada:\n\n`;
+    let msg = `📅 Maravilha! Aqui estão as datas disponíveis:\n\n`;
     dates.forEach((d, i) => {
       msg += `${i + 1}️⃣ ${d.formatted} (${d.weekday})\n`;
     });
+    msg += `\n_Escolha o número da data que preferir!_`;
     return msg.trim();
   },
 
-  noDates: `😔 Não há datas disponíveis para este profissional nos próximos dias.
+  noDates: (professionalName?: string) => {
+    const profText = professionalName ? ` do(a) Dr(a). ${professionalName}` : '';
+    return `😔 Que pena! Infelizmente não encontramos datas disponíveis${profText} nos próximos dias.
 
-Digite *MENU* para escolher outro profissional.`,
+Isso pode acontecer quando a agenda está bem concorrida - é sinal de que o(a) profissional é muito procurado(a)! 🌟
+
+💡 *Sugestões:*
+• Digite *MENU* para ver outros profissionais
+• Tente novamente em alguns dias
+• Entre em contato conosco para lista de espera`;
+  },
 
   selectTime: (times: Array<{ formatted: string }>) => {
-    let msg = `⏰ Escolha o horário disponível:\n\n`;
+    let msg = `⏰ Perfeito! Confira os horários disponíveis:\n\n`;
     times.forEach((t, i) => {
       msg += `${i + 1}️⃣ ${t.formatted}\n`;
     });
+    msg += `\n_Qual horário fica melhor para você?_`;
     return msg.trim();
   },
 
-  noTimes: `😔 Não há horários disponíveis nesta data.
+  noTimes: (date?: string, professionalName?: string) => {
+    const dateText = date ? ` para ${date}` : '';
+    const profText = professionalName ? ` com Dr(a). ${professionalName}` : '';
+    return `😔 Ah, que pena! Os horários${dateText}${profText} já foram todos preenchidos.
 
-Digite *MENU* para escolher outra data.`,
+A boa notícia é que podemos tentar outra data! 📅
+
+💡 *O que você pode fazer:*
+• Responda com outra data (ex: "amanhã", "segunda")
+• Digite *MENU* para recomeçar
+• Entre em contato conosco para verificar cancelamentos`;
+  },
 
   confirmAppointment: (data: {
     patientName: string;
@@ -1386,7 +1405,7 @@ async function handleListAppointments(
     const availableDates = await getAvailableDates(supabase, config.clinic_id, appointment.professional_id);
 
     if (availableDates.length === 0) {
-      await sendWhatsAppMessage(config, phone, MESSAGES.noDates);
+      await sendWhatsAppMessage(config, phone, MESSAGES.noDates(selected.professional));
       return { handled: true, newState: 'LIST_APPOINTMENTS' };
     }
 
@@ -1477,7 +1496,7 @@ async function handleRescheduleSelectDate(
   );
 
   if (availableTimes.length === 0) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.noTimes);
+    await sendWhatsAppMessage(config, phone, MESSAGES.noTimes(selected.formatted, session.selected_professional_name || undefined));
     return { handled: true, newState: 'RESCHEDULE_SELECT_DATE' };
   }
 
@@ -1754,7 +1773,7 @@ async function handleSelectProfessional(
   const availableDates = await getAvailableDates(supabase, config.clinic_id, selected.id);
 
   if (availableDates.length === 0) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.noDates);
+    await sendWhatsAppMessage(config, phone, MESSAGES.noDates(selected.name));
     return { handled: true, newState: 'SELECT_PROFESSIONAL' };
   }
 
@@ -1828,7 +1847,7 @@ async function handleSelectDate(
   );
 
   if (availableTimes.length === 0) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.noTimes);
+    await sendWhatsAppMessage(config, phone, MESSAGES.noTimes(selected.formatted, session.selected_professional_name || undefined));
     return { handled: true, newState: 'SELECT_DATE' };
   }
 
@@ -1954,7 +1973,7 @@ async function handleConfirmAppointment(
     );
 
     if (availableTimes.length === 0) {
-      await sendWhatsAppMessage(config, phone, MESSAGES.noTimes);
+      await sendWhatsAppMessage(config, phone, MESSAGES.noTimes(session.selected_date || undefined, session.selected_professional_name || undefined));
       await updateSession(supabase, session.id, { state: 'SELECT_DATE' });
       return { handled: true, newState: 'SELECT_DATE' };
     }
