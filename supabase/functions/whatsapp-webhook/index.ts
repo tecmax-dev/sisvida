@@ -406,9 +406,12 @@ Qualquer dúvida, estamos à disposição! 😊`,
 
   invalidOption: `❌ Opção inválida. Por favor, digite apenas o *número* da opção desejada.`,
 
-  sessionExpired: `⏰ Sua sessão expirou por inatividade.
+  sessionExpired: `⏰ *Sessão expirada*
 
-Digite *MENU* para iniciar um novo agendamento.`,
+Você ficou mais de 60 segundos sem interagir.
+Por segurança, iniciamos uma nova sessão.
+
+Para continuar, *informe seu CPF* (apenas números):`,
 
   error: `😔 Ocorreu um erro inesperado. Por favor, tente novamente.
 
@@ -417,6 +420,19 @@ Digite *MENU* para reiniciar.`,
   slotTaken: `😔 Ops! Este horário acabou de ser reservado por outro paciente.
 
 Por favor, escolha outro horário.`,
+
+  // Hints/Tips for each state
+  hintCpf: `\n\n💡 _Dica: Digite apenas os 11 números do CPF, sem pontos ou traços._`,
+  
+  hintSelectOption: `\n\n💡 _Dica: Responda apenas com o número da opção (ex: 1, 2, 3...)_`,
+  
+  hintConfirm: `\n\n💡 _Dica: Digite CONFIRMAR para prosseguir ou CANCELAR para desistir._`,
+  
+  hintYesNo: `\n\n💡 _Dica: Responda SIM ou NÃO._`,
+  
+  hintMenu: `\n\n💡 _Digite MENU a qualquer momento para recomeçar._`,
+
+  timeoutWarning: `⏳ _Lembre-se: você tem 60 segundos para responder antes da sessão expirar._`,
 };
 
 // ==========================================
@@ -434,20 +450,27 @@ async function handleBookingFlow(
   config: EvolutionConfig,
   phone: string,
   messageText: string,
-  session: BookingSession | null
+  session: BookingSession | null,
+  wasExpired: boolean = false
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   
   // Check for global commands
   if (MENU_REGEX.test(messageText)) {
     await resetSession(supabase, config.clinic_id, phone);
-    await sendWhatsAppMessage(config, phone, MESSAGES.welcome);
+    await sendWhatsAppMessage(config, phone, MESSAGES.welcome + MESSAGES.hintCpf);
     return { handled: true, newState: 'WAITING_CPF' };
   }
 
-  // If no session or expired, start new one
-  if (!session || new Date(session.expires_at) < new Date()) {
+  // If session was expired, send expiration message
+  if (wasExpired) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.sessionExpired);
+    return { handled: true, newState: 'WAITING_CPF' };
+  }
+
+  // If no session, start new one
+  if (!session) {
     await createOrResetSession(supabase, config.clinic_id, phone, 'WAITING_CPF');
-    await sendWhatsAppMessage(config, phone, MESSAGES.welcome);
+    await sendWhatsAppMessage(config, phone, MESSAGES.welcome + MESSAGES.hintCpf);
     return { handled: true, newState: 'WAITING_CPF' };
   }
 
@@ -522,7 +545,7 @@ async function handleWaitingCpf(
   const cleanCpf = messageText.replace(/\D/g, '');
   
   if (!CPF_REGEX.test(cleanCpf) || !validateCpf(cleanCpf)) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.cpfInvalid);
+    await sendWhatsAppMessage(config, phone, MESSAGES.cpfInvalid + MESSAGES.hintCpf);
     return { handled: true, newState: 'WAITING_CPF' };
   }
 
@@ -564,7 +587,7 @@ async function handleWaitingCpf(
       patient_name: patientByPhoneData.name,
     });
 
-    await sendWhatsAppMessage(config, phone, MESSAGES.confirmIdentity(patientByPhoneData.name));
+    await sendWhatsAppMessage(config, phone, MESSAGES.confirmIdentity(patientByPhoneData.name) + MESSAGES.hintYesNo);
     return { handled: true, newState: 'CONFIRM_IDENTITY' };
   }
 
@@ -574,7 +597,7 @@ async function handleWaitingCpf(
     patient_name: patientData.name,
   });
 
-  await sendWhatsAppMessage(config, phone, MESSAGES.confirmIdentity(patientData.name));
+  await sendWhatsAppMessage(config, phone, MESSAGES.confirmIdentity(patientData.name) + MESSAGES.hintYesNo);
   return { handled: true, newState: 'CONFIRM_IDENTITY' };
 }
 
@@ -588,7 +611,7 @@ async function handleConfirmIdentity(
   if (POSITIVE_REGEX.test(messageText)) {
     // Go to main menu instead of directly to professional selection
     await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
-    await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu);
+    await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'MAIN_MENU' };
   }
 
@@ -598,7 +621,7 @@ async function handleConfirmIdentity(
     return { handled: true, newState: 'FINISHED' };
   }
 
-  await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* ou *NÃO*.`);
+  await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* ou *NÃO*.` + MESSAGES.hintYesNo);
   return { handled: true, newState: 'CONFIRM_IDENTITY' };
 }
 
@@ -641,7 +664,7 @@ async function handleMainMenu(
       action_type: 'new',
     });
 
-    await sendWhatsAppMessage(config, phone, MESSAGES.selectProfessional(profList));
+    await sendWhatsAppMessage(config, phone, MESSAGES.selectProfessional(profList) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
     return { handled: true, newState: 'SELECT_PROFESSIONAL' };
   }
 
@@ -660,7 +683,7 @@ async function handleMainMenu(
       action_type: 'cancel',
     });
 
-    await sendWhatsAppMessage(config, phone, MESSAGES.listAppointments(appointments));
+    await sendWhatsAppMessage(config, phone, MESSAGES.listAppointments(appointments) + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'LIST_APPOINTMENTS' };
   }
 
@@ -679,11 +702,11 @@ async function handleMainMenu(
       action_type: 'reschedule',
     });
 
-    await sendWhatsAppMessage(config, phone, MESSAGES.listAppointments(appointments));
+    await sendWhatsAppMessage(config, phone, MESSAGES.listAppointments(appointments) + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'LIST_APPOINTMENTS' };
   }
 
-  await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+  await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
   return { handled: true, newState: 'MAIN_MENU' };
 }
 
@@ -702,7 +725,7 @@ async function handleListAppointments(
   const appointments = session.pending_appointments || [];
 
   if (isNaN(choice) || choice < 1 || choice > appointments.length) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'LIST_APPOINTMENTS' };
   }
 
@@ -718,7 +741,7 @@ async function handleListAppointments(
       date: selected.date,
       time: selected.time,
       professional: selected.professional,
-    }));
+    }) + MESSAGES.hintYesNo);
     return { handled: true, newState: 'CONFIRM_CANCEL' };
   }
 
@@ -792,11 +815,11 @@ async function handleConfirmCancel(
 
   if (NEGATIVE_REGEX.test(messageText)) {
     await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
-    await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu);
+    await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'MAIN_MENU' };
   }
 
-  await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* ou *NÃO*.`);
+  await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* ou *NÃO*.` + MESSAGES.hintYesNo);
   return { handled: true, newState: 'CONFIRM_CANCEL' };
 }
 
@@ -815,7 +838,7 @@ async function handleRescheduleSelectDate(
   const dates = session.available_dates || [];
 
   if (isNaN(choice) || choice < 1 || choice > dates.length) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'RESCHEDULE_SELECT_DATE' };
   }
 
@@ -839,7 +862,7 @@ async function handleRescheduleSelectDate(
     available_times: availableTimes,
   });
 
-  await sendWhatsAppMessage(config, phone, MESSAGES.selectTime(availableTimes));
+  await sendWhatsAppMessage(config, phone, MESSAGES.selectTime(availableTimes) + MESSAGES.hintSelectOption);
   return { handled: true, newState: 'RESCHEDULE_SELECT_TIME' };
 }
 
@@ -858,7 +881,7 @@ async function handleRescheduleSelectTime(
   const times = session.available_times || [];
 
   if (isNaN(choice) || choice < 1 || choice > times.length) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'RESCHEDULE_SELECT_TIME' };
   }
 
@@ -892,7 +915,7 @@ async function handleRescheduleSelectTime(
     newDate: formatDate(session.selected_date!),
     newTime: formatTime(selected.time),
     professional: session.selected_professional_name || '',
-  }));
+  }) + MESSAGES.hintConfirm);
 
   return { handled: true, newState: 'CONFIRM_RESCHEDULE' };
 }
@@ -1036,7 +1059,7 @@ async function handleSelectProfessional(
   const professionals = session.available_professionals || [];
 
   if (isNaN(choice) || choice < 1 || choice > professionals.length) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'SELECT_PROFESSIONAL' };
   }
 
@@ -1072,7 +1095,7 @@ async function handleSelectProfessional(
   });
 
   await sendWhatsAppMessage(config, phone, MESSAGES.professionalSelected(selected.name));
-  await sendWhatsAppMessage(config, phone, MESSAGES.selectDate(availableDates));
+  await sendWhatsAppMessage(config, phone, MESSAGES.selectDate(availableDates) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
   return { handled: true, newState: 'SELECT_DATE' };
 }
 
@@ -1087,7 +1110,7 @@ async function handleSelectDate(
   const dates = session.available_dates || [];
 
   if (isNaN(choice) || choice < 1 || choice > dates.length) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'SELECT_DATE' };
   }
 
@@ -1111,7 +1134,7 @@ async function handleSelectDate(
     available_times: availableTimes,
   });
 
-  await sendWhatsAppMessage(config, phone, MESSAGES.selectTime(availableTimes));
+  await sendWhatsAppMessage(config, phone, MESSAGES.selectTime(availableTimes) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
   return { handled: true, newState: 'SELECT_TIME' };
 }
 
@@ -1126,7 +1149,7 @@ async function handleSelectTime(
   const times = session.available_times || [];
 
   if (isNaN(choice) || choice < 1 || choice > times.length) {
-    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'SELECT_TIME' };
   }
 
@@ -1142,7 +1165,7 @@ async function handleSelectTime(
     professionalName: session.selected_professional_name || '',
     date: formatDate(session.selected_date!),
     time: selected.formatted,
-  }));
+  }) + MESSAGES.hintConfirm);
 
   return { handled: true, newState: 'CONFIRM_APPOINTMENT' };
 }
@@ -1164,7 +1187,7 @@ async function handleConfirmAppointment(
   }
 
   if (!confirmRegex.test(messageText)) {
-    await sendWhatsAppMessage(config, phone, `Por favor, digite *CONFIRMAR* ou *CANCELAR*.`);
+    await sendWhatsAppMessage(config, phone, `Por favor, digite *CONFIRMAR* ou *CANCELAR*.` + MESSAGES.hintConfirm);
     return { handled: true, newState: 'CONFIRM_APPOINTMENT' };
   }
 
@@ -1603,32 +1626,56 @@ async function getOrCreateSession(
   supabase: SupabaseClient,
   clinicId: string,
   phone: string
-): Promise<BookingSession | null> {
-  const { data: session, error } = await supabase
+): Promise<{ session: BookingSession | null; wasExpired: boolean }> {
+  // First, check if there's ANY session (even expired) to detect expiration
+  const { data: anySession, error: anyError } = await supabase
     .from('whatsapp_booking_sessions')
     .select('*')
     .eq('clinic_id', clinicId)
     .eq('phone', phone)
-    .gt('expires_at', new Date().toISOString())
     .neq('state', 'FINISHED')
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
 
-  if (error) {
-    console.error('[booking] Error fetching session:', error);
-    return null;
+  if (anyError) {
+    console.error('[booking] Error fetching session:', anyError);
+    return { session: null, wasExpired: false };
   }
 
-  if (session) {
-    return session as BookingSession;
+  // Check if session exists but is expired
+  const isExpired = anySession && new Date(anySession.expires_at) < new Date();
+  
+  if (isExpired) {
+    console.log(`[booking] Session expired for ${phone}, was in state: ${anySession.state}`);
+    // Delete expired session
+    await supabase
+      .from('whatsapp_booking_sessions')
+      .delete()
+      .eq('id', anySession.id);
+    
+    // Create new session
+    try {
+      const newSession = await createOrResetSession(supabase, clinicId, phone, 'WAITING_CPF');
+      return { session: newSession, wasExpired: true };
+    } catch (e) {
+      console.error('[booking] Error creating session after expiry:', e);
+      return { session: null, wasExpired: true };
+    }
   }
 
+  // Session is valid
+  if (anySession) {
+    return { session: anySession as BookingSession, wasExpired: false };
+  }
+
+  // No session at all, create new one
   try {
-    return await createOrResetSession(supabase, clinicId, phone, 'WAITING_CPF');
+    const newSession = await createOrResetSession(supabase, clinicId, phone, 'WAITING_CPF');
+    return { session: newSession, wasExpired: false };
   } catch (e) {
     console.error('[booking] Error creating session:', e);
-    return null;
+    return { session: null, wasExpired: false };
   }
 }
 
@@ -1898,16 +1945,17 @@ serve(async (req) => {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing booking flow for clinic ${clinicId}`);
 
-        const session = await getOrCreateSession(supabase, clinicId, phone);
-        console.log(`[webhook] Session state: ${session?.state ?? 'null'}`);
+        const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
+        console.log(`[webhook] Session state: ${sessionResult?.session?.state ?? 'null'}, wasExpired: ${sessionResult?.wasExpired}`);
 
-        if (session) {
+        if (sessionResult?.session) {
           await handleBookingFlow(
             supabase,
             configData,
             phone,
             messageText,
-            session
+            sessionResult.session,
+            sessionResult.wasExpired
           );
         } else {
           console.error('[webhook] Failed to get or create session');
