@@ -684,8 +684,63 @@ export function mapPatientRow(row: Record<string, unknown>): PatientImportRow {
   };
 }
 
+// Helper to parse iClinic JSON format from eventblock_pack or similar columns
+function parseIClinicEventBlock(value: unknown): {
+  queixa?: string;
+  historia?: string;
+  prescricao?: string;
+} {
+  if (!value) return {};
+  
+  let jsonStr = String(value).trim();
+  
+  // Handle "json::" prefix from iClinic exports
+  if (jsonStr.startsWith('json::')) {
+    jsonStr = jsonStr.slice(6);
+  }
+  
+  try {
+    const parsed = JSON.parse(jsonStr);
+    const result: { queixa?: string; historia?: string; prescricao?: string } = {};
+    
+    // Extract from "block" array
+    if (parsed.block && Array.isArray(parsed.block)) {
+      for (const item of parsed.block) {
+        const name = String(item.name || '').toLowerCase();
+        const val = String(item.value || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+        
+        if (!val) continue;
+        
+        if (name.includes('queixa')) {
+          result.queixa = result.queixa ? `${result.queixa}\n${val}` : val;
+        } else if (name.includes('história') || name.includes('historia')) {
+          result.historia = result.historia ? `${result.historia}\n${val}` : val;
+        }
+      }
+    }
+    
+    // Extract from "recipe" array (prescriptions)
+    if (parsed.recipe && Array.isArray(parsed.recipe)) {
+      const prescriptions = parsed.recipe
+        .map((r: { value?: string }) => String(r.value || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim())
+        .filter(Boolean);
+      if (prescriptions.length > 0) {
+        result.prescricao = prescriptions.join('\n---\n');
+      }
+    }
+    
+    return result;
+  } catch {
+    return {};
+  }
+}
+
 // Map raw row to MedicalRecordImportRow
 export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecordImportRow {
+  // Check if this is iClinic format (has eventblock_pack column)
+  const eventBlockRaw = row['eventblock_pack'] || row['eventBlock_pack'] || row['event_block_pack'];
+  const iClinicData = parseIClinicEventBlock(eventBlockRaw);
+  
   // First, try to get the main record content from various possible column names
   // Many legacy systems store everything in a single "description" or "evolution" column
   const mainContent = getRowValue(row, [
@@ -704,27 +759,36 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
     'ficha', 'Ficha', 'FICHA',
   ]) || undefined;
 
+  // For iClinic format, use patient_name column
+  const patientName = getRowValue(row, [
+    'patient_name', 'Patient Name', 'patient', 'Patient',
+    'nome_paciente', 'Nome Paciente', 'nome paciente', 'nome do paciente',
+    'Nome do Paciente', 'Paciente', 'paciente', 'nome', 'Nome',
+    'cliente', 'Cliente', 'client', 'Client', 'nome_completo', 'Nome Completo'
+  ]) || undefined;
+
+  // For iClinic format, use date column
+  const recordDate = getRowValue(row, [
+    'date', 'Date', 'DATE',
+    'data_registro', 'Data do Registro', 'data do registro', 'Data Registro',
+    'data', 'Data', 'DATA', 'data_consulta', 'Data Consulta',
+    'data_atendimento', 'Data Atendimento', 'Data do Atendimento',
+    'record_date', 'Record Date', 'visit_date', 'Visit Date',
+    'appointment_date', 'Appointment Date',
+    'criado_em', 'Criado em', 'Criado Em', 'created_at', 'Created At',
+    'date_added'
+  ]);
+
   return {
     cpf_paciente: getRowValue(row, [
       'cpf_paciente', 'CPF Paciente', 'cpf paciente', 'cpf do paciente',
       'CPF do Paciente', 'cpf', 'CPF', 'patient_cpf', 'Patient CPF',
       'documento_paciente', 'Documento Paciente', 'documento', 'Documento'
     ]) || undefined,
-    nome_paciente: getRowValue(row, [
-      'nome_paciente', 'Nome Paciente', 'nome paciente', 'nome do paciente',
-      'Nome do Paciente', 'Paciente', 'paciente', 'nome', 'Nome',
-      'patient_name', 'Patient Name', 'patient', 'Patient',
-      'cliente', 'Cliente', 'client', 'Client', 'nome_completo', 'Nome Completo'
-    ]) || undefined,
-    data_registro: getRowValue(row, [
-      'data_registro', 'Data do Registro', 'data do registro', 'Data Registro',
-      'data', 'Data', 'DATA', 'data_consulta', 'Data Consulta',
-      'data_atendimento', 'Data Atendimento', 'Data do Atendimento',
-      'record_date', 'Record Date', 'visit_date', 'Visit Date',
-      'appointment_date', 'Appointment Date', 'date', 'Date',
-      'criado_em', 'Criado em', 'Criado Em', 'created_at', 'Created At'
-    ]),
-    queixa: getRowValue(row, [
+    nome_paciente: patientName,
+    data_registro: recordDate,
+    // Use iClinic data if available, otherwise fallback to standard columns
+    queixa: iClinicData.queixa || getRowValue(row, [
       'queixa', 'Queixa', 'QUEIXA', 'Queixa Principal', 'queixa_principal',
       'queixa principal', 'motivo_consulta', 'Motivo Consulta', 'Motivo da Consulta',
       'chief_complaint', 'Chief Complaint', 'complaint', 'Complaint',
@@ -741,15 +805,14 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
       'treatment', 'Treatment', 'TREATMENT', 'treatment_plan', 'Treatment Plan',
       'conduta', 'Conduta', 'plan', 'Plan', 'plano', 'Plano'
     ]) || undefined,
-    prescricao: getRowValue(row, [
+    prescricao: iClinicData.prescricao || getRowValue(row, [
       'prescricao', 'Prescricao', 'PRESCRICAO', 'prescrição', 'Prescrição',
       'prescription', 'Prescription', 'PRESCRIPTION',
       'medicamentos', 'Medicamentos', 'medications', 'Medications',
       'receita', 'Receita', 'recipe', 'remedio', 'Remédio', 'remedios', 'Remédios'
     ]) || undefined,
-    // For observacoes, use specific columns first, then fall back to mainContent
-    // This ensures legacy systems that use a single "evolucao" or "descricao" column are captured
-    observacoes: getRowValue(row, [
+    // For observacoes, use iClinic historia (História), or standard columns, or mainContent
+    observacoes: iClinicData.historia || getRowValue(row, [
       'observacoes', 'Observacoes', 'OBSERVACOES', 'observações', 'Observações',
       'notas', 'Notas', 'NOTAS', 'obs', 'Obs', 'OBS',
       'notes', 'Notes', 'NOTES', 'comments', 'Comments',
