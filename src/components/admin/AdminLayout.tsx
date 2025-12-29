@@ -35,6 +35,7 @@ const adminNavItems = [
   { path: "/admin/access-groups", label: "Grupos de Acesso", icon: Lock },
   { path: "/admin/notifications", label: "Notificações", icon: Bell },
   { path: "/admin/hero", label: "Hero Landing", icon: Image },
+  { path: "/admin/banners", label: "Banners Carrossel", icon: Image },
   { path: "/admin/chat", label: "Chat Suporte", icon: MessageCircle },
   { path: "/admin/upgrades", label: "Upgrades", icon: ArrowUpCircle, hasBadge: true },
   { path: "/admin/import", label: "Importar Dados", icon: Upload },
