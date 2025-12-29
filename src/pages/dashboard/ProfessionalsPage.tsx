@@ -99,6 +99,7 @@ interface Professional {
   bio: string | null;
   education: string | null;
   experience: string | null;
+  appointment_duration: number | null;
   specialtyNames?: string[];
 }
 
@@ -233,7 +234,7 @@ export default function ProfessionalsPage() {
     try {
       const { data, error } = await supabase
         .from('professionals')
-        .select('id, name, specialty, registration_number, phone, is_active, schedule, user_id, email, avatar_url, telemedicine_enabled, slug, address, city, state, zip_code, whatsapp, bio, education, experience')
+        .select('id, name, specialty, registration_number, phone, is_active, schedule, user_id, email, avatar_url, telemedicine_enabled, slug, address, city, state, zip_code, whatsapp, bio, education, experience, appointment_duration')
         .eq('clinic_id', currentClinic.id)
         .order('name');
 
@@ -1102,6 +1103,7 @@ export default function ProfessionalsPage() {
             name: selectedProfessional.name,
             schedule: selectedProfessional.schedule as Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null,
           }}
+          appointmentDuration={(selectedProfessional as any).appointment_duration || 30}
           onUpdate={fetchProfessionals}
         />
       )}

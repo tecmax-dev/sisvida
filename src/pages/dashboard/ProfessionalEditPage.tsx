@@ -92,6 +92,7 @@ export default function ProfessionalEditPage() {
   const [email, setEmail] = useState("");
   const [userId, setUserId] = useState("");
   const [telemedicineEnabled, setTelemedicineEnabled] = useState(false);
+  const [appointmentDuration, setAppointmentDuration] = useState(30);
   const [errors, setErrors] = useState<Record<string, string>>({});
   
   // Avatar
@@ -137,6 +138,7 @@ export default function ProfessionalEditPage() {
         setEmail(data.email || "");
         setUserId(data.user_id || "");
         setTelemedicineEnabled(data.telemedicine_enabled || false);
+        setAppointmentDuration(data.appointment_duration || 30);
         setAvatarPreview(data.avatar_url || null);
         setAddress(data.address || "");
         setCity(data.city || "");
@@ -275,6 +277,7 @@ export default function ProfessionalEditPage() {
           user_id: userId || null,
           avatar_url: avatarUrl,
           telemedicine_enabled: hasFeature('telemedicine') ? telemedicineEnabled : false,
+          appointment_duration: appointmentDuration,
           slug: newSlug,
           address: address.trim() || null,
           city: city.trim() || null,
@@ -479,6 +482,26 @@ export default function ProfessionalEditPage() {
               </TabsContent>
 
               <TabsContent value="settings" className="space-y-4 mt-4">
+                <div>
+                  <Label htmlFor="appointmentDuration">Intervalo de Atendimento</Label>
+                  <Select value={String(appointmentDuration)} onValueChange={(val) => setAppointmentDuration(Number(val))}>
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="10">10 minutos</SelectItem>
+                      <SelectItem value="15">15 minutos</SelectItem>
+                      <SelectItem value="20">20 minutos</SelectItem>
+                      <SelectItem value="30">30 minutos</SelectItem>
+                      <SelectItem value="45">45 minutos</SelectItem>
+                      <SelectItem value="60">60 minutos</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Define o intervalo entre os horários disponíveis na configuração de horários
+                  </p>
+                </div>
+                
                 <div>
                   <Label htmlFor="userId">Vincular a Usuário do Sistema</Label>
                   <Select value={userId || "none"} onValueChange={(val) => setUserId(val === "none" ? "" : val)}>
