@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PanelBanner } from "@/hooks/usePanelBanners";
@@ -11,31 +11,54 @@ interface PanelBannerCarouselProps {
 export function PanelBannerCarousel({ banners, className }: PanelBannerCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isAutoPlaying, setIsAutoPlaying] = useState(true);
+  const intervalRef = useRef<number | null>(null);
+  
+  // Memoize banner IDs to detect actual changes, not just reference changes
+  const bannerIds = useMemo(() => banners.map(b => b.id).join(','), [banners]);
+  const bannersCount = banners.length;
+
+  // Ensure currentIndex is valid when banners change
+  useEffect(() => {
+    if (currentIndex >= bannersCount && bannersCount > 0) {
+      setCurrentIndex(0);
+    }
+  }, [bannersCount, currentIndex]);
 
   const nextSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % banners.length);
-  }, [banners.length]);
+    setCurrentIndex((prev) => (prev + 1) % bannersCount);
+  }, [bannersCount]);
 
   const prevSlide = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
-  }, [banners.length]);
+    setCurrentIndex((prev) => (prev - 1 + bannersCount) % bannersCount);
+  }, [bannersCount]);
 
-  // Auto-play carousel
+  // Auto-play carousel - only restart if banners actually change (by ID)
   useEffect(() => {
-    if (!isAutoPlaying || banners.length <= 1) return;
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    if (!isAutoPlaying || bannersCount <= 1) return;
     
     const currentBanner = banners[currentIndex];
     const duration = (currentBanner?.duration_seconds || 5) * 1000;
     
-    const interval = setInterval(nextSlide, duration);
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, nextSlide, banners.length, currentIndex, banners]);
+    intervalRef.current = window.setInterval(nextSlide, duration);
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [isAutoPlaying, nextSlide, bannersCount, currentIndex, bannerIds]);
 
-  if (!banners || banners.length === 0) {
+  if (!banners || bannersCount === 0) {
     return null;
   }
 
-  const currentBanner = banners[currentIndex];
+  const currentBanner = banners[currentIndex] || banners[0];
 
   return (
     <div 
