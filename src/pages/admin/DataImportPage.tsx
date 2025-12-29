@@ -53,6 +53,7 @@ import {
   formatCPF,
   parseDate,
   getDetectedColumnsInfo,
+  normalizeNameForComparison,
 } from "@/lib/importUtils";
 
 interface Clinic {
@@ -435,7 +436,9 @@ export default function DataImportPage() {
       
       // Build maps for patient lookup - CPF is the PRIMARY identifier
       const cpfToPatientId = new Map<string, string>();
-      const nameToPatientIds = new Map<string, string[]>(); // Name can have multiple patients
+      const normalizedNameToPatientIds = new Map<string, string[]>();
+      // Build list for fuzzy matching
+      const allPatients: Array<{ id: string; name: string; normalizedName: string }> = [];
       
       existingPatients?.forEach(p => {
         // CPF map - only if CPF exists (unique identifier)
@@ -444,10 +447,11 @@ export default function DataImportPage() {
           cpfToPatientId.set(cleanCPF, p.id);
         }
         // Name map - track ALL patients with same name (for duplicate detection)
-        const normalizedName = p.name.toLowerCase().trim();
-        const existingIds = nameToPatientIds.get(normalizedName) || [];
+        const normalizedName = normalizeNameForComparison(p.name);
+        allPatients.push({ id: p.id, name: p.name, normalizedName });
+        const existingIds = normalizedNameToPatientIds.get(normalizedName) || [];
         existingIds.push(p.id);
-        nameToPatientIds.set(normalizedName, existingIds);
+        normalizedNameToPatientIds.set(normalizedName, existingIds);
       });
       
       // Also add patients imported in step 1 to the maps
@@ -455,12 +459,40 @@ export default function DataImportPage() {
         cpfToPatientId.set(cpf, id);
       }
       for (const [name, id] of importedPatientsNameMap.entries()) {
-        const existingIds = nameToPatientIds.get(name) || [];
+        const normalizedName = normalizeNameForComparison(name);
+        const existingIds = normalizedNameToPatientIds.get(normalizedName) || [];
         if (!existingIds.includes(id)) {
           existingIds.push(id);
-          nameToPatientIds.set(name, existingIds);
+          normalizedNameToPatientIds.set(normalizedName, existingIds);
+          allPatients.push({ id, name, normalizedName });
         }
       }
+      
+      // Helper function to find patient by name with fuzzy matching
+      const findPatientByNameCombined = (searchName: string): string | undefined => {
+        const normalizedSearch = normalizeNameForComparison(searchName);
+        if (!normalizedSearch) return undefined;
+        
+        // PRIORITY 1: Exact normalized match
+        const exactMatches = normalizedNameToPatientIds.get(normalizedSearch) || [];
+        if (exactMatches.length === 1) return exactMatches[0];
+        
+        // PRIORITY 2: Check if search name contains patient name or vice versa
+        for (const patient of allPatients) {
+          if (patient.normalizedName.includes(normalizedSearch) || normalizedSearch.includes(patient.normalizedName)) {
+            // Additional check: at least 70% of words match
+            const searchWords = normalizedSearch.split(' ').filter(w => w.length > 2);
+            const patientWords = patient.normalizedName.split(' ').filter(w => w.length > 2);
+            const matchingWords = searchWords.filter(sw => patientWords.some(pw => pw.includes(sw) || sw.includes(pw)));
+            
+            if (matchingWords.length >= Math.min(searchWords.length, patientWords.length) * 0.7) {
+              return patient.id;
+            }
+          }
+        }
+        
+        return undefined;
+      };
       
       // ============ PROFESSIONAL CREATION LOGIC ============
       // Extract unique professional names from records
@@ -576,15 +608,9 @@ export default function DataImportPage() {
           patientId = cpfToPatientId.get(cleanCPF);
         }
         
-        // PRIORITY 2: Match by unique name
-        // Se houver múltiplos pacientes com o mesmo nome (ambíguo), não bloqueamos a importação;
-        // seguimos para criação automática de um novo paciente para preservar o prontuário.
+        // PRIORITY 2: Match by name using fuzzy matching
         if (!patientId && normalizedName) {
-          const matchingPatients = nameToPatientIds.get(normalizedName) || [];
-
-          if (matchingPatients.length === 1) {
-            patientId = matchingPatients[0];
-          }
+          patientId = findPatientByNameCombined(row.data.nome_paciente || '');
         }
         
         if (patientId) {
@@ -672,10 +698,11 @@ export default function DataImportPage() {
                 if (p.cpf) {
                   cpfToPatientId.set(p.cpf.replace(/\D/g, ''), p.id);
                 }
-                const normName = p.name.toLowerCase().trim();
-                const existingNames = nameToPatientIds.get(normName) || [];
+                const normName = normalizeNameForComparison(p.name);
+                allPatients.push({ id: p.id, name: p.name, normalizedName: normName });
+                const existingNames = normalizedNameToPatientIds.get(normName) || [];
                 existingNames.push(p.id);
-                nameToPatientIds.set(normName, existingNames);
+                normalizedNameToPatientIds.set(normName, existingNames);
               });
             } else if (error) {
               console.error('[PATIENT CREATE BATCH ERROR]', error.message);
@@ -693,10 +720,7 @@ export default function DataImportPage() {
             patientId = cpfToPatientId.get(cleanCPF);
           }
           if (!patientId) {
-            const matchingPatients = nameToPatientIds.get(normalizedName) || [];
-            if (matchingPatients.length === 1) {
-              patientId = matchingPatients[0];
-            }
+            patientId = findPatientByNameCombined(row.data.nome_paciente || '');
           }
           
           if (patientId) {
@@ -920,18 +944,47 @@ export default function DataImportPage() {
     
     // Build maps for patient lookup - CPF is the PRIMARY identifier
     const cpfToPatientId = new Map<string, string>();
-    const nameToPatientIds = new Map<string, string[]>();
+    const normalizedNameToPatientIds = new Map<string, string[]>();
+    // Also build a list for fuzzy matching
+    const allPatients: Array<{ id: string; name: string; normalizedName: string }> = [];
     
     patients?.forEach(p => {
       if (p.cpf) {
         const cleanCPF = p.cpf.replace(/\D/g, '');
         cpfToPatientId.set(cleanCPF, p.id);
       }
-      const normalizedName = p.name.toLowerCase().trim();
-      const existingIds = nameToPatientIds.get(normalizedName) || [];
+      const normalizedName = normalizeNameForComparison(p.name);
+      allPatients.push({ id: p.id, name: p.name, normalizedName });
+      const existingIds = normalizedNameToPatientIds.get(normalizedName) || [];
       existingIds.push(p.id);
-      nameToPatientIds.set(normalizedName, existingIds);
+      normalizedNameToPatientIds.set(normalizedName, existingIds);
     });
+    
+    // Helper function to find patient by name with fuzzy matching
+    const findPatientByName = (searchName: string): string | undefined => {
+      const normalizedSearch = normalizeNameForComparison(searchName);
+      if (!normalizedSearch) return undefined;
+      
+      // PRIORITY 1: Exact normalized match
+      const exactMatches = normalizedNameToPatientIds.get(normalizedSearch) || [];
+      if (exactMatches.length === 1) return exactMatches[0];
+      
+      // PRIORITY 2: Check if search name contains patient name or vice versa
+      for (const patient of allPatients) {
+        if (patient.normalizedName.includes(normalizedSearch) || normalizedSearch.includes(patient.normalizedName)) {
+          // Additional check: at least 80% of words match
+          const searchWords = normalizedSearch.split(' ').filter(w => w.length > 2);
+          const patientWords = patient.normalizedName.split(' ').filter(w => w.length > 2);
+          const matchingWords = searchWords.filter(sw => patientWords.some(pw => pw.includes(sw) || sw.includes(pw)));
+          
+          if (matchingWords.length >= Math.min(searchWords.length, patientWords.length) * 0.7) {
+            return patient.id;
+          }
+        }
+      }
+      
+      return undefined;
+    };
     
     // ============ PROFESSIONAL CREATION LOGIC ============
     // Extract unique professional names from records
@@ -1045,15 +1098,9 @@ export default function DataImportPage() {
         patientId = cpfToPatientId.get(cleanCPF);
       }
       
-      // PRIORITY 2: Match by unique name
-      // Se houver múltiplos pacientes com o mesmo nome (ambíguo), não bloqueamos a importação;
-      // seguimos para criação automática de um novo paciente para preservar o prontuário.
+      // PRIORITY 2: Match by name using fuzzy matching
       if (!patientId && normalizedName) {
-        const matchingPatients = nameToPatientIds.get(normalizedName) || [];
-
-        if (matchingPatients.length === 1) {
-          patientId = matchingPatients[0];
-        }
+        patientId = findPatientByName(row.data.nome_paciente || '');
       }
       
       if (patientId) {
@@ -1126,10 +1173,11 @@ export default function DataImportPage() {
               if (p.cpf) {
                 cpfToPatientId.set(p.cpf.replace(/\D/g, ''), p.id);
               }
-              const normName = p.name.toLowerCase().trim();
-              const existingNames = nameToPatientIds.get(normName) || [];
+              const normName = normalizeNameForComparison(p.name);
+              allPatients.push({ id: p.id, name: p.name, normalizedName: normName });
+              const existingNames = normalizedNameToPatientIds.get(normName) || [];
               existingNames.push(p.id);
-              nameToPatientIds.set(normName, existingNames);
+              normalizedNameToPatientIds.set(normName, existingNames);
             });
           } else if (error) {
             console.error('[PATIENT CREATE BATCH ERROR]', error.message);
@@ -1147,10 +1195,7 @@ export default function DataImportPage() {
           patientId = cpfToPatientId.get(cleanCPF);
         }
         if (!patientId) {
-          const matchingPatients = nameToPatientIds.get(normalizedName) || [];
-          if (matchingPatients.length === 1) {
-            patientId = matchingPatients[0];
-          }
+          patientId = findPatientByName(row.data.nome_paciente || '');
         }
         
         if (patientId) {
