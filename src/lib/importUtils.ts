@@ -87,30 +87,47 @@ export function formatCPF(cpf: string): string {
 export function parseDate(dateStr: string): string | null {
   if (!dateStr) return null;
   
-  // Try common formats
+  const trimmed = String(dateStr).trim();
+  if (!trimmed) return null;
+  
+  // Try common formats with regex
   const formats = [
-    /^(\d{4})-(\d{2})-(\d{2})$/,           // YYYY-MM-DD
-    /^(\d{2})\/(\d{2})\/(\d{4})$/,         // DD/MM/YYYY
-    /^(\d{2})-(\d{2})-(\d{4})$/,           // DD-MM-YYYY
+    { regex: /^(\d{4})-(\d{2})-(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` },  // YYYY-MM-DD
+    { regex: /^(\d{4})-(\d{2})-(\d{2})T/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYY-MM-DDTHH:MM:SS (ISO)
+    { regex: /^(\d{4})-(\d{2})-(\d{2})\s/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYY-MM-DD HH:MM:SS
+    { regex: /^(\d{2})\/(\d{2})\/(\d{4})$/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2]}-${m[1]}` }, // DD/MM/YYYY
+    { regex: /^(\d{2})-(\d{2})-(\d{4})$/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2]}-${m[1]}` }, // DD-MM-YYYY
+    { regex: /^(\d{2})\.(\d{2})\.(\d{4})$/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2]}-${m[1]}` }, // DD.MM.YYYY
+    { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` }, // D/M/YYYY
+    { regex: /^(\d{4})(\d{2})(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYYMMDD
   ];
   
-  for (const format of formats) {
-    const match = dateStr.match(format);
+  for (const { regex, handler } of formats) {
+    const match = trimmed.match(regex);
     if (match) {
-      if (format === formats[0]) {
-        return dateStr; // Already in correct format
-      } else {
-        // Convert DD/MM/YYYY or DD-MM-YYYY to YYYY-MM-DD
-        return `${match[3]}-${match[2]}-${match[1]}`;
+      const result = handler(match);
+      // Validate the result is a valid date
+      const parsed = new Date(result);
+      if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1900 && parsed.getFullYear() < 2100) {
+        return result;
       }
     }
   }
   
-  // Try to parse as Excel date number
-  const excelDate = parseFloat(dateStr);
-  if (!isNaN(excelDate) && excelDate > 0) {
+  // Try to parse as Excel date number (serial date)
+  const excelDate = parseFloat(trimmed);
+  if (!isNaN(excelDate) && excelDate > 1 && excelDate < 100000) {
+    // Excel serial date: days since 1899-12-30 (with Excel bug for 1900)
     const date = new Date((excelDate - 25569) * 86400 * 1000);
-    return date.toISOString().split('T')[0];
+    if (!isNaN(date.getTime()) && date.getFullYear() > 1900 && date.getFullYear() < 2100) {
+      return date.toISOString().split('T')[0];
+    }
+  }
+  
+  // Try native Date parsing as last resort
+  const nativeDate = new Date(trimmed);
+  if (!isNaN(nativeDate.getTime()) && nativeDate.getFullYear() > 1900 && nativeDate.getFullYear() < 2100) {
+    return nativeDate.toISOString().split('T')[0];
   }
   
   return null;
