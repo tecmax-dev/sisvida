@@ -77,6 +77,8 @@ interface BookingSession {
   available_times: Array<{ time: string; formatted: string }> | null;
   // For cancel/reschedule flows
   pending_appointments: Array<{ id: string; date: string; time: string; professional: string }> | null;
+  appointments_list?: Array<{ id: string; date: string; time: string; professional: string; professional_id?: string; procedure?: string; status: string }> | null;
+  list_action?: 'cancel' | 'reschedule' | null;
   selected_appointment_id: string | null;
   action_type: 'new' | 'cancel' | 'reschedule' | null;
   expires_at: string;
@@ -113,7 +115,8 @@ interface AppointmentRecord {
   end_time?: string;
   status: string;
   patient?: { name?: string };
-  professional?: { name?: string };
+  professional?: { id?: string; name?: string };
+  procedure?: { name?: string };
 }
 
 interface AIExtractedIntent {
@@ -608,7 +611,55 @@ async function handleBookingFlow(
     return { handled: true, newState: 'WAITING_CPF' };
   }
 
-  // Handle based on current state
+  // ===== AI-FIRST APPROACH =====
+  // Always use AI to understand user intent, then route accordingly
+  const aiResult = await getAIIntent(messageText, session.state);
+  console.log(`[booking] AI intent: ${aiResult.intent}, confidence: ${aiResult.confidence}, state: ${session.state}`);
+
+  // Handle high-confidence AI intents that can override current state
+  if (aiResult.confidence >= 0.7) {
+    // Extract CPF from AI if detected
+    if (aiResult.entities?.cpf && session.state === 'WAITING_CPF') {
+      const cleanCpf = aiResult.entities.cpf.replace(/\D/g, '');
+      if (CPF_REGEX.test(cleanCpf) && validateCpf(cleanCpf)) {
+        console.log('[booking] AI detected valid CPF:', cleanCpf.slice(0, 3) + '***');
+        // Let handleWaitingCpf process it
+        return await handleWaitingCpf(supabase, config, phone, cleanCpf, session);
+      }
+    }
+
+    // Handle confirm/deny intents for confirmation states
+    if (aiResult.intent === 'confirm' && ['CONFIRM_IDENTITY', 'CONFIRM_APPOINTMENT', 'CONFIRM_CANCEL', 'CONFIRM_RESCHEDULE'].includes(session.state)) {
+      return await handleStateWithConfirm(supabase, config, phone, session);
+    }
+    
+    if (aiResult.intent === 'deny' && ['CONFIRM_IDENTITY', 'CONFIRM_APPOINTMENT', 'CONFIRM_CANCEL', 'CONFIRM_RESCHEDULE'].includes(session.state)) {
+      return await handleStateWithDeny(supabase, config, phone, session);
+    }
+
+    // Handle main menu navigation intents from any state after identity confirmed
+    if (session.patient_id && aiResult.intent === 'schedule') {
+      console.log('[booking] AI detected schedule intent');
+      return await navigateToSchedule(supabase, config, phone, session);
+    }
+    
+    if (session.patient_id && aiResult.intent === 'cancel') {
+      console.log('[booking] AI detected cancel intent');
+      return await navigateToCancel(supabase, config, phone, session);
+    }
+    
+    if (session.patient_id && aiResult.intent === 'reschedule') {
+      console.log('[booking] AI detected reschedule intent');
+      return await navigateToReschedule(supabase, config, phone, session);
+    }
+    
+    if (session.patient_id && aiResult.intent === 'list') {
+      console.log('[booking] AI detected list intent');
+      return await navigateToList(supabase, config, phone, session);
+    }
+  }
+
+  // Handle based on current state (fallback to existing logic)
   switch (session.state) {
     case 'INIT':
       // First message after session created - send welcome and wait for CPF
@@ -663,6 +714,239 @@ async function handleBookingFlow(
       await sendWhatsAppMessage(config, phone, MESSAGES.welcome);
       return { handled: true, newState: 'WAITING_CPF' };
   }
+}
+
+// ==========================================
+// AI-DRIVEN NAVIGATION HELPERS
+// ==========================================
+
+async function handleStateWithConfirm(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  switch (session.state) {
+    case 'CONFIRM_IDENTITY':
+      await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
+      await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
+      return { handled: true, newState: 'MAIN_MENU' };
+    case 'CONFIRM_APPOINTMENT':
+      return await handleConfirmAppointment(supabase, config, phone, 'sim', session);
+    case 'CONFIRM_CANCEL':
+      return await handleConfirmCancel(supabase, config, phone, 'sim', session);
+    case 'CONFIRM_RESCHEDULE':
+      return await handleConfirmReschedule(supabase, config, phone, 'sim', session);
+    default:
+      return { handled: false };
+  }
+}
+
+async function handleStateWithDeny(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  switch (session.state) {
+    case 'CONFIRM_IDENTITY':
+      await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
+      await sendWhatsAppMessage(config, phone, MESSAGES.cpfInvalid + MESSAGES.hintCpf);
+      return { handled: true, newState: 'WAITING_CPF' };
+    case 'CONFIRM_APPOINTMENT':
+      return await handleConfirmAppointment(supabase, config, phone, 'não', session);
+    case 'CONFIRM_CANCEL':
+      return await handleConfirmCancel(supabase, config, phone, 'não', session);
+    case 'CONFIRM_RESCHEDULE':
+      return await handleConfirmReschedule(supabase, config, phone, 'não', session);
+    default:
+      return { handled: false };
+  }
+}
+
+async function navigateToSchedule(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  // Load professionals and navigate to SELECT_PROFESSIONAL
+  const { data: professionals } = await supabase
+    .from('professionals')
+    .select('id, name, specialty')
+    .eq('clinic_id', config.clinic_id)
+    .eq('is_active', true)
+    .order('name');
+
+  const profList = (professionals || []) as Array<{ id: string; name: string; specialty: string | null }>;
+  
+  if (profList.length === 0) {
+    await sendWhatsAppMessage(config, phone, '❌ Não há profissionais disponíveis no momento.');
+    return { handled: true, newState: 'MAIN_MENU' };
+  }
+
+  await updateSession(supabase, session.id, {
+    state: 'SELECT_PROFESSIONAL',
+    available_professionals: profList.map((p) => ({
+      id: p.id,
+      name: p.name,
+      specialty: p.specialty || '',
+    })),
+  });
+
+  const mappedList = profList.map((p) => ({ name: p.name, specialty: p.specialty || '' }));
+  await sendWhatsAppMessage(config, phone, MESSAGES.selectProfessional(mappedList) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
+  return { handled: true, newState: 'SELECT_PROFESSIONAL' };
+}
+
+async function navigateToCancel(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const now = new Date().toISOString();
+  const { data: appointments } = await supabase
+    .from('appointments')
+    .select(`
+      id, appointment_date, start_time, end_time, status,
+      professional:professionals!inner(name),
+      procedure:procedures(name)
+    `)
+    .eq('patient_id', session.patient_id)
+    .eq('clinic_id', config.clinic_id)
+    .gte('appointment_date', now.split('T')[0])
+    .in('status', ['scheduled', 'confirmed'])
+    .order('appointment_date')
+    .order('start_time');
+
+  const appointmentList = (appointments || []) as AppointmentRecord[];
+
+  if (appointmentList.length === 0) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.noAppointments);
+    await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
+    return { handled: true, newState: 'MAIN_MENU' };
+  }
+
+  await updateSession(supabase, session.id, {
+    state: 'LIST_APPOINTMENTS',
+    appointments_list: appointmentList.map((a) => ({
+      id: a.id,
+      date: a.appointment_date,
+      time: a.start_time,
+      professional: a.professional?.name || 'Profissional',
+      procedure: a.procedure?.name || undefined,
+      status: a.status,
+    })),
+    list_action: 'cancel',
+  });
+
+  let msg = '📋 *Suas consultas agendadas:*\n\n';
+  appointmentList.forEach((a, i) => {
+    msg += `*${i + 1}.* ${formatDate(a.appointment_date)} às ${formatTime(a.start_time)}\n`;
+    msg += `   👨‍⚕️ ${a.professional?.name || 'Profissional'}\n\n`;
+  });
+  msg += '\n_Qual consulta deseja cancelar?_';
+
+  await sendWhatsAppMessage(config, phone, msg + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
+  return { handled: true, newState: 'LIST_APPOINTMENTS' };
+}
+
+async function navigateToReschedule(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const now = new Date().toISOString();
+  const { data: appointments } = await supabase
+    .from('appointments')
+    .select(`
+      id, appointment_date, start_time, end_time, status,
+      professional:professionals!inner(id, name),
+      procedure:procedures(name)
+    `)
+    .eq('patient_id', session.patient_id)
+    .eq('clinic_id', config.clinic_id)
+    .gte('appointment_date', now.split('T')[0])
+    .in('status', ['scheduled', 'confirmed'])
+    .order('appointment_date')
+    .order('start_time');
+
+  const appointmentList = (appointments || []) as AppointmentRecord[];
+
+  if (appointmentList.length === 0) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.noAppointments);
+    await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
+    return { handled: true, newState: 'MAIN_MENU' };
+  }
+
+  await updateSession(supabase, session.id, {
+    state: 'LIST_APPOINTMENTS',
+    appointments_list: appointmentList.map((a) => ({
+      id: a.id,
+      date: a.appointment_date,
+      time: a.start_time,
+      professional: a.professional?.name || 'Profissional',
+      professional_id: a.professional?.id,
+      procedure: a.procedure?.name || undefined,
+      status: a.status,
+    })),
+    list_action: 'reschedule',
+  });
+
+  let msg = '📋 *Suas consultas agendadas:*\n\n';
+  appointmentList.forEach((a, i) => {
+    msg += `*${i + 1}.* ${formatDate(a.appointment_date)} às ${formatTime(a.start_time)}\n`;
+    msg += `   👨‍⚕️ ${a.professional?.name || 'Profissional'}\n\n`;
+  });
+  msg += '\n_Qual consulta deseja reagendar?_';
+
+  await sendWhatsAppMessage(config, phone, msg + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
+  return { handled: true, newState: 'LIST_APPOINTMENTS' };
+}
+
+async function navigateToList(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const now = new Date().toISOString();
+  const { data: appointments } = await supabase
+    .from('appointments')
+    .select(`
+      id, appointment_date, start_time, end_time, status,
+      professional:professionals!inner(name),
+      procedure:procedures(name)
+    `)
+    .eq('patient_id', session.patient_id)
+    .eq('clinic_id', config.clinic_id)
+    .gte('appointment_date', now.split('T')[0])
+    .in('status', ['scheduled', 'confirmed'])
+    .order('appointment_date')
+    .order('start_time');
+
+  const appointmentList = (appointments || []) as AppointmentRecord[];
+
+  if (appointmentList.length === 0) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.noAppointments);
+    await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
+    return { handled: true, newState: 'MAIN_MENU' };
+  }
+
+  let msg = '📋 *Suas consultas agendadas:*\n\n';
+  appointmentList.forEach((a) => {
+    const status = a.status === 'confirmed' ? '✅' : '📅';
+    msg += `${status} *${formatDate(a.appointment_date)}* às *${formatTime(a.start_time)}*\n`;
+    msg += `   👨‍⚕️ ${a.professional?.name || 'Profissional'}\n`;
+    if (a.procedure?.name) msg += `   📋 ${a.procedure.name}\n`;
+    msg += '\n';
+  });
+
+  await sendWhatsAppMessage(config, phone, msg + MESSAGES.mainMenu + MESSAGES.hintSelectOption);
+  await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
+  return { handled: true, newState: 'MAIN_MENU' };
 }
 
 // ==========================================
