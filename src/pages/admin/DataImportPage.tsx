@@ -989,12 +989,22 @@ export default function DataImportPage() {
     // ============ PROFESSIONAL CREATION LOGIC ============
     // Extract unique professional names from records
     const uniqueProfessionalNames = new Set<string>();
+    
+    // Debug: Log first few rows to see what data we have
+    console.log('[IMPORT DEBUG] First 3 valid rows:', validRows.slice(0, 3).map(r => ({
+      nome_profissional: r.data.nome_profissional,
+      nome_paciente: r.data.nome_paciente,
+      allKeys: Object.keys(r.data)
+    })));
+    
     for (const row of validRows) {
       const profName = row.data.nome_profissional?.trim();
       if (profName) {
         uniqueProfessionalNames.add(profName.toLowerCase());
       }
     }
+    
+    console.log('[IMPORT DEBUG] Unique professional names found:', Array.from(uniqueProfessionalNames));
     
     // Build map of professional name -> id
     const professionalNameToId = new Map<string, string>();
