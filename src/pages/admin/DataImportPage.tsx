@@ -403,16 +403,13 @@ export default function DataImportPage() {
         }
         
         // PRIORITY 2: Match by unique name
+        // Se houver múltiplos pacientes com o mesmo nome (ambíguo), não bloqueamos a importação;
+        // seguimos para criação automática de um novo paciente para preservar o prontuário.
         if (!patientId && normalizedName) {
           const matchingPatients = nameToPatientIds.get(normalizedName) || [];
-          
+
           if (matchingPatients.length === 1) {
             patientId = matchingPatients[0];
-          } else if (matchingPatients.length > 1) {
-            skippedAmbiguous++;
-            errors++;
-            processedItems++;
-            continue;
           }
         }
         
@@ -430,16 +427,17 @@ export default function DataImportPage() {
           });
         } else if (normalizedName) {
           // Need to create patient
-          const existingWithSameName = nameToPatientIds.get(normalizedName) || [];
-          const canCreate = cleanCPF.length >= 11 || existingWithSameName.length === 0;
-          
+          // Importação “do zero”: se não conseguimos vincular por CPF/nome único,
+          // criamos um paciente automaticamente (mesmo que já exista alguém com o mesmo nome).
+          const canCreate = true;
+
           if (canCreate) {
             // Check if we already queued this patient for creation
             const alreadyQueued = patientsToCreate.find(p => 
               (cleanCPF.length >= 11 && p.cleanCPF === cleanCPF) || 
               (cleanCPF.length < 11 && p.normalizedName === normalizedName)
             );
-            
+
             if (!alreadyQueued) {
               const formattedCpf = cleanCPF.length >= 11 ? formatCPF(row.data.cpf_paciente!) : undefined;
               const patientData: { clinic_id: string; name: string; phone: string; cpf?: string } = {
@@ -457,12 +455,8 @@ export default function DataImportPage() {
                 patientData,
               });
             }
-            
+
             recordsNeedingPatient.push({ row, cleanCPF, normalizedName });
-          } else {
-            skippedAmbiguous++;
-            errors++;
-            processedItems++;
           }
         } else {
           errors++;
@@ -743,15 +737,13 @@ export default function DataImportPage() {
       }
       
       // PRIORITY 2: Match by unique name
+      // Se houver múltiplos pacientes com o mesmo nome (ambíguo), não bloqueamos a importação;
+      // seguimos para criação automática de um novo paciente para preservar o prontuário.
       if (!patientId && normalizedName) {
         const matchingPatients = nameToPatientIds.get(normalizedName) || [];
-        
+
         if (matchingPatients.length === 1) {
           patientId = matchingPatients[0];
-        } else if (matchingPatients.length > 1) {
-          skippedAmbiguous++;
-          errors++;
-          continue;
         }
       }
       
@@ -767,15 +759,14 @@ export default function DataImportPage() {
           notes: row.data.observacoes?.trim() || null,
         });
       } else if (normalizedName) {
-        const existingWithSameName = nameToPatientIds.get(normalizedName) || [];
-        const canCreate = cleanCPF.length >= 11 || existingWithSameName.length === 0;
-        
+        const canCreate = true;
+
         if (canCreate) {
           const alreadyQueued = patientsToCreate.find(p => 
             (cleanCPF.length >= 11 && p.cleanCPF === cleanCPF) || 
             (cleanCPF.length < 11 && p.normalizedName === normalizedName)
           );
-          
+
           if (!alreadyQueued) {
             const formattedCpf = cleanCPF.length >= 11 ? formatCPF(row.data.cpf_paciente!) : undefined;
             const patientData: { clinic_id: string; name: string; phone: string; cpf?: string } = {
@@ -788,11 +779,8 @@ export default function DataImportPage() {
             }
             patientsToCreate.push({ cleanCPF, normalizedName, patientData });
           }
-          
+
           recordsNeedingPatient.push({ row, cleanCPF, normalizedName });
-        } else {
-          skippedAmbiguous++;
-          errors++;
         }
       } else {
         errors++;
