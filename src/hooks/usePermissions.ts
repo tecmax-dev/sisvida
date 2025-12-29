@@ -290,7 +290,7 @@ export function usePermissions() {
         return null;
       }
 
-      return new Set(data?.map((p: { permission_key: string }) => p.permission_key) || []);
+      return new Set((data as unknown as { key: string }[] | null)?.map((p) => p.key) || []);
     },
     enabled: !!user?.id && !!currentClinic?.id && !!accessGroupId,
     staleTime: 5 * 60 * 1000, // 5 minutes
