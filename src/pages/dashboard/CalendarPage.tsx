@@ -182,6 +182,7 @@ export default function CalendarPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [holidays, setHolidays] = useState<Map<string, string>>(new Map()); // date -> holiday name
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -354,6 +355,7 @@ export default function CalendarPage() {
   useEffect(() => {
     if (currentClinic) {
       fetchData();
+      fetchHolidays();
     }
   }, [currentClinic]);
 
@@ -427,6 +429,104 @@ export default function CalendarPage() {
     }
   };
 
+  const fetchHolidays = async () => {
+    if (!currentClinic) return;
+
+    try {
+      const holidayMap = new Map<string, string>();
+      const currentYear = new Date().getFullYear();
+      const years = [currentYear, currentYear + 1];
+
+      // Check if clinic has holidays enabled
+      const { data: clinicData } = await supabase
+        .from('clinics')
+        .select('holidays_enabled, state_code, city')
+        .eq('id', currentClinic.id)
+        .single();
+
+      if (clinicData?.holidays_enabled === false) {
+        setHolidays(holidayMap);
+        return;
+      }
+
+      // Fetch national holidays
+      const { data: nationalHolidays } = await supabase
+        .from('national_holidays')
+        .select('name, holiday_date, is_recurring, recurring_month, recurring_day');
+
+      nationalHolidays?.forEach((h: any) => {
+        if (h.is_recurring && h.recurring_month && h.recurring_day) {
+          years.forEach(year => {
+            const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+            holidayMap.set(dateStr, h.name);
+          });
+        } else if (h.holiday_date) {
+          holidayMap.set(h.holiday_date, h.name);
+        }
+      });
+
+      // Fetch state holidays if clinic has state configured
+      if (clinicData?.state_code) {
+        const { data: stateHolidays } = await supabase
+          .from('state_holidays')
+          .select('name, holiday_date, is_recurring, recurring_month, recurring_day')
+          .eq('state_code', clinicData.state_code);
+
+        stateHolidays?.forEach((h: any) => {
+          if (h.is_recurring && h.recurring_month && h.recurring_day) {
+            years.forEach(year => {
+              const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+              holidayMap.set(dateStr, h.name);
+            });
+          } else if (h.holiday_date) {
+            holidayMap.set(h.holiday_date, h.name);
+          }
+        });
+      }
+
+      // Fetch municipal holidays if clinic has state and city configured
+      if (clinicData?.state_code && clinicData?.city) {
+        const { data: municipalHolidays } = await supabase
+          .from('municipal_holidays')
+          .select('name, holiday_date, is_recurring, recurring_month, recurring_day')
+          .eq('state_code', clinicData.state_code)
+          .eq('city', clinicData.city);
+
+        municipalHolidays?.forEach((h: any) => {
+          if (h.is_recurring && h.recurring_month && h.recurring_day) {
+            years.forEach(year => {
+              const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+              holidayMap.set(dateStr, h.name);
+            });
+          } else if (h.holiday_date) {
+            holidayMap.set(h.holiday_date, h.name);
+          }
+        });
+      }
+
+      // Fetch clinic-specific holidays
+      const { data: clinicHolidays } = await supabase
+        .from('clinic_holidays')
+        .select('name, holiday_date, is_recurring, recurring_month, recurring_day')
+        .eq('clinic_id', currentClinic.id);
+
+      clinicHolidays?.forEach((h: any) => {
+        if (h.is_recurring && h.recurring_month && h.recurring_day) {
+          years.forEach(year => {
+            const dateStr = `${year}-${String(h.recurring_month).padStart(2, '0')}-${String(h.recurring_day).padStart(2, '0')}`;
+            holidayMap.set(dateStr, h.name);
+          });
+        } else if (h.holiday_date) {
+          holidayMap.set(h.holiday_date, h.name);
+        }
+      });
+
+      setHolidays(holidayMap);
+    } catch (error) {
+      console.error('Error fetching holidays:', error);
+    }
+  };
+
   // Realtime subscription for automatic updates
   useRealtimeSubscription({
     table: "appointments",
@@ -497,6 +597,11 @@ export default function CalendarPage() {
         // Second: sort by time (within same priority group)
         return a.start_time.localeCompare(b.start_time);
       });
+  };
+
+  const isHoliday = (date: Date): string | null => {
+    const dateStr = date.toISOString().split('T')[0];
+    return holidays.get(dateStr) || null;
   };
 
   const handleCreateAppointment = async (e: React.FormEvent) => {
@@ -1671,6 +1776,23 @@ export default function CalendarPage() {
   const TimeSlotsPanel = ({ forDate }: { forDate: Date }) => {
     const dateStr = forDate.toISOString().split('T')[0];
     const dayAppointments = getAppointmentsForDate(forDate);
+    const holidayName = isHoliday(forDate);
+    
+    if (holidayName) {
+      return (
+        <div className="p-3 rounded-lg border border-dashed border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/20">
+          <p className="text-xs text-red-600 dark:text-red-400 font-medium mb-2 text-center">
+            🚫 Feriado
+          </p>
+          <div className="text-center text-sm text-red-500 dark:text-red-400">
+            {holidayName}
+          </div>
+          <p className="text-xs text-red-500/60 text-center mt-2 italic">
+            Agendamentos bloqueados
+          </p>
+        </div>
+      );
+    }
     
     return (
       <div className="p-3 rounded-lg border border-dashed border-border/50 bg-muted/20">
@@ -1724,19 +1846,25 @@ export default function CalendarPage() {
             const isTodayDate = isToday(date);
             const isSelectedDate = isSelected(date);
             const dateStr = date.toISOString().split('T')[0];
+            const holidayName = isHoliday(date);
 
             return (
               <div key={i} className="min-h-[300px]">
                 <button
                   onClick={() => handleDayClick(date)}
+                  title={holidayName || undefined}
                   className={cn(
                     "w-full p-2 rounded-lg text-center mb-2 transition-colors",
-                    isTodayDate && "bg-primary/10",
-                    isSelectedDate && "bg-primary text-primary-foreground"
+                    holidayName && "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400",
+                    isTodayDate && !holidayName && "bg-primary/10",
+                    isSelectedDate && !holidayName && "bg-primary text-primary-foreground"
                   )}
                 >
-                  <div className="text-xs text-muted-foreground">{weekDaysFull[i]}</div>
+                  <div className={cn("text-xs", holidayName ? "text-red-500" : "text-muted-foreground")}>{weekDaysFull[i]}</div>
                   <div className="text-lg font-semibold">{date.getDate()}</div>
+                  {holidayName && (
+                    <div className="text-[10px] font-normal truncate" title={holidayName}>Feriado</div>
+                  )}
                 </button>
                 
                 {/* Droppable zone for the entire day */}
@@ -1744,34 +1872,42 @@ export default function CalendarPage() {
                   date={dateStr} 
                   time="08:00" 
                   showTime={false}
-                  isOccupied={dayAppointments.length >= 8}
+                  isOccupied={dayAppointments.length >= 8 || !!holidayName}
                   className="space-y-1 min-h-[200px] p-1"
                 >
-                  {dayAppointments.slice(0, 4).map((apt) => {
-                    const status = statusConfig[apt.status as keyof typeof statusConfig] || statusConfig.scheduled;
-                    const canDrag = apt.status !== "cancelled" && apt.status !== "completed" && apt.status !== "no_show" && apt.status !== "in_progress";
-                    
-                    return (
-                      <DraggableAppointment key={apt.id} appointment={apt}>
-                        <div
-                          onClick={() => canDrag ? openRescheduleDialog(apt) : undefined}
-                          className={cn(
-                            "p-2 rounded-lg text-xs transition-opacity",
-                            canDrag && "cursor-pointer hover:opacity-80",
-                            status.bgColor,
-                            apt.status === "cancelled" && "opacity-50"
-                          )}
-                        >
-                          <div className="font-medium truncate">{apt.start_time.slice(0, 5)}</div>
-                          <div className="truncate text-muted-foreground">{apt.patient?.name}</div>
-                        </div>
-                      </DraggableAppointment>
-                    );
-                  })}
-                  {dayAppointments.length > 4 && (
-                    <div className="text-xs text-center text-muted-foreground">
-                      +{dayAppointments.length - 4} mais
+                  {holidayName ? (
+                    <div className="flex items-center justify-center h-full text-xs text-red-500/60 italic">
+                      Fechado
                     </div>
+                  ) : (
+                    <>
+                      {dayAppointments.slice(0, 4).map((apt) => {
+                        const status = statusConfig[apt.status as keyof typeof statusConfig] || statusConfig.scheduled;
+                        const canDrag = apt.status !== "cancelled" && apt.status !== "completed" && apt.status !== "no_show" && apt.status !== "in_progress";
+                        
+                        return (
+                          <DraggableAppointment key={apt.id} appointment={apt}>
+                            <div
+                              onClick={() => canDrag ? openRescheduleDialog(apt) : undefined}
+                              className={cn(
+                                "p-2 rounded-lg text-xs transition-opacity",
+                                canDrag && "cursor-pointer hover:opacity-80",
+                                status.bgColor,
+                                apt.status === "cancelled" && "opacity-50"
+                              )}
+                            >
+                              <div className="font-medium truncate">{apt.start_time.slice(0, 5)}</div>
+                              <div className="truncate text-muted-foreground">{apt.patient?.name}</div>
+                            </div>
+                          </DraggableAppointment>
+                        );
+                      })}
+                      {dayAppointments.length > 4 && (
+                        <div className="text-xs text-center text-muted-foreground">
+                          +{dayAppointments.length - 4} mais
+                        </div>
+                      )}
+                    </>
                   )}
                 </DroppableTimeSlot>
               </div>
@@ -1808,6 +1944,7 @@ export default function CalendarPage() {
               const isSelectedDate = isSelected(item.date);
               const dateStr = item.date.toISOString().split('T')[0];
               const isOccupied = dayAppointments.filter(a => a.status !== 'cancelled').length >= 10;
+              const holidayName = isHoliday(item.date);
               
               return (
                 <DroppableTimeSlot
@@ -1815,23 +1952,30 @@ export default function CalendarPage() {
                   date={dateStr}
                   time="08:00"
                   showTime={false}
-                  isOccupied={isOccupied}
+                  isOccupied={isOccupied || !!holidayName}
                   disabled={!item.isCurrentMonth}
                   className="p-0"
                 >
                   <button
                     onClick={() => handleDayClick(item.date)}
+                    title={holidayName || undefined}
                     className={cn(
                       "w-full aspect-square p-1 flex flex-col items-center justify-start text-sm rounded-lg transition-colors relative",
                       item.isCurrentMonth
                         ? "text-foreground hover:bg-muted"
                         : "text-muted-foreground/40",
-                      isTodayDate && "bg-primary/10 text-primary font-semibold",
+                      holidayName && item.isCurrentMonth && "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400",
+                      isTodayDate && !holidayName && "bg-primary/10 text-primary font-semibold",
                       isSelectedDate && item.isCurrentMonth && "ring-2 ring-primary"
                     )}
                   >
                     <span>{item.day}</span>
-                    {dayAppointments.length > 0 && (
+                    {holidayName && item.isCurrentMonth && (
+                      <span className="text-[8px] truncate max-w-full px-0.5" title={holidayName}>
+                        Feriado
+                      </span>
+                    )}
+                    {!holidayName && dayAppointments.length > 0 && (
                       <div className="flex gap-0.5 mt-1">
                         {dayAppointments.slice(0, 3).map((apt, j) => (
                           <div
@@ -2236,25 +2380,30 @@ export default function CalendarPage() {
               <div className="grid grid-cols-7 gap-1">
                 {getDaysInMonth(currentDate).map((item, i) => {
                   const dateStr = item.date.toISOString().split('T')[0];
+                  const holidayName = isHoliday(item.date);
                   return (
                     <DroppableTimeSlot
                       key={i}
                       date={dateStr}
                       time="08:00"
                       showTime={false}
+                      isOccupied={!!holidayName}
                       className="p-0"
                     >
                       <button
                         onClick={() => handleDayClick(item.date)}
+                        title={holidayName || undefined}
                         className={cn(
                           "w-full aspect-square flex items-center justify-center text-sm rounded-lg transition-colors",
                           item.isCurrentMonth
                             ? "text-foreground hover:bg-muted"
                             : "text-muted-foreground/40",
-                          isToday(item.date) &&
+                          holidayName && item.isCurrentMonth && "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400",
+                          isToday(item.date) && !holidayName &&
                             "bg-primary/10 text-primary font-semibold",
-                          isSelected(item.date) &&
-                            "bg-primary text-primary-foreground font-semibold"
+                          isSelected(item.date) && !holidayName &&
+                            "bg-primary text-primary-foreground font-semibold",
+                          isSelected(item.date) && holidayName && "ring-2 ring-primary"
                         )}
                       >
                         {item.day}
@@ -2321,35 +2470,50 @@ export default function CalendarPage() {
             ) : viewMode === "day" ? (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                 {/* Time slots for dropping */}
-                <div className="lg:col-span-1 space-y-1 p-2 rounded-lg border border-dashed border-border/50 bg-muted/20">
-                  <p className="text-xs text-muted-foreground font-medium mb-2 text-center">
-                    Arraste para reagendar
-                  </p>
-                  <div className="grid grid-cols-3 gap-1">
-                    {timeSlots.map((time) => {
-                      const dateStr = selectedDate.toISOString().split('T')[0];
-                      const hasAppointment = getAppointmentsForDate(selectedDate).some(
-                        apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled'
-                      );
-                      return (
-                        <DroppableTimeSlot
-                          key={time}
-                          date={dateStr}
-                          time={time}
-                          disabled={hasAppointment}
-                          isOccupied={hasAppointment}
-                          onClick={() => openNewAppointmentWithTime(time)}
-                          className={cn(
-                            "p-2 text-center rounded-md border border-transparent",
-                            hasAppointment 
-                              ? "bg-muted/50 text-muted-foreground/50" 
-                              : "bg-background"
-                          )}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
+                {(() => {
+                  const holidayName = isHoliday(selectedDate);
+                  if (holidayName) {
+                    return (
+                      <div className="lg:col-span-1 p-4 rounded-lg border border-dashed border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/20 text-center">
+                        <div className="text-2xl mb-2">🚫</div>
+                        <p className="text-sm font-medium text-red-600 dark:text-red-400">Feriado</p>
+                        <p className="text-sm text-red-500 dark:text-red-400 mt-1">{holidayName}</p>
+                        <p className="text-xs text-red-500/60 mt-2 italic">Agendamentos bloqueados</p>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="lg:col-span-1 space-y-1 p-2 rounded-lg border border-dashed border-border/50 bg-muted/20">
+                      <p className="text-xs text-muted-foreground font-medium mb-2 text-center">
+                        Arraste para reagendar
+                      </p>
+                      <div className="grid grid-cols-3 gap-1">
+                        {timeSlots.map((time) => {
+                          const dateStr = selectedDate.toISOString().split('T')[0];
+                          const hasAppointment = getAppointmentsForDate(selectedDate).some(
+                            apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled'
+                          );
+                          return (
+                            <DroppableTimeSlot
+                              key={time}
+                              date={dateStr}
+                              time={time}
+                              disabled={hasAppointment}
+                              isOccupied={hasAppointment}
+                              onClick={() => openNewAppointmentWithTime(time)}
+                              className={cn(
+                                "p-2 text-center rounded-md border border-transparent",
+                                hasAppointment 
+                                  ? "bg-muted/50 text-muted-foreground/50" 
+                                  : "bg-background"
+                              )}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Appointments list */}
                 <div className="lg:col-span-2">
@@ -2364,11 +2528,13 @@ export default function CalendarPage() {
                   ) : (
                     <div className="text-center py-12 text-muted-foreground">
                       <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                      <p className="mb-4">Nenhum agendamento para este dia</p>
-                      <Button variant="outline" onClick={() => setDialogOpen(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar agendamento
-                      </Button>
+                      <p className="mb-4">{isHoliday(selectedDate) ? "Dia indisponível para agendamentos" : "Nenhum agendamento para este dia"}</p>
+                      {!isHoliday(selectedDate) && (
+                        <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Adicionar agendamento
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>
