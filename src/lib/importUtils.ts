@@ -519,6 +519,12 @@ const HEADER_MAPPINGS: Record<string, string> = {
   'dtnasc': 'data_nascimento',
   'dt_nasc': 'data_nascimento',
   
+  // Nome dependente variations
+  'nmdependente': 'nome_dependente',
+  'nm_dependente': 'nome_dependente',
+  'dsdependente': 'nome_dependente',
+  'ds_dependente': 'nome_dependente',
+  
   // Nome pai variations
   'nmpai': 'nome_pai',
   'nm_pai': 'nome_pai',
