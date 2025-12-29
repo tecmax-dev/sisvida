@@ -2177,6 +2177,7 @@ export default function DataImportPage() {
                         <TableRow>
                           <TableHead className="w-12">#</TableHead>
                           <TableHead>Paciente</TableHead>
+                          <TableHead>Profissional</TableHead>
                           <TableHead>CPF</TableHead>
                           <TableHead>Data</TableHead>
                           <TableHead>Queixa</TableHead>
@@ -2188,6 +2189,7 @@ export default function DataImportPage() {
                           <TableRow key={row.rowNumber} className={!row.validation.isValid ? 'bg-destructive/5' : ''}>
                             <TableCell className="text-muted-foreground">{row.rowNumber}</TableCell>
                             <TableCell className="font-medium">{row.data.nome_paciente || '-'}</TableCell>
+                            <TableCell>{row.data.nome_profissional || '-'}</TableCell>
                             <TableCell>{row.data.cpf_paciente || '-'}</TableCell>
                             <TableCell>{row.data.data_registro}</TableCell>
                             <TableCell className="max-w-[200px] truncate">{row.data.queixa || '-'}</TableCell>
