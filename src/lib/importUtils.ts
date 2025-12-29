@@ -235,10 +235,18 @@ export function detectSheetType(columns: string[], sheetName?: string): Detected
     'evolucao',
     'atendimentos',
     'consultas',
+    'event_record', // iClinic format
+    'eventrecord',
   ];
 
   if (recordSheetNames.some((n) => normalizedSheetName.includes(n))) return 'records';
   if (patientSheetNames.some((n) => normalizedSheetName.includes(n))) return 'patients';
+
+  // iClinic format detection - if has eventblock_pack column, it's medical records
+  const iClinicRecordColumns = ['eventblock_pack', 'event_block_pack', 'eventblockpack'];
+  if (iClinicRecordColumns.some((col) => normalizedColumns.some((c) => c.includes(col)))) {
+    return 'records';
+  }
 
   // Patient indicators
   const patientIndicators = [
@@ -269,6 +277,9 @@ export function detectSheetType(columns: string[], sheetName?: string): Detected
     'prontuario', 'registro_medico', 'ficha',
     'cpf_paciente', 'cpf_do_paciente',
     'nome_paciente', 'nome_do_paciente',
+    // iClinic specific columns
+    'patient_name', 'patient_id', 'physician_name', 'physician_id',
+    'healthinsurance_pack', 'procedure_pack', 'extra_pack',
     // English
     'chief_complaint', 'complaint', 'reason',
     'diagnosis', 'disease', 'condition',
@@ -289,6 +300,8 @@ export function detectSheetType(columns: string[], sheetName?: string): Detected
     // Common single-column record patterns from legacy systems
     'descricao_do_registro', 'descricao_registro', 'registro_medico',
     'historico_clinico', 'prontuario_medico', 'ficha_clinica',
+    // iClinic specific
+    'eventblock_pack', 'procedure_pack', 'physician_id',
   ];
   const hasStrongRecordColumn = strongRecordIndicators.some((ind) =>
     normalizedColumns.some((col) => col.includes(ind))
@@ -689,6 +702,9 @@ function parseIClinicEventBlock(value: unknown): {
   queixa?: string;
   historia?: string;
   prescricao?: string;
+  diagnostico?: string;
+  tratamento?: string;
+  exame_fisico?: string;
 } {
   if (!value) return {};
   
@@ -699,38 +715,83 @@ function parseIClinicEventBlock(value: unknown): {
     jsonStr = jsonStr.slice(6);
   }
   
+  // If it doesn't look like JSON, return empty
+  if (!jsonStr.startsWith('{') && !jsonStr.startsWith('[')) {
+    return {};
+  }
+  
   try {
     const parsed = JSON.parse(jsonStr);
-    const result: { queixa?: string; historia?: string; prescricao?: string } = {};
+    const result: { 
+      queixa?: string; 
+      historia?: string; 
+      prescricao?: string;
+      diagnostico?: string;
+      tratamento?: string;
+      exame_fisico?: string;
+    } = {};
+    
+    // Collect all content by tab/category
+    const contentByTab: Record<string, string[]> = {};
     
     // Extract from "block" array
     if (parsed.block && Array.isArray(parsed.block)) {
       for (const item of parsed.block) {
         const name = String(item.name || '').toLowerCase();
-        const val = String(item.value || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim();
+        const tab = String(item.tab || '').toLowerCase();
+        const val = String(item.value || '')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .replace(/<[^>]+>/g, '')
+          .trim();
         
         if (!val) continue;
         
-        if (name.includes('queixa')) {
+        // Map iClinic field names to our structure
+        if (name.includes('queixa') || name.includes('motivo')) {
           result.queixa = result.queixa ? `${result.queixa}\n${val}` : val;
-        } else if (name.includes('história') || name.includes('historia')) {
+        } else if (name.includes('história') || name.includes('historia') || name.includes('hda') || name.includes('hmp')) {
           result.historia = result.historia ? `${result.historia}\n${val}` : val;
+        } else if (name.includes('diagnóstico') || name.includes('diagnostico') || name.includes('hipótese') || name.includes('hipotese') || name.includes('cid')) {
+          result.diagnostico = result.diagnostico ? `${result.diagnostico}\n${val}` : val;
+        } else if (name.includes('conduta') || name.includes('tratamento') || name.includes('plano')) {
+          result.tratamento = result.tratamento ? `${result.tratamento}\n${val}` : val;
+        } else if (name.includes('exame') || name.includes('físico') || name.includes('fisico')) {
+          result.exame_fisico = result.exame_fisico ? `${result.exame_fisico}\n${val}` : val;
+        } else {
+          // Group by tab for fallback content
+          const tabKey = tab || 'geral';
+          if (!contentByTab[tabKey]) contentByTab[tabKey] = [];
+          contentByTab[tabKey].push(`${item.name || 'Nota'}: ${val}`);
         }
       }
+    }
+    
+    // If we have ungrouped content, add to historia
+    const allContent = Object.values(contentByTab).flat();
+    if (allContent.length > 0 && !result.historia) {
+      result.historia = allContent.join('\n\n');
     }
     
     // Extract from "recipe" array (prescriptions)
     if (parsed.recipe && Array.isArray(parsed.recipe)) {
       const prescriptions = parsed.recipe
-        .map((r: { value?: string }) => String(r.value || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '').trim())
+        .map((r: { value?: string; name?: string; dosage?: string }) => {
+          const value = String(r.value || r.name || '')
+            .replace(/<br\s*\/?>/gi, '\n')
+            .replace(/<[^>]+>/g, '')
+            .trim();
+          const dosage = r.dosage ? ` - ${r.dosage}` : '';
+          return value ? `${value}${dosage}` : '';
+        })
         .filter(Boolean);
       if (prescriptions.length > 0) {
-        result.prescricao = prescriptions.join('\n---\n');
+        result.prescricao = prescriptions.join('\n');
       }
     }
     
     return result;
-  } catch {
+  } catch (e) {
+    console.warn('[iClinic Parse Error]', e);
     return {};
   }
 }
@@ -794,12 +855,12 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
       'chief_complaint', 'Chief Complaint', 'complaint', 'Complaint',
       'reason', 'Reason', 'motivo', 'Motivo'
     ]) || undefined,
-    diagnostico: getRowValue(row, [
+    diagnostico: iClinicData.diagnostico || getRowValue(row, [
       'diagnostico', 'Diagnostico', 'DIAGNOSTICO', 'diagnóstico', 'Diagnóstico',
       'diagnosis', 'Diagnosis', 'DIAGNOSIS', 'cid', 'CID', 'hipotese', 'Hipótese',
       'doenca', 'Doença', 'disease', 'Disease', 'condition', 'Condition'
     ]) || undefined,
-    tratamento: getRowValue(row, [
+    tratamento: iClinicData.tratamento || getRowValue(row, [
       'tratamento', 'Tratamento', 'TRATAMENTO', 'Plano de Tratamento',
       'plano_de_tratamento', 'plano de tratamento', 'plano_tratamento',
       'treatment', 'Treatment', 'TREATMENT', 'treatment_plan', 'Treatment Plan',
@@ -811,8 +872,8 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
       'medicamentos', 'Medicamentos', 'medications', 'Medications',
       'receita', 'Receita', 'recipe', 'remedio', 'Remédio', 'remedios', 'Remédios'
     ]) || undefined,
-    // For observacoes, use iClinic historia (História), or standard columns, or mainContent
-    observacoes: iClinicData.historia || getRowValue(row, [
+    // For observacoes, use iClinic historia (História), exame_fisico, or standard columns, or mainContent
+    observacoes: iClinicData.historia || iClinicData.exame_fisico || getRowValue(row, [
       'observacoes', 'Observacoes', 'OBSERVACOES', 'observações', 'Observações',
       'notas', 'Notas', 'NOTAS', 'obs', 'Obs', 'OBS',
       'notes', 'Notes', 'NOTES', 'comments', 'Comments',
