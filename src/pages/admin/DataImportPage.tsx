@@ -27,10 +27,12 @@ import {
   ArrowDownToLine,
   StopCircle,
   Phone,
+  History,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import DataExportPanel from "@/components/admin/DataExportPanel";
 import { ImportProgressCard } from "@/components/admin/ImportProgressCard";
+import { ImportHistoryPanel } from "@/components/admin/ImportHistoryPanel";
 import {
   PatientImportRow,
   MedicalRecordImportRow,
@@ -63,7 +65,7 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"export" | "combined" | "patients" | "records" | "contacts">("export");
+  const [activeTab, setActiveTab] = useState<"export" | "combined" | "patients" | "records" | "contacts" | "history">("export");
   
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
@@ -105,6 +107,64 @@ export default function DataImportPage() {
     cancelImportRef.current = false;
     setImportCancelled(false);
   }, []);
+
+  // Helper to create import log entry
+  const createImportLog = async (
+    type: string,
+    fileName?: string
+  ): Promise<string | null> => {
+    if (!selectedClinicId) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('import_logs')
+        .insert({
+          clinic_id: selectedClinicId,
+          import_type: type,
+          file_name: fileName || null,
+          status: 'in_progress',
+        })
+        .select('id')
+        .single();
+      
+      if (error) {
+        console.error('Error creating import log:', error);
+        return null;
+      }
+      return data?.id || null;
+    } catch (err) {
+      console.error('Exception creating import log:', err);
+      return null;
+    }
+  };
+
+  // Helper to update import log
+  const updateImportLog = async (
+    logId: string | null,
+    updates: {
+      total_rows?: number;
+      success_count?: number;
+      error_count?: number;
+      status?: string;
+      error_details?: any;
+    }
+  ) => {
+    if (!logId) return;
+    
+    try {
+      const updateData: Record<string, any> = { ...updates };
+      if (updates.status === 'completed' || updates.status === 'failed' || updates.status === 'cancelled') {
+        updateData.completed_at = new Date().toISOString();
+      }
+      
+      await supabase
+        .from('import_logs')
+        .update(updateData)
+        .eq('id', logId);
+    } catch (err) {
+      console.error('Error updating import log:', err);
+    }
+  };
 
   // Fetch clinics on mount
   useEffect(() => {
@@ -274,6 +334,9 @@ export default function DataImportPage() {
     resetCancellation();
     setImportingCombined(true);
     setCombinedProgress(0);
+    
+    // Create import log
+    const logId = await createImportLog('combined');
     
     const totalItems = validPatients.length + (importWithRecords ? validRecords.length : 0);
     let processedItems = 0;
@@ -593,6 +656,15 @@ export default function DataImportPage() {
       }
     }
     
+    // Update import log
+    const finalStatus = cancelImportRef.current ? 'cancelled' : (errors > 0 ? 'completed' : 'completed');
+    await updateImportLog(logId, {
+      total_rows: totalItems,
+      success_count: importedPatients + importedRecords,
+      error_count: errors,
+      status: cancelImportRef.current ? 'cancelled' : 'completed',
+    });
+    
     setImportingCombined(false);
     setPatientRows([]);
     setRecordRows([]);
@@ -601,6 +673,10 @@ export default function DataImportPage() {
     const resultMessage = importWithRecords 
       ? `${importedPatients} pacientes e ${importedRecords} prontuários importados`
       : `${importedPatients} pacientes importados`;
+    
+    if (cancelImportRef.current) {
+      return;
+    }
     
     if (errors > 0) {
       toast.warning(`Importação concluída: ${resultMessage}. ${errors} erros.`);
@@ -624,6 +700,9 @@ export default function DataImportPage() {
     resetCancellation();
     setImportingPatients(true);
     setPatientProgress(0);
+    
+    // Create import log
+    const logId = await createImportLog('patients');
     
     let imported = 0;
     let errors = 0;
@@ -668,8 +747,18 @@ export default function DataImportPage() {
       setPatientProgress(((i + batch.length) / allPatientData.length) * 100);
     }
     
+    // Update import log
+    await updateImportLog(logId, {
+      total_rows: validRows.length,
+      success_count: imported,
+      error_count: errors,
+      status: cancelImportRef.current ? 'cancelled' : 'completed',
+    });
+    
     setImportingPatients(false);
     setPatientRows([]);
+    
+    if (cancelImportRef.current) return;
     
     if (errors > 0) {
       toast.warning(`Importação concluída: ${imported} pacientes importados, ${errors} erros`);
@@ -693,6 +782,9 @@ export default function DataImportPage() {
     resetCancellation();
     setImportingRecords(true);
     setRecordProgress(0);
+    
+    // Create import log
+    const logId = await createImportLog('records');
     
     // Fetch patients from clinic for matching
     const { data: patients } = await supabase
@@ -908,8 +1000,18 @@ export default function DataImportPage() {
       setRecordProgress(40 + ((i + batch.length) / recordsToInsert.length) * 60);
     }
     
+    // Update import log
+    await updateImportLog(logId, {
+      total_rows: validRows.length,
+      success_count: imported,
+      error_count: errors,
+      status: cancelImportRef.current ? 'cancelled' : 'completed',
+    });
+    
     setImportingRecords(false);
     setRecordRows([]);
+    
+    if (cancelImportRef.current) return;
     
     if (autoCreatedPatients > 0) {
       toast.info(`${autoCreatedPatients} pacientes criados automaticamente`);
@@ -943,6 +1045,9 @@ export default function DataImportPage() {
     resetCancellation();
     setImportingContacts(true);
     setContactProgress(0);
+    
+    // Create import log
+    const logId = await createImportLog('contacts');
     
     let updated = 0;
     let notFound = 0;
@@ -1026,6 +1131,14 @@ export default function DataImportPage() {
       
       setContactProgress(((i + 1) / validContacts.length) * 100);
     }
+    
+    // Update import log
+    await updateImportLog(logId, {
+      total_rows: validContacts.length,
+      success_count: updated,
+      error_count: errors + notFound,
+      status: cancelImportRef.current ? 'cancelled' : 'completed',
+    });
     
     setImportingContacts(false);
     setContactRows([]);
@@ -1175,7 +1288,7 @@ export default function DataImportPage() {
       </Collapsible>
 
       {/* Import/Export Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "combined" | "patients" | "records" | "contacts")}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "combined" | "patients" | "records" | "contacts" | "history")}>
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="export" className="gap-2">
             <ArrowDownToLine className="h-4 w-4" />
@@ -1196,6 +1309,10 @@ export default function DataImportPage() {
           <TabsTrigger value="contacts" className="gap-2">
             <Phone className="h-4 w-4" />
             Atualizar Contatos
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="h-4 w-4" />
+            Histórico
           </TabsTrigger>
         </TabsList>
 
@@ -1928,6 +2045,11 @@ export default function DataImportPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* History Tab */}
+        <TabsContent value="history" className="space-y-4">
+          <ImportHistoryPanel clinicId={selectedClinicId || undefined} />
         </TabsContent>
       </Tabs>
     </div>
