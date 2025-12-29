@@ -330,7 +330,7 @@ Digite *MENU* para escolher outra data.`,
 📅 Data: *${data.date}*
 ⏰ Horário: *${data.time}*
 
-Digite *CONFIRMAR* para finalizar ou *CANCELAR* para encerrar.`,
+Digite *SIM* para confirmar ou *NÃO* para cancelar.`,
 
   appointmentConfirmed: (data: {
     date: string;
@@ -1177,17 +1177,14 @@ async function handleConfirmAppointment(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const confirmRegex = /^(confirmar|confirmo|sim|s|ok|👍)$/i;
-  const cancelRegex = /^(cancelar|cancelo|não|nao|n|❌)$/i;
-
-  if (cancelRegex.test(messageText)) {
+  if (NEGATIVE_REGEX.test(messageText)) {
     await updateSession(supabase, session.id, { state: 'FINISHED' });
     await sendWhatsAppMessage(config, phone, MESSAGES.appointmentCancelled);
     return { handled: true, newState: 'FINISHED' };
   }
 
-  if (!confirmRegex.test(messageText)) {
-    await sendWhatsAppMessage(config, phone, `Por favor, digite *CONFIRMAR* ou *CANCELAR*.` + MESSAGES.hintConfirm);
+  if (!POSITIVE_REGEX.test(messageText)) {
+    await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* ou *NÃO*.` + MESSAGES.hintYesNo);
     return { handled: true, newState: 'CONFIRM_APPOINTMENT' };
   }
 
