@@ -997,7 +997,7 @@ async function getOrCreateSession(
   }
 
   try {
-    return await createOrResetSession(supabase, clinicId, phone, 'INIT');
+    return await createOrResetSession(supabase, clinicId, phone, 'WAITING_CPF');
   } catch (e) {
     console.error('[booking] Error creating session:', e);
     return null;
