@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Monitor, Volume2, VolumeX } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
+import { PanelBannerCarousel } from "@/components/panel/PanelBannerCarousel";
+import { PanelBanner } from "@/hooks/usePanelBanners";
 
 interface Panel {
   id: string;
@@ -37,6 +39,7 @@ export default function PublicPanel() {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [currentCall, setCurrentCall] = useState<QueueCall | null>(null);
   const [recentCalls, setRecentCalls] = useState<QueueCall[]>([]);
+  const [banners, setBanners] = useState<PanelBanner[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -80,6 +83,7 @@ export default function PublicPanel() {
         setClinic((data.clinic ?? null) as Clinic | null);
         setCurrentCall((data.currentCall ?? null) as QueueCall | null);
         setRecentCalls((data.recentCalls ?? []) as QueueCall[]);
+        setBanners((data.banners ?? []) as PanelBanner[]);
       } catch (err) {
         console.error("Erro ao carregar painel:", err);
         if (!cancelled) setError("Erro ao carregar painel");
@@ -164,8 +168,8 @@ export default function PublicPanel() {
 
       {/* Main Content */}
       <div className="flex-1 flex">
-        {/* Current Call - Main Area */}
-        <div className="flex-1 flex flex-col items-center justify-center p-12">
+        {/* Current Call or Banner Carousel - Main Area */}
+        <div className="flex-1 flex flex-col items-center justify-center p-12 relative">
           {currentCall ? (
             <>
               <div className="text-slate-400 text-2xl mb-4">Chamando agora</div>
@@ -179,6 +183,8 @@ export default function PublicPanel() {
                 {currentCall.queue?.name || "Atendimento"}
               </div>
             </>
+          ) : banners.length > 0 ? (
+            <PanelBannerCarousel banners={banners} className="absolute inset-0" />
           ) : (
             <div className="text-center">
               <Monitor className="h-24 w-24 text-slate-600 mx-auto mb-6" />

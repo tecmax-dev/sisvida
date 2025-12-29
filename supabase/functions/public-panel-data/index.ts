@@ -14,6 +14,7 @@ type PublicPanelResponse =
       clinic: { id: string; name: string; logo_url: string | null } | null;
       currentCall: any | null;
       recentCalls: any[];
+      banners: any[];
     };
 
 serve(async (req) => {
@@ -84,6 +85,18 @@ serve(async (req) => {
 
     if (callsError) throw callsError;
 
+    // Fetch active banners for the clinic
+    const { data: banners, error: bannersError } = await supabase
+      .from("panel_banners")
+      .select("*")
+      .eq("clinic_id", panel.clinic_id)
+      .eq("is_active", true)
+      .order("order_index", { ascending: true });
+
+    if (bannersError) {
+      console.error("[public-panel-data] banners error:", bannersError);
+    }
+
     const transformed = (calls || []).map((item: any) => ({
       ...item,
       ticket_number: `${item.ticket_prefix || ""}${item.ticket_number ?? ""}`,
@@ -95,7 +108,7 @@ serve(async (req) => {
     const recentCalls = transformed.slice(1);
 
     return new Response(
-      JSON.stringify({ panel, clinic: clinic ?? null, currentCall, recentCalls } satisfies PublicPanelResponse),
+      JSON.stringify({ panel, clinic: clinic ?? null, currentCall, recentCalls, banners: banners ?? [] } satisfies PublicPanelResponse),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
