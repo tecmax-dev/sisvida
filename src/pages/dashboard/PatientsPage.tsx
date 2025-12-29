@@ -88,6 +88,8 @@ interface Patient {
   } | null;
   created_at: string;
   dependents_count?: number;
+  card_expires_at?: string | null;
+  card_number?: string | null;
 }
 
 interface InsurancePlan {
@@ -272,7 +274,8 @@ export default function PatientsPage() {
             insurance_plan_id,
             created_at,
             insurance_plan:insurance_plans ( name ),
-            patient_dependents ( id )
+            patient_dependents ( id ),
+            patient_cards ( card_number, expires_at, is_active )
           `,
           { count: "exact" }
         )
@@ -306,12 +309,20 @@ export default function PatientsPage() {
 
       if (error) throw error;
 
-      // Map dependents count
-      const patientsWithDependentsCount = (data || []).map((p: any) => ({
-        ...p,
-        dependents_count: Array.isArray(p.patient_dependents) ? p.patient_dependents.filter((d: any) => d.id).length : 0,
-        patient_dependents: undefined,
-      }));
+      // Map dependents count and card info
+      const patientsWithDependentsCount = (data || []).map((p: any) => {
+        const activeCard = Array.isArray(p.patient_cards) 
+          ? p.patient_cards.find((c: any) => c.is_active) 
+          : null;
+        return {
+          ...p,
+          dependents_count: Array.isArray(p.patient_dependents) ? p.patient_dependents.filter((d: any) => d.id).length : 0,
+          card_expires_at: activeCard?.expires_at || null,
+          card_number: activeCard?.card_number || null,
+          patient_dependents: undefined,
+          patient_cards: undefined,
+        };
+      });
 
       setPatients(patientsWithDependentsCount as Patient[]);
       setTotalPatients(count || 0);
@@ -872,6 +883,7 @@ export default function PatientsPage() {
                   <TableHead>Telefone</TableHead>
                   <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden lg:table-cell">Convênio</TableHead>
+                  <TableHead className="hidden xl:table-cell">Carteirinha</TableHead>
                   <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -897,6 +909,27 @@ export default function PatientsPage() {
                         <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground font-medium">
                           {patient.insurance_plan.name}
                         </span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden xl:table-cell">
+                      {patient.card_expires_at ? (
+                        (() => {
+                          const expiryDate = new Date(patient.card_expires_at);
+                          const isExpired = expiryDate < new Date();
+                          const daysUntilExpiry = Math.ceil((expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                          const isExpiringSoon = daysUntilExpiry <= 30 && daysUntilExpiry > 0;
+                          
+                          return (
+                            <Badge 
+                              variant={isExpired ? "destructive" : isExpiringSoon ? "secondary" : "outline"}
+                              className={`text-xs ${isExpiringSoon && !isExpired ? "bg-warning text-warning-foreground" : ""}`}
+                            >
+                              {isExpired ? "Vencida" : format(expiryDate, "dd/MM/yyyy", { locale: ptBR })}
+                            </Badge>
+                          );
+                        })()
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
