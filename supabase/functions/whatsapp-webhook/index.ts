@@ -26,6 +26,7 @@ type BookingState =
   | 'WAITING_CPF'
   | 'CONFIRM_IDENTITY'
   | 'MAIN_MENU'
+  | 'SELECT_BOOKING_FOR'
   | 'SELECT_PROFESSIONAL'
   | 'SELECT_DATE'
   | 'SELECT_TIME'
@@ -82,6 +83,11 @@ interface BookingSession {
   selected_appointment_id: string | null;
   action_type: 'new' | 'cancel' | 'reschedule' | null;
   expires_at: string;
+  // Dependent booking support
+  available_dependents?: Array<{ id: string; name: string; relationship: string | null; card_expires_at: string | null }> | null;
+  selected_dependent_id?: string | null;
+  selected_dependent_name?: string | null;
+  booking_for?: 'titular' | 'dependent';
 }
 
 interface EvolutionConfig {

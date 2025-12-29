@@ -19,6 +19,7 @@ interface BookingRequest {
   procedureId?: string;
   insurancePlanId?: string;
   durationMinutes: number;
+  dependentId?: string;
 }
 
 // Simple in-memory rate limiting (per instance)
@@ -81,7 +82,8 @@ serve(async (req) => {
       patientCpf,
       procedureId,
       insurancePlanId,
-      durationMinutes
+      durationMinutes,
+      dependentId
     } = body;
 
     // ============ INPUT VALIDATION ============
@@ -202,6 +204,9 @@ serve(async (req) => {
     if (insurancePlanId && !uuidRegex.test(insurancePlanId)) {
       return errorResponse('ID do plano de saúde inválido');
     }
+    if (dependentId && !uuidRegex.test(dependentId)) {
+      return errorResponse('ID do dependente inválido');
+    }
 
     // Validate duration
     if (!durationMinutes || durationMinutes < 5 || durationMinutes > 480) {
@@ -213,6 +218,31 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Validate dependent exists and is active if provided
+    let dependentData: { name: string; card_expires_at: string | null } | null = null;
+    if (dependentId) {
+      const { data: dependent, error: depError } = await supabase
+        .from('patient_dependents')
+        .select('id, name, card_expires_at, is_active')
+        .eq('id', dependentId)
+        .single();
+
+      if (depError || !dependent) {
+        return errorResponse('Dependente não encontrado');
+      }
+      if (!dependent.is_active) {
+        return errorResponse('Dependente não está ativo');
+      }
+      
+      // Check if dependent has expired card
+      if (dependent.card_expires_at && new Date(dependent.card_expires_at) < new Date()) {
+        return errorResponse(`A carteirinha do dependente ${dependent.name} está vencida. Por favor, renove antes de agendar.`);
+      }
+      
+      dependentData = { name: dependent.name, card_expires_at: dependent.card_expires_at };
+      console.log(`[create-public-booking] Booking for dependent: ${dependent.name} (${dependentId})`);
+    }
 
     // Verify clinic exists and is not blocked
     const { data: clinic, error: clinicError } = await supabase
@@ -370,6 +400,7 @@ serve(async (req) => {
         patient_id: patientId,
         professional_id: professionalId,
         procedure_id: procedureId || null,
+        dependent_id: dependentId || null,
         appointment_date: date,
         start_time: time,
         end_time: endTime,

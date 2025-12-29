@@ -70,10 +70,10 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Search patient - only return necessary fields
+    // Search patient - return necessary fields plus id
     const { data, error } = await supabase
       .from('patients')
-      .select('name, phone, email')
+      .select('id, name, phone, email')
       .eq('clinic_id', clinicId)
       .eq('cpf', cleanCpf)
       .maybeSingle();
@@ -88,8 +88,24 @@ Deno.serve(async (req) => {
 
     console.log('Patient found:', !!data);
 
+    // If patient found, also fetch their dependents
+    let dependents: Array<{ id: string; name: string; relationship: string | null; card_expires_at: string | null }> = [];
+    if (data?.id) {
+      const { data: dependentsData, error: depError } = await supabase
+        .from('patient_dependents')
+        .select('id, name, relationship, card_expires_at')
+        .eq('patient_id', data.id)
+        .eq('is_active', true)
+        .order('name');
+
+      if (!depError && dependentsData) {
+        dependents = dependentsData;
+        console.log('Found dependents:', dependents.length);
+      }
+    }
+
     return new Response(
-      JSON.stringify({ success: true, patient: data }), 
+      JSON.stringify({ success: true, patient: data, dependents }), 
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

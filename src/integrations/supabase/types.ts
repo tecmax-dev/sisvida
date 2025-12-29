@@ -510,6 +510,7 @@ export type Database = {
           confirmed_at: string | null
           created_at: string
           created_by: string | null
+          dependent_id: string | null
           duration_minutes: number | null
           end_time: string
           id: string
@@ -534,6 +535,7 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
+          dependent_id?: string | null
           duration_minutes?: number | null
           end_time: string
           id?: string
@@ -558,6 +560,7 @@ export type Database = {
           confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
+          dependent_id?: string | null
           duration_minutes?: number | null
           end_time?: string
           id?: string
@@ -578,6 +581,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_dependent_id_fkey"
+            columns: ["dependent_id"]
+            isOneToOne: false
+            referencedRelation: "patient_dependents"
             referencedColumns: ["id"]
           },
           {

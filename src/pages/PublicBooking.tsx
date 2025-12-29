@@ -122,6 +122,16 @@ export default function PublicBooking() {
   const [patientCpf, setPatientCpf] = useState("");
   const [searchingPatient, setSearchingPatient] = useState(false);
   const [patientFound, setPatientFound] = useState(false);
+  
+  // Dependents
+  interface Dependent {
+    id: string;
+    name: string;
+    relationship: string | null;
+    card_expires_at: string | null;
+  }
+  const [dependents, setDependents] = useState<Dependent[]>([]);
+  const [selectedDependent, setSelectedDependent] = useState<string>(""); // "" = titular, "id" = dependent
 
   useEffect(() => {
     fetchClinicData();
@@ -558,9 +568,21 @@ export default function PublicBooking() {
         setPatientPhone(formatPhone(data.patient.phone));
         setPatientEmail(data.patient.email || '');
         setPatientFound(true);
+        
+        // Set dependents if available
+        if (data.dependents && data.dependents.length > 0) {
+          setDependents(data.dependents);
+          setSelectedDependent(""); // Default to titular
+        } else {
+          setDependents([]);
+          setSelectedDependent("");
+        }
+        
         toast({ 
           title: "Cadastro encontrado!", 
-          description: "Seus dados foram preenchidos automaticamente." 
+          description: data.dependents?.length > 0 
+            ? `Seus dados foram preenchidos. Você tem ${data.dependents.length} dependente(s) cadastrado(s).`
+            : "Seus dados foram preenchidos automaticamente." 
         });
       }
     } catch (err) {
@@ -581,6 +603,8 @@ export default function PublicBooking() {
     } else {
       setPatientFound(false);
       setCpfError("");
+      setDependents([]);
+      setSelectedDependent("");
     }
   }, [patientCpf, clinic]);
 
@@ -643,6 +667,7 @@ export default function PublicBooking() {
           procedureId: selectedProcedure || null,
           insurancePlanId: selectedInsurance || null,
           durationMinutes: appointmentDuration,
+          dependentId: selectedDependent || null,
         },
       });
 
@@ -1118,6 +1143,36 @@ export default function PublicBooking() {
                       </p>
                     )}
                   </div>
+
+                  {/* Dependent Selection - Only show if patient found and has dependents */}
+                  {patientFound && dependents.length > 0 && (
+                    <div className="sm:col-span-2">
+                      <Label>Para quem é esta consulta?</Label>
+                      <ResponsiveSelect
+                        value={selectedDependent || "titular"}
+                        onValueChange={(val) => setSelectedDependent(val === "titular" ? "" : val)}
+                        options={[
+                          { value: "titular", label: `${patientName} (Titular)` },
+                          ...dependents.map((dep) => {
+                            const isExpired = dep.card_expires_at && new Date(dep.card_expires_at) < new Date();
+                            return {
+                              value: dep.id,
+                              label: `${dep.name}${dep.relationship ? ` (${dep.relationship})` : ''}${isExpired ? ' - Carteirinha vencida' : ''}`,
+                              disabled: isExpired,
+                            };
+                          }),
+                        ]}
+                        placeholder="Selecione"
+                        title="Para quem é a consulta"
+                        className="mt-1.5"
+                      />
+                      {selectedDependent && (
+                        <p className="text-xs text-primary mt-1">
+                          Agendando para dependente: {dependents.find(d => d.id === selectedDependent)?.name}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Patient Name */}
                   <div className="sm:col-span-2">
