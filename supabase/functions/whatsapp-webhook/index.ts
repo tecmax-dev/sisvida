@@ -14,6 +14,9 @@ const POSITIVE_REGEX = /^(sim|s|confirmo|ok|👍|confirmado|confirmar|vou|yes|y|
 const NEGATIVE_REGEX = /^(não|nao|n|cancelo|cancelar|❌|desisto|nao vou|não vou|no|cancel|cancelado)$/i;
 const CPF_REGEX = /^\d{11}$/;
 const MENU_REGEX = /^(menu|reiniciar|voltar|inicio|começar|comecar|agendar)$/i;
+const CANCEL_REGEX = /^(cancelar consulta|cancelar agendamento|desmarcar|desmarcar consulta)$/i;
+const RESCHEDULE_REGEX = /^(reagendar|remarcar|mudar data|trocar horario|trocar horário)$/i;
+const MY_APPOINTMENTS_REGEX = /^(minhas consultas|meus agendamentos|consultas|agendamentos)$/i;
 
 // ==========================================
 // BOOKING STATES
@@ -22,10 +25,16 @@ type BookingState =
   | 'INIT'
   | 'WAITING_CPF'
   | 'CONFIRM_IDENTITY'
+  | 'MAIN_MENU'
   | 'SELECT_PROFESSIONAL'
   | 'SELECT_DATE'
   | 'SELECT_TIME'
   | 'CONFIRM_APPOINTMENT'
+  | 'LIST_APPOINTMENTS'
+  | 'CONFIRM_CANCEL'
+  | 'RESCHEDULE_SELECT_DATE'
+  | 'RESCHEDULE_SELECT_TIME'
+  | 'CONFIRM_RESCHEDULE'
   | 'FINISHED'
   | 'EXPIRED';
 
@@ -66,6 +75,10 @@ interface BookingSession {
   available_professionals: Array<{ id: string; name: string; specialty: string }> | null;
   available_dates: Array<{ date: string; formatted: string; weekday: string }> | null;
   available_times: Array<{ time: string; formatted: string }> | null;
+  // For cancel/reschedule flows
+  pending_appointments: Array<{ id: string; date: string; time: string; professional: string }> | null;
+  selected_appointment_id: string | null;
+  action_type: 'new' | 'cancel' | 'reschedule' | null;
   expires_at: string;
 }
 
@@ -255,6 +268,15 @@ Responda *SIM* para continuar ou *NÃO* para encerrar.`,
 
 Se precisar de ajuda, entre em contato conosco.`,
 
+  // Main menu after identity confirmed
+  mainMenu: `O que você deseja fazer?
+
+1️⃣ *Agendar* nova consulta
+2️⃣ *Cancelar* consulta existente
+3️⃣ *Reagendar* consulta
+
+_Digite o número da opção desejada._`,
+
   selectProfessional: (professionals: Array<{ name: string; specialty: string }>) => {
     let msg = `Perfeito! 😊
 Escolha o profissional desejado digitando o *número*:\n\n`;
@@ -328,6 +350,60 @@ ${data.clinicName}`,
 
 Se desejar agendar novamente, digite *MENU*.`,
 
+  // List appointments for cancel/reschedule
+  listAppointments: (appointments: Array<{ date: string; time: string; professional: string }>) => {
+    if (appointments.length === 0) {
+      return `📋 Você não possui consultas agendadas.
+
+Digite *MENU* para fazer um novo agendamento.`;
+    }
+    let msg = `📋 Suas próximas consultas:\n\n`;
+    appointments.forEach((a, i) => {
+      msg += `${i + 1}️⃣ *${a.date}* às *${a.time}*\n   👨‍⚕️ Dr(a). ${a.professional}\n\n`;
+    });
+    msg += `\nDigite o *número* da consulta que deseja selecionar ou *MENU* para voltar.`;
+    return msg.trim();
+  },
+
+  noAppointments: `📋 Você não possui consultas agendadas para cancelar ou reagendar.
+
+Digite *MENU* para fazer um novo agendamento.`,
+
+  confirmCancel: (data: { date: string; time: string; professional: string }) => 
+    `⚠️ Tem certeza que deseja *CANCELAR* esta consulta?
+
+📅 Data: *${data.date}*
+⏰ Horário: *${data.time}*
+👨‍⚕️ Dr(a). ${data.professional}
+
+Digite *SIM* para confirmar o cancelamento ou *NÃO* para voltar.`,
+
+  cancelSuccess: `✅ Consulta cancelada com sucesso!
+
+Se precisar reagendar, digite *MENU*.`,
+
+  confirmReschedule: (data: {
+    oldDate: string;
+    oldTime: string;
+    newDate: string;
+    newTime: string;
+    professional: string;
+  }) => `📋 Confirme o reagendamento:
+
+*De:* ${data.oldDate} às ${data.oldTime}
+*Para:* ${data.newDate} às ${data.newTime}
+👨‍⚕️ Dr(a). ${data.professional}
+
+Digite *CONFIRMAR* para finalizar ou *CANCELAR* para desistir.`,
+
+  rescheduleSuccess: (data: { date: string; time: string; professional: string }) => 
+    `✅ *Consulta reagendada com sucesso!*
+
+📅 Nova data: *${data.date}* às *${data.time}*
+👨‍⚕️ Dr(a). ${data.professional}
+
+Qualquer dúvida, estamos à disposição! 😊`,
+
   invalidOption: `❌ Opção inválida. Por favor, digite apenas o *número* da opção desejada.`,
 
   sessionExpired: `⏰ Sua sessão expirou por inatividade.
@@ -388,6 +464,9 @@ async function handleBookingFlow(
     
     case 'CONFIRM_IDENTITY':
       return await handleConfirmIdentity(supabase, config, phone, messageText, session);
+
+    case 'MAIN_MENU':
+      return await handleMainMenu(supabase, config, phone, messageText, session);
     
     case 'SELECT_PROFESSIONAL':
       return await handleSelectProfessional(supabase, config, phone, messageText, session);
@@ -400,6 +479,21 @@ async function handleBookingFlow(
     
     case 'CONFIRM_APPOINTMENT':
       return await handleConfirmAppointment(supabase, config, phone, messageText, session);
+
+    case 'LIST_APPOINTMENTS':
+      return await handleListAppointments(supabase, config, phone, messageText, session);
+
+    case 'CONFIRM_CANCEL':
+      return await handleConfirmCancel(supabase, config, phone, messageText, session);
+
+    case 'RESCHEDULE_SELECT_DATE':
+      return await handleRescheduleSelectDate(supabase, config, phone, messageText, session);
+
+    case 'RESCHEDULE_SELECT_TIME':
+      return await handleRescheduleSelectTime(supabase, config, phone, messageText, session);
+
+    case 'CONFIRM_RESCHEDULE':
+      return await handleConfirmReschedule(supabase, config, phone, messageText, session);
     
     case 'FINISHED':
       await createOrResetSession(supabase, config.clinic_id, phone, 'WAITING_CPF');
@@ -492,6 +586,37 @@ async function handleConfirmIdentity(
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   if (POSITIVE_REGEX.test(messageText)) {
+    // Go to main menu instead of directly to professional selection
+    await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
+    await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu);
+    return { handled: true, newState: 'MAIN_MENU' };
+  }
+
+  if (NEGATIVE_REGEX.test(messageText)) {
+    await updateSession(supabase, session.id, { state: 'FINISHED' });
+    await sendWhatsAppMessage(config, phone, MESSAGES.identityDenied);
+    return { handled: true, newState: 'FINISHED' };
+  }
+
+  await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* ou *NÃO*.`);
+  return { handled: true, newState: 'CONFIRM_IDENTITY' };
+}
+
+// ==========================================
+// MAIN MENU HANDLER
+// ==========================================
+
+async function handleMainMenu(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const choice = messageText.trim();
+
+  // Option 1: New appointment
+  if (choice === '1') {
     const { data: professionals, error } = await supabase
       .from('professionals')
       .select('id, name, specialty, is_active')
@@ -501,7 +626,7 @@ async function handleConfirmIdentity(
 
     if (error || !professionals || professionals.length === 0) {
       await sendWhatsAppMessage(config, phone, MESSAGES.noProfessionals);
-      return { handled: true, newState: 'CONFIRM_IDENTITY' };
+      return { handled: true, newState: 'MAIN_MENU' };
     }
 
     const profList = (professionals as ProfessionalRecord[]).map(p => ({
@@ -513,20 +638,359 @@ async function handleConfirmIdentity(
     await updateSession(supabase, session.id, {
       state: 'SELECT_PROFESSIONAL',
       available_professionals: profList,
+      action_type: 'new',
     });
 
     await sendWhatsAppMessage(config, phone, MESSAGES.selectProfessional(profList));
     return { handled: true, newState: 'SELECT_PROFESSIONAL' };
   }
 
-  if (NEGATIVE_REGEX.test(messageText)) {
+  // Option 2: Cancel appointment
+  if (choice === '2') {
+    const appointments = await getPatientAppointments(supabase, config.clinic_id, session.patient_id!);
+    
+    if (appointments.length === 0) {
+      await sendWhatsAppMessage(config, phone, MESSAGES.noAppointments);
+      return { handled: true, newState: 'MAIN_MENU' };
+    }
+
+    await updateSession(supabase, session.id, {
+      state: 'LIST_APPOINTMENTS',
+      pending_appointments: appointments,
+      action_type: 'cancel',
+    });
+
+    await sendWhatsAppMessage(config, phone, MESSAGES.listAppointments(appointments));
+    return { handled: true, newState: 'LIST_APPOINTMENTS' };
+  }
+
+  // Option 3: Reschedule appointment
+  if (choice === '3') {
+    const appointments = await getPatientAppointments(supabase, config.clinic_id, session.patient_id!);
+    
+    if (appointments.length === 0) {
+      await sendWhatsAppMessage(config, phone, MESSAGES.noAppointments);
+      return { handled: true, newState: 'MAIN_MENU' };
+    }
+
+    await updateSession(supabase, session.id, {
+      state: 'LIST_APPOINTMENTS',
+      pending_appointments: appointments,
+      action_type: 'reschedule',
+    });
+
+    await sendWhatsAppMessage(config, phone, MESSAGES.listAppointments(appointments));
+    return { handled: true, newState: 'LIST_APPOINTMENTS' };
+  }
+
+  await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+  return { handled: true, newState: 'MAIN_MENU' };
+}
+
+// ==========================================
+// LIST APPOINTMENTS HANDLER (for cancel/reschedule)
+// ==========================================
+
+async function handleListAppointments(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const choice = parseInt(messageText.trim());
+  const appointments = session.pending_appointments || [];
+
+  if (isNaN(choice) || choice < 1 || choice > appointments.length) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+    return { handled: true, newState: 'LIST_APPOINTMENTS' };
+  }
+
+  const selected = appointments[choice - 1];
+
+  await updateSession(supabase, session.id, {
+    selected_appointment_id: selected.id,
+  });
+
+  if (session.action_type === 'cancel') {
+    await updateSession(supabase, session.id, { state: 'CONFIRM_CANCEL' });
+    await sendWhatsAppMessage(config, phone, MESSAGES.confirmCancel({
+      date: selected.date,
+      time: selected.time,
+      professional: selected.professional,
+    }));
+    return { handled: true, newState: 'CONFIRM_CANCEL' };
+  }
+
+  if (session.action_type === 'reschedule') {
+    // Get the professional from the appointment to show available dates
+    const { data: appointment } = await supabase
+      .from('appointments')
+      .select('professional_id')
+      .eq('id', selected.id)
+      .single();
+
+    if (!appointment) {
+      await sendWhatsAppMessage(config, phone, MESSAGES.error);
+      return { handled: true, newState: 'MAIN_MENU' };
+    }
+
+    const availableDates = await getAvailableDates(supabase, config.clinic_id, appointment.professional_id);
+
+    if (availableDates.length === 0) {
+      await sendWhatsAppMessage(config, phone, MESSAGES.noDates);
+      return { handled: true, newState: 'LIST_APPOINTMENTS' };
+    }
+
+    await updateSession(supabase, session.id, {
+      state: 'RESCHEDULE_SELECT_DATE',
+      selected_professional_id: appointment.professional_id,
+      selected_professional_name: selected.professional,
+      available_dates: availableDates,
+    });
+
+    await sendWhatsAppMessage(config, phone, `Escolha a nova data para reagendar:`);
+    await sendWhatsAppMessage(config, phone, MESSAGES.selectDate(availableDates));
+    return { handled: true, newState: 'RESCHEDULE_SELECT_DATE' };
+  }
+
+  return { handled: true, newState: 'MAIN_MENU' };
+}
+
+// ==========================================
+// CONFIRM CANCEL HANDLER
+// ==========================================
+
+async function handleConfirmCancel(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  if (POSITIVE_REGEX.test(messageText)) {
+    // Cancel the appointment
+    const { error } = await supabase
+      .from('appointments')
+      .update({ 
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancellation_reason: 'Cancelado pelo paciente via WhatsApp'
+      })
+      .eq('id', session.selected_appointment_id);
+
+    if (error) {
+      console.error('[booking] Error cancelling appointment:', error);
+      await sendWhatsAppMessage(config, phone, MESSAGES.error);
+      return { handled: true, newState: 'MAIN_MENU' };
+    }
+
     await updateSession(supabase, session.id, { state: 'FINISHED' });
-    await sendWhatsAppMessage(config, phone, MESSAGES.identityDenied);
+    await sendWhatsAppMessage(config, phone, MESSAGES.cancelSuccess);
     return { handled: true, newState: 'FINISHED' };
   }
 
+  if (NEGATIVE_REGEX.test(messageText)) {
+    await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
+    await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu);
+    return { handled: true, newState: 'MAIN_MENU' };
+  }
+
   await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* ou *NÃO*.`);
-  return { handled: true, newState: 'CONFIRM_IDENTITY' };
+  return { handled: true, newState: 'CONFIRM_CANCEL' };
+}
+
+// ==========================================
+// RESCHEDULE DATE HANDLER
+// ==========================================
+
+async function handleRescheduleSelectDate(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const choice = parseInt(messageText.trim());
+  const dates = session.available_dates || [];
+
+  if (isNaN(choice) || choice < 1 || choice > dates.length) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+    return { handled: true, newState: 'RESCHEDULE_SELECT_DATE' };
+  }
+
+  const selected = dates[choice - 1];
+
+  const availableTimes = await getAvailableTimes(
+    supabase, 
+    config.clinic_id, 
+    session.selected_professional_id!, 
+    selected.date
+  );
+
+  if (availableTimes.length === 0) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.noTimes);
+    return { handled: true, newState: 'RESCHEDULE_SELECT_DATE' };
+  }
+
+  await updateSession(supabase, session.id, {
+    state: 'RESCHEDULE_SELECT_TIME',
+    selected_date: selected.date,
+    available_times: availableTimes,
+  });
+
+  await sendWhatsAppMessage(config, phone, MESSAGES.selectTime(availableTimes));
+  return { handled: true, newState: 'RESCHEDULE_SELECT_TIME' };
+}
+
+// ==========================================
+// RESCHEDULE TIME HANDLER
+// ==========================================
+
+async function handleRescheduleSelectTime(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const choice = parseInt(messageText.trim());
+  const times = session.available_times || [];
+
+  if (isNaN(choice) || choice < 1 || choice > times.length) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption);
+    return { handled: true, newState: 'RESCHEDULE_SELECT_TIME' };
+  }
+
+  const selected = times[choice - 1];
+
+  // Check slot availability before proceeding
+  const isAvailable = await checkSlotAvailability(
+    supabase,
+    config.clinic_id,
+    session.selected_professional_id!,
+    session.selected_date!,
+    selected.time
+  );
+
+  if (!isAvailable) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.slotTaken);
+    return { handled: true, newState: 'RESCHEDULE_SELECT_TIME' };
+  }
+
+  await updateSession(supabase, session.id, {
+    state: 'CONFIRM_RESCHEDULE',
+    selected_time: selected.time,
+  });
+
+  // Get original appointment info
+  const originalAppointment = session.pending_appointments?.find(a => a.id === session.selected_appointment_id);
+
+  await sendWhatsAppMessage(config, phone, MESSAGES.confirmReschedule({
+    oldDate: originalAppointment?.date || '',
+    oldTime: originalAppointment?.time || '',
+    newDate: formatDate(session.selected_date!),
+    newTime: formatTime(selected.time),
+    professional: session.selected_professional_name || '',
+  }));
+
+  return { handled: true, newState: 'CONFIRM_RESCHEDULE' };
+}
+
+// ==========================================
+// CONFIRM RESCHEDULE HANDLER
+// ==========================================
+
+async function handleConfirmReschedule(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  if (POSITIVE_REGEX.test(messageText)) {
+    // Calculate end time (default 30 min)
+    const startTime = session.selected_time!;
+    const [hours, minutes] = startTime.split(':').map(Number);
+    const endDate = new Date();
+    endDate.setHours(hours, minutes + 30, 0, 0);
+    const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+
+    // Update the appointment with new date/time
+    const { error } = await supabase
+      .from('appointments')
+      .update({ 
+        appointment_date: session.selected_date,
+        start_time: startTime,
+        end_time: endTime,
+        status: 'scheduled', // Reset to scheduled
+        confirmed_at: null,
+      })
+      .eq('id', session.selected_appointment_id);
+
+    if (error) {
+      console.error('[booking] Error rescheduling appointment:', error);
+      await sendWhatsAppMessage(config, phone, MESSAGES.error);
+      return { handled: true, newState: 'MAIN_MENU' };
+    }
+
+    await updateSession(supabase, session.id, { state: 'FINISHED' });
+    await sendWhatsAppMessage(config, phone, MESSAGES.rescheduleSuccess({
+      date: formatDate(session.selected_date!),
+      time: formatTime(startTime),
+      professional: session.selected_professional_name || '',
+    }));
+    return { handled: true, newState: 'FINISHED' };
+  }
+
+  if (NEGATIVE_REGEX.test(messageText)) {
+    await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
+    await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu);
+    return { handled: true, newState: 'MAIN_MENU' };
+  }
+
+  await sendWhatsAppMessage(config, phone, `Por favor, responda *CONFIRMAR* ou *CANCELAR*.`);
+  return { handled: true, newState: 'CONFIRM_RESCHEDULE' };
+}
+
+// ==========================================
+// GET PATIENT APPOINTMENTS
+// ==========================================
+
+async function getPatientAppointments(
+  supabase: SupabaseClient,
+  clinicId: string,
+  patientId: string
+): Promise<Array<{ id: string; date: string; time: string; professional: string }>> {
+  const today = new Date().toISOString().split('T')[0];
+  
+  const { data, error } = await supabase
+    .from('appointments')
+    .select(`
+      id, 
+      appointment_date, 
+      start_time,
+      professional:professionals (name)
+    `)
+    .eq('clinic_id', clinicId)
+    .eq('patient_id', patientId)
+    .in('status', ['scheduled', 'confirmed'])
+    .gte('appointment_date', today)
+    .order('appointment_date', { ascending: true })
+    .order('start_time', { ascending: true })
+    .limit(10);
+
+  if (error || !data) {
+    console.error('[booking] Error fetching patient appointments:', error);
+    return [];
+  }
+
+  return data.map((a: { id: string; appointment_date: string; start_time: string; professional: { name: string } | null }) => ({
+    id: a.id,
+    date: formatDate(a.appointment_date),
+    time: formatTime(a.start_time),
+    professional: a.professional?.name || 'Não informado',
+  }));
 }
 
 async function handleSelectProfessional(
