@@ -501,11 +501,17 @@ export default function DataImportPage() {
         }
         
         if (patientId) {
+          const parsedRecordDate = parseDate(row.data.data_registro);
+          if (!parsedRecordDate) {
+            errors++;
+            continue;
+          }
+
           // Patient found, add record directly
           recordsToInsert.push({
             clinic_id: selectedClinicId,
             patient_id: patientId,
-            record_date: parseDate(row.data.data_registro) || new Date().toISOString().split('T')[0],
+            record_date: parsedRecordDate,
             chief_complaint: row.data.queixa?.trim() || null,
             diagnosis: row.data.diagnostico?.trim() || null,
             treatment_plan: row.data.tratamento?.trim() || null,
@@ -602,10 +608,16 @@ export default function DataImportPage() {
           }
           
           if (patientId) {
+            const parsedRecordDate = parseDate(row.data.data_registro);
+            if (!parsedRecordDate) {
+              errors++;
+              continue;
+            }
+
             recordsToInsert.push({
               clinic_id: selectedClinicId,
               patient_id: patientId,
-              record_date: parseDate(row.data.data_registro) || new Date().toISOString().split('T')[0],
+              record_date: parsedRecordDate,
               chief_complaint: row.data.queixa?.trim() || null,
               diagnosis: row.data.diagnostico?.trim() || null,
               treatment_plan: row.data.tratamento?.trim() || null,
@@ -864,10 +876,16 @@ export default function DataImportPage() {
       }
       
       if (patientId) {
+        const parsedRecordDate = parseDate(row.data.data_registro);
+        if (!parsedRecordDate) {
+          errors++;
+          continue;
+        }
+
         recordsToInsert.push({
           clinic_id: selectedClinicId,
           patient_id: patientId,
-          record_date: parseDate(row.data.data_registro) || new Date().toISOString().split('T')[0],
+          record_date: parsedRecordDate,
           chief_complaint: row.data.queixa?.trim() || null,
           diagnosis: row.data.diagnostico?.trim() || null,
           treatment_plan: row.data.tratamento?.trim() || null,
@@ -955,10 +973,16 @@ export default function DataImportPage() {
         }
         
         if (patientId) {
+          const parsedRecordDate = parseDate(row.data.data_registro);
+          if (!parsedRecordDate) {
+            errors++;
+            continue;
+          }
+
           recordsToInsert.push({
             clinic_id: selectedClinicId,
             patient_id: patientId,
-            record_date: parseDate(row.data.data_registro) || new Date().toISOString().split('T')[0],
+            record_date: parsedRecordDate,
             chief_complaint: row.data.queixa?.trim() || null,
             diagnosis: row.data.diagnostico?.trim() || null,
             treatment_plan: row.data.tratamento?.trim() || null,

@@ -92,30 +92,66 @@ export function formatCPF(cpf: string): string {
 }
 
 // Parse date from various formats to YYYY-MM-DD
-export function parseDate(dateStr: string): string | null {
-  if (!dateStr) return null;
-  
+export function parseDate(dateStr: unknown): string | null {
+  if (dateStr === null || dateStr === undefined) return null;
+
+  // If it's already a Date instance
+  if (dateStr instanceof Date && !isNaN(dateStr.getTime())) {
+    const y = dateStr.getFullYear();
+    if (y > 1900 && y < 2100) return dateStr.toISOString().split('T')[0];
+  }
+
   const trimmed = String(dateStr).trim();
   if (!trimmed) return null;
-  
+
+  const to4DigitYear = (yy: string) => {
+    const n = Number(yy);
+    if (Number.isNaN(n)) return null;
+    // Assume 00-69 => 2000-2069, 70-99 => 1970-1999
+    return n >= 70 ? 1900 + n : 2000 + n;
+  };
+
   // Try common formats with regex
   const formats = [
     { regex: /^(\d{4})-(\d{2})-(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYY-MM-DD
     { regex: /^(\d{4})-(\d{2})-(\d{2})T/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYY-MM-DDTHH:MM:SS (ISO)
     { regex: /^(\d{4})-(\d{2})-(\d{2})\s/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYY-MM-DD HH:MM:SS
 
+    // YYYY/MM/DD or YYYY.MM.DD
+    { regex: /^(\d{4})\/(\d{1,2})\/(\d{1,2})(?:\D|$)/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` },
+    { regex: /^(\d{4})\.(\d{1,2})\.(\d{1,2})(?:\D|$)/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}` },
+
     // DD/MM/YYYY with optional time or extra text (e.g., "29/12/2025 às 01:13")
     { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\D|$)/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` },
     { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})(?:\D|$)/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` },
     { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\D|$)/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` },
 
+    // DD/MM/YY (common in legacy exports)
+    {
+      regex: /^(\d{1,2})\/(\d{1,2})\/(\d{2})(?:\D|$)/,
+      handler: (m: RegExpMatchArray) => {
+        const year = to4DigitYear(m[3]);
+        if (!year) return '';
+        return `${String(year)}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+      },
+    },
+    {
+      regex: /^(\d{1,2})-(\d{1,2})-(\d{2})(?:\D|$)/,
+      handler: (m: RegExpMatchArray) => {
+        const year = to4DigitYear(m[3]);
+        if (!year) return '';
+        return `${String(year)}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+      },
+    },
+
     { regex: /^(\d{4})(\d{2})(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYYMMDD
   ];
-  
+
   for (const { regex, handler } of formats) {
     const match = trimmed.match(regex);
     if (match) {
       const result = handler(match);
+      if (!result) continue;
       // Validate the result is a valid date
       const parsed = new Date(result);
       if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 1900 && parsed.getFullYear() < 2100) {
@@ -123,9 +159,9 @@ export function parseDate(dateStr: string): string | null {
       }
     }
   }
-  
+
   // Try to parse as Excel date number (serial date)
-  const excelDate = parseFloat(trimmed);
+  const excelDate = parseFloat(trimmed.replace(',', '.'));
   if (!isNaN(excelDate) && excelDate > 1 && excelDate < 100000) {
     // Excel serial date: days since 1899-12-30 (with Excel bug for 1900)
     const date = new Date((excelDate - 25569) * 86400 * 1000);
@@ -133,13 +169,13 @@ export function parseDate(dateStr: string): string | null {
       return date.toISOString().split('T')[0];
     }
   }
-  
+
   // Try native Date parsing as last resort
   const nativeDate = new Date(trimmed);
   if (!isNaN(nativeDate.getTime()) && nativeDate.getFullYear() > 1900 && nativeDate.getFullYear() < 2100) {
     return nativeDate.toISOString().split('T')[0];
   }
-  
+
   return null;
 }
 
