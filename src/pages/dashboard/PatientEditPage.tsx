@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
@@ -119,6 +119,7 @@ const initialFormData: PatientFormData = {
 export default function PatientEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { currentClinic } = useAuth();
   const { hasPermission } = usePermissions();
   const { toast } = useToast();
@@ -131,6 +132,7 @@ export default function PatientEditPage() {
   const [formData, setFormData] = useState<PatientFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [insurancePlanName, setInsurancePlanName] = useState<string>('');
+  const [showDependentsForm, setShowDependentsForm] = useState(false);
   
   // Modal states
   const [recordsModalOpen, setRecordsModalOpen] = useState(false);
@@ -151,6 +153,17 @@ export default function PatientEditPage() {
   if (!canViewPrescriptions) {
     hiddenTabs.push('prescricoes');
   }
+
+  // Check URL params for dependentes action
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    const dependentesParam = searchParams.get('dependentes');
+    
+    if (tabParam === 'cadastro' && dependentesParam === 'true') {
+      setActiveTab('cadastro');
+      setShowDependentsForm(true);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (currentClinic && id) {
@@ -450,6 +463,7 @@ export default function PatientEditPage() {
                 patientId={id}
                 clinicId={currentClinic.id}
                 patientPhone={formData.phone}
+                autoOpenForm={showDependentsForm}
               />
             </div>
           )}

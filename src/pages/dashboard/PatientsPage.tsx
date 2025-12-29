@@ -13,6 +13,7 @@ import {
   FileText,
   MessageCircle,
   Paperclip,
+  Users,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,7 @@ interface Patient {
     name: string;
   } | null;
   created_at: string;
+  dependents_count?: number;
 }
 
 interface InsurancePlan {
@@ -269,7 +271,8 @@ export default function PatientsPage() {
             notes,
             insurance_plan_id,
             created_at,
-            insurance_plan:insurance_plans ( name )
+            insurance_plan:insurance_plans ( name ),
+            patient_dependents ( id )
           `,
           { count: "exact" }
         )
@@ -303,7 +306,14 @@ export default function PatientsPage() {
 
       if (error) throw error;
 
-      setPatients((data as Patient[]) || []);
+      // Map dependents count
+      const patientsWithDependentsCount = (data || []).map((p: any) => ({
+        ...p,
+        dependents_count: Array.isArray(p.patient_dependents) ? p.patient_dependents.filter((d: any) => d.id).length : 0,
+        patient_dependents: undefined,
+      }));
+
+      setPatients(patientsWithDependentsCount as Patient[]);
       setTotalPatients(count || 0);
     } catch (error) {
       console.error("Error fetching patients:", error);
@@ -927,6 +937,15 @@ export default function PatientsPage() {
                             <DropdownMenuItem onClick={() => navigate(`/dashboard/patients/${patient.id}/attachments`)}>
                               <Paperclip className="h-4 w-4 mr-2" />
                               Anexos
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission("view_patients") && (
+                            <DropdownMenuItem onClick={() => navigate(`/dashboard/patients/${patient.id}/edit?tab=cadastro&dependentes=true`)}>
+                              <Users className="h-4 w-4 mr-2" />
+                              {(patient.dependents_count || 0) > 0 
+                                ? `Dependentes (${patient.dependents_count})`
+                                : "Novo dependente"
+                              }
                             </DropdownMenuItem>
                           )}
                           {hasPermission("delete_patients") && (
