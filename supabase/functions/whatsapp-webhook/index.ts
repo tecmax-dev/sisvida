@@ -120,7 +120,7 @@ interface AppointmentRecord {
 }
 
 interface AIExtractedIntent {
-  intent: 'schedule' | 'cancel' | 'reschedule' | 'list' | 'help' | 'confirm' | 'deny' | 'select_option' | 'unknown';
+  intent: 'schedule' | 'cancel' | 'reschedule' | 'list' | 'info' | 'help' | 'confirm' | 'deny' | 'select_option' | 'unknown';
   entities: {
     professional_name?: string;
     date?: string;
@@ -292,12 +292,12 @@ async function getAIIntent(
 
 Estado atual: ${context}${contextInfo}
 
-Regras:
+Regras de interpretação:
 - Número sozinho (1, 2, 3...) = select_option com option_number
 - "sim", "confirmo", "ok", "👍", "s" = confirm
-- "não", "nao", "n", "cancelar", "❌" = deny
+- "não", "nao", "n", "❌" = deny
 - Pedir para agendar/marcar = schedule
-- Pedir para cancelar/desmarcar = cancel
+- Pedir para cancelar/desmarcar = cancel  
 - Pedir para reagendar/remarcar = reschedule
 - Ver consultas = list
 - CPF tem 11 dígitos
@@ -305,8 +305,19 @@ Regras:
 - Se mencionar data (amanhã, segunda, dia 15), extrair date
 - Se mencionar horário (14h, duas da tarde), extrair time
 
+IMPORTANTE - Perguntas informativas (intent=info):
+- Perguntas sobre "como faço", "como funciona", "preciso de ajuda com", "o que é", "onde fica" = info
+- Perguntas sobre carteirinha, renovação, documentos, procedimentos = info
+- Para intent=info, SEMPRE forneça uma friendly_response útil respondendo a pergunta do usuário
+
+Exemplos de info:
+- "como atualizo minha carteirinha?" → info + friendly_response explicando que deve entrar em contato com a clínica
+- "a carteirinha venceu, o que faço?" → info + friendly_response sobre renovação
+- "como funciona o agendamento?" → info + friendly_response explicando o processo
+- "preciso de atestado" → info + friendly_response orientando
+
 Retorne APENAS JSON:
-{"intent":"schedule|cancel|reschedule|list|help|confirm|deny|select_option|unknown","entities":{"professional_name":"...","date":"...","time":"...","option_number":N,"cpf":"..."},"confidence":0.0-1.0,"friendly_response":"resposta se não entendeu"}`;
+{"intent":"schedule|cancel|reschedule|list|info|help|confirm|deny|select_option|unknown","entities":{"professional_name":"...","date":"...","time":"...","option_number":N,"cpf":"..."},"confidence":0.0-1.0,"friendly_response":"resposta amigável e útil"}`;
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -625,6 +636,17 @@ async function handleBookingFlow(
         console.log('[booking] AI detected valid CPF:', cleanCpf.slice(0, 3) + '***');
         return await handleWaitingCpf(supabase, config, phone, cleanCpf, session);
       }
+    }
+
+    // Handle INFO intent - respond to informational questions without requiring CPF
+    if (aiResult.intent === 'info' && aiResult.friendly_response) {
+      console.log('[booking] AI detected info intent - responding directly');
+      const infoMsg = `${aiResult.friendly_response}\n\n` +
+        '💡 Posso ajudar com mais alguma coisa?\n\n' +
+        '📅 Para *agendar*, *cancelar* ou *consultar* suas consultas, basta me informar seu CPF.';
+      
+      await sendWhatsAppMessage(config, phone, infoMsg);
+      return { handled: true, newState: session.state };
     }
 
     // Handle greeting or schedule intent at WAITING_CPF state - respond friendly and ask for CPF
