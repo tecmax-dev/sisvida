@@ -196,26 +196,33 @@ async function sendWhatsAppMessage(
       formattedPhone = '55' + formattedPhone;
     }
 
-    console.log(`[booking] Sending message to ${formattedPhone}`);
+    // Evolution expects WhatsApp JID in many setups
+    const destination = formattedPhone.includes('@')
+      ? formattedPhone
+      : `${formattedPhone}@s.whatsapp.net`;
+
+    console.log(`[booking] Sending message to ${destination}`);
 
     const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': config.api_key,
+        apikey: config.api_key,
       },
       body: JSON.stringify({
-        number: formattedPhone,
+        number: destination,
         text: message,
       }),
     });
 
+    const responseText = await response.text();
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[booking] WhatsApp API error:', errorText);
+      console.error('[booking] WhatsApp API error:', responseText);
       return false;
     }
 
+    console.log(`[booking] WhatsApp API ok (${response.status}):`, responseText);
     return true;
   } catch (error) {
     console.error('[booking] Error sending WhatsApp:', error);
