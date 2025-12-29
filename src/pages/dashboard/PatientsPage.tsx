@@ -543,19 +543,45 @@ export default function PatientsPage() {
     }
   };
 
+  // Normalize text: lowercase, remove accents, trim
+  const normalizeText = (text: string): string => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  };
+
+  // Normalize phone: remove non-digits and strip leading 55 (Brazil DDI) if present
+  const normalizePhone = (phone: string): string => {
+    const digits = phone.replace(/\D/g, '');
+    // If starts with 55 and has more than 11 digits, remove the 55
+    if (digits.startsWith('55') && digits.length > 11) {
+      return digits.slice(2);
+    }
+    return digits;
+  };
+
   const filteredPatients = patients.filter((patient) => {
-    const searchLower = searchTerm.toLowerCase().trim();
-    const searchDigits = searchTerm.replace(/\D/g, ''); // Remove non-digits for phone/cpf search
+    const searchNormalized = normalizeText(searchTerm);
+    const searchDigits = searchTerm.replace(/\D/g, '');
+    const searchDigitsNormalized = normalizePhone(searchTerm);
     
-    // Name search (case-insensitive)
-    const nameMatch = patient.name.toLowerCase().includes(searchLower);
+    // Name search (case-insensitive, accent-insensitive)
+    const patientNameNormalized = normalizeText(patient.name);
+    const nameMatch = patientNameNormalized.includes(searchNormalized);
     
     // Email search (case-insensitive)
-    const emailMatch = patient.email?.toLowerCase().includes(searchLower);
+    const emailMatch = patient.email?.toLowerCase().includes(searchNormalized);
     
-    // Phone search: compare only digits to handle formatted/unformatted input
+    // Phone search: normalize both search term and stored phone
     const phoneDigits = patient.phone?.replace(/\D/g, '') || '';
-    const phoneMatch = searchDigits.length >= 3 && phoneDigits.includes(searchDigits);
+    const phoneMatch = searchDigitsNormalized.length >= 3 && (
+      phoneDigits.includes(searchDigitsNormalized) ||
+      searchDigitsNormalized.includes(phoneDigits) ||
+      // Also try matching by suffix (last 8-9 digits) for partial matches
+      (searchDigitsNormalized.length >= 8 && phoneDigits.endsWith(searchDigitsNormalized.slice(-9)))
+    );
     
     // CPF search: compare only digits
     const cpfDigits = patient.cpf?.replace(/\D/g, '') || '';
