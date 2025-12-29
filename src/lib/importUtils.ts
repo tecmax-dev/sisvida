@@ -100,13 +100,15 @@ export function parseDate(dateStr: string): string | null {
   
   // Try common formats with regex
   const formats = [
-    { regex: /^(\d{4})-(\d{2})-(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` },  // YYYY-MM-DD
+    { regex: /^(\d{4})-(\d{2})-(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYY-MM-DD
     { regex: /^(\d{4})-(\d{2})-(\d{2})T/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYY-MM-DDTHH:MM:SS (ISO)
     { regex: /^(\d{4})-(\d{2})-(\d{2})\s/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYY-MM-DD HH:MM:SS
-    { regex: /^(\d{2})\/(\d{2})\/(\d{4})$/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2]}-${m[1]}` }, // DD/MM/YYYY
-    { regex: /^(\d{2})-(\d{2})-(\d{4})$/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2]}-${m[1]}` }, // DD-MM-YYYY
-    { regex: /^(\d{2})\.(\d{2})\.(\d{4})$/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2]}-${m[1]}` }, // DD.MM.YYYY
-    { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` }, // D/M/YYYY
+
+    // DD/MM/YYYY with optional time or extra text (e.g., "29/12/2025 às 01:13")
+    { regex: /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\D|$)/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` },
+    { regex: /^(\d{1,2})-(\d{1,2})-(\d{4})(?:\D|$)/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` },
+    { regex: /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\D|$)/, handler: (m: RegExpMatchArray) => `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` },
+
     { regex: /^(\d{4})(\d{2})(\d{2})$/, handler: (m: RegExpMatchArray) => `${m[1]}-${m[2]}-${m[3]}` }, // YYYYMMDD
   ];
   
