@@ -5927,6 +5927,7 @@ export type Database = {
       }
       whatsapp_booking_sessions: {
         Row: {
+          action_type: string | null
           available_dates: Json | null
           available_professionals: Json | null
           available_times: Json | null
@@ -5936,7 +5937,9 @@ export type Database = {
           id: string
           patient_id: string | null
           patient_name: string | null
+          pending_appointments: Json | null
           phone: string
+          selected_appointment_id: string | null
           selected_date: string | null
           selected_procedure_id: string | null
           selected_professional_id: string | null
@@ -5946,6 +5949,7 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
+          action_type?: string | null
           available_dates?: Json | null
           available_professionals?: Json | null
           available_times?: Json | null
@@ -5955,7 +5959,9 @@ export type Database = {
           id?: string
           patient_id?: string | null
           patient_name?: string | null
+          pending_appointments?: Json | null
           phone: string
+          selected_appointment_id?: string | null
           selected_date?: string | null
           selected_procedure_id?: string | null
           selected_professional_id?: string | null
@@ -5965,6 +5971,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
+          action_type?: string | null
           available_dates?: Json | null
           available_professionals?: Json | null
           available_times?: Json | null
@@ -5974,7 +5981,9 @@ export type Database = {
           id?: string
           patient_id?: string | null
           patient_name?: string | null
+          pending_appointments?: Json | null
           phone?: string
+          selected_appointment_id?: string | null
           selected_date?: string | null
           selected_procedure_id?: string | null
           selected_professional_id?: string | null
