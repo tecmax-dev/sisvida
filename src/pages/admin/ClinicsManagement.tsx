@@ -74,10 +74,12 @@ import {
   DollarSign,
   Clock,
   Mail,
+  ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SendWelcomeDialog } from "@/components/admin/SendWelcomeDialog";
+import { Switch } from "@/components/ui/switch";
 
 interface Clinic {
   id: string;
@@ -398,6 +400,10 @@ export default function ClinicsManagement() {
   // Welcome dialog
   const [welcomeDialogOpen, setWelcomeDialogOpen] = useState(false);
   
+  // Settings dialog
+  const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
+  const [restrictCpfPerMonth, setRestrictCpfPerMonth] = useState(false);
+  
   const { setCurrentClinic, user } = useAuth();
   const { logAction } = useAuditLog();
   const navigate = useNavigate();
@@ -634,6 +640,28 @@ export default function ClinicsManagement() {
     },
   });
 
+  // Settings mutation
+  const saveSettingsMutation = useMutation({
+    mutationFn: async ({ clinicId, restrictCpf }: { clinicId: string; restrictCpf: boolean }) => {
+      const { error } = await supabase
+        .from('clinics')
+        .update({
+          restrict_one_appointment_per_cpf_month: restrictCpf,
+        })
+        .eq('id', clinicId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-clinics"] });
+      toast.success("Configurações salvas");
+      setSettingsDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao salvar configurações: ${error.message}`);
+    },
+  });
+
   const handleAccessClinic = (clinic: Clinic) => {
     logAction({ 
       action: 'access_clinic', 
@@ -693,6 +721,24 @@ export default function ClinicsManagement() {
   const handleOpenWelcomeDialog = (clinic: ClinicWithCounts) => {
     setSelectedClinic(clinic);
     setWelcomeDialogOpen(true);
+  };
+
+  const handleOpenSettingsDialog = async (clinic: ClinicWithCounts) => {
+    setSelectedClinic(clinic);
+    // Fetch current settings
+    const { data } = await supabase
+      .from('clinics')
+      .select('restrict_one_appointment_per_cpf_month')
+      .eq('id', clinic.id)
+      .single();
+    
+    setRestrictCpfPerMonth(data?.restrict_one_appointment_per_cpf_month || false);
+    setSettingsDialogOpen(true);
+  };
+
+  const handleSaveSettings = () => {
+    if (!selectedClinic) return;
+    saveSettingsMutation.mutate({ clinicId: selectedClinic.id, restrictCpf: restrictCpfPerMonth });
   };
 
   const handleBlockClinic = () => {
@@ -986,6 +1032,10 @@ export default function ClinicsManagement() {
                                   <DropdownMenuItem onClick={() => handleOpenPlanDialog(clinic)}>
                                     <CreditCard className="h-4 w-4 mr-2" />
                                     Gerenciar Plano
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleOpenSettingsDialog(clinic)}>
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    Configurações
                                   </DropdownMenuItem>
                                   {clinic.is_blocked ? (
                                     <DropdownMenuItem 
@@ -1394,6 +1444,56 @@ export default function ClinicsManagement() {
         clinicName={selectedClinic?.name || ""}
         clinicId={selectedClinic?.id || ""}
       />
+
+      {/* Settings Dialog */}
+      <Dialog open={settingsDialogOpen} onOpenChange={setSettingsDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Settings className="h-5 w-5 text-primary" />
+              </div>
+              Configurações da Clínica
+            </DialogTitle>
+            <DialogDescription>
+              {selectedClinic?.name}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-6 py-4">
+            {/* CPF Restriction Setting */}
+            <div className="flex items-start justify-between gap-4 p-4 bg-muted/50 rounded-xl border border-border/50">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  <Label className="font-medium">Limitar agendamento por CPF</Label>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Permite apenas um agendamento por CPF por mês para cada profissional.
+                  Evita duplicidade de consultas no mesmo período.
+                </p>
+              </div>
+              <Switch
+                checked={restrictCpfPerMonth}
+                onCheckedChange={setRestrictCpfPerMonth}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSettingsDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSaveSettings}
+              disabled={saveSettingsMutation.isPending}
+            >
+              {saveSettingsMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
