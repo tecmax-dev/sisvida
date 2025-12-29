@@ -255,65 +255,91 @@ export default function DataImportPage() {
     let importedPatients = 0;
     let importedRecords = 0;
     let errors = 0;
+    const BATCH_SIZE = 50;
     
     // Map to track imported patients by CPF and name for record linking
     const importedPatientsMap = new Map<string, string>();
     const importedPatientsNameMap = new Map<string, string>();
     
-    // Step 1: Import patients
-    for (const row of validPatients) {
-      // Check for cancellation
+    // Step 1: Import patients in batches
+    const allPatientData = validPatients.map(row => ({
+      rowData: row.data,
+      patientData: {
+        clinic_id: selectedClinicId,
+        name: row.data.nome.trim(),
+        phone: row.data.telefone ? formatPhone(row.data.telefone) : "",
+        email: row.data.email?.trim() || null,
+        cpf: row.data.cpf ? formatCPF(row.data.cpf) : null,
+        birth_date: row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null,
+        address: row.data.endereco?.trim() || null,
+        notes: row.data.observacoes?.trim() || null,
+      }
+    }));
+    
+    for (let i = 0; i < allPatientData.length; i += BATCH_SIZE) {
       if (cancelImportRef.current) {
         toast.info(`Importação cancelada. ${importedPatients} pacientes importados antes do cancelamento.`);
         break;
       }
       
+      const batch = allPatientData.slice(i, i + BATCH_SIZE);
+      const batchData = batch.map(b => b.patientData);
+      
       try {
-        const patientData = {
-          clinic_id: selectedClinicId,
-          name: row.data.nome.trim(),
-          // Telefone pode estar ausente na planilha; o banco exige string,
-          // então gravamos "" para permitir importar e completar depois.
-          phone: row.data.telefone ? formatPhone(row.data.telefone) : "",
-          email: row.data.email?.trim() || null,
-          cpf: row.data.cpf ? formatCPF(row.data.cpf) : null,
-          birth_date: row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null,
-          address: row.data.endereco?.trim() || null,
-          notes: row.data.observacoes?.trim() || null,
-        };
-        
-        const { data, error } = await supabase.from('patients').insert(patientData).select('id').single();
+        const { data, error } = await supabase.from('patients').insert(batchData).select('id, cpf, name');
         
         if (error) {
-          if (error.message.includes('CPF_DUPLICADO')) {
-            // Get existing patient ID for record linking
-            const { data: existingPatient } = await supabase
-              .from('patients')
-              .select('id')
-              .eq('clinic_id', selectedClinicId)
-              .eq('cpf', patientData.cpf)
-              .single();
-            
-            if (existingPatient) {
-              if (patientData.cpf) {
-                importedPatientsMap.set(patientData.cpf.replace(/\D/g, ''), existingPatient.id);
+          // Batch failed, process one by one
+          for (const item of batch) {
+            if (cancelImportRef.current) break;
+            try {
+              const { data: singleData, error: singleError } = await supabase
+                .from('patients')
+                .insert(item.patientData)
+                .select('id')
+                .single();
+              
+              if (singleError) {
+                if (singleError.message.includes('CPF_DUPLICADO') && item.patientData.cpf) {
+                  const { data: existingPatient } = await supabase
+                    .from('patients')
+                    .select('id')
+                    .eq('clinic_id', selectedClinicId)
+                    .eq('cpf', item.patientData.cpf)
+                    .single();
+                  
+                  if (existingPatient) {
+                    importedPatientsMap.set(item.patientData.cpf.replace(/\D/g, ''), existingPatient.id);
+                    importedPatientsNameMap.set(item.rowData.nome.toLowerCase().trim(), existingPatient.id);
+                  }
+                }
+                errors++;
+              } else if (singleData) {
+                importedPatients++;
+                if (item.patientData.cpf) {
+                  importedPatientsMap.set(item.patientData.cpf.replace(/\D/g, ''), singleData.id);
+                }
+                importedPatientsNameMap.set(item.rowData.nome.toLowerCase().trim(), singleData.id);
               }
-              importedPatientsNameMap.set(row.data.nome.toLowerCase().trim(), existingPatient.id);
+            } catch {
+              errors++;
             }
           }
-          errors++;
         } else if (data) {
-          importedPatients++;
-          if (patientData.cpf) {
-            importedPatientsMap.set(patientData.cpf.replace(/\D/g, ''), data.id);
-          }
-          importedPatientsNameMap.set(row.data.nome.toLowerCase().trim(), data.id);
+          importedPatients += data.length;
+          // Update maps for record linking
+          data.forEach((p: { id: string; cpf: string | null; name: string }) => {
+            if (p.cpf) {
+              importedPatientsMap.set(p.cpf.replace(/\D/g, ''), p.id);
+            }
+            importedPatientsNameMap.set(p.name.toLowerCase().trim(), p.id);
+          });
         }
       } catch (err) {
-        errors++;
+        errors += batch.length;
       }
       
-      processedItems++;
+      processedItems += batch.length;
       setCombinedProgress((processedItems / totalItems) * 100);
     }
     
@@ -366,54 +392,51 @@ export default function DataImportPage() {
       let autoCreatedPatients = 0;
       let skippedAmbiguous = 0;
       
+      // First pass: resolve all patient IDs and auto-create patients if needed
+      const recordsToInsert: Array<{
+        clinic_id: string;
+        patient_id: string;
+        record_date: string;
+        chief_complaint: string | null;
+        diagnosis: string | null;
+        treatment_plan: string | null;
+        prescription: string | null;
+        notes: string | null;
+      }> = [];
+      
       for (const row of validRecords) {
-        // Check for cancellation
         if (cancelImportRef.current) {
-          toast.info(`Importação cancelada. ${importedRecords} prontuários importados antes do cancelamento.`);
+          toast.info(`Importação cancelada durante preparação.`);
           break;
         }
         
         let patientId: string | undefined;
-        let matchMethod: 'cpf' | 'name_unique' | 'created' | 'none' = 'none';
         
         const cleanCPF = row.data.cpf_paciente?.replace(/\D/g, '') || '';
         const normalizedName = row.data.nome_paciente?.toLowerCase().trim() || '';
         
-        // PRIORITY 1: Match by CPF (most reliable - unique identifier)
+        // PRIORITY 1: Match by CPF
         if (cleanCPF && cleanCPF.length >= 11) {
           patientId = cpfToPatientId.get(cleanCPF);
-          if (patientId) {
-            matchMethod = 'cpf';
-          }
         }
         
-        // PRIORITY 2: Match by name ONLY if name is unique in the clinic
+        // PRIORITY 2: Match by unique name
         if (!patientId && normalizedName) {
           const matchingPatients = nameToPatientIds.get(normalizedName) || [];
           
           if (matchingPatients.length === 1) {
-            // Only ONE patient with this name - safe to match
             patientId = matchingPatients[0];
-            matchMethod = 'name_unique';
           } else if (matchingPatients.length > 1) {
-            // MULTIPLE patients with same name - CANNOT match without CPF
-            // Skip this record to avoid wrong association
-            console.warn(`[IMPORT SAFETY] Prontuário ignorado: múltiplos pacientes com nome "${row.data.nome_paciente}". Forneça CPF para vincular corretamente.`);
             skippedAmbiguous++;
             errors++;
             processedItems++;
-            setCombinedProgress((processedItems / totalItems) * 100);
             continue;
           }
         }
         
-        // PRIORITY 3: Auto-create patient if not found
-        // Only create if we have BOTH name AND CPF (to ensure uniqueness)
-        // OR if name doesn't exist at all in the clinic
+        // PRIORITY 3: Auto-create patient
         if (!patientId && normalizedName) {
           const existingWithSameName = nameToPatientIds.get(normalizedName) || [];
-          
-          // Safe to create: either has CPF (unique) or name doesn't exist
           const canCreate = cleanCPF.length >= 11 || existingWithSameName.length === 0;
           
           if (canCreate) {
@@ -437,18 +460,14 @@ export default function DataImportPage() {
               if (!createError && newPatient) {
                 patientId = newPatient.id;
                 autoCreatedPatients++;
-                matchMethod = 'created';
                 
-                // Update maps for subsequent records
                 if (formattedCpf) {
                   cpfToPatientId.set(cleanCPF, newPatient.id);
                 }
                 const existingNames = nameToPatientIds.get(normalizedName) || [];
                 existingNames.push(newPatient.id);
                 nameToPatientIds.set(normalizedName, existingNames);
-                
               } else if (createError?.message.includes('CPF_DUPLICADO')) {
-                // CPF already exists - fetch the existing patient
                 const { data: existingPatient } = await supabase
                   .from('patients')
                   .select('id')
@@ -458,8 +477,6 @@ export default function DataImportPage() {
                 
                 if (existingPatient) {
                   patientId = existingPatient.id;
-                  matchMethod = 'cpf';
-                  // Update map
                   cpfToPatientId.set(cleanCPF, existingPatient.id);
                 }
               }
@@ -467,12 +484,9 @@ export default function DataImportPage() {
               console.error('[IMPORT ERROR] Erro ao criar paciente:', err);
             }
           } else {
-            // Cannot create: name exists but no CPF to differentiate
-            console.warn(`[IMPORT SAFETY] Prontuário ignorado: paciente "${row.data.nome_paciente}" já existe. Forneça CPF para criar novo ou vincular.`);
             skippedAmbiguous++;
             errors++;
             processedItems++;
-            setCombinedProgress((processedItems / totalItems) * 100);
             continue;
           }
         }
@@ -480,32 +494,56 @@ export default function DataImportPage() {
         if (!patientId) {
           errors++;
           processedItems++;
-          setCombinedProgress((processedItems / totalItems) * 100);
           continue;
         }
         
-        try {
-          const { error } = await supabase.from('medical_records').insert({
-            clinic_id: selectedClinicId,
-            patient_id: patientId,
-            record_date: parseDate(row.data.data_registro) || new Date().toISOString().split('T')[0],
-            chief_complaint: row.data.queixa?.trim() || null,
-            diagnosis: row.data.diagnostico?.trim() || null,
-            treatment_plan: row.data.tratamento?.trim() || null,
-            prescription: row.data.prescricao?.trim() || null,
-            notes: row.data.observacoes?.trim() || null,
-          });
-          
-          if (error) {
-            errors++;
-          } else {
-            importedRecords++;
-          }
-        } catch (err) {
-          errors++;
+        recordsToInsert.push({
+          clinic_id: selectedClinicId,
+          patient_id: patientId,
+          record_date: parseDate(row.data.data_registro) || new Date().toISOString().split('T')[0],
+          chief_complaint: row.data.queixa?.trim() || null,
+          diagnosis: row.data.diagnostico?.trim() || null,
+          treatment_plan: row.data.tratamento?.trim() || null,
+          prescription: row.data.prescricao?.trim() || null,
+          notes: row.data.observacoes?.trim() || null,
+        });
+      }
+      
+      // Batch insert medical records
+      const RECORD_BATCH_SIZE = 100;
+      for (let i = 0; i < recordsToInsert.length; i += RECORD_BATCH_SIZE) {
+        if (cancelImportRef.current) {
+          toast.info(`Importação cancelada. ${importedRecords} prontuários importados antes do cancelamento.`);
+          break;
         }
         
-        processedItems++;
+        const batch = recordsToInsert.slice(i, i + RECORD_BATCH_SIZE);
+        
+        try {
+          const { data, error } = await supabase.from('medical_records').insert(batch).select('id');
+          
+          if (error) {
+            // Fallback to one by one
+            for (const record of batch) {
+              try {
+                const { error: singleError } = await supabase.from('medical_records').insert(record);
+                if (singleError) {
+                  errors++;
+                } else {
+                  importedRecords++;
+                }
+              } catch {
+                errors++;
+              }
+            }
+          } else {
+            importedRecords += data?.length || batch.length;
+          }
+        } catch (err) {
+          errors += batch.length;
+        }
+        
+        processedItems += batch.length;
         setCombinedProgress((processedItems / totalItems) * 100);
       }
       
@@ -552,41 +590,55 @@ export default function DataImportPage() {
     
     let imported = 0;
     let errors = 0;
+    const BATCH_SIZE = 50;
     
-    for (const row of validRows) {
-      // Check for cancellation
+    // Prepare all patient data
+    const allPatientData = validRows.map(row => ({
+      clinic_id: selectedClinicId,
+      name: row.data.nome.trim(),
+      phone: row.data.telefone ? formatPhone(row.data.telefone) : "",
+      email: row.data.email?.trim() || null,
+      cpf: row.data.cpf ? formatCPF(row.data.cpf) : null,
+      birth_date: row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null,
+      address: row.data.endereco?.trim() || null,
+      notes: row.data.observacoes?.trim() || null,
+    }));
+    
+    // Process in batches
+    for (let i = 0; i < allPatientData.length; i += BATCH_SIZE) {
       if (cancelImportRef.current) {
         toast.info(`Importação cancelada. ${imported} pacientes importados antes do cancelamento.`);
         break;
       }
       
+      const batch = allPatientData.slice(i, i + BATCH_SIZE);
+      
       try {
-        const { error } = await supabase.from('patients').insert({
-          clinic_id: selectedClinicId,
-          name: row.data.nome.trim(),
-          // Telefone pode estar ausente na planilha; o banco exige string,
-          // então gravamos "" para permitir importar e completar depois.
-          phone: row.data.telefone ? formatPhone(row.data.telefone) : "",
-          email: row.data.email?.trim() || null,
-          cpf: row.data.cpf ? formatCPF(row.data.cpf) : null,
-          birth_date: row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null,
-          address: row.data.endereco?.trim() || null,
-          notes: row.data.observacoes?.trim() || null,
-        });
+        const { data, error } = await supabase.from('patients').insert(batch).select('id');
         
         if (error) {
-          if (error.message.includes('CPF_DUPLICADO')) {
-            console.warn(`CPF duplicado: ${row.data.cpf}`);
+          // If batch fails, try one by one to identify problematic records
+          for (const patient of batch) {
+            if (cancelImportRef.current) break;
+            try {
+              const { error: singleError } = await supabase.from('patients').insert(patient);
+              if (singleError) {
+                errors++;
+              } else {
+                imported++;
+              }
+            } catch {
+              errors++;
+            }
           }
-          errors++;
         } else {
-          imported++;
+          imported += data?.length || batch.length;
         }
       } catch (err) {
-        errors++;
+        errors += batch.length;
       }
       
-      setPatientProgress(((imported + errors) / validRows.length) * 100);
+      setPatientProgress(((i + batch.length) / allPatientData.length) * 100);
     }
     
     setImportingPatients(false);
@@ -640,11 +692,25 @@ export default function DataImportPage() {
     let errors = 0;
     let autoCreatedPatients = 0;
     let skippedAmbiguous = 0;
+    const BATCH_SIZE = 100;
+    
+    // First pass: resolve patient IDs and prepare records
+    const recordsToInsert: Array<{
+      clinic_id: string;
+      patient_id: string;
+      record_date: string;
+      chief_complaint: string | null;
+      diagnosis: string | null;
+      treatment_plan: string | null;
+      prescription: string | null;
+      notes: string | null;
+    }> = [];
+    
+    let processedForMatching = 0;
     
     for (const row of validRows) {
-      // Check for cancellation
       if (cancelImportRef.current) {
-        toast.info(`Importação cancelada. ${imported} prontuários importados antes do cancelamento.`);
+        toast.info(`Importação cancelada durante preparação.`);
         break;
       }
       
@@ -653,27 +719,27 @@ export default function DataImportPage() {
       const cleanCPF = row.data.cpf_paciente?.replace(/\D/g, '') || '';
       const normalizedName = row.data.nome_paciente?.toLowerCase().trim() || '';
       
-      // PRIORITY 1: Match by CPF (most reliable)
+      // PRIORITY 1: Match by CPF
       if (cleanCPF && cleanCPF.length >= 11) {
         patientId = cpfToPatientId.get(cleanCPF);
       }
       
-      // PRIORITY 2: Match by name ONLY if unique
+      // PRIORITY 2: Match by unique name
       if (!patientId && normalizedName) {
         const matchingPatients = nameToPatientIds.get(normalizedName) || [];
         
         if (matchingPatients.length === 1) {
           patientId = matchingPatients[0];
         } else if (matchingPatients.length > 1) {
-          console.warn(`[IMPORT SAFETY] Prontuário ignorado: múltiplos pacientes com nome "${row.data.nome_paciente}"`);
           skippedAmbiguous++;
           errors++;
-          setRecordProgress(((imported + errors) / validRows.length) * 100);
+          processedForMatching++;
+          setRecordProgress((processedForMatching / validRows.length) * 50);
           continue;
         }
       }
       
-      // PRIORITY 3: Auto-create patient with safety checks
+      // PRIORITY 3: Auto-create patient
       if (!patientId && normalizedName) {
         const existingWithSameName = nameToPatientIds.get(normalizedName) || [];
         const canCreate = cleanCPF.length >= 11 || existingWithSameName.length === 0;
@@ -706,7 +772,6 @@ export default function DataImportPage() {
               const existingNames = nameToPatientIds.get(normalizedName) || [];
               existingNames.push(newPatient.id);
               nameToPatientIds.set(normalizedName, existingNames);
-              
             } else if (createError?.message.includes('CPF_DUPLICADO')) {
               const { data: existingPatient } = await supabase
                 .from('patients')
@@ -724,42 +789,70 @@ export default function DataImportPage() {
             console.error('[IMPORT ERROR] Erro ao criar paciente:', err);
           }
         } else {
-          console.warn(`[IMPORT SAFETY] Prontuário ignorado: paciente "${row.data.nome_paciente}" já existe sem CPF`);
           skippedAmbiguous++;
           errors++;
-          setRecordProgress(((imported + errors) / validRows.length) * 100);
+          processedForMatching++;
+          setRecordProgress((processedForMatching / validRows.length) * 50);
           continue;
         }
       }
       
       if (!patientId) {
         errors++;
-        setRecordProgress(((imported + errors) / validRows.length) * 100);
+        processedForMatching++;
+        setRecordProgress((processedForMatching / validRows.length) * 50);
         continue;
       }
       
-      try {
-        const { error } = await supabase.from('medical_records').insert({
-          clinic_id: selectedClinicId,
-          patient_id: patientId,
-          record_date: parseDate(row.data.data_registro) || new Date().toISOString().split('T')[0],
-          chief_complaint: row.data.queixa?.trim() || null,
-          diagnosis: row.data.diagnostico?.trim() || null,
-          treatment_plan: row.data.tratamento?.trim() || null,
-          prescription: row.data.prescricao?.trim() || null,
-          notes: row.data.observacoes?.trim() || null,
-        });
-        
-        if (error) {
-          errors++;
-        } else {
-          imported++;
-        }
-      } catch (err) {
-        errors++;
+      recordsToInsert.push({
+        clinic_id: selectedClinicId,
+        patient_id: patientId,
+        record_date: parseDate(row.data.data_registro) || new Date().toISOString().split('T')[0],
+        chief_complaint: row.data.queixa?.trim() || null,
+        diagnosis: row.data.diagnostico?.trim() || null,
+        treatment_plan: row.data.tratamento?.trim() || null,
+        prescription: row.data.prescricao?.trim() || null,
+        notes: row.data.observacoes?.trim() || null,
+      });
+      
+      processedForMatching++;
+      setRecordProgress((processedForMatching / validRows.length) * 50);
+    }
+    
+    // Batch insert records
+    for (let i = 0; i < recordsToInsert.length; i += BATCH_SIZE) {
+      if (cancelImportRef.current) {
+        toast.info(`Importação cancelada. ${imported} prontuários importados antes do cancelamento.`);
+        break;
       }
       
-      setRecordProgress(((imported + errors) / validRows.length) * 100);
+      const batch = recordsToInsert.slice(i, i + BATCH_SIZE);
+      
+      try {
+        const { data, error } = await supabase.from('medical_records').insert(batch).select('id');
+        
+        if (error) {
+          // Fallback to one by one
+          for (const record of batch) {
+            try {
+              const { error: singleError } = await supabase.from('medical_records').insert(record);
+              if (singleError) {
+                errors++;
+              } else {
+                imported++;
+              }
+            } catch {
+              errors++;
+            }
+          }
+        } else {
+          imported += data?.length || batch.length;
+        }
+      } catch (err) {
+        errors += batch.length;
+      }
+      
+      setRecordProgress(50 + ((i + batch.length) / recordsToInsert.length) * 50);
     }
     
     setImportingRecords(false);
