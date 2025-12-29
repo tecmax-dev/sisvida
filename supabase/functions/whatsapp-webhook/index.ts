@@ -1644,13 +1644,14 @@ async function createOrResetSession(
     .eq('clinic_id', clinicId)
     .eq('phone', phone);
 
+  // Session expires in 60 seconds of inactivity
   const { data: session, error } = await supabase
     .from('whatsapp_booking_sessions')
     .insert({
       clinic_id: clinicId,
       phone,
       state,
-      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + 60 * 1000).toISOString(),
     })
     .select('*')
     .single();
@@ -1668,11 +1669,12 @@ async function updateSession(
   sessionId: string,
   updates: Partial<BookingSession>
 ): Promise<void> {
+  // Renew session for 60 seconds on each interaction
   const { error } = await supabase
     .from('whatsapp_booking_sessions')
     .update({
       ...updates,
-      expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + 60 * 1000).toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', sessionId);
