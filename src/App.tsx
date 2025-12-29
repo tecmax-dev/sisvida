@@ -83,6 +83,7 @@ import SmtpSettingsPage from "./pages/admin/SmtpSettingsPage";
 import NotificationsPage from "./pages/admin/NotificationsPage";
 import ChatSupportPage from "./pages/admin/ChatSupportPage";
 import HeroSettingsPage from "./pages/admin/HeroSettingsPage";
+import DebugXlsPage from "./pages/admin/DebugXlsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -225,6 +226,7 @@ const App = () => (
                   <Route path="audit" element={<AuditLogsPage />} />
                   <Route path="chat" element={<ChatSupportPage />} />
                   <Route path="hero" element={<HeroSettingsPage />} />
+                  <Route path="debug-xls" element={<DebugXlsPage />} />
                 </Route>
                 {/* Dashboard Routes */}
                 <Route
