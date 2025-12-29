@@ -475,6 +475,25 @@ Responda *SIM* para continuar ou *NÃO* para encerrar.`,
 
 Se precisar de ajuda, entre em contato conosco.`,
 
+  // Select who the appointment is for (titular or dependent)
+  selectBookingFor: (patientName: string, dependents: Array<{ name: string; relationship: string | null; card_expires_at: string | null }>) => {
+    let msg = `👤 Para quem é o agendamento?\n\n`;
+    msg += `1️⃣ *${patientName}* (Titular)\n`;
+    
+    dependents.forEach((dep, i) => {
+      const relationship = dep.relationship ? ` - ${dep.relationship}` : '';
+      const isExpired = dep.card_expires_at && new Date(dep.card_expires_at) < new Date();
+      const expiredTag = isExpired ? ' ⚠️ (carteirinha vencida)' : '';
+      msg += `${i + 2}️⃣ *${dep.name}*${relationship}${expiredTag}\n`;
+    });
+    
+    msg += `\n_Digite o número da opção desejada._`;
+    return msg.trim();
+  },
+
+  dependentCardExpired: (dependentName: string, expiryDate: string) => 
+    `❌ A carteirinha de *${dependentName}* está vencida desde *${expiryDate}*.\n\nPor favor, entre em contato com a clínica para renovar antes de agendar.`,
+
   // Main menu after identity confirmed
   mainMenu: `O que você deseja fazer?
 
@@ -858,6 +877,9 @@ async function handleBookingFlow(
 
     case 'MAIN_MENU':
       return await handleMainMenu(supabase, config, phone, messageText, session);
+
+    case 'SELECT_BOOKING_FOR':
+      return await handleSelectBookingFor(supabase, config, phone, messageText, session);
     
     case 'SELECT_PROFESSIONAL':
       return await handleSelectProfessional(supabase, config, phone, messageText, session);
@@ -1165,7 +1187,7 @@ async function handleWaitingCpf(
     return { handled: true, newState: 'WAITING_CPF' };
   }
 
-  const patientData = patient as PatientRecord | null;
+  let patientData = patient as PatientRecord | null;
 
   if (!patientData) {
     const { data: patientByPhone } = await supabase
@@ -1175,27 +1197,30 @@ async function handleWaitingCpf(
       .in('phone', phoneCandidates)
       .maybeSingle();
 
-    const patientByPhoneData = patientByPhone as PatientRecord | null;
+    patientData = patientByPhone as PatientRecord | null;
 
-    if (!patientByPhoneData) {
+    if (!patientData) {
       await sendWhatsAppMessage(config, phone, MESSAGES.patientNotFound);
       return { handled: true, newState: 'WAITING_CPF' };
     }
-
-    await updateSession(supabase, session.id, {
-      state: 'CONFIRM_IDENTITY',
-      patient_id: patientByPhoneData.id,
-      patient_name: patientByPhoneData.name,
-    });
-
-    await sendWhatsAppMessage(config, phone, MESSAGES.confirmIdentity(patientByPhoneData.name) + MESSAGES.hintYesNo);
-    return { handled: true, newState: 'CONFIRM_IDENTITY' };
   }
+
+  // Fetch patient's dependents
+  const { data: dependents } = await supabase
+    .from('patient_dependents')
+    .select('id, name, relationship, card_expires_at')
+    .eq('patient_id', patientData.id)
+    .eq('is_active', true)
+    .order('name');
+
+  const dependentsData = (dependents || []) as Array<{ id: string; name: string; relationship: string | null; card_expires_at: string | null }>;
+  console.log(`[booking] Found ${dependentsData.length} dependents for patient ${patientData.id}`);
 
   await updateSession(supabase, session.id, {
     state: 'CONFIRM_IDENTITY',
     patient_id: patientData.id,
     patient_name: patientData.name,
+    available_dependents: dependentsData.length > 0 ? dependentsData : null,
   });
 
   await sendWhatsAppMessage(config, phone, MESSAGES.confirmIdentity(patientData.name) + MESSAGES.hintYesNo);
@@ -1244,6 +1269,111 @@ async function handleConfirmIdentity(
 }
 
 // ==========================================
+// HELPER: PROCEED TO SELECT PROFESSIONAL
+// ==========================================
+
+async function proceedToSelectProfessional(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  session: BookingSession,
+  bookingFor: 'titular' | 'dependent',
+  dependentId: string | null,
+  dependentName: string | null
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const { data: professionals, error } = await supabase
+    .from('professionals')
+    .select('id, name, specialty, is_active')
+    .eq('clinic_id', config.clinic_id)
+    .eq('is_active', true)
+    .order('name');
+
+  if (error || !professionals || professionals.length === 0) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.noProfessionals);
+    return { handled: true, newState: 'MAIN_MENU' };
+  }
+
+  const profList = (professionals as ProfessionalRecord[]).map(p => ({
+    id: p.id,
+    name: p.name,
+    specialty: p.specialty || 'Clínica Geral',
+  }));
+
+  await updateSession(supabase, session.id, {
+    state: 'SELECT_PROFESSIONAL',
+    available_professionals: profList,
+    action_type: 'new',
+    booking_for: bookingFor,
+    selected_dependent_id: dependentId,
+    selected_dependent_name: dependentName,
+  });
+
+  const forWhom = dependentName ? ` para *${dependentName}*` : '';
+  await sendWhatsAppMessage(config, phone, `Agendando${forWhom}! 😊\n\n` + MESSAGES.selectProfessional(profList) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
+  return { handled: true, newState: 'SELECT_PROFESSIONAL' };
+}
+
+// ==========================================
+// SELECT BOOKING FOR HANDLER (TITULAR OR DEPENDENT)
+// ==========================================
+
+async function handleSelectBookingFor(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const choice = parseInt(messageText.trim());
+  const dependents = session.available_dependents || [];
+  const totalOptions = 1 + dependents.length; // 1 = titular + dependents
+
+  if (isNaN(choice) || choice < 1 || choice > totalOptions) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
+    return { handled: true, newState: 'SELECT_BOOKING_FOR' };
+  }
+
+  // Option 1 = Titular
+  if (choice === 1) {
+    return await proceedToSelectProfessional(supabase, config, phone, session, 'titular', null, null);
+  }
+
+  // Options 2+ = Dependents
+  const dependentIndex = choice - 2;
+  const selectedDependent = dependents[dependentIndex];
+
+  if (!selectedDependent) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
+    return { handled: true, newState: 'SELECT_BOOKING_FOR' };
+  }
+
+  // Check if dependent's card is expired
+  if (selectedDependent.card_expires_at) {
+    const expiryDate = new Date(selectedDependent.card_expires_at);
+    if (expiryDate < new Date()) {
+      const formattedExpiry = expiryDate.toLocaleDateString('pt-BR');
+      await sendWhatsAppMessage(config, phone, MESSAGES.dependentCardExpired(selectedDependent.name, formattedExpiry));
+      
+      // Return to booking for selection
+      await sendWhatsAppMessage(config, phone, MESSAGES.selectBookingFor(session.patient_name || '', dependents) + MESSAGES.hintSelectOption);
+      return { handled: true, newState: 'SELECT_BOOKING_FOR' };
+    }
+  }
+
+  console.log(`[booking] Selected dependent: ${selectedDependent.name} (${selectedDependent.id})`);
+
+  return await proceedToSelectProfessional(
+    supabase, 
+    config, 
+    phone, 
+    session, 
+    'dependent', 
+    selectedDependent.id, 
+    selectedDependent.name
+  );
+}
+
+// ==========================================
 // MAIN MENU HANDLER
 // ==========================================
 
@@ -1287,32 +1417,18 @@ async function handleMainMenu(
 
   // Handle schedule intent
   if (intent === 'schedule') {
-    const { data: professionals, error } = await supabase
-      .from('professionals')
-      .select('id, name, specialty, is_active')
-      .eq('clinic_id', config.clinic_id)
-      .eq('is_active', true)
-      .order('name');
-
-    if (error || !professionals || professionals.length === 0) {
-      await sendWhatsAppMessage(config, phone, MESSAGES.noProfessionals);
-      return { handled: true, newState: 'MAIN_MENU' };
+    // Check if patient has dependents - ask who the appointment is for
+    if (session.available_dependents && session.available_dependents.length > 0) {
+      await updateSession(supabase, session.id, {
+        state: 'SELECT_BOOKING_FOR',
+        action_type: 'new',
+      });
+      await sendWhatsAppMessage(config, phone, MESSAGES.selectBookingFor(session.patient_name || '', session.available_dependents) + MESSAGES.hintSelectOption);
+      return { handled: true, newState: 'SELECT_BOOKING_FOR' };
     }
 
-    const profList = (professionals as ProfessionalRecord[]).map(p => ({
-      id: p.id,
-      name: p.name,
-      specialty: p.specialty || 'Clínica Geral',
-    }));
-
-    await updateSession(supabase, session.id, {
-      state: 'SELECT_PROFESSIONAL',
-      available_professionals: profList,
-      action_type: 'new',
-    });
-
-    await sendWhatsAppMessage(config, phone, MESSAGES.selectProfessional(profList) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
-    return { handled: true, newState: 'SELECT_PROFESSIONAL' };
+    // No dependents - go directly to professional selection
+    return await proceedToSelectProfessional(supabase, config, phone, session, 'titular', null, null);
   }
 
   // Handle cancel intent
@@ -1930,11 +2046,16 @@ async function handleSelectTime(
     selected_time: selected.time,
   });
 
+  // Show patient or dependent name in confirmation message
+  const displayName = session.booking_for === 'dependent' && session.selected_dependent_name
+    ? session.selected_dependent_name
+    : session.patient_name || '';
+
   await sendWhatsAppMessage(
     config,
     phone,
     MESSAGES.confirmAppointment({
-      patientName: session.patient_name || '',
+      patientName: displayName,
       professionalName: session.selected_professional_name || '',
       date: formatDate(session.selected_date!),
       time: selected.formatted,
@@ -2009,21 +2130,32 @@ async function handleConfirmAppointment(
   const endMins = endMinutes % 60;
   const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
 
+  // Build appointment data - include dependent_id if booking for dependent
+  const appointmentData: Record<string, unknown> = {
+    clinic_id: config.clinic_id,
+    patient_id: session.patient_id,
+    professional_id: session.selected_professional_id,
+    appointment_date: session.selected_date,
+    start_time: session.selected_time,
+    end_time: endTime,
+    duration_minutes: duration,
+    status: 'confirmed',
+    type: 'first_visit',
+    confirmed_at: new Date().toISOString(),
+    notes: session.booking_for === 'dependent' 
+      ? `Agendado via WhatsApp para dependente: ${session.selected_dependent_name}` 
+      : 'Agendado via WhatsApp',
+  };
+
+  // Add dependent_id if booking for dependent
+  if (session.booking_for === 'dependent' && session.selected_dependent_id) {
+    appointmentData.dependent_id = session.selected_dependent_id;
+    console.log(`[booking] Creating appointment for dependent: ${session.selected_dependent_id} (${session.selected_dependent_name})`);
+  }
+
   const { data: appointment, error: appointmentError } = await supabase
     .from('appointments')
-    .insert({
-      clinic_id: config.clinic_id,
-      patient_id: session.patient_id,
-      professional_id: session.selected_professional_id,
-      appointment_date: session.selected_date,
-      start_time: session.selected_time,
-      end_time: endTime,
-      duration_minutes: duration,
-      status: 'confirmed',
-      type: 'first_visit',
-      confirmed_at: new Date().toISOString(),
-      notes: 'Agendado via WhatsApp',
-    })
+    .insert(appointmentData)
     .select('id')
     .single();
 
@@ -2061,8 +2193,22 @@ async function handleConfirmAppointment(
 
     // Check for expired patient card
     if (appointmentError.message?.includes('CARTEIRINHA_VENCIDA')) {
+      const whoExpired = session.booking_for === 'dependent' && session.selected_dependent_name
+        ? `A carteirinha de *${session.selected_dependent_name}*`
+        : 'Sua carteirinha digital';
       await sendWhatsAppMessage(config, phone, 
-        `❌ Sua carteirinha digital está *vencida*.\n\nPor favor, entre em contato com a clínica para renovar sua carteirinha antes de agendar.`
+        `❌ ${whoExpired} está *vencida*.\n\nPor favor, entre em contato com a clínica para renovar a carteirinha antes de agendar.`
+      );
+      await updateSession(supabase, session.id, { state: 'FINISHED' });
+      return { handled: true, newState: 'FINISHED' };
+    }
+
+    // Check for expired dependent card
+    if (appointmentError.message?.includes('CARTEIRINHA_DEPENDENTE_VENCIDA')) {
+      const match = appointmentError.message.match(/dependente \(([^)]+)\)/);
+      const dependentName = match ? match[1] : session.selected_dependent_name || 'dependente';
+      await sendWhatsAppMessage(config, phone, 
+        `❌ A carteirinha do dependente *${dependentName}* está *vencida*.\n\nPor favor, entre em contato com a clínica para renovar a carteirinha antes de agendar.`
       );
       await updateSession(supabase, session.id, { state: 'FINISHED' });
       return { handled: true, newState: 'FINISHED' };
@@ -2072,7 +2218,7 @@ async function handleConfirmAppointment(
     return { handled: true, newState: 'CONFIRM_APPOINTMENT' };
   }
 
-  const appointmentData = appointment as { id: string };
+  const createdAppointment = appointment as { id: string };
 
   const { data: clinic } = await supabase
     .from('clinics')
@@ -2084,12 +2230,21 @@ async function handleConfirmAppointment(
 
   await updateSession(supabase, session.id, { state: 'FINISHED' });
 
+  // Build confirmation message - include dependent name if applicable
+  const patientDisplayName = session.booking_for === 'dependent' && session.selected_dependent_name
+    ? session.selected_dependent_name
+    : session.patient_name || '';
+
   await sendWhatsAppMessage(config, phone, MESSAGES.appointmentConfirmed({
     date: formatDate(session.selected_date!),
     time: formatTime(session.selected_time!),
     professionalName: session.selected_professional_name || '',
     clinicName: clinicData?.name || '',
-  }));
+  }).replace(/Agendamento confirmado/, 
+    session.booking_for === 'dependent' 
+      ? `Agendamento para *${session.selected_dependent_name}* confirmado`
+      : 'Agendamento confirmado'
+  ));
 
   const monthYear = new Date().toISOString().slice(0, 7);
   await supabase.from('message_logs').insert({
@@ -2099,7 +2254,7 @@ async function handleConfirmAppointment(
     month_year: monthYear,
   });
 
-  console.log(`[booking] Appointment created: ${appointmentData.id}`);
+  console.log(`[booking] Appointment created: ${createdAppointment.id}${session.booking_for === 'dependent' ? ` for dependent ${session.selected_dependent_id}` : ''}`);
   return { handled: true, newState: 'FINISHED' };
 }
 
