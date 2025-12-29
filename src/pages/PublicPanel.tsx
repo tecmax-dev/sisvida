@@ -48,9 +48,11 @@ export default function PublicPanel() {
     return () => clearInterval(timer);
   }, []);
 
-  // Fetch panel and clinic data
+  // Fetch panel, clinic and calls via backend function (bypasses public DB restrictions)
   useEffect(() => {
-    const fetchPanel = async () => {
+    let cancelled = false;
+
+    const load = async () => {
       if (!token) {
         setError("Token inválido");
         setLoading(false);
@@ -58,108 +60,44 @@ export default function PublicPanel() {
       }
 
       try {
-        const { data: panelData, error: panelError } = await supabase
-          .from("panels")
-          .select("*")
-          .eq("token", token)
-          .eq("is_active", true)
-          .maybeSingle();
+        setLoading(true);
+        setError(null);
 
-        if (panelError) throw panelError;
+        const { data, error: fnError } = await supabase.functions.invoke("public-panel-data", {
+          body: { token },
+        });
 
-        if (!panelData) {
-          setError("Painel não encontrado ou inativo");
-          setLoading(false);
+        if (fnError) throw fnError;
+
+        if (!data?.panel) {
+          setError(data?.error || "Painel não encontrado ou inativo");
           return;
         }
 
-        setPanel(panelData as Panel);
+        if (cancelled) return;
 
-        // Fetch clinic info
-        const { data: clinicData } = await supabase
-          .from("clinics")
-          .select("id, name, logo_url")
-          .eq("id", panelData.clinic_id)
-          .maybeSingle();
-
-        if (clinicData) {
-          setClinic(clinicData as Clinic);
-        }
-
-        // Fetch recent calls
-        await fetchRecentCalls(panelData.clinic_id);
-
-        setLoading(false);
+        setPanel(data.panel as Panel);
+        setClinic((data.clinic ?? null) as Clinic | null);
+        setCurrentCall((data.currentCall ?? null) as QueueCall | null);
+        setRecentCalls((data.recentCalls ?? []) as QueueCall[]);
       } catch (err) {
         console.error("Erro ao carregar painel:", err);
-        setError("Erro ao carregar painel");
-        setLoading(false);
+        if (!cancelled) setError("Erro ao carregar painel");
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     };
 
-    fetchPanel();
-  }, [token]);
+    load();
 
-  const fetchRecentCalls = async (clinicId: string) => {
-    const today = new Date().toISOString().split("T")[0];
-    
-    const { data } = await supabase
-      .from("queue_calls")
-      .select(`
-        *,
-        queue:queues(name, display_mode)
-      `)
-      .eq("clinic_id", clinicId)
-      .eq("status", "called")
-      .gte("called_at", today)
-      .order("called_at", { ascending: false })
-      .limit(10);
-
-    if (data && data.length > 0) {
-      // Transform data to match interface - ticket_number is integer + ticket_prefix
-      const transformedData = (data as any[]).map(item => ({
-        ...item,
-        ticket_number: `${item.ticket_prefix || ''}${item.ticket_number}`,
-        patient_name: item.patient_name || `Senha ${item.ticket_prefix}${item.ticket_number}`,
-      }));
-      setCurrentCall(transformedData[0] as QueueCall);
-      setRecentCalls(transformedData.slice(1) as QueueCall[]);
-    }
-  };
-
-  // Subscribe to realtime updates
-  useEffect(() => {
-    if (!panel?.clinic_id) return;
-
-    const channel = supabase
-      .channel(`panel-${panel.id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "queue_calls",
-          filter: `clinic_id=eq.${panel.clinic_id}`,
-        },
-        async (payload) => {
-          // Play sound if enabled
-          if (soundEnabled) {
-            try {
-              const audio = new Audio("/notification.mp3");
-              audio.play().catch(() => {});
-            } catch {}
-          }
-
-          // Refresh calls
-          await fetchRecentCalls(panel.clinic_id);
-        }
-      )
-      .subscribe();
+    // Simple polling for updates (TV mode) - avoids realtime/RLS issues
+    const interval = setInterval(load, 8000);
 
     return () => {
-      supabase.removeChannel(channel);
+      cancelled = true;
+      clearInterval(interval);
     };
-  }, [panel?.id, panel?.clinic_id, soundEnabled]);
+  }, [token]);
 
   const formatDisplayName = (call: QueueCall) => {
     const displayMode = call.queue?.display_mode || "ticket";
