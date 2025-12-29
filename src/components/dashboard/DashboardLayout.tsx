@@ -46,6 +46,7 @@ import {
   Megaphone,
   FileCheck2,
   CalendarOff,
+  Image,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -81,6 +82,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/financials", icon: DollarSign, label: "Financeiro", permission: "view_financials" },
   { href: "/dashboard/repass", icon: Percent, label: "Repasse Médico", permission: "view_repass" },
   { href: "/dashboard/queue", icon: Monitor, label: "Painel/Totem", permission: "view_queue" },
+  { href: "/dashboard/panel-banners", icon: Image, label: "Banners do Painel", permission: "view_queue" },
   { href: "/dashboard/marketing", icon: Megaphone, label: "Marketing", permission: "view_marketing" },
   { href: "/dashboard/tiss", icon: FileCheck2, label: "TISS", permission: "view_tiss" },
   { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios", permission: "view_reports" },
