@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -25,6 +25,7 @@ import {
   Info,
   Check,
   ArrowDownToLine,
+  StopCircle,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import DataExportPanel from "@/components/admin/DataExportPanel";
@@ -77,6 +78,23 @@ export default function DataImportPage() {
   // Combined import state
   const [importingCombined, setImportingCombined] = useState(false);
   const [combinedProgress, setCombinedProgress] = useState(0);
+  
+  // Cancellation ref - used to signal import loops to stop
+  const cancelImportRef = useRef(false);
+  const [importCancelled, setImportCancelled] = useState(false);
+
+  // Function to cancel ongoing import
+  const cancelImport = useCallback(() => {
+    cancelImportRef.current = true;
+    setImportCancelled(true);
+    toast.warning('Cancelando importação... Aguarde o término da operação atual.');
+  }, []);
+
+  // Reset cancellation state when starting new import
+  const resetCancellation = useCallback(() => {
+    cancelImportRef.current = false;
+    setImportCancelled(false);
+  }, []);
 
   // Fetch clinics on mount
   useEffect(() => {
@@ -228,6 +246,7 @@ export default function DataImportPage() {
       return;
     }
     
+    resetCancellation();
     setImportingCombined(true);
     setCombinedProgress(0);
     
@@ -243,6 +262,12 @@ export default function DataImportPage() {
     
     // Step 1: Import patients
     for (const row of validPatients) {
+      // Check for cancellation
+      if (cancelImportRef.current) {
+        toast.info(`Importação cancelada. ${importedPatients} pacientes importados antes do cancelamento.`);
+        break;
+      }
+      
       try {
         const patientData = {
           clinic_id: selectedClinicId,
@@ -292,6 +317,15 @@ export default function DataImportPage() {
       setCombinedProgress((processedItems / totalItems) * 100);
     }
     
+    // Check for cancellation before starting records import
+    if (cancelImportRef.current) {
+      setImportingCombined(false);
+      setPatientRows([]);
+      setRecordRows([]);
+      setDetectedSheets([]);
+      return;
+    }
+    
     // Step 2: Import records if enabled
     if (importWithRecords && validRecords.length > 0) {
       // Fetch ALL existing patients for this clinic with complete data
@@ -333,6 +367,12 @@ export default function DataImportPage() {
       let skippedAmbiguous = 0;
       
       for (const row of validRecords) {
+        // Check for cancellation
+        if (cancelImportRef.current) {
+          toast.info(`Importação cancelada. ${importedRecords} prontuários importados antes do cancelamento.`);
+          break;
+        }
+        
         let patientId: string | undefined;
         let matchMethod: 'cpf' | 'name_unique' | 'created' | 'none' = 'none';
         
@@ -506,6 +546,7 @@ export default function DataImportPage() {
       return;
     }
     
+    resetCancellation();
     setImportingPatients(true);
     setPatientProgress(0);
     
@@ -513,6 +554,12 @@ export default function DataImportPage() {
     let errors = 0;
     
     for (const row of validRows) {
+      // Check for cancellation
+      if (cancelImportRef.current) {
+        toast.info(`Importação cancelada. ${imported} pacientes importados antes do cancelamento.`);
+        break;
+      }
+      
       try {
         const { error } = await supabase.from('patients').insert({
           clinic_id: selectedClinicId,
@@ -564,6 +611,7 @@ export default function DataImportPage() {
       return;
     }
     
+    resetCancellation();
     setImportingRecords(true);
     setRecordProgress(0);
     
@@ -594,6 +642,12 @@ export default function DataImportPage() {
     let skippedAmbiguous = 0;
     
     for (const row of validRows) {
+      // Check for cancellation
+      if (cancelImportRef.current) {
+        toast.info(`Importação cancelada. ${imported} prontuários importados antes do cancelamento.`);
+        break;
+      }
+      
       let patientId: string | undefined;
       
       const cleanCPF = row.data.cpf_paciente?.replace(/\D/g, '') || '';
@@ -1031,7 +1085,24 @@ export default function DataImportPage() {
                   </div>
 
                   {importingCombined && (
-                    <Progress value={combinedProgress} />
+                    <div className="space-y-2">
+                      <Progress value={combinedProgress} />
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round(combinedProgress)}% concluído
+                        </span>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={cancelImport}
+                          disabled={importCancelled}
+                          className="gap-1"
+                        >
+                          <StopCircle className="h-3 w-3" />
+                          {importCancelled ? 'Cancelando...' : 'Parar Importação'}
+                        </Button>
+                      </div>
+                    </div>
                   )}
 
                   <Button
@@ -1235,7 +1306,24 @@ export default function DataImportPage() {
                   </div>
 
                   {importingPatients && (
-                    <Progress value={patientProgress} />
+                    <div className="space-y-2">
+                      <Progress value={patientProgress} />
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round(patientProgress)}% concluído
+                        </span>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={cancelImport}
+                          disabled={importCancelled}
+                          className="gap-1"
+                        >
+                          <StopCircle className="h-3 w-3" />
+                          {importCancelled ? 'Cancelando...' : 'Parar Importação'}
+                        </Button>
+                      </div>
+                    </div>
                   )}
 
                   <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
@@ -1377,7 +1465,24 @@ export default function DataImportPage() {
                   </div>
 
                   {importingRecords && (
-                    <Progress value={recordProgress} />
+                    <div className="space-y-2">
+                      <Progress value={recordProgress} />
+                      <div className="flex justify-between items-center">
+                        <span className="text-xs text-muted-foreground">
+                          {Math.round(recordProgress)}% concluído
+                        </span>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={cancelImport}
+                          disabled={importCancelled}
+                          className="gap-1"
+                        >
+                          <StopCircle className="h-3 w-3" />
+                          {importCancelled ? 'Cancelando...' : 'Parar Importação'}
+                        </Button>
+                      </div>
+                    </div>
                   )}
 
                   <div className="border rounded-lg overflow-hidden max-h-96 overflow-y-auto">
