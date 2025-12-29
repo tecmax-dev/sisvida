@@ -1137,16 +1137,20 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
     'date_added'
   ]);
 
-  // Extract professional name - include iClinic column names
+  // Extract professional name - include iClinic column names (physician_name first for priority)
   const professionalName = getRowValue(row, [
+    // iClinic specific - highest priority
+    'physician_name', 'Physician_Name', 'PHYSICIAN_NAME', 'Physician Name', 'physician name',
+    'physician_Name', 'Physician_name', 'physicianName', 'PhysicianName',
+    // Portuguese variations
     'profissional', 'Profissional', 'PROFISSIONAL', 'professional', 'Professional',
     'medico', 'Medico', 'MEDICO', 'médico', 'Médico', 'doctor', 'Doctor',
-    'physician', 'Physician', 'physician_name', 'Physician Name', 'physician_Name',
+    'physician', 'Physician', 'PHYSICIAN',
     'responsavel', 'Responsavel', 'RESPONSAVEL', 'responsável', 'Responsável',
     'atendente', 'Atendente', 'ATENDENTE',
     'nome_profissional', 'Nome Profissional', 'nome_medico', 'Nome Médico',
     'dr', 'Dr', 'dra', 'Dra', 'doutor', 'Doutor', 'doutora', 'Doutora',
-    // iClinic specific columns
+    // Other iClinic columns
     'user_name', 'User Name', 'userName', 'user name',
     'created_by', 'Created By', 'createdBy', 'criado_por', 'Criado Por',
     'author', 'Author', 'autor', 'Autor',
