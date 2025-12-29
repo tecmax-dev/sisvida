@@ -286,6 +286,9 @@ export function detectSheetType(columns: string[], sheetName?: string): Detected
   const strongRecordIndicators = [
     'queixa', 'diagnostico', 'tratamento', 'prescricao', 'evolucao', 'anamnese',
     'chief_complaint', 'diagnosis', 'treatment', 'prescription',
+    // Common single-column record patterns from legacy systems
+    'descricao_do_registro', 'descricao_registro', 'registro_medico',
+    'historico_clinico', 'prontuario_medico', 'ficha_clinica',
   ];
   const hasStrongRecordColumn = strongRecordIndicators.some((ind) =>
     normalizedColumns.some((col) => col.includes(ind))
@@ -683,17 +686,35 @@ export function mapPatientRow(row: Record<string, unknown>): PatientImportRow {
 
 // Map raw row to MedicalRecordImportRow
 export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecordImportRow {
+  // First, try to get the main record content from various possible column names
+  // Many legacy systems store everything in a single "description" or "evolution" column
+  const mainContent = getRowValue(row, [
+    'evolucao', 'Evolução', 'evolution', 'Evolution', 'EVOLUCAO', 'EVOLUÇÃO',
+    'descricao', 'Descrição', 'descrição', 'Descricao', 'DESCRICAO', 'DESCRIÇÃO',
+    'descricao_do_registro', 'descricao_registro', 'Descrição do Registro',
+    'registro', 'Registro', 'REGISTRO', 'record', 'Record',
+    'texto', 'Texto', 'TEXTO', 'text', 'Text',
+    'conteudo', 'Conteúdo', 'conteudo_registro', 'Conteúdo do Registro',
+    'historico', 'Histórico', 'HISTORICO', 'history', 'History',
+    'resumo', 'Resumo', 'RESUMO', 'summary', 'Summary',
+    'anamnese', 'Anamnese', 'ANAMNESE', 'anotacao', 'Anotação', 'anotações',
+    'prontuario', 'Prontuário', 'PRONTUARIO',
+    'atendimento', 'Atendimento', 'ATENDIMENTO',
+    'consulta', 'Consulta', 'CONSULTA',
+    'ficha', 'Ficha', 'FICHA',
+  ]) || undefined;
+
   return {
     cpf_paciente: getRowValue(row, [
       'cpf_paciente', 'CPF Paciente', 'cpf paciente', 'cpf do paciente',
       'CPF do Paciente', 'cpf', 'CPF', 'patient_cpf', 'Patient CPF',
-      'documento_paciente', 'Documento Paciente'
+      'documento_paciente', 'Documento Paciente', 'documento', 'Documento'
     ]) || undefined,
     nome_paciente: getRowValue(row, [
       'nome_paciente', 'Nome Paciente', 'nome paciente', 'nome do paciente',
       'Nome do Paciente', 'Paciente', 'paciente', 'nome', 'Nome',
       'patient_name', 'Patient Name', 'patient', 'Patient',
-      'cliente', 'Cliente', 'client', 'Client'
+      'cliente', 'Cliente', 'client', 'Client', 'nome_completo', 'Nome Completo'
     ]) || undefined,
     data_registro: getRowValue(row, [
       'data_registro', 'Data do Registro', 'data do registro', 'Data Registro',
@@ -726,17 +747,14 @@ export function mapMedicalRecordRow(row: Record<string, unknown>): MedicalRecord
       'medicamentos', 'Medicamentos', 'medications', 'Medications',
       'receita', 'Receita', 'recipe', 'remedio', 'Remédio', 'remedios', 'Remédios'
     ]) || undefined,
+    // For observacoes, use specific columns first, then fall back to mainContent
+    // This ensures legacy systems that use a single "evolucao" or "descricao" column are captured
     observacoes: getRowValue(row, [
       'observacoes', 'Observacoes', 'OBSERVACOES', 'observações', 'Observações',
       'notas', 'Notas', 'NOTAS', 'obs', 'Obs', 'OBS',
       'notes', 'Notes', 'NOTES', 'comments', 'Comments',
       'anotacoes', 'Anotacoes', 'anotações', 'Anotações',
-      // Common "free text" columns from other systems
-      'descricao', 'Descrição', 'descrição', 'descricao_do_registro', 'descricao_registro',
-      'texto', 'Texto', 'conteudo', 'Conteúdo', 'historico', 'Histórico', 'resumo',
-      // Evolution-style notes
-      'evolucao', 'Evolução', 'evolution', 'Evolution',
-    ]) || undefined,
+    ]) || mainContent || undefined,
   };
 }
 
