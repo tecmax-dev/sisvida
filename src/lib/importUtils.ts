@@ -22,6 +22,14 @@ export interface MedicalRecordImportRow {
   observacoes?: string;
 }
 
+export interface ContactImportRow {
+  cpf?: string;
+  nome?: string;
+  telefone?: string;
+  telefone_fixo?: string;
+  email?: string;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
@@ -214,6 +222,72 @@ export function validateMedicalRecordRow(row: MedicalRecordImportRow): Validatio
     isValid: errors.length === 0,
     errors,
     warnings,
+  };
+}
+
+// Validate contact row
+export function validateContactRow(row: ContactImportRow): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  if (!row.cpf && !row.nome) {
+    errors.push('CPF ou Nome é obrigatório para vincular o contato');
+  }
+  
+  if (row.cpf && !validateCPF(row.cpf)) {
+    errors.push('CPF inválido');
+  }
+  
+  if (!row.telefone && !row.telefone_fixo && !row.email) {
+    errors.push('Pelo menos um contato (telefone, fixo ou email) é obrigatório');
+  }
+  
+  if (row.telefone && !validatePhone(row.telefone)) {
+    warnings.push('Telefone celular inválido (deve ter 10-11 dígitos)');
+  }
+  
+  if (row.telefone_fixo && !validatePhone(row.telefone_fixo)) {
+    warnings.push('Telefone fixo inválido (deve ter 10-11 dígitos)');
+  }
+  
+  if (row.email && !row.email.includes('@')) {
+    warnings.push('Email parece inválido');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors,
+    warnings,
+  };
+}
+
+// Map contact row from spreadsheet
+export function mapContactRow(row: Record<string, unknown>): ContactImportRow {
+  return {
+    cpf: getRowValue(row, [
+      'cpf', 'CPF', 'documento', 'Documento', 'DOCUMENTO',
+      'cpf_paciente', 'CPF Paciente', 'patient_cpf'
+    ]) || undefined,
+    nome: getRowValue(row, [
+      'nome', 'Nome', 'NOME', 'name', 'Name', 'NAME',
+      'nome_paciente', 'Nome Paciente', 'patient_name',
+      'paciente', 'Paciente', 'cliente', 'Cliente'
+    ]) || undefined,
+    telefone: getRowValue(row, [
+      'telefone', 'Telefone', 'TELEFONE', 'celular', 'Celular', 'CELULAR',
+      'phone', 'Phone', 'PHONE', 'mobile', 'Mobile', 'MOBILE',
+      'whatsapp', 'WhatsApp', 'Whatsapp', 'WHATSAPP',
+      'tel', 'Tel', 'TEL', 'fone', 'Fone', 'FONE'
+    ]) || undefined,
+    telefone_fixo: getRowValue(row, [
+      'telefone_fixo', 'Telefone Fixo', 'TELEFONE FIXO',
+      'fixo', 'Fixo', 'FIXO', 'landline', 'Landline', 'LANDLINE',
+      'tel_fixo', 'Tel Fixo', 'residencial', 'Residencial'
+    ]) || undefined,
+    email: getRowValue(row, [
+      'email', 'Email', 'EMAIL', 'e-mail', 'E-mail', 'E-MAIL',
+      'correio', 'Correio', 'mail', 'Mail', 'MAIL'
+    ]) || undefined,
   };
 }
 
@@ -949,7 +1023,24 @@ export function generateMedicalRecordTemplate(): ArrayBuffer {
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
 }
 
-export function downloadTemplate(type: 'patients' | 'records' | 'combined') {
+export function generateContactTemplate(): ArrayBuffer {
+  const template = [
+    {
+      cpf: '000.000.000-00',
+      nome: 'João Silva',
+      telefone: '71999999999',
+      telefone_fixo: '7133334444',
+      email: 'joao@email.com',
+    },
+  ];
+  
+  const ws = XLSX.utils.json_to_sheet(template);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Contatos');
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+}
+
+export function downloadTemplate(type: 'patients' | 'records' | 'combined' | 'contacts') {
   let buffer: ArrayBuffer;
   let filename: string;
   
@@ -959,6 +1050,9 @@ export function downloadTemplate(type: 'patients' | 'records' | 'combined') {
   } else if (type === 'patients') {
     buffer = generatePatientTemplate();
     filename = 'modelo_pacientes.xlsx';
+  } else if (type === 'contacts') {
+    buffer = generateContactTemplate();
+    filename = 'modelo_contatos.xlsx';
   } else {
     buffer = generateMedicalRecordTemplate();
     filename = 'modelo_prontuarios.xlsx';

@@ -9,14 +9,15 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  Zap
+  Zap,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ImportProgressCardProps {
   isImporting: boolean;
   progress: number;
-  importType: 'patients' | 'records' | 'combined';
+  importType: 'patients' | 'records' | 'combined' | 'contacts';
   totalItems?: number;
   importedCount?: number;
   errorsCount?: number;
@@ -44,6 +45,8 @@ export function ImportProgressCard({
         return { icon: FileText, label: 'Prontuários', color: 'text-secondary-foreground' };
       case 'combined':
         return { icon: Zap, label: 'Importação Combinada', color: 'text-primary' };
+      case 'contacts':
+        return { icon: Phone, label: 'Contatos', color: 'text-primary' };
     }
   };
 
