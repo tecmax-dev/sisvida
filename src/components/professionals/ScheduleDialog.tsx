@@ -27,6 +27,7 @@ interface ScheduleDialogProps {
     name: string;
     schedule: Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null;
   };
+  appointmentDuration?: number;
   onUpdate: () => void;
 }
 
@@ -40,12 +41,16 @@ const weekDays = [
   { key: "sunday", label: "Domingo" },
 ];
 
-const timeOptions = [
-  "06:00", "06:30", "07:00", "07:30", "08:00", "08:30", "09:00", "09:30",
-  "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30",
-  "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30",
-  "18:00", "18:30", "19:00", "19:30", "20:00", "20:30", "21:00", "21:30", "22:00"
-];
+const generateTimeOptions = (intervalMinutes: number): string[] => {
+  const options: string[] = [];
+  for (let h = 6; h <= 22; h++) {
+    for (let m = 0; m < 60; m += intervalMinutes) {
+      if (h === 22 && m > 0) break;
+      options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+    }
+  }
+  return options;
+};
 
 type Schedule = Record<string, { enabled: boolean; slots: { start: string; end: string }[] }>;
 
@@ -59,12 +64,14 @@ const defaultSchedule: Schedule = {
   sunday: { enabled: false, slots: [] },
 };
 
-export function ScheduleDialog({ open, onOpenChange, professional, onUpdate }: ScheduleDialogProps) {
+export function ScheduleDialog({ open, onOpenChange, professional, appointmentDuration = 30, onUpdate }: ScheduleDialogProps) {
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
   const [schedule, setSchedule] = useState<Schedule>(
     (professional.schedule as Schedule) || defaultSchedule
   );
+  
+  const timeOptions = generateTimeOptions(appointmentDuration);
 
   const toggleDay = (day: string) => {
     setSchedule(prev => ({
