@@ -883,7 +883,7 @@ export default function PatientsPage() {
                   <TableHead>Telefone</TableHead>
                   <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden lg:table-cell">Convênio</TableHead>
-                  <TableHead className="hidden xl:table-cell">Carteirinha</TableHead>
+                  <TableHead className="hidden md:table-cell">Carteirinha</TableHead>
                   <TableHead className="w-[60px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -913,7 +913,7 @@ export default function PatientsPage() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden xl:table-cell">
+                    <TableCell className="hidden md:table-cell">
                       {patient.card_expires_at ? (
                         (() => {
                           const expiryDate = new Date(patient.card_expires_at);
