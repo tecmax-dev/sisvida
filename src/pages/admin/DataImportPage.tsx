@@ -350,37 +350,103 @@ export default function DataImportPage() {
     const importedPatientsMap = new Map<string, string>();
     const importedPatientsNameMap = new Map<string, string>();
     
-    // Step 1: Import patients in batches
-    const allPatientData = validPatients.map(row => ({
-      rowData: row.data,
-      patientData: {
-        clinic_id: selectedClinicId,
-        name: row.data.nome.trim(),
-        phone: row.data.telefone ? formatPhone(row.data.telefone) : "",
-        landline: row.data.telefone_fixo ? formatPhone(row.data.telefone_fixo) : null,
-        email: row.data.email?.trim() || null,
-        cpf: row.data.cpf ? formatCPF(row.data.cpf) : null,
-        rg: row.data.rg?.trim() || null,
-        birth_date: row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null,
-        gender: row.data.sexo?.trim() || null,
-        marital_status: row.data.estado_civil?.trim() || null,
-        birthplace: row.data.naturalidade?.trim() || null,
-        profession: row.data.profissao?.trim() || null,
-        education: row.data.escolaridade?.trim() || null,
-        mother_name: row.data.nome_mae?.trim() || null,
-        father_name: row.data.nome_pai?.trim() || null,
-        cep: row.data.cep?.replace(/\D/g, '') || null,
-        street: row.data.rua?.trim() || null,
-        street_number: row.data.numero?.trim() || null,
-        complement: row.data.complemento?.trim() || null,
-        neighborhood: row.data.bairro?.trim() || null,
-        city: row.data.cidade?.trim() || null,
-        state: row.data.estado?.trim() || null,
-        address: row.data.endereco?.trim() || null,
-        referral: row.data.indicacao?.trim() || null,
-        notes: row.data.observacoes?.trim() || null,
+    // Fetch existing patients BEFORE importing to avoid duplicates
+    const { data: existingPatientsForDedup } = await supabase
+      .from('patients')
+      .select('id, name, cpf')
+      .eq('clinic_id', selectedClinicId);
+    
+    // Build deduplication maps
+    const existingCpfToId = new Map<string, string>();
+    const existingNameToId = new Map<string, string>();
+    
+    existingPatientsForDedup?.forEach(p => {
+      if (p.cpf) {
+        existingCpfToId.set(p.cpf.replace(/\D/g, ''), p.id);
       }
-    }));
+      existingNameToId.set(normalizeNameForComparison(p.name), p.id);
+    });
+    
+    console.log('[DEDUP] Existing patients:', existingPatientsForDedup?.length || 0);
+    console.log('[DEDUP] CPF map size:', existingCpfToId.size);
+    console.log('[DEDUP] Name map size:', existingNameToId.size);
+    
+    // Step 1: Import patients in batches (only NEW patients)
+    const allPatientData: Array<{
+      rowData: PatientImportRow;
+      patientData: any;
+      existingPatientId?: string;
+    }> = [];
+    
+    let skippedDuplicates = 0;
+    
+    for (const row of validPatients) {
+      const cpfClean = row.data.cpf ? row.data.cpf.replace(/\D/g, '') : null;
+      const normalizedName = normalizeNameForComparison(row.data.nome);
+      
+      // Check if patient already exists by CPF (primary) or name (secondary)
+      let existingId: string | undefined;
+      
+      if (cpfClean && existingCpfToId.has(cpfClean)) {
+        existingId = existingCpfToId.get(cpfClean);
+        console.log('[DEDUP] Found by CPF:', row.data.nome, cpfClean);
+      } else if (existingNameToId.has(normalizedName)) {
+        existingId = existingNameToId.get(normalizedName);
+        console.log('[DEDUP] Found by name:', row.data.nome, normalizedName);
+      }
+      
+      if (existingId) {
+        // Patient exists - add to map for record linking, skip insertion
+        skippedDuplicates++;
+        if (cpfClean) {
+          importedPatientsMap.set(cpfClean, existingId);
+        }
+        importedPatientsNameMap.set(row.data.nome.toLowerCase().trim(), existingId);
+        processedItems++;
+        setCombinedProgress((processedItems / totalItems) * 100);
+      } else {
+        // New patient - prepare for insertion
+        allPatientData.push({
+          rowData: row.data,
+          patientData: {
+            clinic_id: selectedClinicId,
+            name: row.data.nome.trim(),
+            phone: row.data.telefone ? formatPhone(row.data.telefone) : "",
+            landline: row.data.telefone_fixo ? formatPhone(row.data.telefone_fixo) : null,
+            email: row.data.email?.trim() || null,
+            cpf: row.data.cpf ? formatCPF(row.data.cpf) : null,
+            rg: row.data.rg?.trim() || null,
+            birth_date: row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null,
+            gender: row.data.sexo?.trim() || null,
+            marital_status: row.data.estado_civil?.trim() || null,
+            birthplace: row.data.naturalidade?.trim() || null,
+            profession: row.data.profissao?.trim() || null,
+            education: row.data.escolaridade?.trim() || null,
+            mother_name: row.data.nome_mae?.trim() || null,
+            father_name: row.data.nome_pai?.trim() || null,
+            cep: row.data.cep?.replace(/\D/g, '') || null,
+            street: row.data.rua?.trim() || null,
+            street_number: row.data.numero?.trim() || null,
+            complement: row.data.complemento?.trim() || null,
+            neighborhood: row.data.bairro?.trim() || null,
+            city: row.data.cidade?.trim() || null,
+            state: row.data.estado?.trim() || null,
+            address: row.data.endereco?.trim() || null,
+            referral: row.data.indicacao?.trim() || null,
+            notes: row.data.observacoes?.trim() || null,
+          }
+        });
+        
+        // Also add to name map to prevent duplicates within the same import batch
+        existingNameToId.set(normalizedName, 'pending');
+        if (cpfClean) {
+          existingCpfToId.set(cpfClean, 'pending');
+        }
+      }
+    }
+    
+    console.log('[DEDUP] Skipped duplicates:', skippedDuplicates);
+    console.log('[DEDUP] New patients to import:', allPatientData.length);
     
     for (let i = 0; i < allPatientData.length; i += BATCH_SIZE) {
       if (cancelImportRef.current) {
@@ -395,7 +461,6 @@ export default function DataImportPage() {
         const { data, error } = await supabase.from('patients').insert(batchData).select('id, cpf, name');
         
         if (error) {
-          // Log error but don't fallback to individual inserts (too slow)
           console.error('[BATCH ERROR]', error.message);
           errors += batch.length;
         } else if (data) {
@@ -415,6 +480,11 @@ export default function DataImportPage() {
       
       processedItems += batch.length;
       setCombinedProgress((processedItems / totalItems) * 100);
+    }
+    
+    // Show dedup info
+    if (skippedDuplicates > 0) {
+      toast.info(`${skippedDuplicates} pacientes já existentes foram ignorados (sem duplicação).`);
     }
     
     // Check for cancellation before starting records import
