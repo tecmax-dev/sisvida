@@ -930,6 +930,29 @@ async function handleConfirmReschedule(
 
     if (error) {
       console.error('[booking] Error rescheduling appointment:', error);
+      
+      // Handle specific errors
+      if (error.message?.includes('LIMITE_AGENDAMENTO_CPF')) {
+        await sendWhatsAppMessage(config, phone, 
+          `❌ Não foi possível reagendar: você já possui o limite de agendamentos com este profissional no mês da nova data.\n\nEscolha uma data em outro mês ou entre em contato com a clínica.`
+        );
+        return { handled: true, newState: 'MAIN_MENU' };
+      }
+      
+      if (error.message?.includes('FERIADO')) {
+        const holidayMatch = error.message.match(/FERIADO: (.+)/);
+        const holidayMsg = holidayMatch ? holidayMatch[1] : 'A data selecionada é feriado.';
+        await sendWhatsAppMessage(config, phone, `❌ ${holidayMsg}\n\nPor favor, escolha outra data.`);
+        return { handled: true, newState: 'RESCHEDULE_SELECT_DATE' };
+      }
+      
+      if (error.message?.includes('HORARIO_INVALIDO')) {
+        await sendWhatsAppMessage(config, phone, 
+          `❌ O horário selecionado não está mais disponível.\n\nPor favor, escolha outro horário.`
+        );
+        return { handled: true, newState: 'RESCHEDULE_SELECT_TIME' };
+      }
+      
       await sendWhatsAppMessage(config, phone, MESSAGES.error);
       return { handled: true, newState: 'MAIN_MENU' };
     }
