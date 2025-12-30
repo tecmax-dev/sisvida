@@ -2162,6 +2162,19 @@ async function handleConfirmAppointment(
   if (appointmentError) {
     console.error('[booking] Error creating appointment:', appointmentError);
     
+    // Check for no-show blocking error
+    if (appointmentError.message?.includes('PACIENTE_BLOQUEADO_NO_SHOW')) {
+      const dateMatch = appointmentError.message.match(/até (\d{2}\/\d{2}\/\d{4})/);
+      const blockedUntil = dateMatch ? dateMatch[1] : 'data não informada';
+      await sendWhatsAppMessage(config, phone, 
+        `🚫 *Agendamento Bloqueado*\n\n` +
+        `Você está temporariamente bloqueado para novos agendamentos até *${blockedUntil}* devido a não comparecimento em consulta anterior.\n\n` +
+        `Para solicitar a liberação, entre em contato diretamente com a clínica.`
+      );
+      await updateSession(supabase, session.id, { state: 'FINISHED' });
+      return { handled: true, newState: 'FINISHED' };
+    }
+    
     // Check for CPF restriction limit error
     if (appointmentError.message?.includes('LIMITE_AGENDAMENTO_CPF')) {
       const limitMatch = appointmentError.message.match(/limite de (\d+) agendamento/i);

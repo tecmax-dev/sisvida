@@ -134,6 +134,11 @@ export default function PatientEditPage() {
   const [insurancePlanName, setInsurancePlanName] = useState<string>('');
   const [showDependentsForm, setShowDependentsForm] = useState(false);
   
+  // No-show blocking state
+  const [noShowBlockedUntil, setNoShowBlockedUntil] = useState<string | null>(null);
+  const [noShowBlockedAt, setNoShowBlockedAt] = useState<string | null>(null);
+  const [noShowUnblockedAt, setNoShowUnblockedAt] = useState<string | null>(null);
+  
   // Modal states
   const [recordsModalOpen, setRecordsModalOpen] = useState(false);
   const [anamnesisModalOpen, setAnamnesisModalOpen] = useState(false);
@@ -144,6 +149,7 @@ export default function PatientEditPage() {
   // Permission checks for restricted tabs
   const canViewMedicalRecords = hasPermission('view_medical_records');
   const canViewPrescriptions = hasPermission('view_prescriptions');
+  const isAdmin = hasPermission('manage_patients');
   
   // Determine which tabs to hide based on permissions
   const hiddenTabs: PatientTab[] = [];
@@ -225,6 +231,11 @@ export default function PatientEditPage() {
           fatherName: data.father_name || '',
           notes: data.notes || '',
         });
+        
+        // Set no-show blocking data
+        setNoShowBlockedUntil(data.no_show_blocked_until);
+        setNoShowBlockedAt(data.no_show_blocked_at);
+        setNoShowUnblockedAt(data.no_show_unblocked_at);
         
         if (data.insurance_plans) {
           setInsurancePlanName((data.insurance_plans as any).name || '');
@@ -389,6 +400,36 @@ export default function PatientEditPage() {
     }
   };
 
+  const handleUnblockNoShow = async () => {
+    if (!id || !currentClinic) return;
+    
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .update({
+          no_show_unblocked_by: (await supabase.auth.getUser()).data.user?.id,
+          no_show_unblocked_at: new Date().toISOString(),
+        })
+        .eq('id', id)
+        .eq('clinic_id', currentClinic.id);
+
+      if (error) throw error;
+
+      setNoShowUnblockedAt(new Date().toISOString());
+      
+      toast({
+        title: "Bloqueio liberado",
+        description: "O paciente agora pode agendar consultas novamente.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao liberar",
+        description: error.message || "Não foi possível liberar o bloqueio.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -430,6 +471,11 @@ export default function PatientEditPage() {
         phone={formData.phone}
         insurancePlan={insurancePlanName}
         priority={formData.priority}
+        noShowBlockedUntil={noShowBlockedUntil}
+        noShowBlockedAt={noShowBlockedAt}
+        noShowUnblockedAt={noShowUnblockedAt}
+        onUnblockNoShow={handleUnblockNoShow}
+        isAdmin={isAdmin}
       />
 
       {/* Tabs Navigation */}

@@ -437,6 +437,12 @@ serve(async (req) => {
         return errorResponse(match ? match[1].trim() : 'Limite de agendamentos atingido para este mês.');
       }
       
+      // Check for no-show blocking errors
+      if (apptError.message?.includes('PACIENTE_BLOQUEADO_NO_SHOW')) {
+        const match = apptError.message.match(/PACIENTE_BLOQUEADO_NO_SHOW:\s*(.+)/);
+        return errorResponse(match ? match[1].trim() : 'Paciente bloqueado por não comparecimento. Entre em contato com a clínica.');
+      }
+      
       // Check for invalid dependent errors
       if (apptError.message?.includes('DEPENDENTE_INVALIDO')) {
         const match = apptError.message.match(/DEPENDENTE_INVALIDO:\s*(.+)/);
