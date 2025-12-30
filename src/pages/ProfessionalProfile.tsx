@@ -570,30 +570,56 @@ export default function ProfessionalProfile() {
       setSuccess(true);
       toast({ title: "Agendamento realizado!", description: "Você receberá uma confirmação em breve." });
     } catch (error: unknown) {
-      console.error('Error creating appointment:', error);
+      console.error("Error creating appointment:", error);
 
-      const { message: errorMessage } = extractFunctionsError(error);
+      let { message: derivedMessage } = extractFunctionsError(error);
+
+      if (derivedMessage.includes("non-2xx")) {
+        try {
+          const anyErr: any = error;
+          const res: any = anyErr?.context?.response;
+          if (res && typeof res.text === "function") {
+            const rawText = await res.text();
+            const parsed = (() => {
+              try {
+                return JSON.parse(rawText);
+              } catch {
+                return null;
+              }
+            })();
+
+            const msgFromBody =
+              (parsed && typeof parsed.error === "string" && parsed.error) ||
+              (parsed && typeof parsed.message === "string" && parsed.message) ||
+              (typeof rawText === "string" && rawText.trim() ? rawText : null);
+
+            if (msgFromBody) derivedMessage = msgFromBody;
+          }
+        } catch {
+          // ignore
+        }
+      }
 
       let title = "Erro ao agendar";
-      let description = errorMessage || "Tente novamente";
+      let description = derivedMessage || "Tente novamente";
 
-      if (errorMessage.includes("HORARIO_INVALIDO") || errorMessage.includes("horário")) {
+      if (derivedMessage.includes("HORARIO_INVALIDO") || derivedMessage.includes("horário")) {
         title = "Horário indisponível";
-        const match = errorMessage.match(/HORARIO_INVALIDO:\s*(.+)/);
-        description = match ? match[1].trim() : errorMessage;
-      } else if (errorMessage.includes("carteirinha") || errorMessage.includes("CARTEIRINHA")) {
+        const match = derivedMessage.match(/HORARIO_INVALIDO:\s*(.+)/);
+        description = match ? match[1].trim() : derivedMessage;
+      } else if (derivedMessage.includes("carteirinha") || derivedMessage.includes("CARTEIRINHA")) {
         title = "Carteirinha vencida";
-        description = errorMessage;
-      } else if (errorMessage.includes("LIMITE_AGENDAMENTO") || errorMessage.includes("limite")) {
+        description = derivedMessage;
+      } else if (derivedMessage.includes("LIMITE_AGENDAMENTO") || derivedMessage.includes("limite")) {
         title = "Limite de agendamentos";
-        description = errorMessage;
-      } else if (errorMessage.includes("DEPENDENTE_INVALIDO") || errorMessage.includes("dependente")) {
+        description = derivedMessage;
+      } else if (derivedMessage.includes("DEPENDENTE_INVALIDO") || derivedMessage.includes("dependente")) {
         title = "Dependente inválido";
-        description = errorMessage;
-      } else if (errorMessage.includes("FERIADO") || errorMessage.includes("feriado")) {
+        description = derivedMessage;
+      } else if (derivedMessage.includes("FERIADO") || derivedMessage.includes("feriado")) {
         title = "Data indisponível";
-        description = errorMessage;
-      } else if (errorMessage.includes("non-2xx")) {
+        description = derivedMessage;
+      } else if (derivedMessage.includes("non-2xx")) {
         description = "Não foi possível concluir o agendamento. Verifique os dados e tente novamente.";
       }
 
