@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -18,12 +19,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useSpecialties, Specialty } from "@/hooks/useSpecialties";
+import { useSpecialties } from "@/hooks/useSpecialties";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { SpecialtySelector } from "@/components/professionals/SpecialtySelector";
 import { ProfessionalFormFields } from "@/components/professionals/ProfessionalFormFields";
 import { z } from "zod";
-import { Json } from "@/integrations/supabase/types";
+
+interface Procedure {
+  id: string;
+  name: string;
+}
 
 interface Professional {
   id: string;
@@ -109,10 +114,15 @@ export default function ProfessionalEditPage() {
   const [education, setEducation] = useState("");
   const [experience, setExperience] = useState("");
 
+  // Procedures
+  const [procedures, setProcedures] = useState<Procedure[]>([]);
+  const [selectedProcedureIds, setSelectedProcedureIds] = useState<string[]>([]);
+
   useEffect(() => {
     if (currentClinic && id) {
       fetchProfessional();
       fetchClinicUsers();
+      fetchProcedures();
     }
   }, [currentClinic, id]);
 
@@ -200,6 +210,52 @@ export default function ProfessionalEditPage() {
       setClinicUsers(users);
     } catch (error) {
       console.error("Error fetching clinic users:", error);
+    }
+  };
+
+  const fetchProcedures = async () => {
+    if (!currentClinic || !id) return;
+    
+    try {
+      // Fetch all active procedures for the clinic
+      const { data: proceduresData } = await supabase
+        .from("procedures")
+        .select("id, name")
+        .eq("clinic_id", currentClinic.id)
+        .eq("is_active", true)
+        .order("name");
+      
+      setProcedures(proceduresData || []);
+
+      // Fetch procedures already linked to this professional
+      const { data: linkedData } = await supabase
+        .from("professional_procedures")
+        .select("procedure_id")
+        .eq("professional_id", id);
+      
+      setSelectedProcedureIds((linkedData || []).map(l => l.procedure_id));
+    } catch (error) {
+      console.error("Error fetching procedures:", error);
+    }
+  };
+
+  const saveProfessionalProcedures = async (professionalId: string) => {
+    // Delete existing links
+    await supabase
+      .from("professional_procedures")
+      .delete()
+      .eq("professional_id", professionalId);
+    
+    // Insert new links
+    if (selectedProcedureIds.length > 0) {
+      const inserts = selectedProcedureIds.map(procedureId => ({
+        professional_id: professionalId,
+        procedure_id: procedureId,
+      }));
+      
+      await supabase
+        .from("professional_procedures")
+        .insert(inserts);
     }
   };
 
@@ -308,6 +364,9 @@ export default function ProfessionalEditPage() {
         });
       }
 
+      // Save professional procedures
+      await saveProfessionalProcedures(id);
+
       toast({
         title: "Profissional atualizado",
         description: "As informações foram salvas com sucesso.",
@@ -390,9 +449,10 @@ export default function ProfessionalEditPage() {
             </div>
 
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
                 <TabsTrigger value="profile">Perfil Público</TabsTrigger>
+                <TabsTrigger value="procedures">Procedimentos</TabsTrigger>
                 <TabsTrigger value="settings">Configurações</TabsTrigger>
               </TabsList>
 
@@ -479,6 +539,46 @@ export default function ProfessionalEditPage() {
                   experience={experience}
                   setExperience={setExperience}
                 />
+              </TabsContent>
+
+              <TabsContent value="procedures" className="mt-4 space-y-4">
+                <div>
+                  <Label>Procedimentos que este profissional realiza</Label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Selecione os procedimentos que serão exibidos na página pública do profissional
+                  </p>
+                  {procedures.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">
+                      Nenhum procedimento cadastrado. Cadastre procedimentos na página de Procedimentos.
+                    </p>
+                  ) : (
+                    <div className="grid gap-2 max-h-[300px] overflow-y-auto border rounded-lg p-3">
+                      {procedures.map((procedure) => (
+                        <div key={procedure.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`proc-${procedure.id}`}
+                            checked={selectedProcedureIds.includes(procedure.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedProcedureIds((prev) => [...prev, procedure.id]);
+                              } else {
+                                setSelectedProcedureIds((prev) =>
+                                  prev.filter((id) => id !== procedure.id)
+                                );
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor={`proc-${procedure.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {procedure.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </TabsContent>
 
               <TabsContent value="settings" className="space-y-4 mt-4">

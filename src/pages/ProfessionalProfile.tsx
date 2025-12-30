@@ -191,13 +191,30 @@ export default function ProfessionalProfile() {
         setProfessional(profData as Professional);
       }
 
-      // Fetch procedures
-      const { data: proceduresData } = await supabase
+      // Fetch professional procedures link
+      let procedureIds: string[] = [];
+      if (profData || professionalSlug) {
+        const professionalId = profData?.id || professionalSlug;
+        const { data: linkedProcedures } = await supabase
+          .from('professional_procedures')
+          .select('procedure_id')
+          .eq('professional_id', professionalId);
+        
+        procedureIds = (linkedProcedures || []).map(lp => lp.procedure_id);
+      }
+
+      // Fetch procedures - only linked ones if professional has any linked
+      let proceduresQuery = supabase
         .from('procedures')
         .select('id, name, price, duration_minutes')
         .eq('clinic_id', clinicData.id)
         .eq('is_active', true);
+      
+      if (procedureIds.length > 0) {
+        proceduresQuery = proceduresQuery.in('id', procedureIds);
+      }
 
+      const { data: proceduresData } = await proceduresQuery;
       setProcedures(proceduresData || []);
 
       // Fetch procedure insurance prices

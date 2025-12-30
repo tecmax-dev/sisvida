@@ -4406,6 +4406,42 @@ export type Database = {
           },
         ]
       }
+      professional_procedures: {
+        Row: {
+          created_at: string
+          id: string
+          procedure_id: string
+          professional_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          procedure_id: string
+          professional_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          procedure_id?: string
+          professional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_procedures_procedure_id_fkey"
+            columns: ["procedure_id"]
+            isOneToOne: false
+            referencedRelation: "procedures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_procedures_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_specialties: {
         Row: {
           created_at: string | null
