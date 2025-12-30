@@ -46,6 +46,8 @@ export default function CardValidation() {
 
   const fetchCard = async () => {
     try {
+      console.log('Buscando carteirinha com token:', token);
+      
       const { data, error } = await supabase
         .from('patient_cards')
         .select(`
@@ -58,13 +60,32 @@ export default function CardValidation() {
           clinic:clinics(name, logo_url)
         `)
         .eq('qr_code_token', token)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
+      console.log('Resultado da busca:', { data, error });
+
+      if (error) {
+        console.error('Erro ao buscar carteirinha:', error);
+        setError('Erro ao validar carteirinha. Tente novamente.');
+        return;
+      }
+      
+      if (!data) {
+        setError('Carteirinha não encontrada ou token inválido.');
+        return;
+      }
+      
+      // Validar que os relacionamentos retornaram dados
+      if (!data.patient || !data.clinic) {
+        console.error('Dados incompletos:', data);
+        setError('Dados da carteirinha incompletos.');
+        return;
+      }
       
       setCard(data as unknown as CardData);
     } catch (err: any) {
-      setError('Carteirinha não encontrada');
+      console.error('Erro inesperado:', err);
+      setError('Erro ao validar carteirinha.');
     } finally {
       setLoading(false);
     }
