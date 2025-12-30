@@ -15,6 +15,56 @@ function tryParseJson(input: unknown): any | null {
   }
 }
 
+function tryDecodeBody(input: unknown): string | null {
+  if (!input) return null;
+  if (typeof input === "string") return input;
+
+  // Supabase FunctionsHttpError sometimes carries body as bytes/ArrayBuffer.
+  try {
+    if (input instanceof ArrayBuffer) {
+      return new TextDecoder().decode(new Uint8Array(input));
+    }
+    if (ArrayBuffer.isView(input)) {
+      return new TextDecoder().decode(new Uint8Array(input.buffer));
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
+}
+
+function extractMessageFromUnknown(input: unknown): string | null {
+  if (!input) return null;
+
+  // Object body: { error: string } or { message: string }
+  if (typeof input === "object") {
+    const anyObj: any = input;
+    if (typeof anyObj?.error === "string" && anyObj.error.trim()) return anyObj.error;
+    if (typeof anyObj?.message === "string" && anyObj.message.trim()) return anyObj.message;
+  }
+
+  // String body
+  const decoded = tryDecodeBody(input);
+  if (decoded && decoded.trim()) {
+    // Try JSON first
+    const parsed = tryParseJson(decoded);
+    if (parsed && typeof parsed === "object") {
+      if (typeof (parsed as any).error === "string" && (parsed as any).error.trim()) {
+        return (parsed as any).error;
+      }
+      if (typeof (parsed as any).message === "string" && (parsed as any).message.trim()) {
+        return (parsed as any).message;
+      }
+    }
+
+    // Plain text
+    return decoded;
+  }
+
+  return null;
+}
+
 export function extractFunctionsError(err: unknown): FunctionsErrorExtract {
   const anyErr: any = err;
 
@@ -31,29 +81,13 @@ export function extractFunctionsError(err: unknown): FunctionsErrorExtract {
     anyErr?.details,
   ].filter((v) => v !== undefined && v !== null);
 
-  // 1) If we already have an object with {error}, use it
+  // Try to extract the most meaningful message from any candidate body
   for (const c of candidates) {
-    if (c && typeof c === "object" && typeof (c as any).error === "string") {
-      return { message: (c as any).error, status, raw: err };
-    }
+    const msg = extractMessageFromUnknown(c);
+    if (msg) return { message: msg, status, raw: err };
   }
 
-  // 2) If we have a JSON string with {error}, parse it
-  for (const c of candidates) {
-    const parsed = tryParseJson(c);
-    if (parsed && typeof parsed.error === "string") {
-      return { message: parsed.error, status, raw: err };
-    }
-  }
-
-  // 3) If body is plain string, use it
-  for (const c of candidates) {
-    if (typeof c === "string" && c.trim()) {
-      return { message: c, status, raw: err };
-    }
-  }
-
-  // 4) Fall back to error.message
+  // Fall back to error.message
   if (typeof anyErr?.message === "string" && anyErr.message.trim()) {
     return { message: anyErr.message, status, raw: err };
   }
