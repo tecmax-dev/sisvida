@@ -124,6 +124,15 @@ const defaultTimeSlots = [
   "13:00", "14:00", "15:00", "16:00", "17:00", "18:00",
 ];
 
+// Normaliza texto para busca: remove acentos, pontuação e converte para minúsculo
+const normalizeForSearch = (text: string): string => {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+    .replace(/[^\w\s]/g, ''); // Remove pontuação
+};
+
 const statusConfig = {
   scheduled: { icon: AlertCircle, color: "text-amber-600", bgColor: "bg-amber-100", label: "A confirmar" },
   confirmed: { icon: CheckCircle2, color: "text-blue-600", bgColor: "bg-blue-100", label: "Confirmado" },
@@ -1464,15 +1473,6 @@ export default function CalendarPage() {
     } finally {
       setSendingTelemedicineLink(null);
     }
-  };
-
-  // Normaliza texto para busca: remove acentos, pontuação e converte para minúsculo
-  const normalizeForSearch = (text: string) => {
-    return text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
-      .replace(/[^\w\s]/g, ''); // Remove pontuação
   };
 
   const AppointmentFormFields = () => (
