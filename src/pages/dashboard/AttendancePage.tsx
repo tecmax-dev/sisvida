@@ -1245,6 +1245,7 @@ export default function AttendancePage() {
           initialTab={printDialogInitialTab}
           date={new Date().toISOString().split("T")[0]}
           onDocumentSaved={() => loadPatientData()}
+          onPrescriptionChange={(newPrescription) => setRecordForm(prev => ({ ...prev, prescription: newPrescription }))}
         />
       )}
     </div>
