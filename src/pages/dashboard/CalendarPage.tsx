@@ -1104,8 +1104,8 @@ export default function CalendarPage() {
   };
 
   const openAppointmentPanel = (appointment: Appointment) => {
-    setSelectedAppointmentForPanel(appointment);
-    setAppointmentPanelOpen(true);
+    // Navigate to dedicated attendance page instead of opening modal
+    navigate(`/dashboard/atendimento/${appointment.id}`);
   };
 
   // Drag and Drop handlers
