@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,8 @@ import {
   History,
   Save,
   Loader2,
+  CloudOff,
+  Cloud,
   Stethoscope,
   Timer,
   Lock,
@@ -205,6 +207,11 @@ export default function AttendancePage() {
     "receituario" | "controlado" | "atestado" | "comparecimento" | "exames"
   >("receituario");
 
+  // Auto-save states
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedFormRef = useRef<string>('');
+  const isInitialLoadRef = useRef(true);
   // Load appointment
   useEffect(() => {
     if (!appointmentId || !currentClinic?.id) return;
@@ -372,9 +379,78 @@ export default function AttendancePage() {
       console.error("Error loading patient data:", error);
     } finally {
       setLoadingData(false);
+      isInitialLoadRef.current = false;
     }
   };
 
+  // Auto-save function
+  const performAutoSave = useCallback(async () => {
+    if (!appointment || isCompleted) return;
+    
+    const currentFormJson = JSON.stringify(recordForm);
+    
+    // Don't save if nothing changed
+    if (currentFormJson === lastSavedFormRef.current) return;
+    
+    // Don't save if form is completely empty
+    const hasContent = recordForm.chief_complaint || recordForm.diagnosis || 
+                       recordForm.treatment_plan || recordForm.prescription || recordForm.notes;
+    if (!hasContent) return;
+    
+    setAutoSaveStatus('saving');
+    
+    try {
+      const { error } = await supabase
+        .from("medical_records")
+        .upsert({
+          clinic_id: appointment.clinic_id,
+          patient_id: appointment.patient_id,
+          professional_id: appointment.professional_id,
+          appointment_id: appointment.id,
+          record_date: new Date().toISOString().split("T")[0],
+          chief_complaint: recordForm.chief_complaint || null,
+          diagnosis: recordForm.diagnosis || null,
+          treatment_plan: recordForm.treatment_plan || null,
+          prescription: recordForm.prescription || null,
+          notes: recordForm.notes || null,
+        }, { onConflict: 'appointment_id', ignoreDuplicates: false });
+
+      if (error) {
+        setAutoSaveStatus('error');
+        console.error("Auto-save error:", error);
+      } else {
+        lastSavedFormRef.current = currentFormJson;
+        setAutoSaveStatus('saved');
+        // Reset to idle after 2 seconds
+        setTimeout(() => setAutoSaveStatus('idle'), 2000);
+      }
+    } catch (error) {
+      setAutoSaveStatus('error');
+      console.error("Auto-save error:", error);
+    }
+  }, [appointment, recordForm, isCompleted]);
+
+  // Auto-save effect - triggers 3 seconds after last change
+  useEffect(() => {
+    // Skip auto-save during initial load
+    if (isInitialLoadRef.current || isCompleted) return;
+    
+    // Clear previous timeout
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    // Set new timeout for auto-save
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      performAutoSave();
+    }, 3000);
+    
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [recordForm, performAutoSave, isCompleted]);
   const loadPreviousPrescriptions = async () => {
     if (!appointment) return;
     
@@ -836,6 +912,28 @@ export default function AttendancePage() {
 
         {/* Prontuário Tab */}
         <TabsContent value="prontuario" className="mt-4 space-y-4">
+          {/* Auto-save indicator */}
+          <div className="flex items-center justify-end gap-2 text-sm">
+            {autoSaveStatus === 'saving' && (
+              <span className="flex items-center gap-1.5 text-muted-foreground animate-pulse">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Salvando automaticamente...
+              </span>
+            )}
+            {autoSaveStatus === 'saved' && (
+              <span className="flex items-center gap-1.5 text-emerald-600">
+                <Cloud className="h-3.5 w-3.5" />
+                Salvo automaticamente
+              </span>
+            )}
+            {autoSaveStatus === 'error' && (
+              <span className="flex items-center gap-1.5 text-destructive">
+                <CloudOff className="h-3.5 w-3.5" />
+                Erro ao salvar
+              </span>
+            )}
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Queixa Principal</Label>
@@ -855,9 +953,9 @@ export default function AttendancePage() {
             </div>
           </div>
           {!isCompleted && (
-            <Button onClick={handleSaveRecord} disabled={savingRecord} className="w-full">
+            <Button onClick={handleSaveRecord} disabled={savingRecord} variant="outline" className="w-full">
               {savingRecord ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-              Salvar Prontuário
+              Salvar Prontuário Manualmente
             </Button>
           )}
         </TabsContent>
