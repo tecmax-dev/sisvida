@@ -147,7 +147,6 @@ export default function ExamsPage() {
         
         const { data, error } = await query
           .eq("clinic_id", clinicId)
-          .eq("is_active", true)
           .or(`name.ilike.%${value}%,cpf.ilike.%${value}%,phone.ilike.%${value}%`)
           .order("name")
           .limit(10);
