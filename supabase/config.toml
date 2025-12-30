@@ -77,3 +77,9 @@ verify_jwt = false
 
 [functions.public-panel-data]
 verify_jwt = false
+
+[functions.mercado-pago]
+verify_jwt = true
+
+[functions.mercado-pago-webhook]
+verify_jwt = false
