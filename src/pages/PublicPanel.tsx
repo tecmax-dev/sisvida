@@ -1,10 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Monitor, Volume2, VolumeX } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { PanelBannerCarousel } from "@/components/panel/PanelBannerCarousel";
 import { PanelBanner } from "@/hooks/usePanelBanners";
+
+// Text-to-speech function for call announcements
+const speakCallAnnouncement = (text: string) => {
+  if ('speechSynthesis' in window) {
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'pt-BR';
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+    
+    // Try to use a Portuguese voice if available
+    const voices = window.speechSynthesis.getVoices();
+    const ptVoice = voices.find(voice => voice.lang.startsWith('pt'));
+    if (ptVoice) {
+      utterance.voice = ptVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
+  }
+};
 
 interface Panel {
   id: string;
@@ -45,11 +68,54 @@ export default function PublicPanel() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  const lastCallIdRef = useRef<string | null>(null);
+  const hasInitializedRef = useRef(false);
+
+  // Load voices for TTS
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      // Voices may load asynchronously
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+    }
+  }, []);
+
   // Update time every second
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Play sound and announce when new call arrives
+  const announceCall = useCallback((call: QueueCall) => {
+    if (!soundEnabled) return;
+    
+    const displayMode = call.queue?.display_mode || "ticket";
+    let announcement = "";
+    
+    switch (displayMode) {
+      case "name":
+        announcement = `Chamando ${call.patient_name}. Por favor, dirija-se ao ${call.queue?.name || "atendimento"}.`;
+        break;
+      case "initials":
+        const initials = call.patient_name
+          .split(" ")
+          .map((n) => n[0])
+          .join(" ")
+          .toUpperCase()
+          .slice(0, 5);
+        announcement = `Chamando ${initials}. Por favor, dirija-se ao ${call.queue?.name || "atendimento"}.`;
+        break;
+      case "ticket":
+      default:
+        announcement = `Senha ${call.ticket_number}. Por favor, dirija-se ao ${call.queue?.name || "atendimento"}.`;
+        break;
+    }
+    
+    speakCallAnnouncement(announcement);
+  }, [soundEnabled]);
 
   // Fetch panel, clinic and calls via backend function (bypasses public DB restrictions)
   useEffect(() => {
@@ -79,9 +145,22 @@ export default function PublicPanel() {
 
         if (cancelled) return;
 
+        const newCurrentCall = (data.currentCall ?? null) as QueueCall | null;
+        
+        // Check if there's a new call to announce
+        if (newCurrentCall && newCurrentCall.id !== lastCallIdRef.current) {
+          // Only announce if we've already initialized (not on first load)
+          if (hasInitializedRef.current) {
+            announceCall(newCurrentCall);
+          }
+          lastCallIdRef.current = newCurrentCall.id;
+        }
+        
+        hasInitializedRef.current = true;
+
         setPanel(data.panel as Panel);
         setClinic((data.clinic ?? null) as Clinic | null);
-        setCurrentCall((data.currentCall ?? null) as QueueCall | null);
+        setCurrentCall(newCurrentCall);
         setRecentCalls((data.recentCalls ?? []) as QueueCall[]);
         setBanners((data.banners ?? []) as PanelBanner[]);
       } catch (err) {
@@ -101,7 +180,7 @@ export default function PublicPanel() {
       cancelled = true;
       clearInterval(interval);
     };
-  }, [token]);
+  }, [token, announceCall]);
 
   const formatDisplayName = (call: QueueCall) => {
     const displayMode = call.queue?.display_mode || "ticket";
