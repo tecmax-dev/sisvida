@@ -436,6 +436,17 @@ export function PrintDialog({
             </TabsList>
 
             <TabsContent value="receituario" className="mt-4 space-y-4">
+              {/* Top action buttons */}
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                  Cancelar
+                </Button>
+                <Button size="sm" onClick={handlePrint}>
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir
+                </Button>
+              </div>
+              
               <div>
                 <Label>Prescrição</Label>
                 <Textarea
