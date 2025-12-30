@@ -626,9 +626,10 @@ export function convertRowHeaders(row: Record<string, unknown>): Record<string, 
   const converted: Record<string, unknown> = {};
   
   for (const [key, value] of Object.entries(row)) {
+    // Normalize the key and check if there's a mapping
     const normalizedKey = normalizeColumnHeader(key);
-    // If key was converted, use the new key; otherwise keep original
-    const newKey = HEADER_MAPPINGS[normalizedKey] ? normalizedKey : key;
+    // Use the mapped key if it exists, otherwise use the normalized key
+    const newKey = HEADER_MAPPINGS[normalizedKey] || normalizedKey;
     converted[newKey] = value;
   }
   
@@ -833,7 +834,9 @@ function parseSheet<T>(
   const { rows } = extractSheetRows(worksheet);
 
   return rows.map((row, index) => {
-    const mappedData = mapRow(row);
+    // Convert headers before mapping to handle legacy column names
+    const convertedRow = convertRowHeaders(row);
+    const mappedData = mapRow(convertedRow);
     const validation = validateRow(mappedData);
     return {
       rowNumber: index + 2,
