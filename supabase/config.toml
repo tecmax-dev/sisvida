@@ -83,3 +83,12 @@ verify_jwt = true
 
 [functions.mercado-pago-webhook]
 verify_jwt = false
+
+[functions.send-subscription-billing]
+verify_jwt = false
+
+[functions.get-patient-identification]
+verify_jwt = false
+
+[functions.bulk-create-patient-cards]
+verify_jwt = true
