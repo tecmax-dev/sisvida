@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { ArrowLeft, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, Save, Cloud, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,8 +86,13 @@ export default function ProfessionalEditPage() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [professional, setProfessional] = useState<Professional | null>(null);
   const [clinicUsers, setClinicUsers] = useState<ClinicUser[]>([]);
+  
+  // Auto-save refs
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasLoadedRef = useRef(false);
   
   // Form state
   const [name, setName] = useState("");
@@ -117,6 +122,9 @@ export default function ProfessionalEditPage() {
   // Procedures
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [selectedProcedureIds, setSelectedProcedureIds] = useState<string[]>([]);
+
+  // Initial data for comparison
+  const [initialFormData, setInitialFormData] = useState<string>("");
 
   useEffect(() => {
     if (currentClinic && id) {
@@ -162,6 +170,28 @@ export default function ProfessionalEditPage() {
         // Load specialties
         const existingIds = await fetchProfessionalSpecialties(data.id);
         setSpecialtyIds(existingIds);
+        
+        // Set initial data for auto-save comparison
+        const initialData = JSON.stringify({
+          name: data.name,
+          crm: data.registration_number || "",
+          phone: data.phone || "",
+          email: data.email || "",
+          userId: data.user_id || "",
+          telemedicineEnabled: data.telemedicine_enabled || false,
+          appointmentDuration: data.appointment_duration || 30,
+          address: data.address || "",
+          city: data.city || "",
+          state: data.state || "",
+          zipCode: data.zip_code || "",
+          whatsapp: data.whatsapp || "",
+          bio: data.bio || "",
+          education: data.education || "",
+          experience: data.experience || "",
+          specialtyIds: existingIds,
+        });
+        setInitialFormData(initialData);
+        hasLoadedRef.current = true;
       }
     } catch (error) {
       console.error("Error fetching professional:", error);
@@ -268,6 +298,111 @@ export default function ProfessionalEditPage() {
       reader.readAsDataURL(file);
     }
   };
+
+  // Auto-save function
+  const performAutoSave = useCallback(async () => {
+    if (!currentClinic || !id || !professional || !hasLoadedRef.current) return;
+    
+    // Validate before saving
+    const validation = professionalSchema.safeParse({
+      name,
+      email: email || undefined,
+    });
+    
+    if (!validation.success) return; // Don't auto-save invalid data
+
+    setAutoSaveStatus('saving');
+
+    try {
+      // Get display name from selected specialties
+      const specialtyNames = specialtyIds
+        .map(specId => getSpecialtyById(specId)?.name)
+        .filter((n): n is string => !!n);
+      const specialtyDisplay = specialtyNames.join(', ') || null;
+
+      const { error } = await supabase
+        .from('professionals')
+        .update({
+          name: name.trim(),
+          specialty: specialtyDisplay,
+          registration_number: crm.trim() || null,
+          phone: phone.trim() || null,
+          email: email.trim() || null,
+          user_id: userId || null,
+          telemedicine_enabled: hasFeature('telemedicine') ? telemedicineEnabled : false,
+          appointment_duration: appointmentDuration,
+          address: address.trim() || null,
+          city: city.trim() || null,
+          state: state || null,
+          zip_code: zipCode.replace(/\D/g, '') || null,
+          whatsapp: whatsapp.replace(/\D/g, '') || null,
+          bio: bio.trim() || null,
+          education: education.trim() || null,
+          experience: experience.trim() || null,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      // Save specialties silently
+      await saveProfessionalSpecialties(id, specialtyIds);
+      
+      // Update initial data
+      const newInitialData = JSON.stringify({
+        name, crm, phone, email, userId, telemedicineEnabled,
+        appointmentDuration, address, city, state, zipCode,
+        whatsapp, bio, education, experience, specialtyIds,
+      });
+      setInitialFormData(newInitialData);
+      
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error("Auto-save error:", error);
+      setAutoSaveStatus('idle');
+    }
+  }, [currentClinic, id, professional, name, crm, phone, email, userId, telemedicineEnabled,
+      appointmentDuration, address, city, state, zipCode, whatsapp, bio, education, 
+      experience, specialtyIds, getSpecialtyById, hasFeature, saveProfessionalSpecialties]);
+
+  // Get current form data for comparison
+  const getCurrentFormData = useCallback(() => {
+    return JSON.stringify({
+      name, crm, phone, email, userId, telemedicineEnabled,
+      appointmentDuration, address, city, state, zipCode,
+      whatsapp, bio, education, experience, specialtyIds,
+    });
+  }, [name, crm, phone, email, userId, telemedicineEnabled,
+      appointmentDuration, address, city, state, zipCode,
+      whatsapp, bio, education, experience, specialtyIds]);
+
+  // Auto-save effect with debounce
+  useEffect(() => {
+    if (!hasLoadedRef.current || getCurrentFormData() === initialFormData) return;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      performAutoSave();
+    }, 3000);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [getCurrentFormData, initialFormData, performAutoSave]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -405,13 +540,30 @@ export default function ProfessionalEditPage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/professionals')}>
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Editar Profissional</h1>
-          <p className="text-muted-foreground">{professional.name}</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard/professionals')}>
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Editar Profissional</h1>
+            <p className="text-muted-foreground">{professional.name}</p>
+          </div>
+        </div>
+        {/* Auto-save status indicator */}
+        <div className="flex items-center gap-2">
+          {autoSaveStatus === 'saving' && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Cloud className="h-4 w-4 animate-pulse" />
+              <span>Salvando...</span>
+            </div>
+          )}
+          {autoSaveStatus === 'saved' && (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <Check className="h-4 w-4" />
+              <span>Salvo</span>
+            </div>
+          )}
         </div>
       </div>
 

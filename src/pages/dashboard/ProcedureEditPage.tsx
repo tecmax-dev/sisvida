@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,7 +7,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Cloud, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -84,6 +84,10 @@ export default function ProcedureEditPage() {
 
   const isCreating = !id;
   const [insurancePrices, setInsurancePrices] = useState<Record<string, string>>({});
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasLoadedRef = useRef(false);
+  const [initialFormData, setInitialFormData] = useState<string>("");
 
   const form = useForm<ProcedureFormData>({
     resolver: zodResolver(procedureSchema),
@@ -158,6 +162,17 @@ export default function ProcedureEditPage() {
         color: procedure.color || "#3b82f6",
         is_active: procedure.is_active ?? true,
       });
+      
+      // Set initial data for auto-save comparison
+      setInitialFormData(JSON.stringify({
+        name: procedure.name,
+        description: procedure.description || "",
+        price: procedure.price,
+        duration_minutes: procedure.duration_minutes || 30,
+        category: procedure.category || "",
+        color: procedure.color || "#3b82f6",
+      }));
+      hasLoadedRef.current = true;
     }
   }, [procedure, form]);
 
@@ -171,6 +186,92 @@ export default function ProcedureEditPage() {
       setInsurancePrices(pricesMap);
     }
   }, [existingPrices]);
+
+  // Auto-save function for editing only
+  const performAutoSave = useCallback(async () => {
+    if (!id || !currentClinic?.id || !hasLoadedRef.current || isCreating) return;
+    
+    const formValues = form.getValues();
+    
+    // Validate form
+    const result = procedureSchema.safeParse(formValues);
+    if (!result.success) return;
+
+    setAutoSaveStatus('saving');
+
+    try {
+      const { error } = await supabase
+        .from("procedures")
+        .update({
+          name: formValues.name,
+          description: formValues.description || null,
+          price: formValues.price,
+          duration_minutes: formValues.duration_minutes,
+          category: formValues.category || null,
+          color: formValues.color,
+        })
+        .eq("id", id);
+
+      if (error) throw error;
+
+      // Update initial data
+      setInitialFormData(JSON.stringify({
+        name: formValues.name,
+        description: formValues.description || "",
+        price: formValues.price,
+        duration_minutes: formValues.duration_minutes,
+        category: formValues.category || "",
+        color: formValues.color,
+      }));
+
+      setAutoSaveStatus('saved');
+      setTimeout(() => setAutoSaveStatus('idle'), 2000);
+    } catch (error) {
+      console.error("Auto-save error:", error);
+      setAutoSaveStatus('idle');
+    }
+  }, [id, currentClinic?.id, form, isCreating]);
+
+  // Watch form values for auto-save
+  const formValues = form.watch();
+  
+  useEffect(() => {
+    if (!hasLoadedRef.current || isCreating) return;
+    
+    const currentData = JSON.stringify({
+      name: formValues.name,
+      description: formValues.description || "",
+      price: formValues.price,
+      duration_minutes: formValues.duration_minutes,
+      category: formValues.category || "",
+      color: formValues.color,
+    });
+    
+    if (currentData === initialFormData) return;
+
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      performAutoSave();
+    }, 3000);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [formValues, initialFormData, performAutoSave, isCreating]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const mutation = useMutation({
     mutationFn: async (data: ProcedureFormData) => {
@@ -286,18 +387,37 @@ export default function ProcedureEditPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={handleCancel}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">
-            {isCreating ? "Novo Procedimento" : "Editar Procedimento"}
-          </h1>
-          {!isCreating && procedure && (
-            <p className="text-muted-foreground">{procedure.name}</p>
-          )}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={handleCancel}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              {isCreating ? "Novo Procedimento" : "Editar Procedimento"}
+            </h1>
+            {!isCreating && procedure && (
+              <p className="text-muted-foreground">{procedure.name}</p>
+            )}
+          </div>
         </div>
+        {/* Auto-save status indicator - only show when editing */}
+        {!isCreating && (
+          <div className="flex items-center gap-2">
+            {autoSaveStatus === 'saving' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Cloud className="h-4 w-4 animate-pulse" />
+                <span>Salvando...</span>
+              </div>
+            )}
+            {autoSaveStatus === 'saved' && (
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <Check className="h-4 w-4" />
+                <span>Salvo</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <Form {...form}>
