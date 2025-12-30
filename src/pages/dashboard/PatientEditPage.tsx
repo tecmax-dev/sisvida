@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Check, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -127,12 +127,18 @@ export default function PatientEditPage() {
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [activeTab, setActiveTab] = useState<PatientTab>('cadastro');
   const [formData, setFormData] = useState<PatientFormData>(initialFormData);
+  const [initialData, setInitialData] = useState<PatientFormData>(initialFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [insurancePlanName, setInsurancePlanName] = useState<string>('');
   const [showDependentsForm, setShowDependentsForm] = useState(false);
+  
+  // Auto-save refs
+  const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasLoadedRef = useRef(false);
   
   // No-show blocking state
   const [noShowBlockedUntil, setNoShowBlockedUntil] = useState<string | null>(null);
@@ -193,7 +199,7 @@ export default function PatientEditPage() {
       if (error) throw error;
       
       if (data) {
-        setFormData({
+        const loadedData: PatientFormData = {
           isCompany: data.is_company || false,
           isForeigner: data.is_foreigner || false,
           recordCode: data.record_code,
@@ -230,7 +236,10 @@ export default function PatientEditPage() {
           motherName: data.mother_name || '',
           fatherName: data.father_name || '',
           notes: data.notes || '',
-        });
+        };
+        setFormData(loadedData);
+        setInitialData(loadedData);
+        hasLoadedRef.current = true;
         
         // Set no-show blocking data
         setNoShowBlockedUntil(data.no_show_blocked_until);
@@ -285,6 +294,112 @@ export default function PatientEditPage() {
       }));
     }
   };
+
+  // Auto-save function
+  const performAutoSave = useCallback(async (dataToSave: PatientFormData) => {
+    if (!currentClinic || !id || !hasLoadedRef.current) return;
+    
+    // Validate before saving
+    const validation = patientSchema.safeParse({
+      name: dataToSave.name,
+      phone: dataToSave.phone,
+      email: dataToSave.email || undefined,
+      cpf: dataToSave.cpf || undefined,
+    });
+    
+    if (!validation.success) return; // Don't auto-save invalid data
+
+    setAutoSaveStatus('saving');
+    
+    try {
+      const { error } = await supabase
+        .from('patients')
+        .update({
+          name: dataToSave.name.trim(),
+          phone: dataToSave.phone.replace(/\D/g, '').trim(),
+          email: dataToSave.email.trim() || null,
+          cpf: dataToSave.cpf.replace(/\D/g, '').trim() || null,
+          birth_date: dataToSave.birthDate || null,
+          notes: dataToSave.notes.trim() || null,
+          insurance_plan_id: dataToSave.insurancePlanId || null,
+          is_company: dataToSave.isCompany,
+          is_foreigner: dataToSave.isForeigner,
+          contact_name: dataToSave.contactName.trim() || null,
+          rg: dataToSave.rg.trim() || null,
+          gender: dataToSave.gender || null,
+          birthplace: dataToSave.birthplace.trim() || null,
+          marital_status: dataToSave.maritalStatus || null,
+          height_cm: dataToSave.heightCm ? parseFloat(dataToSave.heightCm) : null,
+          weight_kg: dataToSave.weightKg ? parseFloat(dataToSave.weightKg) : null,
+          skin_color: dataToSave.skinColor || null,
+          priority: dataToSave.priority || 'none',
+          religion: dataToSave.religion.trim() || null,
+          cep: dataToSave.cep.replace(/\D/g, '').trim() || null,
+          street: dataToSave.street.trim() || null,
+          street_number: dataToSave.streetNumber.trim() || null,
+          neighborhood: dataToSave.neighborhood.trim() || null,
+          city: dataToSave.city.trim() || null,
+          state: dataToSave.state || null,
+          complement: dataToSave.complement.trim() || null,
+          tag: dataToSave.tag.trim() || null,
+          referral: dataToSave.referral.trim() || null,
+          send_notifications: dataToSave.sendNotifications,
+          landline: dataToSave.landline.replace(/\D/g, '').trim() || null,
+          preferred_channel: dataToSave.preferredChannel || 'whatsapp',
+          profession: dataToSave.profession.trim() || null,
+          education: dataToSave.education || null,
+          mother_name: dataToSave.motherName.trim() || null,
+          father_name: dataToSave.fatherName.trim() || null,
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setAutoSaveStatus('saved');
+      setInitialData(dataToSave);
+      
+      // Reset status after 2 seconds
+      setTimeout(() => {
+        setAutoSaveStatus('idle');
+      }, 2000);
+    } catch (error) {
+      console.error("Auto-save error:", error);
+      setAutoSaveStatus('idle');
+    }
+  }, [currentClinic, id]);
+
+  // Check if form data has changed
+  const hasFormChanged = useCallback((current: PatientFormData, initial: PatientFormData): boolean => {
+    return JSON.stringify(current) !== JSON.stringify(initial);
+  }, []);
+
+  // Auto-save effect with debounce
+  useEffect(() => {
+    if (!hasLoadedRef.current || !hasFormChanged(formData, initialData)) return;
+    
+    if (autoSaveTimeoutRef.current) {
+      clearTimeout(autoSaveTimeoutRef.current);
+    }
+    
+    autoSaveTimeoutRef.current = setTimeout(() => {
+      performAutoSave(formData);
+    }, 3000);
+
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, [formData, initialData, performAutoSave, hasFormChanged]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeoutRef.current) {
+        clearTimeout(autoSaveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const handleTabChange = (tab: PatientTab) => {
     if (tab === 'cadastro') {
@@ -451,16 +566,31 @@ export default function PatientEditPage() {
 
   return (
     <div className="space-y-4">
-      {/* Top bar with back button */}
+      {/* Top bar with back button and auto-save indicator */}
       <div className="flex items-center justify-between">
         <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/patients')} className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Button>
-        <Button onClick={handleSubmit} disabled={saving} className="gap-2">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Salvar
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* Auto-save status indicator */}
+          {autoSaveStatus === 'saving' && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Cloud className="h-4 w-4 animate-pulse" />
+              <span>Salvando...</span>
+            </div>
+          )}
+          {autoSaveStatus === 'saved' && (
+            <div className="flex items-center gap-2 text-sm text-green-600">
+              <Check className="h-4 w-4" />
+              <span>Salvo</span>
+            </div>
+          )}
+          <Button onClick={handleSubmit} disabled={saving} className="gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar e Voltar
+          </Button>
+        </div>
       </div>
 
       {/* Patient Header */}
