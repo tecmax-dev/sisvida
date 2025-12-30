@@ -23,9 +23,11 @@ import {
   Pencil,
   Mail,
   AlertCircle,
-  Trash2
+  Trash2,
+  Key
 } from "lucide-react";
 import { EditUserEmailDialog } from "@/components/admin/EditUserEmailDialog";
+import { EditUserPasswordDialog } from "@/components/admin/EditUserPasswordDialog";
 import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -54,6 +56,7 @@ export default function UsersManagement() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithEmail | null>(null);
   const { logAction } = useAuditLog();
@@ -93,6 +96,11 @@ export default function UsersManagement() {
   const handleEditEmail = (user: UserWithEmail) => {
     setSelectedUser(user);
     setEditDialogOpen(true);
+  };
+
+  const handleEditPassword = (user: UserWithEmail) => {
+    setSelectedUser(user);
+    setPasswordDialogOpen(true);
   };
 
   const handleDeleteUser = (user: UserWithEmail) => {
@@ -243,6 +251,14 @@ export default function UsersManagement() {
                               >
                                 <Pencil className="h-4 w-4" />
                               </Button>
+                              <Button
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => handleEditPassword(user)}
+                                title="Alterar senha"
+                              >
+                                <Key className="h-4 w-4" />
+                              </Button>
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
@@ -330,7 +346,15 @@ export default function UsersManagement() {
                             onClick={() => handleEditEmail(user)}
                           >
                             <Pencil className="h-4 w-4 mr-2" />
-                            Editar
+                            Email
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditPassword(user)}
+                          >
+                            <Key className="h-4 w-4 mr-2" />
+                            Senha
                           </Button>
                           <TooltipProvider>
                             <Tooltip>
@@ -368,6 +392,13 @@ export default function UsersManagement() {
       <EditUserEmailDialog
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
+        user={selectedUser}
+        onSuccess={fetchUsers}
+      />
+
+      <EditUserPasswordDialog
+        open={passwordDialogOpen}
+        onOpenChange={setPasswordDialogOpen}
         user={selectedUser}
         onSuccess={fetchUsers}
       />
