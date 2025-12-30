@@ -5612,6 +5612,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          billing_day: number | null
           canceled_at: string | null
           clinic_id: string
           created_at: string
@@ -5625,6 +5626,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          billing_day?: number | null
           canceled_at?: string | null
           clinic_id: string
           created_at?: string
@@ -5638,6 +5640,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          billing_day?: number | null
           canceled_at?: string | null
           clinic_id?: string
           created_at?: string
