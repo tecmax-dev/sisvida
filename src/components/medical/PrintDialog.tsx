@@ -115,6 +115,41 @@ export function PrintDialog({
   const [patientCpf, setPatientCpf] = useState("");
   const [patientAddress, setPatientAddress] = useState("");
 
+  // Load patient CPF and address when dialog opens
+  useEffect(() => {
+    const loadPatientData = async () => {
+      if (!open || !patientId) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('patients')
+          .select('cpf, address, street, street_number, neighborhood, city, state')
+          .eq('id', patientId)
+          .single();
+        
+        if (error) throw error;
+        
+        if (data) {
+          setPatientCpf(data.cpf || "");
+          // Build full address from components - prefer structured fields, fallback to legacy address
+          const streetWithNumber = data.street && data.street_number 
+            ? `${data.street}, ${data.street_number}` 
+            : data.street || data.address;
+          const addressParts = [
+            streetWithNumber,
+            data.neighborhood,
+            data.city && data.state ? `${data.city}/${data.state}` : data.city
+          ].filter(Boolean);
+          setPatientAddress(addressParts.join(', '));
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados do paciente:", error);
+      }
+    };
+    
+    loadPatientData();
+  }, [open, patientId]);
+
   // Sync prescription state with initialPrescription when dialog opens
   useEffect(() => {
     if (open) {
