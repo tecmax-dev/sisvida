@@ -38,6 +38,7 @@ import {
   MessageCircle,
   Copy,
   ChevronDown,
+  Printer,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -57,6 +58,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Odontogram } from "@/components/medical/Odontogram";
 import { VitalSignsDisplay } from "@/components/appointments/VitalSignsDisplay";
+import { PrintDialog } from "@/components/medical/PrintDialog";
 
 interface Patient {
   id: string;
@@ -202,6 +204,9 @@ export function AppointmentPanel({
     professional_name?: string;
   }>>([]);
   const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
+  
+  // Print Dialog state
+  const [printDialogOpen, setPrintDialogOpen] = useState(false);
   
   const isCompleted = appointment.status === "completed";
   const isInProgress = appointment.status === "in_progress";
@@ -545,49 +550,27 @@ export function AppointmentPanel({
   const handleSaveRecord = async () => {
     setSavingRecord(true);
     
-    // Check if record already exists for this appointment
-    const { data: existingRecord } = await supabase
+    // Upsert based on appointment_id (unique index ensures only one record per appointment)
+    const { error } = await supabase
       .from("medical_records")
-      .select("id")
-      .eq("appointment_id", appointment.id)
-      .maybeSingle();
-
-    let error;
-
-    if (existingRecord) {
-      // Update existing record
-      const result = await supabase
-        .from("medical_records")
-        .update({
-          chief_complaint: recordForm.chief_complaint || null,
-          diagnosis: recordForm.diagnosis || null,
-          treatment_plan: recordForm.treatment_plan || null,
-          prescription: recordForm.prescription || null,
-          notes: recordForm.notes || null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", existingRecord.id);
-      error = result.error;
-    } else {
-      // Insert new record
-      const result = await supabase
-        .from("medical_records")
-        .insert({
-          clinic_id: clinicId,
-          patient_id: appointment.patient_id,
-          professional_id: professionalId,
-          appointment_id: appointment.id,
-          record_date: new Date().toISOString().split("T")[0],
-          chief_complaint: recordForm.chief_complaint || null,
-          diagnosis: recordForm.diagnosis || null,
-          treatment_plan: recordForm.treatment_plan || null,
-          prescription: recordForm.prescription || null,
-          notes: recordForm.notes || null,
-        });
-      error = result.error;
-    }
+      .upsert({
+        clinic_id: clinicId,
+        patient_id: appointment.patient_id,
+        professional_id: professionalId,
+        appointment_id: appointment.id,
+        record_date: new Date().toISOString().split("T")[0],
+        chief_complaint: recordForm.chief_complaint || null,
+        diagnosis: recordForm.diagnosis || null,
+        treatment_plan: recordForm.treatment_plan || null,
+        prescription: recordForm.prescription || null,
+        notes: recordForm.notes || null,
+      }, { 
+        onConflict: 'appointment_id',
+        ignoreDuplicates: false 
+      });
 
     if (error) {
+      console.error("Erro ao salvar prontuário:", error);
       toast({
         title: "Erro ao salvar prontuário",
         description: error.message,
@@ -1237,12 +1220,12 @@ export function AppointmentPanel({
                 />
               </div>
               
-              <div className="flex gap-2 mt-4">
+                <div className="flex flex-wrap gap-2 mt-4">
                 {!isCompleted && (
                   <Button 
                     onClick={handleSaveRecord} 
                     disabled={savingRecord}
-                    className="flex-1"
+                    className="flex-1 min-w-[140px]"
                   >
                     {savingRecord ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1258,7 +1241,7 @@ export function AppointmentPanel({
                   onClick={handleSendPrescriptionWhatsApp}
                   disabled={sendingWhatsApp || !recordForm.prescription?.trim() || !appointment.patient.phone}
                   title={!appointment.patient.phone ? "Paciente sem telefone" : "Enviar via WhatsApp"}
-                  className={isCompleted ? "flex-1" : ""}
+                  className={isCompleted ? "flex-1 min-w-[140px]" : "min-w-[140px]"}
                 >
                   {sendingWhatsApp ? (
                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -1267,11 +1250,22 @@ export function AppointmentPanel({
                   )}
                   Enviar WhatsApp
                 </Button>
+                
+                {/* Print/Documents Button */}
+                <Button 
+                  variant="outline"
+                  onClick={() => setPrintDialogOpen(true)}
+                  className="min-w-[140px]"
+                  title="Imprimir documentos (Receita Simples, Controlada, Atestado, etc.)"
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Imprimir Docs
+                </Button>
               </div>
               
               {isCompleted && recordForm.prescription && (
                 <p className="text-sm text-muted-foreground mt-2">
-                  O atendimento foi finalizado, mas você ainda pode enviar o receituário via WhatsApp.
+                  O atendimento foi finalizado, mas você ainda pode enviar o receituário via WhatsApp ou imprimir documentos.
                 </p>
               )}
             </TabsContent>
@@ -1454,6 +1448,35 @@ export function AppointmentPanel({
           </div>
         </div>
       </DialogContent>
+      
+      {/* Print Dialog for Controlled Prescription, Certificates, etc. */}
+      {clinic && (
+        <PrintDialog
+          open={printDialogOpen}
+          onOpenChange={setPrintDialogOpen}
+          clinic={{
+            name: clinic.name,
+            address: clinic.address || undefined,
+            phone: clinic.phone || undefined,
+            cnpj: clinic.cnpj || undefined,
+          }}
+          clinicId={clinicId}
+          patient={{ 
+            name: appointment.patient.name, 
+            phone: appointment.patient.phone 
+          }}
+          patientId={appointment.patient_id}
+          professional={professional ? {
+            name: professional.name,
+            specialty: professional.specialty || undefined,
+            registration_number: professional.registration_number || undefined,
+          } : undefined}
+          professionalId={professionalId}
+          initialPrescription={recordForm.prescription || ""}
+          date={new Date().toISOString().split("T")[0]}
+          onDocumentSaved={() => loadPatientData()}
+        />
+      )}
     </Dialog>
   );
 }
