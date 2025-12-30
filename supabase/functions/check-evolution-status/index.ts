@@ -11,25 +11,43 @@ serve(async (req) => {
   }
 
   try {
-    const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
-    const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
-    const EVOLUTION_INSTANCE = Deno.env.get('EVOLUTION_INSTANCE');
+    // Try to get from request body first (for testing from admin panel)
+    let apiUrl: string | undefined;
+    let apiKey: string | undefined;
+    let instanceName: string | undefined;
+
+    if (req.method === 'POST') {
+      try {
+        const body = await req.json();
+        apiUrl = body.api_url;
+        apiKey = body.api_key;
+        instanceName = body.instance_name;
+        console.log('[check-evolution-status] Using params from request body');
+      } catch {
+        console.log('[check-evolution-status] No valid JSON body, using env vars');
+      }
+    }
+
+    // Fall back to environment variables
+    if (!apiUrl) apiUrl = Deno.env.get('EVOLUTION_API_URL');
+    if (!apiKey) apiKey = Deno.env.get('EVOLUTION_API_KEY');
+    if (!instanceName) instanceName = Deno.env.get('EVOLUTION_INSTANCE');
 
     console.log('[check-evolution-status] Config:', {
-      url: EVOLUTION_API_URL,
-      instance: EVOLUTION_INSTANCE,
-      keyLength: EVOLUTION_API_KEY?.length || 0
+      url: apiUrl,
+      instance: instanceName,
+      keyLength: apiKey?.length || 0
     });
 
-    if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE) {
+    if (!apiUrl || !apiKey || !instanceName) {
       return new Response(
         JSON.stringify({ 
-          success: false, 
-          error: 'Evolution API não configurada',
+          connected: false, 
+          error: 'Evolution API não configurada - preencha todos os campos',
           config: {
-            hasUrl: !!EVOLUTION_API_URL,
-            hasKey: !!EVOLUTION_API_KEY,
-            hasInstance: !!EVOLUTION_INSTANCE
+            hasUrl: !!apiUrl,
+            hasKey: !!apiKey,
+            hasInstance: !!instanceName
           }
         }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -37,20 +55,39 @@ serve(async (req) => {
     }
 
     // Normalize URL
-    let apiUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
+    apiUrl = apiUrl.replace(/\/+$/, '');
 
     // Check connection state
-    console.log(`[check-evolution-status] Fetching: ${apiUrl}/instance/connectionState/${EVOLUTION_INSTANCE}`);
+    console.log(`[check-evolution-status] Fetching: ${apiUrl}/instance/connectionState/${instanceName}`);
     
-    const stateResponse = await fetch(`${apiUrl}/instance/connectionState/${EVOLUTION_INSTANCE}`, {
+    const stateResponse = await fetch(`${apiUrl}/instance/connectionState/${instanceName}`, {
       method: 'GET',
       headers: {
-        'apikey': EVOLUTION_API_KEY,
+        'apikey': apiKey,
       },
     });
 
     const stateText = await stateResponse.text();
     console.log(`[check-evolution-status] State response (${stateResponse.status}): ${stateText}`);
+
+    if (!stateResponse.ok) {
+      let errorMsg = 'Erro ao conectar com a API';
+      if (stateResponse.status === 401) {
+        errorMsg = 'API Key inválida ou expirada';
+      } else if (stateResponse.status === 404) {
+        errorMsg = `Instância "${instanceName}" não encontrada`;
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          connected: false, 
+          error: errorMsg,
+          status: stateResponse.status,
+          details: stateText.substring(0, 200)
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let stateData;
     try {
@@ -59,41 +96,16 @@ serve(async (req) => {
       stateData = { raw: stateText };
     }
 
-    // Check instance info
-    console.log(`[check-evolution-status] Fetching: ${apiUrl}/instance/fetchInstances`);
-    
-    const instancesResponse = await fetch(`${apiUrl}/instance/fetchInstances`, {
-      method: 'GET',
-      headers: {
-        'apikey': EVOLUTION_API_KEY,
-      },
-    });
-
-    const instancesText = await instancesResponse.text();
-    console.log(`[check-evolution-status] Instances response (${instancesResponse.status}): ${instancesText.substring(0, 500)}`);
-
-    let instancesData;
-    try {
-      instancesData = JSON.parse(instancesText);
-    } catch {
-      instancesData = { raw: instancesText };
-    }
+    // Determine if connected based on state
+    const state = stateData?.instance?.state || stateData?.state;
+    const isConnected = state === 'open' || state === 'connected';
 
     return new Response(
       JSON.stringify({ 
-        success: true,
-        config: {
-          url: EVOLUTION_API_URL,
-          instance: EVOLUTION_INSTANCE
-        },
-        connectionState: {
-          status: stateResponse.status,
-          data: stateData
-        },
-        instances: {
-          status: instancesResponse.status,
-          data: instancesData
-        }
+        connected: isConnected,
+        state: state || 'unknown',
+        instance: instanceName,
+        details: stateData
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -102,7 +114,7 @@ serve(async (req) => {
     console.error('[check-evolution-status] Error:', error);
     return new Response(
       JSON.stringify({ 
-        success: false, 
+        connected: false, 
         error: error instanceof Error ? error.message : 'Erro desconhecido' 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

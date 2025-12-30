@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, Save, Globe } from "lucide-react";
+import { Loader2, Save, Globe, Wifi, CheckCircle, XCircle } from "lucide-react";
 
 interface GlobalConfig {
   id?: string;
@@ -22,6 +22,8 @@ export default function GlobalConfigPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<"idle" | "connected" | "error">("idle");
 
   useEffect(() => {
     loadConfig();
@@ -95,6 +97,42 @@ export default function GlobalConfigPage() {
     }
   };
 
+  const handleTestConnection = async () => {
+    if (!config.evolution_api_url || !config.evolution_api_key || !config.evolution_instance) {
+      toast.error("Preencha todos os campos antes de testar");
+      return;
+    }
+
+    setTesting(true);
+    setConnectionStatus("idle");
+    
+    try {
+      const { data, error } = await supabase.functions.invoke("check-evolution-status", {
+        body: {
+          api_url: config.evolution_api_url,
+          api_key: config.evolution_api_key,
+          instance_name: config.evolution_instance,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.connected) {
+        setConnectionStatus("connected");
+        toast.success("Conexão estabelecida com sucesso!");
+      } else {
+        setConnectionStatus("error");
+        toast.error(data?.error || "Falha ao conectar com a Evolution API");
+      }
+    } catch (error: any) {
+      console.error("Error testing connection:", error);
+      setConnectionStatus("error");
+      toast.error("Erro ao testar conexão: " + (error.message || "Erro desconhecido"));
+    } finally {
+      setTesting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -160,14 +198,33 @@ export default function GlobalConfigPage() {
             />
           </div>
 
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Salvar Configurações
-          </Button>
+          <div className="flex items-center gap-3 pt-2">
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4 mr-2" />
+              )}
+              Salvar Configurações
+            </Button>
+
+            <Button 
+              variant="outline" 
+              onClick={handleTestConnection} 
+              disabled={testing || !config.evolution_api_url || !config.evolution_api_key || !config.evolution_instance}
+            >
+              {testing ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : connectionStatus === "connected" ? (
+                <CheckCircle className="h-4 w-4 mr-2 text-green-500" />
+              ) : connectionStatus === "error" ? (
+                <XCircle className="h-4 w-4 mr-2 text-red-500" />
+              ) : (
+                <Wifi className="h-4 w-4 mr-2" />
+              )}
+              Testar Conexão
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
