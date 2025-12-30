@@ -29,6 +29,7 @@ interface PatientCardViewProps {
   patientName: string;
   clinicName: string;
   clinicLogo?: string | null;
+  insurancePlanName?: string | null;
   onRenew?: () => void;
   onPrint?: () => void;
   showActions?: boolean;
@@ -39,6 +40,7 @@ export function PatientCardView({
   patientName,
   clinicName,
   clinicLogo,
+  insurancePlanName,
   onRenew,
   onPrint,
   showActions = true,
@@ -97,9 +99,17 @@ export function PatientCardView({
             </div>
 
             <div className="space-y-3">
-              <div>
-                <p className="text-sm text-muted-foreground">Paciente</p>
-                <p className="font-semibold text-lg">{patientName}</p>
+              <div className="flex flex-wrap gap-x-6 gap-y-2">
+                <div>
+                  <p className="text-sm text-muted-foreground">Paciente</p>
+                  <p className="font-semibold text-lg">{patientName}</p>
+                </div>
+                {insurancePlanName && (
+                  <div>
+                    <p className="text-sm text-muted-foreground">Convênio</p>
+                    <p className="font-semibold text-lg">{insurancePlanName}</p>
+                  </div>
+                )}
               </div>
               
               <div className="flex gap-6">
