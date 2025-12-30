@@ -119,30 +119,40 @@ export function PrintDialog({
   const [patientDataError, setPatientDataError] = useState<string | null>(null);
 
   // Load patient CPF and address when entering the controlled tab
-  const fetchedPatientKeyRef = useRef<string | null>(null);
-  const fetchingPatientKeyRef = useRef<string | null>(null);
+  // Track the last successfully fetched patient to avoid re-fetching
+  const lastFetchedPatientRef = useRef<string | null>(null);
 
+  // Reset fetch state when dialog opens for a new patient
+  useEffect(() => {
+    if (open && patientId) {
+      const currentKey = `${clinicId}:${patientId}`;
+      // If this is a different patient than last time, reset everything
+      if (lastFetchedPatientRef.current !== currentKey) {
+        lastFetchedPatientRef.current = null;
+        setPatientCpf("");
+        setPatientAddress("");
+        setPatientDataError(null);
+      }
+    }
+  }, [open, patientId, clinicId]);
+
+  // Fetch patient data when entering controlled tab
   useEffect(() => {
     if (!open || !patientId || !clinicId) return;
     if (activeTab !== "controlado") return;
 
     const key = `${clinicId}:${patientId}`;
 
-    // If we already fetched successfully for this patient, do nothing
-    if (fetchedPatientKeyRef.current === key) return;
-
-    // If a fetch for this key is already in-flight, do nothing
-    if (fetchingPatientKeyRef.current === key) return;
+    // If we already fetched successfully for this exact patient in this session, skip
+    if (lastFetchedPatientRef.current === key && (patientCpf || patientAddress)) {
+      return;
+    }
 
     let cancelled = false;
-    fetchingPatientKeyRef.current = key;
 
-    (async () => {
+    const fetchPatientData = async () => {
       setPatientDataError(null);
       setPatientDataLoading(true);
-      // Clear stale values so UI doesn't keep previous patient data
-      setPatientCpf("");
-      setPatientAddress("");
 
       try {
         const { data, error } = await supabase
@@ -152,9 +162,9 @@ export function PrintDialog({
           .eq("clinic_id", clinicId)
           .maybeSingle();
 
+        if (cancelled) return;
         if (error) throw error;
         if (!data) throw new Error("Paciente não encontrado para esta clínica.");
-        if (cancelled) return;
 
         const cpf = (data.cpf || "").trim();
 
@@ -172,8 +182,8 @@ export function PrintDialog({
         setPatientCpf(cpf);
         setPatientAddress(addressParts.join(", "));
 
-        // Mark as fetched only on success (so cancelled/error can retry)
-        fetchedPatientKeyRef.current = key;
+        // Mark as successfully fetched
+        lastFetchedPatientRef.current = key;
       } catch (err) {
         console.error("Erro ao carregar dados do paciente:", err);
         if (!cancelled) {
@@ -189,22 +199,25 @@ export function PrintDialog({
           });
         }
       } finally {
-        // Clear in-flight marker so we can retry if needed
-        if (fetchingPatientKeyRef.current === key) fetchingPatientKeyRef.current = null;
         if (!cancelled) setPatientDataLoading(false);
       }
-    })();
+    };
+
+    fetchPatientData();
 
     return () => {
       cancelled = true;
     };
   }, [open, activeTab, patientId, clinicId, toast]);
 
+  // Reset state when dialog closes
   useEffect(() => {
     if (!open) {
-      fetchedPatientKeyRef.current = null;
-      fetchingPatientKeyRef.current = null;
+      lastFetchedPatientRef.current = null;
+      setPatientCpf("");
+      setPatientAddress("");
       setPatientDataError(null);
+      setPatientDataLoading(false);
     }
   }, [open]);
   // Sync prescription state with initialPrescription when dialog opens
