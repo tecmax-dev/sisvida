@@ -124,6 +124,9 @@ export function PrintDialog({
   // Controle robusto de concorrência (evita "cancelled" + StrictMode)
   const patientFetchSeqRef = useRef(0);
 
+  // Garante re-busca sempre que o usuário ENTRA na aba "controlado"
+  const prevActiveTabRef = useRef<typeof activeTab>(initialTab);
+
   useEffect(() => {
     if (open) {
       setFetchKey((prev) => prev + 1);
@@ -137,6 +140,19 @@ export function PrintDialog({
     setPatientDataError(null);
     setPatientDataLoading(false);
   }, [open]);
+
+  useEffect(() => {
+    const prev = prevActiveTabRef.current;
+    prevActiveTabRef.current = activeTab;
+
+    if (!open) return;
+    if (activeTab !== "controlado") return;
+
+    // Só incrementa quando realmente "entrou" na aba (não em cada render)
+    if (prev !== "controlado") {
+      setFetchKey((k) => k + 1);
+    }
+  }, [open, activeTab]);
 
   // Carrega CPF/Endereço quando a aba de Controlado estiver ativa
   useEffect(() => {
@@ -152,32 +168,22 @@ export function PrintDialog({
         setPatientDataError(null);
         setPatientDataLoading(true);
 
-        const { data, error } = await supabase
-          .from("patients")
-          .select("cpf, address, street, street_number, neighborhood, city, state")
-          .eq("id", patientId)
-          .eq("clinic_id", clinicId)
-          .maybeSingle();
-
+        const { data, error } = await supabase.functions.invoke(
+          "get-patient-identification",
+          {
+            body: { clinicId, patientId },
+          }
+        );
         // Se apareceu uma requisição mais nova, ignore esta
         if (patientFetchSeqRef.current !== seq) return;
 
         if (error) throw error;
-        if (!data) throw new Error("Paciente não encontrado para esta clínica.");
+        if (!data?.success) {
+          throw new Error(data?.error || "Paciente não encontrado para esta clínica.");
+        }
 
-        const cpf = (data.cpf || "").trim();
-
-        const streetWithNumber = data.street && data.street_number
-          ? `${data.street}, ${data.street_number}`
-          : data.street || data.address;
-
-        const addressParts = [
-          streetWithNumber,
-          data.neighborhood,
-          data.city && data.state ? `${data.city}/${data.state}` : data.city,
-        ].filter(Boolean);
-
-        const fullAddress = addressParts.join(", ");
+        const cpf = String(data.cpf || "").trim();
+        const fullAddress = String(data.address || "").trim();
 
         setPatientCpf(cpf);
         setPatientAddress(fullAddress);
@@ -652,7 +658,26 @@ export function PrintDialog({
               
               <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <Label>CPF do Paciente</Label>
+                  <div className="flex items-center justify-between gap-2">
+                    <Label>CPF do Paciente</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFetchKey((k) => k + 1)}
+                      disabled={patientDataLoading}
+                      className="h-7 px-2 text-xs"
+                    >
+                      {patientDataLoading ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                          Buscando…
+                        </>
+                      ) : (
+                        "Recarregar"
+                      )}
+                    </Button>
+                  </div>
                   <Input
                     value={patientCpf}
                     onChange={(e) => setPatientCpf(e.target.value)}
