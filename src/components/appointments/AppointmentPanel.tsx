@@ -1310,18 +1310,18 @@ export function AppointmentPanel({
                   Enviar WhatsApp
                 </Button>
                 
-                {/* Print/Documents Button */}
+                {/* Print prescription (normal) */}
                 <Button 
                   variant="outline"
                   onClick={() => {
                     setPrintDialogInitialTab("receituario");
                     setPrintDialogOpen(true);
                   }}
-                  className="min-w-[140px]"
-                  title="Imprimir documentos (Receita Simples, Controlada, Atestado, etc.)"
+                  className="min-w-[160px]"
+                  title="Imprimir receituário (receita simples)"
                 >
                   <Printer className="h-4 w-4 mr-2" />
-                  Imprimir Docs
+                  Imprimir Receituário
                 </Button>
               </div>
               
