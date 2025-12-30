@@ -28,19 +28,19 @@ export default function GlobalConfigPage() {
   const loadConfig = async () => {
     try {
       const { data, error } = await supabase
-        .from("global_config")
+        .from("global_config" as any)
         .select("*")
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== "PGRST116") {
+      if (error) {
         throw error;
       }
 
       if (data) {
         setConfig({
-          id: data.id,
-          evolution_api_url: data.evolution_api_url || "",
-          evolution_api_key: data.evolution_api_key || "",
+          id: (data as any).id,
+          evolution_api_url: (data as any).evolution_api_url || "",
+          evolution_api_key: (data as any).evolution_api_key || "",
         });
       }
     } catch (error) {
@@ -56,22 +56,22 @@ export default function GlobalConfigPage() {
     try {
       if (config.id) {
         const { error } = await supabase
-          .from("global_config")
+          .from("global_config" as any)
           .update({
             evolution_api_url: config.evolution_api_url,
             evolution_api_key: config.evolution_api_key,
             updated_at: new Date().toISOString(),
-          })
+          } as any)
           .eq("id", config.id);
 
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from("global_config")
+          .from("global_config" as any)
           .insert({
             evolution_api_url: config.evolution_api_url,
             evolution_api_key: config.evolution_api_key,
-          });
+          } as any);
 
         if (error) throw error;
       }

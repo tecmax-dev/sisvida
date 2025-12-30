@@ -2055,6 +2055,30 @@ export type Database = {
           },
         ]
       }
+      global_config: {
+        Row: {
+          created_at: string
+          evolution_api_key: string | null
+          evolution_api_url: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          evolution_api_key?: string | null
+          evolution_api_url?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          evolution_api_key?: string | null
+          evolution_api_url?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hero_settings: {
         Row: {
           background_effect: string | null

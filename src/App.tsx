@@ -92,6 +92,7 @@ import NotificationsPage from "./pages/admin/NotificationsPage";
 import ChatSupportPage from "./pages/admin/ChatSupportPage";
 import HeroSettingsPage from "./pages/admin/HeroSettingsPage";
 import CarouselBannersPage from "./pages/admin/CarouselBannersPage";
+import GlobalConfigPage from "./pages/admin/GlobalConfigPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -237,6 +238,7 @@ const App = () => (
                   <Route path="chat" element={<ChatSupportPage />} />
                   <Route path="hero" element={<HeroSettingsPage />} />
                   <Route path="banners" element={<CarouselBannersPage />} />
+                  <Route path="config" element={<GlobalConfigPage />} />
                 </Route>
                 {/* Dashboard Routes */}
                 <Route
