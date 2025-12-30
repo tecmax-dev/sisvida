@@ -11,6 +11,7 @@ import {
   Clock,
   Send,
 } from "lucide-react";
+import { useDocumentSettings } from "@/hooks/useDocumentSettings";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +69,7 @@ interface Prescription {
 export default function PrescriptionPage() {
   const { currentClinic, user } = useAuth();
   const { toast } = useToast();
+  const { settings: documentSettings } = useDocumentSettings(currentClinic?.id);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
@@ -188,32 +190,89 @@ export default function PrescriptionPage() {
       ? calculateAge(prescription.patient.birth_date) 
       : null;
 
+    const paperSize = documentSettings?.paper_size || 'A4';
+    const isA5 = paperSize === 'A5';
+    const showLogo = documentSettings?.show_logo !== false;
+    const showAddress = documentSettings?.show_address !== false;
+    const showPhone = documentSettings?.show_phone !== false;
+    const showCnpj = documentSettings?.show_cnpj !== false;
+    const showFooter = documentSettings?.show_footer !== false;
+    const footerText = documentSettings?.footer_text || 'Este documento foi gerado eletronicamente pelo sistema Eclini';
+    const prescriptionTitle = documentSettings?.prescription_title || 'RECEITUÁRIO';
+
     printWindow.document.write(`
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Receituário</title>
+        <title>${prescriptionTitle}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
-          .header { text-align: center; border-bottom: 2px solid #333; padding-bottom: 20px; margin-bottom: 30px; }
-          .clinic-name { font-size: 24px; font-weight: bold; }
-          .patient-info { margin-bottom: 30px; padding: 15px; background: #f5f5f5; border-radius: 8px; }
-          .prescription { white-space: pre-wrap; line-height: 1.8; min-height: 300px; padding: 20px 0; }
-          .signature-area { margin-top: 60px; text-align: center; }
-          .signature-line { border-top: 1px solid #333; width: 300px; margin: 0 auto 10px; }
-          .signature-img { max-width: 300px; margin-bottom: 10px; }
-          .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #666; }
-          @media print { body { padding: 20px; } }
+          @page { size: ${paperSize}; margin: ${isA5 ? '8mm' : '10mm'}; }
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: Arial, sans-serif; 
+            padding: ${isA5 ? '15px' : '30px'}; 
+            width: ${isA5 ? '148mm' : '210mm'}; 
+            min-height: ${isA5 ? '210mm' : '297mm'}; 
+            margin: 0 auto;
+            font-size: ${isA5 ? '11px' : '14px'};
+          }
+          .header { 
+            text-align: center; 
+            border-bottom: 2px solid #333; 
+            padding-bottom: ${isA5 ? '12px' : '20px'}; 
+            margin-bottom: ${isA5 ? '15px' : '30px'}; 
+          }
+          .logo { height: ${isA5 ? '40px' : '60px'}; margin-bottom: 8px; }
+          .clinic-name { font-size: ${isA5 ? '16px' : '22px'}; font-weight: bold; margin-bottom: 4px; }
+          .clinic-info { font-size: ${isA5 ? '10px' : '12px'}; color: #555; }
+          .title { text-align: center; font-size: ${isA5 ? '14px' : '18px'}; font-weight: bold; margin-bottom: ${isA5 ? '15px' : '25px'}; }
+          .patient-info { 
+            margin-bottom: ${isA5 ? '15px' : '25px'}; 
+            padding: ${isA5 ? '10px' : '15px'}; 
+            background: #f5f5f5; 
+            border-radius: 6px; 
+            font-size: ${isA5 ? '11px' : '13px'};
+          }
+          .prescription { 
+            white-space: pre-wrap; 
+            line-height: 1.7; 
+            min-height: ${isA5 ? '120px' : '200px'}; 
+            padding: ${isA5 ? '10px 0' : '15px 0'}; 
+            font-size: ${isA5 ? '11px' : '14px'};
+          }
+          .signature-area { 
+            margin-top: ${isA5 ? '30px' : '50px'}; 
+            text-align: center; 
+          }
+          .signature-line { border-top: 1px solid #333; width: ${isA5 ? '200px' : '280px'}; margin: 0 auto 8px; }
+          .signature-img { max-width: ${isA5 ? '180px' : '260px'}; margin-bottom: 8px; }
+          .professional-info { font-size: ${isA5 ? '10px' : '12px'}; }
+          .footer { 
+            margin-top: ${isA5 ? '20px' : '35px'}; 
+            text-align: center; 
+            font-size: ${isA5 ? '9px' : '11px'}; 
+            color: #666; 
+            border-top: 1px solid #ddd; 
+            padding-top: 10px; 
+          }
+          @media print { 
+            body { padding: ${isA5 ? '10px' : '20px'}; } 
+          }
         </style>
       </head>
       <body>
         <div class="header">
+          ${showLogo && currentClinic?.logo_url ? `<img src="${currentClinic.logo_url}" class="logo" alt="Logo" />` : ''}
           <div class="clinic-name">${currentClinic?.name || 'Clínica'}</div>
-          ${currentClinic?.address ? `<div>${currentClinic.address}</div>` : ''}
-          ${currentClinic?.phone ? `<div>Tel: ${currentClinic.phone}</div>` : ''}
+          <div class="clinic-info">
+            ${showAddress && currentClinic?.address ? `${currentClinic.address}<br>` : ''}
+            ${showPhone && currentClinic?.phone ? `Tel: ${currentClinic.phone}` : ''}
+            ${showPhone && showCnpj && currentClinic?.phone && currentClinic?.cnpj ? ' | ' : ''}
+            ${showCnpj && currentClinic?.cnpj ? `CNPJ: ${currentClinic.cnpj}` : ''}
+          </div>
         </div>
         
-        <h2 style="text-align: center; margin-bottom: 30px;">RECEITUÁRIO</h2>
+        <h2 class="title">${prescriptionTitle}</h2>
         
         <div class="patient-info">
           <strong>Paciente:</strong> ${prescription.patient?.name || 'Não informado'}
@@ -227,14 +286,14 @@ export default function PrescriptionPage() {
         <div class="signature-area">
           ${prescription.signature_data ? `<img src="${prescription.signature_data}" class="signature-img" alt="Assinatura" />` : ''}
           <div class="signature-line"></div>
-          <div>${prescription.professional?.name || 'Profissional'}</div>
-          ${prescription.professional?.specialty ? `<div>${prescription.professional.specialty}</div>` : ''}
-          ${prescription.professional?.registration_number ? `<div>${prescription.professional.registration_number}</div>` : ''}
+          <div class="professional-info">
+            <strong>${prescription.professional?.name || 'Profissional'}</strong>
+            ${prescription.professional?.specialty ? `<br>${prescription.professional.specialty}` : ''}
+            ${prescription.professional?.registration_number ? `<br>${prescription.professional.registration_number}` : ''}
+          </div>
         </div>
         
-        <div class="footer">
-          Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}
-        </div>
+        ${showFooter ? `<div class="footer">${footerText}</div>` : ''}
         
         <script>window.onload = function() { window.print(); }</script>
       </body>
