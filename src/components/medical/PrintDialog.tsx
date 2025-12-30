@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Printer, FileText, Award, ClipboardCheck, Settings, FlaskConical, MessageCircle, Send, Loader2, Pill } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Printer, FileText, Award, ClipboardCheck, Settings, FlaskConical, MessageCircle, Send, Loader2, Pill, Cloud, CloudOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -52,6 +52,8 @@ interface PrintDialogProps {
   initialTab?: "receituario" | "controlado" | "atestado" | "comparecimento" | "exames";
   date: string;
   onDocumentSaved?: () => void;
+  /** Callback to sync prescription changes with parent (for auto-save) */
+  onPrescriptionChange?: (prescription: string) => void;
 }
 
 const getTabTitle = (tab: string) => {
@@ -79,6 +81,7 @@ export function PrintDialog({
   initialTab = "receituario",
   date,
   onDocumentSaved,
+  onPrescriptionChange,
 }: PrintDialogProps) {
   const { settings } = useDocumentSettings(clinicId);
   const { toast } = useToast();
@@ -89,6 +92,10 @@ export function PrintDialog({
   const [attendanceEndTime, setAttendanceEndTime] = useState("09:00");
   const [activeTab, setActiveTab] = useState<"receituario" | "controlado" | "atestado" | "comparecimento" | "exames">(initialTab);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  
+  // Auto-save states
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Exam request states
   const [examRequest, setExamRequest] = useState("");
@@ -127,6 +134,46 @@ export function PrintDialog({
   useEffect(() => {
     setWhatsappPhone(patient.phone || "");
   }, [patient.phone]);
+
+  // Auto-save prescription with debounce
+  const performAutoSave = useCallback(async (content: string) => {
+    if (!content.trim() || !onPrescriptionChange) return;
+    
+    setAutoSaveStatus('saving');
+    try {
+      onPrescriptionChange(content);
+      setAutoSaveStatus('saved');
+      // Reset status after 3 seconds
+      setTimeout(() => setAutoSaveStatus('idle'), 3000);
+    } catch (error) {
+      console.error("Erro no auto-save:", error);
+      setAutoSaveStatus('error');
+    }
+  }, [onPrescriptionChange]);
+
+  // Handle prescription change with auto-save
+  const handlePrescriptionChange = useCallback((value: string) => {
+    setPrescription(value);
+    
+    // Clear existing timer
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    
+    // Set new debounced auto-save
+    autoSaveTimerRef.current = setTimeout(() => {
+      performAutoSave(value);
+    }, 1500);
+  }, [performAutoSave]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current);
+      }
+    };
+  }, []);
 
   const getPrintContent = () => {
     switch (activeTab) {
@@ -436,22 +483,44 @@ export function PrintDialog({
             </TabsList>
 
             <TabsContent value="receituario" className="mt-4 space-y-4">
-              {/* Top action buttons */}
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
-                  Cancelar
-                </Button>
-                <Button size="sm" onClick={handlePrint}>
-                  <Printer className="h-4 w-4 mr-2" />
-                  Imprimir
-                </Button>
+              {/* Top action buttons with auto-save indicator */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm">
+                  {autoSaveStatus === 'saving' && (
+                    <span className="flex items-center gap-1.5 text-muted-foreground animate-pulse">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Salvando...
+                    </span>
+                  )}
+                  {autoSaveStatus === 'saved' && (
+                    <span className="flex items-center gap-1.5 text-emerald-600">
+                      <Cloud className="h-3.5 w-3.5" />
+                      Salvo automaticamente
+                    </span>
+                  )}
+                  {autoSaveStatus === 'error' && (
+                    <span className="flex items-center gap-1.5 text-destructive">
+                      <CloudOff className="h-3.5 w-3.5" />
+                      Erro ao salvar
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                    Cancelar
+                  </Button>
+                  <Button size="sm" onClick={handlePrint}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Imprimir
+                  </Button>
+                </div>
               </div>
               
               <div>
                 <Label>Prescrição</Label>
                 <Textarea
                   value={prescription}
-                  onChange={(e) => setPrescription(e.target.value)}
+                  onChange={(e) => handlePrescriptionChange(e.target.value)}
                   placeholder="Digite a prescrição médica..."
                   className="mt-1.5 min-h-[200px] font-mono"
                 />
