@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,13 +12,31 @@ serve(async (req) => {
   }
 
   try {
-    const { phone, clinic_name, plan_name, value, pix_code } = await req.json();
+    const { phone, message, clinic_name, plan_name, value, pix_code } = await req.json();
 
-    const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
-    const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
-    const EVOLUTION_INSTANCE = Deno.env.get('EVOLUTION_INSTANCE');
+    // Get global config from database
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log('[test-billing-whatsapp] Config:', {
+    const { data: globalConfig, error: configError } = await supabase
+      .from('global_config')
+      .select('evolution_api_url, evolution_api_key, evolution_instance')
+      .maybeSingle();
+
+    if (configError) {
+      console.error('[test-billing-whatsapp] Error loading global_config:', configError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Erro ao carregar configuração global' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const EVOLUTION_API_URL = globalConfig?.evolution_api_url;
+    const EVOLUTION_API_KEY = globalConfig?.evolution_api_key;
+    const EVOLUTION_INSTANCE = globalConfig?.evolution_instance;
+
+    console.log('[test-billing-whatsapp] Config from global_config:', {
       url: EVOLUTION_API_URL,
       instance: EVOLUTION_INSTANCE,
       hasKey: !!EVOLUTION_API_KEY
@@ -27,7 +46,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Evolution API não configurada nos secrets do projeto',
+          error: 'Evolution API não configurada em Configuração Global do Super Admin',
           config: {
             hasUrl: !!EVOLUTION_API_URL,
             hasKey: !!EVOLUTION_API_KEY,
@@ -54,11 +73,17 @@ serve(async (req) => {
 
     console.log(`[test-billing-whatsapp] Sending to: ${formattedPhone}`);
 
-    // Test PIX code
-    const testPixCode = pix_code || '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890520400005303986540550.005802BR5925ECLINI SISTEMAS LTDA6009SAO PAULO62070503***6304ABCD';
+    // If custom message is provided, use it directly
+    let finalMessage: string;
+    
+    if (message) {
+      finalMessage = message;
+    } else {
+      // Test PIX code
+      const testPixCode = pix_code || '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890520400005303986540550.005802BR5925ECLINI SISTEMAS LTDA6009SAO PAULO62070503***6304ABCD';
 
-    // Build message
-    const message = `🏥 *Eclini - TESTE de Cobrança*
+      // Build billing message
+      finalMessage = `🏥 *Eclini - TESTE de Cobrança*
 
 Olá, ${clinic_name || 'Clínica Teste'}!
 
@@ -77,6 +102,7 @@ ${testPixCode}
 ⚠️ _Esta é uma mensagem de TESTE - não efetue pagamento._
 
 _Equipe Eclini_`;
+    }
 
     // Normalize URL - remove trailing slash
     let apiUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
@@ -91,7 +117,7 @@ _Equipe Eclini_`;
       },
       body: JSON.stringify({
         number: formattedPhone,
-        text: message,
+        text: finalMessage,
       }),
     });
 
@@ -121,7 +147,7 @@ _Equipe Eclini_`;
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Mensagem de teste enviada para ${formattedPhone}`,
+        message: `Mensagem enviada para ${formattedPhone}`,
         response: responseData
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
