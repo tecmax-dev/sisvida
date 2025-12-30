@@ -2779,6 +2779,56 @@ export type Database = {
           },
         ]
       }
+      medications: {
+        Row: {
+          active_ingredient: string | null
+          clinic_id: string
+          created_at: string
+          dosage: string | null
+          form: string | null
+          id: string
+          instructions: string | null
+          is_active: boolean | null
+          is_controlled: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          active_ingredient?: string | null
+          clinic_id: string
+          created_at?: string
+          dosage?: string | null
+          form?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          is_controlled?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          active_ingredient?: string | null
+          clinic_id?: string
+          created_at?: string
+          dosage?: string | null
+          form?: string | null
+          id?: string
+          instructions?: string | null
+          is_active?: boolean | null
+          is_controlled?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "medications_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_logs: {
         Row: {
           clinic_id: string
