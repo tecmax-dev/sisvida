@@ -15,7 +15,7 @@ interface MercadoPagoPaymentDialogProps {
   clinicId: string;
   amount: number;
   description: string;
-  source: 'transaction' | 'package' | 'quote' | 'booking';
+  source: 'transaction' | 'package' | 'quote' | 'booking' | 'subscription';
   sourceId?: string;
   payerName?: string;
   payerEmail?: string;

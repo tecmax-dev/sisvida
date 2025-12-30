@@ -75,11 +75,13 @@ import {
   Clock,
   Mail,
   ShieldCheck,
+  QrCode,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SendWelcomeDialog } from "@/components/admin/SendWelcomeDialog";
 import { Switch } from "@/components/ui/switch";
+import { MercadoPagoPaymentDialog } from "@/components/payments/MercadoPagoPaymentDialog";
 
 interface Clinic {
   id: string;
@@ -403,6 +405,9 @@ export default function ClinicsManagement() {
   // Settings dialog
   const [settingsDialogOpen, setSettingsDialogOpen] = useState(false);
   const [maxCpfAppointments, setMaxCpfAppointments] = useState<number | null>(null);
+  
+  // Payment dialog
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   
   const { setCurrentClinic, user } = useAuth();
   const { logAction } = useAuditLog();
@@ -1368,10 +1373,19 @@ export default function ClinicsManagement() {
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button variant="outline" onClick={() => setPlanDialogOpen(false)}>
               Cancelar
             </Button>
+            {selectedClinic?.subscription && selectedPlan && (
+              <Button 
+                variant="secondary"
+                onClick={() => setPaymentDialogOpen(true)}
+              >
+                <QrCode className="h-4 w-4 mr-2" />
+                Gerar PIX/Boleto
+              </Button>
+            )}
             <Button 
               onClick={handleSavePlan}
               disabled={savePlanMutation.isPending || !selectedPlanId}
@@ -1506,6 +1520,22 @@ export default function ClinicsManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mercado Pago Payment Dialog for Plan Subscription */}
+      {selectedClinic && selectedPlan && (
+        <MercadoPagoPaymentDialog
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+          clinicId={selectedClinic.id}
+          amount={selectedPlan.monthly_price}
+          description={`Assinatura do plano ${selectedPlan.name} - ${selectedClinic.name}`}
+          source="subscription"
+          sourceId={selectedClinic.subscription?.id || selectedClinic.id}
+          payerName={selectedClinic.name}
+          payerEmail={selectedClinic.email || ""}
+          payerCpf={selectedClinic.cnpj || ""}
+        />
+      )}
     </div>
   );
 }

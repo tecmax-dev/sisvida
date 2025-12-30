@@ -57,7 +57,6 @@ import {
   Download,
   FileText,
   Loader2,
-  QrCode,
 } from "lucide-react";
 import { QuoteDialog } from "@/components/quotes/QuoteDialog";
 import { QuotePreview } from "@/components/quotes/QuotePreview";
@@ -76,7 +75,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MercadoPagoPaymentDialog } from "@/components/payments/MercadoPagoPaymentDialog";
+
 
 interface Quote {
   id: string;
@@ -116,8 +115,6 @@ export default function QuotesPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<Quote | null>(null);
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
-  const [mpPaymentDialogOpen, setMpPaymentDialogOpen] = useState(false);
-  const [mpPaymentQuote, setMpPaymentQuote] = useState<Quote | null>(null);
 
   const { data: quotes = [], isLoading, error: queryError } = useQuery({
     queryKey: ["quotes", currentClinic?.id, statusFilter],
@@ -565,14 +562,6 @@ Equipe ${currentClinic?.name || ''}`;
                             Enviar WhatsApp
                           </DropdownMenuItem>
                         )}
-                        {quote.status === 'approved' && (
-                          <DropdownMenuItem 
-                            onClick={() => { setMpPaymentQuote(quote); setMpPaymentDialogOpen(true); }}
-                          >
-                            <QrCode className="h-4 w-4 mr-2" />
-                            Gerar PIX/Boleto
-                          </DropdownMenuItem>
-                        )}
                         <DropdownMenuSeparator />
                         {hasPermission("approve_budgets") && quote.status !== 'approved' && (
                           <DropdownMenuItem 
@@ -650,24 +639,6 @@ Equipe ${currentClinic?.name || ''}`;
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Mercado Pago Payment Dialog */}
-      {mpPaymentQuote && currentClinic && (
-        <MercadoPagoPaymentDialog
-          open={mpPaymentDialogOpen}
-          onOpenChange={(open) => {
-            setMpPaymentDialogOpen(open);
-            if (!open) setMpPaymentQuote(null);
-          }}
-          clinicId={currentClinic.id}
-          amount={mpPaymentQuote.total}
-          description={`Orçamento ${mpPaymentQuote.quote_number}`}
-          source="quote"
-          sourceId={mpPaymentQuote.id}
-          payerName={mpPaymentQuote.patient.name}
-          payerEmail=""
-          payerCpf={mpPaymentQuote.patient.cpf || ""}
-        />
-      )}
     </div>
     </RoleGuard>
   );

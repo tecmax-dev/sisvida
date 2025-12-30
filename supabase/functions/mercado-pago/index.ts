@@ -14,7 +14,7 @@ interface CreatePaymentRequest {
   payer_email: string;
   payer_name: string;
   payer_cpf: string;
-  source: 'transaction' | 'package' | 'quote' | 'booking';
+  source: 'transaction' | 'package' | 'quote' | 'booking' | 'subscription';
   source_id?: string;
   boleto_due_days?: number;
   payment_id?: string; // for check_status
@@ -161,6 +161,7 @@ serve(async (req) => {
     } else if (source === 'booking' && source_id) {
       paymentRecord.appointment_id = source_id;
     }
+    // subscription source doesn't need a specific foreign key relation
 
     // Add PIX specific data
     if (paymentType === 'pix') {
