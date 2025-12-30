@@ -85,6 +85,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -134,6 +142,7 @@ interface Patient {
   phone: string;
   email?: string | null;
   birth_date?: string | null;
+  cpf?: string | null;
 }
 
 interface Professional {
@@ -234,6 +243,7 @@ export default function CalendarPage() {
   const [formTime, setFormTime] = useState("");
   const [formType, setFormType] = useState("first_visit");
   const [formNotes, setFormNotes] = useState("");
+  const [patientSearchOpen, setPatientSearchOpen] = useState(false);
   
   // Professional user state
   const [loggedInProfessionalId, setLoggedInProfessionalId] = useState<string | null>(null);
@@ -403,7 +413,7 @@ export default function CalendarPage() {
     try {
       const { data: patientsData, error: patientsError } = await supabase
         .from('patients')
-        .select('id, name, phone, email, birth_date')
+        .select('id, name, phone, email, birth_date, cpf')
         .eq('clinic_id', currentClinic.id)
         .order('name');
       
@@ -1472,24 +1482,56 @@ export default function CalendarPage() {
 
       <div className="space-y-2">
         <Label>Paciente *</Label>
-        <Select value={formPatient} onValueChange={setFormPatient}>
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="Selecione o paciente" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border border-border shadow-lg z-50">
-            {patients.length > 0 ? (
-              patients.map((patient) => (
-                <SelectItem key={patient.id} value={patient.id}>
-                  {patient.name}
-                </SelectItem>
-              ))
-            ) : (
-              <div className="p-2 text-sm text-muted-foreground text-center">
-                Nenhum paciente cadastrado
-              </div>
-            )}
-          </SelectContent>
-        </Select>
+        <Popover open={patientSearchOpen} onOpenChange={setPatientSearchOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={patientSearchOpen}
+              className="w-full justify-between bg-background font-normal"
+            >
+              {formPatient
+                ? patients.find((patient) => patient.id === formPatient)?.name
+                : "Selecione o paciente"}
+              <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
+            <Command>
+              <CommandInput placeholder="Buscar por nome ou CPF..." />
+              <CommandList>
+                <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
+                <CommandGroup>
+                  {patients.map((patient) => (
+                    <CommandItem
+                      key={patient.id}
+                      value={`${patient.name} ${patient.cpf || ''}`}
+                      onSelect={() => {
+                        setFormPatient(patient.id);
+                        setPatientSearchOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          formPatient === patient.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span>{patient.name}</span>
+                        {patient.cpf && (
+                          <span className="text-xs text-muted-foreground">
+                            CPF: {patient.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                          </span>
+                        )}
+                      </div>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className="space-y-2">
