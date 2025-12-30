@@ -82,15 +82,15 @@ export function VitalSignsDisplay({ appointmentId, className }: VitalSignsDispla
   if (!data) return null;
 
   const hasAnyVital = 
-    data.blood_pressure_systolic || 
-    data.heart_rate || 
-    data.temperature || 
-    data.weight || 
-    data.height || 
-    data.oxygen_saturation ||
-    data.glucose;
+    (data.blood_pressure_systolic && data.blood_pressure_systolic > 0) || 
+    (data.heart_rate && data.heart_rate > 0) || 
+    (data.temperature && data.temperature > 0) || 
+    (data.weight && data.weight > 0) || 
+    (data.height && data.height > 0) || 
+    (data.oxygen_saturation && data.oxygen_saturation > 0) ||
+    (data.glucose && data.glucose > 0);
 
-  if (!hasAnyVital && !data.notes) return null;
+  if (!hasAnyVital && (!data.notes || !data.notes.trim())) return null;
 
   // Calculate BMI if weight and height are available
   const bmi = data.weight && data.height 
