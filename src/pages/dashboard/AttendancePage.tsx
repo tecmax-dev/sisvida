@@ -207,11 +207,17 @@ export default function AttendancePage() {
     "receituario" | "controlado" | "atestado" | "comparecimento" | "exames"
   >("receituario");
 
-  // Auto-save states
+  // Auto-save states for Prontuário/Receituário
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedFormRef = useRef<string>('');
   const isInitialLoadRef = useRef(true);
+  
+  // Auto-save states for Exames
+  const [examAutoSaveStatus, setExamAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const examAutoSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedExamRef = useRef<string>('');
+  const isExamInitialLoadRef = useRef(true);
   // Load appointment
   useEffect(() => {
     if (!appointmentId || !currentClinic?.id) return;
@@ -373,6 +379,21 @@ export default function AttendancePage() {
           notes: recordData.notes || "",
         });
       }
+
+      // Load existing exam request for this appointment
+      const { data: examData } = await supabase
+        .from("medical_documents")
+        .select("content, additional_info")
+        .match({ appointment_id: appointment.id, document_type: "exam_request" })
+        .maybeSingle();
+
+      if (examData) {
+        setExamRequest(examData.content || "");
+        const additionalInfo = examData.additional_info as Record<string, string | null> | null;
+        setClinicalIndication(additionalInfo?.clinical_indication || "");
+        // Mark initial exam data as loaded
+        lastSavedExamRef.current = JSON.stringify({ examRequest: examData.content || "", clinicalIndication: additionalInfo?.clinical_indication || "" });
+      }
       
       await loadPreviousPrescriptions();
     } catch (error) {
@@ -380,6 +401,7 @@ export default function AttendancePage() {
     } finally {
       setLoadingData(false);
       isInitialLoadRef.current = false;
+      isExamInitialLoadRef.current = false;
     }
   };
 
@@ -451,6 +473,72 @@ export default function AttendancePage() {
       }
     };
   }, [recordForm, performAutoSave, isCompleted]);
+
+  // Exam auto-save function
+  const performExamAutoSave = useCallback(async () => {
+    if (!appointment || isCompleted) return;
+    
+    const currentExamJson = JSON.stringify({ examRequest, clinicalIndication });
+    
+    // Don't save if nothing changed
+    if (currentExamJson === lastSavedExamRef.current) return;
+    
+    // Don't save if form is completely empty
+    if (!examRequest.trim() && !clinicalIndication.trim()) return;
+    
+    setExamAutoSaveStatus('saving');
+    
+    try {
+      const { error } = await supabase
+        .from("medical_documents")
+        .upsert({
+          clinic_id: appointment.clinic_id,
+          patient_id: appointment.patient_id,
+          professional_id: appointment.professional_id,
+          appointment_id: appointment.id,
+          document_type: "exam_request",
+          content: examRequest || null,
+          additional_info: { clinical_indication: clinicalIndication || null },
+          document_date: new Date().toISOString().split("T")[0],
+        }, { onConflict: 'appointment_id,document_type', ignoreDuplicates: false });
+
+      if (error) {
+        setExamAutoSaveStatus('error');
+        console.error("Exam auto-save error:", error);
+      } else {
+        lastSavedExamRef.current = currentExamJson;
+        setExamAutoSaveStatus('saved');
+        // Reset to idle after 2 seconds
+        setTimeout(() => setExamAutoSaveStatus('idle'), 2000);
+      }
+    } catch (error) {
+      setExamAutoSaveStatus('error');
+      console.error("Exam auto-save error:", error);
+    }
+  }, [appointment, examRequest, clinicalIndication, isCompleted]);
+
+  // Exam auto-save effect - triggers 3 seconds after last change
+  useEffect(() => {
+    // Skip auto-save during initial load
+    if (isExamInitialLoadRef.current || isCompleted) return;
+    
+    // Clear previous timeout
+    if (examAutoSaveTimeoutRef.current) {
+      clearTimeout(examAutoSaveTimeoutRef.current);
+    }
+    
+    // Set new timeout for auto-save
+    examAutoSaveTimeoutRef.current = setTimeout(() => {
+      performExamAutoSave();
+    }, 3000);
+    
+    return () => {
+      if (examAutoSaveTimeoutRef.current) {
+        clearTimeout(examAutoSaveTimeoutRef.current);
+      }
+    };
+  }, [examRequest, clinicalIndication, performExamAutoSave, isCompleted]);
+
   const loadPreviousPrescriptions = async () => {
     if (!appointment) return;
     
@@ -1075,6 +1163,28 @@ export default function AttendancePage() {
 
         {/* Exames Tab */}
         <TabsContent value="exames" className="mt-4 space-y-4">
+          {/* Auto-save indicator for Exams */}
+          <div className="flex items-center justify-end gap-2 text-sm">
+            {examAutoSaveStatus === 'saving' && (
+              <span className="flex items-center gap-1.5 text-muted-foreground animate-pulse">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                Salvando automaticamente...
+              </span>
+            )}
+            {examAutoSaveStatus === 'saved' && (
+              <span className="flex items-center gap-1.5 text-emerald-600">
+                <Cloud className="h-3.5 w-3.5" />
+                Salvo automaticamente
+              </span>
+            )}
+            {examAutoSaveStatus === 'error' && (
+              <span className="flex items-center gap-1.5 text-destructive">
+                <CloudOff className="h-3.5 w-3.5" />
+                Erro ao salvar
+              </span>
+            )}
+          </div>
+          
           <div>
             <Label>Exames Solicitados</Label>
             <Textarea value={examRequest} onChange={(e) => setExamRequest(e.target.value)} placeholder="1. Hemograma completo&#10;2. Glicemia de jejum&#10;3. Colesterol total..." className="min-h-[150px] font-mono" disabled={isCompleted} />
@@ -1087,7 +1197,7 @@ export default function AttendancePage() {
             {!isCompleted && (
               <Button onClick={handleSaveExamRequest} disabled={!examRequest.trim()} variant="outline" className="flex-1 min-w-[140px]">
                 <Save className="h-4 w-4 mr-2" />
-                Salvar Solicitação
+                Salvar Manualmente
               </Button>
             )}
             <Button onClick={() => setShowExamWhatsAppDialog(true)} disabled={!examRequest.trim() || isCompleted} variant={isCompleted ? "default" : "outline"} className="flex-1 min-w-[140px]">
