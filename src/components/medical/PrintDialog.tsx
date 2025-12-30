@@ -115,40 +115,54 @@ export function PrintDialog({
   const [patientCpf, setPatientCpf] = useState("");
   const [patientAddress, setPatientAddress] = useState("");
 
+  const [patientDataLoading, setPatientDataLoading] = useState(false);
+
   // Load patient CPF and address when dialog opens
   useEffect(() => {
     const loadPatientData = async () => {
-      if (!open || !patientId) return;
-      
+      if (!open || !patientId || !clinicId) return;
+
+      setPatientDataLoading(true);
       try {
         const { data, error } = await supabase
-          .from('patients')
-          .select('cpf, address, street, street_number, neighborhood, city, state')
-          .eq('id', patientId)
-          .single();
-        
+          .from("patients")
+          .select("cpf, address, street, street_number, neighborhood, city, state")
+          .eq("id", patientId)
+          .eq("clinic_id", clinicId)
+          .maybeSingle();
+
         if (error) throw error;
-        
-        if (data) {
-          setPatientCpf(data.cpf || "");
-          // Build full address from components - prefer structured fields, fallback to legacy address
-          const streetWithNumber = data.street && data.street_number 
-            ? `${data.street}, ${data.street_number}` 
-            : data.street || data.address;
-          const addressParts = [
-            streetWithNumber,
-            data.neighborhood,
-            data.city && data.state ? `${data.city}/${data.state}` : data.city
-          ].filter(Boolean);
-          setPatientAddress(addressParts.join(', '));
+        if (!data) {
+          throw new Error("Paciente não encontrado para esta clínica.");
         }
-      } catch (error) {
-        console.error("Erro ao carregar dados do paciente:", error);
+
+        setPatientCpf(data.cpf || "");
+
+        // Build full address from components - prefer structured fields, fallback to legacy address
+        const streetWithNumber = data.street && data.street_number
+          ? `${data.street}, ${data.street_number}`
+          : data.street || data.address;
+        const addressParts = [
+          streetWithNumber,
+          data.neighborhood,
+          data.city && data.state ? `${data.city}/${data.state}` : data.city,
+        ].filter(Boolean);
+
+        setPatientAddress(addressParts.join(", "));
+      } catch (err) {
+        console.error("Erro ao carregar dados do paciente:", err);
+        toast({
+          title: "Não foi possível carregar os dados do paciente",
+          description: err instanceof Error ? err.message : "Verifique permissões de acesso e tente novamente.",
+          variant: "destructive",
+        });
+      } finally {
+        setPatientDataLoading(false);
       }
     };
-    
+
     loadPatientData();
-  }, [open, patientId]);
+  }, [open, patientId, clinicId, toast]);
 
   // Sync prescription state with initialPrescription when dialog opens
   useEffect(() => {
@@ -600,8 +614,9 @@ export function PrintDialog({
                   <Input
                     value={patientCpf}
                     onChange={(e) => setPatientCpf(e.target.value)}
-                    placeholder="000.000.000-00"
+                    placeholder={patientDataLoading ? "Carregando..." : "000.000.000-00"}
                     className="mt-1.5"
+                    disabled={patientDataLoading}
                   />
                 </div>
                 <div>
@@ -609,8 +624,9 @@ export function PrintDialog({
                   <Input
                     value={patientAddress}
                     onChange={(e) => setPatientAddress(e.target.value)}
-                    placeholder="Rua, número, bairro, cidade/UF"
+                    placeholder={patientDataLoading ? "Carregando..." : "Rua, número, bairro, cidade/UF"}
                     className="mt-1.5"
+                    disabled={patientDataLoading}
                   />
                 </div>
               </div>
