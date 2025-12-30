@@ -117,53 +117,61 @@ export function PrintDialog({
 
   const [patientDataLoading, setPatientDataLoading] = useState(false);
 
-  // Load patient CPF and address when dialog opens
-  useEffect(() => {
-    const loadPatientData = async () => {
-      if (!open || !patientId || !clinicId) return;
+  // Load patient CPF and address when dialog opens (and when entering controlled tab)
+  const loadPatientData = useCallback(async () => {
+    if (!open || !patientId || !clinicId) return;
 
-      setPatientDataLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from("patients")
-          .select("cpf, address, street, street_number, neighborhood, city, state")
-          .eq("id", patientId)
-          .eq("clinic_id", clinicId)
-          .maybeSingle();
+    setPatientDataLoading(true);
+    // Clear stale values so UI doesn't keep previous patient data
+    setPatientCpf("");
+    setPatientAddress("");
 
-        if (error) throw error;
-        if (!data) {
-          throw new Error("Paciente não encontrado para esta clínica.");
-        }
+    try {
+      const { data, error } = await supabase
+        .from("patients")
+        .select("cpf, address, street, street_number, neighborhood, city, state")
+        .eq("id", patientId)
+        .eq("clinic_id", clinicId)
+        .maybeSingle();
 
-        setPatientCpf(data.cpf || "");
+      if (error) throw error;
+      if (!data) throw new Error("Paciente não encontrado para esta clínica.");
 
-        // Build full address from components - prefer structured fields, fallback to legacy address
-        const streetWithNumber = data.street && data.street_number
-          ? `${data.street}, ${data.street_number}`
-          : data.street || data.address;
-        const addressParts = [
-          streetWithNumber,
-          data.neighborhood,
-          data.city && data.state ? `${data.city}/${data.state}` : data.city,
-        ].filter(Boolean);
+      setPatientCpf((data.cpf || "").trim());
 
-        setPatientAddress(addressParts.join(", "));
-      } catch (err) {
-        console.error("Erro ao carregar dados do paciente:", err);
-        toast({
-          title: "Não foi possível carregar os dados do paciente",
-          description: err instanceof Error ? err.message : "Verifique permissões de acesso e tente novamente.",
-          variant: "destructive",
-        });
-      } finally {
-        setPatientDataLoading(false);
-      }
-    };
+      // Build full address from components - prefer structured fields, fallback to legacy address
+      const streetWithNumber = data.street && data.street_number
+        ? `${data.street}, ${data.street_number}`
+        : data.street || data.address;
 
-    loadPatientData();
+      const addressParts = [
+        streetWithNumber,
+        data.neighborhood,
+        data.city && data.state ? `${data.city}/${data.state}` : data.city,
+      ].filter(Boolean);
+
+      setPatientAddress(addressParts.join(", "));
+    } catch (err) {
+      console.error("Erro ao carregar dados do paciente:", err);
+      toast({
+        title: "Não foi possível carregar os dados do paciente",
+        description: err instanceof Error ? err.message : "Verifique permissões de acesso e tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setPatientDataLoading(false);
+    }
   }, [open, patientId, clinicId, toast]);
 
+  useEffect(() => {
+    if (open) loadPatientData();
+  }, [open, loadPatientData]);
+
+  useEffect(() => {
+    if (open && activeTab === "controlado" && !patientDataLoading && (!patientCpf || !patientAddress)) {
+      loadPatientData();
+    }
+  }, [open, activeTab, patientCpf, patientAddress, patientDataLoading, loadPatientData]);
   // Sync prescription state with initialPrescription when dialog opens
   useEffect(() => {
     if (open) {
