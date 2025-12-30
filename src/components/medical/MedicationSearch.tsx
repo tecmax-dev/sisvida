@@ -46,17 +46,22 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
   });
 
   const fetchMedications = useCallback(async (searchTerm: string) => {
-    if (!currentClinic?.id) return;
-    
     setLoading(true);
     try {
+      // Build query to fetch both global and clinic-specific medications
       let query = supabase
         .from("medications")
         .select("id, name, active_ingredient, dosage, form, instructions, is_controlled")
-        .eq("clinic_id", currentClinic.id)
         .eq("is_active", true)
         .order("name")
-        .limit(20);
+        .limit(30);
+      
+      // Filter by clinic_id (NULL for global, or matching clinic)
+      if (currentClinic?.id) {
+        query = query.or(`clinic_id.is.null,clinic_id.eq.${currentClinic.id}`);
+      } else {
+        query = query.is("clinic_id", null);
+      }
       
       if (searchTerm.trim()) {
         query = query.or(`name.ilike.%${searchTerm}%,active_ingredient.ilike.%${searchTerm}%`);
