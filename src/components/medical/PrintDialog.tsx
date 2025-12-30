@@ -185,6 +185,10 @@ export function PrintDialog({
         const cpf = String(data.cpf || "").trim();
         const fullAddress = String(data.address || "").trim();
 
+        if (!cpf && !fullAddress) {
+          throw new Error("CPF e endereço não estão cadastrados para este paciente.");
+        }
+
         setPatientCpf(cpf);
         setPatientAddress(fullAddress);
       } catch (err) {
