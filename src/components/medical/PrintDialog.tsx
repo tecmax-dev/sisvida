@@ -186,7 +186,7 @@ export function PrintDialog({
         const fullAddress = String(data.address || "").trim();
 
         if (!cpf && !fullAddress) {
-          throw new Error("CPF e endereço não estão cadastrados para este paciente.");
+          throw new Error(`CPF e endereço não estão cadastrados para o paciente ${patient?.name || "selecionado"}. Verifique o cadastro do paciente (ID: ${patientId}).`);
         }
 
         setPatientCpf(cpf);
