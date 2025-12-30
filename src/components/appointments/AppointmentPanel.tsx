@@ -46,6 +46,7 @@ import { generateExamRequestPDF } from "@/lib/examRequestExportUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Odontogram } from "@/components/medical/Odontogram";
+import { VitalSignsDisplay } from "@/components/appointments/VitalSignsDisplay";
 
 interface Patient {
   id: string;
@@ -838,6 +839,9 @@ export function AppointmentPanel({
                 Exames
               </TabsTrigger>
             </TabsList>
+
+            {/* Vital Signs Display */}
+            <VitalSignsDisplay appointmentId={appointment.id} className="mt-4" />
 
             {/* Prontuário Tab */}
             <TabsContent value="prontuario" className="mt-4 space-y-4">
