@@ -1004,6 +1004,35 @@ export default function CalendarPage() {
     }
   };
 
+  // Start appointment and navigate directly to attendance page
+  const handleStartAttendance = async (appointment: Appointment) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          status: 'in_progress',
+          started_at: new Date().toISOString(),
+        })
+        .eq('id', appointment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Atendimento iniciado",
+        description: "Bom atendimento!",
+      });
+
+      // Navigate directly to attendance page
+      navigate(`/dashboard/atendimento/${appointment.id}`);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao iniciar atendimento",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Helper function to check if date/time is in the past
   const isDateTimeInPast = (date: string, time: string): boolean => {
     const now = new Date();
@@ -1815,9 +1844,9 @@ export default function CalendarPage() {
                 </>
               )}
               
-              {/* Chegou -> Iniciar Atendimento */}
+              {/* Chegou -> Iniciar Atendimento (navega direto para página de atendimento) */}
               {appointment.status === "arrived" && (
-                <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "in_progress")}>
+                <DropdownMenuItem onClick={() => handleStartAttendance(appointment)}>
                   <Stethoscope className="h-4 w-4 mr-2 text-purple-600" />
                   Iniciar Atendimento
                 </DropdownMenuItem>
