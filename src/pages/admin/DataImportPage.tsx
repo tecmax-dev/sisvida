@@ -1030,15 +1030,43 @@ export default function DataImportPage() {
         setCombinedProgress((processedItems / totalItems) * 100);
       }
       
+      // Fetch existing dependents CPFs in this clinic to deduplicate
+      const { data: existingDependents } = await supabase
+        .from('patient_dependents')
+        .select('cpf')
+        .eq('clinic_id', selectedClinicId)
+        .not('cpf', 'is', null);
+      
+      const existingDependentCpfs = new Set(
+        (existingDependents || []).map(d => d.cpf?.replace(/\D/g, '')).filter(Boolean)
+      );
+      
+      // Filter out dependents with CPFs that already exist
+      const uniqueDependentsToInsert = dependentsToInsert.filter(dep => {
+        if (!dep.cpf) return true; // Allow dependents without CPF
+        const cpfClean = dep.cpf.replace(/\D/g, '');
+        if (existingDependentCpfs.has(cpfClean)) {
+          console.log('[DEPENDENT SKIP] CPF already exists:', dep.cpf);
+          return false;
+        }
+        existingDependentCpfs.add(cpfClean); // Add to set to prevent duplicates within file
+        return true;
+      });
+      
+      const skippedDuplicates = dependentsToInsert.length - uniqueDependentsToInsert.length;
+      if (skippedDuplicates > 0) {
+        console.log(`[DEPENDENTS] Skipped ${skippedDuplicates} duplicates by CPF`);
+      }
+      
       // Batch insert dependents
       const DEPENDENT_BATCH_SIZE = 500;
-      for (let i = 0; i < dependentsToInsert.length; i += DEPENDENT_BATCH_SIZE) {
+      for (let i = 0; i < uniqueDependentsToInsert.length; i += DEPENDENT_BATCH_SIZE) {
         if (cancelImportRef.current) {
           toast.info(`Importação cancelada. ${importedDependentsCount} dependentes importados antes do cancelamento.`);
           break;
         }
         
-        const batch = dependentsToInsert.slice(i, i + DEPENDENT_BATCH_SIZE);
+        const batch = uniqueDependentsToInsert.slice(i, i + DEPENDENT_BATCH_SIZE);
         
         try {
           const { data, error } = await supabase.from('patient_dependents').insert(batch).select('id');
