@@ -85,14 +85,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -1562,58 +1554,70 @@ export default function CalendarPage() {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-            <Command shouldFilter={false}>
-              <CommandInput
-                key={patientSearchOpen ? "patient-search-open" : "patient-search-closed"}
-                placeholder="Buscar por nome ou CPF..."
-                onValueChange={(value) => setPatientSearchQuery(value)}
-              />
-              <CommandList>
-                {isSearchingPatients ? (
-                  <div className="py-6 text-center text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
-                    Buscando...
-                  </div>
-                ) : patientSearchQuery.length < 2 ? (
-                  <div className="py-6 text-center text-sm text-muted-foreground">
-                    Digite ao menos 2 caracteres para buscar
-                  </div>
-                ) : patientSearchResults.length === 0 ? (
-                  <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
-                ) : (
-                  <CommandGroup>
-                    {patientSearchResults.map((patient) => (
-                      <CommandItem
-                        key={patient.id}
-                        value={patient.id}
-                        onSelect={() => {
-                          setFormPatient(patient.id);
-                          setSelectedPatientName(patient.name);
-                          setPatientSearchOpen(false);
-                          setPatientSearchQuery("");
-                          setPatientSearchResults([]);
-                        }}
-                      >
-                        <Check
-                          className={cn(
-                            "mr-2 h-4 w-4",
-                            formPatient === patient.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                        <div className="flex flex-col">
-                          <span>{patient.name}</span>
-                          {patient.cpf && (
-                            <span className="text-xs text-muted-foreground">
-                              CPF: {patient.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
-                            </span>
-                          )}
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                )}
-              </CommandList>
-            </Command>
+            <div className="p-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  autoFocus
+                  placeholder="Buscar por nome ou CPF..."
+                  value={patientSearchQuery}
+                  onChange={(e) => setPatientSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <div className="max-h-[320px] overflow-auto p-1 border-t">
+              {isSearchingPatients ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                  Buscando...
+                </div>
+              ) : patientSearchQuery.length < 2 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Digite ao menos 2 caracteres para buscar
+                </div>
+              ) : patientSearchResults.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  Nenhum paciente encontrado.
+                </div>
+              ) : (
+                <div className="space-y-1">
+                  {patientSearchResults.map((patient) => (
+                    <button
+                      key={patient.id}
+                      type="button"
+                      className={cn(
+                        "w-full flex items-start gap-2 rounded-md px-2 py-2 text-left hover:bg-muted transition-colors",
+                        formPatient === patient.id && "bg-muted"
+                      )}
+                      onClick={() => {
+                        setFormPatient(patient.id);
+                        setSelectedPatientName(patient.name);
+                        setPatientSearchOpen(false);
+                        setPatientSearchQuery("");
+                        setPatientSearchResults([]);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mt-0.5 h-4 w-4",
+                          formPatient === patient.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <div className="flex flex-col">
+                        <span className="text-sm">{patient.name}</span>
+                        {patient.cpf && (
+                          <span className="text-xs text-muted-foreground">
+                            CPF: {patient.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </PopoverContent>
         </Popover>
       </div>
