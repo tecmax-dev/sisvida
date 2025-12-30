@@ -860,7 +860,43 @@ function extractSheetRows(worksheet: XLSX.WorkSheet): { rows: Record<string, unk
   return { rows, columns };
 }
 
-// Parse single sheet
+// Yield control back to the main thread to prevent "Page not responding" dialogs
+function yieldToMain(): Promise<void> {
+  return new Promise(resolve => {
+    setTimeout(resolve, 0);
+  });
+}
+
+// Process array in chunks asynchronously to prevent UI blocking
+async function processInChunksAsync<T, R>(
+  items: T[],
+  processor: (item: T, index: number) => R,
+  chunkSize: number = 500,
+  onProgress?: (processed: number, total: number) => void
+): Promise<R[]> {
+  const results: R[] = [];
+  const total = items.length;
+  
+  for (let i = 0; i < total; i += chunkSize) {
+    const chunk = items.slice(i, Math.min(i + chunkSize, total));
+    
+    for (let j = 0; j < chunk.length; j++) {
+      results.push(processor(chunk[j], i + j));
+    }
+    
+    // Report progress
+    if (onProgress) {
+      onProgress(Math.min(i + chunkSize, total), total);
+    }
+    
+    // Yield control back to the main thread every chunk
+    await yieldToMain();
+  }
+  
+  return results;
+}
+
+// Parse single sheet (synchronous - for small files)
 function parseSheet<T>(
   worksheet: XLSX.WorkSheet,
   validateRow: (row: T) => ValidationResult,
@@ -881,6 +917,37 @@ function parseSheet<T>(
   });
 }
 
+// Parse single sheet asynchronously (for large files)
+async function parseSheetAsync<T>(
+  worksheet: XLSX.WorkSheet,
+  validateRow: (row: T) => ValidationResult,
+  mapRow: (row: Record<string, unknown>) => T,
+  onProgress?: (processed: number, total: number) => void
+): Promise<ImportRow<T>[]> {
+  const { rows } = extractSheetRows(worksheet);
+  
+  // For small files, use synchronous processing
+  if (rows.length < 500) {
+    return parseSheet(worksheet, validateRow, mapRow);
+  }
+  
+  return processInChunksAsync(
+    rows,
+    (row, index) => {
+      const convertedRow = convertRowHeaders(row);
+      const mappedData = mapRow(convertedRow);
+      const validation = validateRow(mappedData);
+      return {
+        rowNumber: index + 2,
+        data: mappedData,
+        validation,
+      };
+    },
+    500,
+    onProgress
+  );
+}
+
 // Parse Excel/CSV file (single sheet - legacy)
 export function parseSpreadsheet<T>(
   file: ArrayBuffer,
@@ -893,8 +960,24 @@ export function parseSpreadsheet<T>(
   return parseSheet(worksheet, validateRow, mapRow);
 }
 
-// Parse multi-sheet Excel file with auto-detection
-export function parseMultiSheetSpreadsheet(file: ArrayBuffer): MultiSheetParseResult {
+// Parse Excel/CSV file asynchronously (single sheet - for large files)
+export async function parseSpreadsheetAsync<T>(
+  file: ArrayBuffer,
+  validateRow: (row: T) => ValidationResult,
+  mapRow: (row: Record<string, unknown>) => T,
+  onProgress?: (processed: number, total: number) => void
+): Promise<ImportRow<T>[]> {
+  const workbook = XLSX.read(file, { type: 'array' });
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+  return parseSheetAsync(worksheet, validateRow, mapRow, onProgress);
+}
+
+// Parse multi-sheet Excel file with auto-detection (async to prevent UI blocking)
+export async function parseMultiSheetSpreadsheet(
+  file: ArrayBuffer,
+  onProgress?: (message: string, processed: number, total: number) => void
+): Promise<MultiSheetParseResult> {
   const workbook = XLSX.read(file, { type: 'array' });
 
   const sheets: DetectedSheet[] = [];
@@ -917,31 +1000,50 @@ export function parseMultiSheetSpreadsheet(file: ArrayBuffer): MultiSheetParseRe
       rowCount: rows.length,
     });
 
+    // Process in chunks to prevent UI blocking
     if (sheetType === 'patients') {
-      const parsed = rows.map((row, index) => {
-        const convertedRow = convertRowHeaders(row);
-        const mappedData = mapPatientRow(convertedRow);
-        const validation = validatePatientRow(mappedData);
-        return { rowNumber: index + 2, data: mappedData, validation };
-      });
+      const parsed = await processInChunksAsync(
+        rows,
+        (row, index) => {
+          const convertedRow = convertRowHeaders(row);
+          const mappedData = mapPatientRow(convertedRow);
+          const validation = validatePatientRow(mappedData);
+          return { rowNumber: index + 2, data: mappedData, validation };
+        },
+        500,
+        onProgress ? (p, t) => onProgress(`Processando pacientes (${sheetName})`, p, t) : undefined
+      );
       patients = [...patients, ...parsed];
     } else if (sheetType === 'records') {
-      const parsed = rows.map((row, index) => {
-        const convertedRow = convertRowHeaders(row);
-        const mappedData = mapMedicalRecordRow(convertedRow);
-        const validation = validateMedicalRecordRow(mappedData);
-        return { rowNumber: index + 2, data: mappedData, validation };
-      });
+      const parsed = await processInChunksAsync(
+        rows,
+        (row, index) => {
+          const convertedRow = convertRowHeaders(row);
+          const mappedData = mapMedicalRecordRow(convertedRow);
+          const validation = validateMedicalRecordRow(mappedData);
+          return { rowNumber: index + 2, data: mappedData, validation };
+        },
+        500,
+        onProgress ? (p, t) => onProgress(`Processando prontuários (${sheetName})`, p, t) : undefined
+      );
       records = [...records, ...parsed];
     } else if (sheetType === 'dependents') {
-      const parsed = rows.map((row, index) => {
-        const convertedRow = convertRowHeaders(row);
-        const mappedData = mapDependentRow(convertedRow);
-        const validation = validateDependentRow(mappedData);
-        return { rowNumber: index + 2, data: mappedData, validation };
-      });
+      const parsed = await processInChunksAsync(
+        rows,
+        (row, index) => {
+          const convertedRow = convertRowHeaders(row);
+          const mappedData = mapDependentRow(convertedRow);
+          const validation = validateDependentRow(mappedData);
+          return { rowNumber: index + 2, data: mappedData, validation };
+        },
+        500,
+        onProgress ? (p, t) => onProgress(`Processando dependentes (${sheetName})`, p, t) : undefined
+      );
       dependents = [...dependents, ...parsed];
     }
+    
+    // Yield between sheets
+    await yieldToMain();
   }
 
   return { sheets, patients, records, dependents };
@@ -971,11 +1073,12 @@ export function forceParseSheetAsType(
   return { patients: [], records: parsed };
 }
 
-// Parse all sheets forcing all unknown ones as a specific type
-export function parseWithForcedType(
+// Parse all sheets forcing all unknown ones as a specific type (async)
+export async function parseWithForcedType(
   file: ArrayBuffer,
-  forceUnknownAs: 'patients' | 'records' | 'dependents'
-): MultiSheetParseResult {
+  forceUnknownAs: 'patients' | 'records' | 'dependents',
+  onProgress?: (message: string, processed: number, total: number) => void
+): Promise<MultiSheetParseResult> {
   const workbook = XLSX.read(file, { type: 'array' });
 
   const sheets: DetectedSheet[] = [];
@@ -999,31 +1102,50 @@ export function parseWithForcedType(
       rowCount: rows.length,
     });
 
+    // Process in chunks to prevent UI blocking
     if (sheetType === 'patients') {
-      const parsed = rows.map((row, index) => {
-        const convertedRow = convertRowHeaders(row);
-        const mappedData = mapPatientRow(convertedRow);
-        const validation = validatePatientRow(mappedData);
-        return { rowNumber: index + 2, data: mappedData, validation };
-      });
+      const parsed = await processInChunksAsync(
+        rows,
+        (row, index) => {
+          const convertedRow = convertRowHeaders(row);
+          const mappedData = mapPatientRow(convertedRow);
+          const validation = validatePatientRow(mappedData);
+          return { rowNumber: index + 2, data: mappedData, validation };
+        },
+        500,
+        onProgress ? (p, t) => onProgress(`Processando pacientes (${sheetName})`, p, t) : undefined
+      );
       patients = [...patients, ...parsed];
     } else if (sheetType === 'records') {
-      const parsed = rows.map((row, index) => {
-        const convertedRow = convertRowHeaders(row);
-        const mappedData = mapMedicalRecordRow(convertedRow);
-        const validation = validateMedicalRecordRow(mappedData);
-        return { rowNumber: index + 2, data: mappedData, validation };
-      });
+      const parsed = await processInChunksAsync(
+        rows,
+        (row, index) => {
+          const convertedRow = convertRowHeaders(row);
+          const mappedData = mapMedicalRecordRow(convertedRow);
+          const validation = validateMedicalRecordRow(mappedData);
+          return { rowNumber: index + 2, data: mappedData, validation };
+        },
+        500,
+        onProgress ? (p, t) => onProgress(`Processando prontuários (${sheetName})`, p, t) : undefined
+      );
       records = [...records, ...parsed];
     } else if (sheetType === 'dependents') {
-      const parsed = rows.map((row, index) => {
-        const convertedRow = convertRowHeaders(row);
-        const mappedData = mapDependentRow(convertedRow);
-        const validation = validateDependentRow(mappedData);
-        return { rowNumber: index + 2, data: mappedData, validation };
-      });
+      const parsed = await processInChunksAsync(
+        rows,
+        (row, index) => {
+          const convertedRow = convertRowHeaders(row);
+          const mappedData = mapDependentRow(convertedRow);
+          const validation = validateDependentRow(mappedData);
+          return { rowNumber: index + 2, data: mappedData, validation };
+        },
+        500,
+        onProgress ? (p, t) => onProgress(`Processando dependentes (${sheetName})`, p, t) : undefined
+      );
       dependents = [...dependents, ...parsed];
     }
+    
+    // Yield between sheets
+    await yieldToMain();
   }
 
   return { sheets, patients, records, dependents };

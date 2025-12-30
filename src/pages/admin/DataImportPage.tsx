@@ -205,10 +205,14 @@ export default function DataImportPage() {
     if (!file) return;
     
     try {
+      toast.loading('Processando planilha...', { id: 'parsing-file' });
+      
       const buffer = await file.arrayBuffer();
       // Store buffer for potential forced re-parsing
       setLastFileBuffer(buffer);
-      const result = parseMultiSheetSpreadsheet(buffer);
+      const result = await parseMultiSheetSpreadsheet(buffer);
+      
+      toast.dismiss('parsing-file');
       
       setDetectedSheets(result.sheets);
       setPatientRows(result.patients);
@@ -255,6 +259,7 @@ export default function DataImportPage() {
         });
       }
     } catch (error) {
+      toast.dismiss('parsing-file');
       console.error('Error parsing file:', error);
       toast.error('Erro ao ler arquivo. Verifique o formato.');
     }
@@ -263,14 +268,18 @@ export default function DataImportPage() {
   }, []);
 
   // Force re-parse unknown sheets as a specific type
-  const forceConvertAs = useCallback((forceType: 'patients' | 'records' | 'dependents') => {
+  const forceConvertAs = useCallback(async (forceType: 'patients' | 'records' | 'dependents') => {
     if (!lastFileBuffer) {
       toast.error('Nenhum arquivo carregado');
       return;
     }
     
     try {
-      const result = parseWithForcedType(lastFileBuffer, forceType);
+      toast.loading('Convertendo planilha...', { id: 'converting-file' });
+      
+      const result = await parseWithForcedType(lastFileBuffer, forceType);
+      
+      toast.dismiss('converting-file');
       
       setDetectedSheets(result.sheets);
       setPatientRows(result.patients);
@@ -288,6 +297,7 @@ export default function DataImportPage() {
         { description: 'Abas não reconhecidas foram convertidas automaticamente' }
       );
     } catch (error) {
+      toast.dismiss('converting-file');
       console.error('Error forcing type:', error);
       toast.error('Erro ao converter arquivo');
     }
