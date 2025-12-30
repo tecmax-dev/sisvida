@@ -1020,13 +1020,14 @@ export default function DataImportPage() {
           const { data, error } = await supabase.from('patient_dependents').insert(batch).select('id');
 
           if (error) {
-            console.error('[DEPENDENTS BATCH ERROR]', {
+            const errorInfo = {
               message: error.message,
               details: (error as any).details,
               hint: (error as any).hint,
               code: (error as any).code,
-            });
-            toast.error(`Erro ao importar dependentes: ${error.message}`);
+            };
+            console.error('[DEPENDENTS BATCH ERROR]', errorInfo);
+            toast.error(`Erro ao importar dependentes: ${error.message}`, { duration: 15000 });
             errors += batch.length;
           } else {
             importedDependentsCount += data?.length || batch.length;
@@ -1897,13 +1898,14 @@ export default function DataImportPage() {
           .select('id');
 
         if (error) {
-          console.error('[DEPENDENT BATCH ERROR]', {
+          const errorInfo = {
             message: error.message,
             details: (error as any).details,
             hint: (error as any).hint,
             code: (error as any).code,
-          });
-          toast.error(`Erro ao importar dependentes: ${error.message}`);
+          };
+          console.error('[DEPENDENT BATCH ERROR]', errorInfo);
+          toast.error(`Erro ao importar dependentes: ${error.message}`, { duration: 15000 });
           errors += batch.length;
         } else {
           imported += data?.length || batch.length;
