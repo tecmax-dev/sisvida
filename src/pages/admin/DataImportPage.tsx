@@ -942,11 +942,75 @@ export default function DataImportPage() {
     const logId = await createImportLog('patients');
     
     let imported = 0;
+    let skippedDuplicates = 0;
     let errors = 0;
-    const BATCH_SIZE = 500; // Increased from 50 for better performance
+    const BATCH_SIZE = 500;
     
-    // Prepare all patient data
-    const allPatientData = validRows.map(row => ({
+    // Fetch existing patients BEFORE importing to avoid duplicates
+    const { data: existingPatientsForDedup } = await supabase
+      .from('patients')
+      .select('id, name, cpf')
+      .eq('clinic_id', selectedClinicId);
+    
+    // Build deduplication maps
+    const existingCpfToId = new Map<string, string>();
+    const existingNameToId = new Map<string, string>();
+    
+    existingPatientsForDedup?.forEach(p => {
+      if (p.cpf) {
+        existingCpfToId.set(p.cpf.replace(/\D/g, ''), p.id);
+      }
+      existingNameToId.set(normalizeNameForComparison(p.name), p.id);
+    });
+    
+    console.log('[DEDUP] Existing patients:', existingPatientsForDedup?.length || 0);
+    
+    // Filter out duplicates before preparing batch data
+    const newPatientRows: typeof validRows = [];
+    
+    for (const row of validRows) {
+      const cpfClean = row.data.cpf ? row.data.cpf.replace(/\D/g, '') : null;
+      const normalizedName = normalizeNameForComparison(row.data.nome);
+      
+      // Check if patient already exists by CPF (primary) or name (secondary)
+      let existingId: string | undefined;
+      
+      if (cpfClean && cpfClean.length >= 11 && existingCpfToId.has(cpfClean)) {
+        existingId = existingCpfToId.get(cpfClean);
+      } else if (existingNameToId.has(normalizedName)) {
+        existingId = existingNameToId.get(normalizedName);
+      }
+      
+      if (existingId) {
+        skippedDuplicates++;
+      } else {
+        newPatientRows.push(row);
+        // Add to maps to prevent duplicates within the same import batch
+        if (cpfClean && cpfClean.length >= 11) {
+          existingCpfToId.set(cpfClean, 'pending');
+        }
+        existingNameToId.set(normalizedName, 'pending');
+      }
+    }
+    
+    console.log('[DEDUP] Skipped duplicates:', skippedDuplicates);
+    console.log('[DEDUP] New patients to import:', newPatientRows.length);
+    
+    if (newPatientRows.length === 0) {
+      toast.info(`Nenhum paciente novo para importar. ${skippedDuplicates} duplicados ignorados.`);
+      await updateImportLog(logId, {
+        total_rows: validRows.length,
+        success_count: 0,
+        error_count: 0,
+        status: 'completed',
+      });
+      setImportingPatients(false);
+      setPatientRows([]);
+      return;
+    }
+    
+    // Prepare all patient data (only new patients)
+    const allPatientData = newPatientRows.map(row => ({
       clinic_id: selectedClinicId,
       name: row.data.nome.trim(),
       phone: row.data.telefone ? formatPhone(row.data.telefone) : "",
@@ -987,7 +1051,6 @@ export default function DataImportPage() {
         const { data, error } = await supabase.from('patients').insert(batch).select('id');
         
         if (error) {
-          // Log error but don't fallback to individual inserts (too slow)
           console.error('[BATCH ERROR]', error.message);
           errors += batch.length;
         } else {
@@ -1014,10 +1077,12 @@ export default function DataImportPage() {
     
     if (cancelImportRef.current) return;
     
+    const duplicateMsg = skippedDuplicates > 0 ? ` (${skippedDuplicates} duplicados ignorados)` : '';
+    
     if (errors > 0) {
-      toast.warning(`Importação concluída: ${imported} pacientes importados, ${errors} erros`);
+      toast.warning(`Importação concluída: ${imported} pacientes importados, ${errors} erros${duplicateMsg}`);
     } else {
-      toast.success(`${imported} pacientes importados com sucesso!`);
+      toast.success(`${imported} pacientes importados com sucesso!${duplicateMsg}`);
     }
   };
 
