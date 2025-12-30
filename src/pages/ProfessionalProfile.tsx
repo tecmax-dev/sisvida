@@ -33,6 +33,7 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { extractFunctionsError } from "@/lib/functionsError";
 import { Logo } from "@/components/layout/Logo";
 
 const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
@@ -571,24 +572,7 @@ export default function ProfessionalProfile() {
     } catch (error: unknown) {
       console.error('Error creating appointment:', error);
 
-      const anyError = error as any;
-      const backendBody = anyError?.context?.body;
-      const backendErrorMessage =
-        (backendBody && typeof backendBody === 'object' && typeof backendBody.error === 'string' && backendBody.error) ||
-        (typeof backendBody === 'string'
-          ? (() => {
-              try {
-                const parsed = JSON.parse(backendBody);
-                return typeof parsed?.error === 'string' ? parsed.error : null;
-              } catch {
-                return null;
-              }
-            })()
-          : null);
-
-      const errorMessage =
-        backendErrorMessage ||
-        (anyError instanceof Error ? anyError.message : String(anyError));
+      const { message: errorMessage } = extractFunctionsError(error);
 
       let title = "Erro ao agendar";
       let description = errorMessage || "Tente novamente";
@@ -599,12 +583,18 @@ export default function ProfessionalProfile() {
         description = match ? match[1].trim() : errorMessage;
       } else if (errorMessage.includes("carteirinha") || errorMessage.includes("CARTEIRINHA")) {
         title = "Carteirinha vencida";
+        description = errorMessage;
       } else if (errorMessage.includes("LIMITE_AGENDAMENTO") || errorMessage.includes("limite")) {
         title = "Limite de agendamentos";
+        description = errorMessage;
       } else if (errorMessage.includes("DEPENDENTE_INVALIDO") || errorMessage.includes("dependente")) {
         title = "Dependente inválido";
+        description = errorMessage;
       } else if (errorMessage.includes("FERIADO") || errorMessage.includes("feriado")) {
         title = "Data indisponível";
+        description = errorMessage;
+      } else if (errorMessage.includes("non-2xx")) {
+        description = "Não foi possível concluir o agendamento. Verifique os dados e tente novamente.";
       }
 
       toast({
