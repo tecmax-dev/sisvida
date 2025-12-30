@@ -23,6 +23,7 @@ import {
   MessageCircle,
   Loader2,
   Image,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ const adminNavItems = [
   { path: "/admin/features", label: "Recursos", icon: Layers },
   { path: "/admin/access-groups", label: "Grupos de Acesso", icon: Lock },
   { path: "/admin/notifications", label: "Notificações", icon: Bell },
+  { path: "/admin/config", label: "Configuração", icon: Settings },
   { path: "/admin/hero", label: "Hero Landing", icon: Image },
   { path: "/admin/banners", label: "Banners Carrossel", icon: Image },
   { path: "/admin/chat", label: "Chat Suporte", icon: MessageCircle },
