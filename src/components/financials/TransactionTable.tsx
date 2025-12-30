@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MoreHorizontal, Search, Check, X, Trash2, Receipt, QrCode } from "lucide-react";
+import { MoreHorizontal, Search, Check, X, Trash2, Receipt } from "lucide-react";
 import { FinancialExportButton } from "./FinancialExportButton";
 import { exportTransactions, TransactionData } from "@/lib/financialExportUtils";
 import { format } from "date-fns";
@@ -30,7 +30,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
 import { PaymentReceiptDialog } from "./PaymentReceiptDialog";
-import { MercadoPagoPaymentDialog } from "@/components/payments/MercadoPagoPaymentDialog";
+
 
 interface TransactionTableProps {
   clinicId: string;
@@ -66,8 +66,6 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
   const [search, setSearch] = useState("");
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
-  const [mpPaymentDialogOpen, setMpPaymentDialogOpen] = useState(false);
-  const [mpPaymentTransaction, setMpPaymentTransaction] = useState<any>(null);
 
   const { data: transactions, isLoading } = useQuery({
     queryKey: ["financial-transactions", clinicId, filterType],
@@ -309,16 +307,6 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
                         {transaction.status === "pending" && (
                           <>
                             <DropdownMenuItem
-                              onClick={() => {
-                                setMpPaymentTransaction(transaction);
-                                setMpPaymentDialogOpen(true);
-                              }}
-                            >
-                              <QrCode className="h-4 w-4 mr-2" />
-                              Gerar PIX/Boleto
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
                               onClick={() =>
                                 updateStatusMutation.mutate({
                                   id: transaction.id,
@@ -391,24 +379,6 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
         />
       )}
 
-      {/* Mercado Pago Payment Dialog */}
-      {mpPaymentTransaction && (
-        <MercadoPagoPaymentDialog
-          open={mpPaymentDialogOpen}
-          onOpenChange={(open) => {
-            setMpPaymentDialogOpen(open);
-            if (!open) setMpPaymentTransaction(null);
-          }}
-          clinicId={clinicId}
-          amount={Number(mpPaymentTransaction.amount)}
-          description={mpPaymentTransaction.description}
-          source="transaction"
-          sourceId={mpPaymentTransaction.id}
-          payerName={(mpPaymentTransaction.patients as any)?.name || ""}
-          payerEmail=""
-          payerCpf=""
-        />
-      )}
     </Card>
   );
 }
