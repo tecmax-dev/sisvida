@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Settings, FileText, Award, ClipboardCheck, Loader2 } from "lucide-react";
+import { Settings, FileText, Award, ClipboardCheck, Loader2, FileIcon } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentSettings, DocumentSettings } from "@/hooks/useDocumentSettings";
 
@@ -102,6 +103,31 @@ export function DocumentSettingsDialog({
 
           <TabsContent value="cabecalho" className="mt-4 space-y-4">
             <div className="space-y-4">
+              <h3 className="font-medium text-foreground">Tamanho do Papel</h3>
+              
+              <RadioGroup
+                value={formData.paper_size || 'A4'}
+                onValueChange={(value) => updateField('paper_size', value as 'A4' | 'A5')}
+                className="flex gap-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="A4" id="paper_a4" />
+                  <Label htmlFor="paper_a4" className="flex items-center gap-2 cursor-pointer">
+                    <FileIcon className="h-4 w-4" />
+                    A4 (210 x 297 mm)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="A5" id="paper_a5" />
+                  <Label htmlFor="paper_a5" className="flex items-center gap-2 cursor-pointer">
+                    <FileIcon className="h-4 w-4" />
+                    A5 (148 x 210 mm)
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-border">
               <h3 className="font-medium text-foreground">Exibir no Cabeçalho</h3>
               
               <div className="flex items-center justify-between">

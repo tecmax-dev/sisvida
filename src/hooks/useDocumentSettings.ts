@@ -18,6 +18,7 @@ export interface DocumentSettings {
   attendance_template: string | null;
   exam_request_title: string;
   exam_request_template: string | null;
+  paper_size: 'A4' | 'A5';
 }
 
 const defaultSettings: Omit<DocumentSettings, 'clinic_id'> = {
@@ -36,6 +37,7 @@ const defaultSettings: Omit<DocumentSettings, 'clinic_id'> = {
   attendance_template: null,
   exam_request_title: 'SOLICITAÇÃO DE EXAMES',
   exam_request_template: null,
+  paper_size: 'A4',
 };
 
 export function useDocumentSettings(clinicId: string | undefined) {

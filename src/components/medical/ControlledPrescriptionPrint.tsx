@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DocumentSettings } from "@/hooks/useDocumentSettings";
 
 interface ControlledPrescriptionPrintProps {
   clinic: {
@@ -22,15 +23,7 @@ interface ControlledPrescriptionPrintProps {
   };
   prescription: string;
   date: string;
-  settings?: {
-    show_logo?: boolean;
-    show_address?: boolean;
-    show_phone?: boolean;
-    show_cnpj?: boolean;
-    show_footer?: boolean;
-    footer_text?: string;
-    custom_header_text?: string;
-  } | null;
+  settings?: DocumentSettings | null;
 }
 
 export const ControlledPrescriptionPrint = forwardRef<HTMLDivElement, ControlledPrescriptionPrintProps>(
@@ -43,6 +36,10 @@ export const ControlledPrescriptionPrint = forwardRef<HTMLDivElement, Controlled
     const showPhone = settings?.show_phone !== false;
     const showCnpj = settings?.show_cnpj !== false;
     const showFooter = settings?.show_footer !== false;
+    const paperSize = settings?.paper_size || 'A4';
+    
+    // Receita controlada sempre em A4 (duas vias)
+    const pageWidth = '210mm';
 
     // Common header for both vias
     const renderHeader = (viaNumber: number, viaType: string) => (
