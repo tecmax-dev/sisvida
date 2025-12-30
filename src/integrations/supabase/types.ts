@@ -2889,6 +2889,135 @@ export type Database = {
           },
         ]
       }
+      mercado_pago_payments: {
+        Row: {
+          amount: number
+          appointment_id: string | null
+          boleto_barcode: string | null
+          boleto_due_date: string | null
+          boleto_url: string | null
+          clinic_id: string
+          created_at: string
+          description: string | null
+          external_reference: string
+          financial_transaction_id: string | null
+          id: string
+          mp_payment_id: string | null
+          mp_status: string | null
+          mp_status_detail: string | null
+          paid_at: string | null
+          patient_package_id: string | null
+          payer_cpf: string | null
+          payer_email: string | null
+          payer_name: string | null
+          payment_type: string
+          pix_expiration_date: string | null
+          pix_qr_code: string | null
+          pix_qr_code_base64: string | null
+          quote_id: string | null
+          source: string
+          status: string
+          updated_at: string
+          webhook_received_at: string | null
+        }
+        Insert: {
+          amount: number
+          appointment_id?: string | null
+          boleto_barcode?: string | null
+          boleto_due_date?: string | null
+          boleto_url?: string | null
+          clinic_id: string
+          created_at?: string
+          description?: string | null
+          external_reference: string
+          financial_transaction_id?: string | null
+          id?: string
+          mp_payment_id?: string | null
+          mp_status?: string | null
+          mp_status_detail?: string | null
+          paid_at?: string | null
+          patient_package_id?: string | null
+          payer_cpf?: string | null
+          payer_email?: string | null
+          payer_name?: string | null
+          payment_type: string
+          pix_expiration_date?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          quote_id?: string | null
+          source: string
+          status?: string
+          updated_at?: string
+          webhook_received_at?: string | null
+        }
+        Update: {
+          amount?: number
+          appointment_id?: string | null
+          boleto_barcode?: string | null
+          boleto_due_date?: string | null
+          boleto_url?: string | null
+          clinic_id?: string
+          created_at?: string
+          description?: string | null
+          external_reference?: string
+          financial_transaction_id?: string | null
+          id?: string
+          mp_payment_id?: string | null
+          mp_status?: string | null
+          mp_status_detail?: string | null
+          paid_at?: string | null
+          patient_package_id?: string | null
+          payer_cpf?: string | null
+          payer_email?: string | null
+          payer_name?: string | null
+          payment_type?: string
+          pix_expiration_date?: string | null
+          pix_qr_code?: string | null
+          pix_qr_code_base64?: string | null
+          quote_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+          webhook_received_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mercado_pago_payments_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercado_pago_payments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercado_pago_payments_financial_transaction_id_fkey"
+            columns: ["financial_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercado_pago_payments_patient_package_id_fkey"
+            columns: ["patient_package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mercado_pago_payments_quote_id_fkey"
+            columns: ["quote_id"]
+            isOneToOne: false
+            referencedRelation: "quotes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       message_logs: {
         Row: {
           clinic_id: string
