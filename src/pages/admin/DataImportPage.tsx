@@ -213,15 +213,27 @@ export default function DataImportPage() {
       setDetectedSheets(result.sheets);
       setPatientRows(result.patients);
       setRecordRows(result.records);
+      setDependentRows(result.dependents);
       
-      const sheetsInfo = result.sheets.map(s => `${s.name} (${s.type === 'patients' ? 'Pacientes' : s.type === 'records' ? 'Prontuários' : 'Desconhecido'})`);
+      const sheetsInfo = result.sheets.map(s => {
+        const typeLabel = s.type === 'patients' ? 'Pacientes' 
+          : s.type === 'records' ? 'Prontuários' 
+          : s.type === 'dependents' ? 'Dependentes' 
+          : 'Desconhecido';
+        return `${s.name} (${typeLabel})`;
+      });
       
       // Check for unrecognized sheets
       const unknownSheets = result.sheets.filter(s => s.type === 'unknown');
       
-      if (result.patients.length > 0 || result.records.length > 0) {
+      if (result.patients.length > 0 || result.records.length > 0 || result.dependents.length > 0) {
+        const parts = [];
+        if (result.patients.length > 0) parts.push(`${result.patients.length} pacientes`);
+        if (result.records.length > 0) parts.push(`${result.records.length} prontuários`);
+        if (result.dependents.length > 0) parts.push(`${result.dependents.length} dependentes`);
+        
         toast.success(
-          `Detectado: ${result.patients.length} pacientes e ${result.records.length} prontuários`,
+          `Detectado: ${parts.join(', ')}`,
           { description: `Abas encontradas: ${sheetsInfo.join(', ')}` }
         );
         
@@ -251,7 +263,7 @@ export default function DataImportPage() {
   }, []);
 
   // Force re-parse unknown sheets as a specific type
-  const forceConvertAs = useCallback((forceType: 'patients' | 'records') => {
+  const forceConvertAs = useCallback((forceType: 'patients' | 'records' | 'dependents') => {
     if (!lastFileBuffer) {
       toast.error('Nenhum arquivo carregado');
       return;
@@ -263,10 +275,16 @@ export default function DataImportPage() {
       setDetectedSheets(result.sheets);
       setPatientRows(result.patients);
       setRecordRows(result.records);
+      setDependentRows(result.dependents);
       
-      const typeLabel = forceType === 'patients' ? 'Pacientes' : 'Prontuários';
+      const typeLabel = forceType === 'patients' ? 'Pacientes' : forceType === 'records' ? 'Prontuários' : 'Dependentes';
+      const parts = [];
+      if (result.patients.length > 0) parts.push(`${result.patients.length} pacientes`);
+      if (result.records.length > 0) parts.push(`${result.records.length} prontuários`);
+      if (result.dependents.length > 0) parts.push(`${result.dependents.length} dependentes`);
+      
       toast.success(
-        `Convertido como ${typeLabel}: ${result.patients.length} pacientes e ${result.records.length} prontuários`,
+        `Convertido como ${typeLabel}: ${parts.join(', ')}`,
         { description: 'Abas não reconhecidas foram convertidas automaticamente' }
       );
     } catch (error) {
@@ -352,8 +370,9 @@ export default function DataImportPage() {
     
     const validPatients = patientRows.filter(r => r.validation.isValid);
     const validRecords = recordRows.filter(r => r.validation.isValid);
+    const validDependents = dependentRows.filter(r => r.validation.isValid);
     
-    if (validPatients.length === 0 && validRecords.length === 0) {
+    if (validPatients.length === 0 && validRecords.length === 0 && validDependents.length === 0) {
       toast.error('Nenhum registro válido para importar');
       return;
     }
@@ -365,10 +384,11 @@ export default function DataImportPage() {
     // Create import log
     const logId = await createImportLog('combined');
     
-    const totalItems = validPatients.length + (importWithRecords ? validRecords.length : 0);
+    const totalItems = validPatients.length + (importWithRecords ? validRecords.length : 0) + validDependents.length;
     let processedItems = 0;
     let importedPatients = 0;
     let importedRecords = 0;
+    let importedDependentsCount = 0;
     let errors = 0;
     const BATCH_SIZE = 500; // Increased from 50 for better performance
     
@@ -893,11 +913,100 @@ export default function DataImportPage() {
       }
     }
     
+    // Step 3: Import dependents if any
+    if (validDependents.length > 0 && !cancelImportRef.current) {
+      // Build final maps of patients for linking
+      const { data: allPatientsNow } = await supabase
+        .from('patients')
+        .select('id, name, cpf')
+        .eq('clinic_id', selectedClinicId);
+      
+      const cpfToPatientIdFinal = new Map<string, string>();
+      const nameToPatientIdFinal = new Map<string, string>();
+      
+      allPatientsNow?.forEach(p => {
+        if (p.cpf) {
+          cpfToPatientIdFinal.set(p.cpf.replace(/\D/g, ''), p.id);
+        }
+        nameToPatientIdFinal.set(normalizeNameForComparison(p.name), p.id);
+      });
+      
+      // Prepare dependents data
+      const dependentsToInsert: Array<{
+        clinic_id: string;
+        patient_id: string;
+        name: string;
+        birth_date: string | null;
+        relationship: string | null;
+        notes: string | null;
+        cpf: string | null;
+      }> = [];
+      
+      for (const row of validDependents) {
+        const cpfTitularClean = row.data.cpf_titular?.replace(/\D/g, '') || '';
+        const nomeTitularNormalized = normalizeNameForComparison(row.data.nome_titular || '');
+        
+        // Find patient by CPF first, then by name
+        let patientId: string | undefined;
+        if (cpfTitularClean && cpfToPatientIdFinal.has(cpfTitularClean)) {
+          patientId = cpfToPatientIdFinal.get(cpfTitularClean);
+        } else if (nomeTitularNormalized && nameToPatientIdFinal.has(nomeTitularNormalized)) {
+          patientId = nameToPatientIdFinal.get(nomeTitularNormalized);
+        }
+        
+        if (patientId) {
+          dependentsToInsert.push({
+            clinic_id: selectedClinicId,
+            patient_id: patientId,
+            name: row.data.nome_dependente.trim(),
+            birth_date: row.data.data_nascimento ? parseDate(row.data.data_nascimento) : null,
+            relationship: row.data.parentesco?.trim() || null,
+            notes: row.data.observacoes?.trim() || null,
+            cpf: row.data.cpf_dependente ? formatCPF(row.data.cpf_dependente) : null,
+          });
+        } else {
+          console.log('[DEPENDENT SKIP] No patient found for:', row.data.nome_titular || row.data.cpf_titular);
+          errors++;
+        }
+        processedItems++;
+        setCombinedProgress((processedItems / totalItems) * 100);
+      }
+      
+      // Batch insert dependents
+      const DEPENDENT_BATCH_SIZE = 500;
+      for (let i = 0; i < dependentsToInsert.length; i += DEPENDENT_BATCH_SIZE) {
+        if (cancelImportRef.current) {
+          toast.info(`Importação cancelada. ${importedDependentsCount} dependentes importados antes do cancelamento.`);
+          break;
+        }
+        
+        const batch = dependentsToInsert.slice(i, i + DEPENDENT_BATCH_SIZE);
+        
+        try {
+          const { data, error } = await supabase.from('patient_dependents').insert(batch).select('id');
+          
+          if (error) {
+            console.error('[DEPENDENTS BATCH ERROR]', error.message);
+            errors += batch.length;
+          } else {
+            importedDependentsCount += data?.length || batch.length;
+          }
+        } catch (err) {
+          console.error('[DEPENDENTS BATCH EXCEPTION]', err);
+          errors += batch.length;
+        }
+      }
+      
+      if (importedDependentsCount > 0) {
+        toast.info(`${importedDependentsCount} dependentes vinculados aos pacientes`);
+      }
+    }
+    
     // Update import log
     const finalStatus = cancelImportRef.current ? 'cancelled' : (errors > 0 ? 'completed' : 'completed');
     await updateImportLog(logId, {
       total_rows: totalItems,
-      success_count: importedPatients + importedRecords,
+      success_count: importedPatients + importedRecords + importedDependentsCount,
       error_count: errors,
       status: cancelImportRef.current ? 'cancelled' : 'completed',
     });
@@ -905,11 +1014,15 @@ export default function DataImportPage() {
     setImportingCombined(false);
     setPatientRows([]);
     setRecordRows([]);
+    setDependentRows([]);
     setDetectedSheets([]);
     
-    const resultMessage = importWithRecords 
-      ? `${importedPatients} pacientes e ${importedRecords} prontuários importados`
-      : `${importedPatients} pacientes importados`;
+    // Build result message
+    const resultParts = [];
+    if (importedPatients > 0) resultParts.push(`${importedPatients} pacientes`);
+    if (importedRecords > 0) resultParts.push(`${importedRecords} prontuários`);
+    if (importedDependentsCount > 0) resultParts.push(`${importedDependentsCount} dependentes`);
+    const resultMessage = resultParts.length > 0 ? `${resultParts.join(', ')} importados` : 'Nenhum registro importado';
     
     if (cancelImportRef.current) {
       return;
