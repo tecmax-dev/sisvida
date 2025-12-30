@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Printer, FileText, Award, ClipboardCheck, Settings, FlaskConical, MessageCircle, Send, Loader2 } from "lucide-react";
+import { Printer, FileText, Award, ClipboardCheck, Settings, FlaskConical, MessageCircle, Send, Loader2, Pill } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -16,6 +16,7 @@ import { PrescriptionPrint } from "./PrescriptionPrint";
 import { MedicalCertificatePrint } from "./MedicalCertificatePrint";
 import { AttendanceDeclarationPrint } from "./AttendanceDeclarationPrint";
 import { ExamRequestPrint } from "./ExamRequestPrint";
+import { ControlledPrescriptionPrint } from "./ControlledPrescriptionPrint";
 import { DocumentSettingsDialog } from "./DocumentSettingsDialog";
 import { useDocumentSettings } from "@/hooks/useDocumentSettings";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +55,7 @@ interface PrintDialogProps {
 const getTabTitle = (tab: string) => {
   switch (tab) {
     case "receituario": return "Receituário";
+    case "controlado": return "Receita Controlada";
     case "atestado": return "Atestado";
     case "comparecimento": return "Declaração de Comparecimento";
     case "exames": return "Solicitação de Exames";
@@ -93,9 +95,15 @@ export function PrintDialog({
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
   
   const prescriptionRef = useRef<HTMLDivElement>(null);
+  const controlledPrescriptionRef = useRef<HTMLDivElement>(null);
   const certificateRef = useRef<HTMLDivElement>(null);
   const attendanceRef = useRef<HTMLDivElement>(null);
   const examRequestRef = useRef<HTMLDivElement>(null);
+  
+  // Controlled prescription states
+  const [controlledPrescription, setControlledPrescription] = useState("");
+  const [patientCpf, setPatientCpf] = useState("");
+  const [patientAddress, setPatientAddress] = useState("");
 
   // Use prescription template if available and no initial prescription
   useEffect(() => {
@@ -112,6 +120,7 @@ export function PrintDialog({
   const getPrintContent = () => {
     switch (activeTab) {
       case "receituario": return prescriptionRef.current;
+      case "controlado": return controlledPrescriptionRef.current;
       case "atestado": return certificateRef.current;
       case "comparecimento": return attendanceRef.current;
       case "exames": return examRequestRef.current;
@@ -162,6 +171,7 @@ export function PrintDialog({
   const getDocumentContent = () => {
     switch (activeTab) {
       case "receituario": return prescription;
+      case "controlado": return controlledPrescription;
       case "atestado": return `Afastamento de ${certificateDays} dia(s)` + (certificateReason ? ` - ${certificateReason}` : '');
       case "comparecimento": return `Comparecimento das ${attendanceStartTime} às ${attendanceEndTime}`;
       case "exames": return examRequest;
@@ -173,6 +183,7 @@ export function PrintDialog({
   const getAdditionalInfo = () => {
     switch (activeTab) {
       case "receituario": return { template_used: !!settings?.prescription_template };
+      case "controlado": return { is_controlled: true, patient_cpf: patientCpf, patient_address: patientAddress };
       case "atestado": return { days: certificateDays, cid: certificateReason || null };
       case "comparecimento": return { start_time: attendanceStartTime, end_time: attendanceEndTime };
       case "exames": return { clinical_indication: clinicalIndication || null };
@@ -187,6 +198,7 @@ export function PrintDialog({
 
     // Save document before printing
     const documentType = activeTab === "receituario" ? "prescription" 
+      : activeTab === "controlado" ? "controlled_prescription"
       : activeTab === "atestado" ? "certificate"
       : activeTab === "comparecimento" ? "attendance"
       : "exam_request";
@@ -385,20 +397,24 @@ export function PrintDialog({
           </DialogHeader>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="receituario" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="receituario" className="flex items-center gap-1 text-xs sm:text-sm">
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Receituário</span>
               </TabsTrigger>
-              <TabsTrigger value="atestado" className="flex items-center gap-2">
+              <TabsTrigger value="controlado" className="flex items-center gap-1 text-xs sm:text-sm">
+                <Pill className="h-4 w-4" />
+                <span className="hidden sm:inline">Controlada</span>
+              </TabsTrigger>
+              <TabsTrigger value="atestado" className="flex items-center gap-1 text-xs sm:text-sm">
                 <Award className="h-4 w-4" />
                 <span className="hidden sm:inline">Atestado</span>
               </TabsTrigger>
-              <TabsTrigger value="comparecimento" className="flex items-center gap-2">
+              <TabsTrigger value="comparecimento" className="flex items-center gap-1 text-xs sm:text-sm">
                 <ClipboardCheck className="h-4 w-4" />
-                <span className="hidden sm:inline">Comparecimento</span>
+                <span className="hidden sm:inline">Comparec.</span>
               </TabsTrigger>
-              <TabsTrigger value="exames" className="flex items-center gap-2">
+              <TabsTrigger value="exames" className="flex items-center gap-1 text-xs sm:text-sm">
                 <FlaskConical className="h-4 w-4" />
                 <span className="hidden sm:inline">Exames</span>
               </TabsTrigger>
@@ -426,6 +442,72 @@ export function PrintDialog({
                       patient={patient}
                       professional={professional}
                       prescription={prescription}
+                      date={date}
+                      settings={settings}
+                    />
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* Receita Controlada Tab */}
+            <TabsContent value="controlado" className="mt-4 space-y-4">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg">
+                <p className="text-sm text-amber-800 dark:text-amber-200">
+                  <strong>Receita de Controle Especial (Tipo C)</strong> - Emitida em 2 vias conforme Portaria SVS/MS nº 344/98. 
+                  A 1ª via fica retida na farmácia e a 2ª via fica com o paciente.
+                </p>
+              </div>
+              
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <Label>CPF do Paciente</Label>
+                  <Input
+                    value={patientCpf}
+                    onChange={(e) => setPatientCpf(e.target.value)}
+                    placeholder="000.000.000-00"
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label>Endereço do Paciente</Label>
+                  <Input
+                    value={patientAddress}
+                    onChange={(e) => setPatientAddress(e.target.value)}
+                    placeholder="Rua, número, bairro, cidade/UF"
+                    className="mt-1.5"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>Medicamento Controlado</Label>
+                <Textarea
+                  value={controlledPrescription}
+                  onChange={(e) => setControlledPrescription(e.target.value)}
+                  placeholder="Nome do medicamento (nome genérico), concentração, forma farmacêutica&#10;Quantidade: XX (por extenso)&#10;Posologia: 1 comprimido a cada 12 horas por 30 dias"
+                  className="mt-1.5 min-h-[150px] font-mono"
+                />
+              </div>
+
+              {/* Preview */}
+              <div className="border border-border rounded-lg overflow-hidden">
+                <div className="bg-muted px-4 py-2 text-sm font-medium flex items-center gap-2">
+                  <span>Pré-visualização (2 vias)</span>
+                  <span className="text-xs text-muted-foreground">- Role para ver ambas as vias</span>
+                </div>
+                <div className="overflow-auto max-h-[400px] bg-gray-100">
+                  <div className="transform scale-[0.35] origin-top-left">
+                    <ControlledPrescriptionPrint
+                      ref={controlledPrescriptionRef}
+                      clinic={clinic}
+                      patient={{
+                        name: patient.name,
+                        cpf: patientCpf,
+                        address: patientAddress,
+                      }}
+                      professional={professional}
+                      prescription={controlledPrescription}
                       date={date}
                       settings={settings}
                     />
