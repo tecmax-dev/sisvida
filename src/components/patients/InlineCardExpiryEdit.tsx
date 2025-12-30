@@ -71,6 +71,8 @@ export function InlineCardExpiryEdit({
 
     setSaving(true);
     try {
+      let dependentsUpdated = 0;
+      
       if (entityType === "patient") {
         // Update patient_cards table
         const { data: existingCard, error: fetchError } = await supabase
@@ -89,6 +91,18 @@ export function InlineCardExpiryEdit({
             .eq("id", existingCard.id);
 
           if (error) throw error;
+          
+          // The database trigger sync_dependent_card_expiry_trigger automatically
+          // updates all dependents' card_expires_at when patient_cards.expires_at changes
+          
+          // Check how many dependents were affected for the toast message
+          const { count } = await supabase
+            .from("patient_dependents")
+            .select("*", { count: "exact", head: true })
+            .eq("patient_id", entityId)
+            .eq("is_active", true);
+          
+          dependentsUpdated = count || 0;
         } else {
           // Create new card if doesn't exist
           const { data: patient } = await supabase
@@ -107,6 +121,15 @@ export function InlineCardExpiryEdit({
             }]);
 
             if (error) throw error;
+            
+            // Count dependents for new cards too
+            const { count } = await supabase
+              .from("patient_dependents")
+              .select("*", { count: "exact", head: true })
+              .eq("patient_id", entityId)
+              .eq("is_active", true);
+            
+            dependentsUpdated = count || 0;
           }
         }
       } else {
@@ -119,9 +142,13 @@ export function InlineCardExpiryEdit({
         if (error) throw error;
       }
 
+      const dependentMessage = dependentsUpdated > 0 
+        ? ` ${dependentsUpdated} dependente(s) também atualizado(s).`
+        : "";
+
       toast({
         title: "Validade atualizada",
-        description: "A data de validade da carteirinha foi atualizada.",
+        description: `A data de validade da carteirinha foi atualizada.${dependentMessage}`,
       });
 
       setIsEditing(false);
