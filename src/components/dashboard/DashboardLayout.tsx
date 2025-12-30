@@ -47,6 +47,7 @@ import {
   FileCheck2,
   CalendarOff,
   Image,
+  FlaskConical,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -76,6 +77,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "view_waiting_list" },
   { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "insurance_plans" },
   { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
+  { href: "/dashboard/exams", icon: FlaskConical, label: "Exames", permission: "view_procedures" },
   { href: "/dashboard/catalog", icon: ShoppingBag, label: "Catálogo", permission: "view_catalog" },
   { href: "/dashboard/quotes", icon: FileSpreadsheet, label: "Orçamentos", permission: "view_budgets" },
   { href: "/dashboard/packages", icon: Package, label: "Pacotes", permission: "view_packages" },

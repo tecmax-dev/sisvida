@@ -76,6 +76,7 @@ import HolidaysPage from "./pages/dashboard/HolidaysPage";
 import PanelBannersPage from "./pages/dashboard/PanelBannersPage";
 import DependentsPage from "./pages/dashboard/DependentsPage";
 import AttendancePage from "./pages/dashboard/AttendancePage";
+import ExamsPage from "./pages/dashboard/ExamsPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -281,6 +282,7 @@ const App = () => (
                   <Route path="holidays" element={<HolidaysPage />} />
                   <Route path="dependents" element={<DependentsPage />} />
                   <Route path="atendimento/:appointmentId" element={<AttendancePage />} />
+                  <Route path="exams" element={<ExamsPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
