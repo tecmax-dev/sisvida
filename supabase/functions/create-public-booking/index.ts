@@ -420,6 +420,36 @@ serve(async (req) => {
         return errorResponse(match ? match[1].trim() : 'O profissional não atende neste horário.');
       }
       
+      // Check for expired card errors
+      if (apptError.message?.includes('CARTEIRINHA_VENCIDA')) {
+        const match = apptError.message.match(/CARTEIRINHA_VENCIDA:\s*(.+)/);
+        return errorResponse(match ? match[1].trim() : 'A carteirinha do paciente está vencida. Por favor, renove para agendar.');
+      }
+      
+      // Check for expired dependent card errors
+      if (apptError.message?.includes('CARTEIRINHA_DEPENDENTE_VENCIDA')) {
+        const match = apptError.message.match(/CARTEIRINHA_DEPENDENTE_VENCIDA:\s*(.+)/);
+        return errorResponse(match ? match[1].trim() : 'A carteirinha do dependente está vencida. Por favor, renove para agendar.');
+      }
+      
+      // Check for CPF appointment limit errors
+      if (apptError.message?.includes('LIMITE_AGENDAMENTO_CPF')) {
+        const match = apptError.message.match(/LIMITE_AGENDAMENTO_CPF:\s*(.+)/);
+        return errorResponse(match ? match[1].trim() : 'Limite de agendamentos atingido para este mês.');
+      }
+      
+      // Check for invalid dependent errors
+      if (apptError.message?.includes('DEPENDENTE_INVALIDO')) {
+        const match = apptError.message.match(/DEPENDENTE_INVALIDO:\s*(.+)/);
+        return errorResponse(match ? match[1].trim() : 'O dependente selecionado não está ativo.');
+      }
+      
+      // Check for holiday errors
+      if (apptError.message?.includes('FERIADO')) {
+        const match = apptError.message.match(/FERIADO:\s*(.+)/);
+        return errorResponse(match ? match[1].trim() : 'Não é possível agendar nesta data (feriado).');
+      }
+      
       return errorResponse('Erro ao criar agendamento. Tente novamente.', 500);
     }
 
