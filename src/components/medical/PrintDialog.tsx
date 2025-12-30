@@ -117,40 +117,34 @@ export function PrintDialog({
 
   const [patientDataLoading, setPatientDataLoading] = useState(false);
   const [patientDataError, setPatientDataError] = useState<string | null>(null);
+  
+  // Use a fetch key that changes each time dialog opens to force re-fetch
+  const [fetchKey, setFetchKey] = useState(0);
 
-  // Load patient CPF and address when entering the controlled tab
-  // Track the last successfully fetched patient to avoid re-fetching
-  const lastFetchedPatientRef = useRef<string | null>(null);
-
-  // Reset fetch state when dialog opens for a new patient
+  // Increment fetch key when dialog opens to force a new fetch
   useEffect(() => {
-    if (open && patientId) {
-      const currentKey = `${clinicId}:${patientId}`;
-      // If this is a different patient than last time, reset everything
-      if (lastFetchedPatientRef.current !== currentKey) {
-        lastFetchedPatientRef.current = null;
-        setPatientCpf("");
-        setPatientAddress("");
-        setPatientDataError(null);
-      }
+    if (open) {
+      setFetchKey(prev => prev + 1);
+    } else {
+      // Reset all state when dialog closes
+      setPatientCpf("");
+      setPatientAddress("");
+      setPatientDataError(null);
+      setPatientDataLoading(false);
     }
-  }, [open, patientId, clinicId]);
+  }, [open]);
 
   // Fetch patient data when entering controlled tab
   useEffect(() => {
-    if (!open || !patientId || !clinicId) return;
-    if (activeTab !== "controlado") return;
-
-    const key = `${clinicId}:${patientId}`;
-
-    // If we already fetched successfully for this exact patient in this session, skip
-    if (lastFetchedPatientRef.current === key && (patientCpf || patientAddress)) {
+    // Only run when all conditions are met
+    if (!open || !patientId || !clinicId || activeTab !== "controlado" || fetchKey === 0) {
       return;
     }
 
     let cancelled = false;
 
     const fetchPatientData = async () => {
+      console.log("[PrintDialog] Fetching patient data for controlled prescription", { patientId, clinicId, fetchKey });
       setPatientDataError(null);
       setPatientDataLoading(true);
 
@@ -162,9 +156,22 @@ export function PrintDialog({
           .eq("clinic_id", clinicId)
           .maybeSingle();
 
-        if (cancelled) return;
-        if (error) throw error;
-        if (!data) throw new Error("Paciente não encontrado para esta clínica.");
+        if (cancelled) {
+          console.log("[PrintDialog] Fetch was cancelled");
+          return;
+        }
+        
+        if (error) {
+          console.error("[PrintDialog] Supabase error:", error);
+          throw error;
+        }
+        
+        if (!data) {
+          console.warn("[PrintDialog] No patient found");
+          throw new Error("Paciente não encontrado para esta clínica.");
+        }
+
+        console.log("[PrintDialog] Patient data received:", data);
 
         const cpf = (data.cpf || "").trim();
 
@@ -179,11 +186,12 @@ export function PrintDialog({
           data.city && data.state ? `${data.city}/${data.state}` : data.city,
         ].filter(Boolean);
 
+        const fullAddress = addressParts.join(", ");
+        
+        console.log("[PrintDialog] Setting CPF:", cpf, "Address:", fullAddress);
         setPatientCpf(cpf);
-        setPatientAddress(addressParts.join(", "));
-
-        // Mark as successfully fetched
-        lastFetchedPatientRef.current = key;
+        setPatientAddress(fullAddress);
+        setPatientDataLoading(false);
       } catch (err) {
         console.error("Erro ao carregar dados do paciente:", err);
         if (!cancelled) {
@@ -192,14 +200,13 @@ export function PrintDialog({
             : "Verifique permissões de acesso e tente novamente.";
 
           setPatientDataError(message);
+          setPatientDataLoading(false);
           toast({
             title: "Não foi possível carregar os dados do paciente",
             description: message,
             variant: "destructive",
           });
         }
-      } finally {
-        if (!cancelled) setPatientDataLoading(false);
       }
     };
 
@@ -208,18 +215,7 @@ export function PrintDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, activeTab, patientId, clinicId, toast]);
-
-  // Reset state when dialog closes
-  useEffect(() => {
-    if (!open) {
-      lastFetchedPatientRef.current = null;
-      setPatientCpf("");
-      setPatientAddress("");
-      setPatientDataError(null);
-      setPatientDataLoading(false);
-    }
-  }, [open]);
+  }, [fetchKey, activeTab, patientId, clinicId, open, toast]);
   // Sync prescription state with initialPrescription when dialog opens
   useEffect(() => {
     if (open) {
