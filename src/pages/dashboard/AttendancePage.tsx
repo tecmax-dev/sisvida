@@ -787,32 +787,50 @@ export default function AttendancePage() {
 
       {/* Main Content */}
       <Tabs defaultValue="prontuario" className="w-full">
-        <TabsList className={`w-full grid ${isDentalSpecialty ? 'grid-cols-6' : 'grid-cols-5'}`}>
-          <TabsTrigger value="prontuario">
-            <FileText className="h-4 w-4 mr-1.5" />
-            Prontuário
+        <TabsList className={`w-full grid ${isDentalSpecialty ? 'grid-cols-6' : 'grid-cols-5'} h-auto gap-2 bg-transparent p-0`}>
+          <TabsTrigger 
+            value="prontuario" 
+            className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-blue-50 text-blue-700 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-lg hover:bg-blue-100 transition-all duration-200"
+          >
+            <FileText className="h-5 w-5" />
+            <span className="text-xs font-medium">Prontuário</span>
           </TabsTrigger>
           {isDentalSpecialty && (
-            <TabsTrigger value="odontograma">
-              <Stethoscope className="h-4 w-4 mr-1.5" />
-              Odontograma
+            <TabsTrigger 
+              value="odontograma"
+              className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-cyan-50 text-cyan-700 data-[state=active]:bg-cyan-500 data-[state=active]:text-white data-[state=active]:border-cyan-600 data-[state=active]:shadow-lg hover:bg-cyan-100 transition-all duration-200"
+            >
+              <Stethoscope className="h-5 w-5" />
+              <span className="text-xs font-medium">Odontograma</span>
             </TabsTrigger>
           )}
-          <TabsTrigger value="anamnese">
-            <ClipboardList className="h-4 w-4 mr-1.5" />
-            Anamnese
+          <TabsTrigger 
+            value="anamnese"
+            className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-amber-50 text-amber-700 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:border-amber-600 data-[state=active]:shadow-lg hover:bg-amber-100 transition-all duration-200"
+          >
+            <ClipboardList className="h-5 w-5" />
+            <span className="text-xs font-medium">Anamnese</span>
           </TabsTrigger>
-          <TabsTrigger value="historico">
-            <History className="h-4 w-4 mr-1.5" />
-            Histórico
+          <TabsTrigger 
+            value="historico"
+            className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-emerald-50 text-emerald-700 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:border-emerald-600 data-[state=active]:shadow-lg hover:bg-emerald-100 transition-all duration-200"
+          >
+            <History className="h-5 w-5" />
+            <span className="text-xs font-medium">Histórico</span>
           </TabsTrigger>
-          <TabsTrigger value="receituario">
-            <Pill className="h-4 w-4 mr-1.5" />
-            Receituário
+          <TabsTrigger 
+            value="receituario"
+            className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-purple-50 text-purple-700 data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:border-purple-600 data-[state=active]:shadow-lg hover:bg-purple-100 transition-all duration-200"
+          >
+            <Pill className="h-5 w-5" />
+            <span className="text-xs font-medium">Receituário</span>
           </TabsTrigger>
-          <TabsTrigger value="exames">
-            <FlaskConical className="h-4 w-4 mr-1.5" />
-            Exames
+          <TabsTrigger 
+            value="exames"
+            className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-rose-50 text-rose-700 data-[state=active]:bg-rose-500 data-[state=active]:text-white data-[state=active]:border-rose-600 data-[state=active]:shadow-lg hover:bg-rose-100 transition-all duration-200"
+          >
+            <FlaskConical className="h-5 w-5" />
+            <span className="text-xs font-medium">Exames</span>
           </TabsTrigger>
         </TabsList>
 
