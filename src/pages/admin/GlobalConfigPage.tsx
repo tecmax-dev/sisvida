@@ -26,24 +26,28 @@ export default function GlobalConfigPage() {
   }, []);
 
   const loadConfig = async () => {
+    setLoading(true);
     try {
       const { data, error } = await supabase
-        .from("global_config" as any)
+        .from("global_config")
         .select("*")
         .maybeSingle();
 
       if (error) {
-        throw error;
+        console.error("Error loading global_config:", error);
+        toast.error("Erro ao carregar configurações: " + error.message);
+        setLoading(false);
+        return;
       }
 
       if (data) {
         setConfig({
-          id: (data as any).id,
-          evolution_api_url: (data as any).evolution_api_url || "",
-          evolution_api_key: (data as any).evolution_api_key || "",
+          id: data.id,
+          evolution_api_url: data.evolution_api_url || "",
+          evolution_api_key: data.evolution_api_key || "",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error loading config:", error);
       toast.error("Erro ao carregar configurações");
     } finally {
@@ -56,31 +60,31 @@ export default function GlobalConfigPage() {
     try {
       if (config.id) {
         const { error } = await supabase
-          .from("global_config" as any)
+          .from("global_config")
           .update({
             evolution_api_url: config.evolution_api_url,
             evolution_api_key: config.evolution_api_key,
             updated_at: new Date().toISOString(),
-          } as any)
+          })
           .eq("id", config.id);
 
         if (error) throw error;
       } else {
         const { error } = await supabase
-          .from("global_config" as any)
+          .from("global_config")
           .insert({
             evolution_api_url: config.evolution_api_url,
             evolution_api_key: config.evolution_api_key,
-          } as any);
+          });
 
         if (error) throw error;
       }
 
       toast.success("Configurações salvas com sucesso!");
       loadConfig();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving config:", error);
-      toast.error("Erro ao salvar configurações");
+      toast.error("Erro ao salvar configurações: " + error.message);
     } finally {
       setSaving(false);
     }
