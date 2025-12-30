@@ -44,9 +44,11 @@ function isRateLimited(ip: string): boolean {
 }
 
 function errorResponse(message: string, status = 400) {
+  // IMPORTANT: Return 200 for business/validation errors so the web app can always read { success, error }
+  // without Supabase treating it as a transport error (“non-2xx”).
   return new Response(
-    JSON.stringify({ success: false, error: message }),
-    { status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    JSON.stringify({ success: false, error: message, status }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
   );
 }
 
@@ -63,10 +65,7 @@ serve(async (req) => {
     
     if (isRateLimited(clientIP)) {
       console.error(`[create-public-booking] Rate limit exceeded for IP: ${clientIP}`);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Limite de agendamentos excedido. Tente novamente em 1 hora.' }),
-        { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return errorResponse('Limite de agendamentos excedido. Tente novamente em 1 hora.', 429);
     }
 
     const body: BookingRequest = await req.json();
