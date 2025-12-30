@@ -253,6 +253,10 @@ export default function CalendarPage() {
   const [formType, setFormType] = useState("first_visit");
   const [formNotes, setFormNotes] = useState("");
   const [patientSearchOpen, setPatientSearchOpen] = useState(false);
+  const [patientSearchQuery, setPatientSearchQuery] = useState("");
+  const [patientSearchResults, setPatientSearchResults] = useState<Patient[]>([]);
+  const [isSearchingPatients, setIsSearchingPatients] = useState(false);
+  const [selectedPatientName, setSelectedPatientName] = useState("");
   
   // Professional user state
   const [loggedInProfessionalId, setLoggedInProfessionalId] = useState<string | null>(null);
@@ -453,6 +457,53 @@ export default function CalendarPage() {
       console.error("Error fetching data:", error);
     }
   };
+
+  // Busca de pacientes no servidor com debounce
+  const searchPatients = useCallback(async (query: string) => {
+    if (!currentClinic || query.length < 2) {
+      setPatientSearchResults([]);
+      return;
+    }
+
+    setIsSearchingPatients(true);
+    try {
+      // Normaliza a busca removendo pontuação para CPF
+      const normalizedQuery = query.replace(/[^\w\s]/g, '');
+      
+      // Busca por nome (usando ilike) ou CPF
+      const { data, error } = await supabase
+        .from('patients')
+        .select('id, name, phone, email, birth_date, cpf')
+        .eq('clinic_id', currentClinic.id)
+        .or(`name.ilike.%${query}%,cpf.ilike.%${normalizedQuery}%`)
+        .order('name')
+        .limit(50);
+
+      if (error) {
+        console.error('Error searching patients:', error);
+        return;
+      }
+
+      setPatientSearchResults(data || []);
+    } catch (error) {
+      console.error('Error searching patients:', error);
+    } finally {
+      setIsSearchingPatients(false);
+    }
+  }, [currentClinic]);
+
+  // Debounce para busca de pacientes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (patientSearchQuery) {
+        searchPatients(patientSearchQuery);
+      } else {
+        setPatientSearchResults([]);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [patientSearchQuery, searchPatients]);
 
   const fetchHolidays = async () => {
     if (!currentClinic) return;
@@ -1041,6 +1092,7 @@ export default function CalendarPage() {
 
   const resetForm = () => {
     setFormPatient("");
+    setSelectedPatientName("");
     // Keep professional selection for logged-in professionals
     if (!loggedInProfessionalId) {
       setFormProfessional("");
@@ -1491,7 +1543,13 @@ export default function CalendarPage() {
 
       <div className="space-y-2">
         <Label>Paciente *</Label>
-        <Popover open={patientSearchOpen} onOpenChange={setPatientSearchOpen}>
+        <Popover open={patientSearchOpen} onOpenChange={(open) => {
+          setPatientSearchOpen(open);
+          if (!open) {
+            setPatientSearchQuery("");
+            setPatientSearchResults([]);
+          }
+        }}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -1499,50 +1557,61 @@ export default function CalendarPage() {
               aria-expanded={patientSearchOpen}
               className="w-full justify-between bg-background font-normal"
             >
-              {formPatient
-                ? patients.find((patient) => patient.id === formPatient)?.name
-                : "Selecione o paciente"}
+              {selectedPatientName || "Digite para buscar paciente..."}
               <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-            <Command
-              filter={(value, search) => {
-                const normalizedSearch = normalizeForSearch(search);
-                const normalizedValue = normalizeForSearch(value);
-                return normalizedValue.includes(normalizedSearch) ? 1 : 0;
-              }}
-            >
-              <CommandInput placeholder="Buscar por nome ou CPF..." />
+            <Command shouldFilter={false}>
+              <CommandInput 
+                placeholder="Buscar por nome ou CPF..." 
+                value={patientSearchQuery}
+                onValueChange={setPatientSearchQuery}
+              />
               <CommandList>
-                <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
-                <CommandGroup>
-                  {patients.map((patient) => (
-                    <CommandItem
-                      key={patient.id}
-                      value={`${patient.name} ${patient.cpf || ''}`}
-                      onSelect={() => {
-                        setFormPatient(patient.id);
-                        setPatientSearchOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          formPatient === patient.id ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      <div className="flex flex-col">
-                        <span>{patient.name}</span>
-                        {patient.cpf && (
-                          <span className="text-xs text-muted-foreground">
-                            CPF: {patient.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
-                          </span>
-                        )}
-                      </div>
-                    </CommandItem>
-                  ))}
-                </CommandGroup>
+                {isSearchingPatients ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin mx-auto mb-2" />
+                    Buscando...
+                  </div>
+                ) : patientSearchQuery.length < 2 ? (
+                  <div className="py-6 text-center text-sm text-muted-foreground">
+                    Digite ao menos 2 caracteres para buscar
+                  </div>
+                ) : patientSearchResults.length === 0 ? (
+                  <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
+                ) : (
+                  <CommandGroup>
+                    {patientSearchResults.map((patient) => (
+                      <CommandItem
+                        key={patient.id}
+                        value={patient.id}
+                        onSelect={() => {
+                          setFormPatient(patient.id);
+                          setSelectedPatientName(patient.name);
+                          setPatientSearchOpen(false);
+                          setPatientSearchQuery("");
+                          setPatientSearchResults([]);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            formPatient === patient.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        <div className="flex flex-col">
+                          <span>{patient.name}</span>
+                          {patient.cpf && (
+                            <span className="text-xs text-muted-foreground">
+                              CPF: {patient.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4')}
+                            </span>
+                          )}
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
               </CommandList>
             </Command>
           </PopoverContent>
