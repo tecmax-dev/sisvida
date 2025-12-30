@@ -971,6 +971,7 @@ export default function DataImportPage() {
         notes: string | null;
         cpf: string | null;
         insurance_plan_id: string | null;
+        card_expires_at: string | null;
       }> = [];
       
       for (const row of validDependents) {
@@ -995,6 +996,7 @@ export default function DataImportPage() {
             notes: row.data.observacoes?.trim() || null,
             cpf: row.data.cpf_dependente ? formatCPF(row.data.cpf_dependente) : null,
             insurance_plan_id: dependentInsurance?.id || null,
+            card_expires_at: row.data.validade_carteirinha ? parseDate(row.data.validade_carteirinha) : null,
           });
         } else {
           console.log('[DEPENDENT SKIP] No patient found for:', row.data.nome_titular || row.data.cpf_titular);
@@ -1826,6 +1828,7 @@ export default function DataImportPage() {
       birth_date: string | null;
       relationship: string;
       notes: string | null;
+      card_expires_at: string | null;
     }> = [];
     
     for (let i = 0; i < validDependents.length; i++) {
@@ -1862,6 +1865,7 @@ export default function DataImportPage() {
           birth_date: parsedBirthDate,
           relationship: mappedRelationship,
           notes: row.data.observacoes?.trim() || null,
+          card_expires_at: row.data.validade_carteirinha ? parseDate(row.data.validade_carteirinha) : null,
         });
       } else {
         notFound++;

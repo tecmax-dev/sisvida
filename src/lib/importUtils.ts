@@ -57,6 +57,7 @@ export interface DependentImportRow {
   cpf_dependente?: string;
   data_nascimento?: string;
   parentesco?: string;
+  validade_carteirinha?: string;
   observacoes?: string;
 }
 
@@ -467,6 +468,11 @@ export function mapDependentRow(row: Record<string, unknown>): DependentImportRo
       'parentesco', 'Parentesco', 'PARENTESCO', 'grau_parentesco', 'Grau Parentesco',
       'relacao', 'Relação', 'Relacao', 'relationship', 'Relationship',
       'tipo', 'Tipo', 'vinculo', 'Vínculo', 'Vinculo'
+    ]) || undefined,
+    validade_carteirinha: getRowValue(row, [
+      'validade_carteirinha', 'Validade Carteirinha', 'VALIDADE_CARTEIRINHA',
+      'validade', 'Validade', 'VALIDADE', 'card_expiry', 'expiry_date',
+      'data_validade', 'Data Validade', 'vencimento', 'Vencimento'
     ]) || undefined,
     observacoes: getRowValue(row, [
       'observacoes', 'Observações', 'Observacoes', 'OBSERVACOES',
