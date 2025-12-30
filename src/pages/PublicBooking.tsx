@@ -693,6 +693,18 @@ export default function PublicBooking() {
         title = "Horário indisponível";
         const match = errorMessage.match(/HORARIO_INVALIDO:\s*(.+)/);
         description = match ? match[1].trim() : errorMessage;
+      } else if (errorMessage.includes("carteirinha") || errorMessage.includes("CARTEIRINHA")) {
+        title = "Carteirinha vencida";
+        description = errorMessage;
+      } else if (errorMessage.includes("LIMITE_AGENDAMENTO") || errorMessage.includes("limite de")) {
+        title = "Limite de agendamentos";
+        description = errorMessage;
+      } else if (errorMessage.includes("DEPENDENTE_INVALIDO") || errorMessage.includes("dependente")) {
+        title = "Dependente inválido";
+        description = errorMessage;
+      } else if (errorMessage.includes("FERIADO") || errorMessage.includes("feriado")) {
+        title = "Data indisponível";
+        description = errorMessage;
       } else if (errorMessage.includes("Rate limit") || errorMessage.includes("Limite")) {
         title = "Muitas tentativas";
         description = "Por favor, aguarde alguns minutos antes de tentar novamente.";
