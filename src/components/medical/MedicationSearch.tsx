@@ -59,7 +59,7 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
         .limit(20);
       
       if (searchTerm.trim()) {
-        query = query.ilike("name", `%${searchTerm}%`);
+        query = query.or(`name.ilike.%${searchTerm}%,active_ingredient.ilike.%${searchTerm}%`);
       }
       
       const { data, error } = await query;
@@ -68,17 +68,21 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
       setMedications(data || []);
     } catch (error) {
       console.error("Error fetching medications:", error);
+      toast.error("Erro ao buscar medicamentos");
     } finally {
       setLoading(false);
     }
   }, [currentClinic?.id]);
 
+  // Fetch on mount and when search changes
   useEffect(() => {
+    if (!currentClinic?.id) return;
+    
     const debounce = setTimeout(() => {
       fetchMedications(search);
     }, 300);
     return () => clearTimeout(debounce);
-  }, [search, fetchMedications]);
+  }, [search, fetchMedications, currentClinic?.id]);
 
   const handleSelectMedication = (med: Medication) => {
     let text = med.name;
@@ -198,7 +202,21 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
             ))}
           </div>
         </ScrollArea>
-      ) : search ? (
+      ) : medications.length === 0 && !search ? (
+        <div className="text-center py-4 text-muted-foreground">
+          <Pill className="h-8 w-8 mx-auto mb-2 opacity-50" />
+          <p className="text-sm">Nenhum medicamento cadastrado</p>
+          <Button
+            variant="link"
+            size="sm"
+            onClick={() => setShowAddDialog(true)}
+            disabled={disabled}
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            Cadastrar primeiro medicamento
+          </Button>
+        </div>
+      ) : search && medications.length === 0 ? (
         <div className="text-center py-4 text-muted-foreground">
           <p className="text-sm">Nenhum medicamento encontrado</p>
           <Button
@@ -214,12 +232,7 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
             Cadastrar "{search}"
           </Button>
         </div>
-      ) : (
-        <div className="text-center py-4 text-muted-foreground">
-          <Pill className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">Digite para buscar medicamentos</p>
-        </div>
-      )}
+      ) : null}
 
       {/* Add Medication Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
