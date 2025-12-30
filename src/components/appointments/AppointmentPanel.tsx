@@ -36,7 +36,17 @@ import {
   Video,
   FlaskConical,
   MessageCircle,
+  Copy,
+  ChevronDown,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { TelemedicineButton } from "@/components/telemedicine/TelemedicineButton";
 import { VideoCall } from "@/components/telemedicine/VideoCall";
@@ -183,6 +193,16 @@ export function AppointmentPanel({
   const [sendingExamRequest, setSendingExamRequest] = useState(false);
   const [examWhatsappPhone, setExamWhatsappPhone] = useState(appointment.patient.phone || "");
   const [showExamWhatsAppDialog, setShowExamWhatsAppDialog] = useState(false);
+  
+  // Previous prescriptions state
+  const [previousPrescriptions, setPreviousPrescriptions] = useState<Array<{
+    id: string;
+    content: string;
+    created_at: string;
+    professional_name?: string;
+  }>>([]);
+  const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
+  
   const isCompleted = appointment.status === "completed";
   const isInProgress = appointment.status === "in_progress";
   const isTelemedicine = appointment.type === "telemedicine";
@@ -335,11 +355,106 @@ export function AppointmentPanel({
           }));
         }
       }
+      
+      // Load previous prescriptions for this patient
+      await loadPreviousPrescriptions();
     } catch (error) {
       console.error("Error loading patient data:", error);
     } finally {
       setLoadingData(false);
     }
+  };
+
+  const loadPreviousPrescriptions = async () => {
+    setLoadingPrescriptions(true);
+    try {
+      // Get from prescriptions table
+      const { data: prescriptionsData } = await supabase
+        .from("prescriptions")
+        .select(`
+          id,
+          content,
+          created_at,
+          professional:professionals(name)
+        `)
+        .eq("clinic_id", clinicId)
+        .eq("patient_id", appointment.patient_id)
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      // Also get from medical_records that have prescription
+      const { data: recordsData } = await supabase
+        .from("medical_records")
+        .select(`
+          id,
+          prescription,
+          created_at,
+          professional:professionals(name)
+        `)
+        .eq("clinic_id", clinicId)
+        .eq("patient_id", appointment.patient_id)
+        .not("prescription", "is", null)
+        .neq("prescription", "")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
+      const allPrescriptions: Array<{
+        id: string;
+        content: string;
+        created_at: string;
+        professional_name?: string;
+      }> = [];
+
+      // Add from prescriptions table
+      if (prescriptionsData) {
+        prescriptionsData.forEach((p: any) => {
+          allPrescriptions.push({
+            id: `prescription-${p.id}`,
+            content: p.content,
+            created_at: p.created_at,
+            professional_name: p.professional?.name,
+          });
+        });
+      }
+
+      // Add from medical_records
+      if (recordsData) {
+        recordsData.forEach((r: any) => {
+          if (r.prescription) {
+            allPrescriptions.push({
+              id: `record-${r.id}`,
+              content: r.prescription,
+              created_at: r.created_at,
+              professional_name: r.professional?.name,
+            });
+          }
+        });
+      }
+
+      // Sort by date and remove duplicates by content
+      const sortedUnique = allPrescriptions
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .filter((item, index, self) => 
+          index === self.findIndex((t) => t.content.trim() === item.content.trim())
+        );
+
+      setPreviousPrescriptions(sortedUnique);
+    } catch (error) {
+      console.error("Error loading previous prescriptions:", error);
+    } finally {
+      setLoadingPrescriptions(false);
+    }
+  };
+
+  const handleCopyPrescription = (content: string) => {
+    setRecordForm(prev => ({
+      ...prev,
+      prescription: content,
+    }));
+    toast({
+      title: "Prescrição copiada!",
+      description: "O conteúdo foi aplicado ao receituário atual.",
+    });
   };
 
   const handleStartAppointment = async () => {
@@ -1039,7 +1154,57 @@ export function AppointmentPanel({
             </TabsContent>
 
             {/* Receituário Tab */}
-            <TabsContent value="receituario" className="mt-4">
+            <TabsContent value="receituario" className="mt-4 space-y-4">
+              {/* Copy from previous prescriptions */}
+              {!isCompleted && previousPrescriptions.length > 0 && (
+                <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-dashed">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Copy className="h-4 w-4" />
+                    <span>Copiar de prescrições anteriores</span>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" disabled={loadingPrescriptions}>
+                        {loadingPrescriptions ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            Selecionar
+                            <ChevronDown className="h-4 w-4 ml-1" />
+                          </>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-80 max-h-[300px] overflow-y-auto">
+                      <DropdownMenuLabel>Prescrições Anteriores</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      {previousPrescriptions.map((prescription) => (
+                        <DropdownMenuItem
+                          key={prescription.id}
+                          onClick={() => handleCopyPrescription(prescription.content)}
+                          className="flex flex-col items-start gap-1 cursor-pointer"
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(prescription.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                            </span>
+                            {prescription.professional_name && (
+                              <span className="text-xs text-muted-foreground">
+                                - {prescription.professional_name}
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-sm line-clamp-2 text-foreground">
+                            {prescription.content.substring(0, 100)}
+                            {prescription.content.length > 100 ? "..." : ""}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              )}
+              
               <div>
                 <Label>Prescrição Médica</Label>
                 <Textarea
