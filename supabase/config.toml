@@ -95,3 +95,9 @@ verify_jwt = true
 
 [functions.process-trial-subscriptions]
 verify_jwt = false
+
+[functions.test-billing-whatsapp]
+verify_jwt = false
+
+[functions.check-evolution-status]
+verify_jwt = false
