@@ -242,12 +242,23 @@ export default function DataImportPage() {
         );
         
         if (unknownSheets.length > 0) {
-          unknownSheets.forEach(sheet => {
-            toast.warning(`Aba "${sheet.name}" não reconhecida (${sheet.rowCount} linhas)`, {
-              description: `Colunas: ${getDetectedColumnsInfo(sheet.columns)}`,
-              duration: 10000,
+          const isInstructionsSheet = (sheet: DetectedSheet) => {
+            const name = sheet.name.toLowerCase().trim();
+            const cols = sheet.columns.map((c) => c.toLowerCase().trim());
+            return (
+              name.includes('instru') ||
+              (cols.length <= 2 && cols.some((c) => c.includes('instrucao') || c.includes('instru')))
+            );
+          };
+
+          unknownSheets
+            .filter((s) => !isInstructionsSheet(s))
+            .forEach((sheet) => {
+              toast.warning(`Aba "${sheet.name}" não reconhecida (${sheet.rowCount} linhas)`, {
+                description: `Colunas: ${getDetectedColumnsInfo(sheet.columns)}`,
+                duration: 10000,
+              });
             });
-          });
         }
       } else {
         // All sheets unknown - show detailed info
