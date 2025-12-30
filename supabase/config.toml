@@ -92,3 +92,6 @@ verify_jwt = false
 
 [functions.bulk-create-patient-cards]
 verify_jwt = true
+
+[functions.process-trial-subscriptions]
+verify_jwt = false
