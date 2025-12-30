@@ -437,16 +437,21 @@ export function mapDependentRow(row: Record<string, unknown>): DependentImportRo
     | undefined;
 
   // In some legacy exports, the *titular* CPF comes as generic "cpf" (e.g., NRCPF -> cpf)
-  // and dependent CPF might be in a dedicated column.
+  // and the dependent CPF might be in a dedicated column.
   const genericCpf = String((row as any)?.cpf ?? '').trim();
   const cpfDependenteRaw = getRowValue(row, [
     'cpf_dependente', 'CPF Dependente', 'CPF_DEPENDENTE', 'cpf do dependente',
     'documento_dependente', 'Documento Dependente'
   ]) || undefined;
 
-  const cpfTitular = (cpfTitularRaw?.trim() || (genericCpf && !cpfDependenteRaw ? genericCpf : '') || undefined) as
-    | string
-    | undefined;
+  const genericCpfDigits = genericCpf.replace(/\D/g, '');
+  const dependenteCpfDigits = String(cpfDependenteRaw || '').replace(/\D/g, '');
+
+  const cpfTitular = (
+    cpfTitularRaw?.trim() ||
+    (genericCpfDigits && genericCpfDigits !== dependenteCpfDigits ? genericCpf : '') ||
+    undefined
+  ) as string | undefined;
 
   return {
     nome_dependente: nomeDependente,
