@@ -208,6 +208,9 @@ export function AppointmentPanel({
   
   // Print Dialog state
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [printDialogInitialTab, setPrintDialogInitialTab] = useState<
+    "receituario" | "controlado" | "atestado" | "comparecimento" | "exames"
+  >("receituario");
   
   const isCompleted = appointment.status === "completed";
   const isInProgress = appointment.status === "in_progress";
@@ -1202,51 +1205,66 @@ export function AppointmentPanel({
                     <Copy className="h-4 w-4" />
                     <span>Copiar de prescrições anteriores</span>
                   </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" disabled={loadingPrescriptions}>
-                        {loadingPrescriptions ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <>
-                            Selecionar
-                            <ChevronDown className="h-4 w-4 ml-1" />
-                          </>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-80 max-h-[300px] overflow-y-auto">
-                      <DropdownMenuLabel>Prescrições Anteriores</DropdownMenuLabel>
-                      <DropdownMenuSeparator />
-                      {previousPrescriptions.map((prescription) => (
-                        <DropdownMenuItem
-                          key={prescription.id}
-                          onClick={() => handleCopyPrescription(prescription.content)}
-                          className="flex flex-col items-start gap-1 cursor-pointer"
-                        >
-                          <div className="flex items-center gap-2 w-full">
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(prescription.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                            </span>
-                            {prescription.is_controlled && (
-                              <Badge variant="outline" className="text-xs h-4 px-1 border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-900/30">
-                                Controlada
-                              </Badge>
-                            )}
-                            {prescription.professional_name && (
+                  <div className="flex items-center gap-2">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" disabled={loadingPrescriptions}>
+                          {loadingPrescriptions ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <>
+                              Selecionar
+                              <ChevronDown className="h-4 w-4 ml-1" />
+                            </>
+                          )}
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-80 max-h-[300px] overflow-y-auto">
+                        <DropdownMenuLabel>Prescrições Anteriores</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {previousPrescriptions.map((prescription) => (
+                          <DropdownMenuItem
+                            key={prescription.id}
+                            onClick={() => handleCopyPrescription(prescription.content)}
+                            className="flex flex-col items-start gap-1 cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2 w-full">
                               <span className="text-xs text-muted-foreground">
-                                - {prescription.professional_name}
+                                {format(new Date(prescription.created_at), "dd/MM/yyyy", { locale: ptBR })}
                               </span>
-                            )}
-                          </div>
-                          <span className="text-sm line-clamp-2 text-foreground">
-                            {prescription.content.substring(0, 100)}
-                            {prescription.content.length > 100 ? "..." : ""}
-                          </span>
-                        </DropdownMenuItem>
-                      ))}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                              {prescription.is_controlled && (
+                                <Badge variant="outline" className="text-xs h-4 px-1 border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-900/30">
+                                  Controlada
+                                </Badge>
+                              )}
+                              {prescription.professional_name && (
+                                <span className="text-xs text-muted-foreground">
+                                  - {prescription.professional_name}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-sm line-clamp-2 text-foreground">
+                              {prescription.content.substring(0, 100)}
+                              {prescription.content.length > 100 ? "..." : ""}
+                            </span>
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setPrintDialogInitialTab("controlado");
+                        setPrintDialogOpen(true);
+                      }}
+                      title="Abrir Receita Controlada"
+                    >
+                      <Pill className="h-4 w-4 mr-1" />
+                      Receita Controlada
+                    </Button>
+                  </div>
                 </div>
               )}
               
@@ -1295,7 +1313,10 @@ export function AppointmentPanel({
                 {/* Print/Documents Button */}
                 <Button 
                   variant="outline"
-                  onClick={() => setPrintDialogOpen(true)}
+                  onClick={() => {
+                    setPrintDialogInitialTab("receituario");
+                    setPrintDialogOpen(true);
+                  }}
                   className="min-w-[140px]"
                   title="Imprimir documentos (Receita Simples, Controlada, Atestado, etc.)"
                 >
@@ -1514,6 +1535,7 @@ export function AppointmentPanel({
           } : undefined}
           professionalId={professionalId}
           initialPrescription={recordForm.prescription || ""}
+          initialTab={printDialogInitialTab}
           date={new Date().toISOString().split("T")[0]}
           onDocumentSaved={() => loadPatientData()}
         />
