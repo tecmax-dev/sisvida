@@ -394,6 +394,25 @@ export default function DataImportPage() {
     // Create import log
     const logId = await createImportLog('combined');
     
+    // Fetch insurance plans for automatic assignment
+    // "Secmi - Titular" for patients, "Secmi - Dependentes" for dependents
+    const { data: titularInsurance } = await supabase
+      .from('insurance_plans')
+      .select('id')
+      .eq('clinic_id', selectedClinicId)
+      .ilike('name', '%Titular%')
+      .maybeSingle();
+    
+    const { data: dependentInsurance } = await supabase
+      .from('insurance_plans')
+      .select('id')
+      .eq('clinic_id', selectedClinicId)
+      .ilike('name', '%Dependentes%')
+      .maybeSingle();
+    
+    console.log('[INSURANCE] Titular plan:', titularInsurance?.id);
+    console.log('[INSURANCE] Dependent plan:', dependentInsurance?.id);
+    
     const totalItems = validPatients.length + (importWithRecords ? validRecords.length : 0) + validDependents.length;
     let processedItems = 0;
     let importedPatients = 0;
@@ -490,6 +509,7 @@ export default function DataImportPage() {
             address: row.data.endereco?.trim() || null,
             referral: row.data.indicacao?.trim() || null,
             notes: row.data.observacoes?.trim() || null,
+            insurance_plan_id: titularInsurance?.id || null,
           }
         });
         
@@ -950,6 +970,7 @@ export default function DataImportPage() {
         relationship: string | null;
         notes: string | null;
         cpf: string | null;
+        insurance_plan_id: string | null;
       }> = [];
       
       for (const row of validDependents) {
@@ -973,6 +994,7 @@ export default function DataImportPage() {
             relationship: row.data.parentesco?.trim() || null,
             notes: row.data.observacoes?.trim() || null,
             cpf: row.data.cpf_dependente ? formatCPF(row.data.cpf_dependente) : null,
+            insurance_plan_id: dependentInsurance?.id || null,
           });
         } else {
           console.log('[DEPENDENT SKIP] No patient found for:', row.data.nome_titular || row.data.cpf_titular);

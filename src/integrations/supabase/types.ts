@@ -3665,6 +3665,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           id: string
+          insurance_plan_id: string | null
           is_active: boolean
           name: string
           notes: string | null
@@ -3680,6 +3681,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           id?: string
+          insurance_plan_id?: string | null
           is_active?: boolean
           name: string
           notes?: string | null
@@ -3695,6 +3697,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           id?: string
+          insurance_plan_id?: string | null
           is_active?: boolean
           name?: string
           notes?: string | null
@@ -3708,6 +3711,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_dependents_insurance_plan_id_fkey"
+            columns: ["insurance_plan_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_plans"
             referencedColumns: ["id"]
           },
           {
