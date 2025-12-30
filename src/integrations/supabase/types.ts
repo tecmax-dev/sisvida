@@ -3792,6 +3792,10 @@ export type Database = {
           mother_name: string | null
           name: string
           neighborhood: string | null
+          no_show_blocked_at: string | null
+          no_show_blocked_until: string | null
+          no_show_unblocked_at: string | null
+          no_show_unblocked_by: string | null
           notes: string | null
           phone: string
           preferred_channel: string | null
@@ -3835,6 +3839,10 @@ export type Database = {
           mother_name?: string | null
           name: string
           neighborhood?: string | null
+          no_show_blocked_at?: string | null
+          no_show_blocked_until?: string | null
+          no_show_unblocked_at?: string | null
+          no_show_unblocked_by?: string | null
           notes?: string | null
           phone: string
           preferred_channel?: string | null
@@ -3878,6 +3886,10 @@ export type Database = {
           mother_name?: string | null
           name?: string
           neighborhood?: string | null
+          no_show_blocked_at?: string | null
+          no_show_blocked_until?: string | null
+          no_show_unblocked_at?: string | null
+          no_show_unblocked_by?: string | null
           notes?: string | null
           phone?: string
           preferred_channel?: string | null
