@@ -409,27 +409,50 @@ export function mapContactRow(row: Record<string, unknown>): ContactImportRow {
 
 // Map dependent row from spreadsheet
 export function mapDependentRow(row: Record<string, unknown>): DependentImportRow {
+  const nomeDependente = getRowValue(row, [
+    'nome_dependente', 'Nome Dependente', 'NOME_DEPENDENTE', 'nome do dependente',
+    'dependente', 'Dependente', 'DEPENDENTE',
+    // Some legacy sheets may use a generic "nome" column for the dependent
+    'dependent_name', 'Dependent Name'
+  ]);
+
+  const cpfTitularRaw = getRowValue(row, [
+    'cpf_titular', 'CPF Titular', 'CPF_TITULAR', 'cpf do titular',
+    'cpf_paciente', 'CPF Paciente', 'cpf paciente', 'titular_cpf',
+    'patient_cpf', 'cpf_responsavel', 'CPF Responsável'
+  ]) || undefined;
+
+  const nomeTitularRaw = getRowValue(row, [
+    'nome_titular', 'Nome Titular', 'NOME_TITULAR', 'nome do titular',
+    'titular', 'Titular', 'TITULAR', 'nome_paciente', 'Nome Paciente',
+    'paciente', 'Paciente', 'responsavel', 'Responsável', 'Responsavel',
+    'patient_name', 'Patient Name'
+  ]) || undefined;
+
+  // In some legacy exports, the *titular* name comes as generic "nome" (e.g., NMSOCIO -> nome)
+  // while the dependent name comes as NMDEPENDENTE -> nome_dependente.
+  const genericNome = String((row as any)?.nome ?? '').trim();
+  const nomeTitular = (nomeTitularRaw?.trim() || (genericNome && genericNome !== nomeDependente ? genericNome : '') || undefined) as
+    | string
+    | undefined;
+
+  // In some legacy exports, the *titular* CPF comes as generic "cpf" (e.g., NRCPF -> cpf)
+  // and dependent CPF might be in a dedicated column.
+  const genericCpf = String((row as any)?.cpf ?? '').trim();
+  const cpfDependenteRaw = getRowValue(row, [
+    'cpf_dependente', 'CPF Dependente', 'CPF_DEPENDENTE', 'cpf do dependente',
+    'documento_dependente', 'Documento Dependente'
+  ]) || undefined;
+
+  const cpfTitular = (cpfTitularRaw?.trim() || (genericCpf && !cpfDependenteRaw ? genericCpf : '') || undefined) as
+    | string
+    | undefined;
+
   return {
-    nome_dependente: getRowValue(row, [
-      'nome_dependente', 'Nome Dependente', 'NOME_DEPENDENTE', 'nome do dependente',
-      'dependente', 'Dependente', 'DEPENDENTE', 'nome', 'Nome', 'NOME',
-      'dependent_name', 'Dependent Name'
-    ]),
-    cpf_titular: getRowValue(row, [
-      'cpf_titular', 'CPF Titular', 'CPF_TITULAR', 'cpf do titular',
-      'cpf_paciente', 'CPF Paciente', 'cpf paciente', 'titular_cpf',
-      'patient_cpf', 'cpf_responsavel', 'CPF Responsável'
-    ]) || undefined,
-    nome_titular: getRowValue(row, [
-      'nome_titular', 'Nome Titular', 'NOME_TITULAR', 'nome do titular',
-      'titular', 'Titular', 'TITULAR', 'nome_paciente', 'Nome Paciente',
-      'paciente', 'Paciente', 'responsavel', 'Responsável', 'Responsavel',
-      'patient_name', 'Patient Name'
-    ]) || undefined,
-    cpf_dependente: getRowValue(row, [
-      'cpf_dependente', 'CPF Dependente', 'CPF_DEPENDENTE', 'cpf do dependente',
-      'cpf', 'CPF', 'documento_dependente', 'Documento Dependente'
-    ]) || undefined,
+    nome_dependente: nomeDependente,
+    cpf_titular: cpfTitular,
+    nome_titular: nomeTitular,
+    cpf_dependente: cpfDependenteRaw?.trim() || undefined,
     data_nascimento: getRowValue(row, [
       'data_nascimento', 'Data Nascimento', 'Data de Nascimento', 'DATA_NASCIMENTO',
       'nascimento', 'Nascimento', 'birth_date', 'birthdate',
