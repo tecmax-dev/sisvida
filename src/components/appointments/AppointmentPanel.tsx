@@ -340,20 +340,21 @@ export function AppointmentPanel({
         setMedicalHistory(historyData as MedicalRecord[]);
       }
 
-      // Load prescription from this appointment if completed
-      if (isCompleted) {
-        const { data: recordData } = await supabase
-          .from("medical_records")
-          .select("prescription")
-          .eq("appointment_id", appointment.id)
-          .maybeSingle();
+      // Load existing record for this appointment (if any)
+      const { data: recordData } = await supabase
+        .from("medical_records")
+        .select("chief_complaint, diagnosis, treatment_plan, prescription, notes")
+        .eq("appointment_id", appointment.id)
+        .maybeSingle();
 
-        if (recordData?.prescription) {
-          setRecordForm(prev => ({
-            ...prev,
-            prescription: recordData.prescription || "",
-          }));
-        }
+      if (recordData) {
+        setRecordForm({
+          chief_complaint: recordData.chief_complaint || "",
+          diagnosis: recordData.diagnosis || "",
+          treatment_plan: recordData.treatment_plan || "",
+          prescription: recordData.prescription || "",
+          notes: recordData.notes || "",
+        });
       }
       
       // Load previous prescriptions for this patient
@@ -544,20 +545,47 @@ export function AppointmentPanel({
   const handleSaveRecord = async () => {
     setSavingRecord(true);
     
-    const { error } = await supabase
+    // Check if record already exists for this appointment
+    const { data: existingRecord } = await supabase
       .from("medical_records")
-      .insert({
-        clinic_id: clinicId,
-        patient_id: appointment.patient_id,
-        professional_id: professionalId,
-        appointment_id: appointment.id,
-        record_date: new Date().toISOString().split("T")[0],
-        chief_complaint: recordForm.chief_complaint || null,
-        diagnosis: recordForm.diagnosis || null,
-        treatment_plan: recordForm.treatment_plan || null,
-        prescription: recordForm.prescription || null,
-        notes: recordForm.notes || null,
-      });
+      .select("id")
+      .eq("appointment_id", appointment.id)
+      .maybeSingle();
+
+    let error;
+
+    if (existingRecord) {
+      // Update existing record
+      const result = await supabase
+        .from("medical_records")
+        .update({
+          chief_complaint: recordForm.chief_complaint || null,
+          diagnosis: recordForm.diagnosis || null,
+          treatment_plan: recordForm.treatment_plan || null,
+          prescription: recordForm.prescription || null,
+          notes: recordForm.notes || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingRecord.id);
+      error = result.error;
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from("medical_records")
+        .insert({
+          clinic_id: clinicId,
+          patient_id: appointment.patient_id,
+          professional_id: professionalId,
+          appointment_id: appointment.id,
+          record_date: new Date().toISOString().split("T")[0],
+          chief_complaint: recordForm.chief_complaint || null,
+          diagnosis: recordForm.diagnosis || null,
+          treatment_plan: recordForm.treatment_plan || null,
+          prescription: recordForm.prescription || null,
+          notes: recordForm.notes || null,
+        });
+      error = result.error;
+    }
 
     if (error) {
       toast({
@@ -569,13 +597,6 @@ export function AppointmentPanel({
       toast({
         title: "Prontuário salvo",
         description: "Registro médico salvo com sucesso!",
-      });
-      setRecordForm({
-        chief_complaint: "",
-        diagnosis: "",
-        treatment_plan: "",
-        prescription: "",
-        notes: "",
       });
       loadPatientData();
     }
