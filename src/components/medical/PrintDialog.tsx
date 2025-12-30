@@ -48,6 +48,8 @@ interface PrintDialogProps {
   professionalId?: string;
   medicalRecordId?: string;
   initialPrescription?: string;
+  /** Which tab should be opened initially (defaults to 'receituario') */
+  initialTab?: "receituario" | "controlado" | "atestado" | "comparecimento" | "exames";
   date: string;
   onDocumentSaved?: () => void;
 }
@@ -74,6 +76,7 @@ export function PrintDialog({
   professionalId,
   medicalRecordId,
   initialPrescription = "",
+  initialTab = "receituario",
   date,
   onDocumentSaved,
 }: PrintDialogProps) {
@@ -84,7 +87,7 @@ export function PrintDialog({
   const [certificateReason, setCertificateReason] = useState("");
   const [attendanceStartTime, setAttendanceStartTime] = useState("08:00");
   const [attendanceEndTime, setAttendanceEndTime] = useState("09:00");
-  const [activeTab, setActiveTab] = useState("receituario");
+  const [activeTab, setActiveTab] = useState<"receituario" | "controlado" | "atestado" | "comparecimento" | "exames">(initialTab);
   const [settingsOpen, setSettingsOpen] = useState(false);
   
   // Exam request states
@@ -116,6 +119,11 @@ export function PrintDialog({
   useEffect(() => {
     setWhatsappPhone(patient.phone || "");
   }, [patient.phone]);
+
+  // Ensure the desired tab is selected when opening
+  useEffect(() => {
+    if (open) setActiveTab(initialTab);
+  }, [open, initialTab]);
 
   const getPrintContent = () => {
     switch (activeTab) {
@@ -396,7 +404,11 @@ export function PrintDialog({
             </div>
           </DialogHeader>
 
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs
+            value={activeTab}
+            onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+            className="w-full"
+          >
             <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="receituario" className="flex items-center gap-1 text-xs sm:text-sm">
                 <FileText className="h-4 w-4" />
