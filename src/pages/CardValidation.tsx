@@ -25,6 +25,9 @@ interface CardData {
   is_active: boolean;
   patient: {
     name: string;
+    insurance_plan: {
+      name: string;
+    } | null;
   };
   clinic: {
     name: string;
@@ -56,7 +59,7 @@ export default function CardValidation() {
           expires_at,
           issued_at,
           is_active,
-          patient:patients(name),
+          patient:patients(name, insurance_plan:insurance_plans(name)),
           clinic:clinics(name, logo_url)
         `)
         .eq('qr_code_token', token)
@@ -184,9 +187,14 @@ export default function CardValidation() {
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="h-6 w-6 text-primary" />
             </div>
-            <div>
+            <div className="flex-1">
               <p className="text-sm text-muted-foreground">Paciente</p>
               <p className="font-semibold text-lg">{card.patient.name}</p>
+              {card.patient.insurance_plan?.name && (
+                <p className="text-sm text-muted-foreground">
+                  Convênio: <span className="font-medium text-foreground">{card.patient.insurance_plan.name}</span>
+                </p>
+              )}
             </div>
           </div>
 

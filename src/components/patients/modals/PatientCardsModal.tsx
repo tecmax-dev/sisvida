@@ -98,6 +98,7 @@ export function PatientCardsModal({
                       patientName={patientName}
                       clinicName={currentClinic?.name || ''}
                       clinicLogo={currentClinic?.logo_url}
+                      insurancePlanName={card.patient?.insurance_plan?.name}
                       onRenew={() => openRenewDialog(card)}
                       onPrint={handlePrint}
                     />
