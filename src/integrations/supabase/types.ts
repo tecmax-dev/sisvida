@@ -6873,6 +6873,10 @@ export type Database = {
         }[]
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      sync_all_dependents_card_expiry: {
+        Args: { p_clinic_id: string }
+        Returns: number
+      }
       user_has_permission: {
         Args: { _clinic_id: string; _permission_key: string; _user_id: string }
         Returns: boolean
