@@ -1589,6 +1589,7 @@ export function generateDependentTemplate(): ArrayBuffer {
 
 // Generate complete template with Patients + Dependents in multiple sheets
 export function generateCompletePatientDependentTemplate(): ArrayBuffer {
+  console.log('🔄 Gerando modelo completo...');
   const wb = XLSX.utils.book_new();
   
   // Sheet 1: Pacientes (complete fields)
@@ -1681,6 +1682,7 @@ export function generateCompletePatientDependentTemplate(): ArrayBuffer {
   
   const wsPatients = XLSX.utils.json_to_sheet(patientsTemplate);
   XLSX.utils.book_append_sheet(wb, wsPatients, 'Pacientes');
+  console.log('✅ Aba Pacientes criada com', Object.keys(patientsTemplate[0]).length, 'colunas');
   
   // Sheet 2: Dependentes (linked by cpf_titular or nome_titular)
   const dependentsTemplate = [
@@ -1738,6 +1740,7 @@ export function generateCompletePatientDependentTemplate(): ArrayBuffer {
   
   const wsDependents = XLSX.utils.json_to_sheet(dependentsTemplate);
   XLSX.utils.book_append_sheet(wb, wsDependents, 'Dependentes');
+  console.log('✅ Aba Dependentes criada com', Object.keys(dependentsTemplate[0]).length, 'colunas');
   
   // Sheet 3: Instruções
   const instructions = [
@@ -1777,6 +1780,9 @@ export function generateCompletePatientDependentTemplate(): ArrayBuffer {
   
   const wsInstructions = XLSX.utils.json_to_sheet(instructions);
   XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instrucoes');
+  
+  console.log('✅ Aba Instruções criada');
+  console.log('📊 Total de abas no workbook:', wb.SheetNames.length, '-', wb.SheetNames.join(', '));
   
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
 }
