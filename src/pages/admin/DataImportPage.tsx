@@ -10,6 +10,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
   Upload, 
   FileSpreadsheet, 
@@ -104,6 +113,10 @@ export default function DataImportPage() {
   // Cancellation ref - used to signal import loops to stop
   const cancelImportRef = useRef(false);
   const [importCancelled, setImportCancelled] = useState(false);
+  
+  // Error modal state for prominent error display
+  const [errorModalOpen, setErrorModalOpen] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState("");
 
   // Function to cancel ongoing import
   const cancelImport = useCallback(() => {
@@ -1038,14 +1051,18 @@ export default function DataImportPage() {
               code: (error as any).code,
             };
             console.error('[DEPENDENTS BATCH ERROR]', errorInfo);
-            toast.error(`Erro ao importar dependentes: ${error.message}`, { duration: 15000 });
+            const fullError = `Erro: ${error.message}\n\nDetalhes: ${JSON.stringify(errorInfo, null, 2)}`;
+            setErrorModalMessage(fullError);
+            setErrorModalOpen(true);
             errors += batch.length;
           } else {
             importedDependentsCount += data?.length || batch.length;
           }
         } catch (err) {
           console.error('[DEPENDENTS BATCH EXCEPTION]', err);
-          toast.error('Erro inesperado ao importar dependentes');
+          const fullError = `Erro inesperado: ${err instanceof Error ? err.message : String(err)}`;
+          setErrorModalMessage(fullError);
+          setErrorModalOpen(true);
           errors += batch.length;
         }
       }
@@ -1916,14 +1933,18 @@ export default function DataImportPage() {
             code: (error as any).code,
           };
           console.error('[DEPENDENT BATCH ERROR]', errorInfo);
-          toast.error(`Erro ao importar dependentes: ${error.message}`, { duration: 15000 });
+          const fullError = `Erro: ${error.message}\n\nDetalhes: ${JSON.stringify(errorInfo, null, 2)}`;
+          setErrorModalMessage(fullError);
+          setErrorModalOpen(true);
           errors += batch.length;
         } else {
           imported += data?.length || batch.length;
         }
       } catch (err) {
         console.error('[DEPENDENT BATCH EXCEPTION]', err);
-        toast.error('Erro inesperado ao importar dependentes');
+        const fullError = `Erro inesperado: ${err instanceof Error ? err.message : String(err)}`;
+        setErrorModalMessage(fullError);
+        setErrorModalOpen(true);
         errors += batch.length;
       }
       
@@ -3008,6 +3029,28 @@ export default function DataImportPage() {
           <ImportHistoryPanel clinicId={selectedClinicId || undefined} />
         </TabsContent>
       </Tabs>
+
+      {/* Error Modal - Large centered display */}
+      <AlertDialog open={errorModalOpen} onOpenChange={setErrorModalOpen}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive text-xl flex items-center gap-2">
+              <AlertCircle className="h-6 w-6" />
+              Erro na Importação
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <pre className="mt-4 p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap font-mono text-foreground overflow-auto max-h-96">
+                {errorModalMessage}
+              </pre>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setErrorModalOpen(false)}>
+              Entendi
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
