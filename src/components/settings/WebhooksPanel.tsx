@@ -330,8 +330,21 @@ export function WebhooksPanel() {
             </div>
           ) : (
             <div className="space-y-4">
-              {webhooks.map(webhook => (
-                <Collapsible key={webhook.id} open={expandedLogs === webhook.id}>
+              {webhooks.map((webhook) => (
+                <Collapsible
+                  key={webhook.id}
+                  open={expandedLogs === webhook.id}
+                  onOpenChange={(open) => {
+                    if (open) {
+                      setExpandedLogs(webhook.id);
+                      if (!logs[webhook.id]) {
+                        loadLogs(webhook.id);
+                      }
+                    } else {
+                      setExpandedLogs(null);
+                    }
+                  }}
+                >
                   <div className="border rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -356,11 +369,7 @@ export function WebhooksPanel() {
                       </div>
                       <div className="flex items-center gap-2">
                         <CollapsibleTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleLogs(webhook.id)}
-                          >
+                          <Button variant="ghost" size="sm">
                             {expandedLogs === webhook.id ? (
                               <ChevronUp className="h-4 w-4" />
                             ) : (
