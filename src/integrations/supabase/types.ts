@@ -2782,7 +2782,7 @@ export type Database = {
       medications: {
         Row: {
           active_ingredient: string | null
-          clinic_id: string
+          clinic_id: string | null
           created_at: string
           dosage: string | null
           form: string | null
@@ -2795,7 +2795,7 @@ export type Database = {
         }
         Insert: {
           active_ingredient?: string | null
-          clinic_id: string
+          clinic_id?: string | null
           created_at?: string
           dosage?: string | null
           form?: string | null
@@ -2808,7 +2808,7 @@ export type Database = {
         }
         Update: {
           active_ingredient?: string | null
-          clinic_id?: string
+          clinic_id?: string | null
           created_at?: string
           dosage?: string | null
           form?: string | null
