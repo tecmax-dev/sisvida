@@ -163,15 +163,21 @@ export function PrintDialog({
     }
   }, [open, patientId, clinicId, toast]);
 
-  useEffect(() => {
-    if (open) loadPatientData();
-  }, [open, loadPatientData]);
+  // Track if data was already fetched for current patient
+  const fetchedPatientRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (open && activeTab === "controlado" && !patientDataLoading && (!patientCpf || !patientAddress)) {
-      loadPatientData();
+    if (open && patientId && clinicId) {
+      // Only fetch if patient changed or dialog just opened
+      if (fetchedPatientRef.current !== patientId) {
+        fetchedPatientRef.current = patientId;
+        loadPatientData();
+      }
+    } else if (!open) {
+      // Reset when dialog closes
+      fetchedPatientRef.current = null;
     }
-  }, [open, activeTab, patientCpf, patientAddress, patientDataLoading, loadPatientData]);
+  }, [open, patientId, clinicId, loadPatientData]);
   // Sync prescription state with initialPrescription when dialog opens
   useEffect(() => {
     if (open) {
