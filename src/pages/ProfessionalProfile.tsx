@@ -568,8 +568,50 @@ export default function ProfessionalProfile() {
 
       setSuccess(true);
       toast({ title: "Agendamento realizado!", description: "Você receberá uma confirmação em breve." });
-    } catch (error: any) {
-      toast({ title: "Erro ao agendar", description: error.message, variant: "destructive" });
+    } catch (error: unknown) {
+      console.error('Error creating appointment:', error);
+
+      const anyError = error as any;
+      const backendBody = anyError?.context?.body;
+      const backendErrorMessage =
+        (backendBody && typeof backendBody === 'object' && typeof backendBody.error === 'string' && backendBody.error) ||
+        (typeof backendBody === 'string'
+          ? (() => {
+              try {
+                const parsed = JSON.parse(backendBody);
+                return typeof parsed?.error === 'string' ? parsed.error : null;
+              } catch {
+                return null;
+              }
+            })()
+          : null);
+
+      const errorMessage =
+        backendErrorMessage ||
+        (anyError instanceof Error ? anyError.message : String(anyError));
+
+      let title = "Erro ao agendar";
+      let description = errorMessage || "Tente novamente";
+
+      if (errorMessage.includes("HORARIO_INVALIDO") || errorMessage.includes("horário")) {
+        title = "Horário indisponível";
+        const match = errorMessage.match(/HORARIO_INVALIDO:\s*(.+)/);
+        description = match ? match[1].trim() : errorMessage;
+      } else if (errorMessage.includes("carteirinha") || errorMessage.includes("CARTEIRINHA")) {
+        title = "Carteirinha vencida";
+      } else if (errorMessage.includes("LIMITE_AGENDAMENTO") || errorMessage.includes("limite")) {
+        title = "Limite de agendamentos";
+      } else if (errorMessage.includes("DEPENDENTE_INVALIDO") || errorMessage.includes("dependente")) {
+        title = "Dependente inválido";
+      } else if (errorMessage.includes("FERIADO") || errorMessage.includes("feriado")) {
+        title = "Data indisponível";
+      }
+
+      toast({
+        title,
+        description,
+        variant: "destructive",
+      });
     } finally {
       setSubmitting(false);
     }
