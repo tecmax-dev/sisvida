@@ -100,6 +100,10 @@ export function WebhooksPanel() {
   useEffect(() => {
     if (currentClinic?.id) {
       loadWebhooks();
+    } else {
+      // Evita loader infinito quando não há clínica selecionada
+      setLoading(false);
+      setWebhooks([]);
     }
   }, [currentClinic?.id]);
 
