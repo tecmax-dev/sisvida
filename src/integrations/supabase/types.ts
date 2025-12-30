@@ -3974,6 +3974,88 @@ export type Database = {
           },
         ]
       }
+      pre_attendance: {
+        Row: {
+          appointment_id: string
+          blood_pressure_diastolic: number | null
+          blood_pressure_systolic: number | null
+          clinic_id: string
+          created_at: string
+          glucose: number | null
+          heart_rate: number | null
+          height: number | null
+          id: string
+          notes: string | null
+          oxygen_saturation: number | null
+          patient_id: string
+          recorded_at: string
+          recorded_by: string | null
+          temperature: number | null
+          updated_at: string
+          weight: number | null
+        }
+        Insert: {
+          appointment_id: string
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
+          clinic_id: string
+          created_at?: string
+          glucose?: number | null
+          heart_rate?: number | null
+          height?: number | null
+          id?: string
+          notes?: string | null
+          oxygen_saturation?: number | null
+          patient_id: string
+          recorded_at?: string
+          recorded_by?: string | null
+          temperature?: number | null
+          updated_at?: string
+          weight?: number | null
+        }
+        Update: {
+          appointment_id?: string
+          blood_pressure_diastolic?: number | null
+          blood_pressure_systolic?: number | null
+          clinic_id?: string
+          created_at?: string
+          glucose?: number | null
+          heart_rate?: number | null
+          height?: number | null
+          id?: string
+          notes?: string | null
+          oxygen_saturation?: number | null
+          patient_id?: string
+          recorded_at?: string
+          recorded_by?: string | null
+          temperature?: number | null
+          updated_at?: string
+          weight?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_attendance_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_attendance_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_attendance_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       prescriptions: {
         Row: {
           clinic_id: string
