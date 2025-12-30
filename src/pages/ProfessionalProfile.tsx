@@ -1258,7 +1258,7 @@ export default function ProfessionalProfile() {
                   {/* Submit Button */}
                   <Button
                     onClick={handleSubmit}
-                    disabled={submitting || !selectedDate || !selectedTime || !patientName || !patientPhone}
+                    disabled={submitting || !selectedDate || !selectedTime || !patientName || !patientPhone || (procedures.length > 0 && !selectedProcedure)}
                     className="w-full h-12 text-base font-semibold"
                     size="lg"
                   >
