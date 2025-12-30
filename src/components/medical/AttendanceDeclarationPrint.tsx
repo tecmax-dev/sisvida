@@ -41,6 +41,11 @@ export const AttendanceDeclarationPrint = forwardRef<HTMLDivElement, AttendanceD
     const footerText = settings?.footer_text || 'Este documento foi gerado eletronicamente pelo sistema Eclini';
     const title = settings?.attendance_title || 'DECLARAÇÃO DE COMPARECIMENTO';
     const customHeaderText = settings?.custom_header_text;
+    const paperSize = settings?.paper_size || 'A4';
+    
+    const paperDimensions = paperSize === 'A5' 
+      ? { width: '148mm', height: '210mm', padding: 'p-6', minHeight: 'min-h-[210mm]', logoHeight: 'h-12' }
+      : { width: '210mm', height: '297mm', padding: 'p-8', minHeight: 'min-h-[297mm]', logoHeight: 'h-16' };
 
     const appointmentDate = new Date(date);
     
@@ -57,13 +62,13 @@ export const AttendanceDeclarationPrint = forwardRef<HTMLDivElement, AttendanceD
     const declarationText = parseTemplate(template, variables);
 
     return (
-      <div ref={ref} className="p-8 bg-white text-black min-h-[297mm] w-[210mm] mx-auto">
+      <div ref={ref} className={`${paperDimensions.padding} bg-white text-black ${paperDimensions.minHeight}`} style={{ width: paperDimensions.width }}>
         {/* Header */}
         <div className="border-b-2 border-gray-300 pb-4 mb-6">
           <div className="flex items-center justify-between">
             <div>
               {showLogo && clinic.logo_url && (
-                <img src={clinic.logo_url} alt={clinic.name} className="h-16 mb-2 object-contain" />
+                <img src={clinic.logo_url} alt={clinic.name} className={`${paperDimensions.logoHeight} mb-2 object-contain`} />
               )}
               <h1 className="text-xl font-bold">{clinic.name}</h1>
               {customHeaderText && <p className="text-sm text-gray-600">{customHeaderText}</p>}

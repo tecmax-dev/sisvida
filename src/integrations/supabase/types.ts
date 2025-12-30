@@ -1653,6 +1653,7 @@ export type Database = {
           exam_request_title: string | null
           footer_text: string | null
           id: string
+          paper_size: string | null
           prescription_template: string | null
           prescription_title: string | null
           show_address: boolean | null
@@ -1674,6 +1675,7 @@ export type Database = {
           exam_request_title?: string | null
           footer_text?: string | null
           id?: string
+          paper_size?: string | null
           prescription_template?: string | null
           prescription_title?: string | null
           show_address?: boolean | null
@@ -1695,6 +1697,7 @@ export type Database = {
           exam_request_title?: string | null
           footer_text?: string | null
           id?: string
+          paper_size?: string | null
           prescription_template?: string | null
           prescription_title?: string | null
           show_address?: boolean | null

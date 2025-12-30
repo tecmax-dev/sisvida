@@ -263,6 +263,11 @@ export function PrintDialog({
     
     await saveDocument(documentType, getDocumentContent(), getAdditionalInfo());
 
+    const paperSize = settings?.paper_size || 'A4';
+    const isA5 = paperSize === 'A5';
+    const pageWidth = isA5 ? '148mm' : '210mm';
+    const pageHeight = isA5 ? '210mm' : '297mm';
+
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
@@ -283,13 +288,13 @@ export function PrintDialog({
               print-color-adjust: exact;
             }
             @page {
-              size: A4;
+              size: ${paperSize};
               margin: 0;
             }
             @media print {
               body {
-                width: 210mm;
-                min-height: 297mm;
+                width: ${pageWidth};
+                min-height: ${pageHeight};
               }
             }
             .p-8 { padding: 2rem; }
