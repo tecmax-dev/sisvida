@@ -559,6 +559,11 @@ export default function ProfessionalProfile() {
       return;
     }
 
+    if (procedures.length > 0 && !selectedProcedure) {
+      toast({ title: "Selecione um procedimento", variant: "destructive" });
+      return;
+    }
+
     setSubmitting(true);
     try {
       const dateStr = selectedDate.toISOString().split('T')[0];
