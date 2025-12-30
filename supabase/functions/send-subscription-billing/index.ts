@@ -6,18 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface SubscriptionBilling {
-  subscription_id: string;
-  clinic_id: string;
-  clinic_name: string;
-  clinic_email: string;
-  clinic_phone: string;
-  clinic_cnpj: string;
-  plan_name: string;
-  plan_price: number;
-  current_period_end: string;
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -34,20 +22,229 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Parse request body for manual trigger with specific days
-    let daysBeforeExpiry = 5; // Default: 5 days before expiry
+    // Get Evolution API config from global_config
+    const { data: globalConfig, error: configError } = await supabase
+      .from('global_config')
+      .select('evolution_api_url, evolution_api_key, evolution_instance')
+      .maybeSingle();
+
+    if (configError) {
+      console.error('[send-subscription-billing] Error loading global_config:', configError);
+    }
+
+    const EVOLUTION_API_URL = globalConfig?.evolution_api_url;
+    const EVOLUTION_API_KEY = globalConfig?.evolution_api_key;
+    const EVOLUTION_INSTANCE = globalConfig?.evolution_instance;
+
+    console.log('[send-subscription-billing] Evolution config from global_config:', {
+      hasUrl: !!EVOLUTION_API_URL,
+      hasKey: !!EVOLUTION_API_KEY,
+      hasInstance: !!EVOLUTION_INSTANCE
+    });
+
+    // Parse request body for manual trigger
+    let daysBeforeExpiry = 5;
+    let testMode = false;
+    let testPhone: string | null = null;
+    let testClinicName = 'Clínica Teste';
+    let testPlanName = 'Pro';
+    let testPlanPrice = 169.00;
+
     try {
       const body = await req.json();
       if (body.days_before_expiry) {
         daysBeforeExpiry = parseInt(body.days_before_expiry);
       }
+      if (body.test_mode) {
+        testMode = true;
+        testPhone = body.phone;
+        testClinicName = body.clinic_name || testClinicName;
+        testPlanName = body.plan_name || testPlanName;
+        testPlanPrice = body.plan_price || testPlanPrice;
+      }
     } catch {
-      // No body or invalid JSON, use default
+      // No body or invalid JSON, use defaults
     }
 
+    // TEST MODE: Generate PIX and send to specific phone
+    if (testMode && testPhone) {
+      console.log(`[send-subscription-billing] TEST MODE - Sending to ${testPhone}`);
+
+      // Format phone
+      const cleanPhone = testPhone.replace(/\D/g, '');
+      let formattedPhone = cleanPhone;
+      if (!formattedPhone.startsWith('55')) {
+        formattedPhone = '55' + formattedPhone;
+      }
+
+      // Create test PIX payment in Mercado Pago
+      const externalReference = `test_billing_${Date.now()}`;
+      const paymentData = {
+        transaction_amount: testPlanPrice,
+        description: `TESTE - Assinatura Eclini - Plano ${testPlanName}`,
+        external_reference: externalReference,
+        payment_method_id: 'pix',
+        payer: {
+          email: 'teste@eclini.app',
+          first_name: 'Teste',
+          last_name: 'Eclini',
+          identification: {
+            type: 'CPF',
+            number: '12345678909',
+          },
+        },
+      };
+
+      console.log(`[send-subscription-billing] Creating TEST PIX:`, JSON.stringify(paymentData, null, 2));
+
+      const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${MERCADO_PAGO_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+          'X-Idempotency-Key': externalReference,
+        },
+        body: JSON.stringify(paymentData),
+      });
+
+      if (!mpResponse.ok) {
+        const errorData = await mpResponse.json();
+        console.error(`[send-subscription-billing] MP API error:`, JSON.stringify(errorData, null, 2));
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Erro ao criar PIX no Mercado Pago',
+            details: errorData 
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const mpResult = await mpResponse.json();
+      console.log(`[send-subscription-billing] TEST PIX created: ${mpResult.id}`);
+
+      const pixInfo = mpResult.point_of_interaction?.transaction_data;
+      const pixQrCode = pixInfo?.qr_code;
+      const pixQrCodeBase64 = pixInfo?.qr_code_base64;
+
+      // Format expiry date (5 days from now for test)
+      const expiryDate = new Date();
+      expiryDate.setDate(expiryDate.getDate() + 5);
+      const formattedExpiryDate = expiryDate.toLocaleDateString('pt-BR');
+
+      // Build WhatsApp message
+      const message = `🏥 *Eclini - TESTE de Cobrança*
+
+Olá, ${testClinicName}!
+
+Sua assinatura do *Plano ${testPlanName}* vence em *${formattedExpiryDate}*.
+
+💰 *Valor:* R$ ${testPlanPrice.toFixed(2).replace('.', ',')}
+
+📱 *Pague via PIX* copiando o código abaixo:
+
+\`\`\`
+${pixQrCode}
+\`\`\`
+
+⏰ Este código expira em 30 minutos.
+
+⚠️ *ESTA É UMA MENSAGEM DE TESTE - NÃO EFETUE PAGAMENTO*
+
+_Equipe Eclini_`;
+
+      // Send via WhatsApp
+      if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Evolution API não configurada em Configuração Global',
+            pix_created: true,
+            pix_code: pixQrCode
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const apiUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
+
+      // Try to send with QR code image first
+      let whatsappSent = false;
+      if (pixQrCodeBase64) {
+        try {
+          const response = await fetch(`${apiUrl}/message/sendMedia/${EVOLUTION_INSTANCE}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'apikey': EVOLUTION_API_KEY,
+            },
+            body: JSON.stringify({
+              number: formattedPhone,
+              mediatype: 'image',
+              media: `data:image/png;base64,${pixQrCodeBase64}`,
+              caption: message,
+            }),
+          });
+          
+          if (response.ok) {
+            console.log(`[send-subscription-billing] WhatsApp with QR sent to ${formattedPhone}`);
+            whatsappSent = true;
+          } else {
+            const errorData = await response.json();
+            console.error(`[send-subscription-billing] WhatsApp media error:`, JSON.stringify(errorData));
+          }
+        } catch (e) {
+          console.error(`[send-subscription-billing] WhatsApp media exception:`, e);
+        }
+      }
+
+      // Fallback to text only
+      if (!whatsappSent) {
+        const response = await fetch(`${apiUrl}/message/sendText/${EVOLUTION_INSTANCE}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': EVOLUTION_API_KEY,
+          },
+          body: JSON.stringify({
+            number: formattedPhone,
+            text: message,
+          }),
+        });
+        
+        if (response.ok) {
+          console.log(`[send-subscription-billing] WhatsApp text sent to ${formattedPhone}`);
+          whatsappSent = true;
+        } else {
+          const errorData = await response.json();
+          console.error(`[send-subscription-billing] WhatsApp text error:`, JSON.stringify(errorData));
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Erro ao enviar WhatsApp',
+              pix_created: true,
+              pix_code: pixQrCode,
+              whatsapp_error: errorData
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: `Cobrança de teste enviada para ${formattedPhone}`,
+          mp_payment_id: mpResult.id,
+          pix_code: pixQrCode
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // PRODUCTION MODE: Process expiring subscriptions
     console.log(`[send-subscription-billing] Looking for subscriptions expiring in ${daysBeforeExpiry} days`);
 
-    // Calculate target date range
     const today = new Date();
     const targetDate = new Date(today);
     targetDate.setDate(today.getDate() + daysBeforeExpiry);
@@ -57,7 +254,6 @@ serve(async (req) => {
 
     console.log(`[send-subscription-billing] Target date range: ${targetDateStr} to ${nextDayStr}`);
 
-    // Find active subscriptions expiring in the target date range
     const { data: expiringSubscriptions, error: fetchError } = await supabase
       .from('subscriptions')
       .select(`
@@ -108,7 +304,6 @@ serve(async (req) => {
       try {
         console.log(`[send-subscription-billing] Processing clinic: ${clinic.name}`);
 
-        // Check if a billing was already sent for this period
         const { data: existingPayment } = await supabase
           .from('mercado_pago_payments')
           .select('id')
@@ -123,14 +318,12 @@ serve(async (req) => {
           continue;
         }
 
-        // Skip if no email or phone
         if (!clinic.email && !clinic.phone) {
           console.log(`[send-subscription-billing] No contact info for clinic ${clinic.name}`);
           results.push({ clinic_name: clinic.name, success: false, error: 'Sem email ou telefone cadastrado' });
           continue;
         }
 
-        // Skip if no CNPJ
         const cleanCnpj = clinic.cnpj?.replace(/\D/g, '') || '';
         if (cleanCnpj.length < 11) {
           console.log(`[send-subscription-billing] Invalid CNPJ for clinic ${clinic.name}`);
@@ -138,10 +331,8 @@ serve(async (req) => {
           continue;
         }
 
-        // Generate external reference
         const externalReference = `subscription_${subscription.id}_${Date.now()}`;
 
-        // Create PIX payment in Mercado Pago
         const paymentData = {
           transaction_amount: plan.monthly_price,
           description: `Assinatura Eclini - Plano ${plan.name}`,
@@ -180,16 +371,13 @@ serve(async (req) => {
         const mpResult = await mpResponse.json();
         console.log(`[send-subscription-billing] PIX created for ${clinic.name}: ${mpResult.id}`);
 
-        // Get PIX data
         const pixInfo = mpResult.point_of_interaction?.transaction_data;
         const pixQrCode = pixInfo?.qr_code;
         const pixQrCodeBase64 = pixInfo?.qr_code_base64;
 
-        // PIX expires in 30 minutes
         const pixExpiration = new Date();
         pixExpiration.setMinutes(pixExpiration.getMinutes() + 30);
 
-        // Save payment to database
         const paymentRecord = {
           clinic_id: clinic.id,
           external_reference: externalReference,
@@ -221,11 +409,9 @@ serve(async (req) => {
           continue;
         }
 
-        // Format expiry date
         const expiryDate = new Date(subscription.current_period_end);
         const formattedExpiryDate = expiryDate.toLocaleDateString('pt-BR');
 
-        // Build WhatsApp message
         const message = `🏥 *Eclini - Cobrança de Assinatura*
 
 Olá, ${clinic.name}!
@@ -248,11 +434,7 @@ Dúvidas? Responda esta mensagem.
 
 _Equipe Eclini_`;
 
-        // Send WhatsApp using SYSTEM Evolution API (Super Admin config)
-        const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
-        const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
-        const EVOLUTION_INSTANCE = Deno.env.get('EVOLUTION_INSTANCE');
-
+        // Send WhatsApp using global config
         if (clinic.phone && EVOLUTION_API_URL && EVOLUTION_API_KEY && EVOLUTION_INSTANCE) {
           const cleanPhone = clinic.phone.replace(/\D/g, '');
           if (cleanPhone.length >= 10) {
@@ -261,10 +443,11 @@ _Equipe Eclini_`;
               formattedPhone = '55' + formattedPhone;
             }
 
+            const apiUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
+
             try {
-              // Send message with QR code image
               if (pixQrCodeBase64) {
-                const response = await fetch(`${EVOLUTION_API_URL}/message/sendMedia/${EVOLUTION_INSTANCE}`, {
+                const response = await fetch(`${apiUrl}/message/sendMedia/${EVOLUTION_INSTANCE}`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -285,8 +468,7 @@ _Equipe Eclini_`;
                   console.error(`[send-subscription-billing] WhatsApp API error for ${clinic.name}:`, JSON.stringify(errorData));
                 }
               } else {
-                // Fallback: send text only
-                const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+                const response = await fetch(`${apiUrl}/message/sendText/${EVOLUTION_INSTANCE}`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
@@ -310,7 +492,7 @@ _Equipe Eclini_`;
             }
           }
         } else if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE) {
-          console.log(`[send-subscription-billing] System Evolution API not configured - skipping WhatsApp`);
+          console.log(`[send-subscription-billing] Evolution API not configured in global_config - skipping WhatsApp`);
         }
 
         results.push({ 
