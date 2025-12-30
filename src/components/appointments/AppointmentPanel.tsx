@@ -202,6 +202,7 @@ export function AppointmentPanel({
     content: string;
     created_at: string;
     professional_name?: string;
+    is_controlled?: boolean;
   }>>([]);
   const [loadingPrescriptions, setLoadingPrescriptions] = useState(false);
   
@@ -404,11 +405,29 @@ export function AppointmentPanel({
         .order("created_at", { ascending: false })
         .limit(10);
 
+      // Get controlled prescriptions from medical_documents table
+      const { data: controlledData } = await supabase
+        .from("medical_documents")
+        .select(`
+          id,
+          content,
+          created_at,
+          professional:professionals(name)
+        `)
+        .eq("clinic_id", clinicId)
+        .eq("patient_id", appointment.patient_id)
+        .eq("document_type", "controlled_prescription")
+        .not("content", "is", null)
+        .neq("content", "")
+        .order("created_at", { ascending: false })
+        .limit(10);
+
       const allPrescriptions: Array<{
         id: string;
         content: string;
         created_at: string;
         professional_name?: string;
+        is_controlled?: boolean;
       }> = [];
 
       // Add from prescriptions table
@@ -419,6 +438,7 @@ export function AppointmentPanel({
             content: p.content,
             created_at: p.created_at,
             professional_name: p.professional?.name,
+            is_controlled: false,
           });
         });
       }
@@ -432,6 +452,22 @@ export function AppointmentPanel({
               content: r.prescription,
               created_at: r.created_at,
               professional_name: r.professional?.name,
+              is_controlled: false,
+            });
+          }
+        });
+      }
+
+      // Add controlled prescriptions from medical_documents
+      if (controlledData) {
+        controlledData.forEach((c: any) => {
+          if (c.content) {
+            allPrescriptions.push({
+              id: `controlled-${c.id}`,
+              content: c.content,
+              created_at: c.created_at,
+              professional_name: c.professional?.name,
+              is_controlled: true,
             });
           }
         });
@@ -1192,6 +1228,11 @@ export function AppointmentPanel({
                             <span className="text-xs text-muted-foreground">
                               {format(new Date(prescription.created_at), "dd/MM/yyyy", { locale: ptBR })}
                             </span>
+                            {prescription.is_controlled && (
+                              <Badge variant="outline" className="text-xs h-4 px-1 border-amber-500 text-amber-600 bg-amber-50 dark:bg-amber-900/30">
+                                Controlada
+                              </Badge>
+                            )}
                             {prescription.professional_name && (
                               <span className="text-xs text-muted-foreground">
                                 - {prescription.professional_name}
