@@ -1466,6 +1466,15 @@ export default function CalendarPage() {
     }
   };
 
+  // Normaliza texto para busca: remove acentos, pontuação e converte para minúsculo
+  const normalizeForSearch = (text: string) => {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+      .replace(/[^\w\s]/g, ''); // Remove pontuação
+  };
+
   const AppointmentFormFields = () => (
     <>
       <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
@@ -1497,7 +1506,13 @@ export default function CalendarPage() {
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
-            <Command>
+            <Command
+              filter={(value, search) => {
+                const normalizedSearch = normalizeForSearch(search);
+                const normalizedValue = normalizeForSearch(value);
+                return normalizedValue.includes(normalizedSearch) ? 1 : 0;
+              }}
+            >
               <CommandInput placeholder="Buscar por nome ou CPF..." />
               <CommandList>
                 <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
