@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { toast } from 'sonner';
 import { 
   Download, 
@@ -16,8 +17,11 @@ import {
   Building2,
   Loader2,
   Phone,
+  UserPlus,
+  FileDown,
 } from 'lucide-react';
 import { exportClinicData, getExportCounts, ExportProgress } from '@/lib/dataExportUtils';
+import { downloadTemplate } from '@/lib/importUtils';
 
 interface DataExportPanelProps {
   clinicId: string;
@@ -305,6 +309,104 @@ export default function DataExportPanel({ clinicId, clinicName }: DataExportPane
           <p>• O arquivo será baixado automaticamente após a exportação</p>
           <p>• Cada tipo de dado será salvo em uma aba separada na planilha</p>
           <p>• Datas e CPFs serão formatados corretamente</p>
+        </div>
+
+        <Separator />
+
+        {/* Import Templates Section */}
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-base font-semibold flex items-center gap-2">
+              <FileDown className="h-5 w-5" />
+              Modelos de Importação
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Baixe os modelos de planilha para importar dados no sistema
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            {/* Complete Template - Highlighted */}
+            <div className="sm:col-span-2 border-2 border-primary/50 bg-primary/5 rounded-lg p-4">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="h-5 w-5 text-primary" />
+                    <span className="font-semibold text-primary">Modelo Completo (Pacientes + Dependentes)</span>
+                    <Badge variant="default" className="text-xs">Recomendado</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Planilha com 3 abas: Pacientes, Dependentes e Instruções. O sistema vincula automaticamente os dependentes aos pacientes pelo CPF ou nome do titular.
+                  </p>
+                </div>
+                <Button 
+                  variant="default" 
+                  className="gap-2 shrink-0"
+                  onClick={() => downloadTemplate('complete')}
+                >
+                  <Download className="h-4 w-4" />
+                  Baixar Modelo Completo
+                </Button>
+              </div>
+            </div>
+
+            {/* Other templates */}
+            <div className="border rounded-lg p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Apenas Pacientes</span>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => downloadTemplate('patients')}
+              >
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
+            <div className="border rounded-lg p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Apenas Dependentes</span>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => downloadTemplate('dependents')}
+              >
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
+            <div className="border rounded-lg p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Prontuários</span>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => downloadTemplate('records')}
+              >
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
+            <div className="border rounded-lg p-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Atualizar Contatos</span>
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => downloadTemplate('contacts')}
+              >
+                <Download className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </div>
         </div>
       </CardContent>
     </Card>

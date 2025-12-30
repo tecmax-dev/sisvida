@@ -1587,11 +1587,208 @@ export function generateDependentTemplate(): ArrayBuffer {
   return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
 }
 
-export function downloadTemplate(type: 'patients' | 'records' | 'combined' | 'contacts' | 'dependents') {
+// Generate complete template with Patients + Dependents in multiple sheets
+export function generateCompletePatientDependentTemplate(): ArrayBuffer {
+  const wb = XLSX.utils.book_new();
+  
+  // Sheet 1: Pacientes (complete fields)
+  const patientsTemplate = [
+    {
+      nome: 'João Silva Santos',
+      telefone: '71999999999',
+      telefone_fixo: '7133334444',
+      email: 'joao.silva@email.com',
+      cpf: '123.456.789-00',
+      rg: '12.345.678-90',
+      data_nascimento: '1985-03-15',
+      sexo: 'Masculino',
+      estado_civil: 'Casado',
+      naturalidade: 'Salvador - BA',
+      profissao: 'Engenheiro Civil',
+      escolaridade: 'Superior Completo',
+      nome_mae: 'Maria Santos Silva',
+      nome_pai: 'José Carlos Silva',
+      cep: '41820-000',
+      rua: 'Rua das Flores',
+      numero: '456',
+      complemento: 'Apto 302 Bloco A',
+      bairro: 'Pituba',
+      cidade: 'Salvador',
+      estado: 'BA',
+      convenio: 'Unimed',
+      numero_convenio: '123456789',
+      tipo_sanguineo: 'O+',
+      indicacao: 'Indicação de amigo',
+      observacoes: 'Paciente VIP - Alergia a dipirona',
+    },
+    {
+      nome: 'Maria Oliveira Costa',
+      telefone: '71988887777',
+      telefone_fixo: '',
+      email: 'maria.costa@email.com',
+      cpf: '987.654.321-00',
+      rg: '98.765.432-10',
+      data_nascimento: '1990-07-22',
+      sexo: 'Feminino',
+      estado_civil: 'Solteiro',
+      naturalidade: 'Feira de Santana - BA',
+      profissao: 'Advogada',
+      escolaridade: 'Pós-Graduação',
+      nome_mae: 'Ana Oliveira',
+      nome_pai: 'Carlos Costa',
+      cep: '40150-000',
+      rua: 'Avenida Oceânica',
+      numero: '1234',
+      complemento: 'Casa',
+      bairro: 'Barra',
+      cidade: 'Salvador',
+      estado: 'BA',
+      convenio: 'Bradesco Saúde',
+      numero_convenio: '987654321',
+      tipo_sanguineo: 'A+',
+      indicacao: 'Google',
+      observacoes: '',
+    },
+    {
+      nome: 'Carlos Eduardo Souza',
+      telefone: '71977776666',
+      telefone_fixo: '7132223333',
+      email: 'carlos.souza@email.com',
+      cpf: '456.789.123-00',
+      rg: '45.678.912-30',
+      data_nascimento: '1978-11-08',
+      sexo: 'Masculino',
+      estado_civil: 'Divorciado',
+      naturalidade: 'Vitória da Conquista - BA',
+      profissao: 'Médico',
+      escolaridade: 'Doutorado',
+      nome_mae: 'Luiza Souza',
+      nome_pai: 'Eduardo Souza',
+      cep: '41810-000',
+      rua: 'Rua da Paz',
+      numero: '789',
+      complemento: 'Cobertura',
+      bairro: 'Itaigara',
+      cidade: 'Salvador',
+      estado: 'BA',
+      convenio: '',
+      numero_convenio: '',
+      tipo_sanguineo: 'B-',
+      indicacao: 'Instagram',
+      observacoes: 'Preferência por horários matutinos',
+    },
+  ];
+  
+  const wsPatients = XLSX.utils.json_to_sheet(patientsTemplate);
+  XLSX.utils.book_append_sheet(wb, wsPatients, 'Pacientes');
+  
+  // Sheet 2: Dependentes (linked by cpf_titular or nome_titular)
+  const dependentsTemplate = [
+    {
+      nome_dependente: 'Pedro Silva Santos',
+      cpf_titular: '123.456.789-00',
+      nome_titular: 'João Silva Santos',
+      cpf_dependente: '111.222.333-44',
+      data_nascimento: '2010-05-12',
+      parentesco: 'Filho(a)',
+      validade_carteirinha: '2025-12-31',
+      observacoes: 'Menor de idade - Alergia a amendoim',
+    },
+    {
+      nome_dependente: 'Ana Clara Silva Santos',
+      cpf_titular: '123.456.789-00',
+      nome_titular: 'João Silva Santos',
+      cpf_dependente: '',
+      data_nascimento: '2015-09-28',
+      parentesco: 'Filho(a)',
+      validade_carteirinha: '2025-12-31',
+      observacoes: 'Menor de idade',
+    },
+    {
+      nome_dependente: 'Rosa Maria Santos',
+      cpf_titular: '123.456.789-00',
+      nome_titular: 'João Silva Santos',
+      cpf_dependente: '555.666.777-88',
+      data_nascimento: '1955-02-14',
+      parentesco: 'Mãe',
+      validade_carteirinha: '2025-06-30',
+      observacoes: 'Idosa - Hipertensa',
+    },
+    {
+      nome_dependente: 'Lucas Oliveira Costa',
+      cpf_titular: '987.654.321-00',
+      nome_titular: 'Maria Oliveira Costa',
+      cpf_dependente: '',
+      data_nascimento: '2018-03-05',
+      parentesco: 'Filho(a)',
+      validade_carteirinha: '2025-12-31',
+      observacoes: '',
+    },
+    {
+      nome_dependente: 'Helena Souza Lima',
+      cpf_titular: '456.789.123-00',
+      nome_titular: 'Carlos Eduardo Souza',
+      cpf_dependente: '999.888.777-66',
+      data_nascimento: '2005-12-10',
+      parentesco: 'Filho(a)',
+      validade_carteirinha: '2025-12-31',
+      observacoes: 'Adolescente',
+    },
+  ];
+  
+  const wsDependents = XLSX.utils.json_to_sheet(dependentsTemplate);
+  XLSX.utils.book_append_sheet(wb, wsDependents, 'Dependentes');
+  
+  // Sheet 3: Instruções
+  const instructions = [
+    { Instrucao: '=== MODELO COMPLETO DE IMPORTAÇÃO ===' },
+    { Instrucao: '' },
+    { Instrucao: '📋 ABA "Pacientes":' },
+    { Instrucao: '- Preencha todos os dados dos pacientes titulares' },
+    { Instrucao: '- O campo CPF é usado para vincular dependentes' },
+    { Instrucao: '- Campos obrigatórios: nome, telefone' },
+    { Instrucao: '' },
+    { Instrucao: '👨‍👩‍👧‍👦 ABA "Dependentes":' },
+    { Instrucao: '- Preencha os dados dos dependentes' },
+    { Instrucao: '- Use cpf_titular OU nome_titular para vincular ao paciente' },
+    { Instrucao: '- O sistema buscará primeiro pelo CPF, depois pelo nome' },
+    { Instrucao: '- Campo obrigatório: nome_dependente + (cpf_titular ou nome_titular)' },
+    { Instrucao: '' },
+    { Instrucao: '⚠️ IMPORTANTE:' },
+    { Instrucao: '- Importe primeiro a aba Pacientes' },
+    { Instrucao: '- Depois importe a aba Dependentes' },
+    { Instrucao: '- O sistema vinculará automaticamente pelo CPF ou nome' },
+    { Instrucao: '' },
+    { Instrucao: '📅 FORMATOS DE DATA:' },
+    { Instrucao: '- Use AAAA-MM-DD (ex: 2024-03-15)' },
+    { Instrucao: '- Ou DD/MM/AAAA (ex: 15/03/2024)' },
+    { Instrucao: '' },
+    { Instrucao: '📱 FORMATOS DE TELEFONE:' },
+    { Instrucao: '- Apenas números: 71999999999' },
+    { Instrucao: '- Ou formatado: (71) 99999-9999' },
+    { Instrucao: '' },
+    { Instrucao: '🆔 FORMATOS DE CPF:' },
+    { Instrucao: '- Apenas números: 12345678900' },
+    { Instrucao: '- Ou formatado: 123.456.789-00' },
+    { Instrucao: '' },
+    { Instrucao: '👪 TIPOS DE PARENTESCO:' },
+    { Instrucao: '- Filho(a), Cônjuge, Pai, Mãe, Irmão(ã), Avô(ó), Neto(a), Outro' },
+  ];
+  
+  const wsInstructions = XLSX.utils.json_to_sheet(instructions);
+  XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instrucoes');
+  
+  return XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+}
+
+export function downloadTemplate(type: 'patients' | 'records' | 'combined' | 'contacts' | 'dependents' | 'complete') {
   let buffer: ArrayBuffer;
   let filename: string;
   
-  if (type === 'combined') {
+  if (type === 'complete') {
+    buffer = generateCompletePatientDependentTemplate();
+    filename = 'modelo_completo_pacientes_dependentes.xlsx';
+  } else if (type === 'combined') {
     buffer = generateCombinedTemplate();
     filename = 'modelo_importacao_completa.xlsx';
   } else if (type === 'patients') {
