@@ -4,6 +4,7 @@ import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, p
 import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite } from "@/lib/whatsapp";
 import { ToastAction } from "@/components/ui/toast";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
+import { PreAttendanceDialog } from "@/components/appointments/PreAttendanceDialog";
 import { DraggableAppointment } from "@/components/appointments/DraggableAppointment";
 import { DroppableTimeSlot } from "@/components/appointments/DroppableTimeSlot";
 import { DragOverlayContent } from "@/components/appointments/DragOverlayContent";
@@ -39,6 +40,7 @@ import {
   GripVertical,
   Video,
   AlertTriangle,
+  Activity,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -218,6 +220,10 @@ export default function CalendarPage() {
   // Appointment Panel state
   const [appointmentPanelOpen, setAppointmentPanelOpen] = useState(false);
   const [selectedAppointmentForPanel, setSelectedAppointmentForPanel] = useState<Appointment | null>(null);
+  
+  // Pre-attendance state
+  const [preAttendanceDialogOpen, setPreAttendanceDialogOpen] = useState(false);
+  const [preAttendanceAppointment, setPreAttendanceAppointment] = useState<Appointment | null>(null);
   
   // Drag and Drop state
   const [activeAppointment, setActiveAppointment] = useState<Appointment | null>(null);
@@ -1716,13 +1722,28 @@ export default function CalendarPage() {
                 className="h-8 w-8 text-info hover:text-info"
                 onClick={() => handleSendTelemedicineLink(appointment)}
                 disabled={sendingTelemedicineLink === appointment.id}
-                title="Enviar link de telemedicina via WhatsApp"
+              title="Enviar link de telemedicina via WhatsApp"
               >
                 {sendingTelemedicineLink === appointment.id ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <Video className="h-4 w-4" />
                 )}
+              </Button>
+            )}
+            {/* Pre-attendance button - visible for confirmed or arrived patients */}
+            {(appointment.status === "confirmed" || appointment.status === "arrived") && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-purple-600 hover:text-purple-600"
+                onClick={() => {
+                  setPreAttendanceAppointment(appointment);
+                  setPreAttendanceDialogOpen(true);
+                }}
+                title="Pré-Atendimento (Sinais Vitais)"
+              >
+                <Activity className="h-4 w-4" />
               </Button>
             )}
             <Button
@@ -2584,6 +2605,21 @@ export default function CalendarPage() {
           <DragOverlayContent appointment={activeAppointment} />
         )}
       </DragOverlay>
+
+      {/* Pre-Attendance Dialog */}
+      {preAttendanceAppointment && (
+        <PreAttendanceDialog
+          open={preAttendanceDialogOpen}
+          onOpenChange={(open) => {
+            setPreAttendanceDialogOpen(open);
+            if (!open) setPreAttendanceAppointment(null);
+          }}
+          appointmentId={preAttendanceAppointment.id}
+          patientId={preAttendanceAppointment.patient_id}
+          patientName={preAttendanceAppointment.patient?.name || "Paciente"}
+          onSaved={fetchAppointments}
+        />
+      )}
     </div>
     </DndContext>
   );

@@ -7,6 +7,7 @@ import { Loader2, Plus, ArrowLeft } from "lucide-react";
 import { AppointmentSidebar } from "@/components/appointments/AppointmentSidebar";
 import { PatientSummaryCard } from "@/components/appointments/PatientSummaryCard";
 import { MedicalRecordsTimeline } from "@/components/appointments/MedicalRecordsTimeline";
+import { VitalSignsDisplay } from "@/components/appointments/VitalSignsDisplay";
 import {
   Dialog,
   DialogContent,
@@ -399,6 +400,12 @@ export default function ProfessionalAppointment() {
         <div className="flex-1 p-6 overflow-auto">
           {activeTab === 'resumo' && (
             <>
+              {/* Vital Signs from Pre-Attendance */}
+              <VitalSignsDisplay 
+                appointmentId={appointment.id} 
+                className="mb-6"
+              />
+
               <PatientSummaryCard
                 patient={appointment.patient}
                 appointmentsCount={appointmentsCount}
