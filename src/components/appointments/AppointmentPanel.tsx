@@ -59,6 +59,7 @@ import { ptBR } from "date-fns/locale";
 import { Odontogram } from "@/components/medical/Odontogram";
 import { VitalSignsDisplay } from "@/components/appointments/VitalSignsDisplay";
 import { PrintDialog } from "@/components/medical/PrintDialog";
+import { MedicationSearch } from "@/components/medical/MedicationSearch";
 
 interface Patient {
   id: string;
@@ -1265,6 +1266,21 @@ export function AppointmentPanel({
                       Receita Controlada
                     </Button>
                   </div>
+                </div>
+              )}
+              
+              {/* Medication Search */}
+              {!isCompleted && (
+                <div className="border rounded-lg p-3 bg-muted/30">
+                  <Label className="text-sm font-medium mb-2 block">Buscar Medicamentos</Label>
+                  <MedicationSearch
+                    onSelectMedication={(text) => {
+                      const current = recordForm.prescription || "";
+                      const newPrescription = current ? `${current}\n\n${text}` : text;
+                      setRecordForm({ ...recordForm, prescription: newPrescription });
+                    }}
+                    disabled={isCompleted}
+                  />
                 </div>
               )}
               
