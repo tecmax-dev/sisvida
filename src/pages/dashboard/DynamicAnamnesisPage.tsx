@@ -50,6 +50,7 @@ import {
 import { AnamnesisPrint } from "@/components/anamnesis/AnamnesisPrint";
 import { exportAnamnesisToPDF, generateAnamnesisPDFBase64 } from "@/lib/anamnesisExportUtils";
 import { sendWhatsAppMessage, sendWhatsAppDocument } from "@/lib/whatsapp";
+import { syncDynamicAnamnesisToPatient } from "@/lib/syncAnamnesisData";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -399,6 +400,14 @@ function DynamicAnamnesisContent() {
 
         if (answersError) throw answersError;
       }
+
+      // Sync dynamic anamnesis data to patient's anamnesis record
+      await syncDynamicAnamnesisToPatient({
+        clinicId: currentClinic.id,
+        patientId: selectedPatient.id,
+        questions,
+        answers,
+      });
 
       toast({ title: "Anamnese salva com sucesso!" });
       setNewResponseDialogOpen(false);
