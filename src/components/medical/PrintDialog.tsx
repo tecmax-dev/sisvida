@@ -116,21 +116,29 @@ export function PrintDialog({
   const [patientAddress, setPatientAddress] = useState("");
 
   const [patientDataLoading, setPatientDataLoading] = useState(false);
+  const [patientDataError, setPatientDataError] = useState<string | null>(null);
 
   // Load patient CPF and address when entering the controlled tab
   const fetchedPatientKeyRef = useRef<string | null>(null);
+  const fetchingPatientKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open || !patientId || !clinicId) return;
     if (activeTab !== "controlado") return;
 
     const key = `${clinicId}:${patientId}`;
+
+    // If we already fetched successfully for this patient, do nothing
     if (fetchedPatientKeyRef.current === key) return;
-    fetchedPatientKeyRef.current = key;
+
+    // If a fetch for this key is already in-flight, do nothing
+    if (fetchingPatientKeyRef.current === key) return;
 
     let cancelled = false;
+    fetchingPatientKeyRef.current = key;
 
     (async () => {
+      setPatientDataError(null);
       setPatientDataLoading(true);
       // Clear stale values so UI doesn't keep previous patient data
       setPatientCpf("");
@@ -148,7 +156,7 @@ export function PrintDialog({
         if (!data) throw new Error("Paciente não encontrado para esta clínica.");
         if (cancelled) return;
 
-        setPatientCpf((data.cpf || "").trim());
+        const cpf = (data.cpf || "").trim();
 
         // Build full address from components - prefer structured fields, fallback to legacy address
         const streetWithNumber = data.street && data.street_number
@@ -161,17 +169,28 @@ export function PrintDialog({
           data.city && data.state ? `${data.city}/${data.state}` : data.city,
         ].filter(Boolean);
 
+        setPatientCpf(cpf);
         setPatientAddress(addressParts.join(", "));
+
+        // Mark as fetched only on success (so cancelled/error can retry)
+        fetchedPatientKeyRef.current = key;
       } catch (err) {
         console.error("Erro ao carregar dados do paciente:", err);
         if (!cancelled) {
+          const message = err instanceof Error
+            ? err.message
+            : "Verifique permissões de acesso e tente novamente.";
+
+          setPatientDataError(message);
           toast({
             title: "Não foi possível carregar os dados do paciente",
-            description: err instanceof Error ? err.message : "Verifique permissões de acesso e tente novamente.",
+            description: message,
             variant: "destructive",
           });
         }
       } finally {
+        // Clear in-flight marker so we can retry if needed
+        if (fetchingPatientKeyRef.current === key) fetchingPatientKeyRef.current = null;
         if (!cancelled) setPatientDataLoading(false);
       }
     })();
@@ -182,7 +201,11 @@ export function PrintDialog({
   }, [open, activeTab, patientId, clinicId, toast]);
 
   useEffect(() => {
-    if (!open) fetchedPatientKeyRef.current = null;
+    if (!open) {
+      fetchedPatientKeyRef.current = null;
+      fetchingPatientKeyRef.current = null;
+      setPatientDataError(null);
+    }
   }, [open]);
   // Sync prescription state with initialPrescription when dialog opens
   useEffect(() => {
@@ -650,6 +673,10 @@ export function PrintDialog({
                   />
                 </div>
               </div>
+
+              {patientDataError && (
+                <p className="text-sm text-destructive">{patientDataError}</p>
+              )}
 
               <div>
                 <Label>Medicamento Controlado</Label>
