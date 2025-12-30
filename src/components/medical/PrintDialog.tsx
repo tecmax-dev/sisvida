@@ -108,22 +108,25 @@ export function PrintDialog({
   const [patientCpf, setPatientCpf] = useState("");
   const [patientAddress, setPatientAddress] = useState("");
 
-  // Use prescription template if available and no initial prescription
+  // Sync prescription state with initialPrescription when dialog opens
   useEffect(() => {
-    if (settings?.prescription_template && !initialPrescription) {
-      setPrescription(settings.prescription_template);
+    if (open) {
+      // Use initialPrescription if provided, otherwise fallback to template
+      if (initialPrescription && initialPrescription.trim()) {
+        setPrescription(initialPrescription);
+      } else if (settings?.prescription_template) {
+        setPrescription(settings.prescription_template);
+      } else {
+        setPrescription("");
+      }
+      setActiveTab(initialTab);
     }
-  }, [settings?.prescription_template, initialPrescription]);
+  }, [open, initialPrescription, settings?.prescription_template, initialTab]);
 
   // Update whatsapp phone when patient changes
   useEffect(() => {
     setWhatsappPhone(patient.phone || "");
   }, [patient.phone]);
-
-  // Ensure the desired tab is selected when opening
-  useEffect(() => {
-    if (open) setActiveTab(initialTab);
-  }, [open, initialTab]);
 
   const getPrintContent = () => {
     switch (activeTab) {
