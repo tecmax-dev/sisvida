@@ -448,7 +448,7 @@ export function mapDependentRow(row: Record<string, unknown>): DependentImportRo
 }
 
 // Detected sheet types
-export type DetectedSheetType = 'patients' | 'records' | 'unknown';
+export type DetectedSheetType = 'patients' | 'records' | 'dependents' | 'unknown';
 
 export interface DetectedSheet {
   name: string;
@@ -461,6 +461,7 @@ export interface MultiSheetParseResult {
   sheets: DetectedSheet[];
   patients: ImportRow<PatientImportRow>[];
   records: ImportRow<MedicalRecordImportRow>[];
+  dependents: ImportRow<DependentImportRow>[];
 }
 
 // Header mapping for legacy/alternative column names to standard names
@@ -672,7 +673,18 @@ export function detectSheetType(columns: string[], sheetName?: string): Detected
     'event_record', // iClinic format
     'eventrecord',
   ];
+  const dependentSheetNames = [
+    'dependentes',
+    'dependente',
+    'dependents',
+    'dependent',
+    'familiares',
+    'familiar',
+    'family',
+  ];
 
+  // Check sheet name for dependent (before patients since both may have "nome")
+  if (dependentSheetNames.some((n) => normalizedSheetName.includes(n))) return 'dependents';
   if (recordSheetNames.some((n) => normalizedSheetName.includes(n))) return 'records';
   if (patientSheetNames.some((n) => normalizedSheetName.includes(n))) return 'patients';
 
@@ -681,6 +693,29 @@ export function detectSheetType(columns: string[], sheetName?: string): Detected
   if (iClinicRecordColumns.some((col) => normalizedColumns.some((c) => c.includes(col)))) {
     return 'records';
   }
+
+  // Dependent indicators - check before patient since both have nome
+  const dependentIndicators = [
+    'nome_dependente', 'nmdependente', 'nm_dependente',
+    'cpf_titular', 'nome_titular', 'nm_titular',
+    'parentesco', 'grau_parentesco', 'relationship',
+    'data_nascimento_dependente', 'dt_nascimento_dependente',
+  ];
+  const dependentMatches = dependentIndicators.filter((ind) =>
+    normalizedColumns.some((col) => col.includes(ind))
+  ).length;
+
+  // Strong dependent indicators - if any exists, it's dependents
+  const strongDependentIndicators = [
+    'nome_dependente', 'nmdependente', 'cpf_titular', 'nome_titular',
+  ];
+  const hasStrongDependentColumn = strongDependentIndicators.some((ind) =>
+    normalizedColumns.some((col) => col.includes(ind))
+  );
+  if (hasStrongDependentColumn) return 'dependents';
+  
+  // If has 2+ dependent indicators, it's dependents
+  if (dependentMatches >= 2) return 'dependents';
 
   // Patient indicators
   const patientIndicators = [
@@ -865,6 +900,7 @@ export function parseMultiSheetSpreadsheet(file: ArrayBuffer): MultiSheetParseRe
   const sheets: DetectedSheet[] = [];
   let patients: ImportRow<PatientImportRow>[] = [];
   let records: ImportRow<MedicalRecordImportRow>[] = [];
+  let dependents: ImportRow<DependentImportRow>[] = [];
 
   for (const sheetName of workbook.SheetNames) {
     const worksheet = workbook.Sheets[sheetName];
@@ -883,22 +919,32 @@ export function parseMultiSheetSpreadsheet(file: ArrayBuffer): MultiSheetParseRe
 
     if (sheetType === 'patients') {
       const parsed = rows.map((row, index) => {
-        const mappedData = mapPatientRow(row);
+        const convertedRow = convertRowHeaders(row);
+        const mappedData = mapPatientRow(convertedRow);
         const validation = validatePatientRow(mappedData);
         return { rowNumber: index + 2, data: mappedData, validation };
       });
       patients = [...patients, ...parsed];
     } else if (sheetType === 'records') {
       const parsed = rows.map((row, index) => {
-        const mappedData = mapMedicalRecordRow(row);
+        const convertedRow = convertRowHeaders(row);
+        const mappedData = mapMedicalRecordRow(convertedRow);
         const validation = validateMedicalRecordRow(mappedData);
         return { rowNumber: index + 2, data: mappedData, validation };
       });
       records = [...records, ...parsed];
+    } else if (sheetType === 'dependents') {
+      const parsed = rows.map((row, index) => {
+        const convertedRow = convertRowHeaders(row);
+        const mappedData = mapDependentRow(convertedRow);
+        const validation = validateDependentRow(mappedData);
+        return { rowNumber: index + 2, data: mappedData, validation };
+      });
+      dependents = [...dependents, ...parsed];
     }
   }
 
-  return { sheets, patients, records };
+  return { sheets, patients, records, dependents };
 }
 
 // Force parse a specific sheet as a specific type
@@ -928,13 +974,14 @@ export function forceParseSheetAsType(
 // Parse all sheets forcing all unknown ones as a specific type
 export function parseWithForcedType(
   file: ArrayBuffer,
-  forceUnknownAs: 'patients' | 'records'
+  forceUnknownAs: 'patients' | 'records' | 'dependents'
 ): MultiSheetParseResult {
   const workbook = XLSX.read(file, { type: 'array' });
 
   const sheets: DetectedSheet[] = [];
   let patients: ImportRow<PatientImportRow>[] = [];
   let records: ImportRow<MedicalRecordImportRow>[] = [];
+  let dependents: ImportRow<DependentImportRow>[] = [];
 
   for (const sheetName of workbook.SheetNames) {
     const worksheet = workbook.Sheets[sheetName];
@@ -954,22 +1001,32 @@ export function parseWithForcedType(
 
     if (sheetType === 'patients') {
       const parsed = rows.map((row, index) => {
-        const mappedData = mapPatientRow(row);
+        const convertedRow = convertRowHeaders(row);
+        const mappedData = mapPatientRow(convertedRow);
         const validation = validatePatientRow(mappedData);
         return { rowNumber: index + 2, data: mappedData, validation };
       });
       patients = [...patients, ...parsed];
     } else if (sheetType === 'records') {
       const parsed = rows.map((row, index) => {
-        const mappedData = mapMedicalRecordRow(row);
+        const convertedRow = convertRowHeaders(row);
+        const mappedData = mapMedicalRecordRow(convertedRow);
         const validation = validateMedicalRecordRow(mappedData);
         return { rowNumber: index + 2, data: mappedData, validation };
       });
       records = [...records, ...parsed];
+    } else if (sheetType === 'dependents') {
+      const parsed = rows.map((row, index) => {
+        const convertedRow = convertRowHeaders(row);
+        const mappedData = mapDependentRow(convertedRow);
+        const validation = validateDependentRow(mappedData);
+        return { rowNumber: index + 2, data: mappedData, validation };
+      });
+      dependents = [...dependents, ...parsed];
     }
   }
 
-  return { sheets, patients, records };
+  return { sheets, patients, records, dependents };
 }
 
 // Generate combined template with both sheets
