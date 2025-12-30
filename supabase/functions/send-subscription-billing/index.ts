@@ -49,6 +49,7 @@ serve(async (req) => {
     let testClinicName = 'Clínica Teste';
     let testPlanName = 'Pro';
     let testPlanPrice = 169.00;
+    let paymentMethod = 'pix';
 
     try {
       const body = await req.json();
@@ -61,14 +62,15 @@ serve(async (req) => {
         testClinicName = body.clinic_name || testClinicName;
         testPlanName = body.plan_name || testPlanName;
         testPlanPrice = body.plan_price || testPlanPrice;
+        paymentMethod = body.payment_method || 'pix';
       }
     } catch {
       // No body or invalid JSON, use defaults
     }
 
-    // TEST MODE: Generate PIX and send to specific phone
+    // TEST MODE: Generate payment and send to specific phone
     if (testMode && testPhone) {
-      console.log(`[send-subscription-billing] TEST MODE - Sending to ${testPhone}`);
+      console.log(`[send-subscription-billing] TEST MODE - Sending ${paymentMethod.toUpperCase()} to ${testPhone}`);
 
       // Format phone
       const cleanPhone = testPhone.replace(/\D/g, '');
@@ -77,13 +79,17 @@ serve(async (req) => {
         formattedPhone = '55' + formattedPhone;
       }
 
-      // Create test PIX payment in Mercado Pago
-      const externalReference = `test_billing_${Date.now()}`;
-      const paymentData = {
+      // Create test payment in Mercado Pago
+      const externalReference = `test_billing_${paymentMethod}_${Date.now()}`;
+      
+      // Calculate boleto due date (3 days from now)
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 3);
+
+      const paymentData: any = {
         transaction_amount: testPlanPrice,
         description: `TESTE - Assinatura Eclini - Plano ${testPlanName}`,
         external_reference: externalReference,
-        payment_method_id: 'pix',
         payer: {
           email: 'teste@eclini.app',
           first_name: 'Teste',
@@ -95,7 +101,23 @@ serve(async (req) => {
         },
       };
 
-      console.log(`[send-subscription-billing] Creating TEST PIX:`, JSON.stringify(paymentData, null, 2));
+      if (paymentMethod === 'boleto') {
+        paymentData.payment_method_id = 'bolbradesco';
+        paymentData.date_of_expiration = dueDate.toISOString();
+        // Boleto requires full address
+        paymentData.payer.address = {
+          zip_code: '45653-010',
+          street_name: 'Rua Teste',
+          street_number: '123',
+          neighborhood: 'Centro',
+          city: 'Ilhéus',
+          federal_unit: 'BA'
+        };
+      } else {
+        paymentData.payment_method_id = 'pix';
+      }
+
+      console.log(`[send-subscription-billing] Creating TEST ${paymentMethod.toUpperCase()}:`, JSON.stringify(paymentData, null, 2));
 
       const mpResponse = await fetch('https://api.mercadopago.com/v1/payments', {
         method: 'POST',
@@ -113,7 +135,7 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({ 
             success: false, 
-            error: 'Erro ao criar PIX no Mercado Pago',
+            error: `Erro ao criar ${paymentMethod.toUpperCase()} no Mercado Pago`,
             details: errorData 
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -121,19 +143,53 @@ serve(async (req) => {
       }
 
       const mpResult = await mpResponse.json();
-      console.log(`[send-subscription-billing] TEST PIX created: ${mpResult.id}`);
-
-      const pixInfo = mpResult.point_of_interaction?.transaction_data;
-      const pixQrCode = pixInfo?.qr_code;
-      const pixQrCodeBase64 = pixInfo?.qr_code_base64;
+      console.log(`[send-subscription-billing] TEST ${paymentMethod.toUpperCase()} created: ${mpResult.id}`);
 
       // Format expiry date (5 days from now for test)
       const expiryDate = new Date();
       expiryDate.setDate(expiryDate.getDate() + 5);
       const formattedExpiryDate = expiryDate.toLocaleDateString('pt-BR');
 
-      // Build WhatsApp message
-      const message = `🏥 *Eclini - TESTE de Cobrança*
+      let message: string;
+      let pixQrCode: string | undefined;
+      let pixQrCodeBase64: string | undefined;
+      let boletoUrl: string | undefined;
+      let boletoBarcode: string | undefined;
+
+      if (paymentMethod === 'boleto') {
+        boletoUrl = mpResult.transaction_details?.external_resource_url;
+        boletoBarcode = mpResult.barcode?.content;
+        const boletoDueDate = dueDate.toLocaleDateString('pt-BR');
+
+        message = `🏥 *Eclini - TESTE de Cobrança (BOLETO)*
+
+Olá, ${testClinicName}!
+
+Sua assinatura do *Plano ${testPlanName}* vence em *${formattedExpiryDate}*.
+
+💰 *Valor:* R$ ${testPlanPrice.toFixed(2).replace('.', ',')}
+
+📄 *Pague via BOLETO:*
+
+📅 Vencimento: ${boletoDueDate}
+
+🔢 Código de barras:
+\`\`\`
+${boletoBarcode || 'Código não disponível'}
+\`\`\`
+
+🔗 Ou acesse o link para visualizar/imprimir:
+${boletoUrl || 'Link não disponível'}
+
+⚠️ *ESTA É UMA MENSAGEM DE TESTE - NÃO EFETUE PAGAMENTO*
+
+_Equipe Eclini_`;
+      } else {
+        const pixInfo = mpResult.point_of_interaction?.transaction_data;
+        pixQrCode = pixInfo?.qr_code;
+        pixQrCodeBase64 = pixInfo?.qr_code_base64;
+
+        message = `🏥 *Eclini - TESTE de Cobrança (PIX)*
 
 Olá, ${testClinicName}!
 
@@ -152,6 +208,7 @@ ${pixQrCode}
 ⚠️ *ESTA É UMA MENSAGEM DE TESTE - NÃO EFETUE PAGAMENTO*
 
 _Equipe Eclini_`;
+      }
 
       // Send via WhatsApp
       if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE) {
@@ -159,8 +216,11 @@ _Equipe Eclini_`;
           JSON.stringify({ 
             success: false, 
             error: 'Evolution API não configurada em Configuração Global',
-            pix_created: true,
-            pix_code: pixQrCode
+            payment_created: true,
+            payment_method: paymentMethod,
+            pix_code: pixQrCode,
+            boleto_url: boletoUrl,
+            boleto_barcode: boletoBarcode
           }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
@@ -168,9 +228,9 @@ _Equipe Eclini_`;
 
       const apiUrl = EVOLUTION_API_URL.replace(/\/+$/, '');
 
-      // Try to send with QR code image first
+      // For PIX, try to send with QR code image first
       let whatsappSent = false;
-      if (pixQrCodeBase64) {
+      if (paymentMethod === 'pix' && pixQrCodeBase64) {
         try {
           const response = await fetch(`${apiUrl}/message/sendMedia/${EVOLUTION_INSTANCE}`, {
             method: 'POST',
@@ -198,7 +258,7 @@ _Equipe Eclini_`;
         }
       }
 
-      // Fallback to text only
+      // Fallback to text only (or for boleto)
       if (!whatsappSent) {
         const response = await fetch(`${apiUrl}/message/sendText/${EVOLUTION_INSTANCE}`, {
           method: 'POST',
@@ -222,8 +282,11 @@ _Equipe Eclini_`;
             JSON.stringify({ 
               success: false, 
               error: 'Erro ao enviar WhatsApp',
-              pix_created: true,
+              payment_created: true,
+              payment_method: paymentMethod,
               pix_code: pixQrCode,
+              boleto_url: boletoUrl,
+              boleto_barcode: boletoBarcode,
               whatsapp_error: errorData
             }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -234,9 +297,12 @@ _Equipe Eclini_`;
       return new Response(
         JSON.stringify({ 
           success: true, 
-          message: `Cobrança de teste enviada para ${formattedPhone}`,
+          message: `Cobrança de teste (${paymentMethod.toUpperCase()}) enviada para ${formattedPhone}`,
           mp_payment_id: mpResult.id,
-          pix_code: pixQrCode
+          payment_method: paymentMethod,
+          pix_code: pixQrCode,
+          boleto_url: boletoUrl,
+          boleto_barcode: boletoBarcode
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
