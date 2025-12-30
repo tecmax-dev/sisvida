@@ -1800,6 +1800,53 @@ export type Database = {
           },
         ]
       }
+      exams: {
+        Row: {
+          category: string
+          clinic_id: string | null
+          code: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_global: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          clinic_id?: string | null
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_global?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          clinic_id?: string | null
+          code?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_global?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exams_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_permissions: {
         Row: {
           created_at: string | null
