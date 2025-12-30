@@ -684,11 +684,29 @@ export default function PublicBooking() {
       });
     } catch (error: unknown) {
       console.error('Error creating appointment:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      const anyError = error as any;
+      const backendBody = anyError?.context?.body;
+      const backendErrorMessage =
+        (backendBody && typeof backendBody === 'object' && typeof backendBody.error === 'string' && backendBody.error) ||
+        (typeof backendBody === 'string'
+          ? (() => {
+              try {
+                const parsed = JSON.parse(backendBody);
+                return typeof parsed?.error === 'string' ? parsed.error : null;
+              } catch {
+                return null;
+              }
+            })()
+          : null);
+
+      const errorMessage =
+        backendErrorMessage ||
+        (anyError instanceof Error ? anyError.message : String(anyError));
+
       let title = "Erro ao agendar";
       let description = errorMessage || "Tente novamente";
-      
+
       if (errorMessage.includes("HORARIO_INVALIDO") || errorMessage.includes("horário")) {
         title = "Horário indisponível";
         const match = errorMessage.match(/HORARIO_INVALIDO:\s*(.+)/);
@@ -705,11 +723,11 @@ export default function PublicBooking() {
       } else if (errorMessage.includes("FERIADO") || errorMessage.includes("feriado")) {
         title = "Data indisponível";
         description = errorMessage;
-      } else if (errorMessage.includes("Rate limit") || errorMessage.includes("Limite")) {
+      } else if (errorMessage.includes("Rate limit") || errorMessage.includes("429")) {
         title = "Muitas tentativas";
         description = "Por favor, aguarde alguns minutos antes de tentar novamente.";
       }
-      
+
       toast({
         title,
         description,
