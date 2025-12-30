@@ -248,62 +248,69 @@ Dúvidas? Responda esta mensagem.
 
 _Equipe Eclini_`;
 
-        // Send WhatsApp if clinic has phone
-        if (clinic.phone) {
+        // Send WhatsApp using SYSTEM Evolution API (Super Admin config)
+        const EVOLUTION_API_URL = Deno.env.get('EVOLUTION_API_URL');
+        const EVOLUTION_API_KEY = Deno.env.get('EVOLUTION_API_KEY');
+        const EVOLUTION_INSTANCE = Deno.env.get('EVOLUTION_INSTANCE');
+
+        if (clinic.phone && EVOLUTION_API_URL && EVOLUTION_API_KEY && EVOLUTION_INSTANCE) {
           const cleanPhone = clinic.phone.replace(/\D/g, '');
           if (cleanPhone.length >= 10) {
-            // Get Evolution API config for system (using first clinic with config as fallback)
-            const { data: evolutionConfig } = await supabase
-              .from('evolution_configs')
-              .select('api_url, api_key, instance_name, is_connected')
-              .eq('clinic_id', clinic.id)
-              .maybeSingle();
+            let formattedPhone = cleanPhone;
+            if (!formattedPhone.startsWith('55')) {
+              formattedPhone = '55' + formattedPhone;
+            }
 
-            if (evolutionConfig?.is_connected) {
-              let formattedPhone = cleanPhone;
-              if (!formattedPhone.startsWith('55')) {
-                formattedPhone = '55' + formattedPhone;
-              }
-
-              try {
-                // Send message with QR code image
-                if (pixQrCodeBase64) {
-                  await fetch(`${evolutionConfig.api_url}/message/sendMedia/${evolutionConfig.instance_name}`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'apikey': evolutionConfig.api_key,
-                    },
-                    body: JSON.stringify({
-                      number: formattedPhone,
-                      mediatype: 'image',
-                      media: `data:image/png;base64,${pixQrCodeBase64}`,
-                      caption: message,
-                    }),
-                  });
-                  console.log(`[send-subscription-billing] WhatsApp sent to ${clinic.name}`);
+            try {
+              // Send message with QR code image
+              if (pixQrCodeBase64) {
+                const response = await fetch(`${EVOLUTION_API_URL}/message/sendMedia/${EVOLUTION_INSTANCE}`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': EVOLUTION_API_KEY,
+                  },
+                  body: JSON.stringify({
+                    number: formattedPhone,
+                    mediatype: 'image',
+                    media: `data:image/png;base64,${pixQrCodeBase64}`,
+                    caption: message,
+                  }),
+                });
+                
+                if (response.ok) {
+                  console.log(`[send-subscription-billing] WhatsApp sent to ${clinic.name} (${formattedPhone})`);
                 } else {
-                  // Fallback: send text only
-                  await fetch(`${evolutionConfig.api_url}/message/sendText/${evolutionConfig.instance_name}`, {
-                    method: 'POST',
-                    headers: {
-                      'Content-Type': 'application/json',
-                      'apikey': evolutionConfig.api_key,
-                    },
-                    body: JSON.stringify({
-                      number: formattedPhone,
-                      text: message,
-                    }),
-                  });
-                  console.log(`[send-subscription-billing] WhatsApp (text) sent to ${clinic.name}`);
+                  const errorData = await response.json();
+                  console.error(`[send-subscription-billing] WhatsApp API error for ${clinic.name}:`, JSON.stringify(errorData));
                 }
-              } catch (whatsappError) {
-                console.error(`[send-subscription-billing] WhatsApp error for ${clinic.name}:`, whatsappError);
+              } else {
+                // Fallback: send text only
+                const response = await fetch(`${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'apikey': EVOLUTION_API_KEY,
+                  },
+                  body: JSON.stringify({
+                    number: formattedPhone,
+                    text: message,
+                  }),
+                });
+                
+                if (response.ok) {
+                  console.log(`[send-subscription-billing] WhatsApp (text) sent to ${clinic.name} (${formattedPhone})`);
+                } else {
+                  const errorData = await response.json();
+                  console.error(`[send-subscription-billing] WhatsApp API error for ${clinic.name}:`, JSON.stringify(errorData));
+                }
               }
-            } else {
-              console.log(`[send-subscription-billing] No WhatsApp configured for ${clinic.name}`);
+            } catch (whatsappError) {
+              console.error(`[send-subscription-billing] WhatsApp error for ${clinic.name}:`, whatsappError);
             }
           }
+        } else if (!EVOLUTION_API_URL || !EVOLUTION_API_KEY || !EVOLUTION_INSTANCE) {
+          console.log(`[send-subscription-billing] System Evolution API not configured - skipping WhatsApp`);
         }
 
         results.push({ 
