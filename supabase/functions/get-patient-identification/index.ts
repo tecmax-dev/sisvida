@@ -33,12 +33,18 @@ function buildAddress(row: {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const requestId = crypto.randomUUID();
+
   try {
     const body = await req.json().catch(() => ({}));
     const clinicId = String(body?.clinicId || "").trim();
     const patientId = String(body?.patientId || "").trim();
 
+    const authHeader = req.headers.get("authorization") || req.headers.get("Authorization") || "";
+    console.log("[get-patient-identification] start", { requestId, clinicId, patientId, hasAuth: !!authHeader });
+
     if (!clinicId || !patientId) {
+      console.warn("[get-patient-identification] missing params", { requestId, clinicId, patientId });
       return new Response(
         JSON.stringify({ error: "clinicId e patientId são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -53,23 +59,33 @@ Deno.serve(async (req) => {
     const userClient = createClient(supabaseUrl, anonKey, {
       global: {
         headers: {
-          Authorization: req.headers.get("Authorization") || "",
+          Authorization: authHeader,
         },
       },
     });
 
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData?.user) {
+      console.warn("[get-patient-identification] not authenticated", { requestId, userErr: userErr?.message });
       return new Response(
         JSON.stringify({ error: "Não autenticado" }),
         { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
+    console.log("[get-patient-identification] user", { requestId, userId: userData.user.id });
+
     // Verifica se o usuário tem acesso à clínica
     const { data: accessOk, error: accessErr } = await userClient.rpc("has_clinic_access", {
       _user_id: userData.user.id,
       _clinic_id: clinicId,
+    });
+
+    console.log("[get-patient-identification] clinic access", {
+      requestId,
+      clinicId,
+      accessOk,
+      accessErr: accessErr?.message,
     });
 
     if (accessErr || accessOk !== true) {
@@ -90,6 +106,7 @@ Deno.serve(async (req) => {
       .maybeSingle();
 
     if (error) {
+      console.error("[get-patient-identification] db error", { requestId, message: error.message });
       return new Response(
         JSON.stringify({ error: "Erro ao buscar paciente" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -97,21 +114,33 @@ Deno.serve(async (req) => {
     }
 
     if (!data) {
+      console.warn("[get-patient-identification] patient not found", { requestId, clinicId, patientId });
       return new Response(
         JSON.stringify({ error: "Paciente não encontrado" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
+    const result = {
+      success: true,
+      cpf: normalizeCpf(data.cpf || ""),
+      address: buildAddress(data),
+    };
+
+    console.log("[get-patient-identification] ok", {
+      requestId,
+      cpfLen: result.cpf.length,
+      addressLen: result.address.length,
+    });
+
     return new Response(
-      JSON.stringify({
-        success: true,
-        cpf: normalizeCpf(data.cpf || ""),
-        address: buildAddress(data),
-      }),
+      JSON.stringify(result),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
+    console.error("[get-patient-identification] unhandled", {
+      message: err instanceof Error ? err.message : String(err),
+    });
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Erro interno" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
