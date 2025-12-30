@@ -1563,10 +1563,10 @@ export default function CalendarPage() {
           </PopoverTrigger>
           <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="start">
             <Command shouldFilter={false}>
-              <CommandInput 
-                placeholder="Buscar por nome ou CPF..." 
-                value={patientSearchQuery}
-                onValueChange={setPatientSearchQuery}
+              <CommandInput
+                key={patientSearchOpen ? "patient-search-open" : "patient-search-closed"}
+                placeholder="Buscar por nome ou CPF..."
+                onValueChange={(value) => setPatientSearchQuery(value)}
               />
               <CommandList>
                 {isSearchingPatients ? (
