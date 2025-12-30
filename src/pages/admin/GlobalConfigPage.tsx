@@ -11,12 +11,14 @@ interface GlobalConfig {
   id?: string;
   evolution_api_url: string;
   evolution_api_key: string;
+  evolution_instance: string;
 }
 
 export default function GlobalConfigPage() {
   const [config, setConfig] = useState<GlobalConfig>({
     evolution_api_url: "",
     evolution_api_key: "",
+    evolution_instance: "",
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -45,6 +47,7 @@ export default function GlobalConfigPage() {
           id: data.id,
           evolution_api_url: data.evolution_api_url || "",
           evolution_api_key: data.evolution_api_key || "",
+          evolution_instance: data.evolution_instance || "",
         });
       }
     } catch (error: any) {
@@ -64,6 +67,7 @@ export default function GlobalConfigPage() {
           .update({
             evolution_api_url: config.evolution_api_url,
             evolution_api_key: config.evolution_api_key,
+            evolution_instance: config.evolution_instance,
             updated_at: new Date().toISOString(),
           })
           .eq("id", config.id);
@@ -75,6 +79,7 @@ export default function GlobalConfigPage() {
           .insert({
             evolution_api_url: config.evolution_api_url,
             evolution_api_key: config.evolution_api_key,
+            evolution_instance: config.evolution_instance,
           });
 
         if (error) throw error;
@@ -140,6 +145,18 @@ export default function GlobalConfigPage() {
                 setConfig({ ...config, evolution_api_key: e.target.value })
               }
               placeholder="Sua chave de API"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="evolution_instance">Nome da Instância</Label>
+            <Input
+              id="evolution_instance"
+              value={config.evolution_instance}
+              onChange={(e) =>
+                setConfig({ ...config, evolution_instance: e.target.value })
+              }
+              placeholder="ex: eclini"
             />
           </div>
 
