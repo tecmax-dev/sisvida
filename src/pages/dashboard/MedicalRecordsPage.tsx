@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { 
   FileText, 
   Plus, 
@@ -65,8 +65,18 @@ interface Patient {
   id: string;
   name: string;
   phone: string;
+  cpf: string | null;
   birth_date: string | null;
 }
+
+// Normalize text for search (remove accents and special chars)
+const normalizeForSearch = (text: string) => {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+};
 
 interface MedicalRecord {
   id: string;
@@ -110,6 +120,8 @@ export default function MedicalRecordsPage() {
   const [pendingAppointments, setPendingAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchingPatients, setSearchingPatients] = useState(false);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<string>("");
@@ -174,18 +186,49 @@ export default function MedicalRecordsPage() {
     }
   }, [selectedFolderId]);
 
-  const fetchPatients = async () => {
+  const fetchPatients = async (search?: string) => {
     if (!currentClinic) return;
     
-    const { data } = await supabase
+    setSearchingPatients(true);
+    
+    let query = supabase
       .from('patients')
-      .select('id, name, phone, birth_date')
+      .select('id, name, phone, cpf, birth_date')
       .eq('clinic_id', currentClinic.id)
-      .order('name');
+      .order('name')
+      .limit(50);
 
+    if (search && search.trim()) {
+      const normalizedSearch = normalizeForSearch(search);
+      const isNumericSearch = /^\d+$/.test(normalizedSearch);
+      
+      if (isNumericSearch) {
+        // Search by CPF or phone
+        query = query.or(`cpf.ilike.%${search.replace(/\D/g, '')}%,phone.ilike.%${search.replace(/\D/g, '')}%`);
+      } else {
+        // Search by name
+        query = query.ilike('name', `%${search}%`);
+      }
+    }
+
+    const { data } = await query;
     setPatients(data || []);
     setLoading(false);
+    setSearchingPatients(false);
   };
+
+  // Debounced search
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    searchTimeoutRef.current = setTimeout(() => {
+      fetchPatients(value);
+    }, 300);
+  }, [currentClinic]);
 
   const fetchPatientRecords = async () => {
     if (!currentClinic || !selectedPatient) return;
@@ -367,10 +410,8 @@ export default function MedicalRecordsPage() {
     }
   };
 
-  const filteredPatients = patients.filter(p =>
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.phone && p.phone.includes(searchQuery))
-  );
+  // Patients are already filtered from server
+  const filteredPatients = patients;
 
   const startRecordFromAppointment = (appointment: Appointment) => {
     const patient = patients.find(p => p.id === appointment.patient.id);
@@ -457,11 +498,14 @@ export default function MedicalRecordsPage() {
             </CardTitle>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              {searchingPatients && (
+                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+              )}
               <Input
-                placeholder="Buscar paciente..."
+                placeholder="Buscar por nome ou CPF..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-9 pr-9"
               />
             </div>
           </CardHeader>
