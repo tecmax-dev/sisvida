@@ -117,38 +117,41 @@ export function PrintDialog({
 
   const [patientDataLoading, setPatientDataLoading] = useState(false);
   const [patientDataError, setPatientDataError] = useState<string | null>(null);
-  
-  // Use a fetch key that changes each time dialog opens to force re-fetch
+
+  // Força re-busca ao reabrir o diálogo (mesmo paciente)
   const [fetchKey, setFetchKey] = useState(0);
 
-  // Increment fetch key when dialog opens to force a new fetch
+  // Controle robusto de concorrência (evita "cancelled" + StrictMode)
+  const patientFetchSeqRef = useRef(0);
+
   useEffect(() => {
     if (open) {
-      setFetchKey(prev => prev + 1);
-    } else {
-      // Reset all state when dialog closes
-      setPatientCpf("");
-      setPatientAddress("");
-      setPatientDataError(null);
-      setPatientDataLoading(false);
-    }
-  }, [open]);
-
-  // Fetch patient data when entering controlled tab
-  useEffect(() => {
-    // Only run when all conditions are met
-    if (!open || !patientId || !clinicId || activeTab !== "controlado" || fetchKey === 0) {
+      setFetchKey((prev) => prev + 1);
       return;
     }
 
-    let cancelled = false;
+    // Invalida qualquer fetch pendente e limpa estado ao fechar
+    patientFetchSeqRef.current += 1;
+    setPatientCpf("");
+    setPatientAddress("");
+    setPatientDataError(null);
+    setPatientDataLoading(false);
+  }, [open]);
+
+  // Carrega CPF/Endereço quando a aba de Controlado estiver ativa
+  useEffect(() => {
+    if (!open) return;
+    if (!patientId || !clinicId) return;
+    if (activeTab !== "controlado") return;
+    if (fetchKey === 0) return;
+
+    const seq = ++patientFetchSeqRef.current;
 
     const fetchPatientData = async () => {
-      console.log("[PrintDialog] Fetching patient data for controlled prescription", { patientId, clinicId, fetchKey });
-      setPatientDataError(null);
-      setPatientDataLoading(true);
-
       try {
+        setPatientDataError(null);
+        setPatientDataLoading(true);
+
         const { data, error } = await supabase
           .from("patients")
           .select("cpf, address, street, street_number, neighborhood, city, state")
@@ -156,26 +159,14 @@ export function PrintDialog({
           .eq("clinic_id", clinicId)
           .maybeSingle();
 
-        if (cancelled) {
-          console.log("[PrintDialog] Fetch was cancelled");
-          return;
-        }
-        
-        if (error) {
-          console.error("[PrintDialog] Supabase error:", error);
-          throw error;
-        }
-        
-        if (!data) {
-          console.warn("[PrintDialog] No patient found");
-          throw new Error("Paciente não encontrado para esta clínica.");
-        }
+        // Se apareceu uma requisição mais nova, ignore esta
+        if (patientFetchSeqRef.current !== seq) return;
 
-        console.log("[PrintDialog] Patient data received:", data);
+        if (error) throw error;
+        if (!data) throw new Error("Paciente não encontrado para esta clínica.");
 
         const cpf = (data.cpf || "").trim();
 
-        // Build full address from components - prefer structured fields, fallback to legacy address
         const streetWithNumber = data.street && data.street_number
           ? `${data.street}, ${data.street_number}`
           : data.street || data.address;
@@ -187,33 +178,32 @@ export function PrintDialog({
         ].filter(Boolean);
 
         const fullAddress = addressParts.join(", ");
-        
-        console.log("[PrintDialog] Setting CPF:", cpf, "Address:", fullAddress);
+
         setPatientCpf(cpf);
         setPatientAddress(fullAddress);
-        setPatientDataLoading(false);
       } catch (err) {
-        console.error("Erro ao carregar dados do paciente:", err);
-        if (!cancelled) {
-          const message = err instanceof Error
-            ? err.message
-            : "Verifique permissões de acesso e tente novamente.";
+        if (patientFetchSeqRef.current !== seq) return;
 
-          setPatientDataError(message);
-          setPatientDataLoading(false);
-          toast({
-            title: "Não foi possível carregar os dados do paciente",
-            description: message,
-            variant: "destructive",
-          });
-        }
+        const message = err instanceof Error
+          ? err.message
+          : "Verifique permissões de acesso e tente novamente.";
+
+        setPatientDataError(message);
+        toast({
+          title: "Não foi possível carregar os dados do paciente",
+          description: message,
+          variant: "destructive",
+        });
+      } finally {
+        if (patientFetchSeqRef.current === seq) setPatientDataLoading(false);
       }
     };
 
     fetchPatientData();
 
+    // cleanup: invalida esta tentativa
     return () => {
-      cancelled = true;
+      patientFetchSeqRef.current += 1;
     };
   }, [fetchKey, activeTab, patientId, clinicId, open, toast]);
   // Sync prescription state with initialPrescription when dialog opens
