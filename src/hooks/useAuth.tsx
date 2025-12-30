@@ -126,10 +126,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .maybeSingle();
     
     setIsSuperAdmin(!!data);
+    return !!data;
   };
 
   const fetchUserRoles = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('user_roles')
       .select(`
         clinic_id,
@@ -150,24 +151,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         )
       `)
       .eq('user_id', userId);
-    
+
+    if (error) {
+      console.error('[Auth] Error fetching user roles:', error);
+    }
+
+    // Caso padrão: usuário com roles em clínicas
     if (data && data.length > 0) {
-      const roles = data.map(item => ({
+      const roles = data.map((item) => ({
         clinic_id: item.clinic_id,
         role: item.role as UserRole['role'],
         access_group_id: item.access_group_id as string | null,
-        clinic: item.clinic as unknown as Clinic
+        clinic: item.clinic as unknown as Clinic,
       }));
+
       setUserRoles(roles);
-      
+
       // Set first clinic as current if none selected
       if (!currentClinic && roles[0]?.clinic) {
         setCurrentClinic(roles[0].clinic);
       }
-    } else {
-      setUserRoles([]);
-      setCurrentClinic(null);
+
+      setRolesLoaded(true);
+      return;
     }
+
+    // Super admin: precisa de um "contexto" de clínica para telas do dashboard
+    const isSa = await fetchSuperAdminStatus(userId);
+    if (isSa) {
+      const { data: clinics, error: clinicsError } = await supabase
+        .from('clinics')
+        .select('id, name, slug, address, phone, cnpj, logo_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason')
+        .order('name');
+
+      if (clinicsError) {
+        console.error('[Auth] Error fetching clinics for super admin:', clinicsError);
+        setUserRoles([]);
+        setCurrentClinic(null);
+        setRolesLoaded(true);
+        return;
+      }
+
+      const roles: UserRole[] = (clinics || []).map((c) => ({
+        clinic_id: c.id,
+        role: 'admin',
+        access_group_id: null,
+        clinic: c as Clinic,
+      }));
+
+      setUserRoles(roles);
+
+      if (!currentClinic && roles[0]?.clinic) {
+        setCurrentClinic(roles[0].clinic);
+      }
+
+      setRolesLoaded(true);
+      return;
+    }
+
+    // Sem roles e não super admin
+    setUserRoles([]);
+    setCurrentClinic(null);
     setRolesLoaded(true);
   };
 
