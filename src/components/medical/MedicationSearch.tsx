@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { Search, Plus, Pill, X, Loader2 } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Search, Plus, Pill, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,11 +30,15 @@ interface MedicationSearchProps {
 
 export function MedicationSearch({ onSelectMedication, disabled }: MedicationSearchProps) {
   const { currentClinic } = useAuth();
-  const [search, setSearch] = useState("");
   const [medications, setMedications] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Use ref to avoid controlled input lag
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
   
   const [newMedication, setNewMedication] = useState({
     name: "",
@@ -45,7 +49,9 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
     is_controlled: false,
   });
 
-  const fetchMedications = useCallback(async (searchTerm: string) => {
+  const fetchMedications = useCallback(async (term: string) => {
+    if (!currentClinic?.id) return;
+    
     setLoading(true);
     try {
       // Build query to fetch both global and clinic-specific medications
@@ -53,18 +59,12 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
         .from("medications")
         .select("id, name, active_ingredient, dosage, form, instructions, is_controlled")
         .eq("is_active", true)
+        .or(`clinic_id.is.null,clinic_id.eq.${currentClinic.id}`)
         .order("name")
         .limit(30);
       
-      // Filter by clinic_id (NULL for global, or matching clinic)
-      if (currentClinic?.id) {
-        query = query.or(`clinic_id.is.null,clinic_id.eq.${currentClinic.id}`);
-      } else {
-        query = query.is("clinic_id", null);
-      }
-      
-      if (searchTerm.trim()) {
-        query = query.or(`name.ilike.%${searchTerm}%,active_ingredient.ilike.%${searchTerm}%`);
+      if (term.trim()) {
+        query = query.or(`name.ilike.%${term}%,active_ingredient.ilike.%${term}%`);
       }
       
       const { data, error } = await query;
@@ -79,15 +79,26 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
     }
   }, [currentClinic?.id]);
 
-  // Fetch on mount and when search changes
+  // Fetch on mount
   useEffect(() => {
-    if (!currentClinic?.id) return;
+    if (currentClinic?.id) {
+      fetchMedications("");
+    }
+  }, [currentClinic?.id, fetchMedications]);
+
+  // Handle search with debounce - uncontrolled input pattern
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
     
-    const debounce = setTimeout(() => {
-      fetchMedications(search);
-    }, 300);
-    return () => clearTimeout(debounce);
-  }, [search, fetchMedications, currentClinic?.id]);
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
+    debounceRef.current = setTimeout(() => {
+      setSearchTerm(value);
+      fetchMedications(value);
+    }, 400);
+  }, [fetchMedications]);
 
   const handleSelectMedication = (med: Medication) => {
     let text = med.name;
@@ -133,7 +144,7 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
         instructions: "",
         is_controlled: false,
       });
-      fetchMedications(search);
+      fetchMedications(searchTerm);
       
       // Auto-add to prescription
       if (data) {
@@ -153,9 +164,10 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            ref={inputRef}
             placeholder="Buscar medicamento..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            defaultValue=""
+            onChange={handleSearchChange}
             className="pl-9"
             disabled={disabled}
           />
@@ -207,7 +219,7 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
             ))}
           </div>
         </ScrollArea>
-      ) : medications.length === 0 && !search ? (
+      ) : medications.length === 0 && !searchTerm ? (
         <div className="text-center py-4 text-muted-foreground">
           <Pill className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">Nenhum medicamento cadastrado</p>
@@ -221,20 +233,20 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
             Cadastrar primeiro medicamento
           </Button>
         </div>
-      ) : search && medications.length === 0 ? (
+      ) : searchTerm && medications.length === 0 ? (
         <div className="text-center py-4 text-muted-foreground">
           <p className="text-sm">Nenhum medicamento encontrado</p>
           <Button
             variant="link"
             size="sm"
             onClick={() => {
-              setNewMedication({ ...newMedication, name: search });
+              setNewMedication({ ...newMedication, name: inputRef.current?.value || searchTerm });
               setShowAddDialog(true);
             }}
             disabled={disabled}
           >
             <Plus className="h-3 w-3 mr-1" />
-            Cadastrar "{search}"
+            Cadastrar "{searchTerm}"
           </Button>
         </div>
       ) : null}
