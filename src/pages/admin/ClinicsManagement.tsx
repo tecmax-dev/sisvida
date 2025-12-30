@@ -114,6 +114,8 @@ interface ClinicSubscription {
   status: string;
   plan_id: string;
   plan: SubscriptionPlan;
+  billing_day: number | null;
+  current_period_end: string | null;
 }
 
 interface ClinicWithCounts extends Clinic {
@@ -394,6 +396,8 @@ export default function ClinicsManagement() {
   const [planDialogOpen, setPlanDialogOpen] = useState(false);
   const [selectedPlanId, setSelectedPlanId] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("trial");
+  const [billingDay, setBillingDay] = useState<number>(5);
+  const [nextDueDate, setNextDueDate] = useState<string>("");
   
   // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -445,7 +449,7 @@ export default function ClinicsManagement() {
             supabase.from('patients').select('id', { count: 'exact', head: true }).eq('clinic_id', clinic.id),
             supabase.from('appointments').select('id', { count: 'exact', head: true }).eq('clinic_id', clinic.id),
             supabase.from('professionals').select('id', { count: 'exact', head: true }).eq('clinic_id', clinic.id).eq('is_active', true),
-            supabase.from('subscriptions').select('id, status, plan_id, subscription_plans(id, name, max_professionals, monthly_price)').eq('clinic_id', clinic.id).maybeSingle(),
+            supabase.from('subscriptions').select('id, status, plan_id, billing_day, current_period_end, subscription_plans(id, name, max_professionals, monthly_price)').eq('clinic_id', clinic.id).maybeSingle(),
           ]);
 
           let subscription: ClinicSubscription | null = null;
@@ -456,6 +460,8 @@ export default function ClinicsManagement() {
               status: subscriptionRes.data.status,
               plan_id: subscriptionRes.data.plan_id,
               plan: planData,
+              billing_day: subscriptionRes.data.billing_day,
+              current_period_end: subscriptionRes.data.current_period_end,
             };
           }
 
@@ -577,11 +583,27 @@ export default function ClinicsManagement() {
 
   // Save plan mutation
   const savePlanMutation = useMutation({
-    mutationFn: async ({ clinic, planId, status }: { clinic: ClinicWithCounts; planId: string; status: string }) => {
+    mutationFn: async ({ clinic, planId, status, billingDay, dueDate }: { 
+      clinic: ClinicWithCounts; 
+      planId: string; 
+      status: string; 
+      billingDay: number;
+      dueDate: string | null;
+    }) => {
+      const updateData: Record<string, unknown> = { 
+        plan_id: planId, 
+        status,
+        billing_day: billingDay,
+      };
+      
+      if (dueDate) {
+        updateData.current_period_end = new Date(dueDate).toISOString();
+      }
+      
       if (clinic.subscription) {
         const { error } = await supabase
           .from('subscriptions')
-          .update({ plan_id: planId, status })
+          .update(updateData)
           .eq('id', clinic.subscription.id);
         if (error) throw error;
       } else {
@@ -591,6 +613,8 @@ export default function ClinicsManagement() {
             clinic_id: clinic.id,
             plan_id: planId,
             status,
+            billing_day: billingDay,
+            current_period_end: dueDate ? new Date(dueDate).toISOString() : null,
             trial_ends_at: status === 'trial' 
               ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString() 
               : null,
@@ -708,6 +732,10 @@ export default function ClinicsManagement() {
     setSelectedClinic(clinic);
     setSelectedPlanId(clinic.subscription?.plan_id || "");
     setSelectedStatus(clinic.subscription?.status || "trial");
+    setBillingDay(clinic.subscription?.billing_day || 5);
+    setNextDueDate(clinic.subscription?.current_period_end 
+      ? new Date(clinic.subscription.current_period_end).toISOString().split('T')[0] 
+      : "");
     setPlanDialogOpen(true);
   };
 
@@ -767,7 +795,13 @@ export default function ClinicsManagement() {
 
   const handleSavePlan = () => {
     if (!selectedClinic || !selectedPlanId) return;
-    savePlanMutation.mutate({ clinic: selectedClinic, planId: selectedPlanId, status: selectedStatus });
+    savePlanMutation.mutate({ 
+      clinic: selectedClinic, 
+      planId: selectedPlanId, 
+      status: selectedStatus,
+      billingDay,
+      dueDate: nextDueDate || null,
+    });
   };
 
   const handleDeleteClinic = () => {
@@ -990,6 +1024,12 @@ export default function ClinicsManagement() {
                                   {clinic.subscription.plan.name}
                                 </Badge>
                                 {getStatusBadge(clinic.subscription.status)}
+                                {clinic.subscription.current_period_end && (
+                                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                    <Calendar className="h-3 w-3" />
+                                    Venc: {new Date(clinic.subscription.current_period_end).toLocaleDateString('pt-BR')}
+                                  </p>
+                                )}
                               </div>
                             ) : (
                               <Badge variant="outline" className="text-muted-foreground">
@@ -1325,6 +1365,16 @@ export default function ClinicsManagement() {
                     <span className="text-muted-foreground">/{selectedClinic.subscription.plan.max_professionals}</span>
                   )}
                 </p>
+                {selectedClinic?.subscription?.current_period_end && (
+                  <p>• Vencimento atual: <span className="font-medium text-foreground">
+                    {new Date(selectedClinic.subscription.current_period_end).toLocaleDateString('pt-BR')}
+                  </span></p>
+                )}
+                {selectedClinic?.subscription?.billing_day && (
+                  <p>• Dia de cobrança: <span className="font-medium text-foreground">
+                    Dia {selectedClinic.subscription.billing_day}
+                  </span></p>
+                )}
               </div>
             </div>
 
@@ -1359,6 +1409,46 @@ export default function ClinicsManagement() {
                   <SelectItem value="canceled">Cancelado</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Billing Day Selection */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-primary" />
+                Dia de Vencimento Mensal
+              </Label>
+              <Select value={billingDay.toString()} onValueChange={(v) => setBillingDay(parseInt(v))}>
+                <SelectTrigger className="bg-muted/30">
+                  <SelectValue placeholder="Selecione o dia" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 28 }, (_, i) => i + 1).map((day) => (
+                    <SelectItem key={day} value={day.toString()}>
+                      Dia {day}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                A cobrança será gerada 5 dias antes desta data todo mês.
+              </p>
+            </div>
+
+            {/* Due Date Selection */}
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-warning" />
+                Próximo Vencimento
+              </Label>
+              <Input
+                type="date"
+                value={nextDueDate}
+                onChange={(e) => setNextDueDate(e.target.value)}
+                className="bg-muted/30"
+              />
+              <p className="text-xs text-muted-foreground">
+                Data de vencimento do período atual. Deixe vazio para calcular automaticamente.
+              </p>
             </div>
 
             {/* Warning for professional limit */}
