@@ -1018,15 +1018,22 @@ export default function DataImportPage() {
         
         try {
           const { data, error } = await supabase.from('patient_dependents').insert(batch).select('id');
-          
+
           if (error) {
-            console.error('[DEPENDENTS BATCH ERROR]', error.message);
+            console.error('[DEPENDENTS BATCH ERROR]', {
+              message: error.message,
+              details: (error as any).details,
+              hint: (error as any).hint,
+              code: (error as any).code,
+            });
+            toast.error(`Erro ao importar dependentes: ${error.message}`);
             errors += batch.length;
           } else {
             importedDependentsCount += data?.length || batch.length;
           }
         } catch (err) {
           console.error('[DEPENDENTS BATCH EXCEPTION]', err);
+          toast.error('Erro inesperado ao importar dependentes');
           errors += batch.length;
         }
       }
@@ -1888,15 +1895,22 @@ export default function DataImportPage() {
           .from('patient_dependents')
           .insert(batch)
           .select('id');
-        
+
         if (error) {
-          console.error('[DEPENDENT BATCH ERROR]', error.message);
+          console.error('[DEPENDENT BATCH ERROR]', {
+            message: error.message,
+            details: (error as any).details,
+            hint: (error as any).hint,
+            code: (error as any).code,
+          });
+          toast.error(`Erro ao importar dependentes: ${error.message}`);
           errors += batch.length;
         } else {
           imported += data?.length || batch.length;
         }
       } catch (err) {
         console.error('[DEPENDENT BATCH EXCEPTION]', err);
+        toast.error('Erro inesperado ao importar dependentes');
         errors += batch.length;
       }
       
