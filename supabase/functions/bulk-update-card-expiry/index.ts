@@ -20,6 +20,18 @@ interface UpdateResult {
   error?: string;
 }
 
+// Normalize CPF to digits only
+function normalizeCpf(cpf: string): string {
+  return cpf.replace(/\D/g, "");
+}
+
+// Format CPF with mask (XXX.XXX.XXX-XX)
+function formatCpf(cpf: string): string {
+  const digits = normalizeCpf(cpf);
+  if (digits.length !== 11) return cpf;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
 // Process a single record
 async function processRecord(
   supabase: SupabaseClient,
@@ -27,7 +39,7 @@ async function processRecord(
   record: UpdateRecord
 ): Promise<UpdateResult> {
   try {
-    const cpfDigits = record.cpf.replace(/\D/g, "");
+    const cpfDigits = normalizeCpf(record.cpf);
     
     if (cpfDigits.length !== 11) {
       return { cpf: record.cpf, success: false, error: "CPF inválido (deve ter 11 dígitos)" };
@@ -51,13 +63,28 @@ async function processRecord(
       return { cpf: record.cpf, success: false, error: `Data inválida: ${record.expires_at}` };
     }
 
-    // Find patient by CPF
-    const { data: patient, error: patientError } = await supabase
+    // Try to find patient by CPF - check both formatted and unformatted
+    const formattedCpf = formatCpf(cpfDigits);
+    
+    // First try formatted CPF
+    let { data: patient, error: patientError } = await supabase
       .from("patients")
       .select("id, name")
       .eq("clinic_id", clinic_id)
-      .eq("cpf", cpfDigits)
-      .single();
+      .eq("cpf", formattedCpf)
+      .maybeSingle();
+
+    // If not found, try unformatted
+    if (!patient) {
+      const result = await supabase
+        .from("patients")
+        .select("id, name")
+        .eq("clinic_id", clinic_id)
+        .eq("cpf", cpfDigits)
+        .maybeSingle();
+      patient = result.data;
+      patientError = result.error;
+    }
 
     if (patientError || !patient) {
       return { cpf: record.cpf, success: false, error: "Paciente não encontrado" };
@@ -70,7 +97,7 @@ async function processRecord(
       .eq("patient_id", patient.id)
       .eq("clinic_id", clinic_id)
       .eq("is_active", true)
-      .single();
+      .maybeSingle();
 
     if (cardError || !card) {
       return { cpf: record.cpf, success: false, patient_name: patient.name, error: "Carteirinha ativa não encontrada" };
@@ -86,7 +113,7 @@ async function processRecord(
       return { cpf: record.cpf, success: false, patient_name: patient.name, card_number: card.card_number, error: `Erro ao atualizar: ${updateError.message}` };
     }
 
-    // Count dependents
+    // Count dependents (trigger will sync automatically)
     const { count: depCount } = await supabase
       .from("patient_dependents")
       .select("id", { count: "exact", head: true })
