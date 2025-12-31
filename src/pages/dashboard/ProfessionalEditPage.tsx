@@ -889,6 +889,7 @@ export default function ProfessionalEditPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="5">5 minutos</SelectItem>
                       <SelectItem value="10">10 minutos</SelectItem>
                       <SelectItem value="15">15 minutos</SelectItem>
                       <SelectItem value="20">20 minutos</SelectItem>
