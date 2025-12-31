@@ -64,6 +64,8 @@ const generateTimeOptions = (): string[] => {
 };
 
 const durationOptions = [
+  { value: 5, label: "5 min" },
+  { value: 10, label: "10 min" },
   { value: 15, label: "15 min" },
   { value: 20, label: "20 min" },
   { value: 30, label: "30 min" },
