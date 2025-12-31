@@ -113,3 +113,6 @@ verify_jwt = false
 
 [functions.test-payslip-approval]
 verify_jwt = false
+
+[functions.booking-web-chat]
+verify_jwt = false

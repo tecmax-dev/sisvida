@@ -49,22 +49,44 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
   }, [messages]);
 
   const sendToBooking = async (userMessage: string) => {
-    const { data, error } = await supabase.functions.invoke('booking-web-chat', {
-      body: {
-        message: userMessage,
-        clinic_id: clinicId,
-        phone: user?.phone || '5500000000000',
-      },
-    });
+    try {
+      console.log('[booking] Calling booking-web-chat with:', { userMessage, clinicId });
+      
+      const { data, error } = await supabase.functions.invoke('booking-web-chat', {
+        body: {
+          message: userMessage,
+          clinic_id: clinicId,
+          phone: user?.phone || '5500000000000',
+        },
+      });
 
-    if (error) {
-      console.error('Error calling booking-web-chat:', error);
-      toast.error('Erro no fluxo de agendamento');
-      return;
-    }
+      console.log('[booking] Response:', { data, error });
 
-    if (data?.response) {
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.response, isBookingFlow: true }]);
+      if (error) {
+        console.error('Error calling booking-web-chat:', error);
+        toast.error('Erro no fluxo de agendamento');
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: 'Desculpe, ocorreu um erro. Por favor, digite seu CPF novamente.', isBookingFlow: true },
+        ]);
+        return;
+      }
+
+      if (data?.response) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.response, isBookingFlow: true }]);
+      }
+
+      if (data?.booking_complete) {
+        setIsBookingMode(false);
+        toast.success('Agendamento realizado com sucesso!');
+      }
+    } catch (err) {
+      console.error('Error in sendToBooking:', err);
+      toast.error('Erro inesperado no agendamento');
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Ocorreu um erro. Tente novamente digitando seu CPF.', isBookingFlow: true },
+      ]);
     }
   };
 
