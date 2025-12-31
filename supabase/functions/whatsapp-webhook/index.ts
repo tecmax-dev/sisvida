@@ -3575,28 +3575,46 @@ async function handlePayslipImageUpload(
   console.log(`[payslip] Processing image from ${phone}, type: ${messageType}`);
 
   try {
+    // First get Evolution config to determine the clinic
+    const { data: evolutionConfig, error: configError } = await supabase
+      .from('evolution_configs')
+      .select('api_url, api_key, instance_name, clinic_id')
+      .eq('instance_name', instanceName)
+      .eq('is_connected', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (configError || !evolutionConfig) {
+      console.error('[payslip] Evolution config not found for instance:', instanceName);
+      return false;
+    }
+
+    console.log(`[payslip] Found Evolution config for clinic: ${evolutionConfig.clinic_id}`);
+
     const phoneCandidates = getBrazilPhoneVariants(phone);
 
-    // Find patient by phone
+    // Find patient by phone IN THE SPECIFIC CLINIC
     const { data: patient, error: patientError } = await supabase
       .from('patients')
       .select('id, name, clinic_id')
+      .eq('clinic_id', evolutionConfig.clinic_id)
       .or(phoneCandidates.map(p => `phone.ilike.%${p.slice(-8)}%`).join(','))
       .limit(1)
       .maybeSingle();
 
     if (patientError || !patient) {
-      console.log('[payslip] Patient not found for phone:', phone);
+      console.log('[payslip] Patient not found for phone:', phone, 'in clinic:', evolutionConfig.clinic_id);
       return false;
     }
 
-    console.log(`[payslip] Found patient: ${patient.name} (${patient.id})`);
+    console.log(`[payslip] Found patient: ${patient.name} (${patient.id}) in clinic ${patient.clinic_id}`);
 
     // Check if patient has a pending payslip request
     const { data: pendingRequest, error: requestError } = await supabase
       .from('payslip_requests')
       .select('id, card_id, clinic_id')
       .eq('patient_id', patient.id)
+      .eq('clinic_id', evolutionConfig.clinic_id)
       .eq('status', 'pending')
       .order('created_at', { ascending: false })
       .limit(1)
@@ -3608,25 +3626,11 @@ async function handlePayslipImageUpload(
     }
 
     if (!pendingRequest) {
-      console.log('[payslip] No pending payslip request for patient');
+      console.log('[payslip] No pending payslip request for patient in clinic:', evolutionConfig.clinic_id);
       return false;
     }
 
     console.log(`[payslip] Found pending request: ${pendingRequest.id}`);
-
-    // Get Evolution config to download media
-    const { data: evolutionConfig, error: configError } = await supabase
-      .from('evolution_configs')
-      .select('api_url, api_key, instance_name, clinic_id')
-      .eq('instance_name', instanceName)
-      .eq('is_connected', true)
-      .limit(1)
-      .maybeSingle();
-
-    if (configError || !evolutionConfig) {
-      console.error('[payslip] Evolution config not found');
-      return false;
-    }
 
     // Download media from Evolution API
     const mediaUrl = `${evolutionConfig.api_url}/chat/getBase64FromMediaMessage/${evolutionConfig.instance_name}`;
