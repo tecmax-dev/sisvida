@@ -923,8 +923,115 @@ Por favor, escolha outro horário.`,
 type SupabaseClient = any;
 
 // ==========================================
+// AI BOOKING FLOW HANDLER
+// ==========================================
+
+async function handleAIBookingFlow(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string
+): Promise<void> {
+  const clinicId = config.clinic_id;
+  console.log(`[ai-booking] Processing message for clinic ${clinicId}, phone ${phone}`);
+
+  try {
+    // Get or create conversation
+    const { data: existingConversation } = await supabase
+      .from('whatsapp_ai_conversations')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .eq('phone', phone)
+      .gt('expires_at', new Date().toISOString())
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    let conversationHistory: Array<{ role: string; content: string }> = [];
+    let conversationId = existingConversation?.id;
+
+    if (existingConversation) {
+      conversationHistory = existingConversation.messages || [];
+      console.log(`[ai-booking] Found existing conversation with ${conversationHistory.length} messages`);
+    } else {
+      // Create new conversation
+      const { data: newConversation } = await supabase
+        .from('whatsapp_ai_conversations')
+        .insert({
+          clinic_id: clinicId,
+          phone: phone,
+          messages: [],
+          expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString() // 30 minutes
+        })
+        .select()
+        .single();
+
+      conversationId = newConversation?.id;
+      console.log(`[ai-booking] Created new conversation: ${conversationId}`);
+    }
+
+    // Call the AI assistant
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+
+    const aiResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-ai-assistant`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${supabaseAnonKey}`,
+      },
+      body: JSON.stringify({
+        message: messageText,
+        clinic_id: clinicId,
+        phone: phone,
+        conversation_history: conversationHistory
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      const errorText = await aiResponse.text();
+      console.error('[ai-booking] AI assistant error:', aiResponse.status, errorText);
+      await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro. Por favor, tente novamente em instantes.');
+      return;
+    }
+
+    const aiData = await aiResponse.json();
+    const responseText = aiData.response || 'Desculpe, não consegui processar sua mensagem.';
+
+    console.log(`[ai-booking] AI response: ${responseText.substring(0, 100)}...`);
+
+    // Update conversation history
+    const updatedHistory = [
+      ...conversationHistory,
+      { role: 'user', content: messageText },
+      { role: 'assistant', content: responseText }
+    ];
+
+    // Keep only last 20 messages to avoid token limits
+    const trimmedHistory = updatedHistory.slice(-20);
+
+    await supabase
+      .from('whatsapp_ai_conversations')
+      .update({
+        messages: trimmedHistory,
+        updated_at: new Date().toISOString(),
+        expires_at: new Date(Date.now() + 30 * 60 * 1000).toISOString()
+      })
+      .eq('id', conversationId);
+
+    // Send response via WhatsApp
+    await sendWhatsAppMessage(config, phone, responseText);
+
+  } catch (error) {
+    console.error('[ai-booking] Error:', error);
+    await sendWhatsAppMessage(config, phone, 'Desculpe, ocorreu um erro. Por favor, tente novamente.');
+  }
+}
+
+// ==========================================
 // BOOKING STATE MACHINE
 // ==========================================
+
 
 async function handleBookingFlow(
   supabase: SupabaseClient,
@@ -3951,20 +4058,34 @@ serve(async (req) => {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing booking flow for clinic ${clinicId}`);
 
-        const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
-        console.log(`[webhook] Session state: ${sessionResult?.session?.state ?? 'null'}, wasExpired: ${sessionResult?.wasExpired}`);
+        // Check if clinic uses AI booking
+        const { data: clinicSettings } = await supabase
+          .from('clinics')
+          .select('use_ai_booking')
+          .eq('id', clinicId)
+          .single();
 
-        if (sessionResult?.session) {
-          await handleBookingFlow(
-            supabase,
-            configData,
-            phone,
-            messageText,
-            sessionResult.session,
-            sessionResult.wasExpired
-          );
+        if (clinicSettings?.use_ai_booking) {
+          // Use AI-powered booking flow
+          console.log(`[webhook] Using AI booking for clinic ${clinicId}`);
+          await handleAIBookingFlow(supabase, configData, phone, messageText);
         } else {
-          console.error('[webhook] Failed to get or create session');
+          // Use traditional menu-based flow
+          const sessionResult = await getOrCreateSession(supabase, clinicId, phone);
+          console.log(`[webhook] Session state: ${sessionResult?.session?.state ?? 'null'}, wasExpired: ${sessionResult?.wasExpired}`);
+
+          if (sessionResult?.session) {
+            await handleBookingFlow(
+              supabase,
+              configData,
+              phone,
+              messageText,
+              sessionResult.session,
+              sessionResult.wasExpired
+            );
+          } else {
+            console.error('[webhook] Failed to get or create session');
+          }
         }
       } else {
         console.log(`[webhook] No config found with direct_reply_enabled for instance: ${payload.instance}`);
