@@ -490,6 +490,10 @@ Se precisar de ajuda, entre em contato conosco.`,
       msg += `${i + 2}️⃣ *${dep.name}*${expiredTag}\n`;
     });
     
+    // Add option for other actions (menu)
+    const menuOption = 2 + dependents.length;
+    msg += `\n${menuOption}️⃣ 📋 *Outras opções* (cancelar, reagendar, ver consultas)`;
+    
     return msg.trim();
   },
 
@@ -1295,11 +1299,27 @@ async function handleConfirmIdentity(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  // First try regex
-  if (POSITIVE_REGEX.test(messageText)) {
+  // Helper to proceed after identity confirmation
+  const proceedAfterConfirmation = async (): Promise<{ handled: boolean; newState?: BookingState }> => {
+    // If patient has dependents, ask who the appointment is for right away
+    if (session.available_dependents && session.available_dependents.length > 0) {
+      await updateSession(supabase, session.id, {
+        state: 'SELECT_BOOKING_FOR',
+        action_type: 'new',
+      });
+      await sendWhatsAppMessage(config, phone, MESSAGES.selectBookingFor(session.patient_name || '', session.available_dependents));
+      return { handled: true, newState: 'SELECT_BOOKING_FOR' };
+    }
+    
+    // No dependents - go to main menu
     await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
     await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
     return { handled: true, newState: 'MAIN_MENU' };
+  };
+
+  // First try regex
+  if (POSITIVE_REGEX.test(messageText)) {
+    return await proceedAfterConfirmation();
   }
 
   if (NEGATIVE_REGEX.test(messageText)) {
@@ -1314,9 +1334,7 @@ async function handleConfirmIdentity(
 
   if (aiResult.confidence >= 0.7) {
     if (aiResult.intent === 'confirm') {
-      await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
-      await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
-      return { handled: true, newState: 'MAIN_MENU' };
+      return await proceedAfterConfirmation();
     }
     if (aiResult.intent === 'deny') {
       await updateSession(supabase, session.id, { state: 'FINISHED' });
@@ -1387,7 +1405,7 @@ async function handleSelectBookingFor(
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   const choice = parseInt(messageText.trim());
   const dependents = session.available_dependents || [];
-  const totalOptions = 1 + dependents.length; // 1 = titular + dependents
+  const totalOptions = 2 + dependents.length; // 1 = titular + dependents + 1 = menu option
 
   if (isNaN(choice) || choice < 1 || choice > totalOptions) {
     await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
@@ -1399,7 +1417,14 @@ async function handleSelectBookingFor(
     return await proceedToSelectProfessional(supabase, config, phone, session, 'titular', null, null);
   }
 
-  // Options 2+ = Dependents
+  // Last option = Go to main menu
+  if (choice === totalOptions) {
+    await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
+    await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
+    return { handled: true, newState: 'MAIN_MENU' };
+  }
+
+  // Options 2 to (totalOptions - 1) = Dependents
   const dependentIndex = choice - 2;
   const selectedDependent = dependents[dependentIndex];
 
