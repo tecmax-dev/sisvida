@@ -4584,6 +4584,42 @@ export type Database = {
           },
         ]
       }
+      professional_insurance_plans: {
+        Row: {
+          created_at: string
+          id: string
+          insurance_plan_id: string
+          professional_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          insurance_plan_id: string
+          professional_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          insurance_plan_id?: string
+          professional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_insurance_plans_insurance_plan_id_fkey"
+            columns: ["insurance_plan_id"]
+            isOneToOne: false
+            referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_insurance_plans_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_procedures: {
         Row: {
           created_at: string
