@@ -155,8 +155,7 @@ async function executeTool(
           .from('professionals')
           .select('id, name, specialty')
           .eq('clinic_id', clinicId)
-          .eq('is_active', true)
-          .eq('accepts_online_booking', true);
+          .eq('is_active', true);
 
         if (error) throw error;
 
