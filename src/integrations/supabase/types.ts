@@ -6735,6 +6735,7 @@ export type Database = {
           created_at: string | null
           expires_at: string
           id: string
+          is_dependent_direct_booking: boolean
           patient_id: string | null
           patient_name: string | null
           pending_appointments: Json | null
@@ -6761,6 +6762,7 @@ export type Database = {
           created_at?: string | null
           expires_at?: string
           id?: string
+          is_dependent_direct_booking?: boolean
           patient_id?: string | null
           patient_name?: string | null
           pending_appointments?: Json | null
@@ -6787,6 +6789,7 @@ export type Database = {
           created_at?: string | null
           expires_at?: string
           id?: string
+          is_dependent_direct_booking?: boolean
           patient_id?: string | null
           patient_name?: string | null
           pending_appointments?: Json | null
