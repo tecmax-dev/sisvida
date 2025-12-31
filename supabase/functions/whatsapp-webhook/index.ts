@@ -485,10 +485,9 @@ Se precisar de ajuda, entre em contato conosco.`,
     msg += `1️⃣ Para mim (*${patientName}*)\n`;
     
     dependents.forEach((dep, i) => {
-      const depFirstName = dep.name.split(' ')[0];
       const isExpired = dep.card_expires_at && new Date(dep.card_expires_at) < new Date();
       const expiredTag = isExpired ? ' ⚠️' : '';
-      msg += `${i + 2}️⃣ Para *${depFirstName}*${expiredTag}\n`;
+      msg += `${i + 2}️⃣ *${dep.name}*${expiredTag}\n`;
     });
     
     return msg.trim();
