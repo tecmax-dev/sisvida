@@ -529,18 +529,92 @@ export default function PublicBooking() {
     const schedule = professional.schedule as Record<string, any>;
     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     
+    // Check if today and all times have passed
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const isToday = dateStr === todayStr;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const minAllowedMinutes = currentMinutes + 30; // 30 min buffer
+    
+    // Helper to check if schedule has available future slots for today
+    const hasAvailableFutureSlots = (scheduleData: Record<string, any>): boolean => {
+      if (!isToday) return true;
+      
+      const defaultDuration = professional.appointment_duration || 30;
+      const blockInterval = scheduleData._blocks?.[0]?.block_interval || 5;
+      
+      // Check _blocks format
+      if (scheduleData._blocks && Array.isArray(scheduleData._blocks)) {
+        for (const block of scheduleData._blocks) {
+          if (!block.days || !block.days.includes(dayKey)) continue;
+          if (block.start_date && dateStr < block.start_date) continue;
+          if (block.end_date && dateStr > block.end_date) continue;
+          
+          if (block.slots && Array.isArray(block.slots)) {
+            for (const slot of block.slots) {
+              const [startH, startM] = (slot.start || '08:00').split(':').map(Number);
+              const [endH, endM] = (slot.end || '18:00').split(':').map(Number);
+              const slotStart = startH * 60 + startM;
+              const slotEnd = endH * 60 + endM;
+              
+              // Check if any time within this slot is still available
+              let current = slotStart;
+              while (current + defaultDuration <= slotEnd) {
+                if (current >= minAllowedMinutes) {
+                  return true; // Found at least one available future slot
+                }
+                current += blockInterval;
+              }
+            }
+          }
+        }
+        return false;
+      }
+      
+      // Fallback to old format
+      const daySchedule = scheduleData[dayKey];
+      if (daySchedule?.enabled && daySchedule.slots) {
+        const slotInterval = daySchedule.block_interval || 30;
+        for (const slot of daySchedule.slots) {
+          const [startH, startM] = (slot.start || '08:00').split(':').map(Number);
+          const [endH, endM] = (slot.end || '18:00').split(':').map(Number);
+          const slotStart = startH * 60 + startM;
+          const slotEnd = endH * 60 + endM;
+          
+          let current = slotStart;
+          while (current + defaultDuration <= slotEnd) {
+            if (current >= minAllowedMinutes) {
+              return true;
+            }
+            current += slotInterval;
+          }
+        }
+        return false;
+      }
+      
+      return false;
+    };
+    
     // Check new _blocks format first
     if (schedule._blocks && Array.isArray(schedule._blocks) && schedule._blocks.length > 0) {
-      return schedule._blocks.some((block: any) => {
+      const hasValidBlock = schedule._blocks.some((block: any) => {
         if (!block.days || !block.days.includes(dayKey)) return false;
         if (block.start_date && dateStr < block.start_date) return false;
         if (block.end_date && dateStr > block.end_date) return false;
         return true;
       });
+      
+      if (!hasValidBlock) return false;
+      
+      // If today, check if there are future slots available
+      return hasAvailableFutureSlots(schedule);
     }
     
     // Fallback to old format
-    return schedule[dayKey]?.enabled || false;
+    if (!schedule[dayKey]?.enabled) return false;
+    
+    // If today, check if there are future slots available
+    return hasAvailableFutureSlots(schedule);
   };
 
   const getDaysInMonth = (date: Date) => {
