@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { TwilioConfigPanel } from "@/components/settings/TwilioConfigPanel";
@@ -16,6 +16,7 @@ import { WhatsAppProviderSelector } from "@/components/settings/WhatsAppProvider
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { MessageHistoryPanel } from "@/components/settings/MessageHistoryPanel";
+import { AIAssistantChat } from "@/components/chat/AIAssistantChat";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAutoSave, AutoSaveStatus } from "@/hooks/useAutoSave";
@@ -854,6 +855,28 @@ export default function SettingsPage() {
 
       {/* Webhooks */}
       <WebhooksPanel />
+
+      {/* AI Assistant Test */}
+      {currentClinic && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Bot className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Testar Assistente IA</CardTitle>
+                <CardDescription>
+                  Teste o assistente de agendamento com OpenAI diretamente
+                </CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <AIAssistantChat clinicId={currentClinic.id} />
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex justify-end">
         <Button variant="hero" onClick={handleSave} disabled={saving}>
