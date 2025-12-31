@@ -52,7 +52,7 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
     if (!request.attachment_path) return;
 
     setLoadingImage(true);
-    setViewingPatientName(request.patient?.name || 'Paciente');
+    setViewingPatientName(request.patients?.name || 'Paciente');
     setViewerOpen(true);
 
     const url = await getAttachmentUrl(request.attachment_path);
@@ -138,11 +138,11 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
             >
               <div className="flex-1 space-y-1">
                 {!patientId && (
-                  <p className="font-medium">{request.patient?.name}</p>
+                  <p className="font-medium">{request.patients?.name}</p>
                 )}
                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
                   <span>
-                    Carteirinha: {request.card?.card_number || 'N/A'}
+                    Carteirinha: {request.patient_cards?.card_number || 'N/A'}
                   </span>
                   <span>
                     Solicitado: {format(new Date(request.requested_at), "dd/MM/yyyy", { locale: ptBR })}
@@ -210,10 +210,10 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
 
           <div className="space-y-4">
             <div className="p-3 bg-muted/50 rounded-lg text-sm">
-              <p><strong>Paciente:</strong> {selectedRequest?.patient?.name}</p>
-              <p><strong>Carteirinha:</strong> {selectedRequest?.card?.card_number}</p>
-              <p><strong>Validade atual:</strong> {selectedRequest?.card?.expires_at 
-                ? format(new Date(selectedRequest.card.expires_at), "dd/MM/yyyy", { locale: ptBR })
+              <p><strong>Paciente:</strong> {selectedRequest?.patients?.name}</p>
+              <p><strong>Carteirinha:</strong> {selectedRequest?.patient_cards?.card_number}</p>
+              <p><strong>Validade atual:</strong> {selectedRequest?.patient_cards?.expires_at 
+                ? format(new Date(selectedRequest.patient_cards.expires_at), "dd/MM/yyyy", { locale: ptBR })
                 : 'N/A'}</p>
             </div>
 

@@ -16,17 +16,17 @@ export interface PayslipRequest {
   reviewed_by: string | null;
   created_at: string;
   updated_at: string;
-  patient?: {
+  patients?: {
     id: string;
     name: string;
     phone: string;
     cpf: string | null;
   };
-  card?: {
+  patient_cards?: {
     id: string;
     card_number: string;
     expires_at: string;
-  };
+  } | null;
 }
 
 export function usePayslipRequests(clinicId: string | undefined, patientId?: string) {
@@ -42,8 +42,8 @@ export function usePayslipRequests(clinicId: string | undefined, patientId?: str
         .from('payslip_requests')
         .select(`
           *,
-          patient:patients(id, name, phone, cpf),
-          card:patient_cards(id, card_number, expires_at)
+          patients!payslip_requests_patient_id_fkey(id, name, phone, cpf),
+          patient_cards!payslip_requests_card_id_fkey(id, card_number, expires_at)
         `)
         .eq('clinic_id', clinicId)
         .order('created_at', { ascending: false });
