@@ -2281,20 +2281,31 @@ async function getAvailableDates(
   professionalId: string
 ): Promise<Array<{ date: string; formatted: string; weekday: string }>> {
   const dates: Array<{ date: string; formatted: string; weekday: string }> = [];
-  const today = new Date();
+  
+  // Get current time in Brazil timezone
+  const now = new Date();
+  const brazilOffset = -3 * 60; // Brazil is UTC-3
+  const utcOffset = now.getTimezoneOffset();
+  const brazilNow = new Date(now.getTime() + (utcOffset + brazilOffset) * 60000);
+  
+  const today = new Date(brazilNow);
   today.setHours(0, 0, 0, 0);
 
   const { data: professional } = await supabase
     .from('professionals')
-    .select('schedule')
+    .select('schedule, appointment_duration')
     .eq('id', professionalId)
     .single();
 
-  const professionalData = professional as { schedule?: Record<string, { enabled: boolean; slots: Array<{ start: string; end: string }> }> } | null;
+  const professionalData = professional as { 
+    schedule?: Record<string, { enabled: boolean; slots: Array<{ start: string; end: string }> }>;
+    appointment_duration?: number;
+  } | null;
 
   if (!professionalData?.schedule) return dates;
 
   const schedule = professionalData.schedule;
+  const duration = professionalData.appointment_duration || 30;
   const dayMap: Record<number, string> = {
     0: 'sunday',
     1: 'monday',
@@ -2305,7 +2316,8 @@ async function getAvailableDates(
     6: 'saturday',
   };
 
-  for (let i = 1; i <= 14 && dates.length < 5; i++) {
+  // Start from today (i=0) to include same-day booking if there are available slots
+  for (let i = 0; i <= 14 && dates.length < 5; i++) {
     const date = new Date(today);
     date.setDate(date.getDate() + i);
     
@@ -2327,12 +2339,33 @@ async function getAvailableDates(
 
     if (clinicHoliday) continue;
 
+    // For today, check if there are still available slots after current time
+    if (i === 0) {
+      const currentMinutes = brazilNow.getHours() * 60 + brazilNow.getMinutes();
+      const minAllowedMinutes = currentMinutes + 30; // 30 min buffer
+      
+      let hasAvailableSlotToday = false;
+      for (const slot of daySchedule.slots) {
+        const [endH, endM] = slot.end.split(':').map(Number);
+        const endMinutes = endH * 60 + endM;
+        
+        // Check if there's at least one slot that ends after minAllowedMinutes + duration
+        if (endMinutes > minAllowedMinutes + duration) {
+          hasAvailableSlotToday = true;
+          break;
+        }
+      }
+      
+      if (!hasAvailableSlotToday) continue;
+    }
+
     const hasAvailableSlots = await hasAvailableSlotsOnDate(
       supabase,
       clinicId,
       professionalId,
       dateStr,
-      daySchedule.slots
+      daySchedule.slots,
+      i === 0 ? brazilNow : null // Pass current time for today
     );
 
     if (hasAvailableSlots) {
@@ -2352,7 +2385,8 @@ async function hasAvailableSlotsOnDate(
   clinicId: string,
   professionalId: string,
   date: string,
-  slots: Array<{ start: string; end: string }>
+  slots: Array<{ start: string; end: string }>,
+  currentTimeForToday?: Date | null
 ): Promise<boolean> {
   const { data: appointments } = await supabase
     .from('appointments')
@@ -2377,6 +2411,11 @@ async function hasAvailableSlotsOnDate(
   const professionalData = professional as { appointment_duration?: number } | null;
   const duration = professionalData?.appointment_duration || 30;
 
+  // Calculate minimum allowed time for today
+  const minAllowedMinutes = currentTimeForToday 
+    ? (currentTimeForToday.getHours() * 60 + currentTimeForToday.getMinutes() + 30)
+    : 0;
+
   for (const slot of slots) {
     const [startH, startM] = slot.start.split(':').map(Number);
     const [endH, endM] = slot.end.split(':').map(Number);
@@ -2384,6 +2423,11 @@ async function hasAvailableSlotsOnDate(
     const endMinutes = endH * 60 + endM;
 
     for (let m = startMinutes; m + duration <= endMinutes; m += duration) {
+      // Skip past times for today
+      if (currentTimeForToday && m < minAllowedMinutes) {
+        continue;
+      }
+
       const h = Math.floor(m / 60);
       const min = m % 60;
       const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
@@ -2445,6 +2489,17 @@ async function getAvailableTimes(
     bookedTimes.add(apt.start_time.substring(0, 5));
   });
 
+  // Get current time in Brazil timezone to filter out past times for today
+  const now = new Date();
+  const brazilOffset = -3 * 60; // Brazil is UTC-3
+  const utcOffset = now.getTimezoneOffset();
+  const brazilNow = new Date(now.getTime() + (utcOffset + brazilOffset) * 60000);
+  const todayStr = brazilNow.toISOString().split('T')[0];
+  const isToday = date === todayStr;
+  const currentMinutes = isToday ? (brazilNow.getHours() * 60 + brazilNow.getMinutes()) : 0;
+  // Add 30 min buffer to not show times too close to now
+  const minAllowedMinutes = currentMinutes + 30;
+
   for (const slot of daySchedule.slots) {
     const [startH, startM] = slot.start.split(':').map(Number);
     const [endH, endM] = slot.end.split(':').map(Number);
@@ -2452,6 +2507,11 @@ async function getAvailableTimes(
     const endMinutes = endH * 60 + endM;
 
     for (let m = startMinutes; m + duration <= endMinutes; m += duration) {
+      // Skip past times for today
+      if (isToday && m < minAllowedMinutes) {
+        continue;
+      }
+
       const h = Math.floor(m / 60);
       const min = m % 60;
       const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
