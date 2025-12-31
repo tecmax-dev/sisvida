@@ -352,12 +352,18 @@ serve(async (req) => {
 
     const { data: existingPatient } = await supabase
       .from('patients')
-      .select('id')
+      .select('id, is_active')
       .eq('clinic_id', clinicId)
       .eq('phone', cleanPhone)
       .single();
 
     if (existingPatient) {
+      // Check if existing patient is inactive
+      if (existingPatient.is_active === false) {
+        console.error('[create-public-booking] Patient is inactive:', existingPatient.id);
+        return errorResponse('Seu cadastro está inativo. Entre em contato com a clínica para reativar.');
+      }
+      
       patientId = existingPatient.id;
       console.log(`[create-public-booking] Found existing patient: ${patientId}`);
       
