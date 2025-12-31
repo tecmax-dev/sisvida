@@ -127,15 +127,22 @@ export function usePayslipRequests(clinicId: string | undefined, patientId?: str
 
   const getAttachmentUrl = async (path: string): Promise<string | null> => {
     try {
+      console.log('[payslip] createSignedUrl start', { path });
       const { data, error } = await supabase.storage
         .from('contra-cheques')
         .createSignedUrl(path, 3600); // 1 hour
 
+      console.log('[payslip] createSignedUrl result', { path, data, error });
+
       if (error) throw error;
+      if (!data?.signedUrl) {
+        throw new Error('Link assinado não foi gerado (sem permissão ou arquivo não encontrado).');
+      }
+
       return data.signedUrl;
     } catch (error: any) {
       const message = error?.message ?? 'Não foi possível gerar o link do arquivo.';
-      console.error('Error getting attachment URL:', message, { path });
+      console.error('[payslip] Error getting attachment URL:', message, { path });
       toast({
         title: 'Erro ao abrir contracheque',
         description: message,
