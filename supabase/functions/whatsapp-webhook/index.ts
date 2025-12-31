@@ -957,9 +957,8 @@ async function handleStateWithConfirm(
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   switch (session.state) {
     case 'CONFIRM_IDENTITY':
-      await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
-      await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
-      return { handled: true, newState: 'MAIN_MENU' };
+      // Use the same logic as handleConfirmIdentity for consistency
+      return await handleConfirmIdentity(supabase, config, phone, 'sim', session);
     case 'CONFIRM_APPOINTMENT':
       return await handleConfirmAppointment(supabase, config, phone, 'sim', session);
     case 'CONFIRM_CANCEL':
@@ -979,9 +978,9 @@ async function handleStateWithDeny(
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   switch (session.state) {
     case 'CONFIRM_IDENTITY':
-      await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
-      await sendWhatsAppMessage(config, phone, MESSAGES.cpfInvalid + MESSAGES.hintCpf);
-      return { handled: true, newState: 'WAITING_CPF' };
+      await updateSession(supabase, session.id, { state: 'FINISHED' });
+      await sendWhatsAppMessage(config, phone, MESSAGES.identityDenied);
+      return { handled: true, newState: 'FINISHED' };
     case 'CONFIRM_APPOINTMENT':
       return await handleConfirmAppointment(supabase, config, phone, 'não', session);
     case 'CONFIRM_CANCEL':
