@@ -567,13 +567,22 @@ export default function PatientEditPage() {
 
       if (error) throw error;
 
+      // Also update all dependents when inactivating
+      if (!newActiveState) {
+        await supabase
+          .from('patient_dependents')
+          .update({ is_active: false })
+          .eq('patient_id', id)
+          .eq('clinic_id', currentClinic.id);
+      }
+
       setIsPatientActive(newActiveState);
       
       toast({
         title: newActiveState ? "Paciente ativado" : "Paciente inativado",
         description: newActiveState 
           ? "O paciente foi reativado com sucesso."
-          : "O paciente foi inativado e não aparecerá nas listagens.",
+          : "O paciente e seus dependentes foram inativados.",
       });
     } catch (error: any) {
       toast({
