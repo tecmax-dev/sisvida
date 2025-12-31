@@ -12,17 +12,20 @@ import {
   User,
   CreditCard,
   RefreshCw,
-  ImageIcon
+  ImageIcon,
+  Calendar,
+  Users
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { format, formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow, addYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 
 interface PayslipRequest {
   id: string;
@@ -51,6 +54,8 @@ export default function PendingPayslipReviews() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
   const [processing, setProcessing] = useState(false);
+  const [newExpiryDate, setNewExpiryDate] = useState("");
+  const [dependentsCount, setDependentsCount] = useState(0);
 
   useEffect(() => {
     if (currentClinic) {
@@ -99,6 +104,19 @@ export default function PendingPayslipReviews() {
     setSelectedRequest(request);
     setReviewNotes(request.notes || "");
     
+    // Set default expiry date to 1 year from now
+    const defaultExpiry = addYears(new Date(), 1);
+    setNewExpiryDate(format(defaultExpiry, "yyyy-MM-dd"));
+    
+    // Fetch dependents count
+    const { count } = await supabase
+      .from('patient_dependents')
+      .select('*', { count: 'exact', head: true })
+      .eq('patient_id', request.patient_id)
+      .eq('is_active', true);
+    
+    setDependentsCount(count || 0);
+    
     if (request.attachment_path) {
       const { data } = await supabase.storage
         .from('contra-cheques')
@@ -114,28 +132,64 @@ export default function PendingPayslipReviews() {
     setSelectedRequest(null);
     setPreviewUrl(null);
     setReviewNotes("");
+    setNewExpiryDate("");
+    setDependentsCount(0);
   };
 
   const handleApprove = async () => {
     if (!selectedRequest) return;
     
+    if (!newExpiryDate) {
+      toast({
+        variant: "destructive",
+        title: "Data obrigatória",
+        description: "Informe a nova data de validade da carteirinha.",
+      });
+      return;
+    }
+    
     setProcessing(true);
     try {
-      const { error } = await supabase
+      const userId = (await supabase.auth.getUser()).data.user?.id;
+      const expiryTimestamp = new Date(newExpiryDate).toISOString();
+      
+      // Update payslip request status
+      const { error: requestError } = await supabase
         .from('payslip_requests')
         .update({
           status: 'approved',
           reviewed_at: new Date().toISOString(),
-          reviewed_by: (await supabase.auth.getUser()).data.user?.id,
+          reviewed_by: userId,
           notes: reviewNotes || null,
         })
         .eq('id', selectedRequest.id);
 
-      if (error) throw error;
+      if (requestError) throw requestError;
+
+      // Update patient's card expiry
+      const { error: cardError } = await supabase
+        .from('patient_cards')
+        .update({ expires_at: expiryTimestamp })
+        .eq('id', selectedRequest.card_id);
+
+      if (cardError) throw cardError;
+
+      // Update all active dependents' card expiry for this patient
+      const { error: dependentsError } = await supabase
+        .from('patient_dependents')
+        .update({ card_expires_at: expiryTimestamp })
+        .eq('patient_id', selectedRequest.patient_id)
+        .eq('is_active', true);
+
+      if (dependentsError) throw dependentsError;
+
+      const dependentMsg = dependentsCount > 0 
+        ? ` A validade de ${dependentsCount} dependente(s) também foi atualizada.`
+        : '';
 
       toast({
         title: "Contracheque aprovado",
-        description: `O contracheque de ${selectedRequest.patient.name} foi aprovado com sucesso.`,
+        description: `Carteirinha de ${selectedRequest.patient.name} atualizada até ${format(new Date(newExpiryDate), "dd/MM/yyyy")}.${dependentMsg}`,
       });
 
       closeReview();
@@ -346,6 +400,29 @@ export default function PendingPayslipReviews() {
                       <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
                       <p>Imagem não disponível</p>
                     </div>
+                  </div>
+                )}
+              </div>
+
+              {/* New Expiry Date */}
+              <div className="space-y-2">
+                <Label htmlFor="expiry-date" className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  Nova Data de Validade
+                </Label>
+                <Input
+                  id="expiry-date"
+                  type="date"
+                  value={newExpiryDate}
+                  onChange={(e) => setNewExpiryDate(e.target.value)}
+                  className="max-w-[200px]"
+                />
+                {dependentsCount > 0 && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                    <Users className="h-4 w-4" />
+                    <span>
+                      A nova validade será aplicada também para <strong>{dependentsCount}</strong> dependente(s) vinculado(s).
+                    </span>
                   </div>
                 )}
               </div>
