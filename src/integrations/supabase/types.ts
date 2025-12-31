@@ -1511,6 +1511,7 @@ export type Database = {
           slug: string
           state_code: string | null
           updated_at: string
+          use_ai_booking: boolean | null
           whatsapp_header_image_url: string | null
           whatsapp_provider: string | null
         }
@@ -1546,6 +1547,7 @@ export type Database = {
           slug: string
           state_code?: string | null
           updated_at?: string
+          use_ai_booking?: boolean | null
           whatsapp_header_image_url?: string | null
           whatsapp_provider?: string | null
         }
@@ -1581,6 +1583,7 @@ export type Database = {
           slug?: string
           state_code?: string | null
           updated_at?: string
+          use_ai_booking?: boolean | null
           whatsapp_header_image_url?: string | null
           whatsapp_provider?: string | null
         }
@@ -6851,6 +6854,54 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_ai_conversations: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          expires_at: string
+          id: string
+          messages: Json
+          patient_id: string | null
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          messages?: Json
+          patient_id?: string | null
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          messages?: Json
+          patient_id?: string | null
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_ai_conversations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_ai_conversations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
