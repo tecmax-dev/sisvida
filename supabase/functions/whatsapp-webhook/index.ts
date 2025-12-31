@@ -151,6 +151,8 @@ interface PatientRecord {
   name: string;
   cpf?: string;
   phone?: string;
+  is_active?: boolean;
+  inactivation_reason?: string | null;
 }
 
 interface ProfessionalRecord {
@@ -675,6 +677,13 @@ _Digite MENU a qualquer momento para reiniciar._`,
   patientNotFound: `❌ Não localizamos seu cadastro em nosso sistema.
 
 Para agendar, acesse nosso site ou entre em contato conosco.`,
+
+  patientInactive: (reason?: string | null) => {
+    const reasonText = reason ? ` (${reason})` : '';
+    return `❌ Seu cadastro está *inativo*${reasonText}.
+
+Para realizar agendamentos, entre em contato com a clínica para regularizar sua situação.`;
+  },
 
   confirmIdentity: (name: string) => `Encontramos o cadastro em nome de *${name}*.
 
@@ -1456,7 +1465,7 @@ async function handleWaitingCpf(
   // First, try to find a titular patient by CPF
   const { data: patient, error } = await supabase
     .from('patients')
-    .select('id, name, cpf')
+    .select('id, name, cpf, is_active, inactivation_reason')
     .eq('clinic_id', config.clinic_id)
     .eq('cpf', cleanCpf)
     .maybeSingle();
@@ -1468,6 +1477,13 @@ async function handleWaitingCpf(
   }
 
   let patientData = patient as PatientRecord | null;
+
+  // Check if patient is inactive
+  if (patientData && patientData.is_active === false) {
+    console.log(`[booking] Patient ${patientData.id} is inactive. Reason: ${patientData.inactivation_reason}`);
+    await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(patientData.inactivation_reason));
+    return { handled: true, newState: 'FINISHED' };
+  }
 
   // If no patient found by CPF, check if it's a dependent's CPF
   if (!patientData) {
@@ -1495,13 +1511,20 @@ async function handleWaitingCpf(
       // Get the titular patient info
       const { data: titularPatient } = await supabase
         .from('patients')
-        .select('id, name')
+        .select('id, name, is_active, inactivation_reason')
         .eq('id', dependentByCpf.patient_id)
         .maybeSingle();
 
       if (!titularPatient) {
         await sendWhatsAppMessage(config, phone, MESSAGES.patientNotFound);
         return { handled: true, newState: 'WAITING_CPF' };
+      }
+
+      // Check if titular patient is inactive
+      if (titularPatient.is_active === false) {
+        console.log(`[booking] Titular patient ${titularPatient.id} is inactive. Dependent cannot book.`);
+        await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(titularPatient.inactivation_reason));
+        return { handled: true, newState: 'FINISHED' };
       }
 
       // For dependent direct booking, we set the session to book directly for the dependent
@@ -1537,7 +1560,7 @@ async function handleWaitingCpf(
   if (!patientData) {
     const { data: patientByPhone } = await supabase
       .from('patients')
-      .select('id, name, cpf')
+      .select('id, name, cpf, is_active, inactivation_reason')
       .eq('clinic_id', config.clinic_id)
       .in('phone', phoneCandidates)
       .maybeSingle();
@@ -1547,6 +1570,13 @@ async function handleWaitingCpf(
     if (!patientData) {
       await sendWhatsAppMessage(config, phone, MESSAGES.patientNotFound);
       return { handled: true, newState: 'WAITING_CPF' };
+    }
+
+    // Check if patient found by phone is inactive
+    if (patientData.is_active === false) {
+      console.log(`[booking] Patient ${patientData.id} (by phone) is inactive. Reason: ${patientData.inactivation_reason}`);
+      await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(patientData.inactivation_reason));
+      return { handled: true, newState: 'FINISHED' };
     }
   }
 
