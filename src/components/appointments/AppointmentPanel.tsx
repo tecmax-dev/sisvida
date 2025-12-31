@@ -88,8 +88,13 @@ interface Appointment {
   completed_at: string | null;
   duration_minutes: number | null;
   procedure_id: string | null;
+  dependent_id?: string | null;
   procedure?: Procedure | null;
   patient: Patient;
+  dependent?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 interface MedicalRecord {
@@ -193,6 +198,11 @@ export function AppointmentPanel({
   // Exam request states
   const [examRequest, setExamRequest] = useState("");
   const [clinicalIndication, setClinicalIndication] = useState("");
+
+  // Nome de exibição: dependente ou paciente titular
+  const displayName = appointment.dependent_id && appointment.dependent?.name 
+    ? appointment.dependent.name 
+    : appointment.patient.name;
   const [sendingExamRequest, setSendingExamRequest] = useState(false);
   const [examWhatsappPhone, setExamWhatsappPhone] = useState(appointment.patient.phone || "");
   const [showExamWhatsAppDialog, setShowExamWhatsAppDialog] = useState(false);
@@ -561,7 +571,7 @@ export function AppointmentPanel({
           .insert({
             clinic_id: clinicId,
             type: "income",
-            description: `${appointment.procedure.name} - ${appointment.patient.name}`,
+            description: `${appointment.procedure.name} - ${displayName}`,
             amount: appointment.procedure.price,
             patient_id: appointment.patient_id,
             procedure_id: appointment.procedure_id,
@@ -668,7 +678,7 @@ export function AppointmentPanel({
           cnpj: clinic?.cnpj,
         },
         patient: {
-          name: appointment.patient.name,
+          name: displayName,
           birth_date: appointment.patient.birth_date,
         },
         professional: professional ? {
@@ -692,7 +702,7 @@ export function AppointmentPanel({
         caption: [
           `📋 *Receituário Médico*`,
           ``,
-          `Olá ${appointment.patient.name}! 👋`,
+          `Olá ${displayName}! 👋`,
           ``,
           `Segue em anexo seu receituário.`,
           ``,
@@ -751,7 +761,7 @@ export function AppointmentPanel({
       const telemedicineLink = `${window.location.origin}/telemedicina/${telemedicineSession.patientToken}`;
       
       const message = formatTelemedicineInvite(
-        appointment.patient.name,
+        displayName,
         clinic?.name || "Clínica",
         format(new Date(appointment.appointment_date), "dd/MM/yyyy", { locale: ptBR }),
         appointment.start_time.substring(0, 5),
@@ -829,7 +839,7 @@ export function AppointmentPanel({
           cnpj: clinic?.cnpj,
         },
         patient: {
-          name: appointment.patient.name,
+          name: displayName,
         },
         professional: professional ? {
           name: professional.name,
@@ -847,7 +857,7 @@ export function AppointmentPanel({
         pdfBase64: base64,
         fileName,
         caption: formatExamRequest(
-          appointment.patient.name,
+          displayName,
           clinic?.name || "Clínica",
           format(new Date(), "dd/MM/yyyy", { locale: ptBR }),
           professional?.name || "Profissional"
@@ -914,7 +924,12 @@ export function AppointmentPanel({
                 <User className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">{appointment.patient.name}</h3>
+                <h3 className="font-semibold text-lg">
+                  {displayName}
+                  {appointment.dependent_id && (
+                    <span className="ml-2 text-xs font-normal text-muted-foreground">(dependente)</span>
+                  )}
+                </h3>
                 <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Phone className="h-3.5 w-3.5" />
@@ -1449,7 +1464,7 @@ export function AppointmentPanel({
               sessionId={telemedicineSession.sessionId}
               roomId={telemedicineSession.roomId}
               isInitiator={true}
-              patientName={appointment.patient.name}
+              patientName={displayName}
               onEnd={() => {
                 setIsVideoCallActive(false);
                 setTelemedicineSession(null);
@@ -1540,7 +1555,7 @@ export function AppointmentPanel({
           }}
           clinicId={clinicId}
           patient={{ 
-            name: appointment.patient.name, 
+            name: displayName, 
             phone: appointment.patient.phone 
           }}
           patientId={appointment.patient_id}

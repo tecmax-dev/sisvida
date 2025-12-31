@@ -125,6 +125,19 @@ const normalizeForSearch = (text: string): string => {
     .replace(/[^\w\s]/g, ''); // Remove pontuação
 };
 
+// Helper para obter nome de exibição do agendamento (dependente ou paciente)
+const getAppointmentDisplayName = (apt: { 
+  patient?: { name: string } | null; 
+  dependent?: { name: string } | null;
+  dependent_id?: string | null;
+}): string => {
+  // Se tem dependente, mostrar nome do dependente
+  if (apt.dependent_id && apt.dependent?.name) {
+    return apt.dependent.name;
+  }
+  return apt.patient?.name || "Paciente";
+};
+
 const statusConfig = {
   scheduled: { icon: AlertCircle, color: "text-amber-600", bgColor: "bg-amber-100", label: "A confirmar" },
   confirmed: { icon: CheckCircle2, color: "text-blue-600", bgColor: "bg-blue-100", label: "Confirmado" },
@@ -169,6 +182,7 @@ interface Appointment {
   duration_minutes: number | null;
   confirmation_token: string | null;
   procedure_id: string | null;
+  dependent_id: string | null;
   procedure?: { id: string; name: string; price: number } | null;
   patient: {
     id: string;
@@ -181,6 +195,10 @@ interface Appointment {
     id: string;
     name: string;
   };
+  dependent?: {
+    id: string;
+    name: string;
+  } | null;
 }
 
 export default function CalendarPage() {
@@ -354,9 +372,11 @@ export default function CalendarPage() {
           duration_minutes,
           confirmation_token,
           procedure_id,
+          dependent_id,
           procedure:procedures (id, name, price),
           patient:patients (id, name, phone, email, birth_date),
-          professional:professionals (id, name)
+          professional:professionals (id, name),
+          dependent:patient_dependents (id, name)
         `)
         .eq('clinic_id', currentClinic.id)
         .gte('appointment_date', startDate)
@@ -1232,7 +1252,7 @@ export default function CalendarPage() {
 
       toast({
         title: "✓ Agendamento reagendado",
-        description: `${appointment.patient?.name || 'Paciente'}: ${formattedOldDate} ${originalStartTime.slice(0, 5)} → ${formattedNewDate} ${newTime}`,
+        description: `${getAppointmentDisplayName(appointment)}: ${formattedOldDate} ${originalStartTime.slice(0, 5)} → ${formattedNewDate} ${newTime}`,
         action: (
           <ToastAction 
             altText="Desfazer" 
@@ -1769,7 +1789,10 @@ export default function CalendarPage() {
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-medium text-foreground">
-              {appointment.patient?.name || "Paciente"}
+              {getAppointmentDisplayName(appointment)}
+              {appointment.dependent_id && (
+                <span className="ml-1 text-xs text-muted-foreground">(dependente)</span>
+              )}
             </p>
             {hasConflict && !isCancelled && (
               <Badge variant="destructive" className="text-xs gap-1">
@@ -2077,7 +2100,7 @@ export default function CalendarPage() {
                               )}
                             >
                               <div className="font-medium truncate">{apt.start_time.slice(0, 5)}</div>
-                              <div className="truncate text-muted-foreground">{apt.patient?.name}</div>
+                              <div className="truncate text-muted-foreground">{getAppointmentDisplayName(apt)}</div>
                             </div>
                           </DraggableAppointment>
                         );
@@ -2407,7 +2430,7 @@ export default function CalendarPage() {
           <div className="space-y-4">
             {reschedulingAppointment && (
               <div className="p-3 rounded-lg bg-muted/50">
-                <p className="font-medium">{reschedulingAppointment.patient?.name}</p>
+                <p className="font-medium">{getAppointmentDisplayName(reschedulingAppointment)}</p>
                 <p className="text-sm text-muted-foreground">
                   {typeLabels[reschedulingAppointment.type]} com {reschedulingAppointment.professional?.name}
                 </p>
@@ -2755,7 +2778,7 @@ export default function CalendarPage() {
       {/* Drag Instructions */}
       <DragInstructions 
         isVisible={!!activeAppointment} 
-        patientName={activeAppointment?.patient?.name}
+        patientName={getAppointmentDisplayName(activeAppointment)}
       />
 
       {/* Drag Overlay */}
@@ -2775,7 +2798,7 @@ export default function CalendarPage() {
           }}
           appointmentId={preAttendanceAppointment.id}
           patientId={preAttendanceAppointment.patient_id}
-          patientName={preAttendanceAppointment.patient?.name || "Paciente"}
+          patientName={getAppointmentDisplayName(preAttendanceAppointment)}
           onSaved={fetchAppointments}
         />
       )}
