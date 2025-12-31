@@ -48,50 +48,58 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
     }
   }, [messages]);
 
+  const sendToBooking = async (userMessage: string) => {
+    const { data, error } = await supabase.functions.invoke('booking-web-chat', {
+      body: {
+        message: userMessage,
+        clinic_id: clinicId,
+        phone: user?.phone || '5500000000000',
+      },
+    });
+
+    if (error) {
+      console.error('Error calling booking-web-chat:', error);
+      toast.error('Erro no fluxo de agendamento');
+      return;
+    }
+
+    if (data?.response) {
+      setMessages((prev) => [...prev, { role: 'assistant', content: data.response, isBookingFlow: true }]);
+    }
+  };
+
   const handleSend = async () => {
     if (!inputValue.trim() || isLoading) return;
 
     const userMessage = inputValue.trim();
     setInputValue('');
-    
+
     // Add user message to chat
     const newMessages: Message[] = [...messages, { role: 'user', content: userMessage }];
     setMessages(newMessages);
     setIsLoading(true);
 
     try {
-      // Build conversation history for context (exclude initial welcome message for API)
-      const conversationHistory = newMessages
-        .slice(1) // Skip welcome message
-        .map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }));
-
-      // If in booking mode, use whatsapp-webhook for booking flow
       if (isBookingMode) {
-        // For now, just show a message that booking flow would continue
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: `🗓️ *Fluxo de Agendamento*
-
-Para agendar sua consulta, preciso de algumas informações:
-
-Por favor, informe seu *CPF* (apenas números):`,
-          isBookingFlow: true 
-        }]);
-        setIsLoading(false);
-        inputRef.current?.focus();
+        await sendToBooking(userMessage);
         return;
       }
+
+      // Build conversation history for context (exclude initial welcome message for API)
+      const conversationHistory = newMessages
+        .slice(1)
+        .map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+        }));
 
       const { data, error } = await supabase.functions.invoke('whatsapp-ai-assistant', {
         body: {
           message: userMessage,
           clinic_id: clinicId,
           phone: user?.phone || '5500000000000',
-          conversation_history: conversationHistory.slice(0, -1) // Exclude the last user message
-        }
+          conversation_history: conversationHistory.slice(0, -1),
+        },
       });
 
       if (error) {
@@ -103,19 +111,13 @@ Por favor, informe seu *CPF* (apenas números):`,
       // Check if we should handoff to booking flow
       if (data?.handoff_to_booking) {
         setIsBookingMode(true);
-        setMessages(prev => [...prev, { 
-          role: 'assistant', 
-          content: `🗓️ *Agendamento de Consultas*
+        await sendToBooking('');
+        return;
+      }
 
-Ótimo! Vou te ajudar a agendar sua consulta.
-
-Para começar, preciso identificar você.
-Por favor, informe seu *CPF* (apenas números):`,
-          isBookingFlow: true 
-        }]);
-      } else if (data?.response) {
-        // Add assistant response
-        setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
+      // Add assistant response
+      if (data?.response) {
+        setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
       }
     } catch (error) {
       console.error('Error:', error);
