@@ -2281,31 +2281,14 @@ async function getAvailableDates(
   professionalId: string
 ): Promise<Array<{ date: string; formatted: string; weekday: string }>> {
   const dates: Array<{ date: string; formatted: string; weekday: string }> = [];
-  
-  // Get current time in Brazil timezone
-  const now = new Date();
-  const brazilOffset = -3 * 60; // Brazil is UTC-3
-  const utcOffset = now.getTimezoneOffset();
-  const brazilNow = new Date(now.getTime() + (utcOffset + brazilOffset) * 60000);
-  
-  const today = new Date(brazilNow);
-  today.setHours(0, 0, 0, 0);
 
-  const { data: professional } = await supabase
-    .from('professionals')
-    .select('schedule, appointment_duration')
-    .eq('id', professionalId)
-    .single();
+  const getBrazilNow = () => {
+    const now = new Date();
+    const brazilOffset = -3 * 60; // UTC-3
+    const utcOffset = now.getTimezoneOffset();
+    return new Date(now.getTime() + (utcOffset + brazilOffset) * 60000);
+  };
 
-  const professionalData = professional as { 
-    schedule?: Record<string, { enabled: boolean; slots: Array<{ start: string; end: string }> }>;
-    appointment_duration?: number;
-  } | null;
-
-  if (!professionalData?.schedule) return dates;
-
-  const schedule = professionalData.schedule;
-  const duration = professionalData.appointment_duration || 30;
   const dayMap: Record<number, string> = {
     0: 'sunday',
     1: 'monday',
@@ -2316,46 +2299,125 @@ async function getAvailableDates(
     6: 'saturday',
   };
 
-  // Start from today (i=0) to include same-day booking if there are available slots
-  for (let i = 0; i <= 14 && dates.length < 5; i++) {
-    const date = new Date(today);
-    date.setDate(date.getDate() + i);
-    
-    const dayOfWeek = date.getDay();
-    const dayKey = dayMap[dayOfWeek];
-    const daySchedule = schedule[dayKey];
+  const { data: professional } = await supabase
+    .from('professionals')
+    .select('schedule, appointment_duration')
+    .eq('id', professionalId)
+    .single();
 
-    if (!daySchedule?.enabled || !daySchedule.slots?.length) continue;
+  const professionalData = professional as { schedule?: any; appointment_duration?: number } | null;
+  if (!professionalData?.schedule) return dates;
 
-    const dateStr = date.toISOString().split('T')[0];
+  const schedule = professionalData.schedule as any;
+  const duration = professionalData.appointment_duration || 30;
 
-    // Check if it's a holiday using direct query instead of RPC
-    const { data: clinicHoliday } = await supabase
-      .from('clinic_holidays')
-      .select('id')
+  const getSlotsForDate = (
+    dateStr: string,
+    dayKey: string
+  ): { slots: Array<{ start: string; end: string }>; stepMinutes: number } | null => {
+    // New block-based schedule
+    if (schedule?._blocks && Array.isArray(schedule._blocks) && schedule._blocks.length > 0) {
+      const slots: Array<{ start: string; end: string }> = [];
+      let stepMinutes = 5;
+
+      for (const block of schedule._blocks) {
+        if (!block?.days?.includes?.(dayKey)) continue;
+        if (block.start_date && dateStr < block.start_date) continue;
+        if (block.end_date && dateStr > block.end_date) continue;
+
+        if (typeof block.block_interval === 'number') stepMinutes = block.block_interval;
+        if (Array.isArray(block.slots)) {
+          for (const s of block.slots) {
+            if (s?.start && s?.end) slots.push({ start: s.start, end: s.end });
+          }
+        }
+      }
+
+      if (slots.length === 0) return null;
+      return { slots, stepMinutes };
+    }
+
+    // Old weekly schedule
+    const daySchedule = schedule?.[dayKey];
+    if (!daySchedule?.enabled || !Array.isArray(daySchedule.slots) || daySchedule.slots.length === 0) return null;
+    return { slots: daySchedule.slots, stepMinutes: duration };
+  };
+
+  const applyExceptionToSlots = async (
+    dateStr: string,
+    base: { slots: Array<{ start: string; end: string }>; stepMinutes: number } | null
+  ) => {
+    const { data: exception } = await supabase
+      .from('professional_schedule_exceptions')
+      .select('is_day_off, start_time, end_time')
       .eq('clinic_id', clinicId)
-      .eq('holiday_date', dateStr)
+      .eq('professional_id', professionalId)
+      .eq('exception_date', dateStr)
       .maybeSingle();
 
-    if (clinicHoliday) continue;
+    const ex = exception as { is_day_off: boolean | null; start_time: string | null; end_time: string | null } | null;
+
+    if (!ex) return base;
+    if (ex.is_day_off) return null;
+
+    if (ex.start_time && ex.end_time) {
+      return { slots: [{ start: ex.start_time, end: ex.end_time }], stepMinutes: base?.stepMinutes ?? 5 };
+    }
+
+    return base;
+  };
+
+  const isHolidayDate = async (dateStr: string): Promise<boolean> => {
+    const { data, error } = await supabase.rpc('is_holiday', {
+      p_clinic_id: clinicId,
+      p_date: dateStr,
+    });
+
+    if (error) {
+      console.error('[booking] is_holiday RPC error:', error);
+      return false;
+    }
+
+    const row = Array.isArray(data) ? data[0] : null;
+    return Boolean(row?.is_holiday);
+  };
+
+  const brazilNow = getBrazilNow();
+  const today = new Date(brazilNow);
+  today.setHours(0, 0, 0, 0);
+
+  // Start from today (i=0) to include same-day booking if there are available slots
+  for (let i = 0; i <= 14 && dates.length < 5; i++) {
+    const dateObj = new Date(today);
+    dateObj.setDate(dateObj.getDate() + i);
+
+    const dateStr = dateObj.toISOString().split('T')[0];
+    const dayKey = dayMap[dateObj.getDay()];
+
+    // Só listar dias realmente configurados na agenda do profissional
+    let scheduleForDay = getSlotsForDate(dateStr, dayKey);
+    scheduleForDay = await applyExceptionToSlots(dateStr, scheduleForDay);
+    if (!scheduleForDay) continue;
+
+    // Bloquear feriados (nacional/estadual/municipal/da clínica)
+    if (await isHolidayDate(dateStr)) continue;
 
     // For today, check if there are still available slots after current time
     if (i === 0) {
       const currentMinutes = brazilNow.getHours() * 60 + brazilNow.getMinutes();
       const minAllowedMinutes = currentMinutes + 30; // 30 min buffer
-      
+
       let hasAvailableSlotToday = false;
-      for (const slot of daySchedule.slots) {
+      for (const slot of scheduleForDay.slots) {
         const [endH, endM] = slot.end.split(':').map(Number);
         const endMinutes = endH * 60 + endM;
-        
-        // Check if there's at least one slot that ends after minAllowedMinutes + duration
+
         if (endMinutes > minAllowedMinutes + duration) {
           hasAvailableSlotToday = true;
           break;
         }
       }
-      
+
       if (!hasAvailableSlotToday) continue;
     }
 
@@ -2364,8 +2426,9 @@ async function getAvailableDates(
       clinicId,
       professionalId,
       dateStr,
-      daySchedule.slots,
-      i === 0 ? brazilNow : null // Pass current time for today
+      scheduleForDay.slots,
+      scheduleForDay.stepMinutes,
+      i === 0 ? brazilNow : null
     );
 
     if (hasAvailableSlots) {
@@ -2386,6 +2449,7 @@ async function hasAvailableSlotsOnDate(
   professionalId: string,
   date: string,
   slots: Array<{ start: string; end: string }>,
+  stepMinutes: number,
   currentTimeForToday?: Date | null
 ): Promise<boolean> {
   const { data: appointments } = await supabase
@@ -2398,7 +2462,7 @@ async function hasAvailableSlotsOnDate(
 
   const appointmentsData = (appointments || []) as Array<{ start_time: string; end_time: string }>;
   const bookedTimes = new Set<string>();
-  appointmentsData.forEach(apt => {
+  appointmentsData.forEach((apt) => {
     bookedTimes.add(apt.start_time.substring(0, 5));
   });
 
@@ -2412,8 +2476,8 @@ async function hasAvailableSlotsOnDate(
   const duration = professionalData?.appointment_duration || 30;
 
   // Calculate minimum allowed time for today
-  const minAllowedMinutes = currentTimeForToday 
-    ? (currentTimeForToday.getHours() * 60 + currentTimeForToday.getMinutes() + 30)
+  const minAllowedMinutes = currentTimeForToday
+    ? currentTimeForToday.getHours() * 60 + currentTimeForToday.getMinutes() + 30
     : 0;
 
   for (const slot of slots) {
@@ -2422,19 +2486,14 @@ async function hasAvailableSlotsOnDate(
     const startMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
 
-    for (let m = startMinutes; m + duration <= endMinutes; m += duration) {
-      // Skip past times for today
-      if (currentTimeForToday && m < minAllowedMinutes) {
-        continue;
-      }
+    for (let m = startMinutes; m + duration <= endMinutes; m += Math.max(1, stepMinutes)) {
+      if (currentTimeForToday && m < minAllowedMinutes) continue;
 
       const h = Math.floor(m / 60);
       const min = m % 60;
       const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-      
-      if (!bookedTimes.has(timeStr)) {
-        return true;
-      }
+
+      if (!bookedTimes.has(timeStr)) return true;
     }
   }
 
@@ -2455,25 +2514,80 @@ async function getAvailableTimes(
     .eq('id', professionalId)
     .single();
 
-  const professionalData = professional as { 
-    schedule?: Record<string, { enabled: boolean; slots: Array<{ start: string; end: string }> }>;
-    appointment_duration?: number;
-  } | null;
-
+  const professionalData = professional as { schedule?: any; appointment_duration?: number } | null;
   if (!professionalData?.schedule) return times;
 
-  const schedule = professionalData.schedule;
+  const schedule = professionalData.schedule as any;
   const duration = professionalData.appointment_duration || 30;
 
-  const dateObj = new Date(date + 'T00:00:00');
-  const dayOfWeek = dateObj.getDay();
+  // Block holidays (national/state/municipal/clinic)
+  const { data: holidayData, error: holidayErr } = await supabase.rpc('is_holiday', {
+    p_clinic_id: clinicId,
+    p_date: date,
+  });
+  if (holidayErr) {
+    console.error('[booking] is_holiday RPC error:', holidayErr);
+  } else {
+    const row = Array.isArray(holidayData) ? holidayData[0] : null;
+    if (row?.is_holiday) return times;
+  }
+
+  // Apply schedule exception (day off or reduced hours)
+  const { data: exception } = await supabase
+    .from('professional_schedule_exceptions')
+    .select('is_day_off, start_time, end_time')
+    .eq('clinic_id', clinicId)
+    .eq('professional_id', professionalId)
+    .eq('exception_date', date)
+    .maybeSingle();
+
+  const ex = exception as { is_day_off: boolean | null; start_time: string | null; end_time: string | null } | null;
+  if (ex?.is_day_off) return times;
+
   const dayMap: Record<number, string> = {
-    0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
-    4: 'thursday', 5: 'friday', 6: 'saturday',
+    0: 'sunday',
+    1: 'monday',
+    2: 'tuesday',
+    3: 'wednesday',
+    4: 'thursday',
+    5: 'friday',
+    6: 'saturday',
   };
 
-  const daySchedule = schedule[dayMap[dayOfWeek]];
-  if (!daySchedule?.enabled || !daySchedule.slots?.length) return times;
+  const dateObj = new Date(date + 'T00:00:00');
+  const dayKey = dayMap[dateObj.getDay()];
+
+  let slots: Array<{ start: string; end: string }> = [];
+  let stepMinutes = duration;
+
+  // New block-based schedule
+  if (schedule?._blocks && Array.isArray(schedule._blocks) && schedule._blocks.length > 0) {
+    stepMinutes = 5;
+
+    for (const block of schedule._blocks) {
+      if (!block?.days?.includes?.(dayKey)) continue;
+      if (block.start_date && date < block.start_date) continue;
+      if (block.end_date && date > block.end_date) continue;
+
+      if (typeof block.block_interval === 'number') stepMinutes = block.block_interval;
+      if (Array.isArray(block.slots)) {
+        for (const s of block.slots) {
+          if (s?.start && s?.end) slots.push({ start: s.start, end: s.end });
+        }
+      }
+    }
+  } else {
+    const daySchedule = schedule?.[dayKey];
+    if (!daySchedule?.enabled || !Array.isArray(daySchedule.slots) || daySchedule.slots.length === 0) return times;
+    slots = daySchedule.slots;
+  }
+
+  // Reduced-hours exception overrides slots
+  if (ex?.start_time && ex?.end_time) {
+    slots = [{ start: ex.start_time, end: ex.end_time }];
+  }
+
+  if (!slots.length) return times;
 
   const { data: appointments } = await supabase
     .from('appointments')
@@ -2485,42 +2599,35 @@ async function getAvailableTimes(
 
   const appointmentsData = (appointments || []) as Array<{ start_time: string; end_time: string }>;
   const bookedTimes = new Set<string>();
-  appointmentsData.forEach(apt => {
+  appointmentsData.forEach((apt) => {
     bookedTimes.add(apt.start_time.substring(0, 5));
   });
 
-  // Get current time in Brazil timezone to filter out past times for today
+  // Brazil time for "today" filtering
   const now = new Date();
-  const brazilOffset = -3 * 60; // Brazil is UTC-3
+  const brazilOffset = -3 * 60; // UTC-3
   const utcOffset = now.getTimezoneOffset();
   const brazilNow = new Date(now.getTime() + (utcOffset + brazilOffset) * 60000);
   const todayStr = brazilNow.toISOString().split('T')[0];
   const isToday = date === todayStr;
-  const currentMinutes = isToday ? (brazilNow.getHours() * 60 + brazilNow.getMinutes()) : 0;
-  // Add 30 min buffer to not show times too close to now
+  const currentMinutes = isToday ? brazilNow.getHours() * 60 + brazilNow.getMinutes() : 0;
   const minAllowedMinutes = currentMinutes + 30;
 
-  for (const slot of daySchedule.slots) {
+  for (const slot of slots) {
     const [startH, startM] = slot.start.split(':').map(Number);
     const [endH, endM] = slot.end.split(':').map(Number);
     const startMinutes = startH * 60 + startM;
     const endMinutes = endH * 60 + endM;
 
-    for (let m = startMinutes; m + duration <= endMinutes; m += duration) {
-      // Skip past times for today
-      if (isToday && m < minAllowedMinutes) {
-        continue;
-      }
+    for (let m = startMinutes; m + duration <= endMinutes; m += Math.max(1, stepMinutes)) {
+      if (isToday && m < minAllowedMinutes) continue;
 
       const h = Math.floor(m / 60);
       const min = m % 60;
       const timeStr = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-      
+
       if (!bookedTimes.has(timeStr)) {
-        times.push({
-          time: timeStr,
-          formatted: timeStr,
-        });
+        times.push({ time: timeStr, formatted: formatTime(timeStr) });
       }
     }
   }
