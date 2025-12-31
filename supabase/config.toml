@@ -107,3 +107,6 @@ verify_jwt = true
 
 [functions.twilio-api]
 verify_jwt = true
+
+[functions.upload-test-payslip]
+verify_jwt = false
