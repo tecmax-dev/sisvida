@@ -515,6 +515,10 @@ export default function ProfessionalEditPage() {
         });
 
         refetchSubscription();
+        
+        // Navigate to edit page to enable auto-save
+        navigate(`/dashboard/professionals/${professionalId}/edit`);
+        return;
       } else {
         // UPDATE existing professional
         if (avatarFile && id) {
