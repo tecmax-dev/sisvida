@@ -3615,6 +3615,13 @@ serve(async (req) => {
     console.log(`[webhook] Phone: ${phone}, Message: "${messageText}"`);
 
     if (!phone || !messageText) {
+      const messageObj = payload.data?.message ?? {};
+      console.warn('[webhook] No phone or messageText extracted', {
+        phone,
+        messageText,
+        messageKeys: Object.keys(messageObj as Record<string, unknown>),
+      });
+
       return new Response(
         JSON.stringify({ success: true, message: 'No action needed' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
