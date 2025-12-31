@@ -996,6 +996,31 @@ async function handleAIBookingFlow(
     }
 
     const aiData = await aiResponse.json();
+    
+    // CHECK FOR BOOKING HANDOFF
+    if (aiData.handoff_to_booking === true) {
+      console.log('[ai-booking] AI requested handoff to booking flow');
+      
+      // Clear the AI conversation to avoid confusion
+      if (conversationId) {
+        await supabase
+          .from('whatsapp_ai_conversations')
+          .delete()
+          .eq('id', conversationId);
+      }
+      
+      // Create a booking session and start the flow
+      await createOrResetSession(supabase, clinicId, phone, 'WAITING_CPF');
+      
+      // Send the booking welcome message
+      const bookingWelcome = `📅 *Agendamento de Consultas*\n\n` +
+        `Para iniciar seu agendamento, por favor informe seu *CPF* (apenas números).\n\n` +
+        `💡 Exemplo: 12345678901`;
+      
+      await sendWhatsAppMessage(config, phone, bookingWelcome);
+      return;
+    }
+    
     const responseText = aiData.response || 'Desculpe, não consegui processar sua mensagem.';
 
     console.log(`[ai-booking] AI response: ${responseText.substring(0, 100)}...`);
