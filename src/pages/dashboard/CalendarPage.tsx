@@ -166,6 +166,7 @@ interface Professional {
   specialty: string | null;
   appointment_duration?: number | null;
   schedule?: any | null;
+  avatar_url?: string | null;
 }
 
 interface Appointment {
@@ -195,6 +196,8 @@ interface Appointment {
   professional: {
     id: string;
     name: string;
+    specialty?: string | null;
+    avatar_url?: string | null;
   };
   dependent?: {
     id: string;
@@ -376,7 +379,7 @@ export default function CalendarPage() {
           dependent_id,
           procedure:procedures (id, name, price),
           patient:patients (id, name, phone, email, birth_date),
-          professional:professionals (id, name),
+          professional:professionals (id, name, specialty, avatar_url),
           dependent:patient_dependents!appointments_dependent_id_fkey (id, name)
         `)
         .eq('clinic_id', currentClinic.id)
@@ -448,7 +451,7 @@ export default function CalendarPage() {
 
       const { data: professionalsData, error: professionalsError } = await supabase
         .from('professionals')
-        .select('id, name, specialty, appointment_duration, schedule')
+        .select('id, name, specialty, appointment_duration, schedule, avatar_url')
         .eq('clinic_id', currentClinic.id)
         .eq('is_active', true)
         .order('name');
@@ -2749,31 +2752,120 @@ export default function CalendarPage() {
                   );
                 })()}
 
-                {/* Appointments list */}
+                {/* Appointments list - agrupado por profissional */}
                 <div className="lg:col-span-2">
                   {(() => {
                     const dayAppointments = getAppointmentsForDate(selectedDate);
-                    const activeAppointments = dayAppointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
-                    const availableSlots = timeSlots.filter(time => 
-                      !dayAppointments.some(apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled')
-                    ).length;
                     
-                    if (dayAppointments.length > 0) {
+                    // Filtrar por busca
+                    const filteredAppointments = searchQuery.trim() 
+                      ? dayAppointments.filter(apt => {
+                          const searchLower = normalizeForSearch(searchQuery);
+                          const patientName = normalizeForSearch(getAppointmentDisplayName(apt));
+                          const profName = normalizeForSearch(apt.professional?.name || '');
+                          return patientName.includes(searchLower) || profName.includes(searchLower);
+                        })
+                      : dayAppointments;
+                    
+                    // Agrupar por profissional
+                    const groupedByProfessional = filteredAppointments.reduce((acc, apt) => {
+                      const profId = apt.professional_id;
+                      if (!acc[profId]) {
+                        acc[profId] = {
+                          professional: apt.professional,
+                          appointments: []
+                        };
+                      }
+                      acc[profId].appointments.push(apt);
+                      return acc;
+                    }, {} as Record<string, { professional: Appointment['professional']; appointments: Appointment[] }>);
+                    
+                    const professionalGroups = Object.values(groupedByProfessional);
+                    
+                    if (filteredAppointments.length > 0) {
                       return (
-                        <div className="space-y-2">
-                          {/* Resumo do dia */}
-                          <div className="flex items-center justify-between text-sm text-muted-foreground pb-2 border-b">
-                            <span>{activeAppointments.length} agendamento(s)</span>
-                            <span>{availableSlots} disponíveis - Total {timeSlots.length}</span>
+                        <div className="space-y-4">
+                          {/* Caixa de busca */}
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Buscar paciente ou profissional..."
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="pl-9 h-9"
+                            />
                           </div>
                           
-                          {/* Lista compacta */}
-                          <div className="divide-y divide-border/50">
-                            {dayAppointments.map((appointment) => (
-                              <DraggableAppointment key={appointment.id} appointment={appointment}>
-                                <AppointmentCard appointment={appointment} />
-                              </DraggableAppointment>
-                            ))}
+                          {/* Lista agrupada por profissional */}
+                          <div className="space-y-6">
+                            {professionalGroups.map((group) => {
+                              const activeAppointments = group.appointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
+                              const profTimeSlots = timeSlots.length;
+                              const occupiedSlots = group.appointments.filter(a => a.status !== 'cancelled').length;
+                              const availableSlots = Math.max(0, profTimeSlots - occupiedSlots);
+                              
+                              return (
+                                <div key={group.professional.id} className="space-y-2">
+                                  {/* Header do profissional */}
+                                  <div className="flex items-center gap-3 pb-2 border-b">
+                                    <div className="flex items-center gap-3 flex-1">
+                                      {group.professional.avatar_url ? (
+                                        <img 
+                                          src={group.professional.avatar_url} 
+                                          alt={group.professional.name}
+                                          className="w-10 h-10 rounded-full object-cover border-2 border-primary/20"
+                                        />
+                                      ) : (
+                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                          <User className="h-5 w-5 text-primary" />
+                                        </div>
+                                      )}
+                                      <div>
+                                        <h3 className="font-semibold text-foreground">{group.professional.name}</h3>
+                                        {group.professional.specialty && (
+                                          <p className="text-xs text-primary">{group.professional.specialty}</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="text-right text-xs text-muted-foreground">
+                                      <span className="font-medium">{activeAppointments.length} agendamento(s)</span>
+                                      <br />
+                                      <span>{availableSlots} disponíveis - Total {profTimeSlots}</span>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Lista de agendamentos do profissional */}
+                                  <div className="divide-y divide-border/30">
+                                    {group.appointments.map((appointment) => (
+                                      <DraggableAppointment key={appointment.id} appointment={appointment}>
+                                        <AppointmentCard appointment={appointment} />
+                                      </DraggableAppointment>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    // Se tem agendamentos mas busca não retornou nada
+                    if (dayAppointments.length > 0 && filteredAppointments.length === 0) {
+                      return (
+                        <div className="space-y-4">
+                          <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                              placeholder="Buscar paciente ou profissional..."
+                              value={searchQuery}
+                              onChange={(e) => setSearchQuery(e.target.value)}
+                              className="pl-9 h-9"
+                            />
+                          </div>
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>Nenhum resultado para "{searchQuery}"</p>
                           </div>
                         </div>
                       );
