@@ -47,7 +47,7 @@ export function usePatientCards(clinicId: string | undefined, patientId?: string
         .from('patient_cards')
         .select(`
           *,
-          patient:patients(name, phone, cpf, insurance_plan_id, insurance_plan:insurance_plans(name))
+          patient:patients(name, phone, cpf, insurance_plan_id)
         `)
         .eq('clinic_id', clinicId)
         .order('created_at', { ascending: false });
@@ -59,7 +59,30 @@ export function usePatientCards(clinicId: string | undefined, patientId?: string
       const { data, error } = await query;
       
       if (error) throw error;
-      return data as PatientCard[];
+      
+      // Buscar nomes dos convênios separadamente
+      const cardsWithInsurance = await Promise.all(
+        (data || []).map(async (card: any) => {
+          if (card.patient?.insurance_plan_id) {
+            const { data: planData } = await supabase
+              .from('insurance_plans')
+              .select('name')
+              .eq('id', card.patient.insurance_plan_id)
+              .single();
+            
+            return {
+              ...card,
+              patient: {
+                ...card.patient,
+                insurance_plan: planData
+              }
+            };
+          }
+          return card;
+        })
+      );
+      
+      return cardsWithInsurance as PatientCard[];
     },
     enabled: !!clinicId,
   });
