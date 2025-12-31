@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Save, Check, Cloud } from "lucide-react";
+import { ArrowLeft, Loader2, Save, Check, Cloud, UserX, UserCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -146,6 +146,10 @@ export default function PatientEditPage() {
   const [noShowBlockedAt, setNoShowBlockedAt] = useState<string | null>(null);
   const [noShowUnblockedAt, setNoShowUnblockedAt] = useState<string | null>(null);
   
+  // Patient active state
+  const [isPatientActive, setIsPatientActive] = useState(true);
+  const [togglingActive, setTogglingActive] = useState(false);
+  
   // Modal states
   const [recordsModalOpen, setRecordsModalOpen] = useState(false);
   const [anamnesisModalOpen, setAnamnesisModalOpen] = useState(false);
@@ -246,6 +250,9 @@ export default function PatientEditPage() {
         setNoShowBlockedUntil(data.no_show_blocked_until);
         setNoShowBlockedAt(data.no_show_blocked_at);
         setNoShowUnblockedAt(data.no_show_unblocked_at);
+        
+        // Set active state
+        setIsPatientActive(data.is_active ?? true);
         
         if (data.insurance_plans) {
           setInsurancePlanName((data.insurance_plans as any).name || '');
@@ -546,6 +553,39 @@ export default function PatientEditPage() {
     }
   };
 
+  const handleToggleActive = async () => {
+    if (!id || !currentClinic) return;
+    
+    setTogglingActive(true);
+    try {
+      const newActiveState = !isPatientActive;
+      const { error } = await supabase
+        .from('patients')
+        .update({ is_active: newActiveState })
+        .eq('id', id)
+        .eq('clinic_id', currentClinic.id);
+
+      if (error) throw error;
+
+      setIsPatientActive(newActiveState);
+      
+      toast({
+        title: newActiveState ? "Paciente ativado" : "Paciente inativado",
+        description: newActiveState 
+          ? "O paciente foi reativado com sucesso."
+          : "O paciente foi inativado e não aparecerá nas listagens.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível alterar o status.",
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingActive(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -605,6 +645,29 @@ export default function PatientEditPage() {
         <PatientSearchBox />
       </div>
 
+      {/* Inactive Patient Alert */}
+      {!isPatientActive && (
+        <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <UserX className="h-5 w-5 text-destructive" />
+            <div>
+              <p className="font-medium text-destructive">Paciente Inativo</p>
+              <p className="text-sm text-muted-foreground">Este paciente está inativo e não aparece nas listagens padrão.</p>
+            </div>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleToggleActive}
+            disabled={togglingActive}
+            className="gap-2"
+          >
+            {togglingActive ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserCheck className="h-4 w-4" />}
+            Reativar
+          </Button>
+        </div>
+      )}
+
       {/* Patient Header */}
       <PatientHeader
         name={formData.name}
@@ -618,6 +681,9 @@ export default function PatientEditPage() {
         noShowUnblockedAt={noShowUnblockedAt}
         onUnblockNoShow={handleUnblockNoShow}
         isAdmin={isAdmin}
+        isActive={isPatientActive}
+        onToggleActive={handleToggleActive}
+        togglingActive={togglingActive}
       />
 
       {/* Tabs Navigation */}

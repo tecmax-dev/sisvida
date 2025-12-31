@@ -1,4 +1,4 @@
-import { User, MessageCircle, AlertTriangle, ShieldX, Unlock } from "lucide-react";
+import { User, MessageCircle, AlertTriangle, ShieldX, Unlock, UserX, UserCheck, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,6 +20,10 @@ interface PatientHeaderProps {
   noShowUnblockedAt?: string | null;
   onUnblockNoShow?: () => void;
   isAdmin?: boolean;
+  // Active status
+  isActive?: boolean;
+  onToggleActive?: () => void;
+  togglingActive?: boolean;
 }
 
 export function PatientHeader({
@@ -34,6 +38,9 @@ export function PatientHeader({
   noShowUnblockedAt,
   onUnblockNoShow,
   isAdmin = false,
+  isActive = true,
+  onToggleActive,
+  togglingActive = false,
 }: PatientHeaderProps) {
   const calculateAge = (dateString?: string) => {
     if (!dateString) return null;
@@ -143,6 +150,12 @@ export function PatientHeader({
                   Bloqueado
                 </Badge>
               )}
+              {!isActive && (
+                <Badge variant="secondary" className="ml-2 gap-1 bg-muted text-muted-foreground">
+                  <UserX className="h-3 w-3" />
+                  Inativo
+                </Badge>
+              )}
             </div>
             
             <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
@@ -165,6 +178,21 @@ export function PatientHeader({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Toggle Active Button - only for admins and when patient is active */}
+          {isAdmin && onToggleActive && isActive && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onToggleActive}
+              disabled={togglingActive}
+              className="text-muted-foreground hover:text-destructive gap-2"
+              title="Inativar paciente"
+            >
+              {togglingActive ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserX className="h-4 w-4" />}
+              <span className="hidden sm:inline">Inativar</span>
+            </Button>
+          )}
           {phone && (
             <Button
               type="button"

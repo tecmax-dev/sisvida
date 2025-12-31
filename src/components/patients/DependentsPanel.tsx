@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, Plus, Trash2, Edit2, Save, X, CreditCard, Calendar, User, Phone } from "lucide-react";
+import { Users, Plus, Trash2, Edit2, Save, X, CreditCard, Calendar, User, Phone, UserX, UserCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -226,18 +226,18 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
       if (error) throw error;
 
       toast({
-        title: "Dependente removido",
-        description: `${dependentToDelete.name} foi removido com sucesso.`,
+        title: "Dependente inativado",
+        description: `${dependentToDelete.name} foi inativado com sucesso.`,
       });
 
       setDeleteDialogOpen(false);
       setDependentToDelete(null);
       fetchDependents();
     } catch (error) {
-      console.error("Error deleting dependent:", error);
+      console.error("Error inactivating dependent:", error);
       toast({
         title: "Erro",
-        description: "Não foi possível remover o dependente.",
+        description: "Não foi possível inativar o dependente.",
         variant: "destructive",
       });
     }
@@ -483,9 +483,9 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                           setDependentToDelete(dependent);
                           setDeleteDialogOpen(true);
                         }}
-                        title="Remover"
+                        title="Inativar dependente"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <UserX className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -500,16 +500,16 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover dependente?</AlertDialogTitle>
+            <AlertDialogTitle>Inativar dependente?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover <strong>{dependentToDelete?.name}</strong> da lista de dependentes?
-              Esta ação pode ser desfeita pelo administrador.
+              Tem certeza que deseja inativar <strong>{dependentToDelete?.name}</strong>?
+              O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-              Remover
+              Inativar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
