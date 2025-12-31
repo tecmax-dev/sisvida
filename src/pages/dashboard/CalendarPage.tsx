@@ -130,7 +130,8 @@ const getAppointmentDisplayName = (apt: {
   patient?: { name: string } | null; 
   dependent?: { name: string } | null;
   dependent_id?: string | null;
-}): string => {
+} | null | undefined): string => {
+  if (!apt) return "Paciente";
   // Se tem dependente, mostrar nome do dependente
   if (apt.dependent_id && apt.dependent?.name) {
     return apt.dependent.name;
