@@ -3954,6 +3954,7 @@ export type Database = {
           height_cm: number | null
           id: string
           insurance_plan_id: string | null
+          is_active: boolean
           is_company: boolean | null
           is_foreigner: boolean | null
           landline: string | null
@@ -4001,6 +4002,7 @@ export type Database = {
           height_cm?: number | null
           id?: string
           insurance_plan_id?: string | null
+          is_active?: boolean
           is_company?: boolean | null
           is_foreigner?: boolean | null
           landline?: string | null
@@ -4048,6 +4050,7 @@ export type Database = {
           height_cm?: number | null
           id?: string
           insurance_plan_id?: string | null
+          is_active?: boolean
           is_company?: boolean | null
           is_foreigner?: boolean | null
           landline?: string | null
