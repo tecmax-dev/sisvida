@@ -2339,12 +2339,13 @@ async function handleConfirmAppointment(
       return { handled: true, newState: 'SELECT_PROFESSIONAL' };
     }
     
-    // Check for dependent limit error (1 per month per professional)
+    // Check for dependent limit error
     if (appointmentError.message?.includes('LIMITE_AGENDAMENTO_DEPENDENTE')) {
       const dependentName = session.selected_dependent_name || 'O dependente';
+      const limitMatch = appointmentError.message.match(/limite de (\d+) agendamento/i);
+      const limit = limitMatch ? limitMatch[1] : '1';
       await sendWhatsAppMessage(config, phone, 
-        `❌ *${dependentName}* já possui um agendamento com este profissional neste mês.\n\n` +
-        `Cada dependente pode ter apenas *1 consulta por mês* com cada profissional.\n\n` +
+        `❌ *${dependentName}* já atingiu o limite de *${limit} agendamento(s)* com este profissional neste mês.\n\n` +
         `Deseja agendar com outro profissional?`
       );
       await updateSession(supabase, session.id, { state: 'SELECT_PROFESSIONAL' });
