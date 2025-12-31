@@ -110,3 +110,6 @@ verify_jwt = true
 
 [functions.upload-test-payslip]
 verify_jwt = false
+
+[functions.test-payslip-approval]
+verify_jwt = false
