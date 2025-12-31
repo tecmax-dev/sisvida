@@ -3834,6 +3834,22 @@ serve(async (req) => {
       }
     }
 
+    // Validate phone number - must have at least 12 digits (DDI + DDD + number)
+    const MIN_PHONE_LENGTH = 12;
+    if (phone && phone.length < MIN_PHONE_LENGTH) {
+      console.error(`[webhook] Invalid phone number: "${phone}" (original remoteJid: "${remoteJid}"). Expected DDI+DDD+number (min ${MIN_PHONE_LENGTH} digits).`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Telefone invalido', 
+          detail: `Esperado DDI+DDD+numero (minimo ${MIN_PHONE_LENGTH} digitos)`,
+          received: phone,
+          remoteJid: remoteJid 
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     if (!phone || !messageText) {
       const messageObj = payload.data?.message ?? {};
       console.warn('[webhook] No phone or messageText extracted', {
@@ -3901,12 +3917,15 @@ serve(async (req) => {
           console.error('[webhook] Error fetching config:', configError);
         }
 
-        // If multiple clinics share same instance, log warning
+        // If multiple clinics share same instance, log detailed warning with all affected clinics
         if (configByInstance && configByInstance.length > 1) {
+          const affectedClinics = configByInstance.map(c => c.clinic_id).join(', ');
           console.warn(
             `[webhook] WARNING: Multiple clinics (${configByInstance.length}) share the same instance "${payload.instance}". ` +
+              `Affected clinic_ids: [${affectedClinics}]. ` +
               `Each clinic should have a unique Evolution instance for proper routing. ` +
-              `Using first match: clinic_id=${configByInstance[0].clinic_id}`
+              `Using first match: clinic_id=${configByInstance[0].clinic_id}. ` +
+              `TIP: Update instance_name in evolution_configs to be unique per clinic (e.g., "eclini_clinicaA", "eclini_clinicaB").`
           );
         }
 
