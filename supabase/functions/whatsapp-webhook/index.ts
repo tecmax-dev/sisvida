@@ -78,7 +78,7 @@ interface BookingSession {
   available_times: Array<{ time: string; formatted: string }> | null;
   // For cancel/reschedule flows
   pending_appointments: Array<{ id: string; date: string; time: string; professional: string }> | null;
-  appointments_list?: Array<{ id: string; date: string; time: string; professional: string; professional_id?: string; procedure?: string; status: string }> | null;
+  appointments_list?: Array<{ id: string; date: string; time: string; professional: string; professional_id?: string; procedure?: string; status: string; dependent_name?: string }> | null;
   list_action?: 'cancel' | 'reschedule' | null;
   selected_appointment_id: string | null;
   action_type: 'new' | 'cancel' | 'reschedule' | null;
@@ -1010,24 +1010,9 @@ async function navigateToCancel(
   phone: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const now = new Date().toISOString();
-  const { data: appointments } = await supabase
-    .from('appointments')
-    .select(`
-      id, appointment_date, start_time, end_time, status,
-      professional:professionals!inner(name),
-      procedure:procedures(name)
-    `)
-    .eq('patient_id', session.patient_id)
-    .eq('clinic_id', config.clinic_id)
-    .gte('appointment_date', now.split('T')[0])
-    .in('status', ['scheduled', 'confirmed'])
-    .order('appointment_date')
-    .order('start_time');
+  const allAppointments = await fetchPatientAndDependentsAppointments(supabase, config.clinic_id, session.patient_id!, session.patient_name || 'Titular');
 
-  const appointmentList = (appointments || []) as AppointmentRecord[];
-
-  if (appointmentList.length === 0) {
+  if (allAppointments.length === 0) {
     await sendWhatsAppMessage(config, phone, MESSAGES.noAppointments);
     await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
     return { handled: true, newState: 'MAIN_MENU' };
@@ -1035,21 +1020,16 @@ async function navigateToCancel(
 
   await updateSession(supabase, session.id, {
     state: 'LIST_APPOINTMENTS',
-    appointments_list: appointmentList.map((a) => ({
-      id: a.id,
-      date: a.appointment_date,
-      time: a.start_time,
-      professional: a.professional?.name || 'Profissional',
-      procedure: a.procedure?.name || undefined,
-      status: a.status,
-    })),
+    appointments_list: allAppointments,
     list_action: 'cancel',
   });
 
-  let msg = '📋 *Suas consultas agendadas:*\n\n';
-  appointmentList.forEach((a, i) => {
-    msg += `*${i + 1}.* ${formatDate(a.appointment_date)} às ${formatTime(a.start_time)}\n`;
-    msg += `   👨‍⚕️ ${a.professional?.name || 'Profissional'}\n\n`;
+  let msg = '📋 *Consultas agendadas:*\n\n';
+  allAppointments.forEach((a, i) => {
+    const whoLabel = a.dependent_name ? `👤 ${a.dependent_name}` : `👤 ${session.patient_name || 'Titular'}`;
+    msg += `*${i + 1}.* ${formatDate(a.date)} às ${formatTime(a.time)}\n`;
+    msg += `   👨‍⚕️ ${a.professional}\n`;
+    msg += `   ${whoLabel}\n\n`;
   });
   msg += '\n_Qual consulta deseja cancelar?_';
 
@@ -1063,24 +1043,9 @@ async function navigateToReschedule(
   phone: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const now = new Date().toISOString();
-  const { data: appointments } = await supabase
-    .from('appointments')
-    .select(`
-      id, appointment_date, start_time, end_time, status,
-      professional:professionals!inner(id, name),
-      procedure:procedures(name)
-    `)
-    .eq('patient_id', session.patient_id)
-    .eq('clinic_id', config.clinic_id)
-    .gte('appointment_date', now.split('T')[0])
-    .in('status', ['scheduled', 'confirmed'])
-    .order('appointment_date')
-    .order('start_time');
+  const allAppointments = await fetchPatientAndDependentsAppointments(supabase, config.clinic_id, session.patient_id!, session.patient_name || 'Titular');
 
-  const appointmentList = (appointments || []) as AppointmentRecord[];
-
-  if (appointmentList.length === 0) {
+  if (allAppointments.length === 0) {
     await sendWhatsAppMessage(config, phone, MESSAGES.noAppointments);
     await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
     return { handled: true, newState: 'MAIN_MENU' };
@@ -1088,22 +1053,16 @@ async function navigateToReschedule(
 
   await updateSession(supabase, session.id, {
     state: 'LIST_APPOINTMENTS',
-    appointments_list: appointmentList.map((a) => ({
-      id: a.id,
-      date: a.appointment_date,
-      time: a.start_time,
-      professional: a.professional?.name || 'Profissional',
-      professional_id: a.professional?.id,
-      procedure: a.procedure?.name || undefined,
-      status: a.status,
-    })),
+    appointments_list: allAppointments,
     list_action: 'reschedule',
   });
 
-  let msg = '📋 *Suas consultas agendadas:*\n\n';
-  appointmentList.forEach((a, i) => {
-    msg += `*${i + 1}.* ${formatDate(a.appointment_date)} às ${formatTime(a.start_time)}\n`;
-    msg += `   👨‍⚕️ ${a.professional?.name || 'Profissional'}\n\n`;
+  let msg = '📋 *Consultas agendadas:*\n\n';
+  allAppointments.forEach((a, i) => {
+    const whoLabel = a.dependent_name ? `👤 ${a.dependent_name}` : `👤 ${session.patient_name || 'Titular'}`;
+    msg += `*${i + 1}.* ${formatDate(a.date)} às ${formatTime(a.time)}\n`;
+    msg += `   👨‍⚕️ ${a.professional}\n`;
+    msg += `   ${whoLabel}\n\n`;
   });
   msg += '\n_Qual consulta deseja reagendar?_';
 
@@ -1117,41 +1076,125 @@ async function navigateToList(
   phone: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const now = new Date().toISOString();
-  const { data: appointments } = await supabase
-    .from('appointments')
-    .select(`
-      id, appointment_date, start_time, end_time, status,
-      professional:professionals!inner(name),
-      procedure:procedures(name)
-    `)
-    .eq('patient_id', session.patient_id)
-    .eq('clinic_id', config.clinic_id)
-    .gte('appointment_date', now.split('T')[0])
-    .in('status', ['scheduled', 'confirmed'])
-    .order('appointment_date')
-    .order('start_time');
+  const allAppointments = await fetchPatientAndDependentsAppointments(supabase, config.clinic_id, session.patient_id!, session.patient_name || 'Titular');
 
-  const appointmentList = (appointments || []) as AppointmentRecord[];
-
-  if (appointmentList.length === 0) {
+  if (allAppointments.length === 0) {
     await sendWhatsAppMessage(config, phone, MESSAGES.noAppointments);
     await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
     return { handled: true, newState: 'MAIN_MENU' };
   }
 
   let msg = '📋 *Suas consultas agendadas:*\n\n';
-  appointmentList.forEach((a) => {
+  allAppointments.forEach((a) => {
     const status = a.status === 'confirmed' ? '✅' : '📅';
-    msg += `${status} *${formatDate(a.appointment_date)}* às *${formatTime(a.start_time)}*\n`;
-    msg += `   👨‍⚕️ ${a.professional?.name || 'Profissional'}\n`;
-    if (a.procedure?.name) msg += `   📋 ${a.procedure.name}\n`;
-    msg += '\n';
+    const whoLabel = a.dependent_name ? `👤 ${a.dependent_name}` : `👤 Você`;
+    msg += `${status} *${formatDate(a.date)}* às *${formatTime(a.time)}*\n`;
+    msg += `   👨‍⚕️ ${a.professional}\n`;
+    if (a.procedure) msg += `   📋 ${a.procedure}\n`;
+    msg += `   ${whoLabel}\n\n`;
   });
 
   await sendWhatsAppMessage(config, phone, msg + MESSAGES.mainMenu + MESSAGES.hintSelectOption);
   await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
   return { handled: true, newState: 'MAIN_MENU' };
+}
+
+// Helper to fetch appointments for both titular and dependents
+async function fetchPatientAndDependentsAppointments(
+  supabase: SupabaseClient,
+  clinicId: string,
+  patientId: string,
+  patientName: string
+): Promise<Array<{ id: string; date: string; time: string; professional: string; professional_id?: string; procedure?: string; status: string; dependent_name?: string }>> {
+  const now = new Date().toISOString();
+  const todayStr = now.split('T')[0];
+
+  // Fetch titular's appointments
+  const { data: titularAppointments } = await supabase
+    .from('appointments')
+    .select(`
+      id, appointment_date, start_time, status, dependent_id,
+      professional:professionals!inner(id, name),
+      procedure:procedures(name)
+    `)
+    .eq('patient_id', patientId)
+    .eq('clinic_id', clinicId)
+    .is('dependent_id', null)
+    .gte('appointment_date', todayStr)
+    .in('status', ['scheduled', 'confirmed'])
+    .order('appointment_date')
+    .order('start_time');
+
+  // Fetch dependents
+  const { data: dependents } = await supabase
+    .from('patient_dependents')
+    .select('id, name')
+    .eq('patient_id', patientId)
+    .eq('clinic_id', clinicId)
+    .eq('is_active', true);
+
+  const dependentList = (dependents || []) as Array<{ id: string; name: string }>;
+  const dependentIds = dependentList.map((d) => d.id);
+  const dependentMap = new Map(dependentList.map((d) => [d.id, d.name]));
+
+  // Fetch dependents' appointments
+  let dependentAppointments: any[] = [];
+  if (dependentIds.length > 0) {
+    const { data: depAppts } = await supabase
+      .from('appointments')
+      .select(`
+        id, appointment_date, start_time, status, dependent_id,
+        professional:professionals!inner(id, name),
+        procedure:procedures(name)
+      `)
+      .eq('clinic_id', clinicId)
+      .in('dependent_id', dependentIds)
+      .gte('appointment_date', todayStr)
+      .in('status', ['scheduled', 'confirmed'])
+      .order('appointment_date')
+      .order('start_time');
+
+    dependentAppointments = depAppts || [];
+  }
+
+  const result: Array<{ id: string; date: string; time: string; professional: string; professional_id?: string; procedure?: string; status: string; dependent_name?: string }> = [];
+
+  // Map titular appointments
+  for (const a of (titularAppointments || []) as any[]) {
+    result.push({
+      id: a.id,
+      date: a.appointment_date,
+      time: a.start_time,
+      professional: a.professional?.name || 'Profissional',
+      professional_id: a.professional?.id,
+      procedure: a.procedure?.name,
+      status: a.status,
+      dependent_name: undefined,
+    });
+  }
+
+  // Map dependent appointments
+  for (const a of dependentAppointments) {
+    result.push({
+      id: a.id,
+      date: a.appointment_date,
+      time: a.start_time,
+      professional: a.professional?.name || 'Profissional',
+      professional_id: a.professional?.id,
+      procedure: a.procedure?.name,
+      status: a.status,
+      dependent_name: dependentMap.get(a.dependent_id) || 'Dependente',
+    });
+  }
+
+  // Sort by date+time
+  result.sort((x, y) => {
+    const dateA = `${x.date} ${x.time}`;
+    const dateB = `${y.date} ${y.time}`;
+    return dateA.localeCompare(dateB);
+  });
+
+  return result;
 }
 
 // ==========================================
@@ -1488,7 +1531,8 @@ async function handleListAppointments(
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   const choice = parseInt(messageText.trim());
-  const appointments = session.pending_appointments || [];
+  // Use appointments_list (new) or pending_appointments (legacy fallback)
+  const appointments = session.appointments_list || session.pending_appointments || [];
 
   if (isNaN(choice) || choice < 1 || choice > appointments.length) {
     await sendWhatsAppMessage(config, phone, MESSAGES.invalidOption + MESSAGES.hintSelectOption);
