@@ -526,7 +526,7 @@ serve(async (req) => {
 
       const { data: patient } = await supabase
         .from("patients")
-        .select("id, name")
+        .select("id, name, is_active, no_show_blocked_until, no_show_unblocked_at")
         .eq("clinic_id", clinic_id)
         .eq("cpf", cpf)
         .maybeSingle();
@@ -535,6 +535,49 @@ serve(async (req) => {
         return new Response(
           JSON.stringify({
             response: "Não encontrei seu cadastro. Para agendar, é necessário estar cadastrado no sistema. Procure o atendimento do sindicato.",
+            state: session.state,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verificar se paciente está ativo
+      if (patient.is_active === false) {
+        return new Response(
+          JSON.stringify({
+            response: "Seu cadastro está inativo. Por favor, procure o atendimento do sindicato para regularizar.",
+            state: session.state,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verificar bloqueio por no-show
+      const today = new Date().toISOString().split("T")[0];
+      if (patient.no_show_blocked_until && patient.no_show_blocked_until >= today && !patient.no_show_unblocked_at) {
+        const blockDate = new Date(patient.no_show_blocked_until + "T00:00:00");
+        const formattedBlockDate = blockDate.toLocaleDateString("pt-BR");
+        return new Response(
+          JSON.stringify({
+            response: `Seu cadastro está bloqueado para novos agendamentos até ${formattedBlockDate} devido a não comparecimento anterior. Para liberação, procure o atendimento do sindicato.`,
+            state: session.state,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Verificar carteirinha válida
+      const { data: cardData } = await supabase.rpc("is_patient_card_valid", {
+        p_patient_id: patient.id,
+        p_clinic_id: clinic_id,
+      });
+      const cardRow = Array.isArray(cardData) ? cardData[0] : cardData;
+      if (cardRow?.card_number && cardRow.is_valid === false) {
+        const expDate = new Date(cardRow.expires_at);
+        const formattedExpDate = expDate.toLocaleDateString("pt-BR");
+        return new Response(
+          JSON.stringify({
+            response: `Sua carteirinha (${cardRow.card_number}) expirou em ${formattedExpDate}. Por favor, renove para poder agendar.`,
             state: session.state,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -740,14 +783,135 @@ serve(async (req) => {
       );
     }
 
-    // 6) CONFIRM_APPOINTMENT (for now, just finish without creating appointment)
+    // 6) CONFIRM_APPOINTMENT - Create real appointment
     if (session.state === "CONFIRM_APPOINTMENT") {
       if (msg === "1" || /^sim/i.test(msg)) {
+        const patientId = session.patient_id;
+        const professionalId = session.selected_professional_id;
+        const appointmentDate = session.selected_date;
+        const startTime = session.selected_time;
+
+        if (!patientId || !professionalId || !appointmentDate || !startTime) {
+          await createOrResetSession(supabase, clinic_id, phone, "WAITING_CPF");
+          return new Response(
+            JSON.stringify({
+              response: "Ops, perdi o contexto. Vamos recomeçar: informe seu CPF (11 números).",
+              state: "WAITING_CPF",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // Get professional's appointment duration
+        const { data: proData } = await supabase
+          .from("professionals")
+          .select("appointment_duration")
+          .eq("id", professionalId)
+          .single();
+        const duration = (proData as any)?.appointment_duration || 30;
+
+        // Calculate end time
+        const [h, m] = startTime.split(":").map(Number);
+        const endMinutes = h * 60 + m + duration;
+        const endH = Math.floor(endMinutes / 60);
+        const endM = endMinutes % 60;
+        const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}:00`;
+
+        // Create the appointment - database triggers will validate all rules
+        const { data: appointment, error: insertError } = await supabase
+          .from("appointments")
+          .insert({
+            clinic_id: clinic_id,
+            patient_id: patientId,
+            professional_id: professionalId,
+            appointment_date: appointmentDate,
+            start_time: startTime + ":00",
+            end_time: endTime,
+            duration_minutes: duration,
+            status: "scheduled",
+            type: "primeira-consulta",
+          })
+          .select("id")
+          .single();
+
+        if (insertError) {
+          console.error("[booking-web-chat] Insert error:", insertError);
+          
+          // Parse specific error messages from database triggers
+          const errMsg = insertError.message || "";
+          
+          if (errMsg.includes("LIMITE_AGENDAMENTO_CPF")) {
+            await updateSession(supabase, session.id, { state: "FINISHED" });
+            return new Response(
+              JSON.stringify({
+                response: "❌ Você já atingiu o limite de agendamentos com este profissional neste mês.",
+                state: "FINISHED",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          if (errMsg.includes("CARTEIRINHA_VENCIDA")) {
+            await updateSession(supabase, session.id, { state: "FINISHED" });
+            return new Response(
+              JSON.stringify({
+                response: "❌ Sua carteirinha está vencida. Renove para poder agendar.",
+                state: "FINISHED",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          if (errMsg.includes("HORARIO_INVALIDO")) {
+            await updateSession(supabase, session.id, { state: "FINISHED" });
+            return new Response(
+              JSON.stringify({
+                response: "❌ Este horário não está mais disponível. Por favor, tente novamente.",
+                state: "FINISHED",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          if (errMsg.includes("FERIADO")) {
+            await updateSession(supabase, session.id, { state: "FINISHED" });
+            return new Response(
+              JSON.stringify({
+                response: "❌ Esta data é feriado e não há atendimento.",
+                state: "FINISHED",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          if (errMsg.includes("PACIENTE_BLOQUEADO")) {
+            await updateSession(supabase, session.id, { state: "FINISHED" });
+            return new Response(
+              JSON.stringify({
+                response: "❌ Seu cadastro está bloqueado devido a não comparecimento anterior.",
+                state: "FINISHED",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          // Generic error
+          return new Response(
+            JSON.stringify({
+              response: "❌ Não foi possível criar o agendamento. Tente novamente ou procure o atendimento.",
+              state: "FINISHED",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
         await updateSession(supabase, session.id, { state: "FINISHED" });
+        
         return new Response(
           JSON.stringify({
-            response: "✅ Confirmado! (Modo teste: aqui criaríamos o agendamento no sistema.)",
+            response: `✅ Agendamento confirmado!\n\nProfissional: *${session.selected_professional_name}*\nData: *${formatDate(appointmentDate)}*\nHorário: *${formatTime(startTime)}*\n\nCompareça com 10 minutos de antecedência.`,
             state: "FINISHED",
+            booking_complete: true,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
