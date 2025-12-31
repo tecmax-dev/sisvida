@@ -4664,6 +4664,7 @@ export type Database = {
           bio: string | null
           city: string | null
           clinic_id: string
+          council_type: string | null
           created_at: string
           education: string | null
           email: string | null
@@ -4692,6 +4693,7 @@ export type Database = {
           bio?: string | null
           city?: string | null
           clinic_id: string
+          council_type?: string | null
           created_at?: string
           education?: string | null
           email?: string | null
@@ -4720,6 +4722,7 @@ export type Database = {
           bio?: string | null
           city?: string | null
           clinic_id?: string
+          council_type?: string | null
           created_at?: string
           education?: string | null
           email?: string | null

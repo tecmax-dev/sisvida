@@ -162,6 +162,7 @@ export default function ProfessionalEditPage() {
       if (data) {
         setProfessional(data);
         setName(data.name);
+        setCouncilType(data.council_type || "");
         setCrm(data.registration_number || "");
         setPhone(data.phone || "");
         setEmail(data.email || "");
@@ -185,6 +186,7 @@ export default function ProfessionalEditPage() {
         // Set initial data for auto-save comparison
         const initialData = JSON.stringify({
           name: data.name,
+          councilType: data.council_type || "",
           crm: data.registration_number || "",
           phone: data.phone || "",
           email: data.email || "",
@@ -336,6 +338,7 @@ export default function ProfessionalEditPage() {
         .update({
           name: name.trim(),
           specialty: specialtyDisplay,
+          council_type: councilType || null,
           registration_number: crm.trim() || null,
           phone: phone.trim() || null,
           email: email.trim() || null,
@@ -360,7 +363,7 @@ export default function ProfessionalEditPage() {
       
       // Update initial data
       const newInitialData = JSON.stringify({
-        name, crm, phone, email, userId, telemedicineEnabled,
+        name, councilType, crm, phone, email, userId, telemedicineEnabled,
         appointmentDuration, address, city, state, zipCode,
         whatsapp, bio, education, experience, specialtyIds,
       });
@@ -372,18 +375,18 @@ export default function ProfessionalEditPage() {
       console.error("Auto-save error:", error);
       setAutoSaveStatus('idle');
     }
-  }, [currentClinic, id, professional, isCreating, name, crm, phone, email, userId, telemedicineEnabled,
+  }, [currentClinic, id, professional, isCreating, name, councilType, crm, phone, email, userId, telemedicineEnabled,
       appointmentDuration, address, city, state, zipCode, whatsapp, bio, education, 
       experience, specialtyIds, getSpecialtyById, hasFeature, saveProfessionalSpecialties]);
 
   // Get current form data for comparison
   const getCurrentFormData = useCallback(() => {
     return JSON.stringify({
-      name, crm, phone, email, userId, telemedicineEnabled,
+      name, councilType, crm, phone, email, userId, telemedicineEnabled,
       appointmentDuration, address, city, state, zipCode,
       whatsapp, bio, education, experience, specialtyIds,
     });
-  }, [name, crm, phone, email, userId, telemedicineEnabled,
+  }, [name, councilType, crm, phone, email, userId, telemedicineEnabled,
       appointmentDuration, address, city, state, zipCode,
       whatsapp, bio, education, experience, specialtyIds]);
 
@@ -461,6 +464,7 @@ export default function ProfessionalEditPage() {
             clinic_id: currentClinic.id,
             name: name.trim(),
             specialty: specialtyDisplay,
+            council_type: councilType || null,
             registration_number: crm.trim() || null,
             phone: phone.trim() || null,
             email: email.trim() || null,
@@ -549,6 +553,7 @@ export default function ProfessionalEditPage() {
           .update({
             name: name.trim(),
             specialty: specialtyDisplay,
+            council_type: councilType || null,
             registration_number: crm.trim() || null,
             phone: phone.trim() || null,
             email: email.trim() || null,
@@ -742,12 +747,28 @@ export default function ProfessionalEditPage() {
                   </div>
                   
                   <div>
-                    <Label htmlFor="crm">Registro Profissional</Label>
+                    <Label htmlFor="councilType">Conselho</Label>
+                    <Select value={councilType} onValueChange={setCouncilType}>
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue placeholder="Selecione o conselho" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PROFESSIONAL_COUNCILS.map((council) => (
+                          <SelectItem key={council.id} value={council.id}>
+                            {council.name} - {council.fullName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="crm">Nº do Registro</Label>
                     <Input
                       id="crm"
                       value={crm}
                       onChange={(e) => setCrm(e.target.value)}
-                      placeholder="CRM, CRO, etc."
+                      placeholder={councilType ? `${councilType} 12345/UF` : "12345/UF"}
                       className="mt-1.5"
                     />
                   </div>
