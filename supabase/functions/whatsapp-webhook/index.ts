@@ -10,8 +10,10 @@ const corsHeaders = {
 // REGEX PATTERNS
 // ==========================================
 
-const POSITIVE_REGEX = /^(sim|s|confirmo|ok|👍|confirmado|confirmar|vou|yes|y|simmm|siim|sím|1)$/i;
-const NEGATIVE_REGEX = /^(não|nao|n|cancelo|cancelar|❌|desisto|nao vou|não vou|no|cancel|cancelado|2)$/i;
+// Accept common confirmations plus numeric fallbacks:
+// 1 = SIM, 2 = NÃO (some clients don’t render buttons)
+const POSITIVE_REGEX = /^(sim|s|confirmo|ok|👍|confirmado|confirmar|vou|yes|y|simmm|siim|sím|1\b)/i;
+const NEGATIVE_REGEX = /^(não|nao|n|cancelo|cancelar|❌|desisto|nao vou|não vou|no|cancel|cancelado|2\b)/i;
 const CPF_REGEX = /^\d{11}$/;
 const MENU_REGEX = /^(menu|reiniciar|voltar|inicio|começar|comecar|agendar)$/i;
 const CANCEL_REGEX = /^(cancelar consulta|cancelar agendamento|desmarcar|desmarcar consulta)$/i;
