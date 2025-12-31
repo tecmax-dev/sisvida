@@ -2325,7 +2325,14 @@ async function getAvailableDates(
         if (block.start_date && dateStr < block.start_date) continue;
         if (block.end_date && dateStr > block.end_date) continue;
 
+        // Some clinics store block-based schedules as start_time/end_time (+duration)
+        if (typeof block.duration === 'number') stepMinutes = block.duration;
         if (typeof block.block_interval === 'number') stepMinutes = block.block_interval;
+
+        if (block.start_time && block.end_time) {
+          slots.push({ start: block.start_time, end: block.end_time });
+        }
+
         if (Array.isArray(block.slots)) {
           for (const s of block.slots) {
             if (s?.start && s?.end) slots.push({ start: s.start, end: s.end });
@@ -2569,7 +2576,14 @@ async function getAvailableTimes(
       if (block.start_date && date < block.start_date) continue;
       if (block.end_date && date > block.end_date) continue;
 
+      if (typeof block.duration === 'number') stepMinutes = block.duration;
       if (typeof block.block_interval === 'number') stepMinutes = block.block_interval;
+
+      // Block can be defined as start_time/end_time (common in Sindicato)
+      if (block.start_time && block.end_time) {
+        slots.push({ start: block.start_time, end: block.end_time });
+      }
+
       if (Array.isArray(block.slots)) {
         for (const s of block.slots) {
           if (s?.start && s?.end) slots.push({ start: s.start, end: s.end });
