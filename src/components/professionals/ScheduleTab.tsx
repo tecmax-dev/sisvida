@@ -258,7 +258,7 @@ export function ScheduleTab({
           <h3 className="font-medium">Horários de Atendimento</h3>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={addBlock}>
+          <Button type="button" variant="outline" size="sm" onClick={addBlock}>
             <Plus className="h-4 w-4 mr-1" />
             Novo Horário
           </Button>
