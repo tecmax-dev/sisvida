@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     // Search patient - return necessary fields plus id
     const { data, error } = await supabase
       .from('patients')
-      .select('id, name, phone, email')
+      .select('id, name, phone, email, is_active, inactivation_reason')
       .eq('clinic_id', clinicId)
       .eq('cpf', cleanCpf)
       .maybeSingle();

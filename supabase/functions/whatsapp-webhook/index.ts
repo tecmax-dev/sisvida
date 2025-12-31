@@ -678,11 +678,11 @@ _Digite MENU a qualquer momento para reiniciar._`,
 
 Para agendar, acesse nosso site ou entre em contato conosco.`,
 
-  patientInactive: (reason?: string | null) => {
+  patientInactive: (clinicName: string, reason?: string | null) => {
     const reasonText = reason ? ` (${reason})` : '';
     return `❌ Seu cadastro está *inativo*${reasonText}.
 
-Para realizar agendamentos, entre em contato com a clínica para regularizar sua situação.`;
+Para realizar agendamentos, entre em contato com *${clinicName}* para regularizar sua situação.`;
   },
 
   confirmIdentity: (name: string) => `Encontramos o cadastro em nome de *${name}*.
@@ -1461,6 +1461,14 @@ async function handleWaitingCpf(
   }
 
   const phoneCandidates = getBrazilPhoneVariants(phone);
+
+  // Fetch clinic name for messages
+  const { data: clinicInfo } = await supabase
+    .from('clinics')
+    .select('name')
+    .eq('id', config.clinic_id)
+    .single();
+  const clinicName = clinicInfo?.name || 'a clínica';
   
   // First, try to find a titular patient by CPF
   const { data: patient, error } = await supabase
@@ -1481,7 +1489,7 @@ async function handleWaitingCpf(
   // Check if patient is inactive
   if (patientData && patientData.is_active === false) {
     console.log(`[booking] Patient ${patientData.id} is inactive. Reason: ${patientData.inactivation_reason}`);
-    await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(patientData.inactivation_reason));
+    await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(clinicName, patientData.inactivation_reason));
     return { handled: true, newState: 'FINISHED' };
   }
 
@@ -1523,7 +1531,7 @@ async function handleWaitingCpf(
       // Check if titular patient is inactive
       if (titularPatient.is_active === false) {
         console.log(`[booking] Titular patient ${titularPatient.id} is inactive. Dependent cannot book.`);
-        await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(titularPatient.inactivation_reason));
+        await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(clinicName, titularPatient.inactivation_reason));
         return { handled: true, newState: 'FINISHED' };
       }
 
@@ -1575,7 +1583,7 @@ async function handleWaitingCpf(
     // Check if patient found by phone is inactive
     if (patientData.is_active === false) {
       console.log(`[booking] Patient ${patientData.id} (by phone) is inactive. Reason: ${patientData.inactivation_reason}`);
-      await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(patientData.inactivation_reason));
+      await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(clinicName, patientData.inactivation_reason));
       return { handled: true, newState: 'FINISHED' };
     }
   }

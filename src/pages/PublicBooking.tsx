@@ -716,6 +716,23 @@ export default function PublicBooking() {
       if (error) throw error;
       
       if (data?.patient) {
+        // Check if patient is inactive
+        if (data.patient.is_active === false) {
+          const reason = data.patient.inactivation_reason ? ` (${data.patient.inactivation_reason})` : '';
+          toast({
+            title: "Cadastro inativo",
+            description: `Seu cadastro está inativo${reason}. Para realizar agendamentos, entre em contato com ${clinic.name} para regularizar sua situação.`,
+            variant: "destructive",
+          });
+          setPatientFound(false);
+          setPatientName("");
+          setPatientPhone("");
+          setPatientEmail("");
+          setDependents([]);
+          setSelectedDependent("");
+          return;
+        }
+        
         setPatientName(data.patient.name);
         setPatientPhone(formatPhone(data.patient.phone));
         setPatientEmail(data.patient.email || '');
