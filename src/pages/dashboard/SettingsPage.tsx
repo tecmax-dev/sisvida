@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
+import { TwilioConfigPanel } from "@/components/settings/TwilioConfigPanel";
+import { WhatsAppProviderSelector } from "@/components/settings/WhatsAppProviderSelector";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { MessageHistoryPanel } from "@/components/settings/MessageHistoryPanel";
@@ -825,9 +827,19 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* WhatsApp Integration */}
+      {/* WhatsApp Provider Selector */}
+      {currentClinic && (
+        <WhatsAppProviderSelector clinicId={currentClinic.id} />
+      )}
+
+      {/* Evolution API Integration */}
       {currentClinic && (
         <EvolutionConfigPanel clinicId={currentClinic.id} />
+      )}
+
+      {/* Twilio WhatsApp Integration */}
+      {currentClinic && (
+        <TwilioConfigPanel clinicId={currentClinic.id} />
       )}
 
       {/* Message History */}

@@ -131,22 +131,102 @@ serve(async (req) => {
       }
     }
 
-    // 9. Fetch clinic's Evolution API configuration and logo
+    // 9. Check which WhatsApp provider to use
+    const { data: clinicProviderData } = await supabase
+      .from('clinics')
+      .select('whatsapp_provider, logo_url, whatsapp_header_image_url')
+      .eq('id', clinicId)
+      .single();
+
+    const whatsappProvider = clinicProviderData?.whatsapp_provider || 'evolution';
+    const logoUrl = clinicProviderData?.whatsapp_header_image_url || clinicProviderData?.logo_url || DEFAULT_SYSTEM_LOGO;
+
+    console.log(`[Clinic ${clinicId}] Using WhatsApp provider: ${whatsappProvider}`);
+
+    // ========== TWILIO PROVIDER ==========
+    if (whatsappProvider === 'twilio') {
+      const { data: twilioConfig, error: twilioError } = await supabase
+        .from('twilio_configs')
+        .select('account_sid, auth_token, phone_number, is_connected')
+        .eq('clinic_id', clinicId)
+        .maybeSingle();
+
+      if (twilioError || !twilioConfig) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Twilio não configurado. Configure em Configurações > Integrações > Twilio.' 
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const { account_sid, auth_token, phone_number } = twilioConfig;
+      const twilioAuth = btoa(`${account_sid}:${auth_token}`);
+
+      // Format phone number
+      let formattedPhone = cleanPhone;
+      if (!formattedPhone.startsWith('55')) {
+        formattedPhone = '55' + formattedPhone;
+      }
+      const toNumber = `whatsapp:+${formattedPhone}`;
+
+      console.log(`[Clinic ${clinicId}] Sending via Twilio to ${toNumber}`);
+
+      const params = new URLSearchParams();
+      params.append('To', toNumber);
+      params.append('From', phone_number);
+      params.append('Body', message);
+      
+      // Add image if available
+      if (logoUrl && logoUrl !== DEFAULT_SYSTEM_LOGO) {
+        params.append('MediaUrl', logoUrl);
+      }
+
+      const twilioResponse = await fetch(
+        `https://api.twilio.com/2010-04-01/Accounts/${account_sid}/Messages.json`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${twilioAuth}`,
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: params.toString(),
+        }
+      );
+
+      const twilioResult = await twilioResponse.json();
+
+      if (!twilioResponse.ok) {
+        console.error('[Twilio] Send failed:', twilioResult);
+        return new Response(
+          JSON.stringify({ success: false, error: twilioResult.message || 'Erro ao enviar via Twilio' }),
+          { status: twilioResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`[Twilio] Message sent successfully: ${twilioResult.sid}`);
+
+      // Log message
+      await supabase.from('message_logs').insert({
+        clinic_id: clinicId,
+        message_type: type,
+        phone: formattedPhone,
+        month_year: monthYear,
+      });
+
+      return new Response(
+        JSON.stringify({ success: true, data: twilioResult }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // ========== EVOLUTION API PROVIDER (default) ==========
     const { data: evolutionConfig, error: configError } = await supabase
       .from('evolution_configs')
       .select('api_url, api_key, instance_name, is_connected')
       .eq('clinic_id', clinicId)
       .maybeSingle();
-
-    // Fetch clinic logo and custom header
-    const { data: clinicData } = await supabase
-      .from('clinics')
-      .select('logo_url, whatsapp_header_image_url')
-      .eq('id', clinicId)
-      .maybeSingle();
-
-    // Usar imagem personalizada da clínica, ou logo da clínica, ou imagem padrão do sistema
-    const logoUrl = clinicData?.whatsapp_header_image_url || clinicData?.logo_url || DEFAULT_SYSTEM_LOGO;
 
     if (configError) {
       console.error('Error fetching evolution config:', configError);

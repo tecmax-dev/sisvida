@@ -1512,6 +1512,7 @@ export type Database = {
           state_code: string | null
           updated_at: string
           whatsapp_header_image_url: string | null
+          whatsapp_provider: string | null
         }
         Insert: {
           address?: string | null
@@ -1546,6 +1547,7 @@ export type Database = {
           state_code?: string | null
           updated_at?: string
           whatsapp_header_image_url?: string | null
+          whatsapp_provider?: string | null
         }
         Update: {
           address?: string | null
@@ -1580,6 +1582,7 @@ export type Database = {
           state_code?: string | null
           updated_at?: string
           whatsapp_header_image_url?: string | null
+          whatsapp_provider?: string | null
         }
         Relationships: []
       }
@@ -6448,6 +6451,50 @@ export type Database = {
           table_type?: string | null
         }
         Relationships: []
+      }
+      twilio_configs: {
+        Row: {
+          account_sid: string
+          auth_token: string
+          clinic_id: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          is_connected: boolean | null
+          phone_number: string
+          updated_at: string
+        }
+        Insert: {
+          account_sid: string
+          auth_token: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_connected?: boolean | null
+          phone_number: string
+          updated_at?: string
+        }
+        Update: {
+          account_sid?: string
+          auth_token?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          is_connected?: boolean | null
+          phone_number?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "twilio_configs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       upgrade_requests: {
         Row: {
