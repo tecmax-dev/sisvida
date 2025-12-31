@@ -180,6 +180,11 @@ export default function PatientsPage() {
   const [totalPatients, setTotalPatients] = useState(0);
   const [showInactive, setShowInactive] = useState(false);
   const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
+  
+  // Inactivation dialog state
+  const [inactivationDialogOpen, setInactivationDialogOpen] = useState(false);
+  const [inactivationReason, setInactivationReason] = useState("");
+  const [patientToInactivate, setPatientToInactivate] = useState<Patient | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -659,43 +664,88 @@ export default function PatientsPage() {
     }
   };
 
-  const handleTogglePatientActive = async (patient: Patient) => {
+  const handleOpenInactivationDialog = (patient: Patient) => {
+    setPatientToInactivate(patient);
+    setInactivationReason("");
+    setInactivationDialogOpen(true);
+  };
+
+  const handleConfirmInactivation = async () => {
+    if (!currentClinic || !patientToInactivate || !inactivationReason) return;
+    
+    setTogglingActiveId(patientToInactivate.id);
+    setInactivationDialogOpen(false);
+    
+    try {
+      // Update patient with inactivation reason
+      const { error } = await supabase
+        .from('patients')
+        .update({ 
+          is_active: false,
+          inactivation_reason: inactivationReason,
+          inactivated_at: new Date().toISOString()
+        })
+        .eq('id', patientToInactivate.id)
+        .eq('clinic_id', currentClinic.id);
+
+      if (error) throw error;
+
+      // Also update all dependents
+      await supabase
+        .from('patient_dependents')
+        .update({ 
+          is_active: false,
+          inactivation_reason: inactivationReason,
+          inactivated_at: new Date().toISOString()
+        })
+        .eq('patient_id', patientToInactivate.id)
+        .eq('clinic_id', currentClinic.id);
+
+      toast({
+        title: "Paciente inativado",
+        description: `${patientToInactivate.name} e seus dependentes foram inativados.`,
+      });
+
+      setPatientToInactivate(null);
+      fetchPatients();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível inativar o paciente.",
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingActiveId(null);
+    }
+  };
+
+  const handleReactivatePatient = async (patient: Patient) => {
     if (!currentClinic) return;
     
     setTogglingActiveId(patient.id);
     try {
-      const newActiveState = !(patient.is_active ?? true);
-      
-      // Update patient
       const { error } = await supabase
         .from('patients')
-        .update({ is_active: newActiveState })
+        .update({ 
+          is_active: true,
+          inactivation_reason: null,
+          inactivated_at: null
+        })
         .eq('id', patient.id)
         .eq('clinic_id', currentClinic.id);
 
       if (error) throw error;
 
-      // Also update all dependents when inactivating
-      if (!newActiveState) {
-        await supabase
-          .from('patient_dependents')
-          .update({ is_active: false })
-          .eq('patient_id', patient.id)
-          .eq('clinic_id', currentClinic.id);
-      }
-
       toast({
-        title: newActiveState ? "Paciente ativado" : "Paciente inativado",
-        description: newActiveState 
-          ? `${patient.name} foi reativado.`
-          : `${patient.name} e seus dependentes foram inativados.`,
+        title: "Paciente reativado",
+        description: `${patient.name} foi reativado com sucesso.`,
       });
 
       fetchPatients();
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível alterar o status.",
+        description: error.message || "Não foi possível reativar o paciente.",
         variant: "destructive",
       });
     } finally {
@@ -1050,7 +1100,10 @@ export default function PatientsPage() {
                           )}
                           {hasPermission("manage_patients") && (
                             <DropdownMenuItem 
-                              onClick={() => handleTogglePatientActive(patient)}
+                              onClick={() => patient.is_active === false 
+                                ? handleReactivatePatient(patient) 
+                                : handleOpenInactivationDialog(patient)
+                              }
                               disabled={togglingActiveId === patient.id}
                             >
                               {patient.is_active === false ? (
@@ -1362,6 +1415,44 @@ export default function PatientsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Inactivation Reason Dialog */}
+      <AlertDialog open={inactivationDialogOpen} onOpenChange={setInactivationDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Motivo da Inativação</AlertDialogTitle>
+            <AlertDialogDescription>
+              Selecione o motivo para inativar o paciente <strong>{patientToInactivate?.name}</strong>.
+              Os dependentes também serão inativados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-4">
+            <Label>Motivo *</Label>
+            <Select value={inactivationReason} onValueChange={setInactivationReason}>
+              <SelectTrigger className="mt-1.5">
+                <SelectValue placeholder="Selecione o motivo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Desligado da Empresa">Desligado da Empresa</SelectItem>
+                <SelectItem value="Carta de Oposição">Carta de Oposição</SelectItem>
+                <SelectItem value="Outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPatientToInactivate(null)}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmInactivation}
+              disabled={!inactivationReason}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Inativar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

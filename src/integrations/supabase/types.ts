@@ -3668,6 +3668,8 @@ export type Database = {
           cpf: string | null
           created_at: string
           id: string
+          inactivated_at: string | null
+          inactivation_reason: string | null
           insurance_plan_id: string | null
           is_active: boolean
           name: string
@@ -3684,6 +3686,8 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           id?: string
+          inactivated_at?: string | null
+          inactivation_reason?: string | null
           insurance_plan_id?: string | null
           is_active?: boolean
           name: string
@@ -3700,6 +3704,8 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           id?: string
+          inactivated_at?: string | null
+          inactivation_reason?: string | null
           insurance_plan_id?: string | null
           is_active?: boolean
           name?: string
@@ -3953,6 +3959,8 @@ export type Database = {
           gender: string | null
           height_cm: number | null
           id: string
+          inactivated_at: string | null
+          inactivation_reason: string | null
           insurance_plan_id: string | null
           is_active: boolean
           is_company: boolean | null
@@ -4001,6 +4009,8 @@ export type Database = {
           gender?: string | null
           height_cm?: number | null
           id?: string
+          inactivated_at?: string | null
+          inactivation_reason?: string | null
           insurance_plan_id?: string | null
           is_active?: boolean
           is_company?: boolean | null
@@ -4049,6 +4059,8 @@ export type Database = {
           gender?: string | null
           height_cm?: number | null
           id?: string
+          inactivated_at?: string | null
+          inactivation_reason?: string | null
           insurance_plan_id?: string | null
           is_active?: boolean
           is_company?: boolean | null
