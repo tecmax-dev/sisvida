@@ -330,7 +330,7 @@ export default function PublicBooking() {
   const fetchExistingAppointments = async () => {
     if (!clinic || !selectedProfessional || !selectedDate) return;
 
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
     
     const { data } = await supabase
       .from('appointments')
@@ -390,7 +390,7 @@ export default function PublicBooking() {
     const duration = appointmentDuration;
     const defaultProfDuration = professional.appointment_duration || 30;
     const slots: string[] = [];
-    const selectedDateStr = selectedDate.toISOString().split('T')[0];
+    const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
     
     // Check if we have the new _blocks format
     if (schedule._blocks && Array.isArray(schedule._blocks) && schedule._blocks.length > 0) {
@@ -513,7 +513,7 @@ export default function PublicBooking() {
     const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayKey = dayKeys[dayIndex];
     const schedule = professional.schedule as Record<string, any>;
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     
     // Check new _blocks format first
     if (schedule._blocks && Array.isArray(schedule._blocks) && schedule._blocks.length > 0) {
@@ -715,7 +715,7 @@ export default function PublicBooking() {
 
     setSubmitting(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
 
       const { data, error } = await supabase.functions.invoke('create-public-booking', {
         body: {
