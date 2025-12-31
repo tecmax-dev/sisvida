@@ -17,20 +17,24 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    const daysBeforeExpiry = 7; // Notify 7 days before expiry
+    const daysBeforeExpiry = 15; // Notify 15 days before expiry
     const targetDate = new Date();
     targetDate.setDate(targetDate.getDate() + daysBeforeExpiry);
+    
+    // Also check for cards expiring today (grace period)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
 
     // Find cards expiring in X days that haven't been notified
     const { data: expiringCards, error: cardsError } = await supabase
       .from("patient_cards")
       .select(`
         id, card_number, expires_at, patient_id,
-        patient:patients(name, phone),
+        patient:patients(id, name, phone, cpf),
         clinic:clinics(id, name, phone)
       `)
       .eq("is_active", true)
-      .gte("expires_at", new Date().toISOString())
+      .gte("expires_at", todayStart.toISOString())
       .lte("expires_at", targetDate.toISOString());
 
     if (cardsError) throw cardsError;
@@ -72,7 +76,36 @@ serve(async (req) => {
       }
 
       const expiryDate = new Date(card.expires_at).toLocaleDateString("pt-BR");
-      const message = `Olá ${patient.name}! 👋\n\nSua carteirinha digital da *${clinic.name}* (${card.card_number}) está próxima do vencimento.\n\n📅 *Validade:* ${expiryDate}\n\nPor favor, entre em contato com a clínica para renovar sua carteirinha e continuar agendando suas consultas.\n\n📞 ${clinic.phone || ""}`;
+      
+      // Create payslip request record
+      const { data: payslipRequest, error: payslipError } = await supabase
+        .from("payslip_requests")
+        .insert({
+          clinic_id: clinic.id,
+          patient_id: patient.id,
+          card_id: card.id,
+          status: "pending",
+        })
+        .select("id")
+        .single();
+
+      if (payslipError) {
+        console.error(`Error creating payslip request for ${patient.name}:`, payslipError);
+      }
+
+      // Message requesting payslip image
+      const message = `Olá ${patient.name}! 👋
+
+Sua carteirinha digital da *${clinic.name}* (${card.card_number}) está próxima do vencimento.
+
+📅 *Validade:* ${expiryDate}
+
+Para renovar sua carteirinha, por favor *envie uma foto do seu contracheque* nesta conversa. Nossa equipe irá analisar e atualizar sua carteirinha.
+
+📎 Basta tirar uma foto do contracheque e enviar aqui!
+
+Atenciosamente,
+Equipe ${clinic.name}`;
 
       try {
         const { error: whatsappError } = await supabase.functions.invoke("send-whatsapp", {
