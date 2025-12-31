@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Clock, Plus, Trash2, Loader2, Calendar } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -370,7 +370,7 @@ export function ScheduleTab({
                     >
                       <Calendar className="mr-2 h-4 w-4" />
                       {block.start_date 
-                        ? format(new Date(block.start_date), "dd/MM/yyyy", { locale: ptBR })
+                        ? format(parseISO(block.start_date), "dd/MM/yyyy", { locale: ptBR })
                         : "Sem limite"
                       }
                     </Button>
@@ -378,9 +378,19 @@ export function ScheduleTab({
                   <PopoverContent className="w-auto p-0" align="start">
                     <CalendarComponent
                       mode="single"
-                      selected={block.start_date ? new Date(block.start_date) : undefined}
-                      onSelect={(date) => updateBlock(index, 'start_date', date ? format(date, 'yyyy-MM-dd') : null)}
+                      selected={block.start_date ? parseISO(block.start_date) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const year = date.getFullYear();
+                          const month = String(date.getMonth() + 1).padStart(2, '0');
+                          const day = String(date.getDate()).padStart(2, '0');
+                          updateBlock(index, 'start_date', `${year}-${month}-${day}`);
+                        } else {
+                          updateBlock(index, 'start_date', null);
+                        }
+                      }}
                       locale={ptBR}
+                      className="pointer-events-auto"
                     />
                     {block.start_date && (
                       <div className="p-2 border-t">
@@ -412,7 +422,7 @@ export function ScheduleTab({
                     >
                       <Calendar className="mr-2 h-4 w-4" />
                       {block.end_date 
-                        ? format(new Date(block.end_date), "dd/MM/yyyy", { locale: ptBR })
+                        ? format(parseISO(block.end_date), "dd/MM/yyyy", { locale: ptBR })
                         : "Sem limite"
                       }
                     </Button>
@@ -420,10 +430,20 @@ export function ScheduleTab({
                   <PopoverContent className="w-auto p-0" align="start">
                     <CalendarComponent
                       mode="single"
-                      selected={block.end_date ? new Date(block.end_date) : undefined}
-                      onSelect={(date) => updateBlock(index, 'end_date', date ? format(date, 'yyyy-MM-dd') : null)}
+                      selected={block.end_date ? parseISO(block.end_date) : undefined}
+                      onSelect={(date) => {
+                        if (date) {
+                          const year = date.getFullYear();
+                          const month = String(date.getMonth() + 1).padStart(2, '0');
+                          const day = String(date.getDate()).padStart(2, '0');
+                          updateBlock(index, 'end_date', `${year}-${month}-${day}`);
+                        } else {
+                          updateBlock(index, 'end_date', null);
+                        }
+                      }}
                       locale={ptBR}
-                      disabled={(date) => block.start_date ? date < new Date(block.start_date) : false}
+                      disabled={(date) => block.start_date ? date < parseISO(block.start_date) : false}
+                      className="pointer-events-auto"
                     />
                     {block.end_date && (
                       <div className="p-2 border-t">
@@ -460,9 +480,9 @@ export function ScheduleTab({
                       <>
                         <span className="text-xs text-muted-foreground mx-1">•</span>
                         <span className="text-xs text-primary">
-                          {block.start_date && !block.end_date && `A partir de ${format(new Date(block.start_date), "dd/MM/yyyy")}`}
-                          {!block.start_date && block.end_date && `Até ${format(new Date(block.end_date), "dd/MM/yyyy")}`}
-                          {block.start_date && block.end_date && `${format(new Date(block.start_date), "dd/MM")} a ${format(new Date(block.end_date), "dd/MM/yyyy")}`}
+                          {block.start_date && !block.end_date && `A partir de ${format(parseISO(block.start_date), "dd/MM/yyyy")}`}
+                          {!block.start_date && block.end_date && `Até ${format(parseISO(block.end_date), "dd/MM/yyyy")}`}
+                          {block.start_date && block.end_date && `${format(parseISO(block.start_date), "dd/MM")} a ${format(parseISO(block.end_date), "dd/MM/yyyy")}`}
                         </span>
                       </>
                     )}
