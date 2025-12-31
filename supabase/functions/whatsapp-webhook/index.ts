@@ -336,51 +336,13 @@ async function sendWhatsAppButtons(
   buttons: ButtonOption[],
   footer?: string
 ): Promise<boolean> {
-  try {
-    const destination = formatPhoneForWhatsApp(phone);
-    console.log(`[booking] Sending buttons to ${destination}:`, buttons.map(b => b.text));
-
-    // Evolution API expects max 3 buttons
-    const limitedButtons = buttons.slice(0, 3).map(b => ({
-      type: 'reply',
-      reply: {
-        id: b.id,
-        title: b.text.substring(0, 20) // Button text limit is 20 chars
-      }
-    }));
-
-    const response = await fetch(`${config.api_url}/message/sendButtons/${config.instance_name}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        apikey: config.api_key,
-      },
-      body: JSON.stringify({
-        number: destination,
-        title: title.substring(0, 60),
-        description: description.substring(0, 1024),
-        footer: footer?.substring(0, 60) || '',
-        buttons: limitedButtons,
-      }),
-    });
-
-    const responseText = await response.text();
-
-    if (!response.ok) {
-      console.error('[booking] WhatsApp Buttons API error:', responseText);
-      // Fallback to text message if buttons fail
-      const fallbackMsg = `${title}\n\n${description}\n\n${buttons.map((b, i) => `${i + 1}️⃣ ${b.text}`).join('\n')}${footer ? `\n\n${footer}` : ''}`;
-      return await sendWhatsAppMessage(config, phone, fallbackMsg);
-    }
-
-    console.log(`[booking] WhatsApp Buttons API ok (${response.status})`);
-    return true;
-  } catch (error) {
-    console.error('[booking] Error sending WhatsApp buttons:', error);
-    // Fallback to text message
-    const fallbackMsg = `${title}\n\n${description}\n\n${buttons.map((b, i) => `${i + 1}️⃣ ${b.text}`).join('\n')}${footer ? `\n\n${footer}` : ''}`;
-    return await sendWhatsAppMessage(config, phone, fallbackMsg);
-  }
+  // Use only numbered text for maximum compatibility across all WhatsApp clients/devices
+  console.log(`[booking] Sending numbered options to phone:`, buttons.map(b => b.text));
+  
+  const numberedOptions = buttons.map((b, i) => `${i + 1}️⃣ ${b.text}`).join('\n');
+  const message = `${title}\n\n${description}\n\n${numberedOptions}${footer ? `\n\n${footer}` : ''}`;
+  
+  return await sendWhatsAppMessage(config, phone, message);
 }
 
 // ==========================================
@@ -1543,7 +1505,7 @@ async function handleWaitingCpf(
           { id: 'confirm_yes', text: '✅ Sim, sou eu' },
           { id: 'confirm_no', text: '❌ Não sou eu' }
         ],
-        'Clique no botão para continuar'
+        'Responda 1 ou 2'
       );
 
       // Fallback for clients that don’t render buttons
@@ -1603,7 +1565,7 @@ async function handleWaitingCpf(
       { id: 'confirm_yes', text: '✅ Sim, sou eu' },
       { id: 'confirm_no', text: '❌ Não sou eu' }
     ],
-    'Clique no botão para continuar'
+    'Responda 1 ou 2'
   );
 
   // Fallback for clients that don’t render buttons
