@@ -75,12 +75,25 @@ const durationOptions = [
   { value: 120, label: "2 horas" },
 ];
 
+// Extended schedule type that includes blocks
+interface ExtendedSchedule extends Record<string, any> {
+  _blocks?: ScheduleBlock[];
+}
+
 // Convert old schedule format to new blocks format
 const convertOldScheduleToBlocks = (
-  oldSchedule: Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null,
+  oldSchedule: ExtendedSchedule | null,
   defaultDuration: number
 ): ScheduleBlock[] => {
   if (!oldSchedule) return [];
+  
+  // Check if we have the new blocks format saved
+  if (oldSchedule._blocks && Array.isArray(oldSchedule._blocks) && oldSchedule._blocks.length > 0) {
+    return oldSchedule._blocks.map(block => ({
+      ...block,
+      duration: block.duration || defaultDuration,
+    }));
+  }
   
   const blocks: ScheduleBlock[] = [];
   
@@ -88,8 +101,9 @@ const convertOldScheduleToBlocks = (
   const slotMap: Map<string, string[]> = new Map();
   
   Object.entries(oldSchedule).forEach(([day, config]) => {
-    if (config.enabled && config.slots) {
-      config.slots.forEach(slot => {
+    if (day === '_blocks') return; // Skip the blocks key
+    if (config && typeof config === 'object' && 'enabled' in config && config.enabled && config.slots) {
+      config.slots.forEach((slot: { start: string; end: string }) => {
         const key = `${slot.start}-${slot.end}`;
         if (!slotMap.has(key)) {
           slotMap.set(key, []);
@@ -121,9 +135,9 @@ const convertOldScheduleToBlocks = (
   }];
 };
 
-// Convert blocks back to old schedule format for saving
-const convertBlocksToOldSchedule = (blocks: ScheduleBlock[]): Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> => {
-  const schedule: Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> = {
+// Convert blocks back to old schedule format for saving (includes _blocks for persistence)
+const convertBlocksToOldSchedule = (blocks: ScheduleBlock[]): ExtendedSchedule => {
+  const schedule: ExtendedSchedule = {
     monday: { enabled: false, slots: [] },
     tuesday: { enabled: false, slots: [] },
     wednesday: { enabled: false, slots: [] },
@@ -131,15 +145,18 @@ const convertBlocksToOldSchedule = (blocks: ScheduleBlock[]): Record<string, { e
     friday: { enabled: false, slots: [] },
     saturday: { enabled: false, slots: [] },
     sunday: { enabled: false, slots: [] },
+    _blocks: blocks, // Save the full blocks array with dates
   };
   
   blocks.forEach(block => {
     block.days.forEach(day => {
-      schedule[day].enabled = true;
-      schedule[day].slots.push({
-        start: block.start_time,
-        end: block.end_time,
-      });
+      if (schedule[day] && typeof schedule[day] === 'object') {
+        schedule[day].enabled = true;
+        schedule[day].slots.push({
+          start: block.start_time,
+          end: block.end_time,
+        });
+      }
     });
   });
   
