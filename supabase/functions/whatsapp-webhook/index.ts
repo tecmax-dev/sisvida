@@ -53,6 +53,7 @@ interface EvolutionWebhookPayload {
     key?: {
       remoteJid?: string;
       fromMe?: boolean;
+      id?: string;
     };
     message?: {
       conversation?: string;
@@ -79,6 +80,26 @@ interface EvolutionWebhookPayload {
       // Template button response
       templateButtonReplyMessage?: {
         selectedId?: string;
+      };
+      // Image message
+      imageMessage?: {
+        url?: string;
+        mimetype?: string;
+        caption?: string;
+        directPath?: string;
+        mediaKey?: string;
+        fileLength?: string;
+        fileSha256?: string;
+        fileEncSha256?: string;
+      };
+      // Document message
+      documentMessage?: {
+        url?: string;
+        mimetype?: string;
+        title?: string;
+        fileName?: string;
+        directPath?: string;
+        mediaKey?: string;
       };
     };
     messageType?: string;
@@ -3524,6 +3545,193 @@ async function handleConfirmationFlow(
 }
 
 // ==========================================
+// PAYSLIP IMAGE UPLOAD HANDLER
+// ==========================================
+
+interface MediaMessage {
+  url?: string;
+  mimetype?: string;
+  caption?: string;
+  directPath?: string;
+  mediaKey?: string;
+  fileLength?: string;
+  title?: string;
+  fileName?: string;
+}
+
+async function handlePayslipImageUpload(
+  supabase: any,
+  phone: string,
+  instanceName: string,
+  messageId: string,
+  mediaMessage: MediaMessage | undefined,
+  messageType: string
+): Promise<boolean> {
+  if (!mediaMessage) {
+    console.log('[payslip] No media message found');
+    return false;
+  }
+
+  console.log(`[payslip] Processing image from ${phone}, type: ${messageType}`);
+
+  try {
+    const phoneCandidates = getBrazilPhoneVariants(phone);
+
+    // Find patient by phone
+    const { data: patient, error: patientError } = await supabase
+      .from('patients')
+      .select('id, name, clinic_id')
+      .or(phoneCandidates.map(p => `phone.ilike.%${p.slice(-8)}%`).join(','))
+      .limit(1)
+      .maybeSingle();
+
+    if (patientError || !patient) {
+      console.log('[payslip] Patient not found for phone:', phone);
+      return false;
+    }
+
+    console.log(`[payslip] Found patient: ${patient.name} (${patient.id})`);
+
+    // Check if patient has a pending payslip request
+    const { data: pendingRequest, error: requestError } = await supabase
+      .from('payslip_requests')
+      .select('id, card_id, clinic_id')
+      .eq('patient_id', patient.id)
+      .eq('status', 'pending')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (requestError) {
+      console.error('[payslip] Error fetching pending request:', requestError);
+      return false;
+    }
+
+    if (!pendingRequest) {
+      console.log('[payslip] No pending payslip request for patient');
+      return false;
+    }
+
+    console.log(`[payslip] Found pending request: ${pendingRequest.id}`);
+
+    // Get Evolution config to download media
+    const { data: evolutionConfig, error: configError } = await supabase
+      .from('evolution_configs')
+      .select('api_url, api_key, instance_name, clinic_id')
+      .eq('instance_name', instanceName)
+      .eq('is_connected', true)
+      .limit(1)
+      .maybeSingle();
+
+    if (configError || !evolutionConfig) {
+      console.error('[payslip] Evolution config not found');
+      return false;
+    }
+
+    // Download media from Evolution API
+    const mediaUrl = `${evolutionConfig.api_url}/chat/getBase64FromMediaMessage/${evolutionConfig.instance_name}`;
+    
+    console.log(`[payslip] Downloading media from Evolution API`);
+    
+    const mediaResponse = await fetch(mediaUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': evolutionConfig.api_key,
+      },
+      body: JSON.stringify({
+        message: {
+          key: {
+            id: messageId,
+            remoteJid: `${phone}@s.whatsapp.net`,
+          },
+          messageType: messageType,
+        },
+        convertToMp4: false,
+      }),
+    });
+
+    if (!mediaResponse.ok) {
+      const errorText = await mediaResponse.text();
+      console.error('[payslip] Failed to download media:', errorText);
+      return false;
+    }
+
+    const mediaData = await mediaResponse.json();
+    const base64Data = mediaData.base64;
+
+    if (!base64Data) {
+      console.error('[payslip] No base64 data in response');
+      return false;
+    }
+
+    // Determine file extension from mimetype
+    const mimeType = mediaMessage.mimetype || 'image/jpeg';
+    const extension = mimeType.includes('pdf') ? 'pdf' : 
+                      mimeType.includes('png') ? 'png' : 
+                      mimeType.includes('webp') ? 'webp' : 'jpg';
+
+    // Create file path: clinic_id/patient_id/timestamp.ext
+    const timestamp = Date.now();
+    const fileName = `${pendingRequest.clinic_id}/${patient.id}/${timestamp}.${extension}`;
+
+    // Decode base64 and upload to storage
+    const binaryData = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('contra-cheques')
+      .upload(fileName, binaryData, {
+        contentType: mimeType,
+        upsert: false,
+      });
+
+    if (uploadError) {
+      console.error('[payslip] Upload error:', uploadError);
+      return false;
+    }
+
+    console.log(`[payslip] Uploaded to storage: ${uploadData.path}`);
+
+    // Update payslip request
+    const { error: updateError } = await supabase
+      .from('payslip_requests')
+      .update({
+        status: 'received',
+        received_at: new Date().toISOString(),
+        attachment_path: uploadData.path,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', pendingRequest.id);
+
+    if (updateError) {
+      console.error('[payslip] Error updating request:', updateError);
+      return false;
+    }
+
+    // Send confirmation message to patient
+    const config: EvolutionConfig = {
+      api_url: evolutionConfig.api_url,
+      api_key: evolutionConfig.api_key,
+      instance_name: evolutionConfig.instance_name,
+      clinic_id: evolutionConfig.clinic_id,
+    };
+
+    await sendWhatsAppMessage(
+      config,
+      phone,
+      `✅ Recebemos seu contracheque!\n\nObrigado, ${patient.name}. Nossa equipe irá analisar o documento e atualizar sua carteirinha.\n\nVocê será notificado quando a análise for concluída.`
+    );
+
+    console.log(`[payslip] Successfully processed payslip for ${patient.name}`);
+    return true;
+
+  } catch (error) {
+    console.error('[payslip] Error processing payslip:', error);
+    return false;
+  }
+}
+
+// ==========================================
 // MAIN HANDLER
 // ==========================================
 
@@ -3559,8 +3767,30 @@ serve(async (req) => {
     const remoteJid = payload.data?.key?.remoteJid || '';
     const phone = normalizePhone(remoteJid.replace('@s.whatsapp.net', ''));
     const messageText = extractMessageText(payload.data);
+    const messageType = payload.data?.messageType;
+    const imageMessage = payload.data?.message?.imageMessage;
+    const documentMessage = payload.data?.message?.documentMessage;
 
-    console.log(`[webhook] Phone: ${phone}, Message: "${messageText}"`);
+    console.log(`[webhook] Phone: ${phone}, Message: "${messageText}", Type: ${messageType}`);
+
+    // Handle image/document messages for payslip submissions
+    if (phone && (imageMessage || documentMessage || messageType === 'imageMessage' || messageType === 'documentMessage')) {
+      const imageHandled = await handlePayslipImageUpload(
+        supabase, 
+        phone, 
+        payload.instance || '',
+        payload.data?.key?.id || '',
+        imageMessage || documentMessage,
+        messageType || ''
+      );
+      
+      if (imageHandled) {
+        return new Response(
+          JSON.stringify({ success: true, message: 'Payslip image processed' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
 
     if (!phone || !messageText) {
       const messageObj = payload.data?.message ?? {};
