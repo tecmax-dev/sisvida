@@ -4620,6 +4620,63 @@ export type Database = {
           },
         ]
       }
+      professional_schedule_exceptions: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          end_time: string | null
+          exception_date: string
+          id: string
+          is_day_off: boolean | null
+          professional_id: string
+          reason: string | null
+          start_time: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          exception_date: string
+          id?: string
+          is_day_off?: boolean | null
+          professional_id: string
+          reason?: string | null
+          start_time?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          end_time?: string | null
+          exception_date?: string
+          id?: string
+          is_day_off?: boolean | null
+          professional_id?: string
+          reason?: string | null
+          start_time?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_schedule_exceptions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_schedule_exceptions_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_specialties: {
         Row: {
           created_at: string | null
