@@ -30,9 +30,10 @@ interface ClinicWithReminder {
 function getBrazilTime(): Date {
   const now = new Date();
   // Bahia (America/Bahia) = UTC-3
-  const brazilOffsetMinutes = -3 * 60; // -3 horas em minutos
-  const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
-  return new Date(utcTime + (brazilOffsetMinutes * 60000));
+  // Calcular offset correto: UTC time - 3 horas
+  const utcTime = now.getTime();
+  const brazilOffsetMs = -3 * 60 * 60 * 1000; // -3 horas em milissegundos
+  return new Date(utcTime + brazilOffsetMs);
 }
 
 // Formatar data para exibição no fuso horário do Brasil
