@@ -107,13 +107,6 @@ interface Appointment {
   patient: { name: string } | null;
 }
 
-const professionalSchema = z.object({
-  name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").max(100),
-  specialty: z.string().optional(),
-  registration_number: z.string().optional(),
-  phone: z.string().optional(),
-  email: z.string().email("Email inválido").optional().or(z.literal("")),
-});
 
 function generateSlug(name: string): string {
   return name
@@ -128,14 +121,6 @@ export default function ProfessionalsPage() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const {
-    loading: loadingSpecialties,
-    groupedSpecialties,
-    saveProfessionalSpecialties,
-    fetchProfessionalSpecialties,
-    getSpecialtyById,
-    getRegistrationPrefix,
-  } = useSpecialties();
   const {
     subscription,
     loading: loadingSubscription,
