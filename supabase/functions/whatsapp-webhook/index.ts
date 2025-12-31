@@ -1512,7 +1512,7 @@ async function handleWaitingCpf(
         .from('patients')
         .select('id, name')
         .eq('id', dependentByCpf.patient_id)
-        .single();
+        .maybeSingle();
 
       if (!titularPatient) {
         await sendWhatsAppMessage(config, phone, MESSAGES.patientNotFound);
@@ -1543,6 +1543,14 @@ async function handleWaitingCpf(
         ],
         'Clique no botão para continuar'
       );
+
+      // Fallback for clients that don’t render buttons
+      await sendWhatsAppMessage(
+        config,
+        phone,
+        `Se os botões não aparecerem, responda:\n1 = SIM\n2 = NÃO`
+      );
+
       return { handled: true, newState: 'CONFIRM_IDENTITY' };
     }
   }
@@ -1595,6 +1603,14 @@ async function handleWaitingCpf(
     ],
     'Clique no botão para continuar'
   );
+
+  // Fallback for clients that don’t render buttons
+  await sendWhatsAppMessage(
+    config,
+    phone,
+    `Se os botões não aparecerem, responda:\n1 = SIM\n2 = NÃO`
+  );
+
   return { handled: true, newState: 'CONFIRM_IDENTITY' };
 }
 
