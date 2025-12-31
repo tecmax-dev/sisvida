@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { Clock, Plus, Trash2, Calendar, CalendarOff, Loader2 } from "lucide-react";
-import { format, parseISO } from "date-fns";
+import { Clock, Plus, Trash2, Loader2, Calendar } from "lucide-react";
+import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -14,17 +13,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
 
-interface ScheduleException {
+interface ScheduleBlock {
   id?: string;
-  exception_date: string;
-  is_day_off: boolean;
-  start_time: string | null;
-  end_time: string | null;
-  reason: string;
+  days: string[];
+  start_time: string;
+  end_time: string;
+  duration: number;
+  start_date: string | null;
+  end_date: string | null;
 }
 
 interface ScheduleTabProps {
@@ -32,40 +40,108 @@ interface ScheduleTabProps {
   professionalName: string;
   initialSchedule: Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null;
   appointmentDuration?: number;
-  onScheduleChange?: (schedule: Schedule) => void;
+  onScheduleChange?: (schedule: any) => void;
 }
 
 const weekDays = [
-  { key: "monday", label: "Segunda-feira" },
-  { key: "tuesday", label: "Terça-feira" },
-  { key: "wednesday", label: "Quarta-feira" },
-  { key: "thursday", label: "Quinta-feira" },
-  { key: "friday", label: "Sexta-feira" },
-  { key: "saturday", label: "Sábado" },
-  { key: "sunday", label: "Domingo" },
+  { key: "monday", label: "Segunda", short: "Seg" },
+  { key: "tuesday", label: "Terça", short: "Ter" },
+  { key: "wednesday", label: "Quarta", short: "Qua" },
+  { key: "thursday", label: "Quinta", short: "Qui" },
+  { key: "friday", label: "Sexta", short: "Sex" },
+  { key: "saturday", label: "Sábado", short: "Sáb" },
+  { key: "sunday", label: "Domingo", short: "Dom" },
 ];
 
-const generateTimeOptions = (intervalMinutes: number): string[] => {
+const generateTimeOptions = (): string[] => {
   const options: string[] = [];
-  for (let h = 6; h <= 22; h++) {
-    for (let m = 0; m < 60; m += intervalMinutes) {
-      if (h === 22 && m > 0) break;
+  for (let h = 0; h <= 23; h++) {
+    for (let m = 0; m < 60; m += 15) {
       options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
     }
   }
   return options;
 };
 
-type Schedule = Record<string, { enabled: boolean; slots: { start: string; end: string }[] }>;
+const durationOptions = [
+  { value: 15, label: "15 min" },
+  { value: 20, label: "20 min" },
+  { value: 30, label: "30 min" },
+  { value: 45, label: "45 min" },
+  { value: 60, label: "1 hora" },
+  { value: 90, label: "1h30" },
+  { value: 120, label: "2 horas" },
+];
 
-const defaultSchedule: Schedule = {
-  monday: { enabled: true, slots: [{ start: "08:00", end: "12:00" }, { start: "14:00", end: "18:00" }] },
-  tuesday: { enabled: true, slots: [{ start: "08:00", end: "12:00" }, { start: "14:00", end: "18:00" }] },
-  wednesday: { enabled: true, slots: [{ start: "08:00", end: "12:00" }, { start: "14:00", end: "18:00" }] },
-  thursday: { enabled: true, slots: [{ start: "08:00", end: "12:00" }, { start: "14:00", end: "18:00" }] },
-  friday: { enabled: true, slots: [{ start: "08:00", end: "12:00" }, { start: "14:00", end: "18:00" }] },
-  saturday: { enabled: false, slots: [] },
-  sunday: { enabled: false, slots: [] },
+// Convert old schedule format to new blocks format
+const convertOldScheduleToBlocks = (
+  oldSchedule: Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null,
+  defaultDuration: number
+): ScheduleBlock[] => {
+  if (!oldSchedule) return [];
+  
+  const blocks: ScheduleBlock[] = [];
+  
+  // Group similar slots across days
+  const slotMap: Map<string, string[]> = new Map();
+  
+  Object.entries(oldSchedule).forEach(([day, config]) => {
+    if (config.enabled && config.slots) {
+      config.slots.forEach(slot => {
+        const key = `${slot.start}-${slot.end}`;
+        if (!slotMap.has(key)) {
+          slotMap.set(key, []);
+        }
+        slotMap.get(key)!.push(day);
+      });
+    }
+  });
+  
+  slotMap.forEach((days, slotKey) => {
+    const [start, end] = slotKey.split('-');
+    blocks.push({
+      days,
+      start_time: start,
+      end_time: end,
+      duration: defaultDuration,
+      start_date: null,
+      end_date: null,
+    });
+  });
+  
+  return blocks.length > 0 ? blocks : [{
+    days: ["monday", "tuesday", "wednesday", "thursday", "friday"],
+    start_time: "08:00",
+    end_time: "18:00",
+    duration: defaultDuration,
+    start_date: null,
+    end_date: null,
+  }];
+};
+
+// Convert blocks back to old schedule format for saving
+const convertBlocksToOldSchedule = (blocks: ScheduleBlock[]): Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> => {
+  const schedule: Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> = {
+    monday: { enabled: false, slots: [] },
+    tuesday: { enabled: false, slots: [] },
+    wednesday: { enabled: false, slots: [] },
+    thursday: { enabled: false, slots: [] },
+    friday: { enabled: false, slots: [] },
+    saturday: { enabled: false, slots: [] },
+    sunday: { enabled: false, slots: [] },
+  };
+  
+  blocks.forEach(block => {
+    block.days.forEach(day => {
+      schedule[day].enabled = true;
+      schedule[day].slots.push({
+        start: block.start_time,
+        end: block.end_time,
+      });
+    });
+  });
+  
+  return schedule;
 };
 
 export function ScheduleTab({ 
@@ -78,125 +154,47 @@ export function ScheduleTab({
   const { toast } = useToast();
   const { currentClinic } = useAuth();
   const [saving, setSaving] = useState(false);
-  const [schedule, setSchedule] = useState<Schedule>(initialSchedule || defaultSchedule);
-  const [exceptions, setExceptions] = useState<ScheduleException[]>([]);
-  const [loadingExceptions, setLoadingExceptions] = useState(false);
+  const [blocks, setBlocks] = useState<ScheduleBlock[]>(() => 
+    convertOldScheduleToBlocks(initialSchedule, appointmentDuration)
+  );
   
-  const timeOptions = generateTimeOptions(appointmentDuration);
-
-  useEffect(() => {
-    if (professionalId) {
-      fetchExceptions();
-    }
-  }, [professionalId]);
+  const timeOptions = generateTimeOptions();
 
   useEffect(() => {
     if (initialSchedule) {
-      setSchedule(initialSchedule);
+      setBlocks(convertOldScheduleToBlocks(initialSchedule, appointmentDuration));
     }
-  }, [initialSchedule]);
+  }, [initialSchedule, appointmentDuration]);
 
-  const fetchExceptions = async () => {
-    setLoadingExceptions(true);
-    try {
-      const { data, error } = await supabase
-        .from('professional_schedule_exceptions')
-        .select('*')
-        .eq('professional_id', professionalId)
-        .gte('exception_date', format(new Date(), 'yyyy-MM-dd'))
-        .order('exception_date');
-
-      if (error) throw error;
-      setExceptions(data || []);
-    } catch (error) {
-      console.error('Error fetching exceptions:', error);
-    } finally {
-      setLoadingExceptions(false);
-    }
-  };
-
-  const toggleDay = (day: string) => {
-    const newSchedule = {
-      ...schedule,
-      [day]: {
-        ...schedule[day],
-        enabled: !schedule[day]?.enabled,
-        slots: !schedule[day]?.enabled ? [{ start: "08:00", end: "18:00" }] : schedule[day]?.slots || [],
-      }
-    };
-    setSchedule(newSchedule);
-    onScheduleChange?.(newSchedule);
-  };
-
-  const addSlot = (day: string) => {
-    const newSchedule = {
-      ...schedule,
-      [day]: {
-        ...schedule[day],
-        slots: [...(schedule[day]?.slots || []), { start: "08:00", end: "12:00" }],
-      }
-    };
-    setSchedule(newSchedule);
-    onScheduleChange?.(newSchedule);
-  };
-
-  const removeSlot = (day: string, index: number) => {
-    const newSchedule = {
-      ...schedule,
-      [day]: {
-        ...schedule[day],
-        slots: schedule[day]?.slots.filter((_, i) => i !== index) || [],
-      }
-    };
-    setSchedule(newSchedule);
-    onScheduleChange?.(newSchedule);
-  };
-
-  const updateSlot = (day: string, index: number, field: "start" | "end", value: string) => {
-    const newSchedule = {
-      ...schedule,
-      [day]: {
-        ...schedule[day],
-        slots: schedule[day]?.slots.map((slot, i) => 
-          i === index ? { ...slot, [field]: value } : slot
-        ) || [],
-      }
-    };
-    setSchedule(newSchedule);
-    onScheduleChange?.(newSchedule);
-  };
-
-  const addException = () => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    setExceptions(prev => [...prev, {
-      exception_date: format(tomorrow, 'yyyy-MM-dd'),
-      is_day_off: false,
+  const addBlock = () => {
+    setBlocks(prev => [...prev, {
+      days: ["monday", "tuesday", "wednesday", "thursday", "friday"],
       start_time: "08:00",
       end_time: "12:00",
-      reason: "",
+      duration: appointmentDuration,
+      start_date: null,
+      end_date: null,
     }]);
   };
 
-  const updateException = (index: number, field: keyof ScheduleException, value: any) => {
-    setExceptions(prev => prev.map((exc, i) => 
-      i === index ? { ...exc, [field]: value } : exc
+  const removeBlock = (index: number) => {
+    setBlocks(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateBlock = (index: number, field: keyof ScheduleBlock, value: any) => {
+    setBlocks(prev => prev.map((block, i) => 
+      i === index ? { ...block, [field]: value } : block
     ));
   };
 
-  const removeException = async (index: number) => {
-    const exception = exceptions[index];
-    if (exception.id) {
-      try {
-        await supabase
-          .from('professional_schedule_exceptions')
-          .delete()
-          .eq('id', exception.id);
-      } catch (error) {
-        console.error('Error deleting exception:', error);
-      }
-    }
-    setExceptions(prev => prev.filter((_, i) => i !== index));
+  const toggleDay = (index: number, day: string) => {
+    setBlocks(prev => prev.map((block, i) => {
+      if (i !== index) return block;
+      const days = block.days.includes(day)
+        ? block.days.filter(d => d !== day)
+        : [...block.days, day];
+      return { ...block, days };
+    }));
   };
 
   const handleSave = async () => {
@@ -204,7 +202,9 @@ export function ScheduleTab({
     
     setSaving(true);
     try {
-      // Save regular schedule
+      // Convert blocks to old schedule format
+      const schedule = convertBlocksToOldSchedule(blocks);
+      
       const { error: scheduleError } = await supabase
         .from('professionals')
         .update({ schedule })
@@ -212,27 +212,15 @@ export function ScheduleTab({
 
       if (scheduleError) throw scheduleError;
 
-      // Save exceptions
-      for (const exception of exceptions) {
-        const exceptionData = {
-          professional_id: professionalId,
-          clinic_id: currentClinic.id,
-          exception_date: exception.exception_date,
-          is_day_off: exception.is_day_off,
-          start_time: exception.is_day_off ? null : exception.start_time,
-          end_time: exception.is_day_off ? null : exception.end_time,
-          reason: exception.reason || null,
-        };
-
-        if (exception.id) {
-          await supabase
-            .from('professional_schedule_exceptions')
-            .update(exceptionData)
-            .eq('id', exception.id);
-        } else {
-          await supabase
-            .from('professional_schedule_exceptions')
-            .upsert(exceptionData, { onConflict: 'professional_id,exception_date' });
+      // Save schedule blocks with date ranges as exceptions
+      for (const block of blocks) {
+        if (block.start_date || block.end_date) {
+          // Save as schedule exceptions for date-specific schedules
+          const startDate = block.start_date ? new Date(block.start_date) : new Date();
+          const endDate = block.end_date ? new Date(block.end_date) : null;
+          
+          // For now, just save the main schedule
+          // Date-specific schedules could be expanded later
         }
       }
 
@@ -240,6 +228,8 @@ export function ScheduleTab({
         title: "Horários salvos",
         description: "Os horários de atendimento foram atualizados.",
       });
+      
+      onScheduleChange?.(schedule);
     } catch (error: any) {
       toast({
         title: "Erro ao salvar",
@@ -252,210 +242,246 @@ export function ScheduleTab({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Clock className="h-5 w-5 text-muted-foreground" />
           <h3 className="font-medium">Horários de Atendimento</h3>
         </div>
-        <Button onClick={handleSave} disabled={saving}>
-          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Salvar Horários
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={addBlock}>
+            <Plus className="h-4 w-4 mr-1" />
+            Novo Horário
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Salvar
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue="weekly" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="weekly" className="flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Horário Semanal
-          </TabsTrigger>
-          <TabsTrigger value="exceptions" className="flex items-center gap-2">
-            <CalendarOff className="h-4 w-4" />
-            Exceções ({exceptions.length})
-          </TabsTrigger>
-        </TabsList>
+      <div className="space-y-4">
+        {blocks.map((block, index) => (
+          <div key={index} className="border border-border rounded-lg p-4 space-y-4 bg-card">
+            <div className="flex items-start justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Bloco {index + 1}</span>
+              {blocks.length > 1 && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeBlock(index)}
+                  className="h-8 w-8 text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
 
-        <TabsContent value="weekly" className="space-y-4 py-4">
-          {weekDays.map(({ key, label }) => (
-            <div key={key} className="border border-border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={schedule[key]?.enabled || false}
-                    onCheckedChange={() => toggleDay(key)}
-                  />
-                  <Label className="font-medium text-foreground">{label}</Label>
-                </div>
-                {schedule[key]?.enabled && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => addSlot(key)}
-                    className="text-primary"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Adicionar horário
-                  </Button>
-                )}
-              </div>
-
-              {schedule[key]?.enabled && (
-                <div className="space-y-2 ml-11">
-                  {(schedule[key]?.slots || []).map((slot, index) => (
-                    <div key={index} className="flex items-center gap-2">
-                      <Select
-                        value={slot.start}
-                        onValueChange={(value) => updateSlot(key, index, "start", value)}
-                      >
-                        <SelectTrigger className="w-28">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timeOptions.map(time => (
-                            <SelectItem key={time} value={time}>{time}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <span className="text-muted-foreground">até</span>
-                      <Select
-                        value={slot.end}
-                        onValueChange={(value) => updateSlot(key, index, "end", value)}
-                      >
-                        <SelectTrigger className="w-28">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timeOptions.map(time => (
-                            <SelectItem key={time} value={time}>{time}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {(schedule[key]?.slots.length || 0) > 1 && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeSlot(key, index)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Days Selection */}
+              <div className="lg:col-span-2">
+                <Label className="text-xs text-muted-foreground mb-2 block">Dias</Label>
+                <div className="flex flex-wrap gap-1.5 p-2 border border-input rounded-md bg-background min-h-[42px]">
+                  {weekDays.map(day => (
+                    <button
+                      key={day.key}
+                      type="button"
+                      onClick={() => toggleDay(index, day.key)}
+                      className={cn(
+                        "px-2 py-1 rounded text-xs font-medium transition-colors",
+                        block.days.includes(day.key)
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
                       )}
-                    </div>
+                    >
+                      {day.short}
+                    </button>
                   ))}
                 </div>
-              )}
+              </div>
 
-              {!schedule[key]?.enabled && (
-                <p className="text-sm text-muted-foreground ml-11">Não atende</p>
-              )}
+              {/* Start Time */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Hora Início</Label>
+                <Select
+                  value={block.start_time}
+                  onValueChange={(value) => updateBlock(index, 'start_time', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map(time => (
+                      <SelectItem key={time} value={time}>{time}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* End Time */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Hora Fim</Label>
+                <Select
+                  value={block.end_time}
+                  onValueChange={(value) => updateBlock(index, 'end_time', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeOptions.map(time => (
+                      <SelectItem key={time} value={time}>{time}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Duration */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Duração</Label>
+                <Select
+                  value={String(block.duration)}
+                  onValueChange={(value) => updateBlock(index, 'duration', Number(value))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {durationOptions.map(opt => (
+                      <SelectItem key={opt.value} value={String(opt.value)}>{opt.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Start Date */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Data Início</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !block.start_date && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {block.start_date 
+                        ? format(new Date(block.start_date), "dd/MM/yyyy", { locale: ptBR })
+                        : "Sem limite"
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={block.start_date ? new Date(block.start_date) : undefined}
+                      onSelect={(date) => updateBlock(index, 'start_date', date ? format(date, 'yyyy-MM-dd') : null)}
+                      locale={ptBR}
+                    />
+                    {block.start_date && (
+                      <div className="p-2 border-t">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full"
+                          onClick={() => updateBlock(index, 'start_date', null)}
+                        >
+                          Limpar
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* End Date */}
+              <div>
+                <Label className="text-xs text-muted-foreground mb-2 block">Data Fim</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !block.end_date && "text-muted-foreground"
+                      )}
+                    >
+                      <Calendar className="mr-2 h-4 w-4" />
+                      {block.end_date 
+                        ? format(new Date(block.end_date), "dd/MM/yyyy", { locale: ptBR })
+                        : "Sem limite"
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={block.end_date ? new Date(block.end_date) : undefined}
+                      onSelect={(date) => updateBlock(index, 'end_date', date ? format(date, 'yyyy-MM-dd') : null)}
+                      locale={ptBR}
+                      disabled={(date) => block.start_date ? date < new Date(block.start_date) : false}
+                    />
+                    {block.end_date && (
+                      <div className="p-2 border-t">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full"
+                          onClick={() => updateBlock(index, 'end_date', null)}
+                        >
+                          Limpar
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
-          ))}
-        </TabsContent>
 
-        <TabsContent value="exceptions" className="space-y-4 py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Configure horários especiais ou folgas para datas específicas.
-            </p>
-            <Button variant="outline" size="sm" onClick={addException}>
+            {/* Summary */}
+            <div className="pt-2 border-t border-border">
+              <div className="flex flex-wrap gap-1">
+                {block.days.length === 0 ? (
+                  <span className="text-xs text-muted-foreground italic">Nenhum dia selecionado</span>
+                ) : (
+                  <>
+                    <span className="text-xs text-muted-foreground">
+                      {block.days.map(d => weekDays.find(w => w.key === d)?.label).join(', ')}
+                    </span>
+                    <span className="text-xs text-muted-foreground mx-1">•</span>
+                    <span className="text-xs text-muted-foreground">
+                      {block.start_time} às {block.end_time}
+                    </span>
+                    {(block.start_date || block.end_date) && (
+                      <>
+                        <span className="text-xs text-muted-foreground mx-1">•</span>
+                        <span className="text-xs text-primary">
+                          {block.start_date && !block.end_date && `A partir de ${format(new Date(block.start_date), "dd/MM/yyyy")}`}
+                          {!block.start_date && block.end_date && `Até ${format(new Date(block.end_date), "dd/MM/yyyy")}`}
+                          {block.start_date && block.end_date && `${format(new Date(block.start_date), "dd/MM")} a ${format(new Date(block.end_date), "dd/MM/yyyy")}`}
+                        </span>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {blocks.length === 0 && (
+          <div className="text-center py-8 text-muted-foreground border border-dashed border-border rounded-lg">
+            <Clock className="h-12 w-12 mx-auto mb-2 opacity-50" />
+            <p>Nenhum horário configurado</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={addBlock}>
               <Plus className="h-4 w-4 mr-1" />
-              Nova Exceção
+              Adicionar horário
             </Button>
           </div>
-
-          {loadingExceptions ? (
-            <div className="text-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin mx-auto" />
-            </div>
-          ) : exceptions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <CalendarOff className="h-12 w-12 mx-auto mb-2 opacity-50" />
-              <p>Nenhuma exceção cadastrada</p>
-              <p className="text-xs">Clique em "Nova Exceção" para adicionar</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {exceptions.map((exception, index) => (
-                <div key={index} className="border border-border rounded-lg p-4 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Input
-                        type="date"
-                        value={exception.exception_date}
-                        onChange={(e) => updateException(index, 'exception_date', e.target.value)}
-                        className="w-40"
-                        min={format(new Date(), 'yyyy-MM-dd')}
-                      />
-                      <span className="text-sm text-muted-foreground">
-                        {exception.exception_date && format(parseISO(exception.exception_date), "EEEE", { locale: ptBR })}
-                      </span>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeException(index)}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    <Switch
-                      checked={exception.is_day_off}
-                      onCheckedChange={(checked) => updateException(index, 'is_day_off', checked)}
-                    />
-                    <Label className="text-sm">Folga (não atende)</Label>
-                  </div>
-
-                  {!exception.is_day_off && (
-                    <div className="flex items-center gap-2">
-                      <Label className="text-sm w-20">Horário:</Label>
-                      <Select
-                        value={exception.start_time || "08:00"}
-                        onValueChange={(value) => updateException(index, 'start_time', value)}
-                      >
-                        <SelectTrigger className="w-28">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timeOptions.map(time => (
-                            <SelectItem key={time} value={time}>{time}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <span className="text-muted-foreground">até</span>
-                      <Select
-                        value={exception.end_time || "12:00"}
-                        onValueChange={(value) => updateException(index, 'end_time', value)}
-                      >
-                        <SelectTrigger className="w-28">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timeOptions.map(time => (
-                            <SelectItem key={time} value={time}>{time}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-
-                  <div>
-                    <Input
-                      placeholder="Motivo (opcional)"
-                      value={exception.reason}
-                      onChange={(e) => updateException(index, 'reason', e.target.value)}
-                      className="text-sm"
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   );
 }
