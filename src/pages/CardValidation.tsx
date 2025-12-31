@@ -187,13 +187,14 @@ export default function CardValidation() {
             <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
               <User className="h-6 w-6 text-primary" />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 space-y-1">
               <p className="text-sm text-muted-foreground">Paciente</p>
               <p className="font-semibold text-lg">{card.patient.name}</p>
               {card.patient.insurance_plan?.name && (
-                <p className="text-sm text-muted-foreground">
-                  Convênio: <span className="font-medium text-foreground">{card.patient.insurance_plan.name}</span>
-                </p>
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 mt-1">
+                  <div className="h-2 w-2 rounded-full bg-primary" />
+                  <span className="text-sm font-medium text-primary">{card.patient.insurance_plan.name}</span>
+                </div>
               )}
             </div>
           </div>

@@ -99,18 +99,17 @@ export function PatientCardView({
             </div>
 
             <div className="space-y-3">
-              <div className="flex flex-wrap gap-x-6 gap-y-2">
-                <div>
-                  <p className="text-sm text-muted-foreground">Paciente</p>
-                  <p className="font-semibold text-lg">{patientName}</p>
-                </div>
-                {insurancePlanName && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Convênio</p>
-                    <p className="font-semibold text-lg">{insurancePlanName}</p>
-                  </div>
-                )}
+              <div>
+                <p className="text-sm text-muted-foreground">Paciente</p>
+                <p className="font-semibold text-lg">{patientName}</p>
               </div>
+              
+              {insurancePlanName && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                  <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-sm font-medium text-primary">{insurancePlanName}</span>
+                </div>
+              )}
               
               <div className="flex gap-6">
                 <div>
