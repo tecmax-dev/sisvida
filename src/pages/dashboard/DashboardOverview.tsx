@@ -28,6 +28,7 @@ import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import BirthdayMessagesHistory from "@/components/dashboard/BirthdayMessagesHistory";
+import PendingPayslipReviews from "@/components/dashboard/PendingPayslipReviews";
 
 interface DashboardStats {
   todayAppointments: number;
@@ -480,6 +481,9 @@ export default function DashboardOverview() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pending Payslip Reviews */}
+      <PendingPayslipReviews />
 
       {/* Birthday Messages History */}
       <BirthdayMessagesHistory />
