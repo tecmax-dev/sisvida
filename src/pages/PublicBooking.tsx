@@ -1111,7 +1111,7 @@ export default function PublicBooking() {
                     </p>
                   ) : availableTimeSlots.length > 0 ? (
                     <div className="grid grid-cols-3 gap-2">
-                      {availableTimeSlots.map((time) => (
+                      {Array.from(new Set(availableTimeSlots)).map((time) => (
                         <button
                           key={time}
                           onClick={() => setSelectedTime(time)}
