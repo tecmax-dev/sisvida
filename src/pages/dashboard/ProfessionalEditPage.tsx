@@ -34,6 +34,11 @@ interface Procedure {
   name: string;
 }
 
+interface InsurancePlan {
+  id: string;
+  name: string;
+}
+
 interface Professional {
   id: string;
   name: string;
@@ -135,6 +140,10 @@ export default function ProfessionalEditPage() {
   const [procedures, setProcedures] = useState<Procedure[]>([]);
   const [selectedProcedureIds, setSelectedProcedureIds] = useState<string[]>([]);
 
+  // Insurance Plans
+  const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
+  const [selectedInsuranceIds, setSelectedInsuranceIds] = useState<string[]>([]);
+
   // Initial data for comparison
   const [initialFormData, setInitialFormData] = useState<string>("");
 
@@ -144,8 +153,10 @@ export default function ProfessionalEditPage() {
       if (id) {
         fetchProfessional();
         fetchProcedures();
+        fetchInsurancePlans();
       } else {
-        // Creating mode - mark as loaded
+        // Creating mode - fetch insurance plans too
+        fetchInsurancePlans();
         hasLoadedRef.current = true;
       }
     }
@@ -285,6 +296,53 @@ export default function ProfessionalEditPage() {
       setSelectedProcedureIds((linkedData || []).map(l => l.procedure_id));
     } catch (error) {
       console.error("Error fetching procedures:", error);
+    }
+  };
+
+  const fetchInsurancePlans = async () => {
+    if (!currentClinic) return;
+    
+    try {
+      const { data } = await supabase
+        .from("insurance_plans")
+        .select("id, name")
+        .eq("clinic_id", currentClinic.id)
+        .eq("is_active", true)
+        .order("name");
+      
+      setInsurancePlans(data || []);
+
+      // If editing, fetch insurance plans already linked to this professional
+      if (id) {
+        const { data: linkedData } = await supabase
+          .from("professional_insurance_plans")
+          .select("insurance_plan_id")
+          .eq("professional_id", id);
+        
+        setSelectedInsuranceIds((linkedData || []).map(l => l.insurance_plan_id));
+      }
+    } catch (error) {
+      console.error("Error fetching insurance plans:", error);
+    }
+  };
+
+  const saveProfessionalInsurancePlans = async (professionalId: string) => {
+    // Delete existing links
+    await supabase
+      .from("professional_insurance_plans")
+      .delete()
+      .eq("professional_id", professionalId);
+    
+    // Insert new links
+    if (selectedInsuranceIds.length > 0) {
+      const inserts = selectedInsuranceIds.map(insuranceId => ({
+        professional_id: professionalId,
+        insurance_plan_id: insuranceId,
+      }));
+      
+      await supabase
+        .from("professional_insurance_plans")
+        .insert(inserts);
     }
   };
 
@@ -519,6 +577,11 @@ export default function ProfessionalEditPage() {
           await saveProfessionalSpecialties(professionalId, specialtyIds);
         }
 
+        // Save insurance plans
+        if (professionalId) {
+          await saveProfessionalInsurancePlans(professionalId);
+        }
+
         toast({
           title: "Profissional cadastrado",
           description: userId 
@@ -601,6 +664,11 @@ export default function ProfessionalEditPage() {
         // Save professional procedures
         if (id) {
           await saveProfessionalProcedures(id);
+        }
+
+        // Save professional insurance plans
+        if (id) {
+          await saveProfessionalInsurancePlans(id);
         }
 
         toast({
@@ -721,11 +789,12 @@ export default function ProfessionalEditPage() {
             </div>
 
             <Tabs defaultValue={defaultTab} className="w-full">
-              <TabsList className={`grid w-full ${isCreating ? 'grid-cols-3' : 'grid-cols-5'}`}>
+              <TabsList className={`grid w-full ${isCreating ? 'grid-cols-4' : 'grid-cols-6'}`}>
                 <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
                 <TabsTrigger value="profile">Perfil Público</TabsTrigger>
                 {!isCreating && <TabsTrigger value="schedule">Horários</TabsTrigger>}
                 {!isCreating && <TabsTrigger value="procedures">Procedimentos</TabsTrigger>}
+                <TabsTrigger value="insurance">Convênios</TabsTrigger>
                 <TabsTrigger value="settings">Configurações</TabsTrigger>
               </TabsList>
 
@@ -873,6 +942,46 @@ export default function ProfessionalEditPage() {
                             className="text-sm cursor-pointer"
                           >
                             {procedure.name}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="insurance" className="mt-4 space-y-4">
+                <div>
+                  <Label>Convênios aceitos por este profissional</Label>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Selecione os convênios que serão exibidos na página pública do profissional
+                  </p>
+                  {insurancePlans.length === 0 ? (
+                    <p className="text-sm text-muted-foreground italic">
+                      Nenhum convênio cadastrado. Cadastre convênios na página de Convênios.
+                    </p>
+                  ) : (
+                    <div className="grid gap-2 max-h-[300px] overflow-y-auto border rounded-lg p-3">
+                      {insurancePlans.map((plan) => (
+                        <div key={plan.id} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`ins-${plan.id}`}
+                            checked={selectedInsuranceIds.includes(plan.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedInsuranceIds((prev) => [...prev, plan.id]);
+                              } else {
+                                setSelectedInsuranceIds((prev) =>
+                                  prev.filter((id) => id !== plan.id)
+                                );
+                              }
+                            }}
+                          />
+                          <label
+                            htmlFor={`ins-${plan.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {plan.name}
                           </label>
                         </div>
                       ))}
