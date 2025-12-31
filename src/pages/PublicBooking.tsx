@@ -1191,14 +1191,11 @@ export default function PublicBooking() {
                       <ResponsiveSelect
                         value={selectedInsurance}
                         onValueChange={setSelectedInsurance}
-                        options={[
-                          { value: "particular", label: "Particular" },
-                          ...insurancePlans.map((plan) => ({
-                            value: plan.id,
-                            label: plan.name,
-                          })),
-                        ]}
-                        placeholder="Particular"
+                        options={insurancePlans.map((plan) => ({
+                          value: plan.id,
+                          label: plan.name,
+                        }))}
+                        placeholder="Selecione o convênio"
                         title="Convênio"
                         className="mt-1.5"
                       />
