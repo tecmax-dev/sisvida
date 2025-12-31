@@ -2339,6 +2339,18 @@ async function handleConfirmAppointment(
       return { handled: true, newState: 'SELECT_PROFESSIONAL' };
     }
     
+    // Check for dependent limit error (1 per month per professional)
+    if (appointmentError.message?.includes('LIMITE_AGENDAMENTO_DEPENDENTE')) {
+      const dependentName = session.selected_dependent_name || 'O dependente';
+      await sendWhatsAppMessage(config, phone, 
+        `❌ *${dependentName}* já possui um agendamento com este profissional neste mês.\n\n` +
+        `Cada dependente pode ter apenas *1 consulta por mês* com cada profissional.\n\n` +
+        `Deseja agendar com outro profissional?`
+      );
+      await updateSession(supabase, session.id, { state: 'SELECT_PROFESSIONAL' });
+      return { handled: true, newState: 'SELECT_PROFESSIONAL' };
+    }
+    
     // Check for slot conflict
     if (appointmentError.code === '23505' || appointmentError.message?.includes('conflict')) {
       await sendWhatsAppMessage(config, phone, MESSAGES.slotTaken);
