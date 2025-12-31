@@ -57,6 +57,27 @@ interface EvolutionWebhookPayload {
       extendedTextMessage?: {
         text?: string;
       };
+      // Interactive button response
+      buttonsResponseMessage?: {
+        selectedButtonId?: string;
+        selectedDisplayText?: string;
+      };
+      // List response
+      listResponseMessage?: {
+        singleSelectReply?: {
+          selectedRowId?: string;
+        };
+      };
+      // Interactive response (newer format)
+      interactiveResponseMessage?: {
+        nativeFlowResponseMessage?: {
+          paramsJson?: string;
+        };
+      };
+      // Template button response
+      templateButtonReplyMessage?: {
+        selectedId?: string;
+      };
     };
     messageType?: string;
   };
@@ -175,6 +196,31 @@ function getBrazilPhoneVariants(phone55: string): string[] {
 
 function extractMessageText(data: EvolutionWebhookPayload['data']): string | null {
   if (!data) return null;
+  
+  // Check for interactive button response first
+  if (data.message?.buttonsResponseMessage?.selectedButtonId) {
+    return data.message.buttonsResponseMessage.selectedButtonId;
+  }
+  
+  // Check for list response
+  if (data.message?.listResponseMessage?.singleSelectReply?.selectedRowId) {
+    return data.message.listResponseMessage.singleSelectReply.selectedRowId;
+  }
+  
+  // Check for interactive message response (newer Evolution API format)
+  if (data.message?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
+    try {
+      const params = JSON.parse(data.message.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
+      if (params.id) return params.id;
+    } catch { /* ignore parse errors */ }
+  }
+  
+  // Check for button reply (alternative format)
+  if (data.message?.templateButtonReplyMessage?.selectedId) {
+    return data.message.templateButtonReplyMessage.selectedId;
+  }
+  
+  // Standard text message
   const text = data.message?.conversation || 
                data.message?.extendedTextMessage?.text ||
                null;
@@ -224,22 +270,24 @@ function formatTime(time: string): string {
 // WHATSAPP MESSAGE SENDER
 // ==========================================
 
+// Helper to format phone for WhatsApp
+function formatPhoneForWhatsApp(phone: string): string {
+  let formattedPhone = phone.replace(/\D/g, '');
+  if (!formattedPhone.startsWith('55')) {
+    formattedPhone = '55' + formattedPhone;
+  }
+  return formattedPhone.includes('@')
+    ? formattedPhone
+    : `${formattedPhone}@s.whatsapp.net`;
+}
+
 async function sendWhatsAppMessage(
   config: EvolutionConfig,
   phone: string,
   message: string
 ): Promise<boolean> {
   try {
-    let formattedPhone = phone.replace(/\D/g, '');
-    if (!formattedPhone.startsWith('55')) {
-      formattedPhone = '55' + formattedPhone;
-    }
-
-    // Evolution expects WhatsApp JID in many setups
-    const destination = formattedPhone.includes('@')
-      ? formattedPhone
-      : `${formattedPhone}@s.whatsapp.net`;
-
+    const destination = formatPhoneForWhatsApp(phone);
     console.log(`[booking] Sending message to ${destination}`);
 
     const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
@@ -267,6 +315,179 @@ async function sendWhatsAppMessage(
     console.error('[booking] Error sending WhatsApp:', error);
     return false;
   }
+}
+
+// ==========================================
+// INTERACTIVE BUTTONS SENDER (up to 3 buttons)
+// ==========================================
+
+interface ButtonOption {
+  id: string;
+  text: string;
+}
+
+async function sendWhatsAppButtons(
+  config: EvolutionConfig,
+  phone: string,
+  title: string,
+  description: string,
+  buttons: ButtonOption[],
+  footer?: string
+): Promise<boolean> {
+  try {
+    const destination = formatPhoneForWhatsApp(phone);
+    console.log(`[booking] Sending buttons to ${destination}:`, buttons.map(b => b.text));
+
+    // Evolution API expects max 3 buttons
+    const limitedButtons = buttons.slice(0, 3).map(b => ({
+      type: 'reply',
+      reply: {
+        id: b.id,
+        title: b.text.substring(0, 20) // Button text limit is 20 chars
+      }
+    }));
+
+    const response = await fetch(`${config.api_url}/message/sendButtons/${config.instance_name}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: config.api_key,
+      },
+      body: JSON.stringify({
+        number: destination,
+        title: title.substring(0, 60),
+        description: description.substring(0, 1024),
+        footer: footer?.substring(0, 60) || '',
+        buttons: limitedButtons,
+      }),
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      console.error('[booking] WhatsApp Buttons API error:', responseText);
+      // Fallback to text message if buttons fail
+      const fallbackMsg = `${title}\n\n${description}\n\n${buttons.map((b, i) => `${i + 1}️⃣ ${b.text}`).join('\n')}${footer ? `\n\n${footer}` : ''}`;
+      return await sendWhatsAppMessage(config, phone, fallbackMsg);
+    }
+
+    console.log(`[booking] WhatsApp Buttons API ok (${response.status})`);
+    return true;
+  } catch (error) {
+    console.error('[booking] Error sending WhatsApp buttons:', error);
+    // Fallback to text message
+    const fallbackMsg = `${title}\n\n${description}\n\n${buttons.map((b, i) => `${i + 1}️⃣ ${b.text}`).join('\n')}${footer ? `\n\n${footer}` : ''}`;
+    return await sendWhatsAppMessage(config, phone, fallbackMsg);
+  }
+}
+
+// ==========================================
+// INTERACTIVE LIST SENDER (for many options)
+// ==========================================
+
+interface ListRow {
+  id: string;
+  title: string;
+  description?: string;
+}
+
+interface ListSection {
+  title: string;
+  rows: ListRow[];
+}
+
+async function sendWhatsAppList(
+  config: EvolutionConfig,
+  phone: string,
+  title: string,
+  description: string,
+  buttonText: string,
+  sections: ListSection[],
+  footer?: string
+): Promise<boolean> {
+  try {
+    const destination = formatPhoneForWhatsApp(phone);
+    console.log(`[booking] Sending list to ${destination}: ${sections.reduce((acc, s) => acc + s.rows.length, 0)} items`);
+
+    // Format sections for Evolution API
+    const formattedSections = sections.map(section => ({
+      title: section.title.substring(0, 24),
+      rows: section.rows.slice(0, 10).map(row => ({
+        rowId: row.id,
+        title: row.title.substring(0, 24),
+        description: row.description?.substring(0, 72) || ''
+      }))
+    }));
+
+    const response = await fetch(`${config.api_url}/message/sendList/${config.instance_name}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        apikey: config.api_key,
+      },
+      body: JSON.stringify({
+        number: destination,
+        title: title.substring(0, 60),
+        description: description.substring(0, 1024),
+        buttonText: buttonText.substring(0, 20),
+        footerText: footer?.substring(0, 60) || '',
+        sections: formattedSections,
+      }),
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      console.error('[booking] WhatsApp List API error:', responseText);
+      // Fallback to text message if list fails
+      let fallbackMsg = `${title}\n\n${description}\n\n`;
+      sections.forEach(section => {
+        if (section.title) fallbackMsg += `*${section.title}*\n`;
+        section.rows.forEach((row, i) => {
+          fallbackMsg += `${i + 1}️⃣ ${row.title}${row.description ? ` - ${row.description}` : ''}\n`;
+        });
+        fallbackMsg += '\n';
+      });
+      if (footer) fallbackMsg += footer;
+      return await sendWhatsAppMessage(config, phone, fallbackMsg.trim());
+    }
+
+    console.log(`[booking] WhatsApp List API ok (${response.status})`);
+    return true;
+  } catch (error) {
+    console.error('[booking] Error sending WhatsApp list:', error);
+    // Fallback to text message
+    let fallbackMsg = `${title}\n\n${description}\n\n`;
+    sections.forEach(section => {
+      if (section.title) fallbackMsg += `*${section.title}*\n`;
+      section.rows.forEach((row, i) => {
+        fallbackMsg += `${i + 1}️⃣ ${row.title}${row.description ? ` - ${row.description}` : ''}\n`;
+      });
+      fallbackMsg += '\n';
+    });
+    if (footer) fallbackMsg += footer;
+    return await sendWhatsAppMessage(config, phone, fallbackMsg.trim());
+  }
+}
+
+// Helper to extract button/list response ID from message
+function extractInteractiveResponseId(messageData: any): string | null {
+  // Check for button response
+  if (messageData?.buttonResponseMessage?.selectedButtonId) {
+    return messageData.buttonResponseMessage.selectedButtonId;
+  }
+  // Check for list response
+  if (messageData?.listResponseMessage?.singleSelectReply?.selectedRowId) {
+    return messageData.listResponseMessage.singleSelectReply.selectedRowId;
+  }
+  // Check for interactive message response (newer format)
+  if (messageData?.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson) {
+    try {
+      const params = JSON.parse(messageData.interactiveResponseMessage.nativeFlowResponseMessage.paramsJson);
+      return params.id || null;
+    } catch { /* ignore */ }
+  }
+  return null;
 }
 
 // ==========================================
@@ -1303,7 +1524,18 @@ async function handleWaitingCpf(
         available_dependents: null, // No need to show dependent selection
       });
 
-      await sendWhatsAppMessage(config, phone, MESSAGES.confirmIdentity(dependentByCpf.name) + MESSAGES.hintYesNo);
+      // Send interactive buttons for dependent identity confirmation
+      await sendWhatsAppButtons(
+        config,
+        phone,
+        '🔐 Confirmação',
+        `Encontramos o cadastro em nome de *${dependentByCpf.name}*.\n\nConfirma que é você?`,
+        [
+          { id: 'confirm_yes', text: '✅ Sim, sou eu' },
+          { id: 'confirm_no', text: '❌ Não sou eu' }
+        ],
+        'Clique no botão para continuar'
+      );
       return { handled: true, newState: 'CONFIRM_IDENTITY' };
     }
   }
@@ -1344,7 +1576,18 @@ async function handleWaitingCpf(
     is_dependent_direct_booking: false,
   });
 
-  await sendWhatsAppMessage(config, phone, MESSAGES.confirmIdentity(patientData.name) + MESSAGES.hintYesNo);
+  // Send interactive buttons for identity confirmation
+  await sendWhatsAppButtons(
+    config,
+    phone,
+    '🔐 Confirmação',
+    `Encontramos o cadastro em nome de *${patientData.name}*.\n\nConfirma que é você?`,
+    [
+      { id: 'confirm_yes', text: '✅ Sim, sou eu' },
+      { id: 'confirm_no', text: '❌ Não sou eu' }
+    ],
+    'Clique no botão para continuar'
+  );
   return { handled: true, newState: 'CONFIRM_IDENTITY' };
 }
 
@@ -1381,13 +1624,24 @@ async function handleConfirmIdentity(
       return { handled: true, newState: 'SELECT_BOOKING_FOR' };
     }
     
-    // No dependents - go to main menu
+    // No dependents - go to main menu with interactive buttons
     await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
-    await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
+    await sendMainMenuButtons(config, phone, session.patient_name || 'Paciente');
     return { handled: true, newState: 'MAIN_MENU' };
   };
 
-  // First try regex
+  // Check for interactive button response first
+  if (messageText === 'confirm_yes' || messageText.toLowerCase() === 'sim, sou eu' || messageText.toLowerCase() === '✅ sim, sou eu') {
+    return await proceedAfterConfirmation();
+  }
+  
+  if (messageText === 'confirm_no' || messageText.toLowerCase() === 'não sou eu' || messageText.toLowerCase() === '❌ não sou eu') {
+    await updateSession(supabase, session.id, { state: 'FINISHED' });
+    await sendWhatsAppMessage(config, phone, MESSAGES.identityDenied);
+    return { handled: true, newState: 'FINISHED' };
+  }
+
+  // Try regex patterns
   if (POSITIVE_REGEX.test(messageText)) {
     return await proceedAfterConfirmation();
   }
@@ -1413,8 +1667,38 @@ async function handleConfirmIdentity(
     }
   }
 
-  await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* para confirmar ou *NÃO* para encerrar.` + MESSAGES.hintYesNo);
+  // Re-send buttons if user didn't respond correctly
+  await sendWhatsAppButtons(
+    config,
+    phone,
+    '🔐 Confirmação',
+    `Por favor, confirme sua identidade clicando no botão abaixo:`,
+    [
+      { id: 'confirm_yes', text: '✅ Sim, sou eu' },
+      { id: 'confirm_no', text: '❌ Não sou eu' }
+    ]
+  );
   return { handled: true, newState: 'CONFIRM_IDENTITY' };
+}
+
+// Helper to send main menu with interactive buttons
+async function sendMainMenuButtons(
+  config: EvolutionConfig,
+  phone: string,
+  patientName: string
+): Promise<boolean> {
+  return await sendWhatsAppButtons(
+    config,
+    phone,
+    '📋 Menu Principal',
+    `Olá, *${patientName}*! 👋\n\nO que você gostaria de fazer?`,
+    [
+      { id: 'menu_schedule', text: '📅 Agendar' },
+      { id: 'menu_cancel', text: '❌ Cancelar' },
+      { id: 'menu_list', text: '📋 Minhas consultas' }
+    ],
+    'Escolha uma opção'
+  );
 }
 
 // ==========================================
@@ -1542,13 +1826,23 @@ async function handleMainMenu(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  const choice = messageText.trim();
+  const choice = messageText.trim().toLowerCase();
 
   // Try AI intent extraction for natural language
   let intent: 'schedule' | 'cancel' | 'reschedule' | 'list' | null = null;
   
-  // First check traditional patterns
-  if (choice === '1') {
+  // Check for interactive button responses first
+  if (choice === 'menu_schedule' || choice === '📅 agendar' || choice === 'agendar') {
+    intent = 'schedule';
+  } else if (choice === 'menu_cancel' || choice === '❌ cancelar' || choice === 'cancelar') {
+    intent = 'cancel';
+  } else if (choice === 'menu_reschedule' || choice === 'reagendar') {
+    intent = 'reschedule';
+  } else if (choice === 'menu_list' || choice === '📋 minhas consultas' || choice === 'minhas consultas' || choice === 'listar') {
+    intent = 'list';
+  }
+  // Then check traditional numeric patterns
+  else if (choice === '1') {
     intent = 'schedule';
   } else if (choice === '2') {
     intent = 'cancel';
@@ -1724,7 +2018,13 @@ async function handleConfirmCancel(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  if (POSITIVE_REGEX.test(messageText)) {
+  const choice = messageText.trim().toLowerCase();
+  
+  // Check for interactive button response first
+  const isConfirm = choice === 'cancel_confirm' || choice === '✅ sim, cancelar' || POSITIVE_REGEX.test(messageText);
+  const isDeny = choice === 'cancel_deny' || choice === '❌ não cancelar' || NEGATIVE_REGEX.test(messageText);
+  
+  if (isConfirm) {
     // Cancel the appointment
     const { error } = await supabase
       .from('appointments')
@@ -1746,13 +2046,23 @@ async function handleConfirmCancel(
     return { handled: true, newState: 'FINISHED' };
   }
 
-  if (NEGATIVE_REGEX.test(messageText)) {
+  if (isDeny) {
     await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
-    await sendWhatsAppMessage(config, phone, MESSAGES.mainMenu + MESSAGES.hintSelectOption);
+    await sendMainMenuButtons(config, phone, session.patient_name || 'Paciente');
     return { handled: true, newState: 'MAIN_MENU' };
   }
 
-  await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* ou *NÃO*.` + MESSAGES.hintYesNo);
+  // Re-send buttons if user didn't respond correctly
+  await sendWhatsAppButtons(
+    config,
+    phone,
+    '⚠️ Confirmar cancelamento',
+    `Deseja realmente cancelar esta consulta?`,
+    [
+      { id: 'cancel_confirm', text: '✅ Sim, cancelar' },
+      { id: 'cancel_deny', text: '❌ Não cancelar' }
+    ]
+  );
   return { handled: true, newState: 'CONFIRM_CANCEL' };
 }
 
@@ -2299,15 +2609,17 @@ async function handleSelectTime(
     ? session.selected_dependent_name
     : session.patient_name || '';
 
-  await sendWhatsAppMessage(
+  // Send confirmation with interactive buttons
+  await sendWhatsAppButtons(
     config,
     phone,
-    MESSAGES.confirmAppointment({
-      patientName: displayName,
-      professionalName: session.selected_professional_name || '',
-      date: formatDate(session.selected_date!),
-      time: selected.formatted,
-    }) + MESSAGES.hintYesNo
+    '✅ Confirmar Agendamento',
+    `👤 Paciente: *${displayName}*\n👨‍⚕️ Profissional: *Dr(a). ${session.selected_professional_name}*\n📅 Data: *${formatDate(session.selected_date!)}*\n⏰ Horário: *${selected.formatted}*\n\nConfirma este agendamento?`,
+    [
+      { id: 'appt_confirm', text: '✅ Confirmar' },
+      { id: 'appt_cancel', text: '❌ Cancelar' }
+    ],
+    'Clique para confirmar'
   );
 
   return { handled: true, newState: 'CONFIRM_APPOINTMENT' };
@@ -2320,14 +2632,30 @@ async function handleConfirmAppointment(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
-  if (NEGATIVE_REGEX.test(messageText)) {
+  const choice = messageText.trim().toLowerCase();
+  
+  // Check for interactive button response first
+  const isConfirm = choice === 'appt_confirm' || choice === '✅ confirmar' || POSITIVE_REGEX.test(messageText);
+  const isDeny = choice === 'appt_cancel' || choice === '❌ cancelar' || NEGATIVE_REGEX.test(messageText);
+  
+  if (isDeny) {
     await updateSession(supabase, session.id, { state: 'FINISHED' });
     await sendWhatsAppMessage(config, phone, MESSAGES.appointmentCancelled);
     return { handled: true, newState: 'FINISHED' };
   }
 
-  if (!POSITIVE_REGEX.test(messageText)) {
-    await sendWhatsAppMessage(config, phone, `Por favor, responda *SIM* ou *NÃO*.` + MESSAGES.hintYesNo);
+  if (!isConfirm) {
+    // Re-send buttons if user didn't respond correctly
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '✅ Confirmar Agendamento',
+      `Por favor, confirme o agendamento clicando no botão:`,
+      [
+        { id: 'appt_confirm', text: '✅ Confirmar' },
+        { id: 'appt_cancel', text: '❌ Cancelar' }
+      ]
+    );
     return { handled: true, newState: 'CONFIRM_APPOINTMENT' };
   }
 
