@@ -389,93 +389,88 @@ export default function PublicBooking() {
     
     const duration = appointmentDuration;
     const defaultProfDuration = professional.appointment_duration || 30;
-    const slots: string[] = [];
     const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
-    
-    // Check if we have the new _blocks format
-    if (schedule._blocks && Array.isArray(schedule._blocks) && schedule._blocks.length > 0) {
-      // Find blocks that apply to this date
-      schedule._blocks.forEach((block: any) => {
-        // Check if this block applies to this day of week
-        if (!block.days || !block.days.includes(dayKey)) return;
-        
-        // Check date range if specified
-        if (block.start_date && selectedDateStr < block.start_date) return;
-        if (block.end_date && selectedDateStr > block.end_date) return;
-        
-        const [startHour, startMin] = block.start_time.split(':').map(Number);
-        const [endHour, endMin] = block.end_time.split(':').map(Number);
-        
-        const slotStartMinutes = startHour * 60 + startMin;
-        const slotEndMinutes = endHour * 60 + endMin;
-        
-        const blockDuration = block.duration || defaultProfDuration;
-        let current = slotStartMinutes;
-        
-        while (current + duration <= slotEndMinutes) {
-          const hour = Math.floor(current / 60);
-          const min = current % 60;
-          const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-          
-          if (!isSlotConflicting(timeStr, duration, existingAppointmentsWithDuration, defaultProfDuration)) {
-            if (!slots.includes(timeStr)) {
-              slots.push(timeStr);
-            }
-          }
-          
-          current += blockDuration;
-        }
-      });
-      
-      // Sort slots chronologically
-      slots.sort((a, b) => {
+
+    const uniqueSortTimes = (times: string[]) => {
+      const unique = Array.from(new Set(times));
+      unique.sort((a, b) => {
         const [aH, aM] = a.split(':').map(Number);
         const [bH, bM] = b.split(':').map(Number);
         return (aH * 60 + aM) - (bH * 60 + bM);
       });
-      
-      return slots;
+      return unique;
+    };
+
+    // Check if we have the new _blocks format
+    if (schedule._blocks && Array.isArray(schedule._blocks) && schedule._blocks.length > 0) {
+      const slots: string[] = [];
+
+      schedule._blocks.forEach((block: any) => {
+        if (!block.days || !block.days.includes(dayKey)) return;
+        if (block.start_date && selectedDateStr < block.start_date) return;
+        if (block.end_date && selectedDateStr > block.end_date) return;
+
+        const [startHour, startMin] = String(block.start_time).split(':').map(Number);
+        const [endHour, endMin] = String(block.end_time).split(':').map(Number);
+
+        const slotStartMinutes = startHour * 60 + startMin;
+        const slotEndMinutes = endHour * 60 + endMin;
+
+        const blockInterval = Number(block.duration || defaultProfDuration);
+        let current = slotStartMinutes;
+
+        while (current + duration <= slotEndMinutes) {
+          const hour = Math.floor(current / 60);
+          const min = current % 60;
+          const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+
+          if (!isSlotConflicting(timeStr, duration, existingAppointmentsWithDuration, defaultProfDuration)) {
+            slots.push(timeStr);
+          }
+
+          current += blockInterval;
+        }
+      });
+
+      return uniqueSortTimes(slots);
     }
-    
+
     // Fallback to old format
     if (!schedule[dayKey] || !schedule[dayKey].enabled) {
       return [];
     }
-    
+
+    const slots: string[] = [];
     const daySchedule = schedule[dayKey];
-    
-    // Generate slots based on the professional's configured schedule slots
-    daySchedule.slots.forEach((slot: {start: string, end: string}) => {
+
+    daySchedule.slots.forEach((slot: { start: string; end: string }) => {
       const [startHour, startMin] = slot.start.split(':').map(Number);
       const [endHour, endMin] = slot.end.split(':').map(Number);
-      
+
       const slotStartMinutes = startHour * 60 + startMin;
       const slotEndMinutes = endHour * 60 + endMin;
-      
-      // Se o profissional configurou o turno apenas em hora cheia (ex: 08:00-12:00),
-      // não exibimos slots quebrados (:30).
+
       const scheduleIsHourOnly = daySchedule.slots.every((s: { start: string; end: string }) =>
         s.start.endsWith(':00') && s.end.endsWith(':00')
       );
 
       const slotInterval = scheduleIsHourOnly ? 60 : defaultProfDuration;
       let current = slotStartMinutes;
-      
+
       while (current + duration <= slotEndMinutes) {
         const hour = Math.floor(current / 60);
         const min = current % 60;
         const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-        
-        // Check if this slot conflicts with any existing appointment (considering duration)
+
         if (!isSlotConflicting(timeStr, duration, existingAppointmentsWithDuration, defaultProfDuration)) {
           slots.push(timeStr);
         }
-        
+
         current += slotInterval;
       }
     });
-    
-    return slots;
+
+    return uniqueSortTimes(slots);
   }, [selectedDate, selectedProfessional, professionals, existingAppointmentsWithDuration, appointmentDuration]);
 
   const appointmentTypes = useMemo(() => {
