@@ -6726,8 +6726,10 @@ export type Database = {
       whatsapp_booking_sessions: {
         Row: {
           action_type: string | null
+          appointments_list: Json | null
           available_dates: Json | null
           available_dependents: Json | null
+          available_procedures: Json | null
           available_professionals: Json | null
           available_times: Json | null
           booking_for: string | null
@@ -6736,6 +6738,7 @@ export type Database = {
           expires_at: string
           id: string
           is_dependent_direct_booking: boolean
+          list_action: string | null
           patient_id: string | null
           patient_name: string | null
           pending_appointments: Json | null
@@ -6753,8 +6756,10 @@ export type Database = {
         }
         Insert: {
           action_type?: string | null
+          appointments_list?: Json | null
           available_dates?: Json | null
           available_dependents?: Json | null
+          available_procedures?: Json | null
           available_professionals?: Json | null
           available_times?: Json | null
           booking_for?: string | null
@@ -6763,6 +6768,7 @@ export type Database = {
           expires_at?: string
           id?: string
           is_dependent_direct_booking?: boolean
+          list_action?: string | null
           patient_id?: string | null
           patient_name?: string | null
           pending_appointments?: Json | null
@@ -6780,8 +6786,10 @@ export type Database = {
         }
         Update: {
           action_type?: string | null
+          appointments_list?: Json | null
           available_dates?: Json | null
           available_dependents?: Json | null
+          available_procedures?: Json | null
           available_professionals?: Json | null
           available_times?: Json | null
           booking_for?: string | null
@@ -6790,6 +6798,7 @@ export type Database = {
           expires_at?: string
           id?: string
           is_dependent_direct_booking?: boolean
+          list_action?: string | null
           patient_id?: string | null
           patient_name?: string | null
           pending_appointments?: Json | null
