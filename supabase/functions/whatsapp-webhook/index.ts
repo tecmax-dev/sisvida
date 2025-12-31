@@ -500,6 +500,7 @@ Se precisar de ajuda, entre em contato conosco.`,
 1️⃣ *Agendar* nova consulta
 2️⃣ *Cancelar* consulta existente
 3️⃣ *Reagendar* consulta
+4️⃣ *Ver* minhas consultas
 
 _Digite o número da opção desejada._`,
 
@@ -1439,6 +1440,8 @@ async function handleMainMenu(
     intent = 'cancel';
   } else if (choice === '3') {
     intent = 'reschedule';
+  } else if (choice === '4') {
+    intent = 'list';
   } else {
     // Try AI for natural language
     const aiResult = await getAIIntent(messageText, 'MAIN_MENU');
@@ -1448,12 +1451,13 @@ async function handleMainMenu(
       if (aiResult.intent === 'schedule') intent = 'schedule';
       else if (aiResult.intent === 'cancel') intent = 'cancel';
       else if (aiResult.intent === 'reschedule') intent = 'reschedule';
-      else if (aiResult.intent === 'list') intent = 'reschedule'; // Show appointments for listing too
+      else if (aiResult.intent === 'list') intent = 'list';
       else if (aiResult.intent === 'select_option' && aiResult.entities.option_number) {
         const num = aiResult.entities.option_number;
         if (num === 1) intent = 'schedule';
         else if (num === 2) intent = 'cancel';
         else if (num === 3) intent = 'reschedule';
+        else if (num === 4) intent = 'list';
       }
     }
   }
@@ -1512,9 +1516,14 @@ async function handleMainMenu(
     return { handled: true, newState: 'LIST_APPOINTMENTS' };
   }
 
+  // Handle list intent - just view appointments (no action)
+  if (intent === 'list') {
+    return await navigateToList(supabase, config, phone, session);
+  }
+
   // Fallback - didn't understand
   await sendWhatsAppMessage(config, phone, 
-    `Não entendi. Por favor, escolha uma opção:\n\n1️⃣ Agendar\n2️⃣ Cancelar\n3️⃣ Reagendar\n\n_Ou diga o que deseja fazer (ex: "quero marcar consulta")_` + MESSAGES.hintMenu
+    `Não entendi. Por favor, escolha uma opção:\n\n1️⃣ Agendar\n2️⃣ Cancelar\n3️⃣ Reagendar\n4️⃣ Ver consultas\n\n_Ou diga o que deseja fazer (ex: "quero marcar consulta")_` + MESSAGES.hintMenu
   );
   return { handled: true, newState: 'MAIN_MENU' };
 }
