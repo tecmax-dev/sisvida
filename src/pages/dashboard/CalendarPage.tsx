@@ -486,8 +486,9 @@ export default function CalendarPage() {
       // Busca por nome (usando ilike) ou CPF
       const { data, error } = await supabase
         .from('patients')
-        .select('id, name, phone, email, birth_date, cpf')
+        .select('id, name, phone, email, birth_date, cpf, is_active')
         .eq('clinic_id', currentClinic.id)
+        .eq('is_active', true)
         .or(`name.ilike.%${query}%,cpf.ilike.%${normalizedQuery}%`)
         .order('name')
         .limit(50);
@@ -707,6 +708,31 @@ export default function CalendarPage() {
 
     if (!currentClinic || !user) return;
 
+    // Check if patient is active before creating appointment
+    const { data: patientData, error: patientError } = await supabase
+      .from('patients')
+      .select('is_active, name')
+      .eq('id', formPatient)
+      .single();
+
+    if (patientError || !patientData) {
+      toast({
+        title: "Paciente não encontrado",
+        description: "O paciente selecionado não foi encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (patientData.is_active === false) {
+      toast({
+        title: "Paciente inativo",
+        description: `${patientData.name} está inativo e não pode realizar agendamentos.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     const dateStr = selectedDate.toISOString().split('T')[0];
     const durationMinutes = 30; // Default duration, could be from procedure
     
@@ -785,6 +811,31 @@ export default function CalendarPage() {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos obrigatórios.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Check if patient is active before editing appointment
+    const { data: patientData, error: patientError } = await supabase
+      .from('patients')
+      .select('is_active, name')
+      .eq('id', formPatient)
+      .single();
+
+    if (patientError || !patientData) {
+      toast({
+        title: "Paciente não encontrado",
+        description: "O paciente selecionado não foi encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (patientData.is_active === false) {
+      toast({
+        title: "Paciente inativo",
+        description: `${patientData.name} está inativo e não pode realizar agendamentos.`,
         variant: "destructive",
       });
       return;
