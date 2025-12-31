@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,8 @@ import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { MessageHistoryPanel } from "@/components/settings/MessageHistoryPanel";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAutoSave, AutoSaveStatus } from "@/hooks/useAutoSave";
+import { AutoSaveIndicator } from "@/components/ui/auto-save-indicator";
 
 export default function SettingsPage() {
   const { user, currentClinic } = useAuth();
@@ -42,6 +44,24 @@ export default function SettingsPage() {
   const [maxCpfAppointments, setMaxCpfAppointments] = useState<number | null>(null);
   const [savingCpfLimit, setSavingCpfLimit] = useState(false);
 
+  // Initial data for auto-save comparison
+  const [initialSettingsData, setInitialSettingsData] = useState({
+    clinicName: "",
+    reminderEnabled: true,
+    reminderTime: "24",
+    mapViewType: "streetview",
+    customMapEmbedUrl: "",
+  });
+
+  // Current settings data for auto-save
+  const settingsData = useMemo(() => ({
+    clinicName,
+    reminderEnabled,
+    reminderTime,
+    mapViewType,
+    customMapEmbedUrl,
+  }), [clinicName, reminderEnabled, reminderTime, mapViewType, customMapEmbedUrl]);
+
   // Load clinic settings
   useEffect(() => {
     const loadClinicSettings = async () => {
@@ -62,11 +82,50 @@ export default function SettingsPage() {
         setCustomMapEmbedUrl(data.custom_map_embed_url || "");
         setWhatsappHeaderImage(data.whatsapp_header_image_url || null);
         setMaxCpfAppointments(data.max_appointments_per_cpf_month);
+        
+        // Set initial data for auto-save
+        setInitialSettingsData({
+          clinicName: data.name || "Clínica",
+          reminderEnabled: data.reminder_enabled ?? true,
+          reminderTime: String(data.reminder_hours || 24),
+          mapViewType: data.map_view_type || "streetview",
+          customMapEmbedUrl: data.custom_map_embed_url || "",
+        });
       }
     };
     
     loadClinicSettings();
   }, [currentClinic?.id]);
+
+  // Auto-save function
+  const performAutoSave = useCallback(async (data: typeof settingsData) => {
+    if (!currentClinic?.id) return;
+    
+    const { error } = await supabase
+      .from('clinics')
+      .update({ 
+        name: data.clinicName,
+        reminder_enabled: data.reminderEnabled,
+        reminder_hours: parseInt(data.reminderTime),
+        map_view_type: data.mapViewType,
+        custom_map_embed_url: data.customMapEmbedUrl || null
+      })
+      .eq('id', currentClinic.id);
+    
+    if (error) throw error;
+    
+    // Update initial data after save
+    setInitialSettingsData(data);
+  }, [currentClinic?.id]);
+
+  // Auto-save hook
+  const { status: autoSaveStatus } = useAutoSave({
+    data: settingsData,
+    initialData: initialSettingsData,
+    onSave: performAutoSave,
+    enabled: !!currentClinic?.id && hasPermission("manage_settings"),
+    validateBeforeSave: (data) => data.clinicName.trim().length > 0,
+  });
 
   const handleToggleScheduleValidation = async (enabled: boolean) => {
     if (!currentClinic?.id) return;
@@ -294,11 +353,14 @@ export default function SettingsPage() {
   return (
     <RoleGuard permissions={["manage_settings", "change_password"]}>
     <div className="space-y-6 max-w-3xl">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-        <p className="text-muted-foreground">
-          Personalize as configurações da sua clínica
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
+          <p className="text-muted-foreground">
+            Personalize as configurações da sua clínica
+          </p>
+        </div>
+        <AutoSaveIndicator status={autoSaveStatus} />
       </div>
 
       <RoleGuard permission="manage_settings">
