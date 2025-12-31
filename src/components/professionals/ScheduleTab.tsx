@@ -56,7 +56,7 @@ const weekDays = [
 const generateTimeOptions = (): string[] => {
   const options: string[] = [];
   for (let h = 0; h <= 23; h++) {
-    for (let m = 0; m < 60; m += 15) {
+    for (let m = 0; m < 60; m += 5) {
       options.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
     }
   }
