@@ -90,6 +90,8 @@ interface BookingSession {
   selected_dependent_id?: string | null;
   selected_dependent_name?: string | null;
   booking_for?: 'titular' | 'dependent';
+  // When dependent logs in with their own CPF
+  is_dependent_direct_booking?: boolean;
 }
 
 interface EvolutionConfig {
@@ -1239,6 +1241,7 @@ async function handleWaitingCpf(
 
   const phoneCandidates = getBrazilPhoneVariants(phone);
   
+  // First, try to find a titular patient by CPF
   const { data: patient, error } = await supabase
     .from('patients')
     .select('id, name, cpf')
@@ -1254,6 +1257,59 @@ async function handleWaitingCpf(
 
   let patientData = patient as PatientRecord | null;
 
+  // If no patient found by CPF, check if it's a dependent's CPF
+  if (!patientData) {
+    const { data: dependentByCpf } = await supabase
+      .from('patient_dependents')
+      .select('id, name, cpf, patient_id, card_expires_at, relationship')
+      .eq('clinic_id', config.clinic_id)
+      .eq('cpf', cleanCpf)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (dependentByCpf) {
+      console.log(`[booking] Found dependent by CPF: ${dependentByCpf.name} (${dependentByCpf.id})`);
+      
+      // Check if dependent's card is expired
+      if (dependentByCpf.card_expires_at) {
+        const expiryDate = new Date(dependentByCpf.card_expires_at);
+        if (expiryDate < new Date()) {
+          const formattedExpiry = expiryDate.toLocaleDateString('pt-BR');
+          await sendWhatsAppMessage(config, phone, MESSAGES.dependentCardExpired(dependentByCpf.name, formattedExpiry));
+          return { handled: true, newState: 'WAITING_CPF' };
+        }
+      }
+      
+      // Get the titular patient info
+      const { data: titularPatient } = await supabase
+        .from('patients')
+        .select('id, name')
+        .eq('id', dependentByCpf.patient_id)
+        .single();
+
+      if (!titularPatient) {
+        await sendWhatsAppMessage(config, phone, MESSAGES.patientNotFound);
+        return { handled: true, newState: 'WAITING_CPF' };
+      }
+
+      // For dependent direct booking, we set the session to book directly for the dependent
+      await updateSession(supabase, session.id, {
+        state: 'CONFIRM_IDENTITY',
+        patient_id: titularPatient.id,
+        patient_name: titularPatient.name,
+        selected_dependent_id: dependentByCpf.id,
+        selected_dependent_name: dependentByCpf.name,
+        booking_for: 'dependent',
+        is_dependent_direct_booking: true,
+        available_dependents: null, // No need to show dependent selection
+      });
+
+      await sendWhatsAppMessage(config, phone, MESSAGES.confirmIdentity(dependentByCpf.name) + MESSAGES.hintYesNo);
+      return { handled: true, newState: 'CONFIRM_IDENTITY' };
+    }
+  }
+
+  // If still no patient, try by phone
   if (!patientData) {
     const { data: patientByPhone } = await supabase
       .from('patients')
@@ -1270,7 +1326,7 @@ async function handleWaitingCpf(
     }
   }
 
-  // Fetch patient's dependents
+  // Fetch patient's dependents (for titular flow)
   const { data: dependents } = await supabase
     .from('patient_dependents')
     .select('id, name, relationship, card_expires_at')
@@ -1286,6 +1342,7 @@ async function handleWaitingCpf(
     patient_id: patientData.id,
     patient_name: patientData.name,
     available_dependents: dependentsData.length > 0 ? dependentsData : null,
+    is_dependent_direct_booking: false,
   });
 
   await sendWhatsAppMessage(config, phone, MESSAGES.confirmIdentity(patientData.name) + MESSAGES.hintYesNo);
@@ -1301,7 +1358,21 @@ async function handleConfirmIdentity(
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   // Helper to proceed after identity confirmation
   const proceedAfterConfirmation = async (): Promise<{ handled: boolean; newState?: BookingState }> => {
-    // If patient has dependents, ask who the appointment is for right away
+    // If dependent logged in directly with their CPF, go straight to professional selection
+    if (session.is_dependent_direct_booking && session.selected_dependent_id && session.selected_dependent_name) {
+      console.log(`[booking] Dependent direct booking for ${session.selected_dependent_name}`);
+      return await proceedToSelectProfessional(
+        supabase,
+        config,
+        phone,
+        session,
+        'dependent',
+        session.selected_dependent_id,
+        session.selected_dependent_name
+      );
+    }
+    
+    // If patient has dependents (titular flow), ask who the appointment is for
     if (session.available_dependents && session.available_dependents.length > 0) {
       await updateSession(supabase, session.id, {
         state: 'SELECT_BOOKING_FOR',
