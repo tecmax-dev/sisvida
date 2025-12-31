@@ -601,9 +601,10 @@ export default function ProfessionalEditPage() {
           title: "Profissional atualizado",
           description: "As informações foram salvas com sucesso.",
         });
+        
+        // Refresh professional data to sync with database
+        await fetchProfessional();
       }
-
-      navigate('/dashboard/professionals');
     } catch (error: any) {
       // Handle professional limit error
       if (error.message?.includes('LIMITE_PROFISSIONAIS')) {
