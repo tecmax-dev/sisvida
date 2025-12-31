@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Calendar, Clock, User, Stethoscope } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +20,8 @@ import { handleScheduleValidationError } from "@/lib/scheduleValidation";
 import { findConflictingAppointments, calculateEndTime, getConflictMessage } from "@/lib/appointmentConflictUtils";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useAutoSave } from "@/hooks/useAutoSave";
+import { AutoSaveIndicator } from "@/components/ui/auto-save-indicator";
 
 const appointmentTypes = [
   { value: "first_visit", label: "Primeira Consulta" },
@@ -96,6 +98,26 @@ export default function AppointmentEditPage() {
   const [startTime, setStartTime] = useState("");
   const [type, setType] = useState("first_visit");
   const [notes, setNotes] = useState("");
+  
+  // Initial data for auto-save
+  const [initialFormData, setInitialFormData] = useState({
+    patientId: "",
+    professionalId: "",
+    appointmentDate: "",
+    startTime: "",
+    type: "first_visit",
+    notes: "",
+  });
+
+  // Current form data for auto-save
+  const formData = useMemo(() => ({
+    patientId,
+    professionalId,
+    appointmentDate,
+    startTime,
+    type,
+    notes,
+  }), [patientId, professionalId, appointmentDate, startTime, type, notes]);
 
   // Generate time slots based on the professional's configured schedule
   const timeSlots = useMemo(() => {
@@ -141,6 +163,47 @@ export default function AppointmentEditPage() {
     return Array.from(new Set(slots)).sort();
   }, [professionalId, appointmentDate, professionals]);
 
+  // Auto-save function
+  const performAutoSave = useCallback(async (data: typeof formData) => {
+    if (!currentClinic?.id || !id || !appointment) return;
+    
+    // Skip if required fields are missing
+    if (!data.patientId || !data.professionalId || !data.startTime || !data.appointmentDate) {
+      return;
+    }
+    
+    const durationMinutes = appointment.duration_minutes || 30;
+    const endTime = calculateEndTime(data.startTime, durationMinutes);
+    
+    const { error } = await supabase
+      .from('appointments')
+      .update({
+        patient_id: data.patientId,
+        professional_id: data.professionalId,
+        appointment_date: data.appointmentDate,
+        start_time: data.startTime,
+        end_time: endTime,
+        type: data.type as "first_visit" | "return" | "exam" | "procedure" | "telemedicine",
+        notes: data.notes.trim() || null,
+      })
+      .eq('id', id);
+    
+    if (error) throw error;
+    
+    // Update initial data after save
+    setInitialFormData(data);
+  }, [currentClinic?.id, id, appointment]);
+
+  // Auto-save hook
+  const { status: autoSaveStatus } = useAutoSave({
+    data: formData,
+    initialData: initialFormData,
+    onSave: performAutoSave,
+    enabled: !!currentClinic?.id && !!id && !!appointment && !loading,
+    validateBeforeSave: (data) => 
+      !!data.patientId && !!data.professionalId && !!data.startTime && !!data.appointmentDate,
+  });
+
   useEffect(() => {
     if (currentClinic && id) {
       fetchAppointment();
@@ -184,6 +247,16 @@ export default function AppointmentEditPage() {
         setStartTime(apt.start_time.slice(0, 5));
         setType(apt.type);
         setNotes(apt.notes || "");
+        
+        // Set initial data for auto-save
+        setInitialFormData({
+          patientId: apt.patient_id,
+          professionalId: apt.professional_id,
+          appointmentDate: apt.appointment_date,
+          startTime: apt.start_time.slice(0, 5),
+          type: apt.type,
+          notes: apt.notes || "",
+        });
       }
     } catch (error) {
       console.error("Error fetching appointment:", error);
@@ -348,12 +421,13 @@ export default function AppointmentEditPage() {
         <Button variant="ghost" size="icon" onClick={() => navigate(returnTo)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-foreground">Editar Agendamento</h1>
           <p className="text-muted-foreground">
             {appointment.patient?.name} - {formattedDate}
           </p>
         </div>
+        <AutoSaveIndicator status={autoSaveStatus} />
       </div>
 
       <Card>
