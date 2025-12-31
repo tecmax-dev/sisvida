@@ -32,7 +32,7 @@ serve(async (req) => {
       );
     }
 
-    const message = `Olá! 🎉\n\nSeu contracheque foi aprovado e sua carteirinha foi renovada com sucesso!\n\n📅 Nova validade: *31/12/2025*\n\nObrigado por manter seus dados atualizados. Estamos à disposição para qualquer dúvida!`;
+    const message = `Olá, João! 🎉\n\nSeu contracheque foi aprovado e as carteirinhas foram renovadas com sucesso!\n\n📅 *Nova validade: 31/12/2025*\n\n*Beneficiários atualizados:*\n👤 *JOÃO DA SILVA* (titular)\n👤 Maria da Silva\n👤 Pedro da Silva\n\nObrigado por manter seus dados atualizados. Estamos à disposição para qualquer dúvida!\n\nClínica Teste`;
 
     // Format phone
     let formattedPhone = phone.replace(/\D/g, "");
