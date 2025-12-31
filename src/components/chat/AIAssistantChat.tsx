@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Bot, User } from 'lucide-react';
+import { Send, Loader2, Bot, User, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
@@ -11,16 +12,31 @@ import { toast } from 'sonner';
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  isBookingFlow?: boolean;
 }
 
 interface AIAssistantChatProps {
   clinicId: string;
 }
 
+const WELCOME_MESSAGE = `Olá, tudo bem? 👋 Sou LIA, assistente virtual SECMI. Estou aqui para auxiliar você!
+
+1️⃣ Atendimento Associado
+2️⃣ Atendimento Empresa
+3️⃣ Atendimento Contabilidade
+4️⃣ Dia do Comerciário
+5️⃣ Outros Assuntos
+6️⃣ Agendar Consultas
+
+Digite o número da opção desejada:`;
+
 export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([
+    { role: 'assistant', content: WELCOME_MESSAGE }
+  ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isBookingMode, setIsBookingMode] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
@@ -44,18 +60,37 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
     setIsLoading(true);
 
     try {
-      // Build conversation history for context
-      const conversationHistory = newMessages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      // Build conversation history for context (exclude initial welcome message for API)
+      const conversationHistory = newMessages
+        .slice(1) // Skip welcome message
+        .map(msg => ({
+          role: msg.role,
+          content: msg.content
+        }));
+
+      // If in booking mode, use whatsapp-webhook for booking flow
+      if (isBookingMode) {
+        // For now, just show a message that booking flow would continue
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `🗓️ *Fluxo de Agendamento*
+
+Para agendar sua consulta, preciso de algumas informações:
+
+Por favor, informe seu *CPF* (apenas números):`,
+          isBookingFlow: true 
+        }]);
+        setIsLoading(false);
+        inputRef.current?.focus();
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke('whatsapp-ai-assistant', {
         body: {
           message: userMessage,
           clinic_id: clinicId,
           phone: user?.phone || '5500000000000',
-          conversation_history: conversationHistory.slice(0, -1) // Exclude the last user message as it's sent separately
+          conversation_history: conversationHistory.slice(0, -1) // Exclude the last user message
         }
       });
 
@@ -65,8 +100,21 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
         return;
       }
 
-      // Add assistant response
-      if (data?.response) {
+      // Check if we should handoff to booking flow
+      if (data?.handoff_to_booking) {
+        setIsBookingMode(true);
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: `🗓️ *Agendamento de Consultas*
+
+Ótimo! Vou te ajudar a agendar sua consulta.
+
+Para começar, preciso identificar você.
+Por favor, informe seu *CPF* (apenas números):`,
+          isBookingFlow: true 
+        }]);
+      } else if (data?.response) {
+        // Add assistant response
         setMessages(prev => [...prev, { role: 'assistant', content: data.response }]);
       }
     } catch (error) {
@@ -86,7 +134,8 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
   };
 
   const clearChat = () => {
-    setMessages([]);
+    setMessages([{ role: 'assistant', content: WELCOME_MESSAGE }]);
+    setIsBookingMode(false);
   };
 
   return (
@@ -95,65 +144,71 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5" />
-            Assistente de Agendamento (OpenAI)
+            LIA - Assistente SECMI
+            {isBookingMode && (
+              <Badge variant="secondary" className="ml-2">
+                <Calendar className="h-3 w-3 mr-1" />
+                Agendamento
+              </Badge>
+            )}
           </CardTitle>
           <Button variant="outline" size="sm" onClick={clearChat}>
-            Limpar
+            Reiniciar
           </Button>
         </div>
         <p className="text-sm text-muted-foreground">
-          Teste o assistente de IA para agendamentos. Modelo: gpt-4o-mini
+          Teste o assistente de IA integrado com OpenAI
         </p>
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col overflow-hidden p-0">
         <ScrollArea ref={scrollRef} className="flex-1 px-4">
-          {messages.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-8">
-              <Bot className="h-12 w-12 mb-4 opacity-50" />
-              <p className="text-sm">Olá! Sou o assistente de agendamento.</p>
-              <p className="text-xs mt-1">Experimente: "Quero agendar uma consulta"</p>
-            </div>
-          ) : (
-            <div className="space-y-4 py-4">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.role === 'assistant' && (
-                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+          <div className="space-y-4 py-4">
+            {messages.map((message, index) => (
+              <div
+                key={index}
+                className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                {message.role === 'assistant' && (
+                  <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+                    message.isBookingFlow ? 'bg-green-500/10' : 'bg-primary/10'
+                  }`}>
+                    {message.isBookingFlow ? (
+                      <Calendar className="h-4 w-4 text-green-600" />
+                    ) : (
                       <Bot className="h-4 w-4 text-primary" />
-                    </div>
-                  )}
-                  <div
-                    className={`rounded-lg px-4 py-2 max-w-[80%] ${
-                      message.role === 'user'
-                        ? 'bg-primary text-primary-foreground'
+                    )}
+                  </div>
+                )}
+                <div
+                  className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                    message.role === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : message.isBookingFlow
+                        ? 'bg-green-50 border border-green-200 dark:bg-green-950 dark:border-green-800'
                         : 'bg-muted'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  </div>
-                  {message.role === 'user' && (
-                    <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                      <User className="h-4 w-4 text-primary-foreground" />
-                    </div>
-                  )}
+                  }`}
+                >
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 </div>
-              ))}
-              {isLoading && (
-                <div className="flex gap-3 justify-start">
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <Bot className="h-4 w-4 text-primary" />
+                {message.role === 'user' && (
+                  <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+                    <User className="h-4 w-4 text-primary-foreground" />
                   </div>
-                  <div className="rounded-lg px-4 py-2 bg-muted">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  </div>
+                )}
+              </div>
+            ))}
+            {isLoading && (
+              <div className="flex gap-3 justify-start">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Bot className="h-4 w-4 text-primary" />
                 </div>
-              )}
-            </div>
-          )}
+                <div className="rounded-lg px-4 py-2 bg-muted">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                </div>
+              </div>
+            )}
+          </div>
         </ScrollArea>
 
         <div className="p-4 border-t">
@@ -163,7 +218,7 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Digite sua mensagem..."
+              placeholder={isBookingMode ? "Digite seu CPF ou resposta..." : "Digite o número da opção ou sua mensagem..."}
               disabled={isLoading}
               className="flex-1"
             />
