@@ -94,6 +94,7 @@ interface Patient {
   card_expires_at?: string | null;
   card_number?: string | null;
   is_active?: boolean;
+  inactivation_reason?: string | null;
 }
 
 interface InsurancePlan {
@@ -285,6 +286,7 @@ export default function PatientsPage() {
             insurance_plan_id,
             created_at,
             is_active,
+            inactivation_reason,
             insurance_plan:insurance_plans ( name ),
             patient_dependents ( id ),
             patient_cards ( card_number, expires_at, is_active )
@@ -1025,6 +1027,9 @@ export default function PatientsPage() {
                           <Badge variant="secondary" className="text-xs gap-1">
                             <UserX className="h-3 w-3" />
                             Inativo
+                            {patient.inactivation_reason && (
+                              <span className="text-muted-foreground">- {patient.inactivation_reason}</span>
+                            )}
                           </Badge>
                         )}
                       </div>
