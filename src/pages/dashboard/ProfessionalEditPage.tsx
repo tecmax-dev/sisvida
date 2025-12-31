@@ -24,6 +24,7 @@ import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { useSubscription } from "@/hooks/useSubscription";
 import { SpecialtySelector } from "@/components/professionals/SpecialtySelector";
 import { ProfessionalFormFields } from "@/components/professionals/ProfessionalFormFields";
+import { PROFESSIONAL_COUNCILS } from "@/lib/professionalCouncils";
 import { z } from "zod";
 
 interface Procedure {
@@ -101,6 +102,7 @@ export default function ProfessionalEditPage() {
   // Form state
   const [name, setName] = useState("");
   const [specialtyIds, setSpecialtyIds] = useState<string[]>([]);
+  const [councilType, setCouncilType] = useState("");
   const [crm, setCrm] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
