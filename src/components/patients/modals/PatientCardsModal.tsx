@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CreditCard, Plus, Loader2 } from 'lucide-react';
+import { CreditCard, Plus, Loader2, FileImage } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -10,10 +10,12 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { usePatientCards, PatientCard } from '@/hooks/usePatientCards';
 import { PatientCardView } from '@/components/patients/PatientCardView';
 import { PatientCardDialog } from '@/components/patients/PatientCardDialog';
+import { PayslipRequestsList } from '@/components/patients/PayslipRequestsList';
 
 interface PatientCardsModalProps {
   open: boolean;
@@ -37,6 +39,7 @@ export function PatientCardsModal({
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [renewDialogOpen, setRenewDialogOpen] = useState(false);
   const [selectedCard, setSelectedCard] = useState<PatientCard | null>(null);
+  const [activeTab, setActiveTab] = useState('carteirinha');
 
   const activeCard = cards?.find(c => c.is_active);
 
@@ -74,53 +77,77 @@ export function PatientCardsModal({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            {!activeCard && (
-              <div className="flex justify-end">
-                <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
-                  <Plus className="h-4 w-4" />
-                  Emitir Carteirinha
-                </Button>
-              </div>
-            )}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="carteirinha" className="gap-2">
+                <CreditCard className="h-4 w-4" />
+                Carteirinha
+              </TabsTrigger>
+              <TabsTrigger value="contracheques" className="gap-2">
+                <FileImage className="h-4 w-4" />
+                Contracheques
+              </TabsTrigger>
+            </TabsList>
 
-            {isLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <TabsContent value="carteirinha" className="mt-4">
+              <div className="space-y-4">
+                {!activeCard && (
+                  <div className="flex justify-end">
+                    <Button onClick={() => setCreateDialogOpen(true)} className="gap-2">
+                      <Plus className="h-4 w-4" />
+                      Emitir Carteirinha
+                    </Button>
+                  </div>
+                )}
+
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : cards && cards.length > 0 ? (
+                  <ScrollArea className="max-h-[50vh]">
+                    <div className="space-y-4 pr-4">
+                      {cards.map((card) => (
+                        <PatientCardView
+                          key={card.id}
+                          card={card}
+                          patientName={patientName}
+                          clinicName={currentClinic?.name || ''}
+                          clinicLogo={currentClinic?.logo_url}
+                          insurancePlanName={card.patient?.insurance_plan?.name}
+                          onRenew={() => openRenewDialog(card)}
+                          onPrint={handlePrint}
+                        />
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="text-center py-12">
+                    <CreditCard className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+                    <p className="text-muted-foreground">
+                      Este paciente ainda não possui carteirinha digital.
+                    </p>
+                    <Button 
+                      onClick={() => setCreateDialogOpen(true)} 
+                      className="mt-4 gap-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      Emitir Primeira Carteirinha
+                    </Button>
+                  </div>
+                )}
               </div>
-            ) : cards && cards.length > 0 ? (
-              <ScrollArea className="max-h-[60vh]">
-                <div className="space-y-4 pr-4">
-                  {cards.map((card) => (
-                    <PatientCardView
-                      key={card.id}
-                      card={card}
-                      patientName={patientName}
-                      clinicName={currentClinic?.name || ''}
-                      clinicLogo={currentClinic?.logo_url}
-                      insurancePlanName={card.patient?.insurance_plan?.name}
-                      onRenew={() => openRenewDialog(card)}
-                      onPrint={handlePrint}
-                    />
-                  ))}
-                </div>
-              </ScrollArea>
-            ) : (
-              <div className="text-center py-12">
-                <CreditCard className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                <p className="text-muted-foreground">
-                  Este paciente ainda não possui carteirinha digital.
-                </p>
-                <Button 
-                  onClick={() => setCreateDialogOpen(true)} 
-                  className="mt-4 gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Emitir Primeira Carteirinha
-                </Button>
-              </div>
-            )}
-          </div>
+            </TabsContent>
+
+            <TabsContent value="contracheques" className="mt-4">
+              {currentClinic && (
+                <PayslipRequestsList 
+                  clinicId={currentClinic.id} 
+                  patientId={patientId} 
+                />
+              )}
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
 
