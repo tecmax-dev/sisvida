@@ -1797,101 +1797,106 @@ export default function CalendarPage() {
     </>
   );
 
+  // Componente compacto de linha de agendamento (estilo lista)
   const AppointmentCard = ({ appointment }: { appointment: Appointment }) => {
     const status = statusConfig[appointment.status as keyof typeof statusConfig] || statusConfig.scheduled;
     const StatusIcon = status.icon;
     const isCancelled = appointment.status === "cancelled";
     const isCompleted = appointment.status === "completed";
+    const isNoShow = appointment.status === "no_show";
     const isInProgress = appointment.status === "in_progress";
-    const canModify = !isCancelled && !isCompleted;
-    const canAttend = appointment.status === "scheduled" || appointment.status === "confirmed" || isInProgress;
+    const canModify = !isCancelled && !isCompleted && !isNoShow;
+    const canAttend = appointment.status === "scheduled" || appointment.status === "confirmed" || appointment.status === "arrived" || isInProgress;
     const hasConflict = conflictingAppointmentIds.has(appointment.id);
+    
+    // Determina cor do badge de horário baseado no status
+    const getTimeBadgeStyle = () => {
+      if (hasConflict && !isCancelled) return "bg-destructive text-destructive-foreground";
+      if (isInProgress) return "bg-info text-info-foreground";
+      if (isCompleted) return "bg-muted text-muted-foreground";
+      if (isCancelled || isNoShow) return "bg-muted/50 text-muted-foreground/50";
+      return "bg-primary text-primary-foreground";
+    };
+
+    // Ícone de status simplificado
+    const getStatusIcon = () => {
+      if (isCancelled || isNoShow) return <XCircle className="h-4 w-4 text-destructive" />;
+      if (isCompleted) return <CheckCircle2 className="h-4 w-4 text-muted-foreground" />;
+      if (isInProgress) return <Play className="h-4 w-4 text-info" />;
+      if (appointment.status === "arrived") return <UserCheck className="h-4 w-4 text-success" />;
+      if (appointment.status === "confirmed") return <CheckCircle2 className="h-4 w-4 text-success" />;
+      return <AlertCircle className="h-4 w-4 text-warning" />;
+    };
     
     return (
       <div
         className={cn(
-          "flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-muted/50 transition-all group",
-          isCancelled && "opacity-60",
-          isInProgress && "border-info bg-info/5",
-          hasConflict && !isCancelled && "border-destructive bg-destructive/5"
+          "flex items-center gap-3 py-2 px-3 rounded-lg border border-transparent hover:bg-muted/50 transition-all group",
+          isCancelled && "opacity-50",
+          isNoShow && "opacity-60",
+          hasConflict && !isCancelled && "border-destructive/30 bg-destructive/5"
         )}
       >
-        <div className={cn(
-          "w-20 text-center py-2 rounded-lg relative",
-          isInProgress ? "bg-info/20" : hasConflict && !isCancelled ? "bg-destructive/20" : "bg-primary/10"
-        )}>
-          {hasConflict && !isCancelled && (
-            <div className="absolute -top-1 -right-1 bg-destructive rounded-full p-0.5" title="Conflito de horário">
-              <AlertTriangle className="h-3 w-3 text-destructive-foreground" />
-            </div>
+        {/* Badge de horário compacto */}
+        <Badge 
+          variant="secondary" 
+          className={cn(
+            "font-mono font-semibold text-xs px-2 py-1 min-w-[52px] justify-center",
+            getTimeBadgeStyle()
           )}
+        >
+          {appointment.start_time.slice(0, 5)}
+        </Badge>
+
+        {/* Ícone de status */}
+        <div className="flex-shrink-0" title={status.label}>
+          {getStatusIcon()}
+        </div>
+
+        {/* Nome do paciente - flex-1 para ocupar espaço */}
+        <div className="flex-1 min-w-0 flex items-center gap-2">
           <span className={cn(
-            "text-sm font-semibold",
-            isInProgress ? "text-info" : hasConflict && !isCancelled ? "text-destructive" : "text-primary"
+            "font-medium truncate uppercase text-sm",
+            (isCancelled || isNoShow) && "line-through text-muted-foreground"
           )}>
-            {appointment.start_time.slice(0, 5)}
+            {getAppointmentDisplayName(appointment)}
           </span>
-          {isInProgress && (
-            <div className="text-xs text-info mt-0.5 flex items-center justify-center gap-1">
-              <Play className="h-3 w-3" />
-              Em atend.
-            </div>
+          {appointment.dependent_id && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0">
+              DEP
+            </Badge>
+          )}
+          {hasConflict && !isCancelled && (
+            <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
           )}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <p className="font-medium text-foreground">
-              {getAppointmentDisplayName(appointment)}
-              {appointment.dependent_id && (
-                <span className="ml-1 text-xs text-muted-foreground">(dependente)</span>
-              )}
-            </p>
-            {hasConflict && !isCancelled && (
-              <Badge variant="destructive" className="text-xs gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                Conflito
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-4 mt-1">
-            <span className="text-sm text-muted-foreground flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
-              {typeLabels[appointment.type] || appointment.type}
-            </span>
-            <span className="text-sm text-muted-foreground flex items-center gap-1">
-              <User className="h-3.5 w-3.5" />
-              {appointment.professional?.name || "Profissional"}
-            </span>
-          </div>
-        </div>
-        
-        {/* Attend button */}
-        {canAttend && (
-          <Button
-            variant={isInProgress ? "default" : "outline"}
-            size="sm"
-            onClick={() => openAppointmentPanel(appointment)}
-            className={cn(
-              "gap-1.5",
-              isInProgress && "bg-info hover:bg-info/90"
-            )}
-          >
-            <Stethoscope className="h-4 w-4" />
-            {isInProgress ? "Continuar" : "Atender"}
-          </Button>
-        )}
-        
-        {/* Status dropdown */}
-        {canModify ? (
+
+        {/* Menu de ações - três pontos */}
+        {canModify && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className={cn("gap-2", status.color)}>
-                <StatusIcon className="h-4 w-4" />
-                {status.label}
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="1" />
+                  <circle cx="12" cy="5" r="1" />
+                  <circle cx="12" cy="19" r="1" />
+                </svg>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover">
-              {/* A confirmar -> Confirmar ou Faltou */}
+            <DropdownMenuContent align="end" className="bg-popover min-w-[180px]">
+              {/* Atender */}
+              {canAttend && (
+                <DropdownMenuItem onClick={() => openAppointmentPanel(appointment)}>
+                  <Stethoscope className="h-4 w-4 mr-2" />
+                  {isInProgress ? "Continuar Atendimento" : "Atender"}
+                </DropdownMenuItem>
+              )}
+              
+              {/* Mudar status */}
               {appointment.status === "scheduled" && (
                 <>
                   <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "confirmed")}>
@@ -1905,7 +1910,6 @@ export default function CalendarPage() {
                 </>
               )}
               
-              {/* Confirmado -> Chegou ou Faltou */}
               {appointment.status === "confirmed" && (
                 <>
                   <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "arrived")}>
@@ -1919,7 +1923,6 @@ export default function CalendarPage() {
                 </>
               )}
               
-              {/* Chegou -> Iniciar Atendimento (navega direto para página de atendimento) */}
               {appointment.status === "arrived" && (
                 <DropdownMenuItem onClick={() => handleStartAttendance(appointment)}>
                   <Stethoscope className="h-4 w-4 mr-2 text-purple-600" />
@@ -1927,101 +1930,77 @@ export default function CalendarPage() {
                 </DropdownMenuItem>
               )}
               
-              {/* Em atendimento -> Concluir */}
               {appointment.status === "in_progress" && (
                 <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "completed")}>
                   <Check className="h-4 w-4 mr-2 text-gray-500" />
                   Concluir
                 </DropdownMenuItem>
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : (
-          <div className="flex items-center gap-2">
-            <StatusIcon className={`h-4 w-4 ${status.color}`} />
-            <span className={`text-sm ${status.color}`}>
-              {status.label}
-            </span>
-          </div>
-        )}
-        
-        {/* Actions */}
-        {canModify && (
-          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-            {/* Botão de telemedicina - apenas para consultas de telemedicina */}
-            {appointment.type === "telemedicine" && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-info hover:text-info"
-                onClick={() => handleSendTelemedicineLink(appointment)}
-                disabled={sendingTelemedicineLink === appointment.id}
-              title="Enviar link de telemedicina via WhatsApp"
-              >
-                {sendingTelemedicineLink === appointment.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Video className="h-4 w-4" />
-                )}
-              </Button>
-            )}
-            {/* Pre-attendance button - visible for confirmed or arrived patients */}
-            {(appointment.status === "confirmed" || appointment.status === "arrived") && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-purple-600 hover:text-purple-600"
-                onClick={() => {
+
+              <DropdownMenuSeparator />
+              
+              {/* Pré-atendimento */}
+              {(appointment.status === "confirmed" || appointment.status === "arrived") && (
+                <DropdownMenuItem onClick={() => {
                   setPreAttendanceAppointment(appointment);
                   setPreAttendanceDialogOpen(true);
-                }}
-                title="Pré-Atendimento (Sinais Vitais)"
-              >
-                <Activity className="h-4 w-4" />
-              </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-success hover:text-success"
-              onClick={() => handleSendWhatsAppReminder(appointment)}
-              disabled={sendingWhatsApp === appointment.id}
-              title="Enviar lembrete WhatsApp"
-            >
-              {sendingWhatsApp === appointment.id ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
+                }}>
+                  <Activity className="h-4 w-4 mr-2 text-purple-600" />
+                  Pré-Atendimento
+                </DropdownMenuItem>
               )}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => openRescheduleDialog(appointment)}
-              title="Reagendar"
-            >
-              <CalendarDays className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => openEditDialog(appointment)}
-              title="Editar"
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
-              onClick={() => openCancelDialog(appointment)}
-              title="Cancelar"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
+              
+              {/* Telemedicina */}
+              {appointment.type === "telemedicine" && (
+                <DropdownMenuItem 
+                  onClick={() => handleSendTelemedicineLink(appointment)}
+                  disabled={sendingTelemedicineLink === appointment.id}
+                >
+                  <Video className="h-4 w-4 mr-2 text-info" />
+                  Enviar Link Telemedicina
+                </DropdownMenuItem>
+              )}
+              
+              {/* WhatsApp */}
+              <DropdownMenuItem 
+                onClick={() => handleSendWhatsAppReminder(appointment)}
+                disabled={sendingWhatsApp === appointment.id}
+              >
+                <Send className="h-4 w-4 mr-2 text-success" />
+                Enviar Lembrete WhatsApp
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+              
+              {/* Reagendar */}
+              <DropdownMenuItem onClick={() => openRescheduleDialog(appointment)}>
+                <CalendarDays className="h-4 w-4 mr-2" />
+                Reagendar
+              </DropdownMenuItem>
+              
+              {/* Editar */}
+              <DropdownMenuItem onClick={() => openEditDialog(appointment)}>
+                <Pencil className="h-4 w-4 mr-2" />
+                Editar
+              </DropdownMenuItem>
+              
+              {/* Cancelar */}
+              <DropdownMenuItem 
+                onClick={() => openCancelDialog(appointment)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Cancelar
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        {/* Status fixo para agendamentos não modificáveis */}
+        {!canModify && (
+          <Badge variant="outline" className={cn("text-xs", status.color)}>
+            {status.label}
+          </Badge>
         )}
       </div>
     );
@@ -2772,26 +2751,47 @@ export default function CalendarPage() {
 
                 {/* Appointments list */}
                 <div className="lg:col-span-2">
-                  {getAppointmentsForDate(selectedDate).length > 0 ? (
-                    <div className="space-y-3">
-                      {getAppointmentsForDate(selectedDate).map((appointment) => (
-                        <DraggableAppointment key={appointment.id} appointment={appointment}>
-                          <AppointmentCard appointment={appointment} />
-                        </DraggableAppointment>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                      <p className="mb-4">{isHoliday(selectedDate) ? "Dia indisponível para agendamentos" : "Nenhum agendamento para este dia"}</p>
-                      {!isHoliday(selectedDate) && (
-                        <Button variant="outline" onClick={() => setDialogOpen(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar agendamento
-                        </Button>
-                      )}
-                    </div>
-                  )}
+                  {(() => {
+                    const dayAppointments = getAppointmentsForDate(selectedDate);
+                    const activeAppointments = dayAppointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
+                    const availableSlots = timeSlots.filter(time => 
+                      !dayAppointments.some(apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled')
+                    ).length;
+                    
+                    if (dayAppointments.length > 0) {
+                      return (
+                        <div className="space-y-2">
+                          {/* Resumo do dia */}
+                          <div className="flex items-center justify-between text-sm text-muted-foreground pb-2 border-b">
+                            <span>{activeAppointments.length} agendamento(s)</span>
+                            <span>{availableSlots} disponíveis - Total {timeSlots.length}</span>
+                          </div>
+                          
+                          {/* Lista compacta */}
+                          <div className="divide-y divide-border/50">
+                            {dayAppointments.map((appointment) => (
+                              <DraggableAppointment key={appointment.id} appointment={appointment}>
+                                <AppointmentCard appointment={appointment} />
+                              </DraggableAppointment>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                        <p className="mb-4">{isHoliday(selectedDate) ? "Dia indisponível para agendamentos" : "Nenhum agendamento para este dia"}</p>
+                        {!isHoliday(selectedDate) && (
+                          <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar agendamento
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             ) : viewMode === "week" ? (
