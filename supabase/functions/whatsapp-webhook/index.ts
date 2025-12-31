@@ -3787,7 +3787,21 @@ serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const payload: EvolutionWebhookPayload = await req.json();
+    // Log raw body for debugging
+    const rawBody = await req.text();
+    console.log('[webhook] Raw body received:', rawBody.substring(0, 500));
+    
+    // Parse the body
+    let payload: EvolutionWebhookPayload;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch (parseError) {
+      console.error('[webhook] JSON parse error:', parseError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid JSON' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     console.log('[webhook] Received event:', payload.event);
     console.log('[webhook] Instance:', payload.instance);
