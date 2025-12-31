@@ -149,10 +149,24 @@ export default function PendingPayslipReviews() {
       
       if (!patient?.phone) return;
       
+      // Get dependents names
+      const { data: dependents } = await supabase
+        .from('patient_dependents')
+        .select('name')
+        .eq('patient_id', patientId)
+        .eq('is_active', true);
+      
       const formattedDate = format(new Date(newExpiry), "dd/MM/yyyy");
       const firstName = patientName.split(' ')[0];
       
-      const message = `Olá, ${firstName}! 🎉\n\nSeu contracheque foi aprovado e sua carteirinha foi renovada com sucesso!\n\n📅 Nova validade: *${formattedDate}*\n\nObrigado por manter seus dados atualizados. Estamos à disposição para qualquer dúvida!\n\n${currentClinic.name}`;
+      // Build names list
+      let namesSection = `👤 *${patientName}* (titular)`;
+      if (dependents && dependents.length > 0) {
+        const dependentNames = dependents.map(d => `👤 ${d.name}`).join('\n');
+        namesSection += `\n${dependentNames}`;
+      }
+      
+      const message = `Olá, ${firstName}! 🎉\n\nSeu contracheque foi aprovado e as carteirinhas foram renovadas com sucesso!\n\n📅 *Nova validade: ${formattedDate}*\n\n*Beneficiários atualizados:*\n${namesSection}\n\nObrigado por manter seus dados atualizados. Estamos à disposição para qualquer dúvida!\n\n${currentClinic.name}`;
       
       await supabase.functions.invoke('send-whatsapp', {
         body: {
