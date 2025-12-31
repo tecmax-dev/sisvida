@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useSpecialties } from "@/hooks/useSpecialties";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useSubscription } from "@/hooks/useSubscription";
 import { SpecialtySelector } from "@/components/professionals/SpecialtySelector";
 import { ProfessionalFormFields } from "@/components/professionals/ProfessionalFormFields";
 import { z } from "zod";
@@ -76,6 +77,7 @@ export default function ProfessionalEditPage() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
   const { hasFeature } = usePlanFeatures();
+  const { canAddProfessional, refetch: refetchSubscription } = useSubscription();
   const {
     loading: loadingSpecialties,
     groupedSpecialties,
@@ -84,7 +86,9 @@ export default function ProfessionalEditPage() {
     getSpecialtyById,
   } = useSpecialties();
   
-  const [loading, setLoading] = useState(true);
+  const isCreating = !id;
+  
+  const [loading, setLoading] = useState(!isCreating);
   const [saving, setSaving] = useState(false);
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [professional, setProfessional] = useState<Professional | null>(null);
@@ -127,10 +131,15 @@ export default function ProfessionalEditPage() {
   const [initialFormData, setInitialFormData] = useState<string>("");
 
   useEffect(() => {
-    if (currentClinic && id) {
-      fetchProfessional();
+    if (currentClinic) {
       fetchClinicUsers();
-      fetchProcedures();
+      if (id) {
+        fetchProfessional();
+        fetchProcedures();
+      } else {
+        // Creating mode - mark as loaded
+        hasLoadedRef.current = true;
+      }
     }
   }, [currentClinic, id]);
 
@@ -299,9 +308,9 @@ export default function ProfessionalEditPage() {
     }
   };
 
-  // Auto-save function
+  // Auto-save function (only for editing)
   const performAutoSave = useCallback(async () => {
-    if (!currentClinic || !id || !professional || !hasLoadedRef.current) return;
+    if (!currentClinic || !id || !professional || !hasLoadedRef.current || isCreating) return;
     
     // Validate before saving
     const validation = professionalSchema.safeParse({
@@ -361,7 +370,7 @@ export default function ProfessionalEditPage() {
       console.error("Auto-save error:", error);
       setAutoSaveStatus('idle');
     }
-  }, [currentClinic, id, professional, name, crm, phone, email, userId, telemedicineEnabled,
+  }, [currentClinic, id, professional, isCreating, name, crm, phone, email, userId, telemedicineEnabled,
       appointmentDuration, address, city, state, zipCode, whatsapp, bio, education, 
       experience, specialtyIds, getSpecialtyById, hasFeature, saveProfessionalSpecialties]);
 
@@ -422,7 +431,10 @@ export default function ProfessionalEditPage() {
       return;
     }
 
-    if (!currentClinic || !id || !professional) return;
+    if (!currentClinic) return;
+    
+    // For editing, we need the professional to exist
+    if (!isCreating && !professional) return;
 
     setSaving(true);
     setErrors({});
@@ -434,83 +446,166 @@ export default function ProfessionalEditPage() {
         .filter((n): n is string => !!n);
       const specialtyDisplay = specialtyNames.join(', ') || null;
 
-      // Upload new avatar if selected
-      let avatarUrl = professional.avatar_url;
-      if (avatarFile) {
-        const fileExt = avatarFile.name.split('.').pop();
-        const filePath = `${currentClinic.id}/${id}.${fileExt}`;
+      let professionalId = id;
+      let avatarUrl: string | null = professional?.avatar_url || null;
+
+      if (isCreating) {
+        // CREATE new professional
+        const slug = generateSlug(name);
         
-        const { error: uploadError } = await supabase.storage
-          .from('professional-avatars')
-          .upload(filePath, avatarFile, { upsert: true });
-        
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage
+        const { data: newProfessional, error } = await supabase
+          .from('professionals')
+          .insert({
+            clinic_id: currentClinic.id,
+            name: name.trim(),
+            specialty: specialtyDisplay,
+            registration_number: crm.trim() || null,
+            phone: phone.trim() || null,
+            email: email.trim() || null,
+            user_id: userId || null,
+            telemedicine_enabled: hasFeature('telemedicine') ? telemedicineEnabled : false,
+            appointment_duration: appointmentDuration,
+            slug,
+            address: address.trim() || null,
+            city: city.trim() || null,
+            state: state || null,
+            zip_code: zipCode.replace(/\D/g, '') || null,
+            whatsapp: whatsapp.replace(/\D/g, '') || null,
+            bio: bio.trim() || null,
+            education: education.trim() || null,
+            experience: experience.trim() || null,
+          })
+          .select('id')
+          .single();
+
+        if (error) throw error;
+        professionalId = newProfessional.id;
+
+        // Upload avatar if selected
+        if (avatarFile && professionalId) {
+          const fileExt = avatarFile.name.split('.').pop();
+          const filePath = `${currentClinic.id}/${professionalId}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
             .from('professional-avatars')
-            .getPublicUrl(filePath);
-          avatarUrl = urlData.publicUrl;
+            .upload(filePath, avatarFile, { upsert: true });
+          
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('professional-avatars')
+              .getPublicUrl(filePath);
+            
+            await supabase
+              .from('professionals')
+              .update({ avatar_url: urlData.publicUrl })
+              .eq('id', professionalId);
+          }
         }
-      }
 
-      // Generate new slug if name changed
-      const newSlug = name !== professional.name 
-        ? generateSlug(name) 
-        : professional.slug;
+        // Save specialties
+        if (professionalId && specialtyIds.length > 0) {
+          await saveProfessionalSpecialties(professionalId, specialtyIds);
+        }
 
-      const { data: updateData, error } = await supabase
-        .from('professionals')
-        .update({
-          name: name.trim(),
-          specialty: specialtyDisplay,
-          registration_number: crm.trim() || null,
-          phone: phone.trim() || null,
-          email: email.trim() || null,
-          user_id: userId || null,
-          avatar_url: avatarUrl,
-          telemedicine_enabled: hasFeature('telemedicine') ? telemedicineEnabled : false,
-          appointment_duration: appointmentDuration,
-          slug: newSlug,
-          address: address.trim() || null,
-          city: city.trim() || null,
-          state: state || null,
-          zip_code: zipCode.replace(/\D/g, '') || null,
-          whatsapp: whatsapp.replace(/\D/g, '') || null,
-          bio: bio.trim() || null,
-          education: education.trim() || null,
-          experience: experience.trim() || null,
-        })
-        .eq('id', id)
-        .select();
-
-      if (error) throw error;
-
-      // Verificar se alguma linha foi realmente atualizada
-      if (!updateData || updateData.length === 0) {
-        throw new Error('Não foi possível atualizar. Verifique suas permissões de administrador.');
-      }
-
-      // Save professional specialties
-      const result = await saveProfessionalSpecialties(id, specialtyIds);
-      if (!result.success) {
         toast({
-          title: "Aviso",
-          description: "Profissional atualizado, mas houve um problema ao salvar especialidades.",
-          variant: "destructive",
+          title: "Profissional cadastrado",
+          description: userId 
+            ? "O profissional foi vinculado e pode acessar o portal." 
+            : "O profissional foi adicionado com sucesso.",
+        });
+
+        refetchSubscription();
+      } else {
+        // UPDATE existing professional
+        if (avatarFile && id) {
+          const fileExt = avatarFile.name.split('.').pop();
+          const filePath = `${currentClinic.id}/${id}.${fileExt}`;
+          
+          const { error: uploadError } = await supabase.storage
+            .from('professional-avatars')
+            .upload(filePath, avatarFile, { upsert: true });
+          
+          if (!uploadError) {
+            const { data: urlData } = supabase.storage
+              .from('professional-avatars')
+              .getPublicUrl(filePath);
+            avatarUrl = urlData.publicUrl;
+          }
+        }
+
+        // Generate new slug if name changed
+        const newSlug = name !== professional?.name 
+          ? generateSlug(name) 
+          : professional?.slug;
+
+        const { data: updateData, error } = await supabase
+          .from('professionals')
+          .update({
+            name: name.trim(),
+            specialty: specialtyDisplay,
+            registration_number: crm.trim() || null,
+            phone: phone.trim() || null,
+            email: email.trim() || null,
+            user_id: userId || null,
+            avatar_url: avatarUrl,
+            telemedicine_enabled: hasFeature('telemedicine') ? telemedicineEnabled : false,
+            appointment_duration: appointmentDuration,
+            slug: newSlug,
+            address: address.trim() || null,
+            city: city.trim() || null,
+            state: state || null,
+            zip_code: zipCode.replace(/\D/g, '') || null,
+            whatsapp: whatsapp.replace(/\D/g, '') || null,
+            bio: bio.trim() || null,
+            education: education.trim() || null,
+            experience: experience.trim() || null,
+          })
+          .eq('id', id)
+          .select();
+
+        if (error) throw error;
+
+        if (!updateData || updateData.length === 0) {
+          throw new Error('Não foi possível atualizar. Verifique suas permissões de administrador.');
+        }
+
+        // Save professional specialties
+        if (id) {
+          const result = await saveProfessionalSpecialties(id, specialtyIds);
+          if (!result.success) {
+            toast({
+              title: "Aviso",
+              description: "Profissional atualizado, mas houve um problema ao salvar especialidades.",
+              variant: "destructive",
+            });
+          }
+        }
+
+        // Save professional procedures
+        if (id) {
+          await saveProfessionalProcedures(id);
+        }
+
+        toast({
+          title: "Profissional atualizado",
+          description: "As informações foram salvas com sucesso.",
         });
       }
 
-      // Save professional procedures
-      await saveProfessionalProcedures(id);
-
-      toast({
-        title: "Profissional atualizado",
-        description: "As informações foram salvas com sucesso.",
-      });
-
       navigate('/dashboard/professionals');
     } catch (error: any) {
+      // Handle professional limit error
+      if (error.message?.includes('LIMITE_PROFISSIONAIS')) {
+        const match = error.message.match(/LIMITE_PROFISSIONAIS: (.+)/);
+        toast({
+          title: "Limite de profissionais atingido",
+          description: match ? match[1] : "Você atingiu o limite de profissionais do seu plano.",
+          variant: "destructive",
+        });
+        return;
+      }
       toast({
-        title: "Erro ao atualizar",
+        title: isCreating ? "Erro ao cadastrar" : "Erro ao atualizar",
         description: error.message || "Tente novamente.",
         variant: "destructive",
       });
@@ -527,7 +622,8 @@ export default function ProfessionalEditPage() {
     );
   }
 
-  if (!professional) {
+  // Only show "not found" for editing mode
+  if (!isCreating && !professional) {
     return (
       <div className="text-center py-12">
         <p className="text-muted-foreground">Profissional não encontrado.</p>
@@ -546,25 +642,31 @@ export default function ProfessionalEditPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Editar Profissional</h1>
-            <p className="text-muted-foreground">{professional.name}</p>
+            <h1 className="text-2xl font-bold text-foreground">
+              {isCreating ? "Novo Profissional" : "Editar Profissional"}
+            </h1>
+            {!isCreating && professional && (
+              <p className="text-muted-foreground">{professional.name}</p>
+            )}
           </div>
         </div>
-        {/* Auto-save status indicator */}
-        <div className="flex items-center gap-2">
-          {autoSaveStatus === 'saving' && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Cloud className="h-4 w-4 animate-pulse" />
-              <span>Salvando...</span>
-            </div>
-          )}
-          {autoSaveStatus === 'saved' && (
-            <div className="flex items-center gap-2 text-sm text-green-600">
-              <Check className="h-4 w-4" />
-              <span>Salvo</span>
-            </div>
-          )}
-        </div>
+        {/* Auto-save status indicator - only show when editing */}
+        {!isCreating && (
+          <div className="flex items-center gap-2">
+            {autoSaveStatus === 'saving' && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Cloud className="h-4 w-4 animate-pulse" />
+                <span>Salvando...</span>
+              </div>
+            )}
+            {autoSaveStatus === 'saved' && (
+              <div className="flex items-center gap-2 text-sm text-green-600">
+                <Check className="h-4 w-4" />
+                <span>Salvo</span>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <Card>
@@ -601,10 +703,10 @@ export default function ProfessionalEditPage() {
             </div>
 
             <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+              <TabsList className={`grid w-full ${isCreating ? 'grid-cols-3' : 'grid-cols-4'}`}>
                 <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
                 <TabsTrigger value="profile">Perfil Público</TabsTrigger>
-                <TabsTrigger value="procedures">Procedimentos</TabsTrigger>
+                {!isCreating && <TabsTrigger value="procedures">Procedimentos</TabsTrigger>}
                 <TabsTrigger value="settings">Configurações</TabsTrigger>
               </TabsList>
 
@@ -799,9 +901,9 @@ export default function ProfessionalEditPage() {
               >
                 Cancelar
               </Button>
-              <Button type="submit" disabled={saving}>
+              <Button type="submit" disabled={saving || (isCreating && !canAddProfessional)}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar Alterações
+                {isCreating ? "Cadastrar" : "Salvar Alterações"}
               </Button>
             </div>
           </form>
