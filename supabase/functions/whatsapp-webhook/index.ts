@@ -3635,30 +3635,64 @@ serve(async (req) => {
     let clinicId = confirmResult.clinicId;
 
     if (!confirmResult.handled) {
-      // Find config by instance name - each clinic should have unique instance name
-      const { data: configByInstance, error: configError } = await supabase
-        .from('evolution_configs')
-        .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled')
-        .eq('instance_name', payload.instance)
-        .eq('is_connected', true)
-        .eq('direct_reply_enabled', true);
+      // Prefer routing by existing active session (avoids ambiguity when multiple clinics share the same instance)
+      const { data: activeSession, error: activeSessionError } = await supabase
+        .from('whatsapp_booking_sessions')
+        .select('clinic_id, updated_at')
+        .in('phone', phoneCandidates)
+        .neq('state', 'FINISHED')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
-      if (configError) {
-        console.error('[webhook] Error fetching config:', configError);
+      if (activeSessionError) {
+        console.error('[webhook] Error fetching active session for routing:', activeSessionError);
       }
 
-      // If multiple clinics share same instance, log warning
-      if (configByInstance && configByInstance.length > 1) {
-        console.warn(`[webhook] WARNING: Multiple clinics (${configByInstance.length}) share the same instance "${payload.instance}". ` +
-          `Each clinic should have a unique Evolution instance for proper routing. ` +
-          `Using first match: clinic_id=${configByInstance[0].clinic_id}`);
+      let configData: EvolutionConfig | null = null;
+
+      if (activeSession?.clinic_id) {
+        const { data: configByClinic, error: configByClinicError } = await supabase
+          .from('evolution_configs')
+          .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled')
+          .eq('clinic_id', activeSession.clinic_id)
+          .eq('is_connected', true)
+          .eq('direct_reply_enabled', true)
+          .maybeSingle();
+
+        if (configByClinicError) {
+          console.error('[webhook] Error fetching config by clinic_id:', configByClinicError);
+        }
+
+        configData = (configByClinic as EvolutionConfig) ?? null;
+        console.log(`[webhook] Routing by active session -> clinic: ${configData?.clinic_id ?? 'not found'}`);
       }
 
-      const configData = configByInstance && configByInstance.length > 0 
-        ? (configByInstance[0] as EvolutionConfig) 
-        : null;
+      // Fallback: Find config by instance name - each clinic should have unique instance name
+      if (!configData) {
+        const { data: configByInstance, error: configError } = await supabase
+          .from('evolution_configs')
+          .select('clinic_id, api_url, api_key, instance_name, direct_reply_enabled')
+          .eq('instance_name', payload.instance)
+          .eq('is_connected', true)
+          .eq('direct_reply_enabled', true);
 
-      console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
+        if (configError) {
+          console.error('[webhook] Error fetching config:', configError);
+        }
+
+        // If multiple clinics share same instance, log warning
+        if (configByInstance && configByInstance.length > 1) {
+          console.warn(
+            `[webhook] WARNING: Multiple clinics (${configByInstance.length}) share the same instance "${payload.instance}". ` +
+              `Each clinic should have a unique Evolution instance for proper routing. ` +
+              `Using first match: clinic_id=${configByInstance[0].clinic_id}`
+          );
+        }
+
+        configData = configByInstance && configByInstance.length > 0 ? (configByInstance[0] as EvolutionConfig) : null;
+        console.log(`[webhook] Instance "${payload.instance}" -> clinic: ${configData?.clinic_id ?? 'not found'}`);
+      }
 
       if (configData) {
         clinicId = configData.clinic_id;
