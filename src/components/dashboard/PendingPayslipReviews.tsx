@@ -136,6 +136,37 @@ export default function PendingPayslipReviews() {
     setDependentsCount(0);
   };
 
+  const sendApprovalNotification = async (patientId: string, patientName: string, newExpiry: string) => {
+    if (!currentClinic) return;
+    
+    try {
+      // Get patient phone
+      const { data: patient } = await supabase
+        .from('patients')
+        .select('phone')
+        .eq('id', patientId)
+        .single();
+      
+      if (!patient?.phone) return;
+      
+      const formattedDate = format(new Date(newExpiry), "dd/MM/yyyy");
+      const firstName = patientName.split(' ')[0];
+      
+      const message = `Olá, ${firstName}! 🎉\n\nSeu contracheque foi aprovado e sua carteirinha foi renovada com sucesso!\n\n📅 Nova validade: *${formattedDate}*\n\nObrigado por manter seus dados atualizados. Estamos à disposição para qualquer dúvida!\n\n${currentClinic.name}`;
+      
+      await supabase.functions.invoke('send-whatsapp', {
+        body: {
+          clinicId: currentClinic.id,
+          phone: patient.phone,
+          message
+        }
+      });
+    } catch (error) {
+      console.error('Error sending approval notification:', error);
+      // Don't throw - notification failure shouldn't block approval
+    }
+  };
+
   const handleApprove = async () => {
     if (!selectedRequest) return;
     
@@ -183,13 +214,20 @@ export default function PendingPayslipReviews() {
 
       if (dependentsError) throw dependentsError;
 
+      // Send WhatsApp notification to patient
+      await sendApprovalNotification(
+        selectedRequest.patient_id, 
+        selectedRequest.patient.name, 
+        newExpiryDate
+      );
+
       const dependentMsg = dependentsCount > 0 
         ? ` A validade de ${dependentsCount} dependente(s) também foi atualizada.`
         : '';
 
       toast({
         title: "Contracheque aprovado",
-        description: `Carteirinha de ${selectedRequest.patient.name} atualizada até ${format(new Date(newExpiryDate), "dd/MM/yyyy")}.${dependentMsg}`,
+        description: `Carteirinha de ${selectedRequest.patient.name} atualizada até ${format(new Date(newExpiryDate), "dd/MM/yyyy")}.${dependentMsg} Notificação enviada.`,
       });
 
       closeReview();
