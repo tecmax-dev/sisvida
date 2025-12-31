@@ -895,7 +895,7 @@ Qualquer dúvida, estamos à disposição! 😊`,
 
   sessionExpired: `⏰ *Sessão expirada*
 
-Você ficou mais de 60 segundos sem interagir.
+Você ficou mais de 10 minutos sem interagir.
 Por segurança, iniciamos uma nova sessão.
 
 Para continuar, *informe seu CPF* (apenas números):`,
@@ -948,7 +948,14 @@ async function handleBookingFlow(
     return { handled: true, newState: 'WAITING_CPF' };
   }
 
-  // If session was expired, send expiration message
+  // Fast-path CPF (don’t depend on AI; WhatsApp sometimes sends formats the AI won’t parse)
+  const maybeCpf = messageText.replace(/\D/g, '');
+  if (CPF_REGEX.test(maybeCpf) && validateCpf(maybeCpf)) {
+    const currentSession = session ?? await createOrResetSession(supabase, config.clinic_id, phone, 'WAITING_CPF');
+    return await handleWaitingCpf(supabase, config, phone, maybeCpf, currentSession);
+  }
+
+  // If session was expired, only interrupt when the message is NOT a CPF
   if (wasExpired) {
     await sendWhatsAppMessage(config, phone, MESSAGES.sessionExpired);
     return { handled: true, newState: 'WAITING_CPF' };
@@ -3306,6 +3313,9 @@ async function checkSlotAvailability(
 // SESSION MANAGEMENT
 // ==========================================
 
+// Session TTL (inactivity)
+const SESSION_TTL_MS = 10 * 60 * 1000;
+
 async function getOrCreateSession(
   supabase: SupabaseClient,
   clinicId: string,
@@ -3375,14 +3385,14 @@ async function createOrResetSession(
     .eq('clinic_id', clinicId)
     .eq('phone', phone);
 
-  // Session expires in 60 seconds of inactivity
+  // Session expires after inactivity
   const { data: session, error } = await supabase
     .from('whatsapp_booking_sessions')
     .insert({
       clinic_id: clinicId,
       phone,
       state,
-      expires_at: new Date(Date.now() + 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
     })
     .select('*')
     .single();
@@ -3400,12 +3410,12 @@ async function updateSession(
   sessionId: string,
   updates: Partial<BookingSession>
 ): Promise<void> {
-  // Renew session for 60 seconds on each interaction
+  // Renew session on each interaction
   const { error } = await supabase
     .from('whatsapp_booking_sessions')
     .update({
       ...updates,
-      expires_at: new Date(Date.now() + 60 * 1000).toISOString(),
+      expires_at: new Date(Date.now() + SESSION_TTL_MS).toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', sessionId);
