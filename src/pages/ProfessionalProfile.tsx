@@ -388,31 +388,86 @@ export default function ProfessionalProfile() {
     const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayKey = dayKeys[dayIndex];
     
-    const schedule = professional.schedule;
-    if (!schedule || !schedule[dayKey] || !schedule[dayKey].enabled) {
+    const schedule = professional.schedule as Record<string, any> | null;
+    if (!schedule) return [];
+    
+    const duration = appointmentDuration;
+    const defaultProfDuration = professional.appointment_duration || 30;
+    const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
+
+    const uniqueSortTimes = (times: string[]) => {
+      const unique = Array.from(new Set(times));
+      unique.sort((a, b) => {
+        const [aH, aM] = a.split(':').map(Number);
+        const [bH, bM] = b.split(':').map(Number);
+        return (aH * 60 + aM) - (bH * 60 + bM);
+      });
+      return unique;
+    };
+
+    // Check if we have the new _blocks format
+    if (schedule._blocks && Array.isArray(schedule._blocks) && schedule._blocks.length > 0) {
+      const slots: string[] = [];
+
+      schedule._blocks.forEach((block: any) => {
+        if (!block.days || !block.days.includes(dayKey)) return;
+        if (block.start_date && selectedDateStr < block.start_date) return;
+        if (block.end_date && selectedDateStr > block.end_date) return;
+
+        const [startHour, startMin] = String(block.start_time).split(':').map(Number);
+        const [endHour, endMin] = String(block.end_time).split(':').map(Number);
+
+        const slotStartMinutes = startHour * 60 + startMin;
+        const slotEndMinutes = endHour * 60 + endMin;
+
+        const blockInterval = Number(block.duration || defaultProfDuration);
+        let current = slotStartMinutes;
+
+        while (current + duration <= slotEndMinutes) {
+          const hour = Math.floor(current / 60);
+          const min = current % 60;
+          const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+
+          if (!existingAppointments.includes(timeStr)) {
+            slots.push(timeStr);
+          }
+
+          current += blockInterval;
+        }
+      });
+
+      return uniqueSortTimes(slots);
+    }
+
+    // Fallback to old format
+    if (!schedule[dayKey] || !schedule[dayKey].enabled) {
       return [];
     }
-    
-    const daySchedule = schedule[dayKey];
-    const duration = appointmentDuration;
+
     const slots: string[] = [];
-    
+    const daySchedule = schedule[dayKey];
+
     daySchedule.slots.forEach((slot: { start: string; end: string }) => {
       const [startHour, startMin] = slot.start.split(':').map(Number);
       const [endHour, endMin] = slot.end.split(':').map(Number);
-      
+
       let current = startHour * 60 + startMin;
       const end = endHour * 60 + endMin;
-      
+
       while (current + duration <= end) {
         const hour = Math.floor(current / 60);
         const min = current % 60;
-        slots.push(`${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`);
+        const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+        
+        if (!existingAppointments.includes(timeStr)) {
+          slots.push(timeStr);
+        }
+        
         current += duration;
       }
     });
-    
-    return slots.filter(slot => !existingAppointments.includes(slot));
+
+    return uniqueSortTimes(slots);
   }, [selectedDate, professional, existingAppointments, appointmentDuration]);
 
   const isDayAvailable = (date: Date) => {
@@ -421,8 +476,21 @@ export default function ProfessionalProfile() {
     const dayIndex = date.getDay();
     const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     const dayKey = dayKeys[dayIndex];
+    const schedule = professional.schedule as Record<string, any>;
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     
-    return professional.schedule[dayKey]?.enabled || false;
+    // Check new _blocks format first
+    if (schedule._blocks && Array.isArray(schedule._blocks) && schedule._blocks.length > 0) {
+      return schedule._blocks.some((block: any) => {
+        if (!block.days || !block.days.includes(dayKey)) return false;
+        if (block.start_date && dateStr < block.start_date) return false;
+        if (block.end_date && dateStr > block.end_date) return false;
+        return true;
+      });
+    }
+    
+    // Fallback to old format
+    return schedule[dayKey]?.enabled || false;
   };
 
   const getDaysInMonth = (date: Date) => {
