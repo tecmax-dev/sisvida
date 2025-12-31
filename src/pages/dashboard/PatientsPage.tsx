@@ -293,8 +293,10 @@ export default function PatientsPage() {
         )
         .eq("clinic_id", currentClinic.id);
 
-      // Filter by active status
-      if (!showInactive) {
+      // Filter by active status - when showInactive is true, show ONLY inactive patients
+      if (showInactive) {
+        query = query.eq("is_active", false);
+      } else {
         query = query.eq("is_active", true);
       }
 
