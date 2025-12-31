@@ -1,13 +1,13 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Loader2, Bot, User, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -40,6 +40,7 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -90,7 +91,7 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
     }
   };
 
-  const handleSend = async () => {
+  const handleSend = useCallback(async () => {
     if (!inputValue.trim() || isLoading) return;
 
     const userMessage = inputValue.trim();
@@ -146,9 +147,12 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
       toast.error('Erro ao processar mensagem');
     } finally {
       setIsLoading(false);
-      inputRef.current?.focus();
+      // Only auto-focus on desktop
+      if (!isMobile) {
+        inputRef.current?.focus();
+      }
     }
-  };
+  }, [inputValue, isLoading, isBookingMode, messages, clinicId, user, isMobile]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -162,50 +166,62 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
     setIsBookingMode(false);
   };
 
+  // Handle touch events for mobile
+  const handleTouchSend = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    handleSend();
+  }, [handleSend]);
+
   return (
-    <Card className="h-[600px] flex flex-col">
-      <CardHeader className="pb-3">
+    <Card className="h-[calc(100dvh-180px)] md:h-[600px] flex flex-col">
+      <CardHeader className="pb-3 shrink-0">
         <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base md:text-lg">
             <Bot className="h-5 w-5" />
-            LIA - Assistente SECMI
+            <span className="truncate">LIA - Assistente SECMI</span>
             {isBookingMode && (
-              <Badge variant="secondary" className="ml-2">
+              <Badge variant="secondary" className="ml-1 md:ml-2 shrink-0">
                 <Calendar className="h-3 w-3 mr-1" />
-                Agendamento
+                <span className="hidden sm:inline">Agendamento</span>
               </Badge>
             )}
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={clearChat}>
+          <Button variant="outline" size="sm" onClick={clearChat} className="shrink-0">
             Reiniciar
           </Button>
         </div>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-muted-foreground hidden md:block">
           Teste o assistente de IA integrado com OpenAI
         </p>
       </CardHeader>
 
-      <CardContent className="flex-1 flex flex-col overflow-hidden p-0">
-        <ScrollArea ref={scrollRef} className="flex-1 px-4">
+      <CardContent className="flex-1 flex flex-col overflow-hidden p-0 min-h-0">
+        {/* Use native scroll on mobile for better performance */}
+        <div 
+          ref={scrollRef} 
+          className="flex-1 overflow-y-auto px-4 overscroll-contain"
+          style={{ WebkitOverflowScrolling: 'touch' }}
+        >
           <div className="space-y-4 py-4">
             {messages.map((message, index) => (
               <div
                 key={index}
-                className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                className={`flex gap-2 md:gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {message.role === 'assistant' && (
-                  <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${
+                  <div className={`h-7 w-7 md:h-8 md:w-8 rounded-full flex items-center justify-center shrink-0 ${
                     message.isBookingFlow ? 'bg-green-500/10' : 'bg-primary/10'
                   }`}>
                     {message.isBookingFlow ? (
-                      <Calendar className="h-4 w-4 text-green-600" />
+                      <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4 text-green-600" />
                     ) : (
-                      <Bot className="h-4 w-4 text-primary" />
+                      <Bot className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                     )}
                   </div>
                 )}
                 <div
-                  className={`rounded-lg px-4 py-2 max-w-[80%] ${
+                  className={`rounded-lg px-3 py-2 md:px-4 max-w-[85%] md:max-w-[80%] ${
                     message.role === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : message.isBookingFlow
@@ -216,40 +232,48 @@ export const AIAssistantChat = ({ clinicId }: AIAssistantChatProps) => {
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                 </div>
                 {message.role === 'user' && (
-                  <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center shrink-0">
-                    <User className="h-4 w-4 text-primary-foreground" />
+                  <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-primary flex items-center justify-center shrink-0">
+                    <User className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary-foreground" />
                   </div>
                 )}
               </div>
             ))}
             {isLoading && (
-              <div className="flex gap-3 justify-start">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Bot className="h-4 w-4 text-primary" />
+              <div className="flex gap-2 md:gap-3 justify-start">
+                <div className="h-7 w-7 md:h-8 md:w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <Bot className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />
                 </div>
-                <div className="rounded-lg px-4 py-2 bg-muted">
+                <div className="rounded-lg px-3 py-2 md:px-4 bg-muted">
                   <Loader2 className="h-4 w-4 animate-spin" />
                 </div>
               </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
 
-        <div className="p-4 border-t">
+        <div className="p-3 md:p-4 border-t shrink-0">
           <div className="flex items-center gap-2">
             <Input
               ref={inputRef}
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={isBookingMode ? "Digite seu CPF ou resposta..." : "Digite o número da opção ou sua mensagem..."}
+              placeholder={isBookingMode ? "Digite seu CPF ou resposta..." : "Digite o número da opção..."}
               disabled={isLoading}
-              className="flex-1"
+              className="flex-1 text-base"
+              inputMode="text"
+              enterKeyHint="send"
+              autoComplete="off"
+              autoCapitalize="off"
+              autoCorrect="off"
             />
             <Button
+              type="button"
               onClick={handleSend}
+              onTouchEnd={handleTouchSend}
               disabled={!inputValue.trim() || isLoading}
               size="icon"
+              className="shrink-0 h-10 w-10 touch-manipulation"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
