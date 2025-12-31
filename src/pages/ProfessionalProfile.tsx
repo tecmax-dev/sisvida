@@ -358,11 +358,7 @@ export default function ProfessionalProfile() {
 
   // Helper function to get price based on selected insurance
   const getProcedurePrice = (procedureId: string, defaultPrice: number): number => {
-    if (!selectedInsurance || selectedInsurance === "particular") return defaultPrice;
-    
-    // Check if the selected plan is "Particular" by ID
-    const selectedPlan = insurancePlans.find(p => p.id === selectedInsurance);
-    if (selectedPlan?.name.toLowerCase() === "particular") return defaultPrice;
+    if (!selectedInsurance) return defaultPrice;
     
     const insurancePrice = procedureInsurancePrices.find(
       p => p.procedure_id === procedureId && p.insurance_plan_id === selectedInsurance
@@ -1101,17 +1097,12 @@ export default function ProfessionalProfile() {
                       <ResponsiveSelect
                         value={selectedInsurance}
                         onValueChange={setSelectedInsurance}
-                        placeholder="Particular"
+                        placeholder="Selecione o convênio"
                         className="mt-1.5"
-                        options={[
-                          { value: "particular", label: "Particular" },
-                          ...insurancePlans
-                            .filter((plan) => plan.name.toLowerCase() !== "particular")
-                            .map((plan) => ({
-                              value: plan.id,
-                              label: plan.name
-                            }))
-                        ]}
+                        options={insurancePlans.map((plan) => ({
+                          value: plan.id,
+                          label: plan.name
+                        }))}
                       />
                     </div>
                   )}
