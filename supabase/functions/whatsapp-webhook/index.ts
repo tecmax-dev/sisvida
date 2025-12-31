@@ -1508,13 +1508,6 @@ async function handleWaitingCpf(
         'Responda 1 ou 2'
       );
 
-      // Fallback for clients that don’t render buttons
-      await sendWhatsAppMessage(
-        config,
-        phone,
-        `Se os botões não aparecerem, responda:\n1 = SIM\n2 = NÃO`
-      );
-
       return { handled: true, newState: 'CONFIRM_IDENTITY' };
     }
   }
@@ -1566,13 +1559,6 @@ async function handleWaitingCpf(
       { id: 'confirm_no', text: '❌ Não sou eu' }
     ],
     'Responda 1 ou 2'
-  );
-
-  // Fallback for clients that don’t render buttons
-  await sendWhatsAppMessage(
-    config,
-    phone,
-    `Se os botões não aparecerem, responda:\n1 = SIM\n2 = NÃO`
   );
 
   return { handled: true, newState: 'CONFIRM_IDENTITY' };
