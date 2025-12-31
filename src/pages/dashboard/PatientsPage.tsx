@@ -881,6 +881,7 @@ export default function PatientsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
+                  <TableHead className="hidden sm:table-cell">CPF</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden lg:table-cell">Convênio</TableHead>
@@ -900,6 +901,11 @@ export default function PatientsPage() {
                           </Badge>
                         )}
                       </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      <span className="text-muted-foreground font-mono text-sm">
+                        {patient.cpf ? formatCPF(patient.cpf) : "—"}
+                      </span>
                     </TableCell>
                     <TableCell>{patient.phone}</TableCell>
                     <TableCell className="hidden md:table-cell">
