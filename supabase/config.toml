@@ -101,3 +101,6 @@ verify_jwt = false
 
 [functions.check-evolution-status]
 verify_jwt = false
+
+[functions.bulk-update-card-expiry]
+verify_jwt = true

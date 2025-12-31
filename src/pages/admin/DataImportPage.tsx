@@ -38,11 +38,13 @@ import {
   Phone,
   History,
   UserPlus,
+  CreditCard,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import DataExportPanel from "@/components/admin/DataExportPanel";
 import { ImportProgressCard } from "@/components/admin/ImportProgressCard";
 import { ImportHistoryPanel } from "@/components/admin/ImportHistoryPanel";
+import { BulkCardExpiryUpdate } from "@/components/admin/BulkCardExpiryUpdate";
 import {
   PatientImportRow,
   MedicalRecordImportRow,
@@ -79,7 +81,7 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"export" | "combined" | "patients" | "records" | "contacts" | "dependents" | "history">("export");
+  const [activeTab, setActiveTab] = useState<"export" | "combined" | "patients" | "records" | "contacts" | "dependents" | "history" | "cards">("export");
   
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
@@ -2166,6 +2168,10 @@ export default function DataImportPage() {
             <History className="h-4 w-4" />
             Histórico
           </TabsTrigger>
+          <TabsTrigger value="cards" className="gap-2">
+            <CreditCard className="h-4 w-4" />
+            Carteirinhas
+          </TabsTrigger>
         </TabsList>
 
         {/* Export Tab */}
@@ -3055,6 +3061,11 @@ export default function DataImportPage() {
         {/* History Tab */}
         <TabsContent value="history" className="space-y-4">
           <ImportHistoryPanel clinicId={selectedClinicId || undefined} />
+        </TabsContent>
+
+        {/* Cards Bulk Update Tab */}
+        <TabsContent value="cards" className="space-y-4">
+          <BulkCardExpiryUpdate />
         </TabsContent>
       </Tabs>
 
