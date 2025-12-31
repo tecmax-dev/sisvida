@@ -665,6 +665,8 @@ export default function PatientsPage() {
     setTogglingActiveId(patient.id);
     try {
       const newActiveState = !(patient.is_active ?? true);
+      
+      // Update patient
       const { error } = await supabase
         .from('patients')
         .update({ is_active: newActiveState })
@@ -673,11 +675,20 @@ export default function PatientsPage() {
 
       if (error) throw error;
 
+      // Also update all dependents when inactivating
+      if (!newActiveState) {
+        await supabase
+          .from('patient_dependents')
+          .update({ is_active: false })
+          .eq('patient_id', patient.id)
+          .eq('clinic_id', currentClinic.id);
+      }
+
       toast({
         title: newActiveState ? "Paciente ativado" : "Paciente inativado",
         description: newActiveState 
           ? `${patient.name} foi reativado.`
-          : `${patient.name} foi inativado.`,
+          : `${patient.name} e seus dependentes foram inativados.`,
       });
 
       fetchPatients();
