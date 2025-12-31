@@ -376,7 +376,7 @@ export default function CalendarPage() {
           procedure:procedures (id, name, price),
           patient:patients (id, name, phone, email, birth_date),
           professional:professionals (id, name),
-          dependent:patient_dependents (id, name)
+          dependent:patient_dependents!left (id, name)
         `)
         .eq('clinic_id', currentClinic.id)
         .gte('appointment_date', startDate)
