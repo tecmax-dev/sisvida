@@ -15,30 +15,55 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { clinic_id, patient_id, image_base64 } = await req.json();
+    const { clinic_id, patient_id, image_url, image_base64 } = await req.json();
 
-    if (!clinic_id || !patient_id || !image_base64) {
+    if (!clinic_id || !patient_id) {
       return new Response(
-        JSON.stringify({ error: 'clinic_id, patient_id and image_base64 are required' }),
+        JSON.stringify({ error: 'clinic_id and patient_id are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Decode base64 image
-    const base64Data = image_base64.replace(/^data:image\/\w+;base64,/, '');
-    const imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+    let imageBuffer: Uint8Array;
+    let contentType = 'image/png';
+    
+    // Option 1: Download from URL
+    if (image_url) {
+      console.log(`[upload-test-payslip] Fetching image from URL: ${image_url}`);
+      const response = await fetch(image_url);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      imageBuffer = new Uint8Array(arrayBuffer);
+      contentType = response.headers.get('content-type') || 'image/png';
+      console.log(`[upload-test-payslip] Downloaded ${imageBuffer.length} bytes`);
+    } 
+    // Option 2: Base64 encoded
+    else if (image_base64) {
+      const base64Data = image_base64.replace(/^data:image\/\w+;base64,/, '');
+      imageBuffer = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+      contentType = 'image/jpeg';
+    } 
+    else {
+      return new Response(
+        JSON.stringify({ error: 'Either image_url or image_base64 is required' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Generate file path
-    const fileName = `${Date.now()}.jpg`;
+    const ext = contentType.includes('png') ? 'png' : 'jpg';
+    const fileName = `${Date.now()}.${ext}`;
     const filePath = `${clinic_id}/${patient_id}/${fileName}`;
 
-    console.log(`[upload-test-payslip] Uploading to: ${filePath}`);
+    console.log(`[upload-test-payslip] Uploading to: ${filePath} (${imageBuffer.length} bytes)`);
 
     // Upload to storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('contra-cheques')
       .upload(filePath, imageBuffer, {
-        contentType: 'image/jpeg',
+        contentType,
         upsert: true
       });
 
@@ -49,7 +74,7 @@ Deno.serve(async (req) => {
 
     console.log(`[upload-test-payslip] Upload successful: ${filePath}`);
 
-    // Update payslip request if exists
+    // Update payslip request
     const { data: updateData, error: updateError } = await supabase
       .from('payslip_requests')
       .update({ 
@@ -60,8 +85,6 @@ Deno.serve(async (req) => {
       .eq('clinic_id', clinic_id)
       .eq('patient_id', patient_id)
       .eq('status', 'received')
-      .is('attachment_path', null)
-      .or(`attachment_path.ilike.%teste%`)
       .select()
       .single();
 
@@ -73,6 +96,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         path: filePath,
+        size: imageBuffer.length,
         updated: updateData ? true : false
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
