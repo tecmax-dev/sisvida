@@ -222,6 +222,9 @@ export default function ProfessionalsPage() {
   const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
   const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
 
+  // Filter state - show only active by default
+  const [showInactive, setShowInactive] = useState(false);
+
   // Telemedicine state
   const [formTelemedicineEnabled, setFormTelemedicineEnabled] = useState(false);
   const [editTelemedicineEnabled, setEditTelemedicineEnabled] = useState(false);
@@ -714,7 +717,13 @@ export default function ProfessionalsPage() {
 
   const maxProfessionals = subscription?.plan?.max_professionals || 999;
   const activeProfessionals = professionals.filter(p => p.is_active).length;
+  const inactiveProfessionals = professionals.filter(p => !p.is_active).length;
   const usagePercentage = subscription ? (activeProfessionals / maxProfessionals) * 100 : 0;
+  
+  // Filter professionals based on toggle
+  const filteredProfessionals = showInactive 
+    ? professionals 
+    : professionals.filter(p => p.is_active);
 
   return (
     <RoleGuard permission="view_professionals">
@@ -750,14 +759,27 @@ export default function ProfessionalsPage() {
             </div>
           )}
         </div>
-        {canManageProfessionals && (
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="hero" disabled={!canAddProfessional && !!subscription}>
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Profissional
-              </Button>
-            </DialogTrigger>
+        <div className="flex items-center gap-4">
+          {inactiveProfessionals > 0 && (
+            <div className="flex items-center gap-2">
+              <Switch
+                id="showInactive"
+                checked={showInactive}
+                onCheckedChange={setShowInactive}
+              />
+              <Label htmlFor="showInactive" className="text-sm text-muted-foreground cursor-pointer">
+                Mostrar inativos ({inactiveProfessionals})
+              </Label>
+            </div>
+          )}
+          {canManageProfessionals && (
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="hero" disabled={!canAddProfessional && !!subscription}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Profissional
+                </Button>
+              </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh]">
             <DialogHeader>
               <DialogTitle>Cadastrar Profissional</DialogTitle>
@@ -941,6 +963,7 @@ export default function ProfessionalsPage() {
           </DialogContent>
         </Dialog>
         )}
+        </div>
       </div>
 
       {loading ? (
@@ -948,9 +971,9 @@ export default function ProfessionalsPage() {
           <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
           Carregando profissionais...
         </div>
-      ) : professionals.length > 0 ? (
+      ) : filteredProfessionals.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {professionals.map((professional) => (
+          {filteredProfessionals.map((professional) => (
             <Card key={professional.id} className="card-hover">
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
@@ -1082,11 +1105,20 @@ export default function ProfessionalsPage() {
         <Card>
           <CardContent className="py-12 text-center text-muted-foreground">
             <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-            <p className="mb-4">Nenhum profissional cadastrado</p>
-            {canManageProfessionals && (
+            <p className="mb-4">
+              {professionals.length === 0 
+                ? "Nenhum profissional cadastrado" 
+                : "Nenhum profissional ativo encontrado"}
+            </p>
+            {professionals.length === 0 && canManageProfessionals && (
               <Button variant="outline" onClick={() => setDialogOpen(true)}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar profissional
+              </Button>
+            )}
+            {professionals.length > 0 && !showInactive && (
+              <Button variant="outline" onClick={() => setShowInactive(true)}>
+                Mostrar inativos ({inactiveProfessionals})
               </Button>
             )}
           </CardContent>
