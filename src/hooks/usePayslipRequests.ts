@@ -133,8 +133,14 @@ export function usePayslipRequests(clinicId: string | undefined, patientId?: str
 
       if (error) throw error;
       return data.signedUrl;
-    } catch (error) {
-      console.error('Error getting attachment URL:', error);
+    } catch (error: any) {
+      const message = error?.message ?? 'Não foi possível gerar o link do arquivo.';
+      console.error('Error getting attachment URL:', message, { path });
+      toast({
+        title: 'Erro ao abrir contracheque',
+        description: message,
+        variant: 'destructive',
+      });
       return null;
     }
   };
