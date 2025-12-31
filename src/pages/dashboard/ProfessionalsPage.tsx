@@ -54,7 +54,7 @@ import { RoleGuard } from "@/components/auth/RoleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { ScheduleDialog } from "@/components/professionals/ScheduleDialog";
+
 import { useSubscription } from "@/hooks/useSubscription";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { Json } from "@/integrations/supabase/types";
@@ -136,7 +136,6 @@ export default function ProfessionalsPage() {
   const [clinicUsers, setClinicUsers] = useState<ClinicUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   
@@ -272,11 +271,6 @@ export default function ProfessionalsPage() {
     } finally {
       setLoadingAppointments(false);
     }
-  };
-
-  const openScheduleDialog = (professional: Professional) => {
-    setSelectedProfessional(professional);
-    setScheduleDialogOpen(true);
   };
 
   const handleViewSchedule = (professional: Professional) => {
@@ -515,7 +509,7 @@ export default function ProfessionalsPage() {
                             <Edit className="h-4 w-4 mr-2" />
                             Editar
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => openScheduleDialog(professional)}>
+                          <DropdownMenuItem onClick={() => navigate(`/dashboard/professionals/${professional.id}/edit?tab=schedule`)}>
                             <Settings className="h-4 w-4 mr-2" />
                             Configurar horários
                           </DropdownMenuItem>
@@ -599,21 +593,6 @@ export default function ProfessionalsPage() {
             )}
           </CardContent>
         </Card>
-      )}
-
-      {/* Schedule Configuration Dialog */}
-      {selectedProfessional && (
-        <ScheduleDialog
-          open={scheduleDialogOpen}
-          onOpenChange={setScheduleDialogOpen}
-          professional={{
-            id: selectedProfessional.id,
-            name: selectedProfessional.name,
-            schedule: selectedProfessional.schedule as Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null,
-          }}
-          appointmentDuration={(selectedProfessional as any).appointment_duration || 30}
-          onUpdate={fetchProfessionals}
-        />
       )}
 
       {/* View Schedule Dialog */}

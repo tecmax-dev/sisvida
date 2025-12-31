@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Loader2, Upload, Save, Cloud, Check } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,8 +24,10 @@ import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { useSubscription } from "@/hooks/useSubscription";
 import { SpecialtySelector } from "@/components/professionals/SpecialtySelector";
 import { ProfessionalFormFields } from "@/components/professionals/ProfessionalFormFields";
+import { ScheduleTab } from "@/components/professionals/ScheduleTab";
 import { PROFESSIONAL_COUNCILS } from "@/lib/professionalCouncils";
 import { z } from "zod";
+import { Json } from "@/integrations/supabase/types";
 
 interface Procedure {
   id: string;
@@ -51,6 +53,8 @@ interface Professional {
   bio: string | null;
   education: string | null;
   experience: string | null;
+  schedule: Json;
+  appointment_duration: number | null;
 }
 
 interface ClinicUser {
@@ -74,6 +78,8 @@ function generateSlug(name: string): string {
 
 export default function ProfessionalEditPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
+  const defaultTab = searchParams.get('tab') || 'basic';
   const navigate = useNavigate();
   const { currentClinic } = useAuth();
   const { toast } = useToast();
@@ -714,10 +720,11 @@ export default function ProfessionalEditPage() {
               </div>
             </div>
 
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className={`grid w-full ${isCreating ? 'grid-cols-3' : 'grid-cols-4'}`}>
+            <Tabs defaultValue={defaultTab} className="w-full">
+              <TabsList className={`grid w-full ${isCreating ? 'grid-cols-3' : 'grid-cols-5'}`}>
                 <TabsTrigger value="basic">Dados Básicos</TabsTrigger>
                 <TabsTrigger value="profile">Perfil Público</TabsTrigger>
+                {!isCreating && <TabsTrigger value="schedule">Horários</TabsTrigger>}
                 {!isCreating && <TabsTrigger value="procedures">Procedimentos</TabsTrigger>}
                 <TabsTrigger value="settings">Configurações</TabsTrigger>
               </TabsList>
@@ -822,6 +829,17 @@ export default function ProfessionalEditPage() {
                   setExperience={setExperience}
                 />
               </TabsContent>
+
+              {!isCreating && professional && (
+                <TabsContent value="schedule" className="mt-4">
+                  <ScheduleTab
+                    professionalId={professional.id}
+                    professionalName={professional.name}
+                    initialSchedule={professional.schedule as Record<string, { enabled: boolean; slots: { start: string; end: string }[] }> | null}
+                    appointmentDuration={appointmentDuration}
+                  />
+                </TabsContent>
+              )}
 
               <TabsContent value="procedures" className="mt-4 space-y-4">
                 <div>
