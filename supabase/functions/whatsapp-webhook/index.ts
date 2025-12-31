@@ -28,6 +28,7 @@ type BookingState =
   | 'MAIN_MENU'
   | 'SELECT_BOOKING_FOR'
   | 'SELECT_PROFESSIONAL'
+  | 'SELECT_PROCEDURE'
   | 'SELECT_DATE'
   | 'SELECT_TIME'
   | 'CONFIRM_APPOINTMENT'
@@ -74,6 +75,7 @@ interface BookingSession {
   selected_time: string | null;
   selected_procedure_id: string | null;
   available_professionals: Array<{ id: string; name: string; specialty: string }> | null;
+  available_procedures?: Array<{ id: string; name: string; duration?: number }> | null;
   available_dates: Array<{ date: string; formatted: string; weekday: string }> | null;
   available_times: Array<{ time: string; formatted: string }> | null;
   // For cancel/reschedule flows
@@ -513,6 +515,16 @@ Escolha o profissional desejado digitando o *número*:\n\n`;
     return msg.trim();
   },
 
+  selectProcedure: (professionalName: string, procedures: Array<{ name: string; duration?: number }>) => {
+    let msg = `O(A) *Dr(a). ${professionalName}* realiza os seguintes procedimentos:\n\n`;
+    procedures.forEach((p, i) => {
+      const durationText = p.duration ? ` (${p.duration} min)` : '';
+      msg += `${i + 1}️⃣ ${p.name}${durationText}\n`;
+    });
+    msg += `\n_Qual procedimento você deseja agendar?_`;
+    return msg.trim();
+  },
+
   noProfessionals: `😔 Poxa, que pena! No momento não conseguimos encontrar profissionais disponíveis para agendamento.
 
 Mas não desanime! Isso pode ser temporário. Tente novamente mais tarde ou entre em contato conosco por telefone que teremos prazer em ajudá-lo(a). 💙`,
@@ -884,6 +896,9 @@ async function handleBookingFlow(
     
     case 'SELECT_PROFESSIONAL':
       return await handleSelectProfessional(supabase, config, phone, messageText, session);
+
+    case 'SELECT_PROCEDURE':
+      return await handleSelectProcedure(supabase, config, phone, messageText, session);
     
     case 'SELECT_DATE':
       return await handleSelectDate(supabase, config, phone, messageText, session);
@@ -1945,6 +1960,40 @@ async function handleSelectProfessional(
     return { handled: true, newState: 'FINISHED' };
   }
 
+  // Check if professional has multiple procedures configured
+  const { data: professionalProcedures } = await supabase
+    .from('professional_procedures')
+    .select('procedure_id, procedures(id, name, duration)')
+    .eq('professional_id', selected.id);
+
+  const procedures = (professionalProcedures || [])
+    .map((pp: any) => pp.procedures)
+    .filter((p: any) => p !== null);
+
+  console.log(`[booking] Professional ${selected.name} has ${procedures.length} procedures`);
+
+  // If professional has more than 1 procedure, ask which one
+  if (procedures.length > 1) {
+    const procedureList = procedures.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      duration: p.duration
+    }));
+
+    await updateSession(supabase, session.id, {
+      state: 'SELECT_PROCEDURE',
+      selected_professional_id: selected.id,
+      selected_professional_name: selected.name,
+      available_procedures: procedureList,
+    });
+
+    await sendWhatsAppMessage(config, phone, `✅ Selecionado: *Dr(a). ${selected.name}*\n\n` + MESSAGES.selectProcedure(selected.name, procedureList) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
+    return { handled: true, newState: 'SELECT_PROCEDURE' };
+  }
+
+  // If only 1 procedure, auto-select it
+  const selectedProcedure = procedures.length === 1 ? procedures[0] : null;
+
   const availableDates = await getAvailableDates(supabase, config.clinic_id, selected.id);
 
   if (availableDates.length === 0) {
@@ -1956,10 +2005,57 @@ async function handleSelectProfessional(
     state: 'SELECT_DATE',
     selected_professional_id: selected.id,
     selected_professional_name: selected.name,
+    selected_procedure_id: selectedProcedure?.id || null,
     available_dates: availableDates,
   });
 
   await sendWhatsAppMessage(config, phone, `✅ Selecionado: *Dr(a). ${selected.name}*\n\nAgora escolha a data:`);
+  await sendWhatsAppMessage(config, phone, MESSAGES.selectDate(availableDates) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
+  return { handled: true, newState: 'SELECT_DATE' };
+}
+
+// ==========================================
+// SELECT PROCEDURE HANDLER
+// ==========================================
+
+async function handleSelectProcedure(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const procedures = session.available_procedures || [];
+
+  // Numeric selection
+  const choice = parseInt(messageText.trim());
+  
+  if (isNaN(choice) || choice < 1 || choice > procedures.length) {
+    await sendWhatsAppMessage(config, phone, 
+      `Por favor, escolha pelo *número* do procedimento:\n\n${
+        procedures.map((p, i) => `${i + 1}️⃣ ${p.name}`).join('\n')
+      }` + MESSAGES.hintMenu
+    );
+    return { handled: true, newState: 'SELECT_PROCEDURE' };
+  }
+
+  const selected = procedures[choice - 1];
+  console.log(`[booking] Selected procedure: ${selected.name} (${selected.id})`);
+
+  const availableDates = await getAvailableDates(supabase, config.clinic_id, session.selected_professional_id!);
+
+  if (availableDates.length === 0) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.noDates(session.selected_professional_name || undefined));
+    return { handled: true, newState: 'SELECT_PROFESSIONAL' };
+  }
+
+  await updateSession(supabase, session.id, {
+    state: 'SELECT_DATE',
+    selected_procedure_id: selected.id,
+    available_dates: availableDates,
+  });
+
+  await sendWhatsAppMessage(config, phone, `✅ Procedimento: *${selected.name}*\n\nAgora escolha a data:`);
   await sendWhatsAppMessage(config, phone, MESSAGES.selectDate(availableDates) + MESSAGES.hintSelectOption + MESSAGES.hintMenu);
   return { handled: true, newState: 'SELECT_DATE' };
 }
