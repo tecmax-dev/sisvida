@@ -3,7 +3,6 @@ import {
   Search,
   Plus,
   Phone,
-  Mail,
   MoreVertical,
   Calendar,
   Loader2,
@@ -14,6 +13,8 @@ import {
   MessageCircle,
   Paperclip,
   Users,
+  UserX,
+  UserCheck,
 } from "lucide-react";
 import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -60,6 +61,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -91,6 +93,7 @@ interface Patient {
   dependents_count?: number;
   card_expires_at?: string | null;
   card_number?: string | null;
+  is_active?: boolean;
 }
 
 interface InsurancePlan {
@@ -175,6 +178,8 @@ export default function PatientsPage() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [totalPatients, setTotalPatients] = useState(0);
+  const [showInactive, setShowInactive] = useState(false);
+  const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -274,6 +279,7 @@ export default function PatientsPage() {
             notes,
             insurance_plan_id,
             created_at,
+            is_active,
             insurance_plan:insurance_plans ( name ),
             patient_dependents ( id ),
             patient_cards ( card_number, expires_at, is_active )
@@ -281,6 +287,11 @@ export default function PatientsPage() {
           { count: "exact" }
         )
         .eq("clinic_id", currentClinic.id);
+
+      // Filter by active status
+      if (!showInactive) {
+        query = query.eq("is_active", true);
+      }
 
       if (safeSearch.length > 0) {
         const text = `%${safeSearch}%`;
@@ -332,7 +343,7 @@ export default function PatientsPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentClinic, debouncedSearch, page, pageSize]);
+  }, [currentClinic, debouncedSearch, page, pageSize, showInactive]);
 
   useEffect(() => {
     if (currentClinic) {
@@ -648,6 +659,39 @@ export default function PatientsPage() {
     }
   };
 
+  const handleTogglePatientActive = async (patient: Patient) => {
+    if (!currentClinic) return;
+    
+    setTogglingActiveId(patient.id);
+    try {
+      const newActiveState = !(patient.is_active ?? true);
+      const { error } = await supabase
+        .from('patients')
+        .update({ is_active: newActiveState })
+        .eq('id', patient.id)
+        .eq('clinic_id', currentClinic.id);
+
+      if (error) throw error;
+
+      toast({
+        title: newActiveState ? "Paciente ativado" : "Paciente inativado",
+        description: newActiveState 
+          ? `${patient.name} foi reativado.`
+          : `${patient.name} foi inativado.`,
+      });
+
+      fetchPatients();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Não foi possível alterar o status.",
+        variant: "destructive",
+      });
+    } finally {
+      setTogglingActiveId(null);
+    }
+  };
+
   const pageCount = Math.max(1, Math.ceil(totalPatients / pageSize));
   const showingFrom = totalPatients === 0 ? 0 : (page - 1) * pageSize + 1;
   const showingTo = Math.min(page * pageSize, totalPatients);
@@ -833,7 +877,22 @@ export default function PatientsPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-4">
+            {/* Show inactive toggle */}
+            <div className="flex items-center gap-2">
+              <Switch
+                id="show-inactive"
+                checked={showInactive}
+                onCheckedChange={(checked) => {
+                  setShowInactive(checked);
+                  setPage(1);
+                }}
+              />
+              <Label htmlFor="show-inactive" className="text-sm cursor-pointer">
+                Mostrar inativos
+              </Label>
+            </div>
+
             <Select
               value={String(pageSize)}
               onValueChange={(val) => {
@@ -883,7 +942,6 @@ export default function PatientsPage() {
                   <TableHead>Nome</TableHead>
                   <TableHead className="hidden sm:table-cell">CPF</TableHead>
                   <TableHead>Telefone</TableHead>
-                  <TableHead className="hidden md:table-cell">Email</TableHead>
                   <TableHead className="hidden lg:table-cell">Convênio</TableHead>
                   <TableHead className="hidden md:table-cell">Carteirinha</TableHead>
                   <TableHead className="w-[60px]"></TableHead>
@@ -891,13 +949,19 @@ export default function PatientsPage() {
               </TableHeader>
               <TableBody>
                 {patients.map((patient) => (
-                  <TableRow key={patient.id}>
+                  <TableRow key={patient.id} className={patient.is_active === false ? "opacity-60" : ""}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <span className="truncate">{patient.name}</span>
                         {patient.birth_date && (
                           <Badge variant="outline" className="text-xs">
                             {calculateAge(patient.birth_date)} anos
+                          </Badge>
+                        )}
+                        {patient.is_active === false && (
+                          <Badge variant="secondary" className="text-xs gap-1">
+                            <UserX className="h-3 w-3" />
+                            Inativo
                           </Badge>
                         )}
                       </div>
@@ -908,9 +972,6 @@ export default function PatientsPage() {
                       </span>
                     </TableCell>
                     <TableCell>{patient.phone}</TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <span className="text-muted-foreground">{patient.email || "—"}</span>
-                    </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {patient.insurance_plan ? (
                         <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground font-medium">
@@ -976,6 +1037,24 @@ export default function PatientsPage() {
                               }
                             </DropdownMenuItem>
                           )}
+                          {hasPermission("manage_patients") && (
+                            <DropdownMenuItem 
+                              onClick={() => handleTogglePatientActive(patient)}
+                              disabled={togglingActiveId === patient.id}
+                            >
+                              {patient.is_active === false ? (
+                                <>
+                                  <UserCheck className="h-4 w-4 mr-2" />
+                                  Reativar
+                                </>
+                              ) : (
+                                <>
+                                  <UserX className="h-4 w-4 mr-2" />
+                                  Inativar
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          )}
                           {hasPermission("delete_patients") && (
                             <DropdownMenuItem className="text-destructive" onClick={() => handleOpenDelete(patient)}>
                               Excluir
@@ -1033,7 +1112,7 @@ export default function PatientsPage() {
                 </div>
                 {selectedPatient.email && (
                   <div className="flex items-center gap-3">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">📧</span>
                     <span>{selectedPatient.email}</span>
                   </div>
                 )}
