@@ -391,6 +391,13 @@ export default function PublicBooking() {
     const defaultProfDuration = professional.appointment_duration || 30;
     const selectedDateStr = `${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, "0")}-${String(selectedDate.getDate()).padStart(2, "0")}`;
 
+    // Check if selected date is today and calculate minimum allowed time
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const isToday = selectedDateStr === todayStr;
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const minAllowedMinutes = isToday ? currentMinutes + 30 : 0; // 30 min buffer for today
+
     const uniqueSortTimes = (times: string[]) => {
       const unique = Array.from(new Set(times));
       unique.sort((a, b) => {
@@ -420,6 +427,12 @@ export default function PublicBooking() {
         let current = slotStartMinutes;
 
         while (current + duration <= slotEndMinutes) {
+          // Skip past times for today
+          if (current < minAllowedMinutes) {
+            current += blockInterval;
+            continue;
+          }
+
           const hour = Math.floor(current / 60);
           const min = current % 60;
           const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
@@ -458,6 +471,12 @@ export default function PublicBooking() {
       let current = slotStartMinutes;
 
       while (current + duration <= slotEndMinutes) {
+        // Skip past times for today
+        if (current < minAllowedMinutes) {
+          current += slotInterval;
+          continue;
+        }
+
         const hour = Math.floor(current / 60);
         const min = current % 60;
         const timeStr = `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
