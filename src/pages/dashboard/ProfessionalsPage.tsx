@@ -33,7 +33,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -45,30 +44,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { z } from "zod";
 import { ScheduleDialog } from "@/components/professionals/ScheduleDialog";
-import { SpecialtySelector } from "@/components/professionals/SpecialtySelector";
-import { ProfessionalFormFields } from "@/components/professionals/ProfessionalFormFields";
-import { useSpecialties } from "@/hooks/useSpecialties";
 import { useSubscription } from "@/hooks/useSubscription";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { Json } from "@/integrations/supabase/types";
@@ -76,7 +62,6 @@ import { Switch } from "@/components/ui/switch";
 import { format, isToday, isTomorrow, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
-import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
 
 interface Professional {
   id: string;
@@ -165,69 +150,19 @@ export default function ProfessionalsPage() {
   const [professionals, setProfessionals] = useState<Professional[]>([]);
   const [clinicUsers, setClinicUsers] = useState<ClinicUser[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   
-  // Additional dialog states
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  // Dialog states
   const [scheduleViewDialogOpen, setScheduleViewDialogOpen] = useState(false);
   const [deactivateDialogOpen, setDeactivateDialogOpen] = useState(false);
   const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([]);
   const [loadingAppointments, setLoadingAppointments] = useState(false);
-  
-  // Form state for create
-  const [formName, setFormName] = useState("");
-  const [formSpecialtyIds, setFormSpecialtyIds] = useState<string[]>([]);
-  const [formCRM, setFormCRM] = useState("");
-  const [formPhone, setFormPhone] = useState("");
-  const [formEmail, setFormEmail] = useState("");
-  const [formUserId, setFormUserId] = useState<string>("");
-  const [formErrors, setFormErrors] = useState<{ name?: string; email?: string }>({});
-
-  // Public profile fields for create
-  const [formAddress, setFormAddress] = useState("");
-  const [formCity, setFormCity] = useState("");
-  const [formState, setFormState] = useState("");
-  const [formZipCode, setFormZipCode] = useState("");
-  const [formWhatsapp, setFormWhatsapp] = useState("");
-  const [formBio, setFormBio] = useState("");
-  const [formEducation, setFormEducation] = useState("");
-  const [formExperience, setFormExperience] = useState("");
-
-  // Form state for edit
-  const [editName, setEditName] = useState("");
-  const [editSpecialtyIds, setEditSpecialtyIds] = useState<string[]>([]);
-  const [editCRM, setEditCRM] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-  const [editEmail, setEditEmail] = useState("");
-  const [editUserId, setEditUserId] = useState<string>("");
-  const [editErrors, setEditErrors] = useState<{ name?: string; email?: string }>({});
-
-  // Public profile fields for edit
-  const [editAddress, setEditAddress] = useState("");
-  const [editCity, setEditCity] = useState("");
-  const [editState, setEditState] = useState("");
-  const [editZipCode, setEditZipCode] = useState("");
-  const [editWhatsapp, setEditWhatsapp] = useState("");
-  const [editBio, setEditBio] = useState("");
-  const [editEducation, setEditEducation] = useState("");
-  const [editExperience, setEditExperience] = useState("");
-
-  // Avatar upload state
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
-  const [editAvatarFile, setEditAvatarFile] = useState<File | null>(null);
-  const [editAvatarPreview, setEditAvatarPreview] = useState<string | null>(null);
 
   // Filter state - show only active by default
   const [showInactive, setShowInactive] = useState(false);
-
-  // Telemedicine state
-  const [formTelemedicineEnabled, setFormTelemedicineEnabled] = useState(false);
-  const [editTelemedicineEnabled, setEditTelemedicineEnabled] = useState(false);
 
   const fetchProfessionals = useCallback(async () => {
     if (!currentClinic) return;
@@ -354,162 +289,6 @@ export default function ProfessionalsPage() {
     }
   };
 
-  const handleCreateProfessional = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const validation = professionalSchema.safeParse({
-      name: formName,
-      registration_number: formCRM || undefined,
-      phone: formPhone || undefined,
-      email: formEmail || undefined,
-    });
-    
-    if (!validation.success) {
-      const errors: typeof formErrors = {};
-      validation.error.errors.forEach((err) => {
-        if (err.path[0] === "name") errors.name = err.message;
-        if (err.path[0] === "email") errors.email = err.message;
-      });
-      setFormErrors(errors);
-      return;
-    }
-
-    if (!currentClinic) return;
-
-    setSaving(true);
-    setFormErrors({});
-
-    try {
-      // Get display name from selected specialties
-      const specialtyNames = formSpecialtyIds
-        .map(id => getSpecialtyById(id)?.name)
-        .filter((n): n is string => !!n);
-      const specialtyDisplay = specialtyNames.join(', ') || null;
-      
-      // Generate slug from name
-      const slug = generateSlug(formName);
-      
-      const { data: newProfessional, error } = await supabase
-        .from('professionals')
-        .insert({
-          clinic_id: currentClinic.id,
-          name: formName.trim(),
-          specialty: specialtyDisplay,
-          registration_number: formCRM.trim() || null,
-          phone: formPhone.trim() || null,
-          email: formEmail.trim() || null,
-          user_id: formUserId || null,
-          telemedicine_enabled: hasFeature('telemedicine') ? formTelemedicineEnabled : false,
-          slug,
-          address: formAddress.trim() || null,
-          city: formCity.trim() || null,
-          state: formState || null,
-          zip_code: formZipCode.replace(/\D/g, '') || null,
-          whatsapp: formWhatsapp.replace(/\D/g, '') || null,
-          bio: formBio.trim() || null,
-          education: formEducation.trim() || null,
-          experience: formExperience.trim() || null,
-        })
-        .select('id')
-        .single();
-
-      if (error) throw error;
-
-      // Upload avatar if selected
-      if (newProfessional && avatarFile) {
-        const fileExt = avatarFile.name.split('.').pop();
-        const filePath = `${currentClinic.id}/${newProfessional.id}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('professional-avatars')
-          .upload(filePath, avatarFile, { upsert: true });
-        
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage
-            .from('professional-avatars')
-            .getPublicUrl(filePath);
-          
-          await supabase
-            .from('professionals')
-            .update({ avatar_url: urlData.publicUrl })
-            .eq('id', newProfessional.id);
-        }
-      }
-
-      // Save professional specialties
-      if (newProfessional && formSpecialtyIds.length > 0) {
-        const result = await saveProfessionalSpecialties(newProfessional.id, formSpecialtyIds);
-        if (!result.success) {
-          toast({
-            title: "Aviso",
-            description: "Profissional criado, mas houve um problema ao salvar especialidades: " + result.error,
-            variant: "destructive",
-          });
-        }
-      }
-
-      toast({
-        title: "Profissional cadastrado",
-        description: formUserId 
-          ? "O profissional foi vinculado e pode acessar o portal." 
-          : "O profissional foi adicionado com sucesso.",
-      });
-
-      setDialogOpen(false);
-      resetForm();
-      fetchProfessionals();
-      refetchSubscription();
-    } catch (error: any) {
-      // Handle professional limit error
-      if (error.message?.includes('LIMITE_PROFISSIONAIS')) {
-        const match = error.message.match(/LIMITE_PROFISSIONAIS: (.+)/);
-        toast({
-          title: "Limite de profissionais atingido",
-          description: match ? match[1] : "Você atingiu o limite de profissionais do seu plano. Faça upgrade para adicionar mais.",
-          variant: "destructive",
-        });
-        return;
-      }
-      if (error.message?.includes('ASSINATURA_INVALIDA')) {
-        const match = error.message.match(/ASSINATURA_INVALIDA: (.+)/);
-        toast({
-          title: "Assinatura inválida",
-          description: match ? match[1] : "Sua assinatura não está ativa.",
-          variant: "destructive",
-        });
-        return;
-      }
-      toast({
-        title: "Erro ao cadastrar",
-        description: error.message || "Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormName("");
-    setFormSpecialtyIds([]);
-    setFormCRM("");
-    setFormPhone("");
-    setFormEmail("");
-    setFormUserId("");
-    setFormErrors({});
-    setAvatarFile(null);
-    setAvatarPreview(null);
-    setFormTelemedicineEnabled(false);
-    setFormAddress("");
-    setFormCity("");
-    setFormState("");
-    setFormZipCode("");
-    setFormWhatsapp("");
-    setFormBio("");
-    setFormEducation("");
-    setFormExperience("");
-  };
-
   const openScheduleDialog = (professional: Professional) => {
     setSelectedProfessional(professional);
     setScheduleDialogOpen(true);
@@ -523,113 +302,6 @@ export default function ProfessionalsPage() {
 
   const handleOpenEdit = (professional: Professional) => {
     navigate(`/dashboard/professionals/${professional.id}/edit`);
-  };
-
-  const handleEditProfessional = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProfessional || !currentClinic) return;
-
-    const validation = professionalSchema.safeParse({
-      name: editName,
-      registration_number: editCRM || undefined,
-      phone: editPhone || undefined,
-      email: editEmail || undefined,
-    });
-    
-    if (!validation.success) {
-      const errors: typeof editErrors = {};
-      validation.error.errors.forEach((err) => {
-        if (err.path[0] === "name") errors.name = err.message;
-        if (err.path[0] === "email") errors.email = err.message;
-      });
-      setEditErrors(errors);
-      return;
-    }
-
-    setSaving(true);
-    setEditErrors({});
-
-    try {
-      // Get display name from selected specialties
-      const specialtyNames = editSpecialtyIds
-        .map(id => getSpecialtyById(id)?.name)
-        .filter((n): n is string => !!n);
-      const specialtyDisplay = specialtyNames.join(', ') || null;
-
-      // Upload new avatar if selected
-      let avatarUrl = selectedProfessional.avatar_url;
-      if (editAvatarFile && currentClinic) {
-        const fileExt = editAvatarFile.name.split('.').pop();
-        const filePath = `${currentClinic.id}/${selectedProfessional.id}.${fileExt}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('professional-avatars')
-          .upload(filePath, editAvatarFile, { upsert: true });
-        
-        if (!uploadError) {
-          const { data: urlData } = supabase.storage
-            .from('professional-avatars')
-            .getPublicUrl(filePath);
-          avatarUrl = urlData.publicUrl;
-        }
-      }
-
-      // Generate new slug if name changed
-      const newSlug = editName !== selectedProfessional.name 
-        ? generateSlug(editName) 
-        : selectedProfessional.slug;
-      
-      const { error } = await supabase
-        .from('professionals')
-        .update({
-          name: editName.trim(),
-          specialty: specialtyDisplay,
-          registration_number: editCRM.trim() || null,
-          phone: editPhone.trim() || null,
-          email: editEmail.trim() || null,
-          user_id: editUserId || null,
-          avatar_url: avatarUrl,
-          telemedicine_enabled: hasFeature('telemedicine') ? editTelemedicineEnabled : false,
-          slug: newSlug,
-          address: editAddress.trim() || null,
-          city: editCity.trim() || null,
-          state: editState || null,
-          zip_code: editZipCode.replace(/\D/g, '') || null,
-          whatsapp: editWhatsapp.replace(/\D/g, '') || null,
-          bio: editBio.trim() || null,
-          education: editEducation.trim() || null,
-          experience: editExperience.trim() || null,
-        })
-        .eq('id', selectedProfessional.id);
-
-      if (error) throw error;
-
-      // Save professional specialties
-      const result = await saveProfessionalSpecialties(selectedProfessional.id, editSpecialtyIds);
-      if (!result.success) {
-        toast({
-          title: "Aviso",
-          description: "Profissional atualizado, mas houve um problema ao salvar especialidades: " + result.error,
-          variant: "destructive",
-        });
-      }
-
-      toast({
-        title: "Profissional atualizado",
-        description: "As informações foram salvas com sucesso.",
-      });
-
-      setEditDialogOpen(false);
-      fetchProfessionals();
-    } catch (error: any) {
-      toast({
-        title: "Erro ao atualizar",
-        description: error.message || "Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setSaving(false);
-    }
   };
 
   const handleOpenDeactivate = (professional: Professional) => {
@@ -773,196 +445,15 @@ export default function ProfessionalsPage() {
             </div>
           )}
           {canManageProfessionals && (
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="hero" disabled={!canAddProfessional && !!subscription}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Novo Profissional
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh]">
-            <DialogHeader>
-              <DialogTitle>Cadastrar Profissional</DialogTitle>
-            </DialogHeader>
-            <ScrollArea className="max-h-[70vh] pr-4">
-              <form onSubmit={handleCreateProfessional} className="space-y-4">
-                <div>
-                  <Label htmlFor="profName">Nome *</Label>
-                  <Input
-                    id="profName"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    placeholder="Dr. João Silva"
-                    className={`mt-1.5 ${formErrors.name ? "border-destructive" : ""}`}
-                  />
-                  {formErrors.name && (
-                    <p className="mt-1 text-sm text-destructive">{formErrors.name}</p>
-                  )}
-                </div>
-                <SpecialtySelector
-                  selectedIds={formSpecialtyIds}
-                  onChange={setFormSpecialtyIds}
-                  groupedSpecialties={groupedSpecialties}
-                  loading={loadingSpecialties}
-                  getSpecialtyById={getSpecialtyById}
-                />
-                <div>
-                  <Label htmlFor="profCRM">CRM / Registro</Label>
-                  <Input
-                    id="profCRM"
-                    value={formCRM}
-                    onChange={(e) => setFormCRM(e.target.value)}
-                    placeholder="123456-SP"
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="profPhone">Telefone</Label>
-                  <Input
-                    id="profPhone"
-                    value={formPhone}
-                    onChange={(e) => setFormPhone(e.target.value)}
-                    placeholder="(11) 99999-9999"
-                    className="mt-1.5"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="profEmail">Email</Label>
-                  <Input
-                    id="profEmail"
-                    type="email"
-                    value={formEmail}
-                    onChange={(e) => setFormEmail(e.target.value)}
-                    placeholder="profissional@email.com"
-                    className={`mt-1.5 ${formErrors.email ? "border-destructive" : ""}`}
-                  />
-                  {formErrors.email && (
-                    <p className="mt-1 text-sm text-destructive">{formErrors.email}</p>
-                  )}
-                </div>
-                
-                {/* Avatar upload */}
-                <div>
-                  <Label>Foto do Profissional</Label>
-                  <div className="mt-2 flex items-center gap-4">
-                    {avatarPreview ? (
-                      <img 
-                        src={avatarPreview} 
-                        alt="Preview" 
-                        className="w-16 h-16 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                        <User className="h-8 w-8 text-primary/60" />
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <Input 
-                        type="file" 
-                        accept="image/*" 
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
-                            setAvatarFile(file);
-                            setAvatarPreview(URL.createObjectURL(file));
-                          }
-                        }}
-                        className="cursor-pointer"
-                      />
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        A foto será exibida no agendamento online
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Telemedicine Toggle */}
-                {hasFeature('telemedicine') && (
-                  <div className="flex items-center justify-between rounded-lg border border-border p-4">
-                    <div className="flex items-center gap-3">
-                      <Video className="h-5 w-5 text-primary" />
-                      <div>
-                        <Label htmlFor="formTelemedicine" className="cursor-pointer">
-                          Atende por Telemedicina
-                        </Label>
-                        <p className="text-xs text-muted-foreground">
-                          Habilitar consultas online por vídeo
-                        </p>
-                      </div>
-                    </div>
-                    <Switch
-                      id="formTelemedicine"
-                      checked={formTelemedicineEnabled}
-                      onCheckedChange={setFormTelemedicineEnabled}
-                    />
-                  </div>
-                )}
-                
-                {clinicUsers.length > 0 && (
-                  <div>
-                    <Label htmlFor="profUser">Vincular usuário (Portal do Profissional)</Label>
-                    <Select value={formUserId || "none"} onValueChange={(val) => setFormUserId(val === "none" ? "" : val)}>
-                      <SelectTrigger className="mt-1.5">
-                        <SelectValue placeholder="Selecione um usuário (opcional)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Nenhum</SelectItem>
-                        {clinicUsers
-                          .filter(u => !professionals.some(p => p.user_id === u.user_id))
-                          .map((user) => (
-                            <SelectItem key={user.user_id} value={user.user_id}>
-                              {user.profile?.name || "Usuário sem nome"}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Vincular permite que o profissional acesse o portal em /profissional
-                    </p>
-                  </div>
-                )}
-
-                {/* Public Profile Fields */}
-                <ProfessionalFormFields
-                  address={formAddress}
-                  setAddress={setFormAddress}
-                  city={formCity}
-                  setCity={setFormCity}
-                  state={formState}
-                  setState={setFormState}
-                  zipCode={formZipCode}
-                  setZipCode={setFormZipCode}
-                  whatsapp={formWhatsapp}
-                  setWhatsapp={setFormWhatsapp}
-                  bio={formBio}
-                  setBio={setFormBio}
-                  education={formEducation}
-                  setEducation={setFormEducation}
-                  experience={formExperience}
-                  setExperience={setFormExperience}
-                />
-
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setDialogOpen(false);
-                      resetForm();
-                    }}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={saving}>
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Cadastrar
-                  </Button>
-                </div>
-              </form>
-            </ScrollArea>
-          </DialogContent>
-        </Dialog>
-        )}
+            <Button 
+              variant="hero" 
+              disabled={!canAddProfessional && !!subscription}
+              onClick={() => navigate('/dashboard/professionals/new')}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Profissional
+            </Button>
+          )}
         </div>
       </div>
 
@@ -1111,7 +602,7 @@ export default function ProfessionalsPage() {
                 : "Nenhum profissional ativo encontrado"}
             </p>
             {professionals.length === 0 && canManageProfessionals && (
-              <Button variant="outline" onClick={() => setDialogOpen(true)}>
+              <Button variant="outline" onClick={() => navigate('/dashboard/professionals/new')}>
                 <Plus className="h-4 w-4 mr-2" />
                 Adicionar profissional
               </Button>
@@ -1196,182 +687,6 @@ export default function ProfessionalsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit Professional Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>Editar Profissional</DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-[70vh] pr-4">
-            <form onSubmit={handleEditProfessional} className="space-y-4">
-              <div>
-                <Label htmlFor="editProfName">Nome *</Label>
-                <Input
-                  id="editProfName"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  className={`mt-1.5 ${editErrors.name ? "border-destructive" : ""}`}
-                />
-                {editErrors.name && (
-                  <p className="mt-1 text-sm text-destructive">{editErrors.name}</p>
-                )}
-              </div>
-              <SpecialtySelector
-                selectedIds={editSpecialtyIds}
-                onChange={setEditSpecialtyIds}
-                groupedSpecialties={groupedSpecialties}
-                loading={loadingSpecialties}
-                getSpecialtyById={getSpecialtyById}
-              />
-              <div>
-                <Label htmlFor="editProfCRM">CRM / Registro</Label>
-                <Input
-                  id="editProfCRM"
-                  value={editCRM}
-                  onChange={(e) => setEditCRM(e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="editProfPhone">Telefone</Label>
-                <Input
-                  id="editProfPhone"
-                  value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
-                  className="mt-1.5"
-                />
-              </div>
-              <div>
-                <Label htmlFor="editProfEmail">Email</Label>
-                <Input
-                  id="editProfEmail"
-                  type="email"
-                  value={editEmail}
-                  onChange={(e) => setEditEmail(e.target.value)}
-                  className={`mt-1.5 ${editErrors.email ? "border-destructive" : ""}`}
-                />
-                {editErrors.email && (
-                  <p className="mt-1 text-sm text-destructive">{editErrors.email}</p>
-                )}
-              </div>
-              
-              {/* Avatar upload for edit */}
-              <div>
-                <Label>Foto do Profissional</Label>
-                <div className="mt-2 flex items-center gap-4">
-                  {editAvatarPreview ? (
-                    <img 
-                      src={editAvatarPreview} 
-                      alt="Preview" 
-                      className="w-16 h-16 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
-                      <User className="h-8 w-8 text-primary/60" />
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <Input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setEditAvatarFile(file);
-                          setEditAvatarPreview(URL.createObjectURL(file));
-                        }
-                      }}
-                      className="cursor-pointer"
-                    />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      A foto será exibida no agendamento online
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Telemedicine Toggle for Edit */}
-              {hasFeature('telemedicine') && (
-                <div className="flex items-center justify-between rounded-lg border border-border p-4">
-                  <div className="flex items-center gap-3">
-                    <Video className="h-5 w-5 text-primary" />
-                    <div>
-                      <Label htmlFor="editTelemedicine" className="cursor-pointer">
-                        Atende por Telemedicina
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        Habilitar consultas online por vídeo
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    id="editTelemedicine"
-                    checked={editTelemedicineEnabled}
-                    onCheckedChange={setEditTelemedicineEnabled}
-                  />
-                </div>
-              )}
-              
-              {clinicUsers.length > 0 && (
-                <div>
-                  <Label htmlFor="editProfUser">Vincular usuário</Label>
-                  <Select value={editUserId || "none"} onValueChange={(val) => setEditUserId(val === "none" ? "" : val)}>
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue placeholder="Selecione um usuário (opcional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Nenhum</SelectItem>
-                      {clinicUsers
-                        .filter(u => 
-                          !professionals.some(p => p.user_id === u.user_id && p.id !== selectedProfessional?.id)
-                        )
-                        .map((user) => (
-                          <SelectItem key={user.user_id} value={user.user_id}>
-                            {user.profile?.name || "Usuário sem nome"}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Public Profile Fields for Edit */}
-              <ProfessionalFormFields
-                address={editAddress}
-                setAddress={setEditAddress}
-                city={editCity}
-                setCity={setEditCity}
-                state={editState}
-                setState={setEditState}
-                zipCode={editZipCode}
-                setZipCode={setEditZipCode}
-                whatsapp={editWhatsapp}
-                setWhatsapp={setEditWhatsapp}
-                bio={editBio}
-                setBio={setEditBio}
-                education={editEducation}
-                setEducation={setEditEducation}
-                experience={editExperience}
-                setExperience={setEditExperience}
-              />
-
-              <div className="flex justify-end gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setEditDialogOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Salvar
-                </Button>
-              </div>
-            </form>
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
 
       {/* Deactivate Confirmation Dialog */}
       <AlertDialog open={deactivateDialogOpen} onOpenChange={setDeactivateDialogOpen}>
