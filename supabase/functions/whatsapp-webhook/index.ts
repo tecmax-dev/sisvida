@@ -1886,42 +1886,14 @@ async function handleMainMenu(
     return await proceedToSelectProfessional(supabase, config, phone, session, 'titular', null, null);
   }
 
-  // Handle cancel intent
+  // Handle cancel intent - use navigateToCancel for consistency
   if (intent === 'cancel') {
-    const appointments = await getPatientAppointments(supabase, config.clinic_id, session.patient_id!);
-    
-    if (appointments.length === 0) {
-      await sendWhatsAppMessage(config, phone, MESSAGES.noAppointments);
-      return { handled: true, newState: 'MAIN_MENU' };
-    }
-
-    await updateSession(supabase, session.id, {
-      state: 'LIST_APPOINTMENTS',
-      pending_appointments: appointments,
-      action_type: 'cancel',
-    });
-
-    await sendWhatsAppMessage(config, phone, MESSAGES.listAppointments(appointments) + MESSAGES.hintSelectOption);
-    return { handled: true, newState: 'LIST_APPOINTMENTS' };
+    return await navigateToCancel(supabase, config, phone, session);
   }
 
-  // Handle reschedule intent
+  // Handle reschedule intent - use navigateToReschedule for consistency
   if (intent === 'reschedule') {
-    const appointments = await getPatientAppointments(supabase, config.clinic_id, session.patient_id!);
-    
-    if (appointments.length === 0) {
-      await sendWhatsAppMessage(config, phone, MESSAGES.noAppointments);
-      return { handled: true, newState: 'MAIN_MENU' };
-    }
-
-    await updateSession(supabase, session.id, {
-      state: 'LIST_APPOINTMENTS',
-      pending_appointments: appointments,
-      action_type: 'reschedule',
-    });
-
-    await sendWhatsAppMessage(config, phone, MESSAGES.listAppointments(appointments) + MESSAGES.hintSelectOption);
-    return { handled: true, newState: 'LIST_APPOINTMENTS' };
+    return await navigateToReschedule(supabase, config, phone, session);
   }
 
   // Handle list intent - just view appointments (no action)
@@ -1962,7 +1934,10 @@ async function handleListAppointments(
     selected_appointment_id: selected.id,
   });
 
-  if (session.action_type === 'cancel') {
+  // Use list_action (new) or action_type (legacy fallback)
+  const actionType = session.list_action || session.action_type;
+  
+  if (actionType === 'cancel') {
     await updateSession(supabase, session.id, { state: 'CONFIRM_CANCEL' });
     await sendWhatsAppMessage(config, phone, MESSAGES.confirmCancel({
       date: selected.date,
@@ -1972,7 +1947,7 @@ async function handleListAppointments(
     return { handled: true, newState: 'CONFIRM_CANCEL' };
   }
 
-  if (session.action_type === 'reschedule') {
+  if (actionType === 'reschedule') {
     // Get the professional from the appointment to show available dates
     const { data: appointment } = await supabase
       .from('appointments')
