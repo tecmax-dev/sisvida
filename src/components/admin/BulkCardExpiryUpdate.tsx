@@ -74,41 +74,85 @@ export function BulkCardExpiryUpdate() {
       try {
         const data = new Uint8Array(event.target?.result as ArrayBuffer);
         const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
+        
+        // Try to find the dependents sheet (usually the second one) or look for specific columns
+        let worksheet = null;
+        let sheetName = "";
+        
+        // First, try to find a sheet with "dependente" in the name or check all sheets for the right columns
+        for (const name of workbook.SheetNames) {
+          const ws = workbook.Sheets[name];
+          const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1 }) as unknown[][];
+          const headers = (jsonData[0] || []) as string[];
+          
+          const hasValidade = headers.some(h => 
+            String(h).toLowerCase().includes("validade_carteirinha") || 
+            String(h).toLowerCase().includes("validade")
+          );
+          const hasCpfTitular = headers.some(h => 
+            String(h).toLowerCase().includes("cpf_titular")
+          );
+          
+          if (hasValidade && hasCpfTitular) {
+            worksheet = ws;
+            sheetName = name;
+            break;
+          }
+        }
+        
+        // If no specific sheet found, try the second sheet (index 1) as dependents are usually there
+        if (!worksheet && workbook.SheetNames.length > 1) {
+          worksheet = workbook.Sheets[workbook.SheetNames[1]];
+          sheetName = workbook.SheetNames[1];
+        }
+        
+        // Fallback to first sheet
+        if (!worksheet) {
+          worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          sheetName = workbook.SheetNames[0];
+        }
+        
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as unknown[][];
 
-        // Find CPF and date columns
+        // Find CPF and date columns - prioritize cpf_titular and validade_carteirinha
         const headers = jsonData[0] as string[];
         let cpfIndex = -1;
         let dateIndex = -1;
 
         headers.forEach((header, index) => {
           const headerLower = String(header).toLowerCase().trim();
-          if (headerLower.includes("cpf") || headerLower === "nrcpf") {
+          
+          // Prioritize cpf_titular for dependents sheet
+          if (headerLower === "cpf_titular" || headerLower.includes("cpf_titular")) {
+            cpfIndex = index;
+          } else if (cpfIndex === -1 && (headerLower.includes("cpf") || headerLower === "nrcpf")) {
             cpfIndex = index;
           }
-          if (
+          
+          // Prioritize validade_carteirinha
+          if (headerLower === "validade_carteirinha" || headerLower.includes("validade_carteirinha")) {
+            dateIndex = index;
+          } else if (dateIndex === -1 && (
             headerLower.includes("valid") ||
             headerLower.includes("expir") ||
-            headerLower.includes("vencimento") ||
-            headerLower.includes("data")
-          ) {
+            headerLower.includes("vencimento")
+          )) {
             dateIndex = index;
           }
         });
 
         if (cpfIndex === -1) {
-          setParseError("Coluna de CPF não encontrada. Certifique-se de que existe uma coluna com 'CPF' no cabeçalho.");
+          setParseError("Coluna de CPF não encontrada. Certifique-se de que existe uma coluna com 'cpf_titular' ou 'CPF' no cabeçalho.");
           return;
         }
 
         if (dateIndex === -1) {
-          setParseError("Coluna de data de validade não encontrada. Certifique-se de que existe uma coluna com 'Validade', 'Vencimento' ou 'Data' no cabeçalho.");
+          setParseError("Coluna de data de validade não encontrada. Certifique-se de que existe uma coluna 'validade_carteirinha' ou similar no cabeçalho.");
           return;
         }
 
-        const parsedRecords: UpdateRecord[] = [];
+        // Use a Map to deduplicate by CPF (keep the latest date)
+        const cpfDateMap = new Map<string, string>();
         
         for (let i = 1; i < jsonData.length; i++) {
           const row = jsonData[i];
@@ -118,6 +162,8 @@ export function BulkCardExpiryUpdate() {
           if (cpf.length !== 11) continue;
 
           let dateValue = row[dateIndex];
+          if (!dateValue) continue;
+          
           let formattedDate = "";
 
           if (typeof dateValue === "number") {
@@ -129,15 +175,21 @@ export function BulkCardExpiryUpdate() {
           }
 
           if (formattedDate) {
-            parsedRecords.push({
-              cpf,
-              expires_at: formattedDate,
-            });
+            // Keep the latest date for each CPF
+            const existingDate = cpfDateMap.get(cpf);
+            if (!existingDate || formattedDate > existingDate) {
+              cpfDateMap.set(cpf, formattedDate);
+            }
           }
         }
 
+        const parsedRecords: UpdateRecord[] = Array.from(cpfDateMap.entries()).map(([cpf, expires_at]) => ({
+          cpf,
+          expires_at,
+        }));
+
         setRecords(parsedRecords);
-        toast.success(`${parsedRecords.length} registros encontrados no arquivo`);
+        toast.success(`${parsedRecords.length} titulares únicos encontrados na aba "${sheetName}"`);
 
       } catch (err) {
         console.error("Error parsing file:", err);
@@ -250,7 +302,7 @@ export function BulkCardExpiryUpdate() {
             )}
           </div>
           <p className="text-xs text-muted-foreground">
-            O arquivo deve conter colunas: CPF (ou NRCPF) e Data de Validade (ou Vencimento)
+            O sistema busca automaticamente a aba de dependentes com as colunas: <strong>cpf_titular</strong> e <strong>validade_carteirinha</strong>
           </p>
         </div>
 
