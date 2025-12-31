@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Clock, Plus, Trash2, Loader2, Calendar } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -162,9 +162,16 @@ export function ScheduleTab({
   
   const timeOptions = generateTimeOptions();
 
+  // Only update blocks when initialSchedule actually changes (by comparing JSON)
+  const initialScheduleRef = useRef<string | null>(null);
+  
   useEffect(() => {
-    if (initialSchedule) {
-      setBlocks(convertOldScheduleToBlocks(initialSchedule, appointmentDuration));
+    const newScheduleJson = initialSchedule ? JSON.stringify(initialSchedule) : null;
+    if (initialScheduleRef.current !== newScheduleJson) {
+      initialScheduleRef.current = newScheduleJson;
+      if (initialSchedule) {
+        setBlocks(convertOldScheduleToBlocks(initialSchedule, appointmentDuration));
+      }
     }
   }, [initialSchedule, appointmentDuration]);
 
