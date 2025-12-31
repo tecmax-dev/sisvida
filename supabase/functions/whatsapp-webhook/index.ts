@@ -479,22 +479,25 @@ Se precisar de ajuda, entre em contato conosco.`,
 
   // Select who the appointment is for (titular or dependent)
   selectBookingFor: (patientName: string, dependents: Array<{ name: string; relationship: string | null; card_expires_at: string | null }>) => {
-    let msg = `👤 Para quem é o agendamento?\n\n`;
-    msg += `1️⃣ *${patientName}* (Titular)\n`;
+    // Build a friendly message with first name
+    const firstName = patientName.split(' ')[0];
+    let msg = `${firstName}, você quer agendar para você ou para algum dependente? 😊\n\n`;
+    msg += `1️⃣ Para mim (*${patientName}*)\n`;
     
     dependents.forEach((dep, i) => {
-      const relationship = dep.relationship ? ` - ${dep.relationship}` : '';
+      const depFirstName = dep.name.split(' ')[0];
       const isExpired = dep.card_expires_at && new Date(dep.card_expires_at) < new Date();
-      const expiredTag = isExpired ? ' ⚠️ (carteirinha vencida)' : '';
-      msg += `${i + 2}️⃣ *${dep.name}*${relationship}${expiredTag}\n`;
+      const expiredTag = isExpired ? ' ⚠️' : '';
+      msg += `${i + 2}️⃣ Para *${depFirstName}*${expiredTag}\n`;
     });
     
-    msg += `\n_Digite o número da opção desejada._`;
     return msg.trim();
   },
 
-  dependentCardExpired: (dependentName: string, expiryDate: string) => 
-    `❌ A carteirinha de *${dependentName}* está vencida desde *${expiryDate}*.\n\nPor favor, entre em contato com a clínica para renovar antes de agendar.`,
+  dependentCardExpired: (dependentName: string, expiryDate: string) => {
+    const firstName = dependentName.split(' ')[0];
+    return `Ops! A carteirinha de *${firstName}* está vencida desde *${expiryDate}*. 😕\n\nEntre em contato com a clínica para renovar, depois é só voltar aqui! 💪`;
+  },
 
   // Main menu after identity confirmed
   mainMenu: `O que você deseja fazer?
@@ -1413,8 +1416,10 @@ async function handleSelectBookingFor(
       const formattedExpiry = expiryDate.toLocaleDateString('pt-BR');
       await sendWhatsAppMessage(config, phone, MESSAGES.dependentCardExpired(selectedDependent.name, formattedExpiry));
       
-      // Return to booking for selection
-      await sendWhatsAppMessage(config, phone, MESSAGES.selectBookingFor(session.patient_name || '', dependents) + MESSAGES.hintSelectOption);
+      // Return to booking for selection with a gentler prompt
+      setTimeout(async () => {
+        await sendWhatsAppMessage(config, phone, `Quer agendar para outra pessoa?\n\n` + MESSAGES.selectBookingFor(session.patient_name || '', dependents));
+      }, 1000);
       return { handled: true, newState: 'SELECT_BOOKING_FOR' };
     }
   }
@@ -1485,7 +1490,7 @@ async function handleMainMenu(
         state: 'SELECT_BOOKING_FOR',
         action_type: 'new',
       });
-      await sendWhatsAppMessage(config, phone, MESSAGES.selectBookingFor(session.patient_name || '', session.available_dependents) + MESSAGES.hintSelectOption);
+      await sendWhatsAppMessage(config, phone, MESSAGES.selectBookingFor(session.patient_name || '', session.available_dependents));
       return { handled: true, newState: 'SELECT_BOOKING_FOR' };
     }
 
