@@ -17,6 +17,7 @@ import { PatientPrescriptionModal } from "@/components/patients/modals/PatientPr
 import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
 import { DependentsPanel } from "@/components/patients/DependentsPanel";
+import { PatientSearchBox } from "@/components/patients/PatientSearchBox";
 
 interface InsurancePlan {
   id: string;
@@ -566,24 +567,30 @@ export default function PatientEditPage() {
 
   return (
     <div className="space-y-4">
-      {/* Top bar with back button and auto-save indicator */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/patients')} className="gap-2">
+      {/* Top bar with back button, search box and auto-save indicator */}
+      <div className="flex items-center justify-between gap-4">
+        <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard/patients')} className="gap-2 flex-shrink-0">
           <ArrowLeft className="h-4 w-4" />
           Voltar
         </Button>
+        
+        {/* Search box */}
+        <div className="flex-1 max-w-sm hidden md:block">
+          <PatientSearchBox />
+        </div>
+        
         <div className="flex items-center gap-3">
           {/* Auto-save status indicator */}
           {autoSaveStatus === 'saving' && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Cloud className="h-4 w-4 animate-pulse" />
-              <span>Salvando...</span>
+              <span className="hidden sm:inline">Salvando...</span>
             </div>
           )}
           {autoSaveStatus === 'saved' && (
             <div className="flex items-center gap-2 text-sm text-green-600">
               <Check className="h-4 w-4" />
-              <span>Salvo</span>
+              <span className="hidden sm:inline">Salvo</span>
             </div>
           )}
           <Button onClick={handleSubmit} disabled={saving} className="gap-2">
@@ -591,6 +598,11 @@ export default function PatientEditPage() {
             Salvar e Voltar
           </Button>
         </div>
+      </div>
+      
+      {/* Mobile search box */}
+      <div className="block md:hidden">
+        <PatientSearchBox />
       </div>
 
       {/* Patient Header */}
