@@ -196,7 +196,7 @@ export default function MedicalRecordsPage() {
       .select('id, name, phone, cpf, birth_date')
       .eq('clinic_id', currentClinic.id)
       .order('name')
-      .limit(50);
+      .limit(25);
 
     if (search && search.trim()) {
       const normalizedSearch = normalizeForSearch(search);
