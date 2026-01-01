@@ -36,10 +36,24 @@ interface InsurancePlan {
   id: string;
   name: string;
   code: string | null;
+  color: string | null;
   procedures: string[] | null;
   is_active: boolean;
   patient_count?: number;
 }
+
+const PRESET_COLORS = [
+  '#3B82F6', // blue
+  '#10B981', // green
+  '#F59E0B', // amber
+  '#EF4444', // red
+  '#8B5CF6', // violet
+  '#EC4899', // pink
+  '#06B6D4', // cyan
+  '#F97316', // orange
+  '#6366F1', // indigo
+  '#84CC16', // lime
+];
 
 const insuranceSchema = z.object({
   name: z.string().min(2, "Nome deve ter no mínimo 2 caracteres").max(100),
@@ -60,6 +74,7 @@ export default function InsurancePage() {
   // Form state
   const [formName, setFormName] = useState("");
   const [formCode, setFormCode] = useState("");
+  const [formColor, setFormColor] = useState("#3B82F6");
   const [formErrors, setFormErrors] = useState<{ name?: string }>({});
   
   // Edit mode
@@ -113,10 +128,12 @@ export default function InsurancePage() {
       setEditingInsurance(insurance);
       setFormName(insurance.name);
       setFormCode(insurance.code || "");
+      setFormColor(insurance.color || "#3B82F6");
     } else {
       setEditingInsurance(null);
       setFormName("");
       setFormCode("");
+      setFormColor("#3B82F6");
     }
     setFormErrors({});
     setDialogOpen(true);
@@ -127,6 +144,7 @@ export default function InsurancePage() {
     setEditingInsurance(null);
     setFormName("");
     setFormCode("");
+    setFormColor("#3B82F6");
     setFormErrors({});
   };
 
@@ -160,6 +178,7 @@ export default function InsurancePage() {
           .update({
             name: formName.trim(),
             code: formCode.trim() || null,
+            color: formColor,
           })
           .eq('id', editingInsurance.id);
 
@@ -177,6 +196,7 @@ export default function InsurancePage() {
             clinic_id: currentClinic.id,
             name: formName.trim(),
             code: formCode.trim() || null,
+            color: formColor,
             procedures: ['Consulta', 'Retorno'],
           });
 
@@ -281,6 +301,26 @@ export default function InsurancePage() {
                 className="mt-1.5"
               />
             </div>
+            <div>
+              <Label>Cor do convênio</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {PRESET_COLORS.map((color) => (
+                  <button
+                    key={color}
+                    type="button"
+                    onClick={() => setFormColor(color)}
+                    className={cn(
+                      "w-8 h-8 rounded-full border-2 transition-all hover:scale-110",
+                      formColor === color 
+                        ? "border-foreground ring-2 ring-offset-2 ring-offset-background" 
+                        : "border-transparent"
+                    )}
+                    style={{ backgroundColor: color }}
+                    title={color}
+                  />
+                ))}
+              </div>
+            </div>
             <div className="flex justify-end gap-3 pt-4">
               <Button
                 type="button"
@@ -317,6 +357,10 @@ export default function InsurancePage() {
                 <div className="flex items-start justify-between mb-4">
                   <div>
                     <div className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full flex-shrink-0" 
+                        style={{ backgroundColor: insurance.color || '#3B82F6' }}
+                      />
                       <h3 className="font-semibold text-foreground text-lg">
                         {insurance.name}
                       </h3>
