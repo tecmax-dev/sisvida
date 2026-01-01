@@ -1983,22 +1983,20 @@ export default function CalendarPage() {
           {/* Badge do convênio com diferenciação titular/dependente */}
           {appointment.patient?.insurance_plan && (
             <Badge 
-              className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border-0"
+              className={`text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium ${appointment.dependent_id ? 'italic' : ''}`}
               style={{
                 backgroundColor: appointment.dependent_id 
-                  ? (appointment.patient.insurance_plan.color 
-                      ? `${appointment.patient.insurance_plan.color}35` 
-                      : 'hsl(var(--muted))')
+                  ? '#e9d5ff' // Lilás claro fixo para dependentes
                   : (appointment.patient.insurance_plan.color 
-                      ? `${appointment.patient.insurance_plan.color}20` 
+                      ? `${appointment.patient.insurance_plan.color}25` 
                       : 'hsl(var(--accent))'),
                 color: appointment.dependent_id
-                  ? (appointment.patient.insurance_plan.color || 'hsl(var(--muted-foreground))')
+                  ? '#7c3aed' // Roxo escuro para dependentes
                   : (appointment.patient.insurance_plan.color || 'hsl(var(--accent-foreground))'),
-                borderWidth: appointment.dependent_id ? '1px' : '0',
+                borderWidth: appointment.dependent_id ? '2px' : '0',
                 borderStyle: 'dashed',
                 borderColor: appointment.dependent_id 
-                  ? (appointment.patient.insurance_plan.color || 'hsl(var(--muted-foreground))')
+                  ? (appointment.patient.insurance_plan.color || '#7c3aed')
                   : 'transparent'
               }}
             >
