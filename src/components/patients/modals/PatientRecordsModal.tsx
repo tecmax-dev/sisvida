@@ -126,8 +126,16 @@ export function PatientRecordsModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+    <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
+      <DialogContent 
+        className="max-w-2xl max-h-[85vh] flex flex-col"
+        onPointerDownOutside={(e) => {
+          if (!document.hasFocus()) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (!document.hasFocus()) e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />

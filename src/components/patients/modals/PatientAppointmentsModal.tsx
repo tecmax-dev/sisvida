@@ -173,8 +173,16 @@ export function PatientAppointmentsModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh]">
+    <Dialog open={open} onOpenChange={onOpenChange} modal={true}>
+      <DialogContent 
+        className="max-w-2xl max-h-[85vh]"
+        onPointerDownOutside={(e) => {
+          if (!document.hasFocus()) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (!document.hasFocus()) e.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Calendar className="h-5 w-5" />
