@@ -39,6 +39,11 @@ type BookingState =
   | 'RESCHEDULE_SELECT_DATE'
   | 'RESCHEDULE_SELECT_TIME'
   | 'CONFIRM_RESCHEDULE'
+  | 'OFFER_REGISTRATION'
+  | 'WAITING_REGISTRATION_NAME'
+  | 'WAITING_REGISTRATION_BIRTHDATE'
+  | 'WAITING_REGISTRATION_CNPJ'
+  | 'CONFIRM_REGISTRATION'
   | 'FINISHED'
   | 'EXPIRED';
 
@@ -136,6 +141,12 @@ interface BookingSession {
   booking_for?: 'titular' | 'dependent';
   // When dependent logs in with their own CPF
   is_dependent_direct_booking?: boolean;
+  // Registration flow fields
+  pending_registration_cpf?: string | null;
+  pending_registration_phone?: string | null;
+  pending_registration_name?: string | null;
+  pending_registration_birthdate?: string | null;
+  pending_registration_cnpj?: string | null;
 }
 
 interface EvolutionConfig {
@@ -676,7 +687,52 @@ _Digite MENU a qualquer momento para reiniciar._`,
 
   patientNotFound: `❌ Não localizamos seu cadastro em nosso sistema.
 
-Para agendar, acesse nosso site ou entre em contato conosco.`,
+Deseja se cadastrar agora? É rápido e você já poderá agendar!
+
+1️⃣ *Sim*, quero me cadastrar
+2️⃣ *Não*, vou entrar em contato por outro meio`,
+
+  offerRegistration: `Para completar seu cadastro, preciso de algumas informações.
+
+Por favor, informe seu *nome completo*:`,
+
+  askBirthDate: (name: string) => `Olá, *${name}*! 👋
+
+Agora informe sua *data de nascimento* no formato DD/MM/AAAA:
+(Exemplo: 15/03/1990)`,
+
+  askEmployerCnpj: `Informe o *CNPJ da empresa* onde você trabalha (opcional):
+
+_Digite apenas os números ou envie "pular" para continuar sem CNPJ._`,
+
+  confirmRegistration: (name: string, birthDate: string, cnpj: string | null) => {
+    let msg = `📋 *Confirme seus dados:*\n\n`;
+    msg += `👤 Nome: *${name}*\n`;
+    msg += `📅 Nascimento: *${birthDate}*\n`;
+    if (cnpj) {
+      msg += `🏢 CNPJ: *${cnpj}*\n`;
+    }
+    msg += `📱 WhatsApp: _(este número)_\n\n`;
+    msg += `Os dados estão corretos?\n`;
+    msg += `1️⃣ *Sim*, confirmar cadastro\n`;
+    msg += `2️⃣ *Não*, começar novamente`;
+    return msg;
+  },
+
+  registrationSuccess: (name: string) => `✅ *Cadastro realizado com sucesso!*
+
+Olá, *${name}*! Seja bem-vindo(a)! 🎉
+
+Sua carteirinha digital foi criada com validade de 15 dias.
+
+Agora você já pode agendar sua consulta! Por favor, informe novamente seu *CPF*:`,
+
+  registrationError: `❌ Ocorreu um erro ao realizar seu cadastro.
+
+Por favor, tente novamente ou entre em contato conosco.`,
+
+  invalidBirthDate: `❌ Data inválida. Por favor, informe no formato *DD/MM/AAAA*.
+(Exemplo: 15/03/1990)`,
 
   patientInactive: (clinicName: string, reason?: string | null) => {
     const reasonText = reason ? ` (${reason})` : '';
@@ -1322,6 +1378,22 @@ async function handleBookingFlow(
     case 'CONFIRM_RESCHEDULE':
       return await handleConfirmReschedule(supabase, config, phone, messageText, session);
     
+    // Registration flow states
+    case 'OFFER_REGISTRATION':
+      return await handleOfferRegistration(supabase, config, phone, messageText, session);
+    
+    case 'WAITING_REGISTRATION_NAME':
+      return await handleWaitingRegistrationName(supabase, config, phone, messageText, session);
+    
+    case 'WAITING_REGISTRATION_BIRTHDATE':
+      return await handleWaitingRegistrationBirthdate(supabase, config, phone, messageText, session);
+    
+    case 'WAITING_REGISTRATION_CNPJ':
+      return await handleWaitingRegistrationCnpj(supabase, config, phone, messageText, session);
+    
+    case 'CONFIRM_REGISTRATION':
+      return await handleConfirmRegistration(supabase, config, phone, messageText, session);
+    
     case 'FINISHED':
       await createOrResetSession(supabase, config.clinic_id, phone, 'WAITING_CPF');
       await sendWhatsAppMessage(config, phone, MESSAGES.welcome);
@@ -1744,8 +1816,25 @@ async function handleWaitingCpf(
     patientData = patientByPhone as PatientRecord | null;
 
     if (!patientData) {
-      await sendWhatsAppMessage(config, phone, MESSAGES.patientNotFound);
-      return { handled: true, newState: 'WAITING_CPF' };
+      // Patient not found - offer registration
+      console.log(`[booking] Patient not found for CPF ${cleanCpf}, offering registration`);
+      await updateSession(supabase, session.id, {
+        state: 'OFFER_REGISTRATION',
+        pending_registration_cpf: cleanCpf,
+        pending_registration_phone: phone,
+      });
+      await sendWhatsAppButtons(
+        config,
+        phone,
+        '📝 Cadastro',
+        MESSAGES.patientNotFound,
+        [
+          { id: 'register_yes', text: '✅ Sim, cadastrar' },
+          { id: 'register_no', text: '❌ Não' }
+        ],
+        'Responda 1 ou 2'
+      );
+      return { handled: true, newState: 'OFFER_REGISTRATION' };
     }
 
     // Check if patient found by phone is inactive
@@ -2422,6 +2511,288 @@ async function handleConfirmReschedule(
 
   await sendWhatsAppMessage(config, phone, `Por favor, responda *CONFIRMAR* ou *CANCELAR*.`);
   return { handled: true, newState: 'CONFIRM_RESCHEDULE' };
+}
+
+// ==========================================
+// REGISTRATION FLOW HANDLERS
+// ==========================================
+
+async function handleOfferRegistration(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const isYes = POSITIVE_REGEX.test(messageText) || messageText.includes('register_yes') || messageText === '1';
+  const isNo = NEGATIVE_REGEX.test(messageText) || messageText.includes('register_no') || messageText === '2';
+  
+  if (isYes) {
+    await updateSession(supabase, session.id, { state: 'WAITING_REGISTRATION_NAME' });
+    await sendWhatsAppMessage(config, phone, MESSAGES.offerRegistration);
+    return { handled: true, newState: 'WAITING_REGISTRATION_NAME' };
+  }
+  
+  if (isNo) {
+    await updateSession(supabase, session.id, { state: 'FINISHED' });
+    await sendWhatsAppMessage(config, phone, `Tudo bem! Se precisar, entre em contato conosco por outros meios. Até breve! 👋`);
+    return { handled: true, newState: 'FINISHED' };
+  }
+  
+  // Invalid response
+  await sendWhatsAppMessage(config, phone, `Por favor, responda *1* para cadastrar ou *2* para não.`);
+  return { handled: true, newState: 'OFFER_REGISTRATION' };
+}
+
+async function handleWaitingRegistrationName(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const name = messageText.trim();
+  
+  // Validate name (at least 3 characters, contains at least a space for full name)
+  if (name.length < 3) {
+    await sendWhatsAppMessage(config, phone, `❌ Nome muito curto. Por favor, informe seu *nome completo*:`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_NAME' };
+  }
+  
+  // Store name and ask for birth date
+  await updateSession(supabase, session.id, {
+    state: 'WAITING_REGISTRATION_BIRTHDATE',
+    pending_registration_name: name,
+  });
+  
+  const firstName = name.split(' ')[0];
+  await sendWhatsAppMessage(config, phone, MESSAGES.askBirthDate(firstName));
+  return { handled: true, newState: 'WAITING_REGISTRATION_BIRTHDATE' };
+}
+
+function parseDate(dateStr: string): Date | null {
+  // Try DD/MM/YYYY format
+  const ddmmyyyyMatch = dateStr.match(/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/);
+  if (ddmmyyyyMatch) {
+    const day = parseInt(ddmmyyyyMatch[1]);
+    const month = parseInt(ddmmyyyyMatch[2]) - 1;
+    const year = parseInt(ddmmyyyyMatch[3]);
+    const date = new Date(year, month, day);
+    if (date.getDate() === day && date.getMonth() === month && date.getFullYear() === year) {
+      return date;
+    }
+  }
+  return null;
+}
+
+async function handleWaitingRegistrationBirthdate(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const dateStr = messageText.trim();
+  const parsedDate = parseDate(dateStr);
+  
+  if (!parsedDate) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.invalidBirthDate);
+    return { handled: true, newState: 'WAITING_REGISTRATION_BIRTHDATE' };
+  }
+  
+  // Check if date is reasonable (not in future, not too old)
+  const today = new Date();
+  if (parsedDate > today) {
+    await sendWhatsAppMessage(config, phone, `❌ A data não pode ser no futuro. Por favor, informe sua data de nascimento:`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_BIRTHDATE' };
+  }
+  
+  const age = today.getFullYear() - parsedDate.getFullYear();
+  if (age > 120) {
+    await sendWhatsAppMessage(config, phone, `❌ Data inválida. Por favor, verifique e informe novamente:`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_BIRTHDATE' };
+  }
+  
+  // Format date as YYYY-MM-DD for database
+  const dbDate = parsedDate.toISOString().split('T')[0];
+  const displayDate = parsedDate.toLocaleDateString('pt-BR');
+  
+  await updateSession(supabase, session.id, {
+    state: 'WAITING_REGISTRATION_CNPJ',
+    pending_registration_birthdate: dbDate,
+  });
+  
+  await sendWhatsAppMessage(config, phone, MESSAGES.askEmployerCnpj);
+  return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
+}
+
+async function handleWaitingRegistrationCnpj(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const input = messageText.trim().toLowerCase();
+  let cnpj: string | null = null;
+  
+  // Check if user wants to skip
+  if (input === 'pular' || input === 'skip' || input === '0' || input === 'não' || input === 'nao') {
+    cnpj = null;
+  } else {
+    // Clean and validate CNPJ
+    const cleanCnpj = messageText.replace(/\D/g, '');
+    if (cleanCnpj.length === 14) {
+      cnpj = cleanCnpj;
+    } else if (cleanCnpj.length > 0 && cleanCnpj.length !== 14) {
+      await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido (deve ter 14 dígitos).\n\nDigite o CNPJ ou "pular" para continuar sem:`);
+      return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
+    }
+  }
+  
+  await updateSession(supabase, session.id, {
+    state: 'CONFIRM_REGISTRATION',
+    pending_registration_cnpj: cnpj,
+  });
+  
+  // Format display date
+  const birthDate = session.pending_registration_birthdate 
+    ? new Date(session.pending_registration_birthdate + 'T00:00:00').toLocaleDateString('pt-BR')
+    : '';
+  
+  // Format CNPJ for display
+  const formattedCnpj = cnpj 
+    ? cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+    : null;
+  
+  await sendWhatsAppButtons(
+    config,
+    phone,
+    '📋 Confirmar Cadastro',
+    MESSAGES.confirmRegistration(session.pending_registration_name || '', birthDate, formattedCnpj),
+    [
+      { id: 'confirm_yes', text: '✅ Confirmar' },
+      { id: 'confirm_no', text: '❌ Recomeçar' }
+    ],
+    'Responda 1 ou 2'
+  );
+  
+  return { handled: true, newState: 'CONFIRM_REGISTRATION' };
+}
+
+async function handleConfirmRegistration(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const isYes = POSITIVE_REGEX.test(messageText) || messageText.includes('confirm_yes') || messageText === '1';
+  const isNo = NEGATIVE_REGEX.test(messageText) || messageText.includes('confirm_no') || messageText === '2';
+  
+  if (isNo) {
+    // Start over
+    await updateSession(supabase, session.id, {
+      state: 'WAITING_CPF',
+      pending_registration_cpf: null,
+      pending_registration_name: null,
+      pending_registration_birthdate: null,
+      pending_registration_cnpj: null,
+      pending_registration_phone: null,
+    });
+    await sendWhatsAppMessage(config, phone, MESSAGES.welcome + MESSAGES.hintCpf);
+    return { handled: true, newState: 'WAITING_CPF' };
+  }
+  
+  if (isYes) {
+    try {
+      // Clean phone for storage
+      const cleanPhone = phone.replace(/\D/g, '');
+      
+      // Create patient
+      const { data: patient, error: patientError } = await supabase
+        .from('patients')
+        .insert({
+          clinic_id: config.clinic_id,
+          name: session.pending_registration_name!.trim(),
+          cpf: session.pending_registration_cpf,
+          birth_date: session.pending_registration_birthdate,
+          phone: cleanPhone,
+          employer_cnpj: session.pending_registration_cnpj || null,
+        })
+        .select('id, name')
+        .single();
+      
+      if (patientError) {
+        console.error('[registration] Error creating patient:', patientError);
+        if (patientError.message?.includes('CPF_DUPLICADO')) {
+          await sendWhatsAppMessage(config, phone, `❌ Este CPF já está cadastrado no sistema.\n\nPor favor, informe outro CPF ou entre em contato conosco.`);
+          await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
+          return { handled: true, newState: 'WAITING_CPF' };
+        }
+        await sendWhatsAppMessage(config, phone, MESSAGES.registrationError);
+        return { handled: true, newState: 'FINISHED' };
+      }
+      
+      console.log(`[registration] Patient created: ${patient.id} - ${patient.name}`);
+      
+      // Generate card number
+      const { data: cardNumber, error: cardError } = await supabase.rpc(
+        'generate_card_number',
+        { p_clinic_id: config.clinic_id }
+      );
+      
+      if (cardError) {
+        console.error('[registration] Error generating card number:', cardError);
+      } else {
+        // Calculate 15 days from now
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 15);
+        
+        // Create patient card
+        const { error: insertCardError } = await supabase
+          .from('patient_cards')
+          .insert({
+            clinic_id: config.clinic_id,
+            patient_id: patient.id,
+            card_number: cardNumber,
+            issued_at: new Date().toISOString(),
+            expires_at: expiresAt.toISOString(),
+            is_active: true,
+            token: crypto.randomUUID(),
+          });
+        
+        if (insertCardError) {
+          console.error('[registration] Error creating card:', insertCardError);
+        } else {
+          console.log(`[registration] Card created for patient ${patient.id}`);
+        }
+      }
+      
+      // Clear registration data and reset to ask for CPF again
+      await updateSession(supabase, session.id, {
+        state: 'WAITING_CPF',
+        pending_registration_cpf: null,
+        pending_registration_name: null,
+        pending_registration_birthdate: null,
+        pending_registration_cnpj: null,
+        pending_registration_phone: null,
+      });
+      
+      const firstName = patient.name.split(' ')[0];
+      await sendWhatsAppMessage(config, phone, MESSAGES.registrationSuccess(firstName));
+      return { handled: true, newState: 'WAITING_CPF' };
+      
+    } catch (error) {
+      console.error('[registration] Unexpected error:', error);
+      await sendWhatsAppMessage(config, phone, MESSAGES.registrationError);
+      return { handled: true, newState: 'FINISHED' };
+    }
+  }
+  
+  // Invalid response
+  await sendWhatsAppMessage(config, phone, `Por favor, responda *1* para confirmar ou *2* para recomeçar.`);
+  return { handled: true, newState: 'CONFIRM_REGISTRATION' };
 }
 
 // ==========================================
