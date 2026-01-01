@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Save, Check, Cloud, UserX, UserCheck } from "lucide
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useModal } from "@/contexts/ModalContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -16,6 +17,7 @@ import { PatientAnamnesisModal } from "@/components/patients/modals/PatientAnamn
 import { PatientPrescriptionModal } from "@/components/patients/modals/PatientPrescriptionModal";
 import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
+import { PatientOdontogramModal } from "@/components/patients/modals/PatientOdontogramModal";
 import { DependentsPanel } from "@/components/patients/DependentsPanel";
 import { PatientSearchBox } from "@/components/patients/PatientSearchBox";
 
@@ -123,6 +125,7 @@ export default function PatientEditPage() {
   const [searchParams] = useSearchParams();
   const { currentClinic } = useAuth();
   const { hasPermission } = usePermissions();
+  const { openModal, closeModal, isModalOpen, getModalData } = useModal();
   const { toast } = useToast();
   const { lookupCep, loading: cepLoading } = useCepLookup();
   
@@ -150,12 +153,7 @@ export default function PatientEditPage() {
   const [isPatientActive, setIsPatientActive] = useState(true);
   const [togglingActive, setTogglingActive] = useState(false);
   
-  // Modal states
-  const [recordsModalOpen, setRecordsModalOpen] = useState(false);
-  const [anamnesisModalOpen, setAnamnesisModalOpen] = useState(false);
-  const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
-  const [appointmentsModalOpen, setAppointmentsModalOpen] = useState(false);
-  const [cardsModalOpen, setCardsModalOpen] = useState(false);
+  // Modal states managed by ModalContext for persistence across tab switches
 
   // Permission checks for restricted tabs
   const canViewMedicalRecords = hasPermission('view_medical_records');
@@ -417,19 +415,19 @@ export default function PatientEditPage() {
     if (tab === 'cadastro') {
       setActiveTab(tab);
     } else if (tab === 'prontuario') {
-      setRecordsModalOpen(true);
+      openModal('patientRecords', { patientId: id, patientName: formData.name });
     } else if (tab === 'anamnese') {
-      setAnamnesisModalOpen(true);
+      openModal('patientAnamnesis', { patientId: id, patientName: formData.name });
     } else if (tab === 'anexos') {
       navigate(`/dashboard/patients/${id}/attachments`);
     } else if (tab === 'agendamentos') {
-      setAppointmentsModalOpen(true);
+      openModal('patientAppointments', { patientId: id, patientName: formData.name });
     } else if (tab === 'prescricoes') {
-      setPrescriptionModalOpen(true);
+      openModal('patientPrescription', { patientId: id, patientName: formData.name });
     } else if (tab === 'carteirinha') {
-      setCardsModalOpen(true);
+      openModal('patientCards', { patientId: id, patientName: formData.name });
     } else if (tab === 'odontograma') {
-      navigate(`/dashboard/patients/${id}/odontograma`);
+      openModal('patientOdontogram', { patientId: id, clinicId: currentClinic?.id });
     }
   };
 
@@ -739,41 +737,50 @@ export default function PatientEditPage() {
         </div>
       )}
 
-      {/* Modals */}
+      {/* Modals - managed by global ModalContext */}
       <PatientRecordsModal
-        open={recordsModalOpen}
-        onOpenChange={setRecordsModalOpen}
-        patientId={id || ''}
-        patientName={formData.name}
+        open={isModalOpen('patientRecords')}
+        onOpenChange={(open) => open ? null : closeModal('patientRecords')}
+        patientId={getModalData('patientRecords').patientId || id || ''}
+        patientName={getModalData('patientRecords').patientName || formData.name}
       />
 
       <PatientAnamnesisModal
-        open={anamnesisModalOpen}
-        onOpenChange={setAnamnesisModalOpen}
-        patientId={id || ''}
-        patientName={formData.name}
+        open={isModalOpen('patientAnamnesis')}
+        onOpenChange={(open) => open ? null : closeModal('patientAnamnesis')}
+        patientId={getModalData('patientAnamnesis').patientId || id || ''}
+        patientName={getModalData('patientAnamnesis').patientName || formData.name}
       />
 
       <PatientPrescriptionModal
-        open={prescriptionModalOpen}
-        onOpenChange={setPrescriptionModalOpen}
-        patientId={id || ''}
-        patientName={formData.name}
+        open={isModalOpen('patientPrescription')}
+        onOpenChange={(open) => open ? null : closeModal('patientPrescription')}
+        patientId={getModalData('patientPrescription').patientId || id || ''}
+        patientName={getModalData('patientPrescription').patientName || formData.name}
       />
 
       <PatientAppointmentsModal
-        open={appointmentsModalOpen}
-        onOpenChange={setAppointmentsModalOpen}
-        patientId={id || ''}
-        patientName={formData.name}
+        open={isModalOpen('patientAppointments')}
+        onOpenChange={(open) => open ? null : closeModal('patientAppointments')}
+        patientId={getModalData('patientAppointments').patientId || id || ''}
+        patientName={getModalData('patientAppointments').patientName || formData.name}
       />
 
       <PatientCardsModal
-        open={cardsModalOpen}
-        onOpenChange={setCardsModalOpen}
-        patientId={id || ''}
-        patientName={formData.name}
+        open={isModalOpen('patientCards')}
+        onOpenChange={(open) => open ? null : closeModal('patientCards')}
+        patientId={getModalData('patientCards').patientId || id || ''}
+        patientName={getModalData('patientCards').patientName || formData.name}
       />
+
+      {currentClinic && (
+        <PatientOdontogramModal
+          open={isModalOpen('patientOdontogram')}
+          onOpenChange={(open) => open ? null : closeModal('patientOdontogram')}
+          patientId={getModalData('patientOdontogram').patientId || id || ''}
+          clinicId={getModalData('patientOdontogram').clinicId || currentClinic.id}
+        />
+      )}
     </div>
   );
 }

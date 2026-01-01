@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { ModalProvider } from "@/contexts/ModalContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LoadingFallback } from "@/components/ui/loading-fallback";
 import { Button } from "./components/ui/button";
@@ -175,11 +176,12 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AuthProvider>
-            <Suspense fallback={<LoadingFallback />}>
+        <ModalProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AuthProvider>
+              <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/instalar" element={<InstallPage />} />
@@ -294,6 +296,7 @@ const App = () => (
             </Suspense>
           </AuthProvider>
         </BrowserRouter>
+        </ModalProvider>
       </TooltipProvider>
     </QueryClientProvider>
   </ErrorBoundary>
