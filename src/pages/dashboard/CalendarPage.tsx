@@ -139,6 +139,75 @@ const getAppointmentDisplayName = (apt: {
   return apt.patient?.name || "Paciente";
 };
 
+const toHslColor = (input?: string | null): string | null => {
+  if (!input) return null;
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("hsl(")) return trimmed;
+
+  // suporta #rgb e #rrggbb
+  if (trimmed.startsWith("#")) {
+    const hex = trimmed.replace("#", "");
+    const full =
+      hex.length === 3
+        ? hex
+            .split("")
+            .map((c) => c + c)
+            .join("")
+        : hex;
+
+    if (full.length !== 6) return null;
+
+    const r = parseInt(full.slice(0, 2), 16) / 255;
+    const g = parseInt(full.slice(2, 4), 16) / 255;
+    const b = parseInt(full.slice(4, 6), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    let h = 0;
+    if (delta !== 0) {
+      if (max === r) h = ((g - b) / delta) % 6;
+      else if (max === g) h = (b - r) / delta + 2;
+      else h = (r - g) / delta + 4;
+      h = Math.round(h * 60);
+      if (h < 0) h += 360;
+    }
+
+    const l = (max + min) / 2;
+    const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+
+    const sPct = Math.round(s * 100);
+    const lPct = Math.round(l * 100);
+    return `hsl(${h} ${sPct}% ${lPct}%)`;
+  }
+
+  return null;
+};
+
+const parseHsl = (hsl: string): { h: number; s: number; l: number } | null => {
+  const m = hsl
+    .trim()
+    .match(/^hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)$/i);
+  if (!m) return null;
+  return { h: Number(m[1]), s: Number(m[2]), l: Number(m[3]) };
+};
+
+const hslWithAlpha = (hsl: string, alpha: number): string => {
+  const p = parseHsl(hsl);
+  if (!p) return hsl;
+  const a = Math.max(0, Math.min(1, alpha));
+  return `hsl(${p.h} ${p.s}% ${p.l}% / ${a})`;
+};
+
+const shiftHslHue = (hsl: string, degrees: number): string => {
+  const p = parseHsl(hsl);
+  if (!p) return hsl;
+  const h = ((p.h + degrees) % 360 + 360) % 360;
+  return `hsl(${h} ${p.s}% ${p.l}%)`;
+};
+
 const statusConfig = {
   scheduled: { icon: AlertCircle, color: "text-amber-600", bgColor: "bg-amber-100", label: "A confirmar" },
   confirmed: { icon: CheckCircle2, color: "text-blue-600", bgColor: "bg-blue-100", label: "Confirmado" },
@@ -1981,28 +2050,29 @@ export default function CalendarPage() {
             </Badge>
           )}
           {/* Badge do convênio com diferenciação titular/dependente */}
-          {appointment.patient?.insurance_plan && (
-            <Badge 
-              className={`text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium ${appointment.dependent_id ? 'italic' : ''}`}
-              style={{
-                backgroundColor: appointment.dependent_id 
-                  ? '#e9d5ff' // Lilás claro fixo para dependentes
-                  : (appointment.patient.insurance_plan.color 
-                      ? `${appointment.patient.insurance_plan.color}25` 
-                      : 'hsl(var(--accent))'),
-                color: appointment.dependent_id
-                  ? '#7c3aed' // Roxo escuro para dependentes
-                  : (appointment.patient.insurance_plan.color || 'hsl(var(--accent-foreground))'),
-                borderWidth: appointment.dependent_id ? '2px' : '0',
-                borderStyle: 'dashed',
-                borderColor: appointment.dependent_id 
-                  ? (appointment.patient.insurance_plan.color || '#7c3aed')
-                  : 'transparent'
-              }}
-            >
-              {appointment.patient.insurance_plan.name} - {appointment.dependent_id ? 'Dep' : 'Titular'}
-            </Badge>
-          )}
+          {appointment.patient?.insurance_plan && (() => {
+            const base =
+              toHslColor(appointment.patient.insurance_plan.color) ??
+              "hsl(var(--accent))";
+
+            // Dependente: mesma saturação/luminosidade, só muda o matiz (cor)
+            const dependentHue = shiftHslHue(base, 35);
+
+            const current = appointment.dependent_id ? dependentHue : base;
+
+            return (
+              <Badge
+                className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border"
+                style={{
+                  backgroundColor: hslWithAlpha(current, 0.22),
+                  color: current,
+                  borderColor: hslWithAlpha(current, 0.55),
+                }}
+              >
+                {appointment.patient.insurance_plan.name} - {appointment.dependent_id ? "Dep" : "Titular"}
+              </Badge>
+            );
+          })()}
           {hasConflict && !isCancelled && (
             <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
           )}
