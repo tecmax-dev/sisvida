@@ -69,9 +69,10 @@ export interface PatientFormData {
   email: string;
   preferredChannel: string;
   
-  // Família
+  // Família e Trabalho
   profession: string;
   education: string;
+  employerCnpj: string;
   motherName: string;
   fatherName: string;
   
@@ -168,6 +169,15 @@ export function PatientFormFields({
   const formatCEP = (value: string): string => {
     const cleaned = value.replace(/\D/g, '');
     return cleaned.replace(/(\d{5})(\d)/, '$1-$2').substring(0, 9);
+  };
+
+  const formatCNPJ = (value: string): string => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 14);
+    return cleaned
+      .replace(/(\d{2})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1/$2')
+      .replace(/(\d{4})(\d{1,2})$/, '$1-$2');
   };
 
   const calculateIMC = () => {
@@ -622,8 +632,8 @@ export function PatientFormFields({
         </div>
       </div>
 
-      {/* Linha 9: Profissão, Escolaridade, Nome da Mãe, Nome do Pai */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Linha 9: Profissão, Escolaridade, CNPJ Empresa */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <div>
           <Label htmlFor="profession">Profissão</Label>
           <Input
@@ -652,6 +662,20 @@ export function PatientFormFields({
           </Select>
         </div>
         
+        <div>
+          <Label htmlFor="employerCnpj">CNPJ da Empresa</Label>
+          <Input
+            id="employerCnpj"
+            value={formData.employerCnpj}
+            onChange={(e) => updateField('employerCnpj', formatCNPJ(e.target.value))}
+            placeholder="00.000.000/0000-00"
+            className="mt-1"
+          />
+        </div>
+      </div>
+
+      {/* Linha 10: Nome da Mãe, Nome do Pai */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <Label htmlFor="motherName">Nome da Mãe</Label>
           <Input

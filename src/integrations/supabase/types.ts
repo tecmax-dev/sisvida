@@ -3958,6 +3958,7 @@ export type Database = {
           created_at: string
           education: string | null
           email: string | null
+          employer_cnpj: string | null
           father_name: string | null
           gender: string | null
           height_cm: number | null
@@ -4008,6 +4009,7 @@ export type Database = {
           created_at?: string
           education?: string | null
           email?: string | null
+          employer_cnpj?: string | null
           father_name?: string | null
           gender?: string | null
           height_cm?: number | null
@@ -4058,6 +4060,7 @@ export type Database = {
           created_at?: string
           education?: string | null
           email?: string | null
+          employer_cnpj?: string | null
           father_name?: string | null
           gender?: string | null
           height_cm?: number | null
