@@ -255,8 +255,8 @@ export default function CalendarPage() {
   // View mode - also persisted
   const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
   
-  // Filters and Search
-  const [filterProfessional, setFilterProfessional] = useState<string>("all");
+  // Filters and Search - now supports multiple professionals
+  const [filterProfessionals, setFilterProfessionals] = useState<string[]>([]);
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   
@@ -322,8 +322,8 @@ export default function CalendarPage() {
     // 4) Se o usuário for um profissional: o próprio
     const selectedProfId =
       activeAppointment?.professional_id ||
-      (filterProfessional !== 'all'
-        ? filterProfessional
+      (filterProfessionals.length === 1
+        ? filterProfessionals[0]
         : (formProfessional || (isProfessionalOnly && loggedInProfessionalId ? loggedInProfessionalId : null)));
 
     if (!selectedProfId) return defaultTimeSlots;
@@ -360,7 +360,7 @@ export default function CalendarPage() {
     }
 
     return Array.from(new Set(slots)).sort();
-  }, [activeAppointment, filterProfessional, formProfessional, isProfessionalOnly, loggedInProfessionalId, professionals, selectedDate]);
+  }, [activeAppointment, filterProfessionals, formProfessional, isProfessionalOnly, loggedInProfessionalId, professionals, selectedDate]);
 
   const toDateKey = (d: Date) => {
     const y = d.getFullYear();
@@ -690,7 +690,7 @@ export default function CalendarPage() {
   const filteredAppointments = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     return appointments.filter(apt => {
-      if (filterProfessional !== "all" && apt.professional_id !== filterProfessional) return false;
+      if (filterProfessionals.length > 0 && !filterProfessionals.includes(apt.professional_id)) return false;
       if (filterType !== "all" && apt.type !== filterType) return false;
       if (query) {
         const patientName = apt.patient?.name?.toLowerCase() || "";
@@ -700,7 +700,7 @@ export default function CalendarPage() {
       }
       return true;
     });
-  }, [appointments, filterProfessional, filterType, searchQuery, patients]);
+  }, [appointments, filterProfessionals, filterType, searchQuery, patients]);
 
   // Detect conflicting appointments
   const conflictingAppointmentIds = useMemo(() => {
@@ -1494,7 +1494,7 @@ export default function CalendarPage() {
     procedure: "Procedimento",
   };
 
-  const hasActiveFilters = filterProfessional !== "all" || filterType !== "all" || searchQuery.trim() !== "";
+  const hasActiveFilters = filterProfessionals.length > 0 || filterType !== "all" || searchQuery.trim() !== "";
 
   const handleSendWhatsAppReminder = async (appointment: Appointment) => {
     const patient = patients.find(p => p.id === appointment.patient_id);
@@ -2389,19 +2389,41 @@ export default function CalendarPage() {
                 <h4 className="font-medium">Filtros</h4>
                 <div className="space-y-2">
                   <Label>Profissional</Label>
-                  <Select value={filterProfessional} onValueChange={setFilterProfessional}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {professionals.map((prof) => (
-                        <SelectItem key={prof.id} value={prof.id}>
-                          {prof.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-1 max-h-48 overflow-y-auto border rounded-md p-2">
+                    {professionals.map((prof) => {
+                      const isChecked = filterProfessionals.includes(prof.id);
+                      return (
+                        <label 
+                          key={prof.id} 
+                          className="flex items-center gap-2 py-1.5 px-2 hover:bg-accent rounded-md cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFilterProfessionals([...filterProfessionals, prof.id]);
+                              } else {
+                                setFilterProfessionals(filterProfessionals.filter(id => id !== prof.id));
+                              }
+                            }}
+                            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                          />
+                          <span className="text-sm">{prof.name}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  {filterProfessionals.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs"
+                      onClick={() => setFilterProfessionals([])}
+                    >
+                      Limpar seleção ({filterProfessionals.length})
+                    </Button>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label>Tipo de Consulta</Label>
@@ -2425,7 +2447,7 @@ export default function CalendarPage() {
                     size="sm"
                     className="w-full"
                     onClick={() => {
-                      setFilterProfessional("all");
+                      setFilterProfessionals([]);
                       setFilterType("all");
                       setSearchQuery("");
                     }}
@@ -2483,11 +2505,13 @@ export default function CalendarPage() {
               <button onClick={() => setSearchQuery("")} className="ml-1 hover:text-foreground">×</button>
             </Badge>
           )}
-          {filterProfessional !== "all" && (
+          {filterProfessionals.length > 0 && (
             <Badge variant="secondary" className="gap-1">
               <UserCheck className="h-3 w-3" />
-              {professionals.find(p => p.id === filterProfessional)?.name}
-              <button onClick={() => setFilterProfessional("all")} className="ml-1 hover:text-foreground">×</button>
+              {filterProfessionals.length === 1 
+                ? professionals.find(p => p.id === filterProfessionals[0])?.name
+                : `${filterProfessionals.length} profissionais`}
+              <button onClick={() => setFilterProfessionals([])} className="ml-1 hover:text-foreground">×</button>
             </Badge>
           )}
           {filterType !== "all" && (
