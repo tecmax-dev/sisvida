@@ -400,8 +400,8 @@ export default function PatientEditPage() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     
     const validation = patientSchema.safeParse({
       name: formData.name,
@@ -470,6 +470,15 @@ export default function PatientEditPage() {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Clear the draft after successful manual save
+      if (id) {
+        try {
+          localStorage.removeItem(`patient-edit-draft:${id}`);
+        } catch {
+          // ignore
+        }
+      }
 
       toast({
         title: "Paciente atualizado",
@@ -604,7 +613,7 @@ export default function PatientEditPage() {
         
         <div className="flex items-center gap-3">
           <AutoSaveIndicator status={autoSaveStatus} />
-          <Button onClick={handleSubmit} disabled={saving} className="gap-2">
+          <Button type="button" onClick={() => handleSubmit()} disabled={saving} className="gap-2">
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Salvar e Voltar
           </Button>
