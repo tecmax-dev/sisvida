@@ -116,3 +116,6 @@ verify_jwt = false
 
 [functions.booking-web-chat]
 verify_jwt = false
+
+[functions.send-campaign]
+verify_jwt = true

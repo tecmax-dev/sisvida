@@ -202,11 +202,44 @@ export default function CampaignsPanel() {
     setDeleteDialogOpen(true);
   };
 
-  const handleSendNow = (campaign: Campaign) => {
-    if (campaign.status === "draft") {
-      updateStatusMutation.mutate({ id: campaign.id, status: "sending" });
-      toast.info("Campanha iniciada", {
-        description: "As mensagens estão sendo enviadas."
+  const handleSendNow = async (campaign: Campaign) => {
+    if (campaign.status !== "draft") return;
+    
+    try {
+      toast.info("Iniciando campanha...", {
+        description: "Preparando envio das mensagens."
+      });
+
+      const { data, error } = await supabase.functions.invoke("send-campaign", {
+        body: {
+          campaignId: campaign.id,
+          clinicId: currentClinic?.id,
+        },
+      });
+
+      if (error) {
+        console.error("Error sending campaign:", error);
+        toast.error("Erro ao enviar campanha", {
+          description: error.message || "Tente novamente."
+        });
+        return;
+      }
+
+      if (data?.error) {
+        toast.error("Erro ao enviar campanha", {
+          description: data.error
+        });
+        return;
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      toast.success("Campanha iniciada!", {
+        description: data?.message || "As mensagens estão sendo enviadas."
+      });
+    } catch (err: any) {
+      console.error("Error invoking send-campaign:", err);
+      toast.error("Erro ao iniciar campanha", {
+        description: err.message || "Tente novamente."
       });
     }
   };
