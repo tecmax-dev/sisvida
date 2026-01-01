@@ -399,6 +399,8 @@ export default function CalendarPage() {
         .order('appointment_date')
         .order('start_time');
 
+      console.log('[DEBUG CalendarPage] fetchAppointments - startDate:', startDate, 'endDate:', endDate, 'count:', data?.length, 'error:', error);
+
       if (error) throw error;
       setAppointments(data as unknown as Appointment[]);
     } catch (error) {
