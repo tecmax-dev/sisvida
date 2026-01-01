@@ -1395,9 +1395,17 @@ async function handleBookingFlow(
       return await handleConfirmRegistration(supabase, config, phone, messageText, session);
     
     case 'FINISHED':
-      await createOrResetSession(supabase, config.clinic_id, phone, 'WAITING_CPF');
-      await sendWhatsAppMessage(config, phone, MESSAGES.welcome);
-      return { handled: true, newState: 'WAITING_CPF' };
+      // Only restart if user explicitly wants to (typed menu, agendar, etc.)
+      if (MENU_REGEX.test(messageText)) {
+        await createOrResetSession(supabase, config.clinic_id, phone, 'WAITING_CPF');
+        await sendWhatsAppMessage(config, phone, MESSAGES.welcome);
+        return { handled: true, newState: 'WAITING_CPF' };
+      }
+      // Otherwise, silently ignore or send a polite message
+      await sendWhatsAppMessage(config, phone, 
+        `✅ Seu agendamento já foi confirmado!\n\nPara fazer outro agendamento, digite *MENU*.`
+      );
+      return { handled: true, newState: 'FINISHED' };
     
     default:
       console.log(`[booking] Unknown state: ${session.state}, resetting to WAITING_CPF`);
@@ -3183,7 +3191,8 @@ async function handleConfirmAppointment(
   const isDeny = choice === 'appt_cancel' || choice === '❌ cancelar' || NEGATIVE_REGEX.test(messageText);
   
   if (isDeny) {
-    await updateSession(supabase, session.id, { state: 'FINISHED' });
+    // Delete session instead of setting to FINISHED to avoid asking CPF again
+    await supabase.from('whatsapp_booking_sessions').delete().eq('id', session.id);
     await sendWhatsAppMessage(config, phone, MESSAGES.appointmentCancelled);
     return { handled: true, newState: 'FINISHED' };
   }
@@ -3374,7 +3383,8 @@ async function handleConfirmAppointment(
 
   const clinicData = clinic as { name?: string } | null;
 
-  await updateSession(supabase, session.id, { state: 'FINISHED' });
+  // Delete session instead of setting to FINISHED to avoid asking CPF again
+  await supabase.from('whatsapp_booking_sessions').delete().eq('id', session.id);
 
   // Build confirmation message - include dependent name if applicable
   const patientDisplayName = session.booking_for === 'dependent' && session.selected_dependent_name
