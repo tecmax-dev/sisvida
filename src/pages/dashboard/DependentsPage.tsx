@@ -285,7 +285,12 @@ export default function DependentsPage() {
                         <TableCell>
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <span className="font-medium">{dependent.name}</span>
+                              <button
+                                onClick={() => handleEditDependent(dependent)}
+                                className="font-medium text-primary hover:underline text-left"
+                              >
+                                {dependent.name}
+                              </button>
                               {age !== null && (
                                 <Badge variant="outline" className="text-xs">
                                   {age} anos
