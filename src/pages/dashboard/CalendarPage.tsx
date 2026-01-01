@@ -1985,11 +1985,21 @@ export default function CalendarPage() {
             <Badge 
               className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border-0"
               style={{
-                backgroundColor: appointment.patient.insurance_plan.color 
-                  ? `${appointment.patient.insurance_plan.color}20` 
-                  : 'hsl(var(--accent))',
-                color: appointment.patient.insurance_plan.color || 'hsl(var(--accent-foreground))',
-                borderColor: appointment.patient.insurance_plan.color || 'hsl(var(--accent))'
+                backgroundColor: appointment.dependent_id 
+                  ? (appointment.patient.insurance_plan.color 
+                      ? `${appointment.patient.insurance_plan.color}35` 
+                      : 'hsl(var(--muted))')
+                  : (appointment.patient.insurance_plan.color 
+                      ? `${appointment.patient.insurance_plan.color}20` 
+                      : 'hsl(var(--accent))'),
+                color: appointment.dependent_id
+                  ? (appointment.patient.insurance_plan.color || 'hsl(var(--muted-foreground))')
+                  : (appointment.patient.insurance_plan.color || 'hsl(var(--accent-foreground))'),
+                borderWidth: appointment.dependent_id ? '1px' : '0',
+                borderStyle: 'dashed',
+                borderColor: appointment.dependent_id 
+                  ? (appointment.patient.insurance_plan.color || 'hsl(var(--muted-foreground))')
+                  : 'transparent'
               }}
             >
               {appointment.patient.insurance_plan.name} - {appointment.dependent_id ? 'Dep' : 'Titular'}
