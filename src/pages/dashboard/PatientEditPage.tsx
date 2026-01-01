@@ -16,7 +16,6 @@ import { PatientAnamnesisModal } from "@/components/patients/modals/PatientAnamn
 import { PatientPrescriptionModal } from "@/components/patients/modals/PatientPrescriptionModal";
 import { PatientAppointmentsModal } from "@/components/patients/modals/PatientAppointmentsModal";
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
-import { PatientOdontogramModal } from "@/components/patients/modals/PatientOdontogramModal";
 import { DependentsPanel } from "@/components/patients/DependentsPanel";
 import { PatientSearchBox } from "@/components/patients/PatientSearchBox";
 
@@ -157,7 +156,6 @@ export default function PatientEditPage() {
   const [prescriptionModalOpen, setPrescriptionModalOpen] = useState(false);
   const [appointmentsModalOpen, setAppointmentsModalOpen] = useState(false);
   const [cardsModalOpen, setCardsModalOpen] = useState(false);
-  const [odontogramModalOpen, setOdontogramModalOpen] = useState(false);
 
   // Permission checks for restricted tabs
   const canViewMedicalRecords = hasPermission('view_medical_records');
@@ -431,7 +429,7 @@ export default function PatientEditPage() {
     } else if (tab === 'carteirinha') {
       setCardsModalOpen(true);
     } else if (tab === 'odontograma') {
-      setOdontogramModalOpen(true);
+      navigate(`/dashboard/patients/${id}/odontograma`);
     }
   };
 
@@ -776,15 +774,6 @@ export default function PatientEditPage() {
         patientId={id || ''}
         patientName={formData.name}
       />
-
-      {currentClinic && (
-        <PatientOdontogramModal
-          open={odontogramModalOpen}
-          onOpenChange={setOdontogramModalOpen}
-          patientId={id || ''}
-          clinicId={currentClinic.id}
-        />
-      )}
     </div>
   );
 }

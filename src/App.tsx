@@ -76,6 +76,7 @@ import HolidaysPage from "./pages/dashboard/HolidaysPage";
 import PanelBannersPage from "./pages/dashboard/PanelBannersPage";
 import DependentsPage from "./pages/dashboard/DependentsPage";
 import AttendancePage from "./pages/dashboard/AttendancePageRedesign";
+import PatientOdontogramPage from "./pages/dashboard/PatientOdontogramPage";
 import ExamsPage from "./pages/dashboard/ExamsPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
@@ -254,6 +255,7 @@ const App = () => (
                   <Route path="patients" element={<PatientsPage />} />
                   <Route path="patients/:id/edit" element={<PatientEditPage />} />
                   <Route path="patients/:id/attachments" element={<PatientAttachmentsPage />} />
+                  <Route path="patients/:id/odontograma" element={<PatientOdontogramPage />} />
                   <Route path="professionals" element={<ProfessionalsPage />} />
                   <Route path="professionals/new" element={<ProfessionalEditPage />} />
                   <Route path="professionals/:id/edit" element={<ProfessionalEditPage />} />
