@@ -260,6 +260,9 @@ export default function CalendarPage() {
   // Drag and Drop state
   const [activeAppointment, setActiveAppointment] = useState<Appointment | null>(null);
   
+  // Calendar visibility state
+  const [showCalendar, setShowCalendar] = useState(false);
+  
   // Form state
   const [formPatient, setFormPatient] = useState("");
   const [formProfessional, setFormProfessional] = useState("");
@@ -1834,17 +1837,18 @@ export default function CalendarPage() {
     return (
       <div
         className={cn(
-          "flex items-center gap-3 py-2 px-3 rounded-lg border border-transparent hover:bg-muted/50 transition-all group",
+          "flex items-center gap-3 py-2 px-3 hover:bg-muted/50 transition-all group cursor-pointer",
           isCancelled && "opacity-50",
           isNoShow && "opacity-60",
-          hasConflict && !isCancelled && "border-destructive/30 bg-destructive/5"
+          hasConflict && !isCancelled && "bg-destructive/5"
         )}
+        onClick={() => openAppointmentPanel(appointment)}
       >
         {/* Badge de horário compacto */}
         <Badge 
           variant="secondary" 
           className={cn(
-            "font-mono font-semibold text-xs px-2 py-1 min-w-[52px] justify-center",
+            "font-mono font-medium text-xs px-2 py-1 min-w-[50px] justify-center rounded-sm",
             getTimeBadgeStyle()
           )}
         >
@@ -1858,6 +1862,9 @@ export default function CalendarPage() {
 
         {/* Nome do paciente - flex-1 para ocupar espaço */}
         <div className="flex-1 min-w-0 flex items-center gap-2">
+          {appointment.type === "return" && (
+            <span className="text-muted-foreground text-xs">(R)</span>
+          )}
           <span className={cn(
             "font-medium truncate uppercase text-sm",
             (isCancelled || isNoShow) && "line-through text-muted-foreground"
@@ -1874,19 +1881,19 @@ export default function CalendarPage() {
           )}
         </div>
 
-        {/* Menu de ações - três pontos */}
+        {/* Menu de ações - três pontos sempre visível */}
         {canModify && (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
               <Button 
                 variant="ghost" 
                 size="icon" 
-                className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="12" cy="12" r="1" />
-                  <circle cx="12" cy="5" r="1" />
-                  <circle cx="12" cy="19" r="1" />
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="12" cy="5" r="2" />
+                  <circle cx="12" cy="12" r="2" />
+                  <circle cx="12" cy="19" r="2" />
                 </svg>
               </Button>
             </DropdownMenuTrigger>
@@ -2257,19 +2264,28 @@ export default function CalendarPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Calendar Toggle - apenas em view day */}
+          {viewMode === "day" && (
+            <Button
+              variant={showCalendar ? "secondary" : "outline"}
+              size="icon"
+              onClick={() => setShowCalendar(!showCalendar)}
+              title={showCalendar ? "Ocultar calendário" : "Mostrar calendário"}
+            >
+              <CalendarIcon className="h-4 w-4" />
+            </Button>
+          )}
+
           {/* View Mode Toggle */}
           <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
             <TabsList>
               <TabsTrigger value="day" className="gap-1">
-                <CalendarIcon className="h-4 w-4" />
                 Dia
               </TabsTrigger>
               <TabsTrigger value="week" className="gap-1">
-                <CalendarDays className="h-4 w-4" />
                 Semana
               </TabsTrigger>
               <TabsTrigger value="month" className="gap-1">
-                <LayoutGrid className="h-4 w-4" />
                 Mês
               </TabsTrigger>
             </TabsList>
@@ -2279,10 +2295,10 @@ export default function CalendarPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar paciente por nome ou telefone..."
+              placeholder="Buscar paciente..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-64"
+              className="pl-9 w-48"
             />
           </div>
 
@@ -2577,10 +2593,10 @@ export default function CalendarPage() {
       </AlertDialog>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Mini Calendar (only in day view) */}
-        {viewMode === "day" && (
-          <Card className="lg:col-span-1">
+      <div className="flex gap-6">
+        {/* Mini Calendar (only in day view when showCalendar is true) */}
+        {viewMode === "day" && showCalendar && (
+          <Card className="w-72 shrink-0">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-base">
@@ -2654,18 +2670,56 @@ export default function CalendarPage() {
         )}
 
         {/* Appointments List / Week View / Month View */}
-        <Card className={viewMode === "day" ? "lg:col-span-2" : "lg:col-span-3"}>
-          <CardHeader>
+        <Card className="flex-1">
+          <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">
-                {viewMode === "day" && `Agendamentos - ${selectedDate.toLocaleDateString("pt-BR", { 
-                  weekday: "long",
-                  day: "numeric",
-                  month: "long"
-                })}`}
-                {viewMode === "week" && `Semana de ${getWeekDays()[0].toLocaleDateString("pt-BR", { day: "numeric", month: "short" })} - ${getWeekDays()[6].toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}`}
-                {viewMode === "month" && `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
-              </CardTitle>
+              <div className="flex items-center gap-3">
+                {viewMode === "day" && (
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => {
+                        const prev = new Date(selectedDate);
+                        prev.setDate(prev.getDate() - 1);
+                        setSelectedDate(prev);
+                      }}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedDate(new Date())}
+                    >
+                      Hoje
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => {
+                        const next = new Date(selectedDate);
+                        next.setDate(next.getDate() + 1);
+                        setSelectedDate(next);
+                      }}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+                <CardTitle className="text-base font-medium">
+                  {viewMode === "day" && selectedDate.toLocaleDateString("pt-BR", { 
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric"
+                  })}
+                  {viewMode === "week" && `Semana de ${getWeekDays()[0].toLocaleDateString("pt-BR", { day: "numeric", month: "short" })} - ${getWeekDays()[6].toLocaleDateString("pt-BR", { day: "numeric", month: "short" })}`}
+                  {viewMode === "month" && `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`}
+                </CardTitle>
+              </div>
               {(viewMode === "week" || viewMode === "month") && (
                 <div className="flex gap-1">
                   <Button
@@ -2705,187 +2759,124 @@ export default function CalendarPage() {
                 Carregando agendamentos...
               </div>
             ) : viewMode === "day" ? (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Time slots for dropping */}
-                {(() => {
-                  const holidayName = isHoliday(selectedDate);
-                  if (holidayName) {
-                    return (
-                      <div className="lg:col-span-1 p-4 rounded-lg border border-dashed border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/20 text-center">
-                        <div className="text-2xl mb-2">🚫</div>
-                        <p className="text-sm font-medium text-red-600 dark:text-red-400">Feriado</p>
-                        <p className="text-sm text-red-500 dark:text-red-400 mt-1">{holidayName}</p>
-                        <p className="text-xs text-red-500/60 mt-2 italic">Agendamentos bloqueados</p>
-                      </div>
-                    );
-                  }
+              (() => {
+                const holidayName = isHoliday(selectedDate);
+                if (holidayName) {
                   return (
-                    <div className="lg:col-span-1 space-y-1 p-2 rounded-lg border border-dashed border-border/50 bg-muted/20">
-                      <p className="text-xs text-muted-foreground font-medium mb-2 text-center">
-                        Arraste para reagendar
-                      </p>
-                      <div className="grid grid-cols-3 gap-1">
-                        {timeSlots.map((time) => {
-                          const dateStr = selectedDate.toISOString().split('T')[0];
-                          const hasAppointment = getAppointmentsForDate(selectedDate).some(
-                            apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled'
-                          );
-                          return (
-                            <DroppableTimeSlot
-                              key={time}
-                              date={dateStr}
-                              time={time}
-                              disabled={hasAppointment}
-                              isOccupied={hasAppointment}
-                              onClick={() => openNewAppointmentWithTime(time)}
-                              className={cn(
-                                "p-2 text-center rounded-md border border-transparent",
-                                hasAppointment 
-                                  ? "bg-muted/50 text-muted-foreground/50" 
-                                  : "bg-background"
-                              )}
-                            />
-                          );
-                        })}
-                      </div>
+                    <div className="p-6 rounded-lg border border-dashed border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/20 text-center">
+                      <div className="text-3xl mb-3">🚫</div>
+                      <p className="text-lg font-medium text-red-600 dark:text-red-400">Feriado</p>
+                      <p className="text-sm text-red-500 dark:text-red-400 mt-1">{holidayName}</p>
+                      <p className="text-xs text-red-500/60 mt-2 italic">Agendamentos bloqueados nesta data</p>
                     </div>
                   );
-                })()}
-
-                {/* Appointments list - agrupado por profissional */}
-                <div className="lg:col-span-2">
-                  {(() => {
-                    const dayAppointments = getAppointmentsForDate(selectedDate);
-                    
-                    // Filtrar por busca
-                    const filteredAppointments = searchQuery.trim() 
-                      ? dayAppointments.filter(apt => {
-                          const searchLower = normalizeForSearch(searchQuery);
-                          const patientName = normalizeForSearch(getAppointmentDisplayName(apt));
-                          const profName = normalizeForSearch(apt.professional?.name || '');
-                          return patientName.includes(searchLower) || profName.includes(searchLower);
-                        })
-                      : dayAppointments;
-                    
-                    // Agrupar por profissional
-                    const groupedByProfessional = filteredAppointments.reduce((acc, apt) => {
-                      const profId = apt.professional_id;
-                      if (!acc[profId]) {
-                        acc[profId] = {
-                          professional: apt.professional,
-                          appointments: []
-                        };
-                      }
-                      acc[profId].appointments.push(apt);
-                      return acc;
-                    }, {} as Record<string, { professional: Appointment['professional']; appointments: Appointment[] }>);
-                    
-                    const professionalGroups = Object.values(groupedByProfessional);
-                    
-                    if (filteredAppointments.length > 0) {
+                }
+                
+                const dayAppointments = getAppointmentsForDate(selectedDate);
+                
+                // Filtrar por busca
+                const filteredAppointments = searchQuery.trim() 
+                  ? dayAppointments.filter(apt => {
+                      const searchLower = normalizeForSearch(searchQuery);
+                      const patientName = normalizeForSearch(getAppointmentDisplayName(apt));
+                      const profName = normalizeForSearch(apt.professional?.name || '');
+                      return patientName.includes(searchLower) || profName.includes(searchLower);
+                    })
+                  : dayAppointments;
+                
+                // Agrupar por profissional
+                const groupedByProfessional = filteredAppointments.reduce((acc, apt) => {
+                  const profId = apt.professional_id;
+                  if (!acc[profId]) {
+                    acc[profId] = {
+                      professional: apt.professional,
+                      appointments: []
+                    };
+                  }
+                  acc[profId].appointments.push(apt);
+                  return acc;
+                }, {} as Record<string, { professional: Appointment['professional']; appointments: Appointment[] }>);
+                
+                const professionalGroups = Object.values(groupedByProfessional);
+                
+                if (professionalGroups.length === 0 && dayAppointments.length === 0) {
+                  return (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                      <p className="mb-4">Nenhum agendamento para este dia</p>
+                      <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar agendamento
+                      </Button>
+                    </div>
+                  );
+                }
+                
+                if (dayAppointments.length > 0 && filteredAppointments.length === 0) {
+                  return (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                      <p>Nenhum resultado para "{searchQuery}"</p>
+                    </div>
+                  );
+                }
+                
+                // Mostrar profissionais em colunas lado a lado
+                return (
+                  <div className={cn(
+                    "grid gap-6",
+                    professionalGroups.length === 1 ? "grid-cols-1" :
+                    professionalGroups.length === 2 ? "grid-cols-1 lg:grid-cols-2" :
+                    "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
+                  )}>
+                    {professionalGroups.map((group) => {
+                      const activeAppointments = group.appointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
+                      const totalAppointments = group.appointments.length;
+                      
                       return (
-                        <div className="space-y-4">
-                          {/* Caixa de busca */}
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              placeholder="Buscar paciente ou profissional..."
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              className="pl-9 h-9"
-                            />
+                        <div key={group.professional.id} className="border rounded-lg overflow-hidden">
+                          {/* Header do profissional */}
+                          <div className="flex items-center gap-3 p-3 bg-muted/30 border-b">
+                            {group.professional.avatar_url ? (
+                              <img 
+                                src={group.professional.avatar_url} 
+                                alt={group.professional.name}
+                                className="w-10 h-10 rounded-full object-cover border-2 border-primary/20"
+                              />
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                <User className="h-5 w-5 text-primary" />
+                              </div>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-foreground truncate">{group.professional.name}</h3>
+                              {group.professional.specialty && (
+                                <p className="text-xs text-primary truncate">{group.professional.specialty}</p>
+                              )}
+                            </div>
+                            <div className="text-right text-xs text-muted-foreground shrink-0">
+                              <span className="font-medium text-primary">{activeAppointments.length} agendamento(s)</span>
+                              <br />
+                              <span>Total {totalAppointments}</span>
+                            </div>
                           </div>
                           
-                          {/* Lista agrupada por profissional */}
-                          <div className="space-y-6">
-                            {professionalGroups.map((group) => {
-                              const activeAppointments = group.appointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
-                              const profTimeSlots = timeSlots.length;
-                              const occupiedSlots = group.appointments.filter(a => a.status !== 'cancelled').length;
-                              const availableSlots = Math.max(0, profTimeSlots - occupiedSlots);
-                              
-                              return (
-                                <div key={group.professional.id} className="space-y-2">
-                                  {/* Header do profissional */}
-                                  <div className="flex items-center gap-3 pb-2 border-b">
-                                    <div className="flex items-center gap-3 flex-1">
-                                      {group.professional.avatar_url ? (
-                                        <img 
-                                          src={group.professional.avatar_url} 
-                                          alt={group.professional.name}
-                                          className="w-10 h-10 rounded-full object-cover border-2 border-primary/20"
-                                        />
-                                      ) : (
-                                        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                          <User className="h-5 w-5 text-primary" />
-                                        </div>
-                                      )}
-                                      <div>
-                                        <h3 className="font-semibold text-foreground">{group.professional.name}</h3>
-                                        {group.professional.specialty && (
-                                          <p className="text-xs text-primary">{group.professional.specialty}</p>
-                                        )}
-                                      </div>
-                                    </div>
-                                    <div className="text-right text-xs text-muted-foreground">
-                                      <span className="font-medium">{activeAppointments.length} agendamento(s)</span>
-                                      <br />
-                                      <span>{availableSlots} disponíveis - Total {profTimeSlots}</span>
-                                    </div>
-                                  </div>
-                                  
-                                  {/* Lista de agendamentos do profissional */}
-                                  <div className="divide-y divide-border/30">
-                                    {group.appointments.map((appointment) => (
-                                      <DraggableAppointment key={appointment.id} appointment={appointment}>
-                                        <AppointmentCard appointment={appointment} />
-                                      </DraggableAppointment>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            })}
+                          {/* Lista de agendamentos do profissional */}
+                          <div className="divide-y divide-border/30 max-h-[500px] overflow-y-auto">
+                            {group.appointments
+                              .sort((a, b) => a.start_time.localeCompare(b.start_time))
+                              .map((appointment) => (
+                              <DraggableAppointment key={appointment.id} appointment={appointment}>
+                                <AppointmentCard appointment={appointment} />
+                              </DraggableAppointment>
+                            ))}
                           </div>
                         </div>
                       );
-                    }
-                    
-                    // Se tem agendamentos mas busca não retornou nada
-                    if (dayAppointments.length > 0 && filteredAppointments.length === 0) {
-                      return (
-                        <div className="space-y-4">
-                          <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input
-                              placeholder="Buscar paciente ou profissional..."
-                              value={searchQuery}
-                              onChange={(e) => setSearchQuery(e.target.value)}
-                              className="pl-9 h-9"
-                            />
-                          </div>
-                          <div className="text-center py-8 text-muted-foreground">
-                            <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p>Nenhum resultado para "{searchQuery}"</p>
-                          </div>
-                        </div>
-                      );
-                    }
-                    
-                    return (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                        <p className="mb-4">{isHoliday(selectedDate) ? "Dia indisponível para agendamentos" : "Nenhum agendamento para este dia"}</p>
-                        {!isHoliday(selectedDate) && (
-                          <Button variant="outline" onClick={() => setDialogOpen(true)}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Adicionar agendamento
-                          </Button>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
+                    })}
+                  </div>
+                );
+              })()
             ) : viewMode === "week" ? (
               <WeekView />
             ) : (
