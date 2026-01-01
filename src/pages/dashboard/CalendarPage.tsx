@@ -1919,7 +1919,7 @@ export default function CalendarPage() {
                 </svg>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover min-w-[180px]">
+            <DropdownMenuContent align="end" className="bg-popover min-w-[180px]" onClick={(e) => e.stopPropagation()}>
               {/* Atender */}
               {canAttend && (
                 <DropdownMenuItem onClick={() => openAppointmentPanel(appointment)}>
@@ -1985,7 +1985,10 @@ export default function CalendarPage() {
               {/* Telemedicina */}
               {appointment.type === "telemedicine" && (
                 <DropdownMenuItem 
-                  onClick={() => handleSendTelemedicineLink(appointment)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleSendTelemedicineLink(appointment);
+                  }}
                   disabled={sendingTelemedicineLink === appointment.id}
                 >
                   <Video className="h-4 w-4 mr-2 text-info" />
@@ -1995,7 +1998,10 @@ export default function CalendarPage() {
               
               {/* WhatsApp */}
               <DropdownMenuItem 
-                onClick={() => handleSendWhatsAppReminder(appointment)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSendWhatsAppReminder(appointment);
+                }}
                 disabled={sendingWhatsApp === appointment.id}
               >
                 <Send className="h-4 w-4 mr-2 text-success" />
