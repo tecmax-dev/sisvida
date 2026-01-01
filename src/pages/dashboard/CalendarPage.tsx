@@ -1135,6 +1135,39 @@ export default function CalendarPage() {
     }
   };
 
+  // Handle patient arrival - update status and open pre-attendance dialog
+  const handlePatientArrived = async (appointment: Appointment) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          status: 'arrived' as const,
+          confirmed_at: new Date().toISOString(),
+        })
+        .eq('id', appointment.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Paciente chegou",
+        description: "Registre os sinais vitais no pré-atendimento.",
+      });
+
+      // Refresh appointments list
+      await fetchAppointments();
+
+      // Open pre-attendance dialog
+      setPreAttendanceAppointment(appointment);
+      setPreAttendanceDialogOpen(true);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar status",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Start appointment and navigate directly to attendance page
   const handleStartAttendance = async (appointment: Appointment) => {
     try {
@@ -1988,7 +2021,7 @@ export default function CalendarPage() {
               
               {appointment.status === "confirmed" && (
                 <>
-                  <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "arrived")}>
+                  <DropdownMenuItem onClick={() => handlePatientArrived(appointment)}>
                     <UserCheck className="h-4 w-4 mr-2 text-green-600" />
                     Chegou
                   </DropdownMenuItem>
