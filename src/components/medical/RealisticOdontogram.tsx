@@ -19,7 +19,7 @@ const ADULT_TEETH = {
 interface RealisticOdontogramProps {
   patientId: string;
   clinicId: string;
-  professionalId: string;
+  professionalId?: string;
   appointmentId?: string;
   readOnly?: boolean;
 }
