@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, pointerWithin } from "@dnd-kit/core";
 import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite } from "@/lib/whatsapp";
@@ -211,8 +211,39 @@ export default function CalendarPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  // Use sessionStorage to preserve selected date across tab switches
+  const getInitialSelectedDate = (): Date => {
+    const stored = sessionStorage.getItem('calendar_selected_date');
+    if (stored) {
+      const parsed = new Date(stored);
+      if (!isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+    return new Date();
+  };
+  
+  const getInitialCurrentDate = (): Date => {
+    const stored = sessionStorage.getItem('calendar_current_date');
+    if (stored) {
+      const parsed = new Date(stored);
+      if (!isNaN(parsed.getTime())) {
+        return parsed;
+      }
+    }
+    return new Date();
+  };
+  
+  const getInitialViewMode = (): ViewMode => {
+    const stored = sessionStorage.getItem('calendar_view_mode');
+    if (stored && ['day', 'week', 'month'].includes(stored)) {
+      return stored as ViewMode;
+    }
+    return 'day';
+  };
+
+  const [currentDate, setCurrentDate] = useState<Date>(getInitialCurrentDate);
+  const [selectedDate, setSelectedDate] = useState<Date>(getInitialSelectedDate);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
@@ -221,8 +252,8 @@ export default function CalendarPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  // View mode
-  const [viewMode, setViewMode] = useState<ViewMode>("day");
+  // View mode - also persisted
+  const [viewMode, setViewMode] = useState<ViewMode>(getInitialViewMode);
   
   // Filters and Search
   const [filterProfessional, setFilterProfessional] = useState<string>("all");
@@ -408,6 +439,19 @@ export default function CalendarPage() {
       setLoading(false);
     }
   }, [currentClinic, getDateRange]);
+
+  // Persist selected date, current date, and view mode to sessionStorage
+  useEffect(() => {
+    sessionStorage.setItem('calendar_selected_date', selectedDate.toISOString());
+  }, [selectedDate]);
+
+  useEffect(() => {
+    sessionStorage.setItem('calendar_current_date', currentDate.toISOString());
+  }, [currentDate]);
+
+  useEffect(() => {
+    sessionStorage.setItem('calendar_view_mode', viewMode);
+  }, [viewMode]);
 
   useEffect(() => {
     if (currentClinic) {
