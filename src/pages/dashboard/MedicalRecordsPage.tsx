@@ -126,9 +126,54 @@ export default function MedicalRecordsPage() {
   const [saving, setSaving] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<string>("");
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [printDialogSnapshot, setPrintDialogSnapshot] = useState<{
+    clinic: {
+      name: string;
+      address?: string;
+      phone?: string;
+      cnpj?: string;
+      logo_url?: string;
+    };
+    clinicId: string;
+    patient: { name: string; phone: string };
+    patientId: string;
+    professional?: { name: string; specialty?: string; registration_number?: string };
+    professionalId?: string;
+    medicalRecordId?: string;
+    initialPrescription?: string;
+    date: string;
+  } | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<MedicalRecord | null>(null);
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!printDialogOpen) return;
+    if (!currentClinic || !selectedPatient || !selectedRecord) return;
+
+    setPrintDialogSnapshot({
+      clinic: {
+        name: currentClinic.name,
+        address: currentClinic.address || undefined,
+        phone: currentClinic.phone || undefined,
+        cnpj: currentClinic.cnpj || undefined,
+        logo_url: currentClinic.logo_url || undefined,
+      },
+      clinicId: currentClinic.id,
+      patient: { name: selectedPatient.name, phone: selectedPatient.phone },
+      patientId: selectedPatient.id,
+      professional: selectedRecord.professional
+        ? {
+            name: selectedRecord.professional.name,
+            specialty: selectedRecord.professional.specialty || undefined,
+            registration_number: selectedRecord.professional.registration_number || undefined,
+          }
+        : undefined,
+      professionalId: selectedRecord.professional?.id,
+      medicalRecordId: selectedRecord.id,
+      initialPrescription: selectedRecord.prescription || "",
+      date: selectedRecord.record_date,
+    });
+  }, [printDialogOpen, currentClinic, selectedPatient, selectedRecord]);
   // Attachments state
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
@@ -888,30 +933,28 @@ export default function MedicalRecordsPage() {
       </Dialog>
 
       {/* Print Dialog */}
-      {selectedPatient && currentClinic && selectedRecord && (
+      {printDialogSnapshot && (
         <PrintDialog
           open={printDialogOpen}
-          onOpenChange={setPrintDialogOpen}
-          clinic={{
-            name: currentClinic.name,
-            address: currentClinic.address || undefined,
-            phone: currentClinic.phone || undefined,
-            cnpj: currentClinic.cnpj || undefined,
-            logo_url: currentClinic.logo_url || undefined,
+          onOpenChange={(open) => {
+            setPrintDialogOpen(open);
+            if (!open) setPrintDialogSnapshot(null);
           }}
-          clinicId={currentClinic.id}
-          patient={{ name: selectedPatient.name, phone: selectedPatient.phone }}
-          patientId={selectedPatient.id}
-          professional={selectedRecord.professional ? {
-            name: selectedRecord.professional.name,
-            specialty: selectedRecord.professional.specialty || undefined,
-            registration_number: selectedRecord.professional.registration_number || undefined,
-          } : undefined}
-          professionalId={selectedRecord.professional?.id}
-          medicalRecordId={selectedRecord.id}
-          initialPrescription={selectedRecord.prescription || ""}
-          date={selectedRecord.record_date}
-          onDocumentSaved={() => fetchPatientDocuments()}
+          clinic={printDialogSnapshot.clinic}
+          clinicId={printDialogSnapshot.clinicId}
+          patient={printDialogSnapshot.patient}
+          patientId={printDialogSnapshot.patientId}
+          professional={printDialogSnapshot.professional}
+          professionalId={printDialogSnapshot.professionalId}
+          medicalRecordId={printDialogSnapshot.medicalRecordId}
+          initialPrescription={printDialogSnapshot.initialPrescription}
+          date={printDialogSnapshot.date}
+          onDocumentSaved={() => {
+            // Avoid closing/unmount-related state issues when switching tabs.
+            if (selectedPatient && currentClinic) {
+              fetchPatientDocuments();
+            }
+          }}
         />
       )}
 
