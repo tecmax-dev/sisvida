@@ -2077,7 +2077,7 @@ export default function CalendarPage() {
                     : hslWithAlpha(insuranceColor, 0.55),
                 }}
               >
-                {appointment.patient.insurance_plan.name} - {isDependent ? "Dep" : "Titular"}
+                {appointment.patient.insurance_plan.name}
               </Badge>
             );
           })()}
