@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   FileText,
   Plus,
@@ -58,6 +58,7 @@ import {
   Answer,
 } from "@/components/anamnesis/AnamneseResponseForm";
 import { SendAnamnesisWhatsAppDialog } from "@/components/anamnesis/SendAnamnesisWhatsAppDialog";
+import { useAnamneseTemplateModals } from "@/contexts/ModalContext";
 
 interface Template {
   id: string;
@@ -75,26 +76,48 @@ export default function AnamneseTemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Dialog states
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [previewDialogOpen, setPreviewDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [sendDialogOpen, setSendDialogOpen] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const [sendTemplate, setSendTemplate] = useState<Template | null>(null);
-
-  // Form state
-  const [formTitle, setFormTitle] = useState("");
-  const [formDescription, setFormDescription] = useState("");
-  const [formIsActive, setFormIsActive] = useState(true);
-  const [questions, setQuestions] = useState<Question[]>([]);
   const [saving, setSaving] = useState(false);
 
-  // Preview state
-  const [previewQuestions, setPreviewQuestions] = useState<Question[]>([]);
-  const [previewAnswers, setPreviewAnswers] = useState<Answer[]>([]);
+  // Use global modal context
+  const {
+    openCreateModal,
+    closeCreateModal,
+    isCreateModalOpen,
+    createModalData,
+    updateCreateModalData,
+    openEditModal,
+    closeEditModal,
+    isEditModalOpen,
+    editModalData,
+    updateEditModalData,
+    openPreviewModal,
+    closePreviewModal,
+    isPreviewModalOpen,
+    previewModalData,
+    updatePreviewModalData,
+    openDeleteModal,
+    closeDeleteModal,
+    isDeleteModalOpen,
+    deleteModalData,
+    openSendModal,
+    closeSendModal,
+    isSendModalOpen,
+    sendModalData,
+  } = useAnamneseTemplateModals();
+
+  // Form getters from modal data
+  const createFormTitle = createModalData.templateTitle || "";
+  const createFormDescription = createModalData.templateDescription || "";
+  const createFormIsActive = createModalData.templateIsActive ?? true;
+  const createQuestions = createModalData.questions || [];
+
+  const editFormTitle = editModalData.templateTitle || "";
+  const editFormDescription = editModalData.templateDescription || "";
+  const editFormIsActive = editModalData.templateIsActive ?? true;
+  const editQuestions = editModalData.questions || [];
+
+  const previewQuestions = previewModalData.previewQuestions || [];
+  const previewAnswers = previewModalData.previewAnswers || [];
 
   useEffect(() => {
     if (currentClinic) {
@@ -182,23 +205,24 @@ export default function AnamneseTemplatesPage() {
   };
 
   const handleOpenCreate = () => {
-    setFormTitle("");
-    setFormDescription("");
-    setFormIsActive(true);
-    setQuestions([]);
-    setCreateDialogOpen(true);
+    openCreateModal({
+      templateTitle: "",
+      templateDescription: "",
+      templateIsActive: true,
+      questions: [],
+    });
   };
 
   const handleOpenEdit = async (template: Template) => {
-    setSelectedTemplate(template);
-    setFormTitle(template.title);
-    setFormDescription(template.description || "");
-    setFormIsActive(template.is_active);
-
     try {
       const questionsWithOptions = await fetchTemplateQuestions(template.id);
-      setQuestions(questionsWithOptions);
-      setEditDialogOpen(true);
+      openEditModal(
+        template.id,
+        template.title,
+        template.description,
+        template.is_active,
+        questionsWithOptions
+      );
     } catch (error: any) {
       toast({
         title: "Erro ao carregar perguntas",
@@ -209,13 +233,9 @@ export default function AnamneseTemplatesPage() {
   };
 
   const handleOpenPreview = async (template: Template) => {
-    setSelectedTemplate(template);
-
     try {
       const questionsWithOptions = await fetchTemplateQuestions(template.id);
-      setPreviewQuestions(questionsWithOptions);
-      setPreviewAnswers([]);
-      setPreviewDialogOpen(true);
+      openPreviewModal(template.id, template.title, questionsWithOptions);
     } catch (error: any) {
       toast({
         title: "Erro ao carregar perguntas",
@@ -226,8 +246,11 @@ export default function AnamneseTemplatesPage() {
   };
 
   const handleOpenDelete = (template: Template) => {
-    setSelectedTemplate(template);
-    setDeleteDialogOpen(true);
+    openDeleteModal(template.id, template.title);
+  };
+
+  const handleOpenSend = (template: Template) => {
+    openSendModal(template.id, template.title);
   };
 
   const handleDuplicate = async (template: Template) => {
@@ -295,6 +318,12 @@ export default function AnamneseTemplatesPage() {
   };
 
   const handleSaveTemplate = async (isEdit: boolean) => {
+    const formTitle = isEdit ? editFormTitle : createFormTitle;
+    const formDescription = isEdit ? editFormDescription : createFormDescription;
+    const formIsActive = isEdit ? editFormIsActive : createFormIsActive;
+    const questions = isEdit ? editQuestions : createQuestions;
+    const templateId = isEdit ? editModalData.templateId : null;
+
     if (!currentClinic || !formTitle.trim()) {
       toast({
         title: "Título obrigatório",
@@ -306,9 +335,9 @@ export default function AnamneseTemplatesPage() {
 
     setSaving(true);
     try {
-      let templateId: string;
+      let savedTemplateId: string;
 
-      if (isEdit && selectedTemplate) {
+      if (isEdit && templateId) {
         // Update template
         const { error: updateError } = await supabase
           .from("anamnese_templates")
@@ -317,10 +346,10 @@ export default function AnamneseTemplatesPage() {
             description: formDescription.trim() || null,
             is_active: formIsActive,
           })
-          .eq("id", selectedTemplate.id);
+          .eq("id", templateId);
 
         if (updateError) throw updateError;
-        templateId = selectedTemplate.id;
+        savedTemplateId = templateId;
 
         // Delete existing questions (cascade deletes options)
         await supabase
@@ -342,7 +371,7 @@ export default function AnamneseTemplatesPage() {
           .single();
 
         if (createError) throw createError;
-        templateId = newTemplate.id;
+        savedTemplateId = newTemplate.id;
       }
 
       // Insert questions
@@ -352,7 +381,7 @@ export default function AnamneseTemplatesPage() {
         const { data: newQuestion, error: questionError } = await supabase
           .from("anamnese_questions")
           .insert({
-            template_id: templateId,
+            template_id: savedTemplateId,
             question_text: question.question_text.trim(),
             question_type: question.question_type,
             is_required: question.is_required,
@@ -364,12 +393,12 @@ export default function AnamneseTemplatesPage() {
         if (questionError) throw questionError;
 
         // Insert options
-        const validOptions = question.options.filter((o) => o.option_text.trim());
+        const validOptions = question.options.filter((o: any) => o.option_text.trim());
         if (validOptions.length > 0) {
           const { error: optionsError } = await supabase
             .from("anamnese_question_options")
             .insert(
-              validOptions.map((o) => ({
+              validOptions.map((o: any) => ({
                 question_id: newQuestion.id,
                 option_text: o.option_text.trim(),
                 order_index: o.order_index,
@@ -381,8 +410,13 @@ export default function AnamneseTemplatesPage() {
       }
 
       toast({ title: `Template ${isEdit ? "atualizado" : "criado"} com sucesso!` });
-      setCreateDialogOpen(false);
-      setEditDialogOpen(false);
+      
+      if (isEdit) {
+        closeEditModal();
+      } else {
+        closeCreateModal();
+      }
+      
       fetchTemplates();
     } catch (error: any) {
       toast({
@@ -396,18 +430,19 @@ export default function AnamneseTemplatesPage() {
   };
 
   const handleDeleteTemplate = async () => {
-    if (!selectedTemplate) return;
+    const templateId = deleteModalData.templateId;
+    if (!templateId) return;
 
     try {
       const { error } = await supabase
         .from("anamnese_templates")
         .delete()
-        .eq("id", selectedTemplate.id);
+        .eq("id", templateId);
 
       if (error) throw error;
 
       toast({ title: "Template excluído com sucesso!" });
-      setDeleteDialogOpen(false);
+      closeDeleteModal();
       fetchTemplates();
     } catch (error: any) {
       toast({
@@ -424,31 +459,31 @@ export default function AnamneseTemplatesPage() {
       (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const renderTemplateForm = (isEdit: boolean) => (
+  const renderCreateTemplateForm = () => (
     <Tabs defaultValue="info" className="space-y-4">
       <TabsList className="grid w-full grid-cols-2">
         <TabsTrigger value="info">Informações</TabsTrigger>
-        <TabsTrigger value="questions">Perguntas ({questions.length})</TabsTrigger>
+        <TabsTrigger value="questions">Perguntas ({createQuestions.length})</TabsTrigger>
       </TabsList>
 
       <TabsContent value="info" className="space-y-4">
         <div>
-          <Label htmlFor="title">Título *</Label>
+          <Label htmlFor="create-title">Título *</Label>
           <Input
-            id="title"
-            value={formTitle}
-            onChange={(e) => setFormTitle(e.target.value)}
+            id="create-title"
+            value={createFormTitle}
+            onChange={(e) => updateCreateModalData({ templateTitle: e.target.value })}
             placeholder="Ex: Anamnese Geral"
             className="mt-1.5"
           />
         </div>
 
         <div>
-          <Label htmlFor="description">Descrição</Label>
+          <Label htmlFor="create-description">Descrição</Label>
           <Textarea
-            id="description"
-            value={formDescription}
-            onChange={(e) => setFormDescription(e.target.value)}
+            id="create-description"
+            value={createFormDescription}
+            onChange={(e) => updateCreateModalData({ templateDescription: e.target.value })}
             placeholder="Descreva o objetivo deste formulário..."
             className="mt-1.5"
             rows={3}
@@ -457,23 +492,78 @@ export default function AnamneseTemplatesPage() {
 
         <div className="flex items-center justify-between p-3 border rounded-lg">
           <div>
-            <Label htmlFor="is_active">Ativo</Label>
+            <Label htmlFor="create-is_active">Ativo</Label>
             <p className="text-sm text-muted-foreground">
               Templates inativos não aparecem na seleção
             </p>
           </div>
           <Switch
-            id="is_active"
-            checked={formIsActive}
-            onCheckedChange={setFormIsActive}
+            id="create-is_active"
+            checked={createFormIsActive}
+            onCheckedChange={(checked) => updateCreateModalData({ templateIsActive: checked })}
           />
         </div>
       </TabsContent>
 
       <TabsContent value="questions">
         <AnamneseTemplateBuilder
-          questions={questions}
-          onQuestionsChange={setQuestions}
+          questions={createQuestions}
+          onQuestionsChange={(questions) => updateCreateModalData({ questions })}
+        />
+      </TabsContent>
+    </Tabs>
+  );
+
+  const renderEditTemplateForm = () => (
+    <Tabs defaultValue="info" className="space-y-4">
+      <TabsList className="grid w-full grid-cols-2">
+        <TabsTrigger value="info">Informações</TabsTrigger>
+        <TabsTrigger value="questions">Perguntas ({editQuestions.length})</TabsTrigger>
+      </TabsList>
+
+      <TabsContent value="info" className="space-y-4">
+        <div>
+          <Label htmlFor="edit-title">Título *</Label>
+          <Input
+            id="edit-title"
+            value={editFormTitle}
+            onChange={(e) => updateEditModalData({ templateTitle: e.target.value })}
+            placeholder="Ex: Anamnese Geral"
+            className="mt-1.5"
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="edit-description">Descrição</Label>
+          <Textarea
+            id="edit-description"
+            value={editFormDescription}
+            onChange={(e) => updateEditModalData({ templateDescription: e.target.value })}
+            placeholder="Descreva o objetivo deste formulário..."
+            className="mt-1.5"
+            rows={3}
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-3 border rounded-lg">
+          <div>
+            <Label htmlFor="edit-is_active">Ativo</Label>
+            <p className="text-sm text-muted-foreground">
+              Templates inativos não aparecem na seleção
+            </p>
+          </div>
+          <Switch
+            id="edit-is_active"
+            checked={editFormIsActive}
+            onCheckedChange={(checked) => updateEditModalData({ templateIsActive: checked })}
+          />
+        </div>
+      </TabsContent>
+
+      <TabsContent value="questions">
+        <AnamneseTemplateBuilder
+          questions={editQuestions}
+          onQuestionsChange={(questions) => updateEditModalData({ questions })}
         />
       </TabsContent>
     </Tabs>
@@ -484,6 +574,37 @@ export default function AnamneseTemplatesPage() {
   const canDelete = hasPermission("delete_anamnesis_templates");
   const canSendWhatsApp = hasPermission("send_anamnesis_whatsapp");
   const canCreate = hasPermission("manage_anamnesis_templates");
+
+  // Safe close handlers that check document focus
+  const handleCreateDialogClose = useCallback((open: boolean) => {
+    if (!open && document.hasFocus()) {
+      closeCreateModal();
+    }
+  }, [closeCreateModal]);
+
+  const handleEditDialogClose = useCallback((open: boolean) => {
+    if (!open && document.hasFocus()) {
+      closeEditModal();
+    }
+  }, [closeEditModal]);
+
+  const handlePreviewDialogClose = useCallback((open: boolean) => {
+    if (!open && document.hasFocus()) {
+      closePreviewModal();
+    }
+  }, [closePreviewModal]);
+
+  const handleDeleteDialogClose = useCallback((open: boolean) => {
+    if (!open && document.hasFocus()) {
+      closeDeleteModal();
+    }
+  }, [closeDeleteModal]);
+
+  const handleSendDialogClose = useCallback((open: boolean) => {
+    if (!open && document.hasFocus()) {
+      closeSendModal();
+    }
+  }, [closeSendModal]);
 
   return (
     <RoleGuard permission="view_anamnesis_templates">
@@ -565,12 +686,7 @@ export default function AnamneseTemplatesPage() {
                         Pré-visualizar
                       </DropdownMenuItem>
                       {canSendWhatsApp && (
-                        <DropdownMenuItem
-                          onClick={() => {
-                            setSendTemplate(template);
-                            setSendDialogOpen(true);
-                          }}
-                        >
+                        <DropdownMenuItem onClick={() => handleOpenSend(template)}>
                           <MessageCircle className="h-4 w-4 mr-2" />
                           Enviar por WhatsApp
                         </DropdownMenuItem>
@@ -626,7 +742,7 @@ export default function AnamneseTemplatesPage() {
       )}
 
       {/* Create Dialog */}
-      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+      <Dialog open={isCreateModalOpen} onOpenChange={handleCreateDialogClose}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Template de Anamnese</DialogTitle>
@@ -635,10 +751,10 @@ export default function AnamneseTemplatesPage() {
             </DialogDescription>
           </DialogHeader>
 
-          {renderTemplateForm(false)}
+          {renderCreateTemplateForm()}
 
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
+            <Button variant="outline" onClick={() => closeCreateModal()}>
               Cancelar
             </Button>
             <Button onClick={() => handleSaveTemplate(false)} disabled={saving}>
@@ -650,7 +766,7 @@ export default function AnamneseTemplatesPage() {
       </Dialog>
 
       {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+      <Dialog open={isEditModalOpen} onOpenChange={handleEditDialogClose}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Template</DialogTitle>
@@ -659,10 +775,10 @@ export default function AnamneseTemplatesPage() {
             </DialogDescription>
           </DialogHeader>
 
-          {renderTemplateForm(true)}
+          {renderEditTemplateForm()}
 
           <div className="flex justify-end gap-2 pt-4 border-t">
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => closeEditModal()}>
               Cancelar
             </Button>
             <Button onClick={() => handleSaveTemplate(true)} disabled={saving}>
@@ -674,10 +790,10 @@ export default function AnamneseTemplatesPage() {
       </Dialog>
 
       {/* Preview Dialog */}
-      <Dialog open={previewDialogOpen} onOpenChange={setPreviewDialogOpen}>
+      <Dialog open={isPreviewModalOpen} onOpenChange={handlePreviewDialogClose}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Pré-visualização: {selectedTemplate?.title}</DialogTitle>
+            <DialogTitle>Pré-visualização: {previewModalData.templateTitle}</DialogTitle>
             <DialogDescription>
               Veja como o formulário será exibido para o paciente
             </DialogDescription>
@@ -686,22 +802,22 @@ export default function AnamneseTemplatesPage() {
           <AnamneseResponseForm
             questions={previewQuestions}
             answers={previewAnswers}
-            onAnswersChange={setPreviewAnswers}
+            onAnswersChange={(answers) => updatePreviewModalData({ previewAnswers: answers })}
           />
 
           <div className="flex justify-end pt-4 border-t">
-            <Button onClick={() => setPreviewDialogOpen(false)}>Fechar</Button>
+            <Button onClick={() => closePreviewModal()}>Fechar</Button>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* Delete Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={handleDeleteDialogClose}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir template?</AlertDialogTitle>
             <AlertDialogDescription>
-              Esta ação não pode ser desfeita. O template "{selectedTemplate?.title}" e todas as suas perguntas serão excluídos permanentemente.
+              Esta ação não pode ser desfeita. O template "{deleteModalData.templateTitle}" e todas as suas perguntas serão excluídos permanentemente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -717,17 +833,14 @@ export default function AnamneseTemplatesPage() {
       </AlertDialog>
 
       {/* Send WhatsApp Dialog */}
-      {currentClinic && sendTemplate && (
+      {currentClinic && isSendModalOpen && sendModalData.templateId && (
         <SendAnamnesisWhatsAppDialog
-          open={sendDialogOpen}
-          onOpenChange={(open) => {
-            setSendDialogOpen(open);
-            if (!open) setSendTemplate(null);
-          }}
+          open={isSendModalOpen}
+          onOpenChange={handleSendDialogClose}
           clinicId={currentClinic.id}
           clinicName={currentClinic.name}
-          templateId={sendTemplate.id}
-          templateTitle={sendTemplate.title}
+          templateId={sendModalData.templateId}
+          templateTitle={sendModalData.templateTitle || ""}
         />
       )}
     </div>
