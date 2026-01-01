@@ -177,7 +177,7 @@ export default function PatientsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(15);
   const [totalPatients, setTotalPatients] = useState(0);
   const [showInactive, setShowInactive] = useState(false);
   const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
@@ -969,6 +969,7 @@ export default function PatientsPage() {
                 <SelectValue placeholder="Por página" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="15">15 / página</SelectItem>
                 <SelectItem value="25">25 / página</SelectItem>
                 <SelectItem value="50">50 / página</SelectItem>
                 <SelectItem value="100">100 / página</SelectItem>
@@ -1003,19 +1004,19 @@ export default function PatientsPage() {
           ) : patients.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead className="hidden sm:table-cell">CPF</TableHead>
-                  <TableHead>Telefone</TableHead>
-                  <TableHead className="hidden lg:table-cell">Convênio</TableHead>
-                  <TableHead className="hidden md:table-cell">Carteirinha</TableHead>
-                  <TableHead className="w-[60px]"></TableHead>
+                <TableRow className="h-9">
+                  <TableHead className="py-2 text-xs">Nome</TableHead>
+                  <TableHead className="hidden sm:table-cell py-2 text-xs">CPF</TableHead>
+                  <TableHead className="py-2 text-xs">Telefone</TableHead>
+                  <TableHead className="hidden lg:table-cell py-2 text-xs">Convênio</TableHead>
+                  <TableHead className="hidden md:table-cell py-2 text-xs">Carteirinha</TableHead>
+                  <TableHead className="w-[50px] py-2"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {patients.map((patient) => (
-                  <TableRow key={patient.id} className={patient.is_active === false ? "opacity-60" : ""}>
-                    <TableCell className="font-medium">
+                  <TableRow key={patient.id} className={`${patient.is_active === false ? "opacity-60" : ""} h-10`}>
+                    <TableCell className="font-medium py-2">
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => handleOpenEdit(patient)}
@@ -1039,13 +1040,13 @@ export default function PatientsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="hidden sm:table-cell">
-                      <span className="text-muted-foreground font-mono text-sm">
+                    <TableCell className="hidden sm:table-cell py-2">
+                      <span className="text-muted-foreground font-mono text-xs">
                         {patient.cpf ? formatCPF(patient.cpf) : "—"}
                       </span>
                     </TableCell>
-                    <TableCell>{patient.phone}</TableCell>
-                    <TableCell className="hidden lg:table-cell">
+                    <TableCell className="py-2 text-sm">{patient.phone}</TableCell>
+                    <TableCell className="hidden lg:table-cell py-2">
                       {patient.insurance_plan ? (
                         <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground font-medium">
                           {patient.insurance_plan.name}
@@ -1054,7 +1055,7 @@ export default function PatientsPage() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="hidden md:table-cell">
+                    <TableCell className="hidden md:table-cell py-2">
                       <InlineCardExpiryEdit
                         entityId={patient.id}
                         entityType="patient"
@@ -1063,7 +1064,7 @@ export default function PatientsPage() {
                         onUpdate={fetchPatients}
                       />
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right py-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="shrink-0">
