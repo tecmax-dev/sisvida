@@ -202,7 +202,6 @@ interface Appointment {
   dependent?: {
     id: string;
     name: string;
-    phone?: string | null;
   } | null;
 }
 
@@ -391,7 +390,7 @@ export default function CalendarPage() {
           procedure:procedures (id, name, price),
           patient:patients (id, name, phone, email, birth_date),
           professional:professionals (id, name, specialty, avatar_url),
-          dependent:patient_dependents!appointments_dependent_id_fkey (id, name, phone)
+          dependent:patient_dependents!appointments_dependent_id_fkey (id, name)
         `)
         .eq('clinic_id', currentClinic.id)
         .gte('appointment_date', startDate)
@@ -1455,13 +1454,11 @@ export default function CalendarPage() {
 
   const handleSendWhatsAppReminder = async (appointment: Appointment) => {
     const patient = patients.find(p => p.id === appointment.patient_id);
-    
-    // Para dependentes, usar nome do dependente; para telefone, herdar do titular se não tiver
+
+    // Para dependentes: nome do dependente; telefone: sempre do titular (paciente)
     const displayName = getAppointmentDisplayName(appointment);
-    const phoneToUse = appointment.dependent_id 
-      ? (appointment.dependent?.phone || patient?.phone) // Dependente: telefone próprio ou do titular
-      : patient?.phone; // Titular: telefone próprio
-    
+    const phoneToUse = patient?.phone;
+
     if (!phoneToUse) {
       toast({
         title: "Erro",
@@ -1564,12 +1561,10 @@ export default function CalendarPage() {
   };
 
   const handleSendTelemedicineLink = async (appointment: Appointment) => {
-    // Para dependentes, usar telefone do dependente ou herdar do titular
+    // Para dependentes: nome do dependente; telefone: sempre do titular (paciente)
     const displayName = getAppointmentDisplayName(appointment);
-    const phoneToUse = appointment.dependent_id 
-      ? (appointment.dependent?.phone || appointment.patient?.phone)
-      : appointment.patient?.phone;
-    
+    const phoneToUse = appointment.patient?.phone;
+
     if (!phoneToUse) {
       toast({
         title: "Telefone não cadastrado",

@@ -284,8 +284,7 @@ serve(async (req) => {
             name
           ),
           dependent:patient_dependents (
-            name,
-            phone
+            name
           )
         `)
         .eq('clinic_id', clinic.id)
@@ -316,11 +315,9 @@ serve(async (req) => {
         const professional = appointment.professional as any;
         const dependent = appointment.dependent as any;
         
-        // Para dependentes, usar nome do dependente; para mensagens, usar telefone do dependente ou herdar do titular
+        // Para dependentes: nome do dependente; telefone: sempre do titular (paciente)
         const displayName = appointment.dependent_id && dependent?.name ? dependent.name : patient?.name;
-        const phoneToUse = appointment.dependent_id 
-          ? (dependent?.phone || patient?.phone) // Dependente: usar telefone próprio ou herdar do titular
-          : patient?.phone; // Titular: usar telefone próprio
+        const phoneToUse = patient?.phone;
 
         if (!phoneToUse) {
           console.log(`No phone for appointment ${appointment.id} (patient: ${patient?.name}, dependent: ${dependent?.name})`);
@@ -412,7 +409,7 @@ serve(async (req) => {
           console.log(`✓ Reminder sent to ${displayName} (phone: ${phoneToUse}) for appointment on ${targetDate} at ${time}`);
         } else {
           errorCount++;
-          console.error(`✗ Failed to send reminder to ${patient.name}`);
+          console.error(`✗ Failed to send reminder to ${displayName}`);
         }
 
         // Small delay to avoid rate limiting
