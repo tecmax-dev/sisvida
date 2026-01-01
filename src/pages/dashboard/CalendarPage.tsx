@@ -1980,7 +1980,7 @@ export default function CalendarPage() {
               DEP
             </Badge>
           )}
-          {/* Badge do convênio */}
+          {/* Badge do convênio com diferenciação titular/dependente */}
           {appointment.patient?.insurance_plan && (
             <Badge 
               className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border-0"
@@ -1992,7 +1992,7 @@ export default function CalendarPage() {
                 borderColor: appointment.patient.insurance_plan.color || 'hsl(var(--accent))'
               }}
             >
-              {appointment.patient.insurance_plan.name}
+              {appointment.patient.insurance_plan.name} - {appointment.dependent_id ? 'Dep' : 'Titular'}
             </Badge>
           )}
           {hasConflict && !isCancelled && (
