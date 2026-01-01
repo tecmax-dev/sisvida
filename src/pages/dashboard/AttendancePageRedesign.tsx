@@ -220,9 +220,48 @@ export default function AttendancePageRedesign() {
   
   // Print Dialog state
   const [printDialogOpen, setPrintDialogOpen] = useState(false);
+  const [printDialogSnapshot, setPrintDialogSnapshot] = useState<{
+    clinic: { name: string; address?: string; phone?: string; cnpj?: string };
+    clinicId: string;
+    patient: { name: string; phone: string };
+    patientId: string;
+    professional?: { name: string; specialty?: string; registration_number?: string };
+    professionalId?: string;
+    initialPrescription?: string;
+    initialTab?: "receituario" | "controlado" | "atestado" | "comparecimento" | "exames";
+    date: string;
+  } | null>(null);
   const [printDialogInitialTab, setPrintDialogInitialTab] = useState<
     "receituario" | "controlado" | "atestado" | "comparecimento" | "exames"
   >("receituario");
+
+  useEffect(() => {
+    if (!printDialogOpen) return;
+    if (!clinic || !appointment) return;
+
+    setPrintDialogSnapshot({
+      clinic: {
+        name: clinic.name,
+        address: clinic.address || undefined,
+        phone: clinic.phone || undefined,
+        cnpj: clinic.cnpj || undefined,
+      },
+      clinicId: appointment.clinic_id,
+      patient: { name: appointment.patient.name, phone: appointment.patient.phone },
+      patientId: appointment.patient_id,
+      professional: professional
+        ? {
+            name: professional.name,
+            specialty: professional.specialty || undefined,
+            registration_number: professional.registration_number || undefined,
+          }
+        : undefined,
+      professionalId: appointment.professional_id,
+      initialPrescription: recordForm.prescription || "",
+      initialTab: printDialogInitialTab,
+      date: new Date().toISOString().split("T")[0],
+    });
+  }, [printDialogOpen, clinic, appointment, professional, recordForm.prescription, printDialogInitialTab]);
 
   // Auto-save states
   const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -1448,19 +1487,24 @@ export default function AttendancePageRedesign() {
       </Dialog>
 
       {/* Print Dialog */}
-      <PrintDialog
-        open={printDialogOpen}
-        onOpenChange={setPrintDialogOpen}
-        clinicId={appointment.clinic_id}
-        patientId={appointment.patient_id}
-        patient={{ name: appointment.patient.name, phone: appointment.patient.phone }}
-        clinic={{ name: clinic?.name || "", address: clinic?.address, phone: clinic?.phone, cnpj: clinic?.cnpj }}
-        professional={professional ? { name: professional.name, specialty: professional.specialty, registration_number: professional.registration_number } : undefined}
-        professionalId={appointment.professional_id}
-        initialTab={printDialogInitialTab}
-        initialPrescription={recordForm.prescription}
-        date={new Date().toISOString().split("T")[0]}
-      />
+      {printDialogSnapshot && (
+        <PrintDialog
+          open={printDialogOpen}
+          onOpenChange={(open) => {
+            setPrintDialogOpen(open);
+            if (!open) setPrintDialogSnapshot(null);
+          }}
+          clinic={printDialogSnapshot.clinic}
+          clinicId={printDialogSnapshot.clinicId}
+          patient={printDialogSnapshot.patient}
+          patientId={printDialogSnapshot.patientId}
+          professional={printDialogSnapshot.professional}
+          professionalId={printDialogSnapshot.professionalId}
+          initialTab={printDialogSnapshot.initialTab}
+          initialPrescription={printDialogSnapshot.initialPrescription}
+          date={printDialogSnapshot.date}
+        />
+      )}
     </div>
   );
 }
