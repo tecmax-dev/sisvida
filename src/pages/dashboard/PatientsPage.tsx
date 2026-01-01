@@ -1017,7 +1017,12 @@ export default function PatientsPage() {
                   <TableRow key={patient.id} className={patient.is_active === false ? "opacity-60" : ""}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
-                        <span className="truncate">{patient.name}</span>
+                        <button
+                          onClick={() => handleOpenEdit(patient)}
+                          className="truncate text-primary hover:underline font-medium text-left"
+                        >
+                          {patient.name}
+                        </button>
                         {patient.birth_date && (
                           <Badge variant="outline" className="text-xs">
                             {calculateAge(patient.birth_date)} anos
