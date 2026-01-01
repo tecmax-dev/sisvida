@@ -2015,8 +2015,8 @@ export default function CalendarPage() {
 
               <DropdownMenuSeparator />
               
-              {/* Pré-atendimento */}
-              {(appointment.status === "confirmed" || appointment.status === "arrived") && (
+              {/* Pré-atendimento - disponível para todos agendamentos não cancelados/concluídos */}
+              {(appointment.status === "scheduled" || appointment.status === "confirmed" || appointment.status === "arrived") && (
                 <DropdownMenuItem onClick={() => {
                   setPreAttendanceAppointment(appointment);
                   setPreAttendanceDialogOpen(true);
