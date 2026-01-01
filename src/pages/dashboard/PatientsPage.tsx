@@ -177,7 +177,7 @@ export default function PatientsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(50);
+  const [pageSize, setPageSize] = useState(25);
   const [totalPatients, setTotalPatients] = useState(0);
   const [showInactive, setShowInactive] = useState(false);
   const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
