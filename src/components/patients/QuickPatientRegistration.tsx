@@ -1,0 +1,328 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { addDays } from "date-fns";
+import { UserPlus, Loader2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+
+// Validação de CPF
+function isValidCPF(cpf: string): boolean {
+  const cleaned = cpf.replace(/\D/g, "");
+  if (cleaned.length !== 11) return false;
+  if (/^(\d)\1+$/.test(cleaned)) return false;
+  
+  let sum = 0;
+  for (let i = 0; i < 9; i++) sum += parseInt(cleaned[i]) * (10 - i);
+  let remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  if (remainder !== parseInt(cleaned[9])) return false;
+  
+  sum = 0;
+  for (let i = 0; i < 10; i++) sum += parseInt(cleaned[i]) * (11 - i);
+  remainder = (sum * 10) % 11;
+  if (remainder === 10 || remainder === 11) remainder = 0;
+  return remainder === parseInt(cleaned[10]);
+}
+
+const quickRegistrationSchema = z.object({
+  cpf: z.string()
+    .min(11, "CPF é obrigatório")
+    .refine((val) => isValidCPF(val), "CPF inválido"),
+  name: z.string().min(3, "Nome deve ter pelo menos 3 caracteres"),
+  birth_date: z.string().min(1, "Data de nascimento é obrigatória"),
+  phone: z.string().min(10, "Telefone WhatsApp é obrigatório"),
+  employer_cnpj: z.string().optional(),
+});
+
+type QuickRegistrationForm = z.infer<typeof quickRegistrationSchema>;
+
+interface QuickPatientRegistrationProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSuccess?: (patientId: string) => void;
+  initialCpf?: string;
+}
+
+export function QuickPatientRegistration({
+  open,
+  onOpenChange,
+  onSuccess,
+  initialCpf = "",
+}: QuickPatientRegistrationProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const { currentClinic } = useAuth();
+
+  const form = useForm<QuickRegistrationForm>({
+    resolver: zodResolver(quickRegistrationSchema),
+    defaultValues: {
+      cpf: initialCpf,
+      name: "",
+      birth_date: "",
+      phone: "",
+      employer_cnpj: "",
+    },
+  });
+
+  const formatCPF = (value: string) => {
+    const cleaned = value.replace(/\D/g, "").slice(0, 11);
+    return cleaned
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  };
+
+  const formatPhone = (value: string) => {
+    const cleaned = value.replace(/\D/g, "").slice(0, 11);
+    if (cleaned.length <= 2) return cleaned;
+    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  };
+
+  const formatCNPJ = (value: string) => {
+    const cleaned = value.replace(/\D/g, "").slice(0, 14);
+    return cleaned
+      .replace(/(\d{2})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1/$2")
+      .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+  };
+
+  const onSubmit = async (data: QuickRegistrationForm) => {
+    if (!currentClinic) {
+      toast.error("Clínica não encontrada");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Check if CPF already exists
+      const cpfCleaned = data.cpf.replace(/\D/g, "");
+      const { data: existing } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("clinic_id", currentClinic.id)
+        .eq("cpf", cpfCleaned)
+        .maybeSingle();
+
+      if (existing) {
+        toast.error("CPF já cadastrado", {
+          description: "Este CPF já está vinculado a outro paciente.",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Create patient
+      const { data: patient, error: patientError } = await supabase
+        .from("patients")
+        .insert({
+          clinic_id: currentClinic.id,
+          name: data.name.trim(),
+          cpf: cpfCleaned,
+          birth_date: data.birth_date,
+          phone: data.phone.replace(/\D/g, ""),
+          employer_cnpj: data.employer_cnpj?.replace(/\D/g, "") || null,
+        })
+        .select("id")
+        .single();
+
+      if (patientError) throw patientError;
+
+      // Generate card number
+      const { data: cardNumber, error: cardError } = await supabase.rpc(
+        "generate_card_number",
+        { p_clinic_id: currentClinic.id }
+      );
+
+      if (cardError) {
+        console.error("Error generating card number:", cardError);
+      } else {
+        // Create patient card with 15 days validity
+        const expiresAt = addDays(new Date(), 15);
+        
+        const { error: insertCardError } = await supabase
+          .from("patient_cards")
+          .insert({
+            clinic_id: currentClinic.id,
+            patient_id: patient.id,
+            card_number: cardNumber,
+            issued_at: new Date().toISOString(),
+            expires_at: expiresAt.toISOString(),
+            is_active: true,
+            token: crypto.randomUUID(),
+          });
+
+        if (insertCardError) {
+          console.error("Error creating card:", insertCardError);
+        }
+      }
+
+      toast.success("Paciente cadastrado com sucesso!", {
+        description: "Carteirinha digital criada com validade de 15 dias.",
+      });
+
+      form.reset();
+      onOpenChange(false);
+      onSuccess?.(patient.id);
+    } catch (error: any) {
+      console.error("Error registering patient:", error);
+      if (error.message?.includes("CPF_DUPLICADO")) {
+        toast.error("CPF já cadastrado");
+      } else {
+        toast.error("Erro ao cadastrar paciente", {
+          description: error.message,
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <UserPlus className="h-5 w-5" />
+            Cadastro Rápido de Paciente
+          </DialogTitle>
+          <DialogDescription>
+            Preencha os dados abaixo para cadastrar um novo paciente. 
+            Uma carteirinha digital será criada automaticamente com validade de 15 dias.
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="cpf"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CPF *</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="000.000.000-00"
+                      onChange={(e) => field.onChange(formatCPF(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome Completo *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Nome do paciente" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="birth_date"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data de Nascimento *</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="date" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefone WhatsApp *</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="(00) 00000-0000"
+                      onChange={(e) => field.onChange(formatPhone(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="employer_cnpj"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>CNPJ da Empresa (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      placeholder="00.000.000/0000-00"
+                      onChange={(e) => field.onChange(formatCNPJ(e.target.value))}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="flex gap-2 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                className="flex-1"
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={isLoading} className="flex-1">
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Cadastrando...
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Cadastrar
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}

@@ -114,6 +114,7 @@ const initialFormData: PatientFormData = {
   preferredChannel: 'whatsapp',
   profession: '',
   education: '',
+  employerCnpj: '',
   motherName: '',
   fatherName: '',
   notes: '',
@@ -240,6 +241,7 @@ export default function PatientEditPage() {
           preferredChannel: data.preferred_channel || 'whatsapp',
           profession: data.profession || '',
           education: data.education || '',
+          employerCnpj: (data as any).employer_cnpj || '',
           motherName: data.mother_name || '',
           fatherName: data.father_name || '',
           notes: data.notes || '',
@@ -358,6 +360,7 @@ export default function PatientEditPage() {
           preferred_channel: dataToSave.preferredChannel || 'whatsapp',
           profession: dataToSave.profession.trim() || null,
           education: dataToSave.education || null,
+          employer_cnpj: dataToSave.employerCnpj?.replace(/\D/g, '') || null,
           mother_name: dataToSave.motherName.trim() || null,
           father_name: dataToSave.fatherName.trim() || null,
         })
@@ -494,6 +497,7 @@ export default function PatientEditPage() {
           preferred_channel: formData.preferredChannel || 'whatsapp',
           profession: formData.profession.trim() || null,
           education: formData.education || null,
+          employer_cnpj: formData.employerCnpj?.replace(/\D/g, '') || null,
           mother_name: formData.motherName.trim() || null,
           father_name: formData.fatherName.trim() || null,
         })
