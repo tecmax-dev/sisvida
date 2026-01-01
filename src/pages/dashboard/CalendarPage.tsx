@@ -202,6 +202,7 @@ interface Appointment {
   dependent?: {
     id: string;
     name: string;
+    phone?: string | null;
   } | null;
 }
 
@@ -383,7 +384,7 @@ export default function CalendarPage() {
           procedure:procedures (id, name, price),
           patient:patients (id, name, phone, email, birth_date),
           professional:professionals (id, name, specialty, avatar_url),
-          dependent:patient_dependents!appointments_dependent_id_fkey (id, name)
+          dependent:patient_dependents!appointments_dependent_id_fkey (id, name, phone)
         `)
         .eq('clinic_id', currentClinic.id)
         .gte('appointment_date', startDate)
@@ -1445,10 +1446,19 @@ export default function CalendarPage() {
 
   const handleSendWhatsAppReminder = async (appointment: Appointment) => {
     const patient = patients.find(p => p.id === appointment.patient_id);
-    if (!patient?.phone) {
+    
+    // Para dependentes, usar nome do dependente; para telefone, herdar do titular se não tiver
+    const displayName = getAppointmentDisplayName(appointment);
+    const phoneToUse = appointment.dependent_id 
+      ? (appointment.dependent?.phone || patient?.phone) // Dependente: telefone próprio ou do titular
+      : patient?.phone; // Titular: telefone próprio
+    
+    if (!phoneToUse) {
       toast({
         title: "Erro",
-        description: "Paciente não possui telefone cadastrado.",
+        description: appointment.dependent_id 
+          ? "Dependente e titular não possuem telefone cadastrado."
+          : "Paciente não possui telefone cadastrado.",
         variant: "destructive",
       });
       return;
@@ -1471,7 +1481,7 @@ export default function CalendarPage() {
         : undefined;
       
       const message = formatAppointmentReminder(
-        patient.name,
+        displayName,
         currentClinic?.name || 'Clínica',
         formattedDate,
         appointment.start_time.slice(0, 5),
@@ -1482,7 +1492,7 @@ export default function CalendarPage() {
 
       const { data, error } = await supabase.functions.invoke('send-whatsapp', {
         body: { 
-          phone: patient.phone, 
+          phone: phoneToUse, 
           message, 
           clinicId: currentClinic?.id,
           type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder'
@@ -1494,7 +1504,7 @@ export default function CalendarPage() {
       if (data?.success) {
         // If direct reply is enabled, register pending confirmation
         if (directReplyEnabled && currentClinic) {
-          const formattedPhone = patient.phone.replace(/\D/g, '');
+          const formattedPhone = phoneToUse.replace(/\D/g, '');
           const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone;
           
           // Calculate expiry time (1 hour before appointment)
@@ -1515,8 +1525,8 @@ export default function CalendarPage() {
         toast({
           title: "Lembrete enviado",
           description: directReplyEnabled 
-            ? `Mensagem enviada para ${patient.name}. Aguardando resposta SIM ou NÃO.`
-            : `Mensagem enviada para ${patient.name}.`,
+            ? `Mensagem enviada para ${displayName}. Aguardando resposta SIM ou NÃO.`
+            : `Mensagem enviada para ${displayName}.`,
         });
       } else {
         throw new Error(data?.error || 'Erro ao enviar mensagem');
@@ -1545,10 +1555,18 @@ export default function CalendarPage() {
   };
 
   const handleSendTelemedicineLink = async (appointment: Appointment) => {
-    if (!appointment.patient?.phone) {
+    // Para dependentes, usar telefone do dependente ou herdar do titular
+    const displayName = getAppointmentDisplayName(appointment);
+    const phoneToUse = appointment.dependent_id 
+      ? (appointment.dependent?.phone || appointment.patient?.phone)
+      : appointment.patient?.phone;
+    
+    if (!phoneToUse) {
       toast({
         title: "Telefone não cadastrado",
-        description: "O paciente não possui telefone para envio do WhatsApp.",
+        description: appointment.dependent_id 
+          ? "Dependente e titular não possuem telefone para envio do WhatsApp."
+          : "O paciente não possui telefone para envio do WhatsApp.",
         variant: "destructive",
       });
       return;
@@ -1580,7 +1598,7 @@ export default function CalendarPage() {
       const formattedTime = appointment.start_time.slice(0, 5);
 
       const message = formatTelemedicineInvite(
-        appointment.patient.name,
+        displayName,
         currentClinic.name || "Clínica",
         formattedDate,
         formattedTime,
@@ -1589,7 +1607,7 @@ export default function CalendarPage() {
       );
 
       const result = await sendWhatsAppMessage({
-        phone: appointment.patient.phone,
+        phone: phoneToUse,
         message,
         clinicId: currentClinic.id,
         type: "custom",
@@ -1598,7 +1616,7 @@ export default function CalendarPage() {
       if (result.success) {
         toast({
           title: "Link enviado! 📹",
-          description: `Link da teleconsulta enviado para ${appointment.patient.phone}`,
+          description: `Link da teleconsulta enviado para ${phoneToUse}`,
         });
       } else {
         throw new Error(result.error || "Erro ao enviar mensagem");

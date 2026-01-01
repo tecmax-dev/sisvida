@@ -275,12 +275,17 @@ serve(async (req) => {
           start_time,
           reminder_sent,
           confirmation_token,
+          dependent_id,
           patient:patients (
             name,
             phone
           ),
           professional:professionals (
             name
+          ),
+          dependent:patient_dependents (
+            name,
+            phone
           )
         `)
         .eq('clinic_id', clinic.id)
@@ -309,9 +314,16 @@ serve(async (req) => {
 
         const patient = appointment.patient as any;
         const professional = appointment.professional as any;
+        const dependent = appointment.dependent as any;
+        
+        // Para dependentes, usar nome do dependente; para mensagens, usar telefone do dependente ou herdar do titular
+        const displayName = appointment.dependent_id && dependent?.name ? dependent.name : patient?.name;
+        const phoneToUse = appointment.dependent_id 
+          ? (dependent?.phone || patient?.phone) // Dependente: usar telefone próprio ou herdar do titular
+          : patient?.phone; // Titular: usar telefone próprio
 
-        if (!patient?.phone) {
-          console.log(`No phone for appointment ${appointment.id}`);
+        if (!phoneToUse) {
+          console.log(`No phone for appointment ${appointment.id} (patient: ${patient?.name}, dependent: ${dependent?.name})`);
           continue;
         }
 
@@ -325,9 +337,9 @@ serve(async (req) => {
           ? `${baseUrl}/consulta/${appointment.confirmation_token}`
           : undefined;
 
-        // Create message
+        // Create message - usar displayName (nome do dependente ou titular)
         const message = formatAppointmentReminder(
-          patient.name,
+          displayName,
           clinic.name,
           dateFormatted,
           time,
@@ -342,7 +354,7 @@ serve(async (req) => {
         const logoUrl = clinic.whatsapp_header_image_url || clinic.logo_url || DEFAULT_SYSTEM_LOGO;
         success = await sendWhatsAppWithImage(
           evolutionConfig as EvolutionConfig,
-          patient.phone,
+          phoneToUse,
           logoUrl,
           message
         );
@@ -356,7 +368,7 @@ serve(async (req) => {
 
           // If direct reply is enabled, register pending confirmation
           if (directReplyEnabled) {
-            const formattedPhone = patient.phone.replace(/\D/g, '');
+            const formattedPhone = phoneToUse.replace(/\D/g, '');
             const phoneWithCountry = formattedPhone.startsWith('55') ? formattedPhone : '55' + formattedPhone;
             
             // Calculate expiry time (1 hour before appointment)
@@ -376,12 +388,12 @@ serve(async (req) => {
             if (pendingError) {
               console.error(`Error creating pending confirmation for appointment ${appointment.id}:`, pendingError);
             } else {
-              console.log(`✓ Pending confirmation registered for ${patient.name} (phone: ${phoneWithCountry})`);
+              console.log(`✓ Pending confirmation registered for ${displayName} (phone: ${phoneWithCountry})`);
             }
           }
 
           // Log the message
-          const formattedPhone = patient.phone.replace(/\D/g, '');
+          const formattedPhone = phoneToUse.replace(/\D/g, '');
           const { error: logError } = await supabase
             .from('message_logs')
             .insert({
@@ -395,9 +407,9 @@ serve(async (req) => {
             console.error(`Error logging message for clinic ${clinic.id}:`, logError);
           }
 
-          remainingMessages--;
+          remainingMessages++;
           sentCount++;
-          console.log(`✓ Reminder sent to ${patient.name} for appointment on ${targetDate} at ${time}`);
+          console.log(`✓ Reminder sent to ${displayName} (phone: ${phoneToUse}) for appointment on ${targetDate} at ${time}`);
         } else {
           errorCount++;
           console.error(`✗ Failed to send reminder to ${patient.name}`);
