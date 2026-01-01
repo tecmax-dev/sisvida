@@ -192,6 +192,11 @@ interface Appointment {
     phone: string;
     email: string | null;
     birth_date: string | null;
+    insurance_plan?: {
+      id: string;
+      name: string;
+      color: string | null;
+    } | null;
   };
   professional: {
     id: string;
@@ -419,7 +424,7 @@ export default function CalendarPage() {
           procedure_id,
           dependent_id,
           procedure:procedures (id, name, price),
-          patient:patients (id, name, phone, email, birth_date),
+          patient:patients (id, name, phone, email, birth_date, insurance_plan:insurance_plans (id, name, color)),
           professional:professionals (id, name, specialty, avatar_url),
           dependent:patient_dependents!appointments_dependent_id_fkey (id, name)
         `)
@@ -1973,6 +1978,21 @@ export default function CalendarPage() {
           {appointment.dependent_id && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0">
               DEP
+            </Badge>
+          )}
+          {/* Badge do convênio */}
+          {appointment.patient?.insurance_plan && (
+            <Badge 
+              className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border-0"
+              style={{
+                backgroundColor: appointment.patient.insurance_plan.color 
+                  ? `${appointment.patient.insurance_plan.color}20` 
+                  : 'hsl(var(--accent))',
+                color: appointment.patient.insurance_plan.color || 'hsl(var(--accent-foreground))',
+                borderColor: appointment.patient.insurance_plan.color || 'hsl(var(--accent))'
+              }}
+            >
+              {appointment.patient.insurance_plan.name}
             </Badge>
           )}
           {hasConflict && !isCancelled && (
