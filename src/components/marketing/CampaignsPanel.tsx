@@ -37,7 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Search, MoreHorizontal, Edit, Trash2, Send, Copy, Eye, Play, Pause, Calendar, MessageSquare, Mail, Smartphone } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Edit, Trash2, Send, Copy, Eye, Play, Pause, Calendar, MessageSquare, Mail, Smartphone, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -244,6 +244,29 @@ export default function CampaignsPanel() {
     }
   };
 
+  const handleResetAndSend = async (campaign: Campaign) => {
+    try {
+      // Reset counters and status to draft first
+      await supabase
+        .from("campaigns")
+        .update({ 
+          status: "draft", 
+          sent_count: 0, 
+          delivered_count: 0, 
+          failed_count: 0 
+        })
+        .eq("id", campaign.id);
+
+      queryClient.invalidateQueries({ queryKey: ["campaigns"] });
+      
+      // Then send
+      await handleSendNow({ ...campaign, status: "draft" });
+    } catch (err: any) {
+      console.error("Error resetting campaign:", err);
+      toast.error("Erro ao resetar campanha");
+    }
+  };
+
   const handlePause = (campaign: Campaign) => {
     updateStatusMutation.mutate({ id: campaign.id, status: "paused" });
   };
@@ -416,15 +439,33 @@ export default function CampaignsPanel() {
                               </>
                             )}
                             {campaign.status === "sending" && (
-                              <DropdownMenuItem onClick={() => handlePause(campaign)}>
-                                <Pause className="h-4 w-4 mr-2" />
-                                Pausar
-                              </DropdownMenuItem>
+                              <>
+                                <DropdownMenuItem onClick={() => handlePause(campaign)}>
+                                  <Pause className="h-4 w-4 mr-2" />
+                                  Pausar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleResetAndSend(campaign)}>
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Reenviar do início
+                                </DropdownMenuItem>
+                              </>
                             )}
                             {campaign.status === "paused" && (
-                              <DropdownMenuItem onClick={() => handleResume(campaign)}>
-                                <Play className="h-4 w-4 mr-2" />
-                                Retomar
+                              <>
+                                <DropdownMenuItem onClick={() => handleResume(campaign)}>
+                                  <Play className="h-4 w-4 mr-2" />
+                                  Retomar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleResetAndSend(campaign)}>
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Reenviar do início
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            {campaign.status === "completed" && (
+                              <DropdownMenuItem onClick={() => handleResetAndSend(campaign)}>
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Reenviar campanha
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem onClick={() => duplicateMutation.mutate(campaign)}>
