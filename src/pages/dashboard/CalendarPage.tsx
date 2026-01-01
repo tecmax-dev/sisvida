@@ -2051,25 +2051,26 @@ export default function CalendarPage() {
           )}
           {/* Badge do convênio com diferenciação titular/dependente */}
           {appointment.patient?.insurance_plan && (() => {
-            const base =
+            const insuranceColor =
               toHslColor(appointment.patient.insurance_plan.color) ??
               "hsl(var(--accent))";
 
-            // Dependente: mesma saturação/luminosidade, só muda o matiz (cor)
-            const dependentHue = shiftHslHue(base, 35);
-
-            const current = appointment.dependent_id ? dependentHue : base;
+            // Titular: usa a cor do convênio
+            // Dependente: usa a cor verde primária do layout
+            const isDependent = !!appointment.dependent_id;
 
             return (
               <Badge
-                className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border"
-                style={{
-                  backgroundColor: hslWithAlpha(current, 0.22),
-                  color: current,
-                  borderColor: hslWithAlpha(current, 0.55),
+                className={`text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border ${
+                  isDependent ? 'bg-primary/20 text-primary border-primary/50' : ''
+                }`}
+                style={isDependent ? undefined : {
+                  backgroundColor: hslWithAlpha(insuranceColor, 0.22),
+                  color: insuranceColor,
+                  borderColor: hslWithAlpha(insuranceColor, 0.55),
                 }}
               >
-                {appointment.patient.insurance_plan.name} - {appointment.dependent_id ? "Dep" : "Titular"}
+                {appointment.patient.insurance_plan.name} - {isDependent ? "Dep" : "Titular"}
               </Badge>
             );
           })()}
