@@ -2012,6 +2012,10 @@ export default function CalendarPage() {
                     <CheckCircle2 className="h-4 w-4 mr-2 text-blue-600" />
                     Confirmar
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handlePatientArrived(appointment)}>
+                    <UserCheck className="h-4 w-4 mr-2 text-green-600" />
+                    Chegou
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "no_show")}>
                     <XCircle className="h-4 w-4 mr-2 text-orange-600" />
                     Faltou
