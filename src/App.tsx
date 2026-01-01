@@ -75,7 +75,7 @@ import TissPage from "./pages/dashboard/TissPage";
 import HolidaysPage from "./pages/dashboard/HolidaysPage";
 import PanelBannersPage from "./pages/dashboard/PanelBannersPage";
 import DependentsPage from "./pages/dashboard/DependentsPage";
-import AttendancePage from "./pages/dashboard/AttendancePage";
+import AttendancePage from "./pages/dashboard/AttendancePageRedesign";
 import ExamsPage from "./pages/dashboard/ExamsPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";

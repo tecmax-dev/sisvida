@@ -249,7 +249,7 @@ export default function AttendancePageRedesign() {
           id, patient_id, appointment_date, start_time, end_time,
           type, status, notes, started_at, completed_at, duration_minutes,
           procedure_id, professional_id, clinic_id,
-          patient:patients(id, name, phone, email, birth_date, insurance_name),
+          patient:patients(id, name, phone, email, birth_date),
           procedure:procedures(id, name, price)
         `)
         .eq("id", appointmentId)
@@ -1062,11 +1062,6 @@ export default function AttendancePageRedesign() {
                               <span><strong>Faltas:</strong> {patientStats.missedAppointments}</span>
                             )}
                           </div>
-                          {appointment.patient.insurance_name && (
-                            <div className="mt-1 text-sm text-muted-foreground">
-                              <strong>Convênio:</strong> {appointment.patient.insurance_name}
-                            </div>
-                          )}
                         </div>
 
                         <div className="flex items-center gap-2">
@@ -1458,20 +1453,13 @@ export default function AttendancePageRedesign() {
         onOpenChange={setPrintDialogOpen}
         clinicId={appointment.clinic_id}
         patientId={appointment.patient_id}
-        patientName={appointment.patient.name}
-        patientBirthDate={appointment.patient.birth_date}
+        patient={{ name: appointment.patient.name, phone: appointment.patient.phone }}
+        clinic={{ name: clinic?.name || "", address: clinic?.address, phone: clinic?.phone, cnpj: clinic?.cnpj }}
+        professional={professional ? { name: professional.name, specialty: professional.specialty, registration_number: professional.registration_number } : undefined}
         professionalId={appointment.professional_id}
-        professionalName={professional?.name}
-        professionalSpecialty={professional?.specialty}
-        professionalRegistration={professional?.registration_number}
-        clinicName={clinic?.name}
-        clinicAddress={clinic?.address}
-        clinicPhone={clinic?.phone}
-        clinicCnpj={clinic?.cnpj}
         initialTab={printDialogInitialTab}
-        prescription={recordForm.prescription}
-        examRequest={examRequest}
-        clinicalIndication={clinicalIndication}
+        initialPrescription={recordForm.prescription}
+        date={new Date().toISOString().split("T")[0]}
       />
     </div>
   );
