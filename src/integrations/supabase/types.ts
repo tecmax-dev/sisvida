@@ -2241,6 +2241,7 @@ export type Database = {
         Row: {
           clinic_id: string
           code: string | null
+          color: string | null
           created_at: string
           id: string
           is_active: boolean | null
@@ -2251,6 +2252,7 @@ export type Database = {
         Insert: {
           clinic_id: string
           code?: string | null
+          color?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
@@ -2261,6 +2263,7 @@ export type Database = {
         Update: {
           clinic_id?: string
           code?: string | null
+          color?: string | null
           created_at?: string
           id?: string
           is_active?: boolean | null
