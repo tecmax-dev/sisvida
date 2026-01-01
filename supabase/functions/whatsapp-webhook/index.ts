@@ -936,7 +936,43 @@ async function handleAIBookingFlow(
   console.log(`[ai-booking] Processing message for clinic ${clinicId}, phone ${phone}`);
 
   try {
-    // Get or create conversation
+    // FIRST: Check if there's an active booking session - if so, use traditional flow
+    const { data: existingBookingSession } = await supabase
+      .from('whatsapp_booking_sessions')
+      .select('*')
+      .eq('clinic_id', clinicId)
+      .eq('phone', phone)
+      .neq('state', 'FINISHED')
+      .gt('expires_at', new Date().toISOString())
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (existingBookingSession) {
+      console.log(`[ai-booking] Found active booking session in state: ${existingBookingSession.state}, switching to traditional flow`);
+      // Use traditional booking flow for active sessions
+      await handleBookingFlow(
+        supabase,
+        config,
+        phone,
+        messageText,
+        existingBookingSession as BookingSession,
+        false
+      );
+      return;
+    }
+
+    // Check if message looks like a CPF (user might be starting booking directly)
+    const maybeCpf = messageText.replace(/\D/g, '');
+    if (CPF_REGEX.test(maybeCpf) && validateCpf(maybeCpf)) {
+      console.log(`[ai-booking] Detected valid CPF, creating booking session and processing`);
+      // Create session and process CPF directly through traditional flow
+      const newSession = await createOrResetSession(supabase, clinicId, phone, 'WAITING_CPF');
+      await handleBookingFlow(supabase, config, phone, messageText, newSession, false);
+      return;
+    }
+
+    // Get or create AI conversation
     const { data: existingConversation } = await supabase
       .from('whatsapp_ai_conversations')
       .select('*')
@@ -1788,10 +1824,8 @@ async function handleConfirmIdentity(
       return { handled: true, newState: 'SELECT_BOOKING_FOR' };
     }
     
-    // No dependents - go to main menu with interactive buttons
-    await updateSession(supabase, session.id, { state: 'MAIN_MENU' });
-    await sendMainMenuButtons(config, phone, session.patient_name || 'Paciente');
-    return { handled: true, newState: 'MAIN_MENU' };
+    // No dependents - go directly to professional selection (skip main menu for faster flow)
+    return await proceedToSelectProfessional(supabase, config, phone, session, 'titular', null, null);
   };
 
   // Check for interactive button response first
