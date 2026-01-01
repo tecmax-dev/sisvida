@@ -2045,7 +2045,10 @@ export default function CalendarPage() {
             {getAppointmentDisplayName(appointment)}
           </span>
           {appointment.dependent_id && (
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 bg-primary/20 text-primary border-primary/50"
+            >
               DEP
             </Badge>
           )}
