@@ -9,6 +9,9 @@ interface UseAutoSaveOptions<T> {
   debounceMs?: number;
   enabled?: boolean;
   validateBeforeSave?: (data: T) => boolean;
+  // Optional: for sendBeacon fallback when tab loses focus
+  beaconEndpoint?: string;
+  prepareBeaconData?: (data: T) => Record<string, unknown>;
 }
 
 export function useAutoSave<T>({
@@ -18,6 +21,8 @@ export function useAutoSave<T>({
   debounceMs = 3000,
   enabled = true,
   validateBeforeSave,
+  beaconEndpoint,
+  prepareBeaconData,
 }: UseAutoSaveOptions<T>) {
   const [status, setStatus] = useState<AutoSaveStatus>('idle');
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -26,6 +31,7 @@ export function useAutoSave<T>({
   const isSavingRef = useRef(false);
   const dataRef = useRef(data);
   const initialDataRef = useRef(initialData);
+  const pendingSaveRef = useRef(false);
 
   // Keep refs updated
   useEffect(() => {
@@ -56,12 +62,16 @@ export function useAutoSave<T>({
     }
 
     isSavingRef.current = true;
+    pendingSaveRef.current = false;
     if (!silent) setStatus('saving');
 
     try {
       await onSave(dataToSave);
       
       if (isMountedRef.current) {
+        // Update initialData ref after successful save to prevent duplicate saves
+        initialDataRef.current = dataToSave;
+        
         if (!silent) {
           setStatus('saved');
           
@@ -97,6 +107,13 @@ export function useAutoSave<T>({
     }
   }, [initialData]);
 
+  // Track pending changes
+  useEffect(() => {
+    if (enabled && hasLoadedRef.current && hasChanged(data, initialData)) {
+      pendingSaveRef.current = true;
+    }
+  }, [data, initialData, enabled, hasChanged]);
+
   // Auto-save effect with debounce
   useEffect(() => {
     if (!enabled || !hasLoadedRef.current || !hasChanged(data, initialData)) {
@@ -130,8 +147,34 @@ export function useAutoSave<T>({
           timeoutRef.current = null;
         }
         
-        // Save immediately if there are changes (silent to avoid UI flicker)
-        if (hasChanged(dataRef.current, initialDataRef.current)) {
+        // Check if there are unsaved changes
+        if (!hasChanged(dataRef.current, initialDataRef.current)) {
+          return;
+        }
+
+        // Validate before saving
+        if (validateBeforeSave && !validateBeforeSave(dataRef.current)) {
+          return;
+        }
+
+        // Try beacon API first (more reliable for background saves)
+        if (beaconEndpoint && prepareBeaconData) {
+          try {
+            const beaconData = prepareBeaconData(dataRef.current);
+            const blob = new Blob([JSON.stringify(beaconData)], { type: 'application/json' });
+            const sent = navigator.sendBeacon(beaconEndpoint, blob);
+            if (sent) {
+              initialDataRef.current = dataRef.current;
+              pendingSaveRef.current = false;
+              return;
+            }
+          } catch (e) {
+            console.warn('Beacon failed, falling back to async save:', e);
+          }
+        }
+
+        // Fallback: try async save (may not complete but worth trying)
+        if (!isSavingRef.current) {
           performSave(dataRef.current, true);
         }
       }
@@ -142,6 +185,27 @@ export function useAutoSave<T>({
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
+  }, [enabled, performSave, hasChanged, validateBeforeSave, beaconEndpoint, prepareBeaconData]);
+
+  // Save on focus return if there was a pending save
+  useEffect(() => {
+    if (!enabled) return;
+
+    const handleFocus = () => {
+      // When tab regains focus, check if we have unsaved changes
+      if (hasLoadedRef.current && pendingSaveRef.current && !isSavingRef.current) {
+        if (hasChanged(dataRef.current, initialDataRef.current)) {
+          // Save immediately when focus returns
+          performSave(dataRef.current, false);
+        }
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
   }, [enabled, performSave, hasChanged]);
 
   // Save before page unload (closing browser/tab)
@@ -150,8 +214,21 @@ export function useAutoSave<T>({
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasLoadedRef.current && hasChanged(dataRef.current, initialDataRef.current)) {
-        // Try to save synchronously (may not complete but try)
-        performSave(dataRef.current, true);
+        // Validate before showing warning
+        if (validateBeforeSave && !validateBeforeSave(dataRef.current)) {
+          return;
+        }
+
+        // Try beacon first
+        if (beaconEndpoint && prepareBeaconData) {
+          try {
+            const beaconData = prepareBeaconData(dataRef.current);
+            const blob = new Blob([JSON.stringify(beaconData)], { type: 'application/json' });
+            navigator.sendBeacon(beaconEndpoint, blob);
+          } catch (e) {
+            console.warn('Beacon on unload failed:', e);
+          }
+        }
         
         // Show browser's native "unsaved changes" dialog
         e.preventDefault();
@@ -164,9 +241,9 @@ export function useAutoSave<T>({
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [enabled, performSave, hasChanged]);
+  }, [enabled, hasChanged, validateBeforeSave, beaconEndpoint, prepareBeaconData]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - try to save pending changes
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
@@ -174,8 +251,23 @@ export function useAutoSave<T>({
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
+      
+      // Last attempt to save on unmount
+      if (pendingSaveRef.current && hasChanged(dataRef.current, initialDataRef.current)) {
+        if (!validateBeforeSave || validateBeforeSave(dataRef.current)) {
+          if (beaconEndpoint && prepareBeaconData) {
+            try {
+              const beaconData = prepareBeaconData(dataRef.current);
+              const blob = new Blob([JSON.stringify(beaconData)], { type: 'application/json' });
+              navigator.sendBeacon(beaconEndpoint, blob);
+            } catch (e) {
+              console.warn('Beacon on unmount failed:', e);
+            }
+          }
+        }
+      }
     };
-  }, []);
+  }, [hasChanged, validateBeforeSave, beaconEndpoint, prepareBeaconData]);
 
   // Force save now (bypass debounce)
   const saveNow = useCallback(() => {
