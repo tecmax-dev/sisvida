@@ -14,9 +14,34 @@ export function PatientOdontogramModal({
   patientId,
   clinicId,
 }: PatientOdontogramModalProps) {
+  // Prevent modal from closing when switching browser tabs
+  const handleOpenChange = (newOpen: boolean) => {
+    // Only allow closing via explicit user action (clicking X or outside)
+    // Don't close on blur/focus events from tab switching
+    if (!newOpen && document.hasFocus()) {
+      onOpenChange(newOpen);
+    } else if (newOpen) {
+      onOpenChange(newOpen);
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={handleOpenChange} modal={true}>
+      <DialogContent 
+        className="max-w-6xl max-h-[90vh] overflow-y-auto"
+        onPointerDownOutside={(e) => {
+          // Prevent closing when clicking outside if document doesn't have focus
+          if (!document.hasFocus()) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          // Prevent closing on interact outside when tab is not focused
+          if (!document.hasFocus()) {
+            e.preventDefault();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle>Odontograma do Paciente</DialogTitle>
         </DialogHeader>
