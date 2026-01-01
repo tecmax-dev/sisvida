@@ -332,25 +332,32 @@ export default function CalendarPage() {
     return Array.from(new Set(slots)).sort();
   }, [activeAppointment, filterProfessional, formProfessional, isProfessionalOnly, loggedInProfessionalId, professionals, selectedDate]);
 
+  const toDateKey = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
   const getDateRange = useCallback(() => {
     if (viewMode === "day") {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = toDateKey(selectedDate);
       return { startDate: dateStr, endDate: dateStr };
     } else if (viewMode === "week") {
       const start = new Date(selectedDate);
       start.setDate(start.getDate() - start.getDay());
       const end = new Date(start);
       end.setDate(end.getDate() + 6);
-      return { 
-        startDate: start.toISOString().split('T')[0], 
-        endDate: end.toISOString().split('T')[0] 
+      return {
+        startDate: toDateKey(start),
+        endDate: toDateKey(end),
       };
     } else {
       const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
-      return { 
-        startDate: start.toISOString().split('T')[0], 
-        endDate: end.toISOString().split('T')[0] 
+      return {
+        startDate: toDateKey(start),
+        endDate: toDateKey(end),
       };
     }
   }, [viewMode, selectedDate, currentDate]);
@@ -679,25 +686,25 @@ export default function CalendarPage() {
 
   // Get appointments for a specific date (sorted by status priority then by time)
   const getAppointmentsForDate = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toDateKey(date);
     return filteredAppointments
-      .filter(apt => apt.appointment_date === dateStr)
+      .filter((apt) => apt.appointment_date === dateStr)
       .sort((a, b) => {
         // First: sort by status priority
         const priorityA = statusPriority[a.status] || 99;
         const priorityB = statusPriority[b.status] || 99;
-        
+
         if (priorityA !== priorityB) {
           return priorityA - priorityB;
         }
-        
+
         // Second: sort by time (within same priority group)
         return a.start_time.localeCompare(b.start_time);
       });
   };
 
   const isHoliday = (date: Date): string | null => {
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = toDateKey(date);
     return holidays.get(dateStr) || null;
   };
 
@@ -2036,7 +2043,7 @@ export default function CalendarPage() {
 
   // Componente reutilizável para o painel de horários livres
   const TimeSlotsPanel = ({ forDate }: { forDate: Date }) => {
-    const dateStr = forDate.toISOString().split('T')[0];
+    const dateStr = toDateKey(forDate);
     const dayAppointments = getAppointmentsForDate(forDate);
     const holidayName = isHoliday(forDate);
     
@@ -2107,7 +2114,7 @@ export default function CalendarPage() {
             const dayAppointments = getAppointmentsForDate(date);
             const isTodayDate = isToday(date);
             const isSelectedDate = isSelected(date);
-            const dateStr = date.toISOString().split('T')[0];
+            const dateStr = toDateKey(date);
             const holidayName = isHoliday(date);
 
             return (
@@ -2204,7 +2211,7 @@ export default function CalendarPage() {
               const dayAppointments = getAppointmentsForDate(item.date);
               const isTodayDate = isToday(item.date);
               const isSelectedDate = isSelected(item.date);
-              const dateStr = item.date.toISOString().split('T')[0];
+              const dateStr = toDateKey(item.date);
               const isOccupied = dayAppointments.filter(a => a.status !== 'cancelled').length >= 10;
               const holidayName = isHoliday(item.date);
               
