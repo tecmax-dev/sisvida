@@ -1020,12 +1020,26 @@ async function handleAIBookingFlow(
 
     // Check if message looks like a CPF (user might be starting booking directly)
     const maybeCpf = messageText.replace(/\D/g, '');
-    if (CPF_REGEX.test(maybeCpf) && validateCpf(maybeCpf)) {
-      console.log(`[ai-booking] Detected valid CPF, creating booking session and processing`);
-      // Create session and process CPF directly through traditional flow
-      const newSession = await createOrResetSession(supabase, clinicId, phone, 'WAITING_CPF');
-      await handleBookingFlow(supabase, config, phone, messageText, newSession, false);
-      return;
+    console.log(`[ai-booking] Checking if message is CPF: "${maybeCpf}" (length: ${maybeCpf.length})`);
+    
+    if (maybeCpf.length === 11) {
+      const isValidCpf = validateCpf(maybeCpf);
+      console.log(`[ai-booking] CPF validation result: ${isValidCpf} for ${maybeCpf.substring(0, 3)}***`);
+      
+      if (isValidCpf) {
+        console.log(`[ai-booking] Detected valid CPF, creating booking session and processing`);
+        // Create session and process CPF directly through traditional flow
+        const newSession = await createOrResetSession(supabase, clinicId, phone, 'WAITING_CPF');
+        await handleBookingFlow(supabase, config, phone, messageText, newSession, false);
+        return;
+      } else {
+        // CPF has 11 digits but failed validation - send clear error message
+        console.log(`[ai-booking] CPF has 11 digits but failed checksum validation`);
+        await sendWhatsAppMessage(config, phone, 
+          `❌ *CPF inválido*\n\nO CPF informado não passou na validação. Por favor, verifique se digitou corretamente.\n\n💡 Digite apenas os 11 números do seu CPF.`
+        );
+        return;
+      }
     }
 
     // Get or create AI conversation
