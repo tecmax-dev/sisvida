@@ -2061,13 +2061,17 @@ export default function CalendarPage() {
 
             return (
               <Badge
-                className={`text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border ${
-                  isDependent ? 'bg-primary/20 text-primary border-primary/50' : ''
-                }`}
-                style={isDependent ? undefined : {
-                  backgroundColor: hslWithAlpha(insuranceColor, 0.22),
-                  color: insuranceColor,
-                  borderColor: hslWithAlpha(insuranceColor, 0.55),
+                className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border"
+                style={{
+                  backgroundColor: isDependent 
+                    ? 'hsl(var(--primary) / 0.2)' 
+                    : hslWithAlpha(insuranceColor, 0.22),
+                  color: isDependent 
+                    ? 'hsl(var(--primary))' 
+                    : insuranceColor,
+                  borderColor: isDependent 
+                    ? 'hsl(var(--primary) / 0.5)' 
+                    : hslWithAlpha(insuranceColor, 0.55),
                 }}
               >
                 {appointment.patient.insurance_plan.name} - {isDependent ? "Dep" : "Titular"}
