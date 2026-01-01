@@ -7,7 +7,8 @@ export type PatientTab =
   | 'prescricoes' 
   | 'anexos' 
   | 'agendamentos'
-  | 'carteirinha';
+  | 'carteirinha'
+  | 'odontograma';
 
 interface PatientTabsProps {
   activeTab: PatientTab;
@@ -24,6 +25,7 @@ const tabs: { id: PatientTab; label: string }[] = [
   { id: 'anexos', label: 'Anexos' },
   { id: 'agendamentos', label: 'Agendamentos' },
   { id: 'carteirinha', label: 'Carteirinha' },
+  { id: 'odontograma', label: 'Odontograma' },
 ];
 
 export function PatientTabs({ activeTab, onTabChange, patientId, hiddenTabs = [] }: PatientTabsProps) {
