@@ -374,6 +374,10 @@ export default function PatientEditPage() {
     debounceMs: 3000,
     enabled: !loading && !!id && !!currentClinic,
     validateBeforeSave,
+    storageKey: id ? `patient-edit-draft:${id}` : undefined,
+    onRestoreDraft: (draft) => {
+      setFormData(draft);
+    },
   });
 
   const handleTabChange = (tab: PatientTab) => {

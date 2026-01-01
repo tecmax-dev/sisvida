@@ -9,9 +9,14 @@ interface UseAutoSaveOptions<T> {
   debounceMs?: number;
   enabled?: boolean;
   validateBeforeSave?: (data: T) => boolean;
+
   // Optional: for sendBeacon fallback when tab loses focus
   beaconEndpoint?: string;
   prepareBeaconData?: (data: T) => Record<string, unknown>;
+
+  // Optional: local draft persistence (prevents data loss if the browser reloads the page)
+  storageKey?: string;
+  onRestoreDraft?: (draft: T) => void;
 }
 
 export function useAutoSave<T>({
@@ -23,6 +28,8 @@ export function useAutoSave<T>({
   validateBeforeSave,
   beaconEndpoint,
   prepareBeaconData,
+  storageKey,
+  onRestoreDraft,
 }: UseAutoSaveOptions<T>) {
   const [status, setStatus] = useState<AutoSaveStatus>('idle');
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -71,6 +78,15 @@ export function useAutoSave<T>({
       if (isMountedRef.current) {
         // Update initialData ref after successful save to prevent duplicate saves
         initialDataRef.current = dataToSave;
+
+        // Clear draft after successful save
+        if (storageKey) {
+          try {
+            localStorage.removeItem(storageKey);
+          } catch {
+            // ignore
+          }
+        }
         
         if (!silent) {
           setStatus('saved');
@@ -107,12 +123,46 @@ export function useAutoSave<T>({
     }
   }, [initialData]);
 
-  // Track pending changes
+  // Restore draft from localStorage (if provided)
+  useEffect(() => {
+    if (!enabled || !storageKey || !onRestoreDraft) return;
+
+    try {
+      const raw = localStorage.getItem(storageKey);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as { data: T; updatedAt: number };
+      if (!parsed?.data) return;
+
+      // Only restore if it differs from the last saved initial data
+      if (hasChanged(parsed.data, initialDataRef.current)) {
+        onRestoreDraft(parsed.data);
+        dataRef.current = parsed.data;
+        pendingSaveRef.current = true;
+      }
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabled, storageKey]);
+
+  // Track pending changes + persist draft to localStorage
   useEffect(() => {
     if (enabled && hasLoadedRef.current && hasChanged(data, initialData)) {
       pendingSaveRef.current = true;
+
+      if (storageKey) {
+        try {
+          localStorage.setItem(
+            storageKey,
+            JSON.stringify({ data, updatedAt: Date.now() })
+          );
+        } catch {
+          // ignore
+        }
+      }
     }
-  }, [data, initialData, enabled, hasChanged]);
+  }, [data, initialData, enabled, hasChanged, storageKey]);
 
   // Auto-save effect with debounce
   useEffect(() => {
