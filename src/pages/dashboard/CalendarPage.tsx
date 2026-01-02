@@ -510,12 +510,15 @@ export default function CalendarPage() {
   const fetchAppointments = useCallback(async () => {
     if (!currentClinic) return;
     
+    // Para profissionais, aguardar o ID ser carregado antes de buscar
+    if (isProfessionalOnly && !loggedInProfessionalId) return;
+    
     setLoading(true);
     
     try {
       const { startDate, endDate } = getDateRange();
       
-      const { data, error } = await supabase
+      let query = supabase
         .from('appointments')
         .select(`
           id,
@@ -540,11 +543,18 @@ export default function CalendarPage() {
         `)
         .eq('clinic_id', currentClinic.id)
         .gte('appointment_date', startDate)
-        .lte('appointment_date', endDate)
+        .lte('appointment_date', endDate);
+
+      // CORREÇÃO DE SEGURANÇA: Profissionais só veem seus próprios agendamentos
+      if (isProfessionalOnly && loggedInProfessionalId) {
+        query = query.eq('professional_id', loggedInProfessionalId);
+      }
+
+      const { data, error } = await query
         .order('appointment_date')
         .order('start_time');
 
-      console.log('[DEBUG CalendarPage] fetchAppointments - startDate:', startDate, 'endDate:', endDate, 'count:', data?.length, 'error:', error);
+      console.log('[DEBUG CalendarPage] fetchAppointments - startDate:', startDate, 'endDate:', endDate, 'count:', data?.length, 'isProfessionalOnly:', isProfessionalOnly, 'loggedInProfessionalId:', loggedInProfessionalId);
 
       if (error) throw error;
       setAppointments(data as unknown as Appointment[]);
@@ -553,7 +563,7 @@ export default function CalendarPage() {
     } finally {
       setLoading(false);
     }
-  }, [currentClinic, getDateRange]);
+  }, [currentClinic, getDateRange, isProfessionalOnly, loggedInProfessionalId]);
 
   // Persist selected date, current date, and view mode to sessionStorage
   useEffect(() => {
@@ -633,12 +643,17 @@ export default function CalendarPage() {
       console.log('[DEBUG CalendarPage] patients fetched:', patientsData?.length, 'error:', patientsError);
       if (patientsData) setPatients(patientsData);
 
-      const { data: professionalsData, error: professionalsError } = await supabase
+      let professionalsQuery = supabase
         .from('professionals')
         .select('id, name, specialty, appointment_duration, schedule, avatar_url')
         .eq('clinic_id', currentClinic.id)
-        .eq('is_active', true)
-        .order('name');
+        .eq('is_active', true);
+
+      // CORREÇÃO DE SEGURANÇA: Profissionais só veem a si mesmos na lista
+      // (precisa aguardar o loggedInProfessionalId ser carregado via useEffect separado)
+      // A filtragem é feita depois via useMemo: availableProfessionals
+      
+      const { data: professionalsData, error: professionalsError } = await professionalsQuery.order('name');
       
       console.log('[DEBUG CalendarPage] professionals fetched:', professionalsData, 'error:', professionalsError);
       if (professionalsData) setProfessionals(professionalsData);
@@ -833,6 +848,14 @@ export default function CalendarPage() {
       return true;
     });
   }, [appointments, filterProfessionals, filterType, searchQuery, patients, showCancelledNoShow, isProfessionalOnly, loggedInProfessionalId]);
+
+  // Lista de profissionais disponíveis (filtrada para usuários com papel professional)
+  const availableProfessionals = useMemo(() => {
+    if (isProfessionalOnly && loggedInProfessionalId) {
+      return professionals.filter(p => p.id === loggedInProfessionalId);
+    }
+    return professionals;
+  }, [professionals, isProfessionalOnly, loggedInProfessionalId]);
 
   // Detect conflicting appointments
   const conflictingAppointmentIds = useMemo(() => {
@@ -2067,8 +2090,8 @@ export default function CalendarPage() {
             <SelectValue placeholder="Selecione o profissional" />
           </SelectTrigger>
           <SelectContent className="bg-popover border border-border shadow-lg z-50">
-            {professionals.length > 0 ? (
-              professionals.map((prof) => (
+            {availableProfessionals.length > 0 ? (
+              availableProfessionals.map((prof) => (
                 <SelectItem key={prof.id} value={prof.id}>
                   {prof.name} {prof.specialty && `- ${prof.specialty}`}
                 </SelectItem>
@@ -2813,7 +2836,7 @@ export default function CalendarPage() {
                   <div className="space-y-2">
                     <Label>Profissional</Label>
                     <div className="space-y-1 max-h-48 overflow-y-auto border rounded-md p-2">
-                      {professionals.map((prof) => {
+                      {availableProfessionals.map((prof) => {
                         const isChecked = filterProfessionals.includes(prof.id);
                         return (
                           <label 
