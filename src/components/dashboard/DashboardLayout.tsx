@@ -15,6 +15,11 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   Calendar,
   Users,
   UserCircle,
@@ -24,9 +29,9 @@ import {
   Menu,
   X,
   Home,
-  Bell,
   CreditCard,
   ChevronDown,
+  ChevronRight,
   FileText,
   ClipboardList,
   Clock,
@@ -49,6 +54,10 @@ import {
   Image,
   FlaskConical,
   Building2,
+  HeartPulse,
+  Briefcase,
+  Receipt,
+  LayoutDashboard,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -65,37 +74,119 @@ interface NavItem {
   permission?: Permission;
 }
 
-const navItems: NavItem[] = [
-  { href: "/dashboard", icon: Home, label: "Visão Geral", permission: "view_dashboard" },
-  { href: "/dashboard/calendar", icon: Calendar, label: "Agenda", permission: "scheduling" },
-  { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients" },
-  { href: "/dashboard/dependents", icon: Users, label: "Dependentes", permission: "view_patients" },
-  { href: "/dashboard/empresas", icon: Building2, label: "Empresas", permission: "view_patients" },
-  { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais", permission: "view_professionals" },
-  { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
-  { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
-  { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "anamnesis_forms" },
-  { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates de Anamnese", permission: "view_anamnesis_templates" },
-  { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "view_waiting_list" },
-  { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "insurance_plans" },
-  { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
-  { href: "/dashboard/exams", icon: FlaskConical, label: "Exames", permission: "view_procedures" },
-  { href: "/dashboard/catalog", icon: ShoppingBag, label: "Catálogo", permission: "view_catalog" },
-  { href: "/dashboard/quotes", icon: FileSpreadsheet, label: "Orçamentos", permission: "view_budgets" },
-  { href: "/dashboard/packages", icon: Package, label: "Pacotes", permission: "view_packages" },
-  { href: "/dashboard/stock", icon: Warehouse, label: "Estoque", permission: "view_stock" },
-  { href: "/dashboard/financials", icon: DollarSign, label: "Financeiro", permission: "view_financials" },
-  { href: "/dashboard/repass", icon: Percent, label: "Repasse Médico", permission: "view_repass" },
-  { href: "/dashboard/queue", icon: Monitor, label: "Painel/Totem", permission: "view_queue" },
-  { href: "/dashboard/panel-banners", icon: Image, label: "Banners do Painel", permission: "view_queue" },
-  { href: "/dashboard/marketing", icon: Megaphone, label: "Marketing", permission: "view_marketing" },
-  { href: "/dashboard/tiss", icon: FileCheck2, label: "TISS", permission: "view_tiss" },
-  { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios", permission: "view_reports" },
-  { href: "/dashboard/holidays", icon: CalendarOff, label: "Feriados", permission: "manage_settings" },
-  { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano", permission: "manage_subscription" },
-  // Intencionalmente sem permission aqui: o controle fino fica dentro da página
-  // (ex.: usuários sem manage_settings podem entrar só para alterar a própria senha)
-  { href: "/dashboard/settings", icon: Settings, label: "Configurações" },
+interface NavCategory {
+  id: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  items: NavItem[];
+}
+
+const navCategories: NavCategory[] = [
+  {
+    id: "overview",
+    label: "Início",
+    icon: Home,
+    items: [
+      { href: "/dashboard", icon: LayoutDashboard, label: "Visão Geral", permission: "view_dashboard" },
+    ],
+  },
+  {
+    id: "attendance",
+    label: "Atendimento",
+    icon: Calendar,
+    items: [
+      { href: "/dashboard/calendar", icon: Calendar, label: "Agenda", permission: "scheduling" },
+      { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "view_waiting_list" },
+      { href: "/dashboard/queue", icon: Monitor, label: "Painel/Totem", permission: "view_queue" },
+      { href: "/dashboard/panel-banners", icon: Image, label: "Banners do Painel", permission: "view_queue" },
+    ],
+  },
+  {
+    id: "patients",
+    label: "Cadastros",
+    icon: Users,
+    items: [
+      { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients" },
+      { href: "/dashboard/dependents", icon: Users, label: "Dependentes", permission: "view_patients" },
+      { href: "/dashboard/empresas", icon: Building2, label: "Empresas", permission: "view_patients" },
+      { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais", permission: "view_professionals" },
+    ],
+  },
+  {
+    id: "clinical",
+    label: "Clínico",
+    icon: HeartPulse,
+    items: [
+      { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
+      { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
+      { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "anamnesis_forms" },
+      { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates de Anamnese", permission: "view_anamnesis_templates" },
+    ],
+  },
+  {
+    id: "services",
+    label: "Serviços",
+    icon: Briefcase,
+    items: [
+      { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "insurance_plans" },
+      { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
+      { href: "/dashboard/exams", icon: FlaskConical, label: "Exames", permission: "view_procedures" },
+      { href: "/dashboard/catalog", icon: ShoppingBag, label: "Catálogo", permission: "view_catalog" },
+      { href: "/dashboard/quotes", icon: FileSpreadsheet, label: "Orçamentos", permission: "view_budgets" },
+      { href: "/dashboard/packages", icon: Package, label: "Pacotes", permission: "view_packages" },
+    ],
+  },
+  {
+    id: "financial",
+    label: "Financeiro",
+    icon: DollarSign,
+    items: [
+      { href: "/dashboard/financials", icon: DollarSign, label: "Movimentações", permission: "view_financials" },
+      { href: "/dashboard/repass", icon: Percent, label: "Repasse Médico", permission: "view_repass" },
+    ],
+  },
+  {
+    id: "tiss",
+    label: "Faturamento TISS",
+    icon: FileCheck2,
+    items: [
+      { href: "/dashboard/tiss", icon: FileCheck2, label: "TISS", permission: "view_tiss" },
+    ],
+  },
+  {
+    id: "stock",
+    label: "Estoque",
+    icon: Warehouse,
+    items: [
+      { href: "/dashboard/stock", icon: Warehouse, label: "Produtos", permission: "view_stock" },
+    ],
+  },
+  {
+    id: "marketing",
+    label: "Marketing",
+    icon: Megaphone,
+    items: [
+      { href: "/dashboard/marketing", icon: Megaphone, label: "Campanhas", permission: "view_marketing" },
+    ],
+  },
+  {
+    id: "reports",
+    label: "Relatórios",
+    icon: BarChart3,
+    items: [
+      { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios", permission: "view_reports" },
+    ],
+  },
+  {
+    id: "settings",
+    label: "Configurações",
+    icon: Settings,
+    items: [
+      { href: "/dashboard/holidays", icon: CalendarOff, label: "Feriados", permission: "manage_settings" },
+      { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano", permission: "manage_subscription" },
+      { href: "/dashboard/settings", icon: Settings, label: "Configurações" },
+    ],
+  },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -110,6 +201,13 @@ export function DashboardLayout() {
     }
     return false;
   });
+  const [openCategories, setOpenCategories] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sidebar-open-categories");
+      return saved ? JSON.parse(saved) : ["overview", "attendance", "patients"];
+    }
+    return ["overview", "attendance", "patients"];
+  });
   const location = useLocation();
   const { user, profile, currentClinic, userRoles, signOut, setCurrentClinic } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
@@ -118,14 +216,22 @@ export function DashboardLayout() {
     localStorage.setItem("sidebar-collapsed", String(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
-  // Filter navigation items based on permissions
-  const filteredNavItems = navItems.filter((item) =>
-    !item.permission || hasPermission(item.permission)
-  );
+  useEffect(() => {
+    localStorage.setItem("sidebar-open-categories", JSON.stringify(openCategories));
+  }, [openCategories]);
+
+  // Filter categories based on permissions
+  const filteredCategories = navCategories.map(category => ({
+    ...category,
+    items: category.items.filter(item => !item.permission || hasPermission(item.permission))
+  })).filter(category => category.items.length > 0);
 
   const filteredAdminNavItems = adminNavItems.filter((item) =>
     !item.permission || hasPermission(item.permission)
   );
+
+  // Flatten items for breadcrumb
+  const allNavItems = filteredCategories.flatMap(cat => cat.items);
 
   const isActive = (href: string) => {
     if (href === "/dashboard") {
@@ -134,23 +240,36 @@ export function DashboardLayout() {
     return location.pathname.startsWith(href);
   };
 
+  const isCategoryActive = (category: NavCategory) => {
+    return category.items.some(item => isActive(item.href));
+  };
+
+  const toggleCategory = (categoryId: string) => {
+    setOpenCategories(prev =>
+      prev.includes(categoryId)
+        ? prev.filter(id => id !== categoryId)
+        : [...prev, categoryId]
+    );
+  };
+
   const displayName = profile?.name || user?.user_metadata?.name || "Usuário";
 
-  const NavItemLink = ({ item }: { item: NavItem }) => {
+  const NavItemLink = ({ item, isSubItem = false }: { item: NavItem; isSubItem?: boolean }) => {
     const linkContent = (
       <Link
         to={item.href}
         onClick={() => setSidebarOpen(false)}
         className={cn(
-          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
           isActive(item.href)
-            ? "bg-sidebar-primary text-sidebar-primary-foreground"
+            ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-          sidebarCollapsed && "justify-center px-2"
+          sidebarCollapsed && "justify-center px-2",
+          isSubItem && !sidebarCollapsed && "ml-6"
         )}
       >
-        <item.icon className="h-5 w-5 shrink-0" />
-        {!sidebarCollapsed && item.label}
+        <item.icon className="h-4 w-4 shrink-0" />
+        {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
       </Link>
     );
 
@@ -166,6 +285,88 @@ export function DashboardLayout() {
     }
 
     return linkContent;
+  };
+
+  const CategoryGroup = ({ category }: { category: NavCategory }) => {
+    const isOpen = openCategories.includes(category.id);
+    const hasActiveItem = isCategoryActive(category);
+    const isSingleItem = category.items.length === 1;
+
+    // For single item categories, render just the link
+    if (isSingleItem) {
+      return <NavItemLink item={category.items[0]} />;
+    }
+
+    if (sidebarCollapsed) {
+      return (
+        <DropdownMenu>
+          <Tooltip delayDuration={0}>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    "w-full flex items-center justify-center p-2 rounded-lg transition-colors",
+                    hasActiveItem
+                      ? "bg-sidebar-primary/20 text-sidebar-primary"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent"
+                  )}
+                >
+                  <category.icon className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="right">{category.label}</TooltipContent>
+          </Tooltip>
+          <DropdownMenuContent side="right" align="start" className="min-w-48">
+            {category.items.map((item) => (
+              <DropdownMenuItem key={item.href} asChild>
+                <Link
+                  to={item.href}
+                  onClick={() => setSidebarOpen(false)}
+                  className={cn(
+                    "flex items-center gap-2 cursor-pointer",
+                    isActive(item.href) && "bg-accent"
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      );
+    }
+
+    return (
+      <Collapsible open={isOpen} onOpenChange={() => toggleCategory(category.id)}>
+        <CollapsibleTrigger asChild>
+          <button
+            className={cn(
+              "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors group",
+              hasActiveItem
+                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+            )}
+          >
+            <div className="flex items-center gap-3">
+              <category.icon className="h-4 w-4 shrink-0" />
+              <span>{category.label}</span>
+            </div>
+            {isOpen ? (
+              <ChevronDown className="h-4 w-4 text-sidebar-foreground/60 transition-transform" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-sidebar-foreground/60 transition-transform" />
+            )}
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-0.5 mt-1">
+          {category.items.map((item) => (
+            <NavItemLink key={item.href} item={item} isSubItem />
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
+    );
   };
 
   return (
@@ -274,15 +475,19 @@ export function DashboardLayout() {
             </div>
           )}
 
-          <nav className={cn("flex-1 p-4 space-y-1 overflow-y-auto", sidebarCollapsed && "p-2")}>
-            {filteredNavItems.map((item) => (
-              <NavItemLink key={item.href} item={item} />
+          <nav className={cn("flex-1 p-3 space-y-1 overflow-y-auto", sidebarCollapsed && "p-2 space-y-2")}>
+            {filteredCategories.map((category) => (
+              <CategoryGroup key={category.id} category={category} />
             ))}
             
             {/* Admin only navigation items */}
-            {isAdmin && filteredAdminNavItems.map((item) => (
-              <NavItemLink key={item.href} item={item} />
-            ))}
+            {isAdmin && filteredAdminNavItems.length > 0 && (
+              <div className={cn("pt-2 mt-2 border-t border-sidebar-border", sidebarCollapsed && "pt-1 mt-1")}>
+                {filteredAdminNavItems.map((item) => (
+                  <NavItemLink key={item.href} item={item} />
+                ))}
+              </div>
+            )}
           </nav>
 
           <div className={cn("p-4 border-t border-sidebar-border bg-sidebar-accent/30", sidebarCollapsed && "p-2")}>
@@ -357,7 +562,7 @@ export function DashboardLayout() {
             <span className="font-medium text-foreground">
               {location.pathname === "/dashboard" 
                 ? "Visão Geral" 
-                : filteredNavItems.find(item => location.pathname.startsWith(item.href) && item.href !== "/dashboard")?.label || ""}
+                : allNavItems.find(item => location.pathname.startsWith(item.href) && item.href !== "/dashboard")?.label || ""}
             </span>
           </div>
 
