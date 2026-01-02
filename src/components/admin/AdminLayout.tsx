@@ -66,15 +66,17 @@ export function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [pendingUpgrades, setPendingUpgrades] = useState(0);
+  const [pendingAddons, setPendingAddons] = useState(0);
   const [clinicInfo, setClinicInfo] = useState<{ id: string; createdAt: string } | null>(null);
 
   useEffect(() => {
     fetchPendingUpgrades();
+    fetchPendingAddons();
     fetchClinicInfo();
     
     // Subscribe to realtime updates
     const channel = supabase
-      .channel('pending-upgrades')
+      .channel('pending-requests')
       .on(
         'postgres_changes',
         {
@@ -84,6 +86,17 @@ export function AdminLayout() {
         },
         () => {
           fetchPendingUpgrades();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'addon_requests',
+        },
+        () => {
+          fetchPendingAddons();
         }
       )
       .subscribe();
@@ -100,6 +113,15 @@ export function AdminLayout() {
       .eq('status', 'pending');
     
     setPendingUpgrades(count || 0);
+  };
+
+  const fetchPendingAddons = async () => {
+    const { count } = await supabase
+      .from('addon_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('status', 'pending');
+    
+    setPendingAddons(count || 0);
   };
 
   const fetchClinicInfo = async () => {
@@ -145,7 +167,9 @@ export function AdminLayout() {
                   ? location.pathname === "/admin"
                   : location.pathname.startsWith(item.path);
 
-              const showBadge = (item as any).hasBadge && pendingUpgrades > 0;
+              const showUpgradeBadge = item.path === '/admin/upgrades' && pendingUpgrades > 0;
+              const showAddonBadge = item.path === '/admin/addon-requests' && pendingAddons > 0;
+              const badgeCount = showUpgradeBadge ? pendingUpgrades : showAddonBadge ? pendingAddons : 0;
 
               return (
                 <Link
@@ -162,9 +186,9 @@ export function AdminLayout() {
                     <item.icon className="h-4 w-4 shrink-0" />
                     <span className="truncate">{item.label}</span>
                   </div>
-                  {showBadge && (
+                  {badgeCount > 0 && (
                     <Badge variant="destructive" className="h-5 min-w-5 px-1.5 text-xs">
-                      {pendingUpgrades}
+                      {badgeCount}
                     </Badge>
                   )}
                 </Link>

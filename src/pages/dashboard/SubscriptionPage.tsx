@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSubscription, useAvailablePlans } from "@/hooks/useSubscription";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { ClinicAddonsSection } from "@/components/subscription/ClinicAddonsSection";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -449,7 +450,8 @@ export default function SubscriptionPage() {
             </Card>
           </div>
 
-          {/* Upgrade Requests History */}
+          {/* Add-ons Section */}
+          <ClinicAddonsSection />
           {upgradeRequests.length > 0 && (
             <Card>
               <CardHeader>
