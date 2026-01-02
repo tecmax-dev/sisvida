@@ -397,10 +397,12 @@ export function DashboardLayout() {
             )}
           </button>
         </CollapsibleTrigger>
-        <CollapsibleContent className="collapsible-content space-y-0.5 mt-1 overflow-hidden">
-          {category.items.map((item) => (
-            <NavItemLink key={item.href} item={item} isSubItem />
-          ))}
+        <CollapsibleContent className="collapsible-content mt-1">
+          <div className="collapsible-inner space-y-0.5">
+            {category.items.map((item) => (
+              <NavItemLink key={item.href} item={item} isSubItem />
+            ))}
+          </div>
         </CollapsibleContent>
       </Collapsible>
     );
