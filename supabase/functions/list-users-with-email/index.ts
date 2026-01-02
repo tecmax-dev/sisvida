@@ -98,10 +98,34 @@ Deno.serve(async (req) => {
 
     const superAdminIds = new Set(superAdmins?.map(sa => sa.user_id) || []);
 
-    // Get user roles count
+    // Get user roles with clinic info
     const { data: userRoles } = await supabaseAdmin
       .from("user_roles")
-      .select("user_id, clinic_id");
+      .select("user_id, clinic_id, role");
+
+    // Get all clinics
+    const { data: clinics } = await supabaseAdmin
+      .from("clinics")
+      .select("id, name, slug");
+
+    const clinicsMap = new Map(clinics?.map(c => [c.id, c]) || []);
+
+    // Build user-clinic relationships
+    const userClinicsMap: Record<string, Array<{ clinic_id: string; clinic_name: string; clinic_slug: string; role: string }>> = {};
+    userRoles?.forEach(role => {
+      if (!userClinicsMap[role.user_id]) {
+        userClinicsMap[role.user_id] = [];
+      }
+      const clinic = clinicsMap.get(role.clinic_id);
+      if (clinic) {
+        userClinicsMap[role.user_id].push({
+          clinic_id: role.clinic_id,
+          clinic_name: clinic.name,
+          clinic_slug: clinic.slug,
+          role: role.role
+        });
+      }
+    });
 
     // Count clinics per user
     const clinicsPerUser: Record<string, number> = {};
@@ -122,15 +146,24 @@ Deno.serve(async (req) => {
         created_at: profile?.created_at || authUser.created_at,
         isSuperAdmin: superAdminIds.has(authUser.id),
         clinicsCount: clinicsPerUser[authUser.id] || 0,
+        clinics: userClinicsMap[authUser.id] || [],
         email_confirmed_at: authUser.email_confirmed_at,
         last_sign_in_at: authUser.last_sign_in_at
       };
     }).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-    console.log(`Returning ${usersWithEmails?.length || 0} users`);
+    // Build clinics list with users
+    const clinicsList = clinics?.map(clinic => ({
+      id: clinic.id,
+      name: clinic.name,
+      slug: clinic.slug,
+      usersCount: userRoles?.filter(r => r.clinic_id === clinic.id).length || 0
+    })).sort((a, b) => a.name.localeCompare(b.name)) || [];
+
+    console.log(`Returning ${usersWithEmails?.length || 0} users, ${clinicsList.length} clinics`);
 
     return new Response(
-      JSON.stringify({ users: usersWithEmails }),
+      JSON.stringify({ users: usersWithEmails, clinics: clinicsList }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
