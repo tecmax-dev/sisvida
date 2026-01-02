@@ -148,7 +148,7 @@ export default function AjudaIndex() {
           {categories.map((category) => {
             const Icon = category.icon;
             return (
-              <Link key={category.id} to={`/ajuda/${category.id}`}>
+              <Link key={category.id} to={`/ajuda/${category.id}`} className="block h-full">
                 <Card className="h-full hover:border-primary/30 hover:shadow-md transition-all group cursor-pointer">
                   <CardHeader className="pb-3">
                     <div className={`w-10 h-10 rounded-lg ${category.color} flex items-center justify-center mb-2`}>
