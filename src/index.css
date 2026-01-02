@@ -68,15 +68,19 @@
     
     --radius: 0.75rem;
     
-    /* Sidebar - Gradient Theme matching Eclini brand */
-    --sidebar-background: 172 50% 42%;
+    /* Sidebar - Premium Gradient Theme Eclini */
+    --sidebar-background: 200 85% 35%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 172 60% 40%;
-    --sidebar-accent: 172 45% 48%;
+    --sidebar-primary-foreground: 200 85% 35%;
+    --sidebar-accent: 0 0% 100% / 0.12;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 172 40% 38%;
+    --sidebar-border: 0 0% 100% / 0.15;
     --sidebar-ring: 0 0% 100%;
+    --sidebar-muted: 0 0% 100% / 0.7;
+    --sidebar-gradient-start: 200 85% 40%;
+    --sidebar-gradient-mid: 175 70% 38%;
+    --sidebar-gradient-end: 140 60% 42%;
     
     /* Custom Gradients - Blue to Cyan to Green */
     --gradient-primary: linear-gradient(135deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
