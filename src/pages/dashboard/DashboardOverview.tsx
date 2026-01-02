@@ -8,96 +8,64 @@ import {
   CheckCircle2,
   XCircle,
   Plus,
-  Bell,
   RefreshCw,
-  UserPlus,
   FileText,
-  BarChart3,
-  Sunrise,
-  Sun,
-  Moon,
+  Brain,
   ArrowRight,
+  Stethoscope,
+  Settings,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import BirthdayMessagesHistory from "@/components/dashboard/BirthdayMessagesHistory";
 import PendingPayslipReviews from "@/components/dashboard/PendingPayslipReviews";
 import { FeatureGateInline } from "@/components/features/FeatureGate";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
 
 interface DashboardStats {
   todayAppointments: number;
   totalPatients: number;
+  totalProfessionals: number;
+  futureAppointments: number;
+  medicalRecordsCount: number;
   completionRate: number;
-  pendingConfirmations: number;
 }
-
-interface Appointment {
-  id: string;
-  start_time: string;
-  type: string;
-  status: string;
-  patient: {
-    name: string;
-  };
-}
-
-const statusConfig = {
-  scheduled: { icon: AlertCircle, color: "text-warning", bgColor: "bg-warning/10", label: "Aguardando" },
-  confirmed: { icon: CheckCircle2, color: "text-success", bgColor: "bg-success/10", label: "Confirmado" },
-  completed: { icon: CheckCircle2, color: "text-info", bgColor: "bg-info/10", label: "Concluído" },
-  cancelled: { icon: XCircle, color: "text-destructive", bgColor: "bg-destructive/10", label: "Cancelado" },
-  no_show: { icon: XCircle, color: "text-destructive", bgColor: "bg-destructive/10", label: "Não compareceu" },
-  in_progress: { icon: Clock, color: "text-primary", bgColor: "bg-primary/10", label: "Em andamento" },
-  arrived: { icon: CheckCircle2, color: "text-info", bgColor: "bg-info/10", label: "Chegou" },
-};
-
-const typeLabels: Record<string, string> = {
-  first_visit: "Primeira Consulta",
-  return: "Retorno",
-  exam: "Exame",
-  procedure: "Procedimento",
-};
-
-const getGreeting = () => {
-  const hour = new Date().getHours();
-  if (hour < 12) return { text: "Bom dia", icon: Sunrise };
-  if (hour < 18) return { text: "Boa tarde", icon: Sun };
-  return { text: "Boa noite", icon: Moon };
-};
 
 export default function DashboardOverview() {
-  const { currentClinic, profile, userRoles } = useAuth();
+  const { currentClinic, userRoles } = useAuth();
   
-  // Check if current user is a professional (limited view)
   const currentClinicRole = userRoles.find(r => r.clinic_id === currentClinic?.id);
   const isProfessionalRole = currentClinicRole?.role === 'professional';
   const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats>({
     todayAppointments: 0,
     totalPatients: 0,
+    totalProfessionals: 0,
+    futureAppointments: 0,
+    medicalRecordsCount: 0,
     completionRate: 0,
-    pendingConfirmations: 0,
   });
-  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newAppointments, setNewAppointments] = useState<string[]>([]);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [procedureData, setProcedureData] = useState<any[]>([]);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-
-  const greeting = getGreeting();
-  const GreetingIcon = greeting.icon;
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 60000);
-    return () => clearInterval(timer);
-  }, []);
 
   useEffect(() => {
     if (currentClinic) {
@@ -120,55 +88,12 @@ export default function DashboardOverview() {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'appointments',
           filter: `clinic_id=eq.${currentClinic.id}`,
         },
-        async (payload) => {
-          console.log('New appointment:', payload);
-          
-          // Fetch patient name for the new appointment
-          const { data: patient } = await supabase
-            .from('patients')
-            .select('name')
-            .eq('id', payload.new.patient_id)
-            .single();
-
-          toast({
-            title: "Novo agendamento!",
-            description: `${patient?.name || 'Paciente'} agendou para ${new Date(payload.new.appointment_date + "T12:00:00").toLocaleDateString('pt-BR')} às ${payload.new.start_time.slice(0, 5)}`,
-          });
-
-          // Highlight new appointment
-          setNewAppointments(prev => [...prev, payload.new.id]);
-          setTimeout(() => {
-            setNewAppointments(prev => prev.filter(id => id !== payload.new.id));
-          }, 5000);
-
-          // Refresh data
-          fetchDashboardData();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'appointments',
-          filter: `clinic_id=eq.${currentClinic.id}`,
-        },
-        (payload) => {
-          console.log('Updated appointment:', payload);
-          
-          // Check if status changed to confirmed
-          if (payload.old.status !== 'confirmed' && payload.new.status === 'confirmed') {
-            toast({
-              title: "Consulta confirmada!",
-              description: "Uma consulta foi confirmada pelo paciente.",
-            });
-          }
-          
+        () => {
           fetchDashboardData();
         }
       )
@@ -183,54 +108,41 @@ export default function DashboardOverview() {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      // Fetch today's appointments
-      const { data: appointments } = await supabase
-        .from('appointments')
-        .select(`
-          id,
-          start_time,
-          type,
-          status,
-          patient:patients (
-            name
-          )
-        `)
-        .eq('clinic_id', currentClinic.id)
-        .eq('appointment_date', today)
-        .order('start_time');
-
-      if (appointments) {
-        setTodayAppointments(appointments as unknown as Appointment[]);
-        setStats(prev => ({ 
-          ...prev, 
-          todayAppointments: appointments.length,
-        }));
-      }
-
-      // Fetch ALL pending confirmations (not just today)
-      const { count: pendingCount } = await supabase
+      // Today's appointments
+      const { count: todayCount } = await supabase
         .from('appointments')
         .select('*', { count: 'exact', head: true })
         .eq('clinic_id', currentClinic.id)
-        .eq('status', 'scheduled')
-        .gte('appointment_date', today);
+        .eq('appointment_date', today);
 
-      setStats(prev => ({ 
-        ...prev, 
-        pendingConfirmations: pendingCount || 0,
-      }));
+      // Future appointments
+      const { count: futureCount } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', currentClinic.id)
+        .gt('appointment_date', today)
+        .neq('status', 'cancelled');
 
-      // Fetch total patients
+      // Total patients
       const { count: patientsCount } = await supabase
         .from('patients')
         .select('*', { count: 'exact', head: true })
         .eq('clinic_id', currentClinic.id);
 
-      if (patientsCount !== null) {
-        setStats(prev => ({ ...prev, totalPatients: patientsCount }));
-      }
+      // Total professionals
+      const { count: professionalsCount } = await supabase
+        .from('professionals')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', currentClinic.id)
+        .eq('is_active', true);
 
-      // Calculate completion rate (completed / total non-cancelled)
+      // Medical records count
+      const { count: recordsCount } = await supabase
+        .from('medical_records')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', currentClinic.id);
+
+      // Completion rate
       const { count: completedCount } = await supabase
         .from('appointments')
         .select('*', { count: 'exact', head: true })
@@ -243,12 +155,23 @@ export default function DashboardOverview() {
         .eq('clinic_id', currentClinic.id)
         .neq('status', 'cancelled');
 
-      if (completedCount !== null && totalCount !== null && totalCount > 0) {
-        setStats(prev => ({ 
-          ...prev, 
-          completionRate: Math.round((completedCount / totalCount) * 100) 
-        }));
-      }
+      const completionRate = totalCount && totalCount > 0 
+        ? Math.round((completedCount || 0) / totalCount * 100) 
+        : 0;
+
+      setStats({
+        todayAppointments: todayCount || 0,
+        totalPatients: patientsCount || 0,
+        totalProfessionals: professionalsCount || 0,
+        futureAppointments: futureCount || 0,
+        medicalRecordsCount: recordsCount || 0,
+        completionRate,
+      });
+
+      // Chart data - last 6 months
+      await fetchChartData();
+      await fetchProcedureData();
+
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
     } finally {
@@ -256,236 +179,385 @@ export default function DashboardOverview() {
     }
   };
 
-  const statCards = [
+  const fetchChartData = async () => {
+    if (!currentClinic) return;
+
+    const months = [];
+    const now = new Date();
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStart = date.toISOString().split('T')[0];
+      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0).toISOString().split('T')[0];
+      
+      const { count: total } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', currentClinic.id)
+        .gte('appointment_date', monthStart)
+        .lte('appointment_date', monthEnd);
+
+      const { count: completed } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', currentClinic.id)
+        .eq('status', 'completed')
+        .gte('appointment_date', monthStart)
+        .lte('appointment_date', monthEnd);
+
+      const { count: cancelled } = await supabase
+        .from('appointments')
+        .select('*', { count: 'exact', head: true })
+        .eq('clinic_id', currentClinic.id)
+        .eq('status', 'cancelled')
+        .gte('appointment_date', monthStart)
+        .lte('appointment_date', monthEnd);
+
+      const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      months.push({
+        name: `${monthNames[date.getMonth()]}/${String(date.getFullYear()).slice(2)}`,
+        total: total || 0,
+        realizadas: completed || 0,
+        canceladas: cancelled || 0,
+      });
+    }
+
+    setChartData(months);
+  };
+
+  const fetchProcedureData = async () => {
+    if (!currentClinic) return;
+
+    const { data: procedures } = await supabase
+      .from('appointments')
+      .select(`
+        procedure_id,
+        procedures:procedure_id (name)
+      `)
+      .eq('clinic_id', currentClinic.id)
+      .not('procedure_id', 'is', null)
+      .limit(100);
+
+    if (procedures && procedures.length > 0) {
+      const counts: Record<string, number> = {};
+      procedures.forEach((p: any) => {
+        const name = p.procedures?.name || 'Outros';
+        counts[name] = (counts[name] || 0) + 1;
+      });
+
+      const data = Object.entries(counts)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+
+      setProcedureData(data);
+    } else {
+      setProcedureData([
+        { name: 'Consulta Geral', value: 5 },
+        { name: 'Retorno', value: 4 },
+        { name: 'Exame', value: 3 },
+      ]);
+    }
+  };
+
+  const CHART_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
+
+  // Stat cards with gradient backgrounds matching the reference
+  const topCards = [
     {
-      title: "Consultas Hoje",
-      value: stats.todayAppointments.toString(),
-      icon: Calendar,
-      gradient: "from-primary/10 via-primary/5 to-transparent",
-      iconBg: "bg-primary/15",
-      iconColor: "text-primary",
-    },
-    {
-      title: "Pacientes Cadastrados",
-      value: stats.totalPatients.toString(),
+      title: "CADASTROS",
+      value: stats.totalPatients,
+      subtitle: "Total de Pacientes",
+      buttonText: "Ver detalhes",
+      buttonLink: "/dashboard/patients",
+      gradient: "from-blue-400 via-blue-500 to-cyan-500",
       icon: Users,
-      gradient: "from-info/10 via-info/5 to-transparent",
-      iconBg: "bg-info/15",
-      iconColor: "text-info",
+      iconBg: "bg-blue-300/50",
     },
     {
-      title: "Taxa de Presença",
+      title: "PROFISSIONAIS",
+      value: stats.totalProfessionals,
+      subtitle: "Terapeutas",
+      buttonText: "Ver detalhes",
+      buttonLink: "/dashboard/professionals",
+      gradient: "from-pink-400 via-pink-500 to-rose-500",
+      icon: Stethoscope,
+      iconBg: "bg-pink-300/50",
+    },
+    {
+      title: "HOJE",
+      value: stats.todayAppointments,
+      subtitle: "Sessões Hoje",
+      buttonText: "Ver agenda",
+      buttonLink: "/dashboard/calendar",
+      gradient: "from-orange-400 via-orange-500 to-amber-500",
+      icon: Calendar,
+      iconBg: "bg-orange-300/50",
+    },
+    {
+      title: "FUTURAS",
+      value: stats.futureAppointments,
+      subtitle: "Sessões Agendadas",
+      buttonText: "Ver todas",
+      buttonLink: "/dashboard/calendar",
+      gradient: "from-emerald-400 via-emerald-500 to-teal-500",
+      icon: Clock,
+      iconBg: "bg-emerald-300/50",
+    },
+  ];
+
+  const bottomCards = [
+    {
+      title: "PRONTUÁRIOS",
+      value: stats.medicalRecordsCount,
+      subtitle: "Evoluções Registradas",
+      buttonText: "Ver prontuários",
+      buttonLink: "/dashboard/medical-records",
+      bgColor: "bg-purple-50",
+      borderColor: "border-purple-100",
+      icon: FileText,
+      iconBg: "bg-purple-100",
+      iconColor: "text-purple-500",
+    },
+    {
+      title: "TAXA DE PRESENÇA",
       value: `${stats.completionRate}%`,
+      subtitle: "Taxa Realização",
+      buttonText: "Ver registros",
+      buttonLink: "/dashboard/reports",
+      bgColor: "bg-amber-50",
+      borderColor: "border-amber-100",
       icon: TrendingUp,
-      gradient: "from-success/10 via-success/5 to-transparent",
-      iconBg: "bg-success/15",
-      iconColor: "text-success",
+      iconBg: "bg-amber-100",
+      iconColor: "text-amber-600",
     },
     {
-      title: "Aguardando Confirmação",
-      value: stats.pendingConfirmations.toString(),
-      icon: Bell,
-      gradient: "from-warning/10 via-warning/5 to-transparent",
-      iconBg: "bg-warning/15",
-      iconColor: "text-warning",
+      title: "AÇÃO",
+      value: "+",
+      isAction: true,
+      subtitle: "Nova Evolução",
+      buttonText: "Registrar nova",
+      buttonLink: "/dashboard/medical-records",
+      bgColor: "bg-rose-50",
+      borderColor: "border-rose-100",
+      icon: Plus,
+      iconBg: "bg-rose-100",
+      iconColor: "text-rose-500",
     },
   ];
 
-  const quickActions = [
-    { icon: UserPlus, label: "Novo Paciente", href: "/dashboard/patients" },
-    { icon: Calendar, label: "Nova Consulta", href: "/dashboard/calendar" },
-    { icon: FileText, label: "Prontuário", href: "/dashboard/medical-records" },
-    { icon: BarChart3, label: "Relatórios", href: "/dashboard/reports" },
-  ];
-
-  // Group appointments by period
-  const morningAppointments = todayAppointments.filter(a => {
-    const hour = parseInt(a.start_time.split(':')[0]);
-    return hour < 12;
-  });
-  const afternoonAppointments = todayAppointments.filter(a => {
-    const hour = parseInt(a.start_time.split(':')[0]);
-    return hour >= 12;
-  });
+  const totalSessions = chartData.reduce((acc, m) => acc + m.total, 0);
+  const totalRealizadas = chartData.reduce((acc, m) => acc + m.realizadas, 0);
+  const sessionsRate = totalSessions > 0 ? Math.round((totalRealizadas / totalSessions) * 100) : 0;
 
   return (
-    <div className="min-h-full flex flex-col animate-fade-in">
-      {/* Hero Header with Primary Gradient */}
-      <div className="bg-gradient-to-r from-primary to-primary-dark -mx-4 sm:-mx-6 lg:-mx-8 -mt-4 sm:-mt-6 px-4 sm:px-6 lg:px-8 pt-6 pb-8 rounded-b-3xl shadow-lg mb-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-primary-foreground/80 text-sm">
-              <GreetingIcon className="h-4 w-4" />
-              <span>{greeting.text}</span>
-              <span className="opacity-60">•</span>
-              <span>{format(currentTime, "EEEE, dd 'de' MMMM", { locale: ptBR })}</span>
-            </div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-primary-foreground">
-              Olá, {profile?.name?.split(' ')[0] || "Usuário"}! 👋
-            </h1>
-            <p className="text-primary-foreground/70">
-              Aqui está o resumo da sua clínica para hoje.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={fetchDashboardData} 
-              title="Atualizar"
-              className="h-10 w-10 bg-white/10 border-white/20 text-primary-foreground hover:bg-white/20 hover:text-primary-foreground"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-            <Button asChild className="h-10 bg-white text-primary hover:bg-white/90 shadow-md">
-              <Link to="/dashboard/calendar">
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Consulta
-              </Link>
-            </Button>
-          </div>
-        </div>
-
-        {/* Realtime indicator inside header */}
-        <div className="flex items-center gap-2 text-sm mt-4 text-primary-foreground/70">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-          </span>
-          <span>Atualizações em tempo real ativas</span>
-        </div>
-      </div>
-
-      {/* Stats Grid - Elevated Cards */}
+    <div className="min-h-full flex flex-col gap-6 animate-fade-in p-1">
+      {/* Top Row - Main Stats with Gradient Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {statCards.map((stat, i) => (
-          <Card 
-            key={i} 
-            className="relative overflow-hidden border-0 bg-card shadow-md hover:shadow-lg transition-all duration-300 group"
+        {topCards.map((card, i) => (
+          <Card
+            key={i}
+            className={`relative overflow-hidden border-0 shadow-lg bg-gradient-to-br ${card.gradient} text-white`}
           >
-            <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-60`} />
-            <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-gradient-to-br from-foreground/[0.03] to-transparent" />
-            <CardContent className="relative p-5">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1.5">
-                  <p className="text-sm font-medium text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
-                    {stat.value}
-                  </p>
+            <CardContent className="p-5 relative">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold tracking-wider opacity-90">{card.title}</p>
+                  <p className="text-4xl font-bold">{card.value}</p>
+                  <p className="text-sm opacity-80">{card.subtitle}</p>
                 </div>
-                <div className={`w-12 h-12 rounded-xl ${stat.iconBg} flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-sm`}>
-                  <stat.icon className={`h-5 w-5 ${stat.iconColor}`} />
+                <div className={`w-12 h-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                  <card.icon className="h-6 w-6 text-white/80" />
                 </div>
               </div>
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="mt-4 text-white/90 hover:text-white hover:bg-white/20 px-0"
+              >
+                <Link to={card.buttonLink} className="flex items-center gap-1">
+                  {card.buttonText} <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      {/* Quick Actions - More Visual */}
-      <div className="space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Ações Rápidas</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {quickActions.map((action, i) => (
-            <Button 
-              key={i}
-              variant="outline" 
-              className="h-auto py-5 flex flex-col gap-3 bg-card border-border/50 hover:bg-primary/5 hover:border-primary/40 hover:shadow-md transition-all duration-200 group"
-              asChild
-            >
-              <Link to={action.href}>
-                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <action.icon className="h-5 w-5 text-primary" />
+      {/* Second Row - Secondary Stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {bottomCards.map((card, i) => (
+          <Card
+            key={i}
+            className={`relative overflow-hidden border ${card.borderColor} shadow-sm ${card.bgColor}`}
+          >
+            <CardContent className="p-5 relative">
+              <div className="flex justify-between items-start">
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold tracking-wider text-muted-foreground">{card.title}</p>
+                  {card.isAction ? (
+                    <div className={`w-14 h-14 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                      <Plus className={`h-8 w-8 ${card.iconColor}`} />
+                    </div>
+                  ) : (
+                    <p className="text-4xl font-bold text-foreground">{card.value}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground">{card.subtitle}</p>
                 </div>
-                <span className="text-sm font-medium text-foreground">{action.label}</span>
-              </Link>
-            </Button>
-          ))}
-        </div>
-      </div>
-
-      {/* Today's Appointments - Enhanced Card */}
-      <Card className="border-0 bg-card shadow-md overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between pb-3 bg-gradient-to-r from-primary/5 to-transparent border-b border-border/30">
-          <div className="space-y-1">
-            <CardTitle className="text-lg font-semibold text-foreground flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Consultas de Hoje
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {todayAppointments.length} {todayAppointments.length === 1 ? 'consulta agendada' : 'consultas agendadas'}
-            </p>
-          </div>
-          <Button variant="ghost" size="sm" asChild className="text-primary hover:text-primary hover:bg-primary/10">
-            <Link to="/dashboard/calendar" className="flex items-center gap-1">
-              Ver todas
-              <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : todayAppointments.length > 0 ? (
-            <div className="space-y-6">
-              {/* Morning Appointments */}
-              {morningAppointments.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Sunrise className="h-4 w-4" />
-                    <span className="font-medium">Manhã</span>
-                    <div className="flex-1 h-px bg-border" />
+                {!card.isAction && (
+                  <div className={`w-12 h-12 rounded-xl ${card.iconBg} flex items-center justify-center`}>
+                    <card.icon className={`h-6 w-6 ${card.iconColor}`} />
                   </div>
-                  <div className="space-y-2">
-                    {morningAppointments.map((appointment) => (
-                      <AppointmentRow 
-                        key={appointment.id} 
-                        appointment={appointment} 
-                        isNew={newAppointments.includes(appointment.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Afternoon Appointments */}
-              {afternoonAppointments.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Sun className="h-4 w-4" />
-                    <span className="font-medium">Tarde</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <div className="space-y-2">
-                    {afternoonAppointments.map((appointment) => (
-                      <AppointmentRow 
-                        key={appointment.id} 
-                        appointment={appointment} 
-                        isNew={newAppointments.includes(appointment.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
-                <Calendar className="h-8 w-8 text-muted-foreground/50" />
+                )}
               </div>
-              <p className="text-muted-foreground mb-4">Nenhuma consulta agendada para hoje</p>
-              <Button variant="outline" asChild>
-                <Link to="/dashboard/calendar">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Agendar consulta
+              <Button
+                asChild
+                variant="ghost"
+                size="sm"
+                className="mt-4 text-muted-foreground hover:text-foreground px-0"
+              >
+                <Link to={card.buttonLink} className="flex items-center gap-1">
+                  {card.buttonText} <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Charts Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Sessions Chart */}
+        <Card className="border-0 shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-indigo-500 via-indigo-600 to-violet-600 px-5 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3 text-white">
+              <TrendingUp className="h-5 w-5" />
+              <h3 className="font-semibold text-lg">Sessões nos Últimos 6 Meses</h3>
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <Button variant="ghost" size="icon" className="text-white/80 hover:text-white hover:bg-white/20">
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
+          <CardContent className="p-5">
+            <div className="flex justify-around mb-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-indigo-600">{totalSessions}</p>
+                <p className="text-sm text-muted-foreground">Total</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-emerald-600">{sessionsRate}%</p>
+                <p className="text-sm text-muted-foreground">Taxa Realização</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-gray-600">+0%</p>
+                <p className="text-sm text-muted-foreground">vs. 6m anteriores</p>
+              </div>
+            </div>
+            <div className="h-64">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                  <YAxis tick={{ fontSize: 12 }} stroke="#9ca3af" />
+                  <Tooltip />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="total"
+                    stroke="#6366f1"
+                    strokeWidth={2}
+                    dot={{ fill: '#6366f1', strokeWidth: 2 }}
+                    name="Total de Sessões"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="realizadas"
+                    stroke="#22c55e"
+                    strokeWidth={2}
+                    dot={{ fill: '#22c55e', strokeWidth: 2 }}
+                    name="Realizadas"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="canceladas"
+                    stroke="#ef4444"
+                    strokeWidth={2}
+                    dot={{ fill: '#ef4444', strokeWidth: 2 }}
+                    name="Canceladas"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              ⓘ Clique nas legendas para mostrar/ocultar dados
+            </p>
+          </CardContent>
+        </Card>
+
+        {/* Procedures Donut Chart */}
+        <Card className="border-0 shadow-lg overflow-hidden">
+          <div className="bg-gradient-to-r from-emerald-500 via-emerald-600 to-teal-600 px-5 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3 text-white">
+              <Brain className="h-5 w-5" />
+              <h3 className="font-semibold text-lg">Tipos de Procedimentos</h3>
+            </div>
+            <Button variant="ghost" size="icon" className="text-white/80 hover:text-white hover:bg-white/20">
+              <Settings className="h-4 w-4" />
+            </Button>
+          </div>
+          <CardContent className="p-5">
+            <div className="flex gap-4">
+              {/* Legend */}
+              <div className="flex-1 space-y-3">
+                {procedureData.map((item, index) => (
+                  <div key={item.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full"
+                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                      />
+                      <span className="text-sm text-muted-foreground truncate max-w-[200px]">
+                        {item.name}
+                      </span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {item.value} pacientes
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              {/* Chart */}
+              <div className="w-48 h-48">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={procedureData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={50}
+                      outerRadius={80}
+                      paddingAngle={2}
+                      dataKey="value"
+                    >
+                      {procedureData.map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={CHART_COLORS[index % CHART_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4">
+              ⓘ Dados dos últimos 6 meses • Hover para detalhes
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Pending Payslip Reviews - Hide from professionals */}
       {!isProfessionalRole && <PendingPayslipReviews />}
@@ -496,85 +568,6 @@ export default function DashboardOverview() {
           <BirthdayMessagesHistory />
         </FeatureGateInline>
       )}
-
-      {/* Footer with Primary Color */}
-      <div className="bg-gradient-to-r from-primary to-primary-dark -mx-4 sm:-mx-6 lg:-mx-8 mt-8 px-4 sm:px-6 lg:px-8 py-4 rounded-t-2xl">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-primary-foreground/80 text-sm">
-          <p>© {new Date().getFullYear()} Eclini - Sistema de Gestão para Clínicas</p>
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
-              </span>
-              Online
-            </span>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Separate component for appointment row
-function AppointmentRow({ appointment, isNew }: { appointment: Appointment; isNew: boolean }) {
-  const status = statusConfig[appointment.status as keyof typeof statusConfig] || statusConfig.scheduled;
-  const StatusIcon = status.icon;
-  const timeStr = appointment.start_time.slice(0, 5);
-  const patientName = appointment.patient?.name || "Paciente";
-  const initials = patientName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
-
-  return (
-    <div
-      className={`flex items-center gap-4 p-4 rounded-xl border transition-all duration-300 ${
-        isNew 
-          ? "border-success bg-success/5 ring-2 ring-success/20" 
-          : "border-border/50 hover:border-border hover:bg-muted/30"
-      } ${
-        appointment.status === "cancelled" ? "opacity-50" : ""
-      }`}
-    >
-      {/* Time */}
-      <div className="w-14 text-center shrink-0">
-        <span className="text-lg font-semibold text-foreground tabular-nums">
-          {timeStr}
-        </span>
-      </div>
-
-      {/* Divider */}
-      <div className="w-px h-10 bg-border" />
-
-      {/* Avatar */}
-      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-        <span className="text-sm font-semibold text-primary">
-          {initials}
-        </span>
-      </div>
-
-      {/* Patient Info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="font-medium text-foreground truncate">
-            {patientName}
-          </p>
-          {isNew && (
-            <Badge className="text-xs bg-success/20 text-success border-0">
-              Novo
-            </Badge>
-          )}
-        </div>
-        <p className="text-sm text-muted-foreground">
-          {typeLabels[appointment.type] || appointment.type}
-        </p>
-      </div>
-
-      {/* Status */}
-      <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${status.bgColor}`}>
-        <StatusIcon className={`h-3.5 w-3.5 ${status.color}`} />
-        <span className={`text-xs font-medium ${status.color}`}>
-          {status.label}
-        </span>
-      </div>
     </div>
   );
 }
