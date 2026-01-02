@@ -6996,7 +6996,10 @@ export type Database = {
           pending_registration_birthdate: string | null
           pending_registration_cnpj: string | null
           pending_registration_cpf: string | null
+          pending_registration_insurance_plan_id: string | null
           pending_registration_name: string | null
+          pending_registration_titular_cpf: string | null
+          pending_registration_type: string | null
           phone: string
           selected_appointment_id: string | null
           selected_date: string | null
@@ -7030,7 +7033,10 @@ export type Database = {
           pending_registration_birthdate?: string | null
           pending_registration_cnpj?: string | null
           pending_registration_cpf?: string | null
+          pending_registration_insurance_plan_id?: string | null
           pending_registration_name?: string | null
+          pending_registration_titular_cpf?: string | null
+          pending_registration_type?: string | null
           phone: string
           selected_appointment_id?: string | null
           selected_date?: string | null
@@ -7064,7 +7070,10 @@ export type Database = {
           pending_registration_birthdate?: string | null
           pending_registration_cnpj?: string | null
           pending_registration_cpf?: string | null
+          pending_registration_insurance_plan_id?: string | null
           pending_registration_name?: string | null
+          pending_registration_titular_cpf?: string | null
+          pending_registration_type?: string | null
           phone?: string
           selected_appointment_id?: string | null
           selected_date?: string | null
