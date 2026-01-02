@@ -516,16 +516,23 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="icon"
                         className="text-destructive hover:text-destructive"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
                           setDependentToDelete(dependent);
                           setDeleteDialogOpen(true);
                         }}
-                        title="Inativar dependente"
+                        title={canPermanentDelete ? "Excluir dependente" : "Inativar dependente"}
                       >
-                        <UserX className="h-4 w-4" />
+                        {canPermanentDelete ? (
+                          <Trash2 className="h-4 w-4" />
+                        ) : (
+                          <UserX className="h-4 w-4" />
+                        )}
                       </Button>
                     </div>
                   </div>
