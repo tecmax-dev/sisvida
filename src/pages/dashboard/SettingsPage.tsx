@@ -21,6 +21,8 @@ import { RoleGuard } from "@/components/auth/RoleGuard";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAutoSave, AutoSaveStatus } from "@/hooks/useAutoSave";
 import { AutoSaveIndicator } from "@/components/ui/auto-save-indicator";
+import { FeatureGate, FeatureGateInline } from "@/components/features/FeatureGate";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 
 export default function SettingsPage() {
   const { user, currentClinic } = useAuth();
@@ -407,59 +409,61 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Notifications */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Bell className="h-5 w-5 text-primary" />
+      {/* Notifications - Protected by whatsapp_appointment_reminders feature */}
+      <FeatureGate feature="whatsapp_appointment_reminders" showUpgradePrompt>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Bell className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">Lembretes WhatsApp</CardTitle>
+                <CardDescription>
+                  Configure os lembretes automáticos
+                </CardDescription>
+              </div>
             </div>
-            <div>
-              <CardTitle className="text-lg">Lembretes WhatsApp</CardTitle>
-              <CardDescription>
-                Configure os lembretes automáticos
-              </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-foreground">Lembretes automáticos</p>
+                <p className="text-sm text-muted-foreground">
+                  Enviar lembretes de consulta via WhatsApp
+                </p>
+              </div>
+              <Switch
+                checked={reminderEnabled}
+                onCheckedChange={setReminderEnabled}
+              />
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium text-foreground">Lembretes automáticos</p>
-              <p className="text-sm text-muted-foreground">
-                Enviar lembretes de consulta via WhatsApp
-              </p>
-            </div>
-            <Switch
-              checked={reminderEnabled}
-              onCheckedChange={setReminderEnabled}
-            />
-          </div>
-          
-          {reminderEnabled && (
-            <div className="space-y-2">
-              <Label htmlFor="reminderTime">Tempo antes da consulta</Label>
-              <select
-                id="reminderTime"
-                value={reminderTime}
-                onChange={(e) => setReminderTime(e.target.value)}
-                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm"
-              >
-                <option value="1">1 hora antes</option>
-                <option value="2">2 horas antes</option>
-                <option value="6">6 horas antes</option>
-                <option value="12">12 horas antes</option>
-                <option value="24">24 horas antes</option>
-                <option value="48">48 horas antes</option>
-                <option value="72">72 horas antes</option>
-              </select>
-              <p className="text-xs text-muted-foreground mt-1">
-                O lembrete será enviado automaticamente no horário configurado antes da consulta
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            
+            {reminderEnabled && (
+              <div className="space-y-2">
+                <Label htmlFor="reminderTime">Tempo antes da consulta</Label>
+                <select
+                  id="reminderTime"
+                  value={reminderTime}
+                  onChange={(e) => setReminderTime(e.target.value)}
+                  className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm"
+                >
+                  <option value="1">1 hora antes</option>
+                  <option value="2">2 horas antes</option>
+                  <option value="6">6 horas antes</option>
+                  <option value="12">12 horas antes</option>
+                  <option value="24">24 horas antes</option>
+                  <option value="48">48 horas antes</option>
+                  <option value="72">72 horas antes</option>
+                </select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  O lembrete será enviado automaticamente no horário configurado antes da consulta
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </FeatureGate>
 
       {/* WhatsApp Header Image - Protected by manage_whatsapp_header permission */}
       {hasPermission('manage_whatsapp_header') && (
@@ -828,19 +832,25 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* WhatsApp Provider Selector */}
+      {/* WhatsApp Provider Selector - Protected by Evolution or Twilio feature */}
       {currentClinic && (
-        <WhatsAppProviderSelector clinicId={currentClinic.id} />
+        <FeatureGateInline feature="whatsapp_evolution_api">
+          <WhatsAppProviderSelector clinicId={currentClinic.id} />
+        </FeatureGateInline>
       )}
 
-      {/* Evolution API Integration */}
+      {/* Evolution API Integration - Protected by whatsapp_evolution_api feature */}
       {currentClinic && (
-        <EvolutionConfigPanel clinicId={currentClinic.id} />
+        <FeatureGate feature="whatsapp_evolution_api" showUpgradePrompt>
+          <EvolutionConfigPanel clinicId={currentClinic.id} />
+        </FeatureGate>
       )}
 
-      {/* Twilio WhatsApp Integration */}
+      {/* Twilio WhatsApp Integration - Protected by whatsapp_twilio feature */}
       {currentClinic && (
-        <TwilioConfigPanel clinicId={currentClinic.id} />
+        <FeatureGate feature="whatsapp_twilio" showUpgradePrompt>
+          <TwilioConfigPanel clinicId={currentClinic.id} />
+        </FeatureGate>
       )}
 
       {/* Message History */}
@@ -856,26 +866,28 @@ export default function SettingsPage() {
       {/* Webhooks */}
       <WebhooksPanel />
 
-      {/* AI Assistant Test */}
+      {/* AI Assistant Test - Protected by whatsapp_ai_assistant feature */}
       {currentClinic && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Bot className="h-5 w-5 text-primary" />
+        <FeatureGate feature="whatsapp_ai_assistant" showUpgradePrompt>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Bot className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Testar Assistente IA</CardTitle>
+                  <CardDescription>
+                    Teste o assistente de agendamento com OpenAI diretamente
+                  </CardDescription>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-lg">Testar Assistente IA</CardTitle>
-                <CardDescription>
-                  Teste o assistente de agendamento com OpenAI diretamente
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <AIAssistantChat clinicId={currentClinic.id} />
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent>
+              <AIAssistantChat clinicId={currentClinic.id} />
+            </CardContent>
+          </Card>
+        </FeatureGate>
       )}
 
       <div className="flex justify-end">

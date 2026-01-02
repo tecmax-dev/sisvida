@@ -2,15 +2,21 @@ import { useAuth } from "@/hooks/useAuth";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Users, Send, Zap, Shield, BarChart } from "lucide-react";
+import { Users, Send, Zap, Shield, BarChart, Lock } from "lucide-react";
 import CampaignsPanel from "@/components/marketing/CampaignsPanel";
 import SegmentsPanel from "@/components/marketing/SegmentsPanel";
 import AutomationsPanel from "@/components/marketing/AutomationsPanel";
+import { FeatureGate } from "@/components/features/FeatureGate";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 
 function MarketingContent() {
   const { currentClinic } = useAuth();
+  const { hasFeature } = usePlanFeatures();
 
   if (!currentClinic) return null;
+
+  const hasCampaigns = hasFeature('whatsapp_campaigns');
+  const hasAutomations = hasFeature('whatsapp_automations');
 
   return (
     <RoleGuard permission="view_marketing">
@@ -31,10 +37,12 @@ function MarketingContent() {
             <TabsTrigger value="campaigns" className="gap-2">
               <Send className="h-4 w-4" />
               Campanhas
+              {!hasCampaigns && <Lock className="h-3 w-3 ml-1 opacity-50" />}
             </TabsTrigger>
             <TabsTrigger value="automations" className="gap-2">
               <Zap className="h-4 w-4" />
               Automações
+              {!hasAutomations && <Lock className="h-3 w-3 ml-1 opacity-50" />}
             </TabsTrigger>
             <TabsTrigger value="consents" className="gap-2">
               <Shield className="h-4 w-4" />
@@ -51,11 +59,15 @@ function MarketingContent() {
           </TabsContent>
 
           <TabsContent value="campaigns">
-            <CampaignsPanel />
+            <FeatureGate feature="whatsapp_campaigns" showUpgradePrompt>
+              <CampaignsPanel />
+            </FeatureGate>
           </TabsContent>
 
           <TabsContent value="automations">
-            <AutomationsPanel />
+            <FeatureGate feature="whatsapp_automations" showUpgradePrompt>
+              <AutomationsPanel />
+            </FeatureGate>
           </TabsContent>
 
           <TabsContent value="consents">

@@ -29,6 +29,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import BirthdayMessagesHistory from "@/components/dashboard/BirthdayMessagesHistory";
 import PendingPayslipReviews from "@/components/dashboard/PendingPayslipReviews";
+import { FeatureGateInline } from "@/components/features/FeatureGate";
 
 interface DashboardStats {
   todayAppointments: number;
@@ -485,8 +486,10 @@ export default function DashboardOverview() {
       {/* Pending Payslip Reviews */}
       <PendingPayslipReviews />
 
-      {/* Birthday Messages History */}
-      <BirthdayMessagesHistory />
+      {/* Birthday Messages History - Protected by whatsapp_birthday_messages feature */}
+      <FeatureGateInline feature="whatsapp_birthday_messages">
+        <BirthdayMessagesHistory />
+      </FeatureGateInline>
 
       {/* Footer with Primary Color */}
       <div className="bg-gradient-to-r from-primary to-primary-dark -mx-4 sm:-mx-6 lg:-mx-8 mt-8 px-4 sm:px-6 lg:px-8 py-4 rounded-t-2xl">
