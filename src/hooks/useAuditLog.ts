@@ -17,7 +17,8 @@ type AuditAction =
   | 'delete_clinic'
   | 'new_user_signup'
   | 'create_user'
-  | 'update_user';
+  | 'update_user'
+  | 'confirm_user_email';
 
 type EntityType = 'clinic' | 'user' | 'super_admin' | 'system' | 'subscription';
 
