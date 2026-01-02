@@ -1,10 +1,16 @@
-import { Link, useParams, Navigate } from "react-router-dom";
+import { Link, useParams, useLocation, Navigate } from "react-router-dom";
 import { ArrowRight, FileText } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { docsCategories } from "./DocsLayout";
 
 export default function CategoryPage() {
-  const { categoryId } = useParams<{ categoryId: string }>();
+  const { categoryId: paramCategoryId } = useParams<{ categoryId: string }>();
+  const location = useLocation();
+  
+  // Extract category from URL path if not provided as param
+  // e.g., /ajuda/primeiros-passos -> "primeiros-passos"
+  const pathParts = location.pathname.split('/').filter(Boolean);
+  const categoryId = paramCategoryId || (pathParts.length >= 2 ? pathParts[1] : null);
   
   const category = docsCategories.find(c => c.id === categoryId);
   
