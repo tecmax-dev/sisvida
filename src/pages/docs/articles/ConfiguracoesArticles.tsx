@@ -1,7 +1,9 @@
 import { Navigate, useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, ArrowRight, Clock, Lightbulb, AlertCircle, Settings, Users, Shield, FileText } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Lightbulb, AlertCircle, Shield, Users, FileText } from "lucide-react";
+import dashboardMockup from "@/assets/dashboard-mockup.png";
+import heroMockup from "@/assets/hero-mockup.png";
 
 const articles: Record<string, {
   title: string;
@@ -24,8 +26,8 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=400&fit=crop" 
-              alt="Configurações gerais" 
+              src="/docs/tela-home.png" 
+              alt="Tela de Configurações Eclini" 
               className="rounded-lg w-full"
             />
           </div>
@@ -121,8 +123,8 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=800&h=400&fit=crop" 
-              alt="Gerenciamento de usuários" 
+              src={dashboardMockup} 
+              alt="Gerenciamento de Usuários Eclini" 
               className="rounded-lg w-full"
             />
           </div>
@@ -153,8 +155,8 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src="https://images.unsplash.com/photo-1586281380117-5a60ae2050cc?w=800&h=400&fit=crop" 
-              alt="Configuração de documentos" 
+              src={heroMockup} 
+              alt="Configuração de Documentos Eclini" 
               className="rounded-lg w-full"
             />
           </div>
@@ -256,9 +258,9 @@ const articles: Record<string, {
 
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
-            src="https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=800&h=400&fit=crop" 
-            alt="Segurança de dados" 
-            className="rounded-lg w-full"
+            src="/eclini-logo.png" 
+            alt="Segurança Eclini" 
+            className="rounded-lg w-full max-w-xs mx-auto"
           />
         </div>
 

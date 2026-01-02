@@ -50,8 +50,8 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="https://images.unsplash.com/photo-1611746872915-64382b5c76da?w=800&h=400&fit=crop" 
-              alt="Configuração WhatsApp" 
+              src="/eclini-whatsapp-header.jpg" 
+              alt="Configuração WhatsApp Eclini" 
               className="rounded-lg w-full"
             />
           </div>
@@ -90,8 +90,8 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src="https://images.unsplash.com/photo-1577563908411-5077b6dc7624?w=800&h=400&fit=crop" 
-              alt="Lembretes automáticos" 
+              src="/docs/tela-home.png" 
+              alt="Dashboard Eclini com lembretes" 
               className="rounded-lg w-full"
             />
           </div>
@@ -188,8 +188,8 @@ const articles: Record<string, {
 
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
-            src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&h=400&fit=crop" 
-            alt="Confirmação de consultas" 
+            src="/docs/tela-home.png" 
+            alt="Tela de agenda Eclini com status" 
             className="rounded-lg w-full"
           />
         </div>
@@ -226,8 +226,8 @@ const articles: Record<string, {
 
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
-            src="https://images.unsplash.com/photo-1513151233558-d860c5398176?w=800&h=400&fit=crop" 
-            alt="Mensagem de aniversário" 
+            src="/birthday-header.webp" 
+            alt="Imagem de aniversário Eclini" 
             className="rounded-lg w-full"
           />
         </div>

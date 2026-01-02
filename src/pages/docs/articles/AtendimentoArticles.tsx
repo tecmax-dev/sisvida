@@ -2,6 +2,8 @@ import { Navigate, useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, ArrowRight, Clock, Lightbulb, AlertCircle, CheckCircle2 } from "lucide-react";
+import dashboardMockup from "@/assets/dashboard-mockup.png";
+import heroMockup from "@/assets/hero-mockup.png";
 
 const articles: Record<string, {
   title: string;
@@ -56,8 +58,8 @@ const articles: Record<string, {
 
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
-            src="https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=800&h=400&fit=crop" 
-            alt="Fluxo de atendimento" 
+            src={dashboardMockup} 
+            alt="Dashboard Eclini - Fluxo de Atendimento" 
             className="rounded-lg w-full"
           />
         </div>
@@ -105,8 +107,8 @@ const articles: Record<string, {
 
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
-            src="https://images.unsplash.com/photo-1666214280557-f1b5022eb634?w=800&h=400&fit=crop" 
-            alt="Iniciando consulta" 
+            src="/docs/tela-home.png" 
+            alt="Tela de Agenda Eclini" 
             className="rounded-lg w-full"
           />
         </div>
@@ -174,8 +176,8 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="https://images.unsplash.com/photo-1587854692152-cbe660dbde88?w=800&h=400&fit=crop" 
-              alt="Emissão de prescrição" 
+              src={heroMockup} 
+              alt="Tela de Prescrição Eclini" 
               className="rounded-lg w-full"
             />
           </div>
@@ -237,8 +239,8 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=800&h=400&fit=crop" 
-              alt="Emissão de atestado" 
+              src={dashboardMockup} 
+              alt="Emissão de documentos Eclini" 
               className="rounded-lg w-full"
             />
           </div>

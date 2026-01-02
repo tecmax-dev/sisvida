@@ -2,6 +2,8 @@ import { Navigate, useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, ArrowRight, Clock, Lightbulb, AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
+import dashboardMockup from "@/assets/dashboard-mockup.png";
+import heroMockupScreens from "@/assets/hero-mockup-screens.png";
 
 const articles: Record<string, {
   title: string;
@@ -25,8 +27,8 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=800&h=400&fit=crop" 
-              alt="Dashboard financeiro" 
+              src={dashboardMockup} 
+              alt="Dashboard Financeiro Eclini" 
               className="rounded-lg w-full"
             />
           </div>
@@ -95,8 +97,8 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&h=400&fit=crop" 
-              alt="Lançamento de receita" 
+              src="/docs/tela-home.png" 
+              alt="Tela de Transações Financeiras Eclini" 
               className="rounded-lg w-full"
             />
           </div>
@@ -166,8 +168,8 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="https://images.unsplash.com/photo-1554224154-26032ffc0d07?w=800&h=400&fit=crop" 
-              alt="Controle de despesas" 
+              src={heroMockupScreens} 
+              alt="Controle de despesas Eclini" 
               className="rounded-lg w-full"
             />
           </div>
@@ -259,8 +261,8 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&h=400&fit=crop" 
-              alt="Relatórios financeiros" 
+              src={dashboardMockup} 
+              alt="Relatórios Financeiros Eclini" 
               className="rounded-lg w-full"
             />
           </div>
