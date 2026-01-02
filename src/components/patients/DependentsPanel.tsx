@@ -68,6 +68,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [dependentToDelete, setDependentToDelete] = useState<Dependent | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [hasCheckedAutoOpen, setHasCheckedAutoOpen] = useState(false);
   const { toast } = useToast();
 
@@ -214,8 +215,9 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
     setIsAdding(true);
   };
 
-  const handleDelete = async () => {
+  const handleInactivate = async () => {
     if (!dependentToDelete) return;
+    setIsDeleting(true);
 
     try {
       const { error } = await supabase
@@ -240,6 +242,40 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
         description: "Não foi possível inativar o dependente.",
         variant: "destructive",
       });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!dependentToDelete) return;
+    setIsDeleting(true);
+
+    try {
+      const { error } = await supabase
+        .from("patient_dependents")
+        .delete()
+        .eq("id", dependentToDelete.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Dependente excluído",
+        description: `${dependentToDelete.name} foi excluído permanentemente.`,
+      });
+
+      setDeleteDialogOpen(false);
+      setDependentToDelete(null);
+      fetchDependents();
+    } catch (error) {
+      console.error("Error deleting dependent:", error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o dependente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -500,17 +536,36 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Inativar dependente?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja inativar <strong>{dependentToDelete?.name}</strong>?
-              O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.
+            <AlertDialogTitle>Remover dependente?</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>O que deseja fazer com <strong>{dependentToDelete?.name}</strong>?</p>
+              <p className="text-sm">
+                <strong>Inativar:</strong> O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.
+              </p>
+              <p className="text-sm text-destructive">
+                <strong>Excluir permanentemente:</strong> Remove todos os dados do dependente. Esta ação não pode ser desfeita.
+              </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <Button 
+              variant="outline" 
+              onClick={handleInactivate} 
+              disabled={isDeleting}
+              className="border-amber-500 text-amber-600 hover:bg-amber-50"
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <UserX className="h-4 w-4 mr-1" />}
               Inativar
-            </AlertDialogAction>
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handlePermanentDelete} 
+              disabled={isDeleting}
+            >
+              {isDeleting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
+              Excluir Permanentemente
+            </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
