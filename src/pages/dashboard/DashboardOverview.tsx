@@ -73,7 +73,11 @@ const getGreeting = () => {
 };
 
 export default function DashboardOverview() {
-  const { currentClinic, profile } = useAuth();
+  const { currentClinic, profile, userRoles } = useAuth();
+  
+  // Check if current user is a professional (limited view)
+  const currentClinicRole = userRoles.find(r => r.clinic_id === currentClinic?.id);
+  const isProfessionalRole = currentClinicRole?.role === 'professional';
   const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats>({
     todayAppointments: 0,
@@ -483,13 +487,15 @@ export default function DashboardOverview() {
         </CardContent>
       </Card>
 
-      {/* Pending Payslip Reviews */}
-      <PendingPayslipReviews />
+      {/* Pending Payslip Reviews - Hide from professionals */}
+      {!isProfessionalRole && <PendingPayslipReviews />}
 
-      {/* Birthday Messages History - Protected by whatsapp_birthday_messages feature */}
-      <FeatureGateInline feature="whatsapp_birthday_messages">
-        <BirthdayMessagesHistory />
-      </FeatureGateInline>
+      {/* Birthday Messages History - Protected by feature and hidden from professionals */}
+      {!isProfessionalRole && (
+        <FeatureGateInline feature="whatsapp_birthday_messages">
+          <BirthdayMessagesHistory />
+        </FeatureGateInline>
+      )}
 
       {/* Footer with Primary Color */}
       <div className="bg-gradient-to-r from-primary to-primary-dark -mx-4 sm:-mx-6 lg:-mx-8 mt-8 px-4 sm:px-6 lg:px-8 py-4 rounded-t-2xl">
