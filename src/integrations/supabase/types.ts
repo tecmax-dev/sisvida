@@ -3740,6 +3740,7 @@ export type Database = {
           name: string
           notes: string | null
           patient_id: string
+          phone: string | null
           relationship: string | null
           updated_at: string
         }
@@ -3758,6 +3759,7 @@ export type Database = {
           name: string
           notes?: string | null
           patient_id: string
+          phone?: string | null
           relationship?: string | null
           updated_at?: string
         }
@@ -3776,6 +3778,7 @@ export type Database = {
           name?: string
           notes?: string | null
           patient_id?: string
+          phone?: string | null
           relationship?: string | null
           updated_at?: string
         }
