@@ -2911,12 +2911,19 @@ async function promptInsurancePlanSelection(
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   // Fetch active insurance plans for the clinic
-  const { data: plans, error } = await supabase
+  // Exclude "Rodoviários" from the list during new registration
+  const { data: allPlans, error } = await supabase
     .from('insurance_plans')
     .select('id, name')
     .eq('clinic_id', config.clinic_id)
     .eq('is_active', true)
     .order('name');
+  
+  // Filter out "Rodoviários" plan (case-insensitive)
+  const plans = allPlans?.filter((p: { name: string }) => 
+    !p.name.toLowerCase().includes('rodoviário') && 
+    !p.name.toLowerCase().includes('rodoviarios')
+  ) || [];
   
   if (error || !plans || plans.length === 0) {
     // No plans available, continue without one
