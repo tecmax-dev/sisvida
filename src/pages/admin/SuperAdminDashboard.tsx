@@ -10,8 +10,11 @@ import {
   Calendar, 
   UserCheck, 
   ArrowRight,
-  TrendingUp
+  TrendingUp,
+  Download,
+  Loader2
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface Stats {
   totalClinics: number;
@@ -31,6 +34,52 @@ export default function SuperAdminDashboard() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [recentClinics, setRecentClinics] = useState<RecentClinic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [backupLoading, setBackupLoading] = useState(false);
+
+  const handleBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Sessão expirada");
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-sql-backup`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Erro ao gerar backup");
+      }
+
+      const sql = await response.text();
+      const blob = new Blob([sql], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `backup_${new Date().toISOString().split('T')[0]}.sql`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("Backup gerado com sucesso!");
+    } catch (error) {
+      console.error("Backup error:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao gerar backup");
+    } finally {
+      setBackupLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchStats();
@@ -88,12 +137,22 @@ export default function SuperAdminDashboard() {
             Visão geral de todas as clínicas do sistema
           </p>
         </div>
-        <Button asChild>
-          <Link to="/admin/clinics">
-            Ver todas as clínicas
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleBackup} disabled={backupLoading}>
+            {backupLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Backup SQL
+          </Button>
+          <Button asChild>
+            <Link to="/admin/clinics">
+              Ver todas as clínicas
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
