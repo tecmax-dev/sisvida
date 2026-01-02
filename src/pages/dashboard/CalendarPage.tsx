@@ -288,6 +288,9 @@ interface Appointment {
 export default function CalendarPage() {
   const { currentClinic, user, userRoles } = useAuth();
   const { isProfessionalOnly, hasPermission } = usePermissions();
+  
+  // Permissão para atender pacientes (requer acesso a prontuários médicos)
+  const canAttendPatient = hasPermission('manage_medical_records');
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -1460,6 +1463,12 @@ export default function CalendarPage() {
   };
 
   const openAppointmentPanel = (appointment: Appointment) => {
+    // Recepcionistas/atendentes não têm acesso à página de atendimento
+    // Eles podem apenas editar o agendamento
+    if (!canAttendPatient) {
+      openEditDialog(appointment);
+      return;
+    }
     // Navigate to dedicated attendance page instead of opening modal
     navigate(`/dashboard/atendimento/${appointment.id}`);
   };
@@ -2294,8 +2303,8 @@ export default function CalendarPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-popover min-w-[180px]" onClick={(e) => e.stopPropagation()}>
-              {/* Atender */}
-              {canAttend && (
+              {/* Atender - apenas para quem tem permissão de prontuário médico */}
+              {canAttend && canAttendPatient && (
                 <DropdownMenuItem onClick={() => openAppointmentPanel(appointment)}>
                   <Stethoscope className="h-4 w-4 mr-2" />
                   {isInProgress ? "Continuar Atendimento" : "Atender"}
@@ -2333,14 +2342,16 @@ export default function CalendarPage() {
                 </>
               )}
               
-              {appointment.status === "arrived" && (
+              {/* Iniciar Atendimento - apenas para quem tem permissão de prontuário médico */}
+              {appointment.status === "arrived" && canAttendPatient && (
                 <DropdownMenuItem onClick={() => handleStartAttendance(appointment)}>
                   <Stethoscope className="h-4 w-4 mr-2 text-purple-600" />
                   Iniciar Atendimento
                 </DropdownMenuItem>
               )}
               
-              {appointment.status === "in_progress" && (
+              {/* Concluir - apenas para quem tem permissão de prontuário médico */}
+              {appointment.status === "in_progress" && canAttendPatient && (
                 <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "completed")}>
                   <Check className="h-4 w-4 mr-2 text-gray-500" />
                   Concluir
