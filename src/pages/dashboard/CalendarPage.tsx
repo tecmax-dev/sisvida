@@ -338,6 +338,7 @@ export default function CalendarPage() {
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
   const [sendingTelemedicineLink, setSendingTelemedicineLink] = useState<string | null>(null);
   const [directReplyEnabled, setDirectReplyEnabled] = useState(false);
+  const [sendingBulkReminder, setSendingBulkReminder] = useState<string | null>(null); // professionalId or null
   
   // Edit state
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -1709,6 +1710,95 @@ export default function CalendarPage() {
     } finally {
       setSendingWhatsApp(null);
     }
+  };
+
+  // Envio de lembretes em massa para todos os agendamentos visíveis de um profissional
+  const handleBulkWhatsAppReminder = async (professionalId: string, appointmentsToSend: Appointment[]) => {
+    // Filtrar apenas agendamentos elegíveis (não cancelados, não concluídos, não faltou)
+    const eligibleAppointments = appointmentsToSend.filter(apt => 
+      apt.status !== 'cancelled' && 
+      apt.status !== 'completed' && 
+      apt.status !== 'no_show'
+    );
+
+    if (eligibleAppointments.length === 0) {
+      toast({
+        title: "Nenhum agendamento elegível",
+        description: "Não há agendamentos pendentes para enviar lembrete.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSendingBulkReminder(professionalId);
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    for (const appointment of eligibleAppointments) {
+      const patient = patients.find(p => p.id === appointment.patient_id);
+      const displayName = getAppointmentDisplayName(appointment);
+      const phoneToUse = patient?.phone;
+
+      if (!phoneToUse) {
+        errorCount++;
+        continue;
+      }
+
+      try {
+        const appointmentDate = new Date(appointment.appointment_date + 'T12:00:00');
+        const formattedDate = appointmentDate.toLocaleDateString('pt-BR', { 
+          weekday: 'long', 
+          day: 'numeric', 
+          month: 'long' 
+        });
+        
+        const baseUrl = window.location.origin;
+        const confirmationLink = (!directReplyEnabled && appointment.confirmation_token)
+          ? `${baseUrl}/consulta/${appointment.confirmation_token}`
+          : undefined;
+        
+        const message = formatAppointmentReminder(
+          displayName,
+          currentClinic?.name || 'Clínica',
+          formattedDate,
+          appointment.start_time.slice(0, 5),
+          appointment.professional?.name || 'Profissional',
+          confirmationLink,
+          directReplyEnabled
+        );
+
+        const { data, error } = await supabase.functions.invoke('send-whatsapp', {
+          body: { 
+            phone: phoneToUse, 
+            message, 
+            clinicId: currentClinic?.id,
+            type: directReplyEnabled ? 'reminder_direct_reply' : 'reminder'
+          },
+        });
+
+        if (error) {
+          errorCount++;
+        } else if (data?.success) {
+          successCount++;
+        } else {
+          errorCount++;
+        }
+
+        // Pequeno delay para não sobrecarregar a API
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch {
+        errorCount++;
+      }
+    }
+
+    setSendingBulkReminder(null);
+
+    toast({
+      title: "Lembretes enviados",
+      description: `${successCount} enviado(s) com sucesso${errorCount > 0 ? `, ${errorCount} falha(s)` : ''}.`,
+      variant: successCount > 0 ? "default" : "destructive",
+    });
   };
 
   const handleSendTelemedicineLink = async (appointment: Appointment) => {
@@ -3098,10 +3188,29 @@ export default function CalendarPage() {
                               <br />
                               <span>Total {totalAppointments}</span>
                             </div>
+                            {/* Botão de lembrete em massa */}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-xs gap-1"
+                              disabled={sendingBulkReminder === group.professional.id}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleBulkWhatsAppReminder(group.professional.id, group.appointments);
+                              }}
+                              title="Enviar lembrete via WhatsApp para todos"
+                            >
+                              {sendingBulkReminder === group.professional.id ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="h-4 w-4 text-success" />
+                              )}
+                              <span className="hidden sm:inline">Lembrar todos</span>
+                            </Button>
                           </div>
                           
-                          {/* Lista de agendamentos do profissional */}
-                          <div className="divide-y divide-border/30 max-h-[500px] overflow-y-auto">
+                          {/* Lista de agendamentos do profissional - sem limite de altura */}
+                          <div className="divide-y divide-border/30">
                             {group.appointments
                               .sort((a, b) => a.start_time.localeCompare(b.start_time))
                               .map((appointment) => (
@@ -3111,10 +3220,10 @@ export default function CalendarPage() {
                             ))}
                           </div>
                         </div>
-                      );
-                    })}
-                  </div>
-                );
+                    );
+                  })}
+                </div>
+              );
               })()
             ) : viewMode === "week" ? (
               <WeekView />
