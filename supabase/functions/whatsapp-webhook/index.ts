@@ -3700,7 +3700,6 @@ async function handleConfirmRegistration(
               issued_at: new Date().toISOString(),
               expires_at: expiresAt.toISOString(),
               is_active: true,
-              token: crypto.randomUUID(),
             });
           
           if (insertCardError) {
@@ -3710,9 +3709,31 @@ async function handleConfirmRegistration(
           }
         }
         
-        // Clear registration data and reset to ask for CPF again
+        // After successful registration, keep the same identified patient and go straight to the main menu
         await updateSession(supabase, session.id, {
-          state: 'WAITING_CPF',
+          state: 'MAIN_MENU',
+          patient_id: patient.id,
+          patient_name: patient.name,
+          action_type: null,
+          selected_professional_id: null,
+          selected_professional_name: null,
+          selected_procedure_id: null,
+          selected_date: null,
+          selected_time: null,
+          available_professionals: null,
+          available_procedures: null,
+          available_dates: null,
+          available_times: null,
+          pending_appointments: null,
+          appointments_list: null,
+          list_action: null,
+          selected_appointment_id: null,
+          booking_for: 'titular',
+          selected_dependent_id: null,
+          selected_dependent_name: null,
+          is_dependent_direct_booking: false,
+
+          // Clear registration data
           pending_registration_cpf: null,
           pending_registration_name: null,
           pending_registration_birthdate: null,
@@ -3725,8 +3746,18 @@ async function handleConfirmRegistration(
         });
         
         const firstName = patient.name.split(' ')[0];
-        await sendWhatsAppMessage(config, phone, MESSAGES.registrationSuccess(firstName));
-        return { handled: true, newState: 'WAITING_CPF' };
+        await sendWhatsAppMessage(
+          config,
+          phone,
+          `✅ *Cadastro realizado com sucesso!*
+
+Olá, *${firstName}*! Seja bem-vindo(a)! 🎉
+
+Sua carteirinha digital foi criada com validade de *15 dias*.
+
+${MESSAGES.mainMenu}${MESSAGES.hintSelectOption}`
+        );
+        return { handled: true, newState: 'MAIN_MENU' };
       }
       
     } catch (error) {
