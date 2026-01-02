@@ -716,9 +716,9 @@ Por favor, informe seu *nome completo*:`,
 Agora informe sua *data de nascimento* no formato DD/MM/AAAA:
 (Exemplo: 15/03/1990)`,
 
-  askEmployerCnpj: `Informe o *CNPJ da empresa* onde você trabalha (opcional):
+  askEmployerCnpj: `Informe o *CNPJ da empresa* onde você trabalha:
 
-_Digite apenas os números ou envie "pular" para continuar sem CNPJ._`,
+_Digite apenas os 14 números do CNPJ._`,
 
   confirmRegistration: (name: string, birthDate: string, cnpj: string | null) => {
     let msg = `📋 *Confirme seus dados:*\n\n`;
@@ -3275,47 +3275,24 @@ async function handleWaitingRegistrationCnpj(
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   const input = messageText.trim().toLowerCase();
   
-  // Check if user wants to skip
-  if (input === 'pular' || input === 'skip' || input === '0' || input === 'não' || input === 'nao') {
-    // Skip CNPJ - go directly to confirm registration
-    await updateSession(supabase, session.id, {
-      state: 'CONFIRM_REGISTRATION',
-      pending_registration_cnpj: null,
-    });
-    
-    // Format display date
-    const birthDate = session.pending_registration_birthdate 
-      ? new Date(session.pending_registration_birthdate + 'T00:00:00').toLocaleDateString('pt-BR')
-      : '';
-    
-    const confirmMsg = MESSAGES.confirmRegistration(session.pending_registration_name || '', birthDate, null);
-    
-    await sendWhatsAppButtons(
-      config,
-      phone,
-      '📋 Confirmar Cadastro',
-      confirmMsg,
-      [
-        { id: 'confirm_yes', text: '✅ Confirmar' },
-        { id: 'confirm_no', text: '❌ Recomeçar' }
-      ],
-      'Responda 1 ou 2'
-    );
-    
-    return { handled: true, newState: 'CONFIRM_REGISTRATION' };
+  // CNPJ is now REQUIRED for titular registration - do not allow skipping
+  // Block any skip attempts
+  if (input === 'pular' || input === 'skip' || input === '0' || input === 'não' || input === 'nao' || input === 'n') {
+    await sendWhatsAppMessage(config, phone, `❌ O CNPJ da empresa é *obrigatório* para o cadastro.\n\nPor favor, digite os *14 números* do CNPJ:`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
   }
   
   // Clean and validate CNPJ
   const cleanCnpj = messageText.replace(/\D/g, '');
   
   if (cleanCnpj.length !== 14) {
-    await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido (deve ter 14 dígitos).\n\nDigite o CNPJ ou "pular" para continuar sem:`);
+    await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido (deve ter 14 dígitos).\n\nPor favor, digite o CNPJ completo da empresa:`);
     return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
   }
   
   // Validate CNPJ checksum
   if (!isValidCNPJ(cleanCnpj)) {
-    await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido. Verifique os dígitos e tente novamente.\n\nDigite o CNPJ ou "pular" para continuar sem:`);
+    await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido. Verifique os dígitos e tente novamente:`);
     return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
   }
   
@@ -3326,7 +3303,7 @@ async function handleWaitingRegistrationCnpj(
   const companyData = await fetchCNPJData(cleanCnpj);
   
   if (!companyData.valid) {
-    await sendWhatsAppMessage(config, phone, `⚠️ Não foi possível encontrar este CNPJ na Receita Federal.\n\nVerifique o número e tente novamente, ou digite "pular" para continuar sem:`);
+    await sendWhatsAppMessage(config, phone, `⚠️ Não foi possível encontrar este CNPJ na Receita Federal.\n\nVerifique o número e tente novamente:`);
     return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
   }
   
