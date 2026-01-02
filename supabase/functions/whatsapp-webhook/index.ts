@@ -2935,11 +2935,15 @@ async function promptInsurancePlanSelection(
     available_insurance_plans: plans,
   });
   
-  // Create list buttons (max 10)
-  const listItems = plans.slice(0, 10).map((p: any, i: number) => ({
-    id: `plan_${p.id}`,
-    text: `${i + 1}️⃣ ${p.name}`.substring(0, 24)
-  }));
+  // Create list sections with rows (max 10)
+  const listSections: ListSection[] = [{
+    title: 'Convênios Disponíveis',
+    rows: plans.slice(0, 10).map((p: any, i: number) => ({
+      id: `plan_${p.id}`,
+      title: `${i + 1}️⃣ ${p.name}`.substring(0, 24),
+      description: ''
+    }))
+  }];
   
   await sendWhatsAppList(
     config,
@@ -2947,7 +2951,7 @@ async function promptInsurancePlanSelection(
     '🏥 Convênio',
     MESSAGES.selectInsurancePlan(plans),
     'Selecionar Convênio',
-    listItems,
+    listSections,
     'Escolha o número do convênio'
   );
   
