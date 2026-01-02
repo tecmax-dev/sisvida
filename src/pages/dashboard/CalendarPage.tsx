@@ -1656,11 +1656,10 @@ export default function CalendarPage() {
   const hasActiveFilters = filterProfessionals.length > 0 || filterType !== "all" || searchQuery.trim() !== "";
 
   const handleSendWhatsAppReminder = async (appointment: Appointment) => {
-    const patient = patients.find(p => p.id === appointment.patient_id);
-
     // Para dependentes: nome do dependente; telefone: sempre do titular (paciente)
     const displayName = getAppointmentDisplayName(appointment);
-    const phoneToUse = patient?.phone;
+    // Usar telefone diretamente do appointment.patient (dados já carregados via join)
+    const phoneToUse = appointment.patient?.phone;
 
     if (!phoneToUse) {
       toast({
