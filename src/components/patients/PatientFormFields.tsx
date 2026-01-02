@@ -25,6 +25,8 @@ interface PatientFormFieldsProps {
   insurancePlans: InsurancePlan[];
   onCepLookup: () => void;
   cepLoading: boolean;
+  onCnpjLookup?: () => void;
+  cnpjLoading?: boolean;
 }
 
 export interface PatientFormData {
@@ -142,6 +144,8 @@ export function PatientFormFields({
   insurancePlans,
   onCepLookup,
   cepLoading,
+  onCnpjLookup,
+  cnpjLoading,
 }: PatientFormFieldsProps) {
   const updateField = <K extends keyof PatientFormData>(
     field: K,
@@ -665,13 +669,31 @@ export function PatientFormFields({
         
         <div>
           <Label htmlFor="employerCnpj">CNPJ da Empresa</Label>
-          <Input
-            id="employerCnpj"
-            value={formData.employerCnpj}
-            onChange={(e) => updateField('employerCnpj', formatCNPJ(e.target.value))}
-            placeholder="00.000.000/0000-00"
-            className="mt-1"
-          />
+          <div className="flex gap-2 mt-1">
+            <Input
+              id="employerCnpj"
+              value={formData.employerCnpj}
+              onChange={(e) => updateField('employerCnpj', formatCNPJ(e.target.value))}
+              placeholder="00.000.000/0000-00"
+              className="flex-1"
+            />
+            {onCnpjLookup && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={onCnpjLookup}
+                disabled={cnpjLoading || !formData.employerCnpj || formData.employerCnpj.replace(/\D/g, '').length < 14}
+                title="Buscar dados do CNPJ"
+              >
+                {cnpjLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Search className="h-4 w-4" />
+                )}
+              </Button>
+            )}
+          </div>
         </div>
         
         <div>
