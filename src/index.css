@@ -300,42 +300,33 @@
   }
 }
 
-/* Collapsible smooth accordion animations */
+/* Collapsible smooth accordion animations (no height-jump) */
 .collapsible-content {
-  overflow: hidden;
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--transition-slow);
 }
 
 .collapsible-content[data-state="open"] {
-  animation: accordion-expand 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  grid-template-rows: 1fr;
 }
 
-.collapsible-content[data-state="closed"] {
-  animation: accordion-collapse 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+.collapsible-inner {
+  overflow: hidden;
 }
 
-@keyframes accordion-expand {
+.collapsible-content[data-state="open"] .collapsible-inner {
+  animation: collapsible-fade-in 180ms ease-out;
+}
+
+@keyframes collapsible-fade-in {
   from {
     opacity: 0;
-    max-height: 0;
-    transform: translateY(-8px);
+    transform: translateY(-6px);
   }
   to {
     opacity: 1;
-    max-height: 500px;
     transform: translateY(0);
-  }
-}
-
-@keyframes accordion-collapse {
-  from {
-    opacity: 1;
-    max-height: 500px;
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    max-height: 0;
-    transform: translateY(-8px);
   }
 }
 
