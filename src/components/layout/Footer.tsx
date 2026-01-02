@@ -73,18 +73,18 @@ export function Footer() {
             <h4 className="font-semibold text-foreground mb-4">Legal</h4>
             <ul className="space-y-3">
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <a href="/lgpd" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Termos de Uso
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <a href="/privacidade" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Política de Privacidade
                 </a>
               </li>
               <li>
-                <a href="#" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Cookies
+                <a href="/lgpd" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  LGPD
                 </a>
               </li>
             </ul>

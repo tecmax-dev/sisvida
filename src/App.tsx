@@ -50,6 +50,7 @@ const AwaitingConfirmation = lazy(() => import("./pages/AwaitingConfirmation"));
 const PublicPanel = lazy(() => import("./pages/PublicPanel"));
 const PublicTotem = lazy(() => import("./pages/PublicTotem"));
 const CardValidation = lazy(() => import("./pages/CardValidation"));
+const LgpdPolicy = lazy(() => import("./pages/LgpdPolicy"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -198,6 +199,8 @@ const App = () => (
               <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/lgpd" element={<LgpdPolicy />} />
+                <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/instalar" element={<InstallPage />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/cadastro" element={<PublicSignup />} />
