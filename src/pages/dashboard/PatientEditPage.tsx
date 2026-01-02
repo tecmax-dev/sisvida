@@ -14,6 +14,7 @@ import { PatientHeader } from "@/components/patients/PatientHeader";
 import { PatientTabs, PatientTab } from "@/components/patients/PatientTabs";
 import { PatientFormFields, PatientFormData } from "@/components/patients/PatientFormFields";
 import { useCepLookup } from "@/hooks/useCepLookup";
+import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 import { PatientRecordsModal } from "@/components/patients/modals/PatientRecordsModal";
 import { PatientAnamnesisModal } from "@/components/patients/modals/PatientAnamnesisModal";
 import { PatientPrescriptionModal } from "@/components/patients/modals/PatientPrescriptionModal";
@@ -132,6 +133,7 @@ export default function PatientEditPage() {
   const { openModal, closeModal, isModalOpen, getModalData } = useModal();
   const { toast } = useToast();
   const { lookupCep, loading: cepLoading } = useCepLookup();
+  const { lookupCnpj, cnpjLoading } = useCnpjLookup();
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -301,6 +303,20 @@ export default function PatientEditPage() {
         city: cepData.localidade || prev.city,
         state: cepData.uf || prev.state,
         complement: cepData.complemento || prev.complement,
+      }));
+    }
+  };
+
+  // CNPJ lookup handler
+  const handleCnpjLookup = async () => {
+    if (!formData.employerCnpj) return;
+    
+    const cnpjData = await lookupCnpj(formData.employerCnpj);
+    if (cnpjData) {
+      setFormData((prev) => ({
+        ...prev,
+        // Só preencher nome da empresa se estiver vazio
+        employerName: prev.employerName || cnpjData.nome_fantasia || cnpjData.razao_social,
       }));
     }
   };
@@ -689,6 +705,8 @@ export default function PatientEditPage() {
                 insurancePlans={insurancePlans}
                 onCepLookup={handleCepLookup}
                 cepLoading={cepLoading}
+                onCnpjLookup={handleCnpjLookup}
+                cnpjLoading={cnpjLoading}
               />
             </form>
           </div>
