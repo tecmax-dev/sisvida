@@ -143,7 +143,6 @@ interface BookingSession {
   is_dependent_direct_booking?: boolean;
   // Registration flow fields
   pending_registration_cpf?: string | null;
-  pending_registration_phone?: string | null;
   pending_registration_name?: string | null;
   pending_registration_birthdate?: string | null;
   pending_registration_cnpj?: string | null;
@@ -1848,7 +1847,6 @@ async function handleWaitingCpf(
       await updateSession(supabase, session.id, {
         state: 'OFFER_REGISTRATION',
         pending_registration_cpf: cleanCpf,
-        pending_registration_phone: phone,
       });
       await sendWhatsAppButtons(
         config,
@@ -2725,7 +2723,6 @@ async function handleConfirmRegistration(
       pending_registration_name: null,
       pending_registration_birthdate: null,
       pending_registration_cnpj: null,
-      pending_registration_phone: null,
     });
     await sendWhatsAppMessage(config, phone, MESSAGES.welcome + MESSAGES.hintCpf);
     return { handled: true, newState: 'WAITING_CPF' };
@@ -2803,7 +2800,6 @@ async function handleConfirmRegistration(
         pending_registration_name: null,
         pending_registration_birthdate: null,
         pending_registration_cnpj: null,
-        pending_registration_phone: null,
       });
       
       const firstName = patient.name.split(' ')[0];
