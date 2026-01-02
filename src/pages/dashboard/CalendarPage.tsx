@@ -5,6 +5,7 @@ import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentRe
 import { ToastAction } from "@/components/ui/toast";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { PreAttendanceDialog } from "@/components/appointments/PreAttendanceDialog";
+import { AppointmentAuditDialog } from "@/components/appointments/AppointmentAuditDialog";
 import { DraggableAppointment } from "@/components/appointments/DraggableAppointment";
 import { DroppableTimeSlot } from "@/components/appointments/DroppableTimeSlot";
 import { DragOverlayContent } from "@/components/appointments/DragOverlayContent";
@@ -41,6 +42,7 @@ import {
   Video,
   AlertTriangle,
   Activity,
+  History,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -364,6 +366,10 @@ export default function CalendarPage() {
   // Pre-attendance state
   const [preAttendanceDialogOpen, setPreAttendanceDialogOpen] = useState(false);
   const [preAttendanceAppointment, setPreAttendanceAppointment] = useState<Appointment | null>(null);
+  
+  // Audit state
+  const [auditDialogOpen, setAuditDialogOpen] = useState(false);
+  const [auditAppointment, setAuditAppointment] = useState<Appointment | null>(null);
   
   // Drag and Drop state
   const [activeAppointment, setActiveAppointment] = useState<Appointment | null>(null);
@@ -1398,6 +1404,11 @@ export default function CalendarPage() {
     setRescheduleDialogOpen(true);
   };
 
+  const openAuditDialog = (appointment: Appointment) => {
+    setAuditAppointment(appointment);
+    setAuditDialogOpen(true);
+  };
+
   const resetForm = () => {
     setFormPatient("");
     setSelectedPatientName("");
@@ -2347,6 +2358,14 @@ export default function CalendarPage() {
               <DropdownMenuItem onClick={() => openEditDialog(appointment)}>
                 <Pencil className="h-4 w-4 mr-2" />
                 Editar
+              </DropdownMenuItem>
+
+              <DropdownMenuSeparator />
+              
+              {/* Auditoria */}
+              <DropdownMenuItem onClick={() => openAuditDialog(appointment)}>
+                <History className="h-4 w-4 mr-2" />
+                Auditoria
               </DropdownMenuItem>
               
               {/* Cancelar */}
@@ -3353,6 +3372,18 @@ export default function CalendarPage() {
           onSaved={fetchAppointments}
         />
       )}
+
+      {/* Audit Dialog */}
+      <AppointmentAuditDialog
+        open={auditDialogOpen}
+        onOpenChange={(open) => {
+          setAuditDialogOpen(open);
+          if (!open) setAuditAppointment(null);
+        }}
+        appointmentId={auditAppointment?.id || null}
+        patientName={getAppointmentDisplayName(auditAppointment)}
+        patientPhone={auditAppointment?.patient?.phone}
+      />
     </div>
     </DndContext>
   );
