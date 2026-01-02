@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, Plus, Trash2, Edit2, Save, X, CreditCard, Calendar, User, Phone, UserX, UserCheck, Loader2 } from "lucide-react";
+import { Users, Plus, Edit2, Save, X, CreditCard, Calendar, User, Phone, UserX, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { format, parseISO, differenceInYears, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -62,6 +63,9 @@ const formatCPF = (value: string): string => {
 };
 
 export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenForm = false }: DependentsPanelProps) {
+  const { userRoles, isSuperAdmin } = useAuth();
+  const canPermanentDelete = isSuperAdmin || userRoles.some((r) => r.role === "owner" || r.role === "admin");
+
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -536,36 +540,55 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remover dependente?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {canPermanentDelete ? "Remover dependente?" : "Inativar dependente?"}
+            </AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <p>O que deseja fazer com <strong>{dependentToDelete?.name}</strong>?</p>
-              <p className="text-sm">
-                <strong>Inativar:</strong> O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.
-              </p>
-              <p className="text-sm text-destructive">
-                <strong>Excluir permanentemente:</strong> Remove todos os dados do dependente. Esta ação não pode ser desfeita.
-              </p>
+              {canPermanentDelete ? (
+                <>
+                  <p>
+                    O que deseja fazer com <strong>{dependentToDelete?.name}</strong>?
+                  </p>
+                  <p className="text-sm">
+                    <strong>Inativar:</strong> O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.
+                  </p>
+                  <p className="text-sm">
+                    <strong>Excluir permanentemente:</strong> Remove todos os dados do dependente. Esta ação não pode ser desfeita.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>
+                    Tem certeza que deseja inativar <strong>{dependentToDelete?.name}</strong>?
+                  </p>
+                  <p className="text-sm">O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.</p>
+                </>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
           <AlertDialogFooter className="flex-col sm:flex-row gap-2">
             <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-            <Button 
-              variant="outline" 
-              onClick={handleInactivate} 
-              disabled={isDeleting}
-              className="border-amber-500 text-amber-600 hover:bg-amber-50"
-            >
-              {isDeleting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <UserX className="h-4 w-4 mr-1" />}
+
+            <Button variant="outline" onClick={handleInactivate} disabled={isDeleting}>
+              {isDeleting ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <UserX className="h-4 w-4 mr-1" />
+              )}
               Inativar
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handlePermanentDelete} 
-              disabled={isDeleting}
-            >
-              {isDeleting ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Trash2 className="h-4 w-4 mr-1" />}
-              Excluir Permanentemente
-            </Button>
+
+            {canPermanentDelete && (
+              <Button variant="destructive" onClick={handlePermanentDelete} disabled={isDeleting}>
+                {isDeleting ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4 mr-1" />
+                )}
+                Excluir Permanentemente
+              </Button>
+            )}
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
