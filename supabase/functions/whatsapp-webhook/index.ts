@@ -3892,9 +3892,86 @@ async function handleSelectProfessional(
   });
 
   if (cardCheck && cardCheck[0] && cardCheck[0].card_number && !cardCheck[0].is_valid) {
-    await sendWhatsAppMessage(config, phone, 
-      `❌ Sua carteirinha (${cardCheck[0].card_number}) está vencida.\n\nPor favor, renove sua carteirinha para agendar consultas.`
-    );
+    console.log(`[booking] Patient card expired: ${cardCheck[0].card_number}`);
+    
+    // Get the card ID for payslip request
+    const { data: patientCard } = await supabase
+      .from('patient_cards')
+      .select('id, card_number, expires_at')
+      .eq('patient_id', session.patient_id)
+      .eq('clinic_id', config.clinic_id)
+      .eq('is_active', true)
+      .order('expires_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (patientCard) {
+      // Check if there's already a pending payslip request
+      const { data: existingRequest } = await supabase
+        .from('payslip_requests')
+        .select('id, status')
+        .eq('patient_id', session.patient_id)
+        .eq('clinic_id', config.clinic_id)
+        .in('status', ['pending', 'received'])
+        .maybeSingle();
+
+      const expiryDate = new Date(cardCheck[0].expires_at).toLocaleDateString('pt-BR');
+
+      if (existingRequest) {
+        // Already has a pending request
+        console.log(`[booking] Patient already has pending payslip request: ${existingRequest.id}`);
+        if (existingRequest.status === 'pending') {
+          await sendWhatsAppMessage(config, phone, 
+            `📋 Sua carteirinha (${cardCheck[0].card_number}) está vencida desde *${expiryDate}*.\n\n` +
+            `Você já tem uma solicitação de renovação em aberto!\n\n` +
+            `📸 *Envie uma foto do seu contracheque* para que possamos renovar sua carteirinha.\n\n` +
+            `Após o envio, aguarde a análise (até 48h úteis).`
+          );
+        } else {
+          // Status is 'received' - waiting for review
+          await sendWhatsAppMessage(config, phone, 
+            `📋 Sua carteirinha (${cardCheck[0].card_number}) está vencida desde *${expiryDate}*.\n\n` +
+            `✅ Recebemos seu contracheque e ele está *em análise*.\n\n` +
+            `Aguarde a liberação (até 48h úteis). Você receberá uma mensagem assim que for aprovado! 🙏`
+          );
+        }
+      } else {
+        // Create new payslip request
+        const { data: newRequest, error: requestError } = await supabase
+          .from('payslip_requests')
+          .insert({
+            clinic_id: config.clinic_id,
+            patient_id: session.patient_id,
+            card_id: patientCard.id,
+            status: 'pending',
+          })
+          .select('id')
+          .single();
+
+        if (requestError) {
+          console.error('[booking] Error creating payslip request:', requestError);
+        } else {
+          console.log(`[booking] Created payslip request: ${newRequest.id}`);
+        }
+
+        await sendWhatsAppMessage(config, phone, 
+          `📋 Sua carteirinha (${cardCheck[0].card_number}) está vencida desde *${expiryDate}*.\n\n` +
+          `Para renovar, precisamos verificar seu vínculo empregatício.\n\n` +
+          `📸 *Por favor, envie uma foto do seu contracheque* (holerite) mais recente.\n\n` +
+          `⚠️ *Importante:*\n` +
+          `• A foto deve estar legível\n` +
+          `• Deve constar seu nome e data\n` +
+          `• Após o envio, aguarde a análise (até 48h úteis)\n\n` +
+          `_Você receberá uma confirmação assim que enviar a imagem._`
+        );
+      }
+    } else {
+      // No card found, generic message
+      await sendWhatsAppMessage(config, phone, 
+        `❌ Sua carteirinha está vencida.\n\nPor favor, entre em contato com a clínica para renovar sua carteirinha.`
+      );
+    }
+    
     await updateSession(supabase, session.id, { state: 'FINISHED' });
     return { handled: true, newState: 'FINISHED' };
   }
