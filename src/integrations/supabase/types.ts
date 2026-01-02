@@ -5418,6 +5418,67 @@ export type Database = {
           },
         ]
       }
+      scheduled_automations: {
+        Row: {
+          automation_id: string | null
+          clinic_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          message_data: Json | null
+          patient_id: string | null
+          processed_at: string | null
+          scheduled_at: string
+          status: string
+        }
+        Insert: {
+          automation_id?: string | null
+          clinic_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_data?: Json | null
+          patient_id?: string | null
+          processed_at?: string | null
+          scheduled_at: string
+          status?: string
+        }
+        Update: {
+          automation_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_data?: Json | null
+          patient_id?: string | null
+          processed_at?: string | null
+          scheduled_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_automations_automation_id_fkey"
+            columns: ["automation_id"]
+            isOneToOne: false
+            referencedRelation: "automation_flows"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_automations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_automations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       segment_patients: {
         Row: {
           added_at: string
