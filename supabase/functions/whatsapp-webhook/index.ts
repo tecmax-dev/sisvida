@@ -2736,24 +2736,18 @@ async function handleSelectRegistrationType(
   }
   
   if (isDependent) {
-    // Mark as dependent.
-    // If the dependent CPF wasn't captured earlier (e.g. user started the flow without a CPF), ask now.
-    if (!session.pending_registration_cpf) {
-      await updateSession(supabase, session.id, {
-        state: 'WAITING_REGISTRATION_DEPENDENT_CPF',
-        pending_registration_type: 'dependent',
-      });
-      await sendWhatsAppMessage(config, phone, `📝 Informe o *CPF do dependente* (11 dígitos):`);
-      return { handled: true, newState: 'WAITING_REGISTRATION_DEPENDENT_CPF' };
-    }
-
-    // CPF do dependente já está na sessão; pedir CPF do titular.
+    // For dependents, we MUST always ask the dependent's CPF.
+    // Reason: the session may already have pending_registration_cpf filled with the *titular* CPF
+    // from the initial "offer registration" flow, which would incorrectly be reused for the dependent.
     await updateSession(supabase, session.id, {
-      state: 'WAITING_REGISTRATION_TITULAR_CPF',
+      state: 'WAITING_REGISTRATION_DEPENDENT_CPF',
       pending_registration_type: 'dependent',
+      pending_registration_cpf: null,
+      pending_registration_titular_cpf: null,
     });
-    await sendWhatsAppMessage(config, phone, MESSAGES.askTitularCpf);
-    return { handled: true, newState: 'WAITING_REGISTRATION_TITULAR_CPF' };
+
+    await sendWhatsAppMessage(config, phone, `📝 Informe o *CPF do dependente* (11 dígitos):`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_DEPENDENT_CPF' };
   }
   
   // Invalid response
@@ -2795,6 +2789,7 @@ async function handleWaitingRegistrationDependentCpf(
   // Store the dependent's CPF and proceed to ask for titular's CPF
   await updateSession(supabase, session.id, {
     state: 'WAITING_REGISTRATION_TITULAR_CPF',
+    pending_registration_type: 'dependent',
     pending_registration_cpf: cleanCpf,
   });
 
