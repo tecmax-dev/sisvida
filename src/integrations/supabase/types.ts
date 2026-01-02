@@ -3962,6 +3962,7 @@ export type Database = {
           education: string | null
           email: string | null
           employer_cnpj: string | null
+          employer_name: string | null
           father_name: string | null
           gender: string | null
           height_cm: number | null
@@ -4013,6 +4014,7 @@ export type Database = {
           education?: string | null
           email?: string | null
           employer_cnpj?: string | null
+          employer_name?: string | null
           father_name?: string | null
           gender?: string | null
           height_cm?: number | null
@@ -4064,6 +4066,7 @@ export type Database = {
           education?: string | null
           email?: string | null
           employer_cnpj?: string | null
+          employer_name?: string | null
           father_name?: string | null
           gender?: string | null
           height_cm?: number | null

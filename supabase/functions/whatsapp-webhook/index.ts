@@ -2651,6 +2651,73 @@ async function handleWaitingRegistrationBirthdate(
   return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
 }
 
+// Validate CNPJ checksum
+function isValidCNPJ(cnpj: string): boolean {
+  const cleanCnpj = cnpj.replace(/\D/g, '');
+  if (cleanCnpj.length !== 14) return false;
+  
+  // Check for known invalid patterns
+  if (/^(\d)\1+$/.test(cleanCnpj)) return false;
+  
+  // Validate check digits
+  let size = cleanCnpj.length - 2;
+  let numbers = cleanCnpj.substring(0, size);
+  const digits = cleanCnpj.substring(size);
+  let sum = 0;
+  let pos = size - 7;
+  
+  for (let i = size; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(size - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  
+  let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (result !== parseInt(digits.charAt(0))) return false;
+  
+  size = size + 1;
+  numbers = cleanCnpj.substring(0, size);
+  sum = 0;
+  pos = size - 7;
+  
+  for (let i = size; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(size - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  
+  result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  return result === parseInt(digits.charAt(1));
+}
+
+// Fetch company data from Brasil API
+async function fetchCNPJData(cnpj: string): Promise<{ razaoSocial: string | null; nomeFantasia: string | null; valid: boolean }> {
+  try {
+    const cleanCnpj = cnpj.replace(/\D/g, '');
+    console.log(`[cnpj] Fetching data for CNPJ: ${cleanCnpj}`);
+    
+    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cleanCnpj}`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+    });
+    
+    if (!response.ok) {
+      console.log(`[cnpj] Brasil API returned status ${response.status}`);
+      return { razaoSocial: null, nomeFantasia: null, valid: false };
+    }
+    
+    const data = await response.json();
+    console.log(`[cnpj] Brasil API response:`, { razaoSocial: data.razao_social, nomeFantasia: data.nome_fantasia });
+    
+    return {
+      razaoSocial: data.razao_social || null,
+      nomeFantasia: data.nome_fantasia || null,
+      valid: true,
+    };
+  } catch (error) {
+    console.error('[cnpj] Error fetching CNPJ data:', error);
+    return { razaoSocial: null, nomeFantasia: null, valid: false };
+  }
+}
+
 async function handleWaitingRegistrationCnpj(
   supabase: SupabaseClient,
   config: EvolutionConfig,
@@ -2660,25 +2727,64 @@ async function handleWaitingRegistrationCnpj(
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   const input = messageText.trim().toLowerCase();
   let cnpj: string | null = null;
+  let employerName: string | null = null;
   
   // Check if user wants to skip
   if (input === 'pular' || input === 'skip' || input === '0' || input === 'não' || input === 'nao') {
     cnpj = null;
+    employerName = null;
   } else {
     // Clean and validate CNPJ
     const cleanCnpj = messageText.replace(/\D/g, '');
-    if (cleanCnpj.length === 14) {
-      cnpj = cleanCnpj;
-    } else if (cleanCnpj.length > 0 && cleanCnpj.length !== 14) {
+    
+    if (cleanCnpj.length !== 14) {
       await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido (deve ter 14 dígitos).\n\nDigite o CNPJ ou "pular" para continuar sem:`);
       return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
     }
+    
+    // Validate CNPJ checksum
+    if (!isValidCNPJ(cleanCnpj)) {
+      await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido. Verifique os dígitos e tente novamente.\n\nDigite o CNPJ ou "pular" para continuar sem:`);
+      return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
+    }
+    
+    // Send "searching" feedback to user
+    await sendWhatsAppMessage(config, phone, `🔍 Buscando dados da empresa...`);
+    
+    // Fetch company data from Receita Federal via Brasil API
+    const companyData = await fetchCNPJData(cleanCnpj);
+    
+    if (!companyData.valid) {
+      await sendWhatsAppMessage(config, phone, `⚠️ Não foi possível encontrar este CNPJ na Receita Federal.\n\nVerifique o número e tente novamente, ou digite "pular" para continuar sem:`);
+      return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
+    }
+    
+    cnpj = cleanCnpj;
+    // Prefer nome_fantasia, fallback to razao_social
+    employerName = companyData.nomeFantasia || companyData.razaoSocial || null;
+    
+    if (employerName) {
+      console.log(`[cnpj] Company found: ${employerName}`);
+    }
   }
   
+  // Store employer name in session for confirmation display
+  // We'll pass it through the session as part of CNPJ field (we need to store it)
+  // Actually, let's update the session with a combined approach
   await updateSession(supabase, session.id, {
     state: 'CONFIRM_REGISTRATION',
     pending_registration_cnpj: cnpj,
   });
+  
+  // Store employer name in a special format for now (we'll parse it in confirm)
+  // Actually, we need to pass this to the patient creation step
+  // Let's store it in session temporarily using a trick - we'll encode it
+  if (employerName && cnpj) {
+    // Store employer name as JSON in the cnpj field temporarily
+    await updateSession(supabase, session.id, {
+      pending_registration_cnpj: JSON.stringify({ cnpj, employerName }),
+    });
+  }
   
   // Format display date
   const birthDate = session.pending_registration_birthdate 
@@ -2690,11 +2796,22 @@ async function handleWaitingRegistrationCnpj(
     ? cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
     : null;
   
+  // Build confirmation message with company name if available
+  let confirmMsg = MESSAGES.confirmRegistration(session.pending_registration_name || '', birthDate, formattedCnpj);
+  if (employerName && cnpj) {
+    confirmMsg = `📋 *Confirme seus dados:*\n\n` +
+      `👤 *Nome:* ${session.pending_registration_name || ''}\n` +
+      `📅 *Nascimento:* ${birthDate}\n` +
+      `🏢 *Empresa:* ${employerName}\n` +
+      `📝 *CNPJ:* ${formattedCnpj}\n\n` +
+      `Os dados estão corretos?`;
+  }
+  
   await sendWhatsAppButtons(
     config,
     phone,
     '📋 Confirmar Cadastro',
-    MESSAGES.confirmRegistration(session.pending_registration_name || '', birthDate, formattedCnpj),
+    confirmMsg,
     [
       { id: 'confirm_yes', text: '✅ Confirmar' },
       { id: 'confirm_no', text: '❌ Recomeçar' }
@@ -2733,7 +2850,25 @@ async function handleConfirmRegistration(
       // Clean phone for storage
       const cleanPhone = phone.replace(/\D/g, '');
       
-      // Create patient
+      // Parse CNPJ data - might be JSON with employer name
+      let employerCnpj: string | null = null;
+      let employerName: string | null = null;
+      
+      if (session.pending_registration_cnpj) {
+        try {
+          // Try to parse as JSON (contains cnpj + employerName)
+          const cnpjData = JSON.parse(session.pending_registration_cnpj);
+          employerCnpj = cnpjData.cnpj || null;
+          employerName = cnpjData.employerName || null;
+          console.log(`[registration] Parsed CNPJ data: cnpj=${employerCnpj}, employerName=${employerName}`);
+        } catch {
+          // Not JSON, use as plain CNPJ
+          employerCnpj = session.pending_registration_cnpj;
+          console.log(`[registration] Plain CNPJ: ${employerCnpj}`);
+        }
+      }
+      
+      // Create patient with employer data
       const { data: patient, error: patientError } = await supabase
         .from('patients')
         .insert({
@@ -2742,7 +2877,8 @@ async function handleConfirmRegistration(
           cpf: session.pending_registration_cpf,
           birth_date: session.pending_registration_birthdate,
           phone: cleanPhone,
-          employer_cnpj: session.pending_registration_cnpj || null,
+          employer_cnpj: employerCnpj,
+          employer_name: employerName,
         })
         .select('id, name')
         .single();
