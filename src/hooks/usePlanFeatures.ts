@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useSubscription } from "@/hooks/useSubscription";
+import { useAuth } from "@/hooks/useAuth";
 
 export interface SystemFeature {
   id: string;
@@ -14,6 +15,7 @@ export interface SystemFeature {
 
 interface UsePlanFeaturesReturn {
   hasFeature: (featureKey: string) => boolean;
+  hasAddon: (addonKey: string) => boolean;
   availableFeatures: SystemFeature[];
   allFeatures: SystemFeature[];
   loading: boolean;
@@ -22,7 +24,9 @@ interface UsePlanFeaturesReturn {
 
 export function usePlanFeatures(): UsePlanFeaturesReturn {
   const { subscription, loading: subLoading } = useSubscription();
+  const { currentClinic } = useAuth();
   const [planFeatureKeys, setPlanFeatureKeys] = useState<string[]>([]);
+  const [addonKeys, setAddonKeys] = useState<string[]>([]);
   const [allFeatures, setAllFeatures] = useState<SystemFeature[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -58,12 +62,29 @@ export function usePlanFeatures(): UsePlanFeaturesReturn {
         .filter(Boolean);
 
       setPlanFeatureKeys(keys);
+
+      // Fetch active add-ons for current clinic
+      if (currentClinic?.id) {
+        const { data: clinicAddonsData, error: addonsError } = await supabase
+          .from('clinic_addons')
+          .select('addon_id, subscription_addons(key)')
+          .eq('clinic_id', currentClinic.id)
+          .eq('status', 'active');
+
+        if (addonsError) throw addonsError;
+
+        const activeAddonKeys = (clinicAddonsData || [])
+          .map((ca: any) => ca.subscription_addons?.key)
+          .filter(Boolean);
+
+        setAddonKeys(activeAddonKeys);
+      }
     } catch (error) {
       console.error("Error fetching plan features:", error);
     } finally {
       setLoading(false);
     }
-  }, [subscription?.plan_id]);
+  }, [subscription?.plan_id, currentClinic?.id]);
 
   useEffect(() => {
     if (!subLoading) {
@@ -74,13 +95,34 @@ export function usePlanFeatures(): UsePlanFeaturesReturn {
   const hasFeature = useCallback((featureKey: string): boolean => {
     // If no subscription, assume no features
     if (!subscription) return false;
-    return planFeatureKeys.includes(featureKey);
-  }, [subscription, planFeatureKeys]);
+    
+    // Check plan features first
+    if (planFeatureKeys.includes(featureKey)) return true;
+    
+    // Check if feature is provided by an active add-on
+    // Map addon keys to feature keys they provide
+    const addonFeatureMap: Record<string, string[]> = {
+      'whatsapp_advanced': ['whatsapp_campaigns', 'whatsapp_automations', 'whatsapp_ai', 'whatsapp_reminders', 'whatsapp_booking'],
+      'api_access': ['api_external'],
+    };
+    
+    for (const addonKey of addonKeys) {
+      const providedFeatures = addonFeatureMap[addonKey] || [];
+      if (providedFeatures.includes(featureKey)) return true;
+    }
+    
+    return false;
+  }, [subscription, planFeatureKeys, addonKeys]);
+
+  const hasAddon = useCallback((addonKey: string): boolean => {
+    return addonKeys.includes(addonKey);
+  }, [addonKeys]);
 
   const availableFeatures = allFeatures.filter(f => planFeatureKeys.includes(f.key));
 
   return {
     hasFeature,
+    hasAddon,
     availableFeatures,
     allFeatures,
     loading: loading || subLoading,
