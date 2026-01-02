@@ -122,3 +122,6 @@ verify_jwt = true
 
 [functions.sindsystem-sync]
 verify_jwt = false
+
+[functions.verify-recaptcha]
+verify_jwt = false
