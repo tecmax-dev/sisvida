@@ -282,7 +282,7 @@ interface Appointment {
 
 export default function CalendarPage() {
   const { currentClinic, user } = useAuth();
-  const { isProfessionalOnly } = usePermissions();
+  const { isProfessionalOnly, hasPermission } = usePermissions();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -1369,6 +1369,9 @@ export default function CalendarPage() {
   };
 
   const openNewAppointmentWithTime = (time: string, date?: Date) => {
+    // Check permission before opening dialog
+    if (!hasPermission('manage_calendar')) return;
+    
     resetForm();
     setFormTime(time);
     if (date) {
@@ -2712,38 +2715,40 @@ export default function CalendarPage() {
             </PopoverContent>
           </Popover>
 
-          <Dialog open={dialogOpen} onOpenChange={(open) => {
-            setDialogOpen(open);
-            if (!open) resetForm();
-          }}>
-            <DialogTrigger asChild>
-              <Button variant="hero">
-                <Plus className="h-4 w-4 mr-2" />
-                Novo Agendamento
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Novo Agendamento</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleCreateAppointment} className="space-y-4">
-                <AppointmentFormFields />
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setDialogOpen(false)}
-                  >
-                    Cancelar
-                  </Button>
-                  <Button type="submit" disabled={saving}>
-                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Agendar
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          {hasPermission('manage_calendar') && (
+            <Dialog open={dialogOpen} onOpenChange={(open) => {
+              setDialogOpen(open);
+              if (!open) resetForm();
+            }}>
+              <DialogTrigger asChild>
+                <Button variant="hero">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Novo Agendamento
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Novo Agendamento</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleCreateAppointment} className="space-y-4">
+                  <AppointmentFormFields />
+                  <div className="flex justify-end gap-3 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setDialogOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button type="submit" disabled={saving}>
+                      {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Agendar
+                    </Button>
+                  </div>
+                </form>
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 
@@ -3153,10 +3158,12 @@ export default function CalendarPage() {
                     <div className="text-center py-12 text-muted-foreground">
                       <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                       <p className="mb-4">Nenhum agendamento para este dia</p>
-                      <Button variant="outline" onClick={() => setDialogOpen(true)}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Adicionar agendamento
-                      </Button>
+                      {hasPermission('manage_calendar') && (
+                        <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Adicionar agendamento
+                        </Button>
+                      )}
                     </div>
                   );
                 }
