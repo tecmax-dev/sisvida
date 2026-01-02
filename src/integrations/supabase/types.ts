@@ -6980,6 +6980,7 @@ export type Database = {
           appointments_list: Json | null
           available_dates: Json | null
           available_dependents: Json | null
+          available_insurance_plans: Json | null
           available_procedures: Json | null
           available_professionals: Json | null
           available_times: Json | null
@@ -7017,6 +7018,7 @@ export type Database = {
           appointments_list?: Json | null
           available_dates?: Json | null
           available_dependents?: Json | null
+          available_insurance_plans?: Json | null
           available_procedures?: Json | null
           available_professionals?: Json | null
           available_times?: Json | null
@@ -7054,6 +7056,7 @@ export type Database = {
           appointments_list?: Json | null
           available_dates?: Json | null
           available_dependents?: Json | null
+          available_insurance_plans?: Json | null
           available_procedures?: Json | null
           available_professionals?: Json | null
           available_times?: Json | null
