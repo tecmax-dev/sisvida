@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Logo } from "./Logo";
 import { MessageCircle, Mail, Shield, Instagram, Linkedin, Youtube } from "lucide-react";
 
@@ -56,14 +57,14 @@ export function Footer() {
                 </a>
               </li>
               <li>
-                <a href="/ajuda" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/ajuda" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Central de Ajuda
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/cadastro" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/cadastro" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Criar conta
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -73,19 +74,19 @@ export function Footer() {
             <h4 className="font-semibold text-foreground mb-4">Legal</h4>
             <ul className="space-y-3">
               <li>
-                <a href="/lgpd" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/lgpd" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Termos de Uso
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/privacidade" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/lgpd" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Política de Privacidade
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="/lgpd" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                <Link to="/lgpd" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   LGPD
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
