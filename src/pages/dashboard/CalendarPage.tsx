@@ -767,6 +767,8 @@ export default function CalendarPage() {
   const filteredAppointments = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     return appointments.filter(apt => {
+      // For professional users, only show their own appointments
+      if (isProfessionalOnly && loggedInProfessionalId && apt.professional_id !== loggedInProfessionalId) return false;
       // Filter cancelled/no_show appointments based on checkbox state
       if (!showCancelledNoShow && (apt.status === 'cancelled' || apt.status === 'no_show')) return false;
       if (filterProfessionals.length > 0 && !filterProfessionals.includes(apt.professional_id)) return false;
@@ -779,7 +781,7 @@ export default function CalendarPage() {
       }
       return true;
     });
-  }, [appointments, filterProfessionals, filterType, searchQuery, patients, showCancelledNoShow]);
+  }, [appointments, filterProfessionals, filterType, searchQuery, patients, showCancelledNoShow, isProfessionalOnly, loggedInProfessionalId]);
 
   // Detect conflicting appointments
   const conflictingAppointmentIds = useMemo(() => {
@@ -2635,44 +2637,47 @@ export default function CalendarPage() {
             <PopoverContent className="w-72" align="end">
               <div className="space-y-4">
                 <h4 className="font-medium">Filtros</h4>
-                <div className="space-y-2">
-                  <Label>Profissional</Label>
-                  <div className="space-y-1 max-h-48 overflow-y-auto border rounded-md p-2">
-                    {professionals.map((prof) => {
-                      const isChecked = filterProfessionals.includes(prof.id);
-                      return (
-                        <label 
-                          key={prof.id} 
-                          className="flex items-center gap-2 py-1.5 px-2 hover:bg-accent rounded-md cursor-pointer"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFilterProfessionals([...filterProfessionals, prof.id]);
-                              } else {
-                                setFilterProfessionals(filterProfessionals.filter(id => id !== prof.id));
-                              }
-                            }}
-                            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
-                          />
-                          <span className="text-sm">{prof.name}</span>
-                        </label>
-                      );
-                    })}
+                {/* Hide professional filter for professional users - they can only see their own appointments */}
+                {!isProfessionalOnly && (
+                  <div className="space-y-2">
+                    <Label>Profissional</Label>
+                    <div className="space-y-1 max-h-48 overflow-y-auto border rounded-md p-2">
+                      {professionals.map((prof) => {
+                        const isChecked = filterProfessionals.includes(prof.id);
+                        return (
+                          <label 
+                            key={prof.id} 
+                            className="flex items-center gap-2 py-1.5 px-2 hover:bg-accent rounded-md cursor-pointer"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setFilterProfessionals([...filterProfessionals, prof.id]);
+                                } else {
+                                  setFilterProfessionals(filterProfessionals.filter(id => id !== prof.id));
+                                }
+                              }}
+                              className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                            />
+                            <span className="text-sm">{prof.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    {filterProfessionals.length > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-xs"
+                        onClick={() => setFilterProfessionals([])}
+                      >
+                        Limpar seleção ({filterProfessionals.length})
+                      </Button>
+                    )}
                   </div>
-                  {filterProfessionals.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full text-xs"
-                      onClick={() => setFilterProfessionals([])}
-                    >
-                      Limpar seleção ({filterProfessionals.length})
-                    </Button>
-                  )}
-                </div>
+                )}
                 <div className="space-y-2">
                   <Label>Tipo de Consulta</Label>
                   <Select value={filterType} onValueChange={setFilterType}>
