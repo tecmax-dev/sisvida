@@ -3845,6 +3845,31 @@ async function handleSelectProfessional(
     return { handled: true, newState: 'SELECT_PROFESSIONAL' };
   }
 
+  // Check if patient is blocked for this specific professional due to no-show
+  const { data: patientBlockCheck } = await supabase
+    .from('patients')
+    .select('no_show_blocked_until, no_show_unblocked_at, no_show_blocked_professional_id')
+    .eq('id', session.patient_id)
+    .single();
+
+  if (patientBlockCheck && 
+      patientBlockCheck.no_show_blocked_until && 
+      patientBlockCheck.no_show_unblocked_at === null &&
+      patientBlockCheck.no_show_blocked_professional_id === selected.id) {
+    const blockDate = new Date(patientBlockCheck.no_show_blocked_until);
+    if (blockDate >= new Date()) {
+      const formattedDate = blockDate.toLocaleDateString('pt-BR');
+      await sendWhatsAppMessage(config, phone, 
+        `❌ Você está bloqueado(a) para agendar com *${selected.name}* até *${formattedDate}* devido a não comparecimento em consulta anterior.\n\n` +
+        `Você pode:\n` +
+        `• Escolher outro profissional\n` +
+        `• Solicitar liberação ao administrador da clínica\n\n` +
+        `Por favor, escolha outro profissional:`
+      );
+      return { handled: true, newState: 'SELECT_PROFESSIONAL' };
+    }
+  }
+
   // Check CPF appointment limit BEFORE proceeding with date selection
   const limitCheck = await checkCpfAppointmentLimit(
     supabase,

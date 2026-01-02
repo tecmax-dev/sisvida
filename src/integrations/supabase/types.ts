@@ -4155,6 +4155,7 @@ export type Database = {
           name: string
           neighborhood: string | null
           no_show_blocked_at: string | null
+          no_show_blocked_professional_id: string | null
           no_show_blocked_until: string | null
           no_show_unblocked_at: string | null
           no_show_unblocked_by: string | null
@@ -4207,6 +4208,7 @@ export type Database = {
           name: string
           neighborhood?: string | null
           no_show_blocked_at?: string | null
+          no_show_blocked_professional_id?: string | null
           no_show_blocked_until?: string | null
           no_show_unblocked_at?: string | null
           no_show_unblocked_by?: string | null
@@ -4259,6 +4261,7 @@ export type Database = {
           name?: string
           neighborhood?: string | null
           no_show_blocked_at?: string | null
+          no_show_blocked_professional_id?: string | null
           no_show_blocked_until?: string | null
           no_show_unblocked_at?: string | null
           no_show_unblocked_by?: string | null
@@ -4293,6 +4296,13 @@ export type Database = {
             columns: ["insurance_plan_id"]
             isOneToOne: false
             referencedRelation: "insurance_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patients_no_show_blocked_professional_id_fkey"
+            columns: ["no_show_blocked_professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
