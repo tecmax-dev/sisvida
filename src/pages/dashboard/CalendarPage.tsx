@@ -43,6 +43,7 @@ import {
   AlertTriangle,
   Activity,
   History,
+  Ban,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -264,6 +265,8 @@ interface Appointment {
     phone: string;
     email: string | null;
     birth_date: string | null;
+    no_show_blocked_until: string | null;
+    no_show_unblocked_at: string | null;
     insurance_plan?: {
       id: string;
       name: string;
@@ -531,7 +534,7 @@ export default function CalendarPage() {
           procedure_id,
           dependent_id,
           procedure:procedures (id, name, price),
-          patient:patients (id, name, phone, email, birth_date, insurance_plan:insurance_plans (id, name, color)),
+          patient:patients (id, name, phone, email, birth_date, no_show_blocked_until, no_show_unblocked_at, insurance_plan:insurance_plans (id, name, color)),
           professional:professionals (id, name, specialty, avatar_url),
           dependent:patient_dependents!appointments_dependent_id_fkey (id, name)
         `)
@@ -2139,6 +2142,11 @@ export default function CalendarPage() {
     const canAttend = appointment.status === "scheduled" || appointment.status === "confirmed" || appointment.status === "arrived" || isInProgress;
     const hasConflict = conflictingAppointmentIds.has(appointment.id);
     
+    // Verifica se paciente está bloqueado por falta (no-show)
+    const isPatientBlocked = appointment.patient?.no_show_blocked_until 
+      && new Date(appointment.patient.no_show_blocked_until) >= new Date()
+      && !appointment.patient.no_show_unblocked_at;
+    
     // Determina cor do badge de horário baseado no status
     const getTimeBadgeStyle = () => {
       if (hasConflict && !isCancelled) return "bg-destructive text-destructive-foreground";
@@ -2234,6 +2242,15 @@ export default function CalendarPage() {
           })()}
           {hasConflict && !isCancelled && (
             <AlertTriangle className="h-4 w-4 text-destructive flex-shrink-0" />
+          )}
+          {/* Ícone de bloqueio por falta (no-show) */}
+          {isPatientBlocked && (
+            <div 
+              className="flex items-center gap-1 flex-shrink-0"
+              title={`Paciente bloqueado até ${new Date(appointment.patient.no_show_blocked_until!).toLocaleDateString('pt-BR')}`}
+            >
+              <Ban className="h-4 w-4 text-destructive" />
+            </div>
           )}
         </div>
 
