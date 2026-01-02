@@ -7002,6 +7002,7 @@ export type Database = {
           pending_registration_cpf: string | null
           pending_registration_insurance_plan_id: string | null
           pending_registration_name: string | null
+          pending_registration_relationship: string | null
           pending_registration_titular_cpf: string | null
           pending_registration_type: string | null
           phone: string
@@ -7040,6 +7041,7 @@ export type Database = {
           pending_registration_cpf?: string | null
           pending_registration_insurance_plan_id?: string | null
           pending_registration_name?: string | null
+          pending_registration_relationship?: string | null
           pending_registration_titular_cpf?: string | null
           pending_registration_type?: string | null
           phone: string
@@ -7078,6 +7080,7 @@ export type Database = {
           pending_registration_cpf?: string | null
           pending_registration_insurance_plan_id?: string | null
           pending_registration_name?: string | null
+          pending_registration_relationship?: string | null
           pending_registration_titular_cpf?: string | null
           pending_registration_type?: string | null
           phone?: string

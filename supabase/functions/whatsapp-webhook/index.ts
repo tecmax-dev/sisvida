@@ -39,6 +39,7 @@ type BookingState =
   | 'RESCHEDULE_SELECT_DATE'
   | 'RESCHEDULE_SELECT_TIME'
   | 'CONFIRM_RESCHEDULE'
+  | 'WAITING_REGISTRATION_RELATIONSHIP'
   | 'OFFER_REGISTRATION'
   | 'SELECT_REGISTRATION_TYPE'
   | 'WAITING_REGISTRATION_TITULAR_CPF'
@@ -153,6 +154,7 @@ interface BookingSession {
   pending_registration_type?: 'titular' | 'dependent' | null;
   pending_registration_titular_cpf?: string | null;
   pending_registration_insurance_plan_id?: string | null;
+  pending_registration_relationship?: string | null;
   available_insurance_plans?: Array<{ id: string; name: string }> | null;
 }
 
@@ -1455,6 +1457,9 @@ async function handleBookingFlow(
     
     case 'WAITING_REGISTRATION_BIRTHDATE':
       return await handleWaitingRegistrationBirthdate(supabase, config, phone, messageText, session);
+    
+    case 'WAITING_REGISTRATION_RELATIONSHIP':
+      return await handleWaitingRegistrationRelationship(supabase, config, phone, messageText, session);
     
     case 'WAITING_REGISTRATION_CNPJ':
       return await handleWaitingRegistrationCnpj(supabase, config, phone, messageText, session);
@@ -2979,37 +2984,30 @@ async function handleWaitingRegistrationBirthdate(
   const dbDate = parsedDate.toISOString().split('T')[0];
   const displayDate = parsedDate.toLocaleDateString('pt-BR');
   
-  // Check if registering as dependent - skip CNPJ step (only titular is linked to company)
+  // Check if registering as dependent - ask for relationship
   const isDependent = session.pending_registration_type === 'dependent' && session.pending_registration_titular_cpf;
   
   if (isDependent) {
-    // Skip CNPJ step - go directly to confirmation
+    // Ask for relationship
     await updateSession(supabase, session.id, {
-      state: 'CONFIRM_REGISTRATION',
+      state: 'WAITING_REGISTRATION_RELATIONSHIP',
       pending_registration_birthdate: dbDate,
-      pending_registration_cnpj: null, // Ensure no CNPJ for dependent
     });
     
-    // Build confirmation message for dependent (no CNPJ)
-    const confirmMsg = `📋 *Confirme seus dados:*\n\n` +
-      `👤 *Nome:* ${session.pending_registration_name || ''}\n` +
-      `📅 *Nascimento:* ${displayDate}\n` +
-      `📱 *WhatsApp:* _(este número)_\n\n` +
-      `Os dados estão corretos?`;
+    const relationshipMsg = `👨‍👩‍👧 *Qual é o parentesco com o titular?*\n\n` +
+      `1️⃣ Filho(a)\n` +
+      `2️⃣ Cônjuge\n` +
+      `3️⃣ Pai\n` +
+      `4️⃣ Mãe\n` +
+      `5️⃣ Irmão(ã)\n` +
+      `6️⃣ Neto(a)\n` +
+      `7️⃣ Sobrinho(a)\n` +
+      `8️⃣ Outro\n\n` +
+      `Responda com o número correspondente:`;
     
-    await sendWhatsAppButtons(
-      config,
-      phone,
-      '📋 Confirmar Cadastro',
-      confirmMsg,
-      [
-        { id: 'confirm_yes', text: '✅ Confirmar' },
-        { id: 'confirm_no', text: '❌ Recomeçar' }
-      ],
-      'Responda 1 ou 2'
-    );
+    await sendWhatsAppMessage(config, phone, relationshipMsg);
     
-    return { handled: true, newState: 'CONFIRM_REGISTRATION' };
+    return { handled: true, newState: 'WAITING_REGISTRATION_RELATIONSHIP' };
   }
   
   // For titular, ask for CNPJ
@@ -3020,6 +3018,93 @@ async function handleWaitingRegistrationBirthdate(
   
   await sendWhatsAppMessage(config, phone, MESSAGES.askEmployerCnpj);
   return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
+}
+
+// Relationship options mapping
+const RELATIONSHIP_OPTIONS: { [key: string]: string } = {
+  '1': 'filho',
+  '2': 'conjuge',
+  '3': 'pai',
+  '4': 'mae',
+  '5': 'irmao',
+  '6': 'neto',
+  '7': 'sobrinho',
+  '8': 'outro',
+};
+
+const RELATIONSHIP_LABELS: { [key: string]: string } = {
+  'filho': 'Filho(a)',
+  'conjuge': 'Cônjuge',
+  'pai': 'Pai',
+  'mae': 'Mãe',
+  'irmao': 'Irmão(ã)',
+  'neto': 'Neto(a)',
+  'sobrinho': 'Sobrinho(a)',
+  'outro': 'Outro',
+};
+
+async function handleWaitingRegistrationRelationship(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const input = messageText.trim();
+  
+  // Check if valid option (1-8)
+  const relationship = RELATIONSHIP_OPTIONS[input];
+  
+  if (!relationship) {
+    await sendWhatsAppMessage(config, phone, 
+      `❌ Opção inválida. Por favor, escolha um número de 1 a 8:\n\n` +
+      `1️⃣ Filho(a)\n` +
+      `2️⃣ Cônjuge\n` +
+      `3️⃣ Pai\n` +
+      `4️⃣ Mãe\n` +
+      `5️⃣ Irmão(ã)\n` +
+      `6️⃣ Neto(a)\n` +
+      `7️⃣ Sobrinho(a)\n` +
+      `8️⃣ Outro`
+    );
+    return { handled: true, newState: 'WAITING_REGISTRATION_RELATIONSHIP' };
+  }
+  
+  // Store relationship and go to confirmation
+  await updateSession(supabase, session.id, {
+    state: 'CONFIRM_REGISTRATION',
+    pending_registration_relationship: relationship,
+    pending_registration_cnpj: null, // Ensure no CNPJ for dependent
+  });
+  
+  // Format birthdate for display
+  const displayDate = session.pending_registration_birthdate 
+    ? new Date(session.pending_registration_birthdate + 'T12:00:00').toLocaleDateString('pt-BR')
+    : '';
+  
+  const relationshipLabel = RELATIONSHIP_LABELS[relationship] || relationship;
+  
+  // Build confirmation message for dependent
+  const confirmMsg = `📋 *Confirme seus dados:*\n\n` +
+    `👤 *Nome:* ${session.pending_registration_name || ''}\n` +
+    `📅 *Nascimento:* ${displayDate}\n` +
+    `👨‍👩‍👧 *Parentesco:* ${relationshipLabel}\n` +
+    `📱 *WhatsApp:* _(este número)_\n\n` +
+    `Os dados estão corretos?`;
+  
+  await sendWhatsAppButtons(
+    config,
+    phone,
+    '📋 Confirmar Cadastro',
+    confirmMsg,
+    [
+      { id: 'confirm_yes', text: '✅ Confirmar' },
+      { id: 'confirm_no', text: '❌ Recomeçar' }
+    ],
+    'Responda 1 ou 2'
+  );
+  
+  return { handled: true, newState: 'CONFIRM_REGISTRATION' };
 }
 
 // Validate CNPJ checksum
@@ -3329,6 +3414,7 @@ async function handleConfirmRegistration(
       pending_registration_type: null,
       pending_registration_titular_cpf: null,
       pending_registration_insurance_plan_id: null,
+      pending_registration_relationship: null,
       available_insurance_plans: null,
     });
     await sendWhatsAppMessage(config, phone, MESSAGES.welcome + MESSAGES.hintCpf);
@@ -3388,7 +3474,7 @@ async function handleConfirmRegistration(
             cpf: session.pending_registration_cpf,
             birth_date: session.pending_registration_birthdate,
             phone: cleanPhone,
-            relationship: null, // Could ask for relationship in future
+            relationship: session.pending_registration_relationship || null,
             is_active: true,
           })
           .select('id, name')
@@ -3436,6 +3522,7 @@ async function handleConfirmRegistration(
           pending_registration_type: null,
           pending_registration_titular_cpf: null,
           pending_registration_insurance_plan_id: null,
+          pending_registration_relationship: null,
           available_insurance_plans: null,
         });
         
@@ -3523,6 +3610,7 @@ async function handleConfirmRegistration(
           pending_registration_type: null,
           pending_registration_titular_cpf: null,
           pending_registration_insurance_plan_id: null,
+          pending_registration_relationship: null,
           available_insurance_plans: null,
         });
         
