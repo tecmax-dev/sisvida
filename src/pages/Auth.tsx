@@ -865,7 +865,7 @@ export default function Auth() {
                       onChange={(token) => {
                         setRecaptchaToken(token);
                         if (errors.recaptcha) {
-                          setErrors(prev => ({ ...prev, recaptcha: undefined }));
+                          setErrors((prev) => ({ ...prev, recaptcha: undefined }));
                         }
                       }}
                       onExpired={() => {
@@ -887,6 +887,13 @@ export default function Auth() {
                       }}
                       hl="pt-BR"
                     />
+
+                    {new URLSearchParams(window.location.search).has("debug") && (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Diagnóstico: domínio detectado <span className="font-medium">{window.location.hostname}</span>
+                      </p>
+                    )}
+
                     {errors.recaptcha && (
                       <p className="mt-1 text-sm text-destructive">{errors.recaptcha}</p>
                     )}
