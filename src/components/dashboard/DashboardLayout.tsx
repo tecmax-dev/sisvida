@@ -73,8 +73,9 @@ import {
 const SYSTEM_VERSION = "2026.01.2";
 
 // Format clinic ID: year prefix + sequential number
-const formatClinicId = (createdAt: string, id: string) => {
-  const year = new Date(createdAt).getFullYear();
+const formatClinicId = (createdAt: string | null | undefined, id: string) => {
+  const date = createdAt ? new Date(createdAt) : new Date();
+  const year = isNaN(date.getTime()) ? new Date().getFullYear() : date.getFullYear();
   // Use first 8 chars of UUID as numeric-like identifier
   const numericPart = parseInt(id.replace(/-/g, '').substring(0, 8), 16) % 100000000;
   return `${year}${String(numericPart).padStart(8, '0')}`;
