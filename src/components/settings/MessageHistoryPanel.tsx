@@ -108,6 +108,64 @@ export function MessageHistoryPanel({ clinicId }: MessageHistoryPanelProps) {
     return phone;
   };
 
+  // Converte mensagens de erro técnicas em mensagens amigáveis
+  const getFriendlyErrorMessage = (errorMessage: string | null): string | null => {
+    if (!errorMessage) return null;
+    
+    const lowerError = errorMessage.toLowerCase();
+    
+    // Número não existe no WhatsApp
+    if (lowerError.includes('"exists":false') || lowerError.includes('exists": false') || lowerError.includes('not registered')) {
+      return 'Número não possui WhatsApp';
+    }
+    
+    // Erros de conexão
+    if (lowerError.includes('connection') || lowerError.includes('timeout') || lowerError.includes('econnrefused')) {
+      return 'Falha na conexão com o servidor';
+    }
+    
+    // WhatsApp desconectado
+    if (lowerError.includes('disconnected') || lowerError.includes('not connected') || lowerError.includes('instance not found')) {
+      return 'WhatsApp desconectado';
+    }
+    
+    // Erro de autenticação
+    if (lowerError.includes('unauthorized') || lowerError.includes('401') || lowerError.includes('authentication')) {
+      return 'Erro de autenticação';
+    }
+    
+    // Número inválido
+    if (lowerError.includes('invalid') && (lowerError.includes('phone') || lowerError.includes('number') || lowerError.includes('jid'))) {
+      return 'Número de telefone inválido';
+    }
+    
+    // Erro 400 genérico
+    if (lowerError.includes('400') || lowerError.includes('bad request')) {
+      if (lowerError.includes('"exists":false') || lowerError.includes('exists": false')) {
+        return 'Número não possui WhatsApp';
+      }
+      return 'Não foi possível enviar a mensagem';
+    }
+    
+    // Erro 500 do servidor
+    if (lowerError.includes('500') || lowerError.includes('internal server error')) {
+      return 'Erro no servidor de mensagens';
+    }
+    
+    // Rate limit
+    if (lowerError.includes('rate limit') || lowerError.includes('too many requests') || lowerError.includes('429')) {
+      return 'Limite de envios atingido. Tente novamente mais tarde';
+    }
+    
+    // Se a mensagem for muito técnica (contém JSON ou caracteres especiais), simplificar
+    if (errorMessage.includes('{') || errorMessage.includes('API error') || errorMessage.length > 100) {
+      return 'Falha no envio da mensagem';
+    }
+    
+    // Retorna a mensagem original se não for muito técnica
+    return errorMessage;
+  };
+
   const getMessageTypeLabel = (type: string) => {
     switch (type) {
       case 'reminder':
@@ -237,11 +295,11 @@ export function MessageHistoryPanel({ clinicId }: MessageHistoryPanelProps) {
                                   {formatPhone(log.phone)}
                                 </p>
                               )}
-                              {log.error_message && (
-                                <p className="text-xs text-red-500 mt-1">
-                                  {log.error_message}
-                                </p>
-                              )}
+                                              {log.error_message && (
+                                                <p className="text-xs text-red-500 mt-1">
+                                                  {getFriendlyErrorMessage(log.error_message)}
+                                                </p>
+                                              )}
                             </div>
                           </div>
                           <div className="text-right">
@@ -338,11 +396,11 @@ export function MessageHistoryPanel({ clinicId }: MessageHistoryPanelProps) {
                           <p className="text-sm text-muted-foreground">
                             {formatPhone(log.patient_phone)}
                           </p>
-                          {log.error_message && (
-                            <p className="text-xs text-red-500 mt-1">
-                              {log.error_message}
-                            </p>
-                          )}
+                                          {log.error_message && (
+                                            <p className="text-xs text-red-500 mt-1">
+                                              {getFriendlyErrorMessage(log.error_message)}
+                                            </p>
+                                          )}
                         </div>
                       </div>
                       <p className="text-xs text-muted-foreground">
