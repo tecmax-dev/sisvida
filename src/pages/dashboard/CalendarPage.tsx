@@ -386,6 +386,13 @@ export default function CalendarPage() {
   // Professional user state
   const [loggedInProfessionalId, setLoggedInProfessionalId] = useState<string | null>(null);
 
+  const toDateKey = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
   const timeSlots = useMemo(() => {
     const getDayKey = (date: Date) => {
       const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -407,44 +414,66 @@ export default function CalendarPage() {
 
     const prof = professionals.find((p) => p.id === selectedProfId);
     const schedule = prof?.schedule as any;
+    const appointmentDuration = prof?.appointment_duration || 30;
     if (!schedule) return defaultTimeSlots;
 
     const dayKey = getDayKey(selectedDate);
     const daySchedule = schedule?.[dayKey];
-    if (!daySchedule?.enabled || !Array.isArray(daySchedule.slots) || daySchedule.slots.length === 0) {
-      return defaultTimeSlots;
-    }
-
-    // Regra solicitada: no painel de arraste/reagendamento, exibir apenas horas cheias.
-    // Se o profissional configurou horários “:30”, arredondamos para a próxima hora cheia.
-    const interval = 60;
+    const blocks = schedule?._blocks as Array<{ days: string[]; start_time: string; end_time: string; duration?: number; start_date?: string; end_date?: string }> | undefined;
+    
     const slots: string[] = [];
+    const dateStr = toDateKey(selectedDate);
 
-    for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
-      const [sh, sm] = String(s.start).split(':').map(Number);
-      const [eh, em] = String(s.end).split(':').map(Number);
-
-      // Início: arredondar para a hora cheia (floor para incluir a hora do início)
-      let cur = Math.floor((sh * 60 + sm) / 60) * 60;
-      // Fim: arredondar para a hora cheia (floor)
-      const end = Math.floor((eh * 60 + em) / 60) * 60;
-
-      while (cur < end) {
-        const h = Math.floor(cur / 60);
-        slots.push(`${String(h).padStart(2, '0')}:00`);
-        cur += 60;
+    // Primeiro, verificar _blocks (nova estrutura de agenda)
+    if (blocks && blocks.length > 0) {
+      for (const block of blocks) {
+        // Verificar se o bloco está ativo para esta data
+        if (block.start_date && dateStr < block.start_date) continue;
+        if (block.end_date && dateStr > block.end_date) continue;
+        
+        // Verificar se o dia da semana está incluído
+        if (block.days && block.days.length > 0) {
+          if (!block.days.includes(dayKey)) continue;
+        }
+        
+        const [sh, sm] = String(block.start_time).split(':').map(Number);
+        const [eh, em] = String(block.end_time).split(':').map(Number);
+        const interval = block.duration || appointmentDuration;
+        
+        let cur = sh * 60 + sm;
+        const end = eh * 60 + em;
+        
+        while (cur < end) {
+          const h = Math.floor(cur / 60);
+          const m = cur % 60;
+          slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+          cur += interval;
+        }
       }
     }
+    
+    // Se não tiver _blocks ou não gerou slots, usar estrutura antiga (slots por dia)
+    if (slots.length === 0 && daySchedule?.enabled && Array.isArray(daySchedule.slots) && daySchedule.slots.length > 0) {
+      for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
+        const [sh, sm] = String(s.start).split(':').map(Number);
+        const [eh, em] = String(s.end).split(':').map(Number);
+        
+        let cur = sh * 60 + sm;
+        const end = eh * 60 + em;
+        
+        while (cur < end) {
+          const h = Math.floor(cur / 60);
+          const m = cur % 60;
+          slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+          cur += appointmentDuration;
+        }
+      }
+    }
+    
+    if (slots.length === 0) return defaultTimeSlots;
 
     return Array.from(new Set(slots)).sort();
   }, [activeAppointment, filterProfessionals, formProfessional, isProfessionalOnly, loggedInProfessionalId, professionals, selectedDate]);
-
-  const toDateKey = (d: Date) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  };
 
   const getDateRange = useCallback(() => {
     if (viewMode === "day") {
