@@ -75,6 +75,15 @@ export default function DashboardOverview() {
     return 'Sessões'; // therapy, aesthetic, massage, etc.
   };
 
+  const getProfessionalLabel = () => {
+    if (clinicSpecialtyCategory === 'medical') return 'Médicos';
+    if (clinicSpecialtyCategory === 'dental') return 'Dentistas';
+    if (clinicSpecialtyCategory === 'therapy') return 'Terapeutas';
+    if (clinicSpecialtyCategory === 'aesthetic') return 'Esteticistas';
+    if (clinicSpecialtyCategory === 'massage') return 'Massoterapeutas';
+    return 'Profissionais';
+  };
+
   useEffect(() => {
     if (currentClinic) {
       fetchDashboardData();
@@ -304,7 +313,7 @@ export default function DashboardOverview() {
     {
       title: "PROFISSIONAIS",
       value: stats.totalProfessionals,
-      subtitle: "Terapeutas",
+      subtitle: getProfessionalLabel(),
       buttonText: "Ver detalhes",
       buttonLink: "/dashboard/professionals",
       gradient: "from-pink-400 via-pink-500 to-rose-500",
