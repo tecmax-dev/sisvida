@@ -86,6 +86,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -333,6 +334,7 @@ export default function CalendarPage() {
   const [filterProfessionals, setFilterProfessionals] = useState<string[]>([]);
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCancelledNoShow, setShowCancelledNoShow] = useState(false); // By default hide cancelled/no_show
   
   // WhatsApp state
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
@@ -765,6 +767,8 @@ export default function CalendarPage() {
   const filteredAppointments = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
     return appointments.filter(apt => {
+      // Filter cancelled/no_show appointments based on checkbox state
+      if (!showCancelledNoShow && (apt.status === 'cancelled' || apt.status === 'no_show')) return false;
       if (filterProfessionals.length > 0 && !filterProfessionals.includes(apt.professional_id)) return false;
       if (filterType !== "all" && apt.type !== filterType) return false;
       if (query) {
@@ -775,7 +779,7 @@ export default function CalendarPage() {
       }
       return true;
     });
-  }, [appointments, filterProfessionals, filterType, searchQuery, patients]);
+  }, [appointments, filterProfessionals, filterType, searchQuery, patients, showCancelledNoShow]);
 
   // Detect conflicting appointments
   const conflictingAppointmentIds = useMemo(() => {
@@ -2595,6 +2599,17 @@ export default function CalendarPage() {
               </TabsTrigger>
             </TabsList>
           </Tabs>
+
+          {/* Show Cancelled/No-Show Toggle */}
+          <label className="flex items-center gap-2 cursor-pointer px-2 py-1.5 rounded-md border border-input hover:bg-accent transition-colors">
+            <Checkbox
+              id="show-cancelled"
+              checked={showCancelledNoShow}
+              onCheckedChange={(checked) => setShowCancelledNoShow(checked === true)}
+              className="border-destructive data-[state=checked]:bg-destructive data-[state=checked]:border-destructive"
+            />
+            <span className="text-sm text-destructive font-medium whitespace-nowrap">Faltas/Cancelados</span>
+          </label>
 
           {/* Search */}
           <div className="relative">
