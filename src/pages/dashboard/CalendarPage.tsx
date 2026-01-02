@@ -2464,130 +2464,181 @@ export default function CalendarPage() {
     );
   };
 
+  // Gera cores suaves diferentes para cada profissional (memoizado fora do WeekView)
+  const professionalColors = useMemo(() => {
+    const colors = [
+      'hsl(45 85% 75%)',   // Amarelo suave
+      'hsl(160 55% 70%)',  // Verde água
+      'hsl(200 65% 75%)',  // Azul claro
+      'hsl(280 45% 75%)',  // Roxo suave
+      'hsl(25 75% 70%)',   // Laranja suave
+      'hsl(340 55% 75%)',  // Rosa suave
+      'hsl(100 45% 70%)',  // Verde limão
+      'hsl(220 55% 75%)',  // Azul médio
+    ];
+    const colorMap: Record<string, string> = {};
+    professionals.forEach((prof, index) => {
+      colorMap[prof.id] = colors[index % colors.length];
+    });
+    return colorMap;
+  }, [professionals]);
+
+  // Gera time slots para o grid semanal
+  const weekTimeSlots = useMemo(() => {
+    return ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
+  }, []);
+
   const WeekView = () => {
     const weekDaysData = getWeekDays();
 
-    // Gera cores suaves diferentes para cada profissional
-    const professionalColors = useMemo(() => {
-      const colors = [
-        'hsl(45 90% 65%)',   // Amarelo suave
-        'hsl(160 60% 55%)',  // Verde água
-        'hsl(200 70% 60%)',  // Azul claro
-        'hsl(280 50% 65%)',  // Roxo suave
-        'hsl(25 80% 60%)',   // Laranja suave
-        'hsl(340 60% 65%)',  // Rosa suave
-        'hsl(100 50% 55%)',  // Verde limão
-        'hsl(220 60% 60%)',  // Azul médio
-      ];
-      const colorMap: Record<string, string> = {};
-      professionals.forEach((prof, index) => {
-        colorMap[prof.id] = colors[index % colors.length];
-      });
-      return colorMap;
-    }, [professionals]);
+    // Agrupa agendamentos por dia e horário
+    const getAppointmentsForSlot = (date: Date, time: string) => {
+      const dateStr = toDateKey(date);
+      return appointments.filter(apt => {
+        if (apt.appointment_date !== dateStr) return false;
+        // Verifica se o agendamento começa neste slot ou está em andamento neste horário
+        const aptStartMinutes = parseInt(apt.start_time.slice(0, 2)) * 60 + parseInt(apt.start_time.slice(3, 5));
+        const aptEndMinutes = parseInt(apt.end_time.slice(0, 2)) * 60 + parseInt(apt.end_time.slice(3, 5));
+        const slotMinutes = parseInt(time.slice(0, 2)) * 60 + parseInt(time.slice(3, 5));
+        // Retorna se o slot está dentro do período do agendamento
+        return aptStartMinutes <= slotMinutes && slotMinutes < aptEndMinutes;
+      }).filter(apt => showCancelledNoShow || (apt.status !== 'cancelled' && apt.status !== 'no_show'));
+    };
 
     return (
-      <div className="flex gap-4">
-        {/* Painel de horários do dia selecionado */}
-        <div className="hidden lg:block w-48 flex-shrink-0">
-          <TimeSlotsPanel forDate={selectedDate} />
-        </div>
-        
-        {/* Grade da semana */}
-        <div className="flex-1 grid grid-cols-7 gap-3">
-          {weekDaysData.map((date, i) => {
-            const dayAppointments = getAppointmentsForDate(date);
-            const isTodayDate = isToday(date);
-            const isSelectedDate = isSelected(date);
-            const dateStr = toDateKey(date);
-            const holidayName = isHoliday(date);
-
-            return (
-              <div key={i} className="min-h-[320px]">
-                {/* Cabeçalho do dia */}
+      <div className="overflow-x-auto">
+        <div className="min-w-[900px]">
+          {/* Header com dias da semana */}
+          <div className="grid grid-cols-8 gap-px bg-border/50 rounded-t-lg overflow-hidden">
+            {/* Coluna de horários */}
+            <div className="bg-muted/30 p-3 text-center">
+              <span className="text-xs font-medium text-muted-foreground">Horário</span>
+            </div>
+            
+            {/* Colunas dos dias */}
+            {weekDaysData.map((date, i) => {
+              const isTodayDate = isToday(date);
+              const holidayName = isHoliday(date);
+              
+              return (
                 <button
+                  key={i}
                   onClick={() => handleDayClick(date)}
-                  title={holidayName || undefined}
                   className={cn(
-                    "w-full p-3 rounded-xl text-center mb-3 transition-all",
-                    holidayName && "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400",
+                    "p-2 text-center transition-colors",
                     isTodayDate && !holidayName && "bg-primary/10",
-                    isSelectedDate && !holidayName && "bg-primary text-primary-foreground shadow-lg",
-                    !isSelectedDate && !holidayName && !isTodayDate && "hover:bg-muted/50"
+                    holidayName && "bg-red-50 dark:bg-red-950/20",
+                    !isTodayDate && !holidayName && "bg-card hover:bg-muted/50"
                   )}
                 >
-                  <div className={cn("text-xs font-medium", holidayName ? "text-red-500" : "text-muted-foreground")}>{weekDaysFull[i]}</div>
-                  <div className="text-2xl font-bold mt-1">{date.getDate()}</div>
-                  {holidayName && (
-                    <div className="text-[10px] font-medium truncate mt-1" title={holidayName}>Feriado</div>
-                  )}
+                  <div className={cn(
+                    "text-xs font-medium",
+                    holidayName ? "text-red-500" : "text-muted-foreground"
+                  )}>
+                    {weekDaysFull[i]}
+                  </div>
+                  <div className={cn(
+                    "text-lg font-bold",
+                    isTodayDate && !holidayName && "text-primary",
+                    holidayName && "text-red-600"
+                  )}>
+                    {date.getDate()}/{monthNames[date.getMonth()].slice(0, 3)}
+                  </div>
                 </button>
+              );
+            })}
+          </div>
+          
+          {/* Grid de horários */}
+          <div className="border border-t-0 border-border/50 rounded-b-lg overflow-hidden">
+            {weekTimeSlots.map((time, timeIndex) => (
+              <div 
+                key={time} 
+                className={cn(
+                  "grid grid-cols-8 gap-px min-h-[80px]",
+                  timeIndex % 2 === 0 ? "bg-muted/10" : "bg-card"
+                )}
+              >
+                {/* Coluna de horário */}
+                <div className="p-2 flex items-start justify-center border-r border-border/30">
+                  <span className="text-sm font-medium text-muted-foreground">{time}</span>
+                </div>
                 
-                {/* Droppable zone for the entire day */}
-                <DroppableTimeSlot 
-                  date={dateStr} 
-                  time="08:00" 
-                  showTime={false}
-                  isOccupied={dayAppointments.length >= 8 || !!holidayName}
-                  className="space-y-2 min-h-[240px] p-1"
-                >
-                  {holidayName ? (
-                    <div className="flex items-center justify-center h-full text-xs text-red-500/60 italic">
-                      Fechado
-                    </div>
-                  ) : (
-                    <>
-                      {dayAppointments.slice(0, 4).map((apt) => {
-                        const canDrag = apt.status !== "cancelled" && apt.status !== "completed" && apt.status !== "no_show" && apt.status !== "in_progress";
-                        const professionalColor = professionalColors[apt.professional_id] || 'hsl(var(--primary))';
-                        const displayName = getAppointmentDisplayName(apt);
-                        
-                        return (
-                          <DraggableAppointment key={apt.id} appointment={apt}>
-                            <div
-                              onClick={() => canDrag ? openRescheduleDialog(apt) : undefined}
-                              className={cn(
-                                "relative rounded-lg transition-all overflow-hidden bg-card border border-border/50 shadow-sm hover:shadow-md",
-                                canDrag && "cursor-pointer hover:scale-[1.02]",
-                                apt.status === "cancelled" && "opacity-50"
-                              )}
-                            >
-                              {/* Borda colorida à esquerda */}
-                              <div 
-                                className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg"
-                                style={{ backgroundColor: professionalColor }}
-                              />
-                              <div className="pl-3 pr-2 py-2">
-                                {/* Horário */}
-                                <div 
-                                  className="text-xs font-bold mb-1"
-                                  style={{ color: professionalColor }}
+                {/* Células dos dias */}
+                {weekDaysData.map((date, dayIndex) => {
+                  const dateStr = toDateKey(date);
+                  const holidayName = isHoliday(date);
+                  const slotAppointments = getAppointmentsForSlot(date, time);
+                  
+                  return (
+                    <DroppableTimeSlot
+                      key={`${dateStr}-${time}`}
+                      date={dateStr}
+                      time={time}
+                      showTime={false}
+                      isOccupied={!!holidayName}
+                      className={cn(
+                        "p-1 border-r border-border/20 relative min-h-[80px]",
+                        holidayName && "bg-red-50/50 dark:bg-red-950/10"
+                      )}
+                    >
+                      {holidayName && timeIndex === 5 ? (
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-xs text-red-400 italic">Feriado</span>
+                        </div>
+                      ) : (
+                        <div className="space-y-1">
+                          {slotAppointments.map((apt) => {
+                            const canDrag = apt.status !== "cancelled" && apt.status !== "completed" && apt.status !== "no_show" && apt.status !== "in_progress";
+                            const profColor = professionalColors[apt.professional_id] || 'hsl(200 65% 75%)';
+                            const displayName = getAppointmentDisplayName(apt);
+                            const isStart = apt.start_time.slice(0, 5) === time;
+                            const status = statusConfig[apt.status as keyof typeof statusConfig];
+                            const StatusIcon = status?.icon || AlertCircle;
+                            
+                            // Só renderiza no slot de início
+                            if (!isStart) return null;
+                            
+                            return (
+                              <DraggableAppointment key={apt.id} appointment={apt}>
+                                <div
+                                  onClick={() => canDrag ? openRescheduleDialog(apt) : undefined}
+                                  style={{ 
+                                    backgroundColor: profColor,
+                                    borderLeftColor: shiftHslHue(profColor, -20)
+                                  }}
+                                  className={cn(
+                                    "rounded-md p-1.5 border-l-4 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02]",
+                                    apt.status === "cancelled" && "opacity-50",
+                                    apt.status === "completed" && "opacity-70"
+                                  )}
                                 >
-                                  {apt.start_time.slice(0, 5)}
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-[10px] font-bold text-gray-700">
+                                      {apt.start_time.slice(0, 5)} - {apt.end_time.slice(0, 5)}
+                                    </span>
+                                    {apt.status === "confirmed" && (
+                                      <Check className="h-3 w-3 text-green-700" />
+                                    )}
+                                    {apt.status === "completed" && (
+                                      <CheckCircle2 className="h-3 w-3 text-gray-600" />
+                                    )}
+                                  </div>
+                                  <div className="text-xs font-medium text-gray-800 truncate mt-0.5">
+                                    {displayName}
+                                  </div>
                                 </div>
-                                {/* Nome do paciente */}
-                                <div className="text-xs font-medium text-foreground truncate uppercase">
-                                  {displayName}
-                                </div>
-                              </div>
-                            </div>
-                          </DraggableAppointment>
-                        );
-                      })}
-                      {dayAppointments.length > 4 && (
-                        <div 
-                          className="text-xs text-center py-1.5 rounded-lg bg-muted/50 text-primary font-medium cursor-pointer hover:bg-muted"
-                          onClick={() => handleDayClick(date)}
-                        >
-                          +{dayAppointments.length - 4} mais
+                              </DraggableAppointment>
+                            );
+                          })}
                         </div>
                       )}
-                    </>
-                  )}
-                </DroppableTimeSlot>
+                    </DroppableTimeSlot>
+                  );
+                })}
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
     );
@@ -3065,6 +3116,63 @@ export default function CalendarPage() {
 
       {/* Main Content */}
       <div className="flex gap-6">
+        {/* Sidebar - Pacientes do dia (week view) */}
+        {viewMode === "week" && (
+          <Card className="w-56 shrink-0 hidden lg:block">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-semibold">Pacientes do dia</CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {(() => {
+                const todayAppointments = getAppointmentsForDate(selectedDate)
+                  .filter(apt => apt.status !== 'cancelled' && apt.status !== 'no_show')
+                  .sort((a, b) => a.start_time.localeCompare(b.start_time));
+                
+                if (todayAppointments.length === 0) {
+                  return (
+                    <p className="text-xs text-muted-foreground text-center py-4">
+                      Nenhum agendamento
+                    </p>
+                  );
+                }
+                
+                return (
+                  <div className="space-y-1 max-h-[500px] overflow-y-auto">
+                    {todayAppointments.map((apt) => {
+                      const profColor = professionalColors[apt.professional_id] || 'hsl(200 65% 75%)';
+                      const displayName = getAppointmentDisplayName(apt);
+                      const status = statusConfig[apt.status as keyof typeof statusConfig];
+                      const StatusIcon = status?.icon || AlertCircle;
+                      
+                      return (
+                        <button
+                          key={apt.id}
+                          onClick={() => openRescheduleDialog(apt)}
+                          className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-muted/50 transition-colors text-left"
+                        >
+                          <div 
+                            className="w-1 h-8 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: profColor }}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <span className="text-xs font-bold" style={{ color: profColor }}>
+                              {apt.start_time.slice(0, 5)}
+                            </span>
+                            <p className="text-xs font-medium truncate text-foreground">
+                              {displayName}
+                            </p>
+                          </div>
+                          <StatusIcon className={cn("h-3.5 w-3.5 flex-shrink-0", status?.color)} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+        )}
+        
         {/* Mini Calendar (only in day view when showCalendar is true) */}
         {viewMode === "day" && showCalendar && (
           <Card className="w-72 shrink-0">
