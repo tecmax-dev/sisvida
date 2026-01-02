@@ -692,18 +692,18 @@ export default function PatientEditPage() {
               />
             </form>
           </div>
+        </div>
+      )}
 
-          {/* Painel de Dependentes */}
-          {id && currentClinic && (
-            <div className="bg-card rounded-lg border p-6">
-              <DependentsPanel
-                patientId={id}
-                clinicId={currentClinic.id}
-                patientPhone={formData.phone}
-                autoOpenForm={showDependentsForm}
-              />
-            </div>
-          )}
+      {/* Aba Dependentes */}
+      {activeTab === 'dependentes' && id && currentClinic && (
+        <div className="bg-card rounded-lg border p-6">
+          <DependentsPanel
+            patientId={id}
+            clinicId={currentClinic.id}
+            patientPhone={formData.phone}
+            autoOpenForm={showDependentsForm}
+          />
         </div>
       )}
 
