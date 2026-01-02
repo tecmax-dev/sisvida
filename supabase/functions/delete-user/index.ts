@@ -112,13 +112,47 @@ Deno.serve(async (req) => {
 
     console.log(`[delete-user] Super admin ${requestingUser.email} deleting user ${targetUserEmail} (${targetUserName})`);
 
+    // Clean up related data before deleting user
+    // Delete user_roles first (these may block the user deletion)
+    const { error: rolesError } = await supabaseAdmin
+      .from('user_roles')
+      .delete()
+      .eq('user_id', targetUserId);
+
+    if (rolesError) {
+      console.error('[delete-user] Error deleting user_roles:', rolesError.message);
+      // Continue anyway, as this might not block deletion
+    } else {
+      console.log(`[delete-user] Deleted user_roles for ${targetUserId}`);
+    }
+
+    // Delete profile (may have foreign key constraint)
+    const { error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .delete()
+      .eq('user_id', targetUserId);
+
+    if (profileError) {
+      console.error('[delete-user] Error deleting profile:', profileError.message);
+      // Continue anyway
+    } else {
+      console.log(`[delete-user] Deleted profile for ${targetUserId}`);
+    }
+
     // Delete the user using Admin API
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(targetUserId);
 
     if (deleteError) {
       console.error('[delete-user] Delete error:', deleteError.message);
+      
+      // Try to provide more helpful error message
+      let errorMsg = deleteError.message;
+      if (errorMsg.includes('violates foreign key constraint')) {
+        errorMsg = 'Existem registros vinculados a este usuário que impedem a exclusão. Verifique prontuários, agendamentos ou outros dados.';
+      }
+      
       return new Response(
-        JSON.stringify({ error: `Erro ao excluir usuário: ${deleteError.message}` }),
+        JSON.stringify({ error: `Erro ao excluir usuário: ${errorMsg}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
