@@ -65,7 +65,15 @@ export default function DashboardOverview() {
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState<any[]>([]);
   const [procedureData, setProcedureData] = useState<any[]>([]);
+  const [clinicSpecialtyCategory, setClinicSpecialtyCategory] = useState<string | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  // Determine label based on specialty category
+  const getSessionLabel = () => {
+    if (clinicSpecialtyCategory === 'medical') return 'Consultas';
+    if (clinicSpecialtyCategory === 'dental') return 'Atendimentos';
+    return 'Sessões'; // therapy, aesthetic, massage, etc.
+  };
 
   useEffect(() => {
     if (currentClinic) {
@@ -107,6 +115,25 @@ export default function DashboardOverview() {
     
     try {
       const today = new Date().toISOString().split('T')[0];
+      
+      // Fetch clinic's main specialty category
+      const { data: professionalsData } = await supabase
+        .from('professionals')
+        .select(`
+          professional_specialties (
+            specialty:specialty_id (category)
+          )
+        `)
+        .eq('clinic_id', currentClinic.id)
+        .eq('is_active', true)
+        .limit(1);
+      
+      if (professionalsData && professionalsData.length > 0) {
+        const specialties = professionalsData[0]?.professional_specialties as any[];
+        if (specialties && specialties.length > 0) {
+          setClinicSpecialtyCategory(specialties[0]?.specialty?.category || null);
+        }
+      }
       
       // Today's appointments
       const { count: todayCount } = await supabase
@@ -287,7 +314,7 @@ export default function DashboardOverview() {
     {
       title: "HOJE",
       value: stats.todayAppointments,
-      subtitle: "Sessões Hoje",
+      subtitle: `${getSessionLabel()} Hoje`,
       buttonText: "Ver agenda",
       buttonLink: "/dashboard/calendar",
       gradient: "from-orange-400 via-orange-500 to-amber-500",
@@ -297,7 +324,7 @@ export default function DashboardOverview() {
     {
       title: "FUTURAS",
       value: stats.futureAppointments,
-      subtitle: "Sessões Agendadas",
+      subtitle: `${getSessionLabel()} Agendadas`,
       buttonText: "Ver todas",
       buttonLink: "/dashboard/calendar",
       gradient: "from-emerald-400 via-emerald-500 to-teal-500",
