@@ -90,7 +90,29 @@ export function VitalSignsDisplay({ appointmentId, className }: VitalSignsDispla
     (data.oxygen_saturation && data.oxygen_saturation > 0) ||
     (data.glucose && data.glucose > 0);
 
-  if (!hasAnyVital && (!data.notes || !data.notes.trim())) return null;
+  const hasNotes = data.notes && data.notes.trim();
+
+  // Show a minimal card when pre-attendance exists but no data was recorded
+  if (!hasAnyVital && !hasNotes) {
+    return (
+      <Card className={`border border-border bg-muted/30 ${className}`}>
+        <CardContent className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+              <Stethoscope className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <div>
+              <p className="text-sm font-medium text-muted-foreground">Pré-atendimento registrado</p>
+              <p className="text-xs text-muted-foreground">
+                {format(new Date(data.recorded_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                {" — Sinais vitais não informados"}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   // Calculate BMI if weight and height are available
   const bmi = data.weight && data.height 
