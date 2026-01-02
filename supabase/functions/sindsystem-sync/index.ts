@@ -106,49 +106,58 @@ async function generateCardNumber(supabase: any, clinicId: string): Promise<stri
 }
 
 async function fetchSociosFromSindSystem(token: string): Promise<SindSystemSocio[]> {
-  // Endpoint correto conforme documentação: /{token}/socio/todos
-  const url = `${SINDSYSTEM_BASE_URL}/${token}/socio/todos`
+  // Lista de endpoints para tentar (baseado na documentação)
+  const endpoints = [
+    `${SINDSYSTEM_BASE_URL}/${token}/associado/lista`,
+    `${SINDSYSTEM_BASE_URL}/${token}/socio/lista`,
+    `${SINDSYSTEM_BASE_URL}/${token}/socios`,
+    `${SINDSYSTEM_BASE_URL}/${token}/associados`,
+  ]
   
-  console.log(`📡 Buscando sócios da API SindSystem: ${SINDSYSTEM_BASE_URL}/${token.slice(0, 8)}***/socio/todos`)
-  
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json',
-    },
-  })
-  
-  if (!response.ok) {
-    const errorText = await response.text()
-    console.error('❌ Erro ao buscar sócios:', response.status, errorText)
-    throw new Error(`Erro na API SindSystem: ${response.status} - ${errorText}`)
+  for (const url of endpoints) {
+    console.log(`📡 Tentando endpoint: ${url.replace(token, token.slice(0, 8) + '***')}`)
+    
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        console.log('📦 Resposta da API:', JSON.stringify(data).slice(0, 500))
+        
+        // A API pode retornar um objeto com array ou diretamente um array
+        if (Array.isArray(data)) {
+          console.log(`✅ Endpoint funcionou: ${url.replace(token, '***')}`)
+          return data
+        }
+        
+        // Tenta diferentes formatos de resposta
+        const possibleArrays = ['socios', 'data', 'resultado', 'associados', 'lista', 'items', 'records']
+        for (const key of possibleArrays) {
+          if (data[key] && Array.isArray(data[key])) {
+            console.log(`✅ Endpoint funcionou com key "${key}": ${url.replace(token, '***')}`)
+            return data[key]
+          }
+        }
+        
+        // Se tem algum dado, retorna como array de um elemento
+        if (Object.keys(data).length > 0 && !data.message && !data.error) {
+          console.log('⚠️ Resposta não é array, tentando próximo endpoint...')
+        }
+      } else {
+        console.log(`❌ Endpoint retornou ${response.status}`)
+      }
+    } catch (error) {
+      console.log(`❌ Erro no endpoint: ${error}`)
+    }
   }
   
-  const data = await response.json()
-  
-  console.log('📦 Resposta da API:', JSON.stringify(data).slice(0, 500))
-  
-  // A API pode retornar um objeto com array ou diretamente um array
-  if (Array.isArray(data)) {
-    return data
-  }
-  
-  // Tenta diferentes formatos de resposta
-  if (data.socios && Array.isArray(data.socios)) {
-    return data.socios
-  }
-  
-  if (data.data && Array.isArray(data.data)) {
-    return data.data
-  }
-  
-  if (data.resultado && Array.isArray(data.resultado)) {
-    return data.resultado
-  }
-  
-  console.log('⚠️ Formato de resposta não reconhecido, tentando usar objeto diretamente')
-  return []
+  throw new Error('Nenhum endpoint de listagem de sócios funcionou. Verifique a documentação da API.')
 }
 
 // deno-lint-ignore no-explicit-any
