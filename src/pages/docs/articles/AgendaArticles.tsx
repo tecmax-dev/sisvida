@@ -1,6 +1,8 @@
 import { Link, useParams, Navigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CheckCircle2, Clock, Lightbulb, AlertCircle, MousePointer, Calendar } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import dashboardMockup from "@/assets/dashboard-mockup.png";
+import heroScreens from "@/assets/hero-mockup-screens.png";
 
 const articles: Record<string, {
   title: string;
@@ -25,9 +27,9 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src="/placeholder.svg" 
-            alt="Visão geral da agenda" 
-            className="rounded-lg w-full"
+            src={dashboardMockup} 
+            alt="Visão geral da agenda do Eclini" 
+            className="rounded-lg w-full shadow-lg"
           />
           <p className="text-sm text-muted-foreground text-center mt-2">
             Visão geral da agenda com agendamentos coloridos por status
@@ -119,12 +121,12 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src="/placeholder.svg" 
-            alt="Formulário de agendamento" 
-            className="rounded-lg w-full"
+            src={heroScreens} 
+            alt="Formulário de agendamento do Eclini" 
+            className="rounded-lg w-full shadow-lg"
           />
           <p className="text-sm text-muted-foreground text-center mt-2">
-            Formulário de novo agendamento
+            Formulário de novo agendamento com interface intuitiva
           </p>
         </div>
 
@@ -190,12 +192,12 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src="/placeholder.svg" 
-            alt="Mensagem de confirmação no WhatsApp" 
-            className="rounded-lg w-full"
+            src="/eclini-whatsapp-header.jpg" 
+            alt="Integração WhatsApp do Eclini" 
+            className="rounded-lg w-full shadow-lg"
           />
           <p className="text-sm text-muted-foreground text-center mt-2">
-            Exemplo de mensagem de confirmação enviada ao paciente
+            Mensagens automáticas enviadas diretamente pelo WhatsApp
           </p>
         </div>
 
@@ -262,9 +264,9 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src="/placeholder.svg" 
-            alt="Lista de espera" 
-            className="rounded-lg w-full"
+            src={dashboardMockup} 
+            alt="Lista de espera no Eclini" 
+            className="rounded-lg w-full shadow-lg"
           />
           <p className="text-sm text-muted-foreground text-center mt-2">
             Tela de lista de espera com pacientes ordenados por prioridade

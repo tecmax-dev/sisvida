@@ -2,6 +2,9 @@ import { Navigate, useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, ArrowRight, Clock, Lightbulb, AlertCircle, CheckCircle2 } from "lucide-react";
+import dashboardMockup from "@/assets/dashboard-mockup.png";
+import heroScreens from "@/assets/hero-mockup-screens.png";
+import heroMockup from "@/assets/hero-mockup.png";
 
 const articles: Record<string, {
   title: string;
@@ -24,10 +27,13 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src="https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=800&h=400&fit=crop" 
-              alt="Tela de cadastro de pacientes" 
-              className="rounded-lg w-full"
+              src={dashboardMockup} 
+              alt="Tela de cadastro de pacientes do Eclini" 
+              className="rounded-lg w-full shadow-lg"
             />
+            <p className="text-sm text-muted-foreground text-center mt-2">
+              Interface de cadastro de pacientes
+            </p>
           </div>
         </section>
 
@@ -60,10 +66,13 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src="https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&h=400&fit=crop" 
-              alt="Cadastro rápido de paciente" 
-              className="rounded-lg w-full"
+              src={heroScreens} 
+              alt="Cadastro rápido de paciente no Eclini" 
+              className="rounded-lg w-full shadow-lg"
             />
+            <p className="text-sm text-muted-foreground text-center mt-2">
+              Formulário de cadastro rápido integrado à agenda
+            </p>
           </div>
         </section>
 
@@ -116,10 +125,13 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=800&h=400&fit=crop" 
-              alt="Prontuário eletrônico" 
-              className="rounded-lg w-full"
+              src={heroMockup} 
+              alt="Prontuário eletrônico do Eclini" 
+              className="rounded-lg w-full shadow-lg"
             />
+            <p className="text-sm text-muted-foreground text-center mt-2">
+              Prontuário eletrônico com histórico completo do paciente
+            </p>
           </div>
         </section>
 
@@ -186,10 +198,13 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=800&h=400&fit=crop" 
-              alt="Upload de anexos" 
-              className="rounded-lg w-full"
+              src={dashboardMockup} 
+              alt="Gerenciamento de anexos no Eclini" 
+              className="rounded-lg w-full shadow-lg"
             />
+            <p className="text-sm text-muted-foreground text-center mt-2">
+              Sistema de anexos organizado em pastas
+            </p>
           </div>
         </section>
 
@@ -251,10 +266,13 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&h=400&fit=crop" 
-              alt="Histórico de atendimentos" 
-              className="rounded-lg w-full"
+              src={heroScreens} 
+              alt="Histórico de atendimentos no Eclini" 
+              className="rounded-lg w-full shadow-lg"
             />
+            <p className="text-sm text-muted-foreground text-center mt-2">
+              Timeline de atendimentos do paciente
+            </p>
           </div>
         </section>
 

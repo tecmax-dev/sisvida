@@ -2,6 +2,9 @@ import { Link, useParams, Navigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CheckCircle2, Clock, Lightbulb, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import heroMockup from "@/assets/hero-mockup.png";
+import dashboardMockup from "@/assets/dashboard-mockup.png";
+import heroScreens from "@/assets/hero-mockup-screens.png";
 
 const articles: Record<string, {
   title: string;
@@ -41,12 +44,12 @@ const articles: Record<string, {
         
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src="/placeholder.svg" 
-            alt="Tela de cadastro do Eclini" 
-            className="rounded-lg w-full"
+            src="/docs/tela-login.png" 
+            alt="Tela de login do Eclini" 
+            className="rounded-lg w-full shadow-lg"
           />
           <p className="text-sm text-muted-foreground text-center mt-2">
-            Tela de cadastro do Eclini
+            Tela de login do Eclini com acesso seguro
           </p>
         </div>
 
@@ -74,12 +77,12 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src="/placeholder.svg" 
-            alt="Configurações da clínica" 
-            className="rounded-lg w-full"
+            src={dashboardMockup} 
+            alt="Dashboard do Eclini" 
+            className="rounded-lg w-full shadow-lg"
           />
           <p className="text-sm text-muted-foreground text-center mt-2">
-            Tela de configurações da clínica
+            Dashboard principal com visão geral da clínica
           </p>
         </div>
 
@@ -138,12 +141,12 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src="/placeholder.svg" 
-            alt="Upload de logo" 
-            className="rounded-lg w-full"
+            src={heroMockup} 
+            alt="Sistema Eclini em dispositivos" 
+            className="rounded-lg w-full shadow-lg"
           />
           <p className="text-sm text-muted-foreground text-center mt-2">
-            Área de upload do logo da clínica
+            O Eclini funciona perfeitamente em todos os dispositivos
           </p>
         </div>
 
@@ -218,12 +221,12 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src="/placeholder.svg" 
-            alt="Formulário de cadastro de profissional" 
-            className="rounded-lg w-full"
+            src={heroScreens} 
+            alt="Telas do sistema Eclini" 
+            className="rounded-lg w-full shadow-lg"
           />
           <p className="text-sm text-muted-foreground text-center mt-2">
-            Formulário de cadastro de profissional
+            Interface intuitiva para cadastro de profissionais
           </p>
         </div>
 
@@ -279,12 +282,12 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src="/placeholder.svg" 
-            alt="Configuração de horários" 
-            className="rounded-lg w-full"
+            src={dashboardMockup} 
+            alt="Configuração de horários na agenda" 
+            className="rounded-lg w-full shadow-lg"
           />
           <p className="text-sm text-muted-foreground text-center mt-2">
-            Tela de configuração de horários do profissional
+            Agenda com visualização clara dos horários configurados
           </p>
         </div>
 
