@@ -209,15 +209,16 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
     setLoading(true);
     try {
       if (isEditing && clinicUser) {
-        // Update user role and access_group_id
+        // Update user role and access_group_id (use user_id + clinic_id to avoid mismatches)
         const { error: roleError } = await supabase
           .from('user_roles')
-          .update({ 
+          .update({
             role: data.role,
             access_group_id: data.access_group_id || null,
-            professional_id: data.professional_id || null
+            professional_id: data.professional_id || null,
           })
-          .eq('id', clinicUser.id);
+          .eq('user_id', clinicUser.user_id)
+          .eq('clinic_id', clinicId);
 
         if (roleError) throw roleError;
 
