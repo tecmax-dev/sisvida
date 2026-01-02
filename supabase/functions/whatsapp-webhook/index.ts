@@ -42,6 +42,7 @@ type BookingState =
   | 'WAITING_REGISTRATION_RELATIONSHIP'
   | 'OFFER_REGISTRATION'
   | 'SELECT_REGISTRATION_TYPE'
+  | 'WAITING_REGISTRATION_DEPENDENT_CPF'
   | 'WAITING_REGISTRATION_TITULAR_CPF'
   | 'SELECT_INSURANCE_PLAN'
   | 'WAITING_REGISTRATION_NAME'
@@ -1223,7 +1224,7 @@ async function handleBookingFlow(
 
   // Fast-path CPF (don’t depend on AI; WhatsApp sometimes sends formats the AI won’t parse)
   const maybeCpf = messageText.replace(/\D/g, '');
-  const skipFastPathStates: BookingState[] = ['WAITING_REGISTRATION_TITULAR_CPF', 'SELECT_REGISTRATION_TYPE', 'SELECT_INSURANCE_PLAN', 'WAITING_REGISTRATION_NAME', 'WAITING_REGISTRATION_BIRTHDATE', 'WAITING_REGISTRATION_CNPJ', 'CONFIRM_COMPANY', 'CONFIRM_REGISTRATION', 'OFFER_REGISTRATION'];
+  const skipFastPathStates: BookingState[] = ['WAITING_REGISTRATION_DEPENDENT_CPF', 'WAITING_REGISTRATION_TITULAR_CPF', 'SELECT_REGISTRATION_TYPE', 'SELECT_INSURANCE_PLAN', 'WAITING_REGISTRATION_NAME', 'WAITING_REGISTRATION_BIRTHDATE', 'WAITING_REGISTRATION_CNPJ', 'CONFIRM_COMPANY', 'CONFIRM_REGISTRATION', 'OFFER_REGISTRATION'];
   const shouldSkipFastPath = session && skipFastPathStates.includes(session.state as BookingState);
   
   if (CPF_REGEX.test(maybeCpf) && validateCpf(maybeCpf) && !shouldSkipFastPath) {
@@ -1252,7 +1253,7 @@ async function handleBookingFlow(
   // Handle high-confidence AI intents that can override current state
   if (aiResult.confidence >= 0.6) {
     // Extract CPF from AI if detected - BUT skip during registration states where CPF has different meaning
-    const skipAiCpfStates: BookingState[] = ['WAITING_REGISTRATION_TITULAR_CPF', 'SELECT_REGISTRATION_TYPE', 'SELECT_INSURANCE_PLAN', 'WAITING_REGISTRATION_NAME', 'WAITING_REGISTRATION_BIRTHDATE', 'WAITING_REGISTRATION_CNPJ', 'CONFIRM_COMPANY', 'CONFIRM_REGISTRATION', 'OFFER_REGISTRATION'];
+    const skipAiCpfStates: BookingState[] = ['WAITING_REGISTRATION_DEPENDENT_CPF', 'WAITING_REGISTRATION_TITULAR_CPF', 'SELECT_REGISTRATION_TYPE', 'SELECT_INSURANCE_PLAN', 'WAITING_REGISTRATION_NAME', 'WAITING_REGISTRATION_BIRTHDATE', 'WAITING_REGISTRATION_CNPJ', 'CONFIRM_COMPANY', 'CONFIRM_REGISTRATION', 'OFFER_REGISTRATION'];
     const shouldSkipAiCpf = skipAiCpfStates.includes(session.state as BookingState);
     
     if (aiResult.entities?.cpf && !shouldSkipAiCpf) {
@@ -1445,12 +1446,15 @@ async function handleBookingFlow(
     
     case 'SELECT_REGISTRATION_TYPE':
       return await handleSelectRegistrationType(supabase, config, phone, messageText, session);
+
+    case 'WAITING_REGISTRATION_DEPENDENT_CPF':
+      return await handleWaitingRegistrationDependentCpf(supabase, config, phone, messageText, session!);
     
     case 'WAITING_REGISTRATION_TITULAR_CPF':
-      return await handleWaitingRegistrationTitularCpf(supabase, config, phone, messageText, session);
-    
+      return await handleWaitingRegistrationTitularCpf(supabase, config, phone, messageText, session!);
+
     case 'SELECT_INSURANCE_PLAN':
-      return await handleSelectInsurancePlan(supabase, config, phone, messageText, session);
+      return await handleSelectInsurancePlan(supabase, config, phone, messageText, session!);
     
     case 'WAITING_REGISTRATION_NAME':
       return await handleWaitingRegistrationName(supabase, config, phone, messageText, session);
@@ -2732,7 +2736,18 @@ async function handleSelectRegistrationType(
   }
   
   if (isDependent) {
-    // Mark as dependent and ask for titular's CPF
+    // Mark as dependent.
+    // If the dependent CPF wasn't captured earlier (e.g. user started the flow without a CPF), ask now.
+    if (!session.pending_registration_cpf) {
+      await updateSession(supabase, session.id, {
+        state: 'WAITING_REGISTRATION_DEPENDENT_CPF',
+        pending_registration_type: 'dependent',
+      });
+      await sendWhatsAppMessage(config, phone, `📝 Informe o *CPF do dependente* (11 dígitos):`);
+      return { handled: true, newState: 'WAITING_REGISTRATION_DEPENDENT_CPF' };
+    }
+
+    // CPF do dependente já está na sessão; pedir CPF do titular.
     await updateSession(supabase, session.id, {
       state: 'WAITING_REGISTRATION_TITULAR_CPF',
       pending_registration_type: 'dependent',
