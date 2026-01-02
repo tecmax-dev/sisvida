@@ -6931,6 +6931,7 @@ export type Database = {
           patient_id: string | null
           patient_name: string | null
           pending_appointments: Json | null
+          pending_registration_cpf: string | null
           phone: string
           selected_appointment_id: string | null
           selected_date: string | null
@@ -6961,6 +6962,7 @@ export type Database = {
           patient_id?: string | null
           patient_name?: string | null
           pending_appointments?: Json | null
+          pending_registration_cpf?: string | null
           phone: string
           selected_appointment_id?: string | null
           selected_date?: string | null
@@ -6991,6 +6993,7 @@ export type Database = {
           patient_id?: string | null
           patient_name?: string | null
           pending_appointments?: Json | null
+          pending_registration_cpf?: string | null
           phone?: string
           selected_appointment_id?: string | null
           selected_date?: string | null
