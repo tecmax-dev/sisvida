@@ -12,21 +12,18 @@ serve(async (req) => {
   }
 
   try {
-    const { phone, clinicId } = await req.json();
+    const { phone, clinicId, patientName, cardNumber, expiryDate } = await req.json();
     
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    // Default to Sindicato Comerciários if no clinicId provided
-    const targetClinicId = clinicId || "89e7585e-7bce-4e58-91fa-c37080d1170d";
-
     // Get clinic Evolution config
     const { data: evolutionConfig } = await supabase
       .from("evolution_configs")
       .select("*")
-      .eq("clinic_id", targetClinicId)
+      .eq("clinic_id", clinicId)
       .eq("is_connected", true)
       .single();
 
@@ -41,21 +38,21 @@ serve(async (req) => {
     const { data: clinic } = await supabase
       .from("clinics")
       .select("name")
-      .eq("id", targetClinicId)
+      .eq("id", clinicId)
       .single();
 
     const clinicName = clinic?.name || "Clínica";
 
-    const message = `Olá! 🎉
+    // Message requesting payslip image
+    const message = `Olá ${patientName}! 👋
 
-Seu contracheque foi aprovado e as carteirinhas foram renovadas com sucesso!
+Sua carteirinha digital da *${clinicName}* (${cardNumber}) está próxima do vencimento.
 
-📅 *Nova validade: 31/01/2026*
+📅 *Validade:* ${expiryDate}
 
-*Beneficiários atualizados:*
-👤 *SERGIO NASCIMENTO DE JESUS* (titular)
+Para renovar sua carteirinha, por favor *envie uma foto do seu contracheque* nesta conversa. Nossa equipe irá analisar e atualizar sua carteirinha.
 
-Obrigado por manter seus dados atualizados. Estamos à disposição para qualquer dúvida!
+📎 Basta tirar uma foto do contracheque e enviar aqui!
 
 Atenciosamente,
 Equipe ${clinicName}`;
@@ -66,7 +63,7 @@ Equipe ${clinicName}`;
       formattedPhone = "55" + formattedPhone;
     }
 
-    console.log("Sending payslip approval to:", formattedPhone);
+    console.log("Sending card expiry notification to:", formattedPhone);
     console.log("Using Evolution instance:", evolutionConfig.instance_name);
 
     const evolutionUrl = `${evolutionConfig.api_url}/message/sendText/${evolutionConfig.instance_name}`;
@@ -97,7 +94,7 @@ Equipe ${clinicName}`;
       JSON.stringify({ 
         success: response.ok, 
         phone: formattedPhone,
-        message: "Notificação de aprovação enviada",
+        message: "Notificação de carteira vencida enviada",
         result 
       }),
       { 

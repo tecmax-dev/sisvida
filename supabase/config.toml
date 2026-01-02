@@ -137,3 +137,6 @@ verify_jwt = false
 
 [functions.send-no-show-notification]
 verify_jwt = false
+
+[functions.test-card-expiry]
+verify_jwt = false
