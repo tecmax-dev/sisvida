@@ -496,362 +496,409 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Panel - Form */}
-      <div className="flex-1 flex flex-col justify-center px-6 py-12 lg:px-8">
-        <div className="sm:mx-auto sm:w-full sm:max-w-md">
-          <Link
-            to="/"
-            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Voltar ao site
-          </Link>
-          
-          <div className="flex justify-center">
-            <Logo size="lg" />
-          </div>
-          
-          <h2 className="mt-8 text-center text-2xl font-bold text-foreground">
-            {getTitle()}
-          </h2>
-          <p className="mt-2 text-center text-sm text-muted-foreground">
-            {getSubtitle()}
-          </p>
+    <div className="min-h-screen relative overflow-hidden bg-[#0d1117]">
+      {/* Background decorativo */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {/* Elemento decorativo esquerdo - forma abstrata */}
+        <div className="absolute left-0 top-0 w-[400px] h-full">
+          <svg viewBox="0 0 400 900" className="h-full w-full" preserveAspectRatio="none">
+            <path
+              d="M0 0 L200 0 L200 300 Q300 450 200 600 L200 900 L0 900 Z"
+              fill="hsl(var(--primary))"
+              opacity="0.15"
+            />
+          </svg>
         </div>
+        
+        {/* Círculos decorativos */}
+        <div className="absolute top-10 right-20 w-32 h-32 rounded-full bg-primary/5 blur-xl" />
+        <div className="absolute bottom-20 left-40 w-24 h-24 rounded-full bg-primary/10 blur-lg" />
+        <div className="absolute top-1/3 right-1/4 w-16 h-16 rounded-full bg-primary/5 blur-md" />
+        
+        {/* Elementos sparkle */}
+        <div className="absolute top-20 right-40 text-primary/40 text-4xl animate-pulse">✦</div>
+        <div className="absolute bottom-32 right-60 text-primary/30 text-2xl animate-pulse delay-300">✧</div>
+        <div className="absolute top-1/2 right-20 text-primary/20 text-3xl animate-pulse delay-500">✦</div>
+      </div>
 
-        <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-          {/* Forgot Password Form */}
-          {view === "forgot-password" && (
-            <form className="space-y-5" onSubmit={handleForgotPassword}>
-              {fromExpiredLink && (
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-200">
-                  O link anterior expirou ou já foi utilizado. Solicite um novo link abaixo.
-                </div>
-              )}
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <div className="relative mt-1.5">
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    className={`pl-10 ${errors.email ? "border-destructive" : ""}`}
-                  />
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                </div>
-                {errors.email && (
-                  <p className="mt-1 text-sm text-destructive">{errors.email}</p>
-                )}
-              </div>
+      {/* Título decorativo "Feliz 2026" estilo */}
+      <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center pointer-events-none">
+        <div className="relative">
+          <span className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
+            ✨ Bem-vindo ao Eclini ✨
+          </span>
+        </div>
+      </div>
 
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Enviar link de recuperação
-              </Button>
+      {/* Container principal */}
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-20">
+        <div className="w-full max-w-5xl bg-card rounded-2xl shadow-2xl overflow-hidden flex flex-col lg:flex-row">
+          
+          {/* Painel esquerdo - Formulário */}
+          <div className="flex-1 p-8 lg:p-12">
+            <Link
+              to="/"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Voltar ao site
+            </Link>
+            
+            <div className="mb-8">
+              <Logo size="lg" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-foreground mb-1">
+              {getTitle()}
+            </h2>
+            <p className="text-muted-foreground mb-8">
+              {getSubtitle()}
+            </p>
 
-              <button
-                type="button"
-                onClick={() => switchView("login")}
-                className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <ArrowLeft className="inline-block w-4 h-4 mr-1" />
-                Voltar para o login
-              </button>
-            </form>
-          )}
-
-          {/* Reset Password Form */}
-          {view === "reset-password" && (
-            <form className="space-y-5" onSubmit={handleResetPassword}>
-              <div>
-                <Label htmlFor="password">Nova senha</Label>
-                <div className="relative mt-1.5">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className={`pl-10 pr-10 ${errors.password ? "border-destructive" : ""}`}
-                  />
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="mt-1 text-sm text-destructive">{errors.password}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
-                <div className="relative mt-1.5">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className={`pl-10 pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
-                  />
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="h-4 w-4" />
-                    ) : (
-                      <Eye className="h-4 w-4" />
-                    )}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-destructive">{errors.confirmPassword}</p>
-                )}
-              </div>
-
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Redefinir senha
-              </Button>
-            </form>
-          )}
-
-          {/* First Access - Create Personal Password */}
-          {view === "first-access" && (
-            <form className="space-y-5" onSubmit={handleSubmit}>
-              <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-sm text-primary dark:bg-primary/5">
-                <p className="font-medium mb-1">🔐 Primeiro acesso detectado</p>
-                <p className="text-muted-foreground">
-                  Você está usando uma senha temporária. Por segurança, crie uma senha pessoal agora.
-                </p>
-              </div>
-
-              <div>
-                <Label htmlFor="password">Nova senha</Label>
-                <div className="relative mt-1.5">
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className={`pl-10 pr-10 ${errors.password ? "border-destructive" : ""}`}
-                  />
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="mt-1 text-sm text-destructive">{errors.password}</p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
-                <div className="relative mt-1.5">
-                  <Input
-                    id="confirmPassword"
-                    type={showConfirmPassword ? "text" : "password"}
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className={`pl-10 pr-10 ${errors.confirmPassword ? "border-destructive" : ""}`}
-                  />
-                  <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="mt-1 text-sm text-destructive">{errors.confirmPassword}</p>
-                )}
-              </div>
-
-              <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Criar minha senha
-              </Button>
-            </form>
-          )}
-
-          {/* Login/Signup Form */}
-          {(view === "login" || view === "signup") && (
-            <>
-              <form className="space-y-5" onSubmit={handleSubmit}>
-                {view === "signup" && (
-                  <div>
-                    <Label htmlFor="name">Nome completo</Label>
-                    <Input
-                      id="name"
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Seu nome"
-                      className={`mt-1.5 ${errors.name ? "border-destructive" : ""}`}
-                    />
-                    {errors.name && (
-                      <p className="mt-1 text-sm text-destructive">{errors.name}</p>
-                    )}
+            {/* Forgot Password Form */}
+            {view === "forgot-password" && (
+              <form className="space-y-5" onSubmit={handleForgotPassword}>
+                {fromExpiredLink && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 dark:bg-amber-900/20 dark:border-amber-800 dark:text-amber-200">
+                    O link anterior expirou ou já foi utilizado. Solicite um novo link abaixo.
                   </div>
                 )}
-
                 <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="seu@email.com"
-                    className={`mt-1.5 ${errors.email ? "border-destructive" : ""}`}
-                  />
+                  <Label htmlFor="email">E-mail</Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="email"
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Digite seu e-mail"
+                      className={`pl-10 h-12 ${errors.email ? "border-destructive" : ""}`}
+                    />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  </div>
                   {errors.email && (
                     <p className="mt-1 text-sm text-destructive">{errors.email}</p>
                   )}
                 </div>
 
-                {view === "login" && (
+                <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Enviar link de recuperação
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => switchView("login")}
+                  className="w-full text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <ArrowLeft className="inline-block w-4 h-4 mr-1" />
+                  Voltar para o login
+                </button>
+              </form>
+            )}
+
+            {/* Reset Password Form */}
+            {view === "reset-password" && (
+              <form className="space-y-5" onSubmit={handleResetPassword}>
+                <div>
+                  <Label htmlFor="password">Nova senha</Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Informe sua senha"
+                      className={`pl-10 pr-10 h-12 ${errors.password ? "border-destructive" : ""}`}
+                    />
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-destructive">{errors.password}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirme sua senha"
+                      className={`pl-10 pr-10 h-12 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                    />
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="mt-1 text-sm text-destructive">{errors.confirmPassword}</p>
+                  )}
+                </div>
+
+                <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Redefinir senha
+                </Button>
+              </form>
+            )}
+
+            {/* First Access Form */}
+            {view === "first-access" && (
+              <form className="space-y-5" onSubmit={handleSubmit}>
+                <div className="bg-primary/10 border border-primary/20 rounded-lg p-4 text-sm">
+                  <p className="font-medium mb-1 text-primary">🔐 Primeiro acesso detectado</p>
+                  <p className="text-muted-foreground">
+                    Você está usando uma senha temporária. Por segurança, crie uma senha pessoal agora.
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="password">Nova senha</Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Informe sua senha"
+                      className={`pl-10 pr-10 h-12 ${errors.password ? "border-destructive" : ""}`}
+                    />
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="mt-1 text-sm text-destructive">{errors.password}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="confirmPassword">Confirmar nova senha</Label>
+                  <div className="relative mt-1.5">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirme sua senha"
+                      className={`pl-10 pr-10 h-12 ${errors.confirmPassword ? "border-destructive" : ""}`}
+                    />
+                    <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="mt-1 text-sm text-destructive">{errors.confirmPassword}</p>
+                  )}
+                </div>
+
+                <Button type="submit" className="w-full h-12 text-base" disabled={loading}>
+                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Criar minha senha
+                </Button>
+              </form>
+            )}
+
+            {/* Login/Signup Form */}
+            {(view === "login" || view === "signup") && (
+              <>
+                <form className="space-y-5" onSubmit={handleSubmit}>
+                  {view === "signup" && (
+                    <div>
+                      <Label htmlFor="name">Nome completo</Label>
+                      <Input
+                        id="name"
+                        type="text"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Seu nome"
+                        className={`mt-1.5 h-12 ${errors.name ? "border-destructive" : ""}`}
+                      />
+                      {errors.name && (
+                        <p className="mt-1 text-sm text-destructive">{errors.name}</p>
+                      )}
+                    </div>
+                  )}
+
                   <div>
-                    <div className="flex items-center justify-between">
+                    <Label htmlFor="email">E-mail</Label>
+                    <div className="relative mt-1.5">
+                      <Input
+                        id="email"
+                        type="email"
+                        autoComplete="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="Digite seu e-mail"
+                        className={`pl-10 h-12 ${errors.email ? "border-destructive" : ""}`}
+                      />
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    </div>
+                    {errors.email && (
+                      <p className="mt-1 text-sm text-destructive">{errors.email}</p>
+                    )}
+                  </div>
+
+                  {view === "login" && (
+                    <div>
                       <Label htmlFor="password">Senha</Label>
+                      <div className="relative mt-1.5">
+                        <Input
+                          id="password"
+                          type={showPassword ? "text" : "password"}
+                          autoComplete="current-password"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="Informe sua senha"
+                          className={`pl-10 pr-10 h-12 ${errors.password ? "border-destructive" : ""}`}
+                        />
+                        <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                      </div>
+                      {errors.password && (
+                        <p className="mt-1 text-sm text-destructive">{errors.password}</p>
+                      )}
                       <button
                         type="button"
                         onClick={() => switchView("forgot-password")}
-                        className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                        className="mt-2 flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
                       >
-                        Esqueceu a senha?
+                        <KeyRound className="h-3.5 w-3.5" />
+                        Esqueci a senha
                       </button>
                     </div>
-                    <div className="relative mt-1.5">
-                      <Input
-                        id="password"
-                        type={showPassword ? "text" : "password"}
-                        autoComplete="current-password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        className={`pr-10 ${errors.password ? "border-destructive" : ""}`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                    {errors.password && (
-                      <p className="mt-1 text-sm text-destructive">{errors.password}</p>
-                    )}
-                  </div>
-                )}
+                  )}
 
-                <Button type="submit" className="w-full" size="lg" disabled={loading}>
-                  {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {view === "login" ? "Entrar" : "Criar conta"}
-                </Button>
-              </form>
+                  <Button type="submit" className="w-full h-12 text-base gap-2" disabled={loading}>
+                    {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    {view === "login" ? "Entrar" : "Criar conta"}
+                    {!loading && <ArrowLeft className="h-4 w-4 rotate-180" />}
+                  </Button>
+                </form>
 
-              <p className="mt-6 text-center text-sm text-muted-foreground">
-                {view === "login" ? "Não tem uma conta?" : "Já tem uma conta?"}{" "}
-                <button
-                  type="button"
-                  onClick={() => switchView(view === "login" ? "signup" : "login")}
-                  className="font-medium text-primary hover:text-primary/80 transition-colors"
-                >
-                  {view === "login" ? "Criar conta" : "Fazer login"}
-                </button>
-              </p>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Right Panel - Visual Profissional */}
-      <div className="hidden lg:flex lg:flex-1 relative overflow-hidden">
-        {/* Imagem de fundo - Médica profissional */}
-        <img 
-          src="https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=1200&q=80" 
-          alt="Profissional de saúde"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        
-        {/* Overlay gradiente para legibilidade */}
-        <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/60 to-primary/30" />
-        
-        {/* Screenshot do sistema sobreposto - posicionado no canto superior direito */}
-        <div className="absolute right-4 top-6 w-[260px] transform rotate-2 hover:rotate-0 transition-transform duration-500 group">
-          <div className="relative">
-            <img 
-              src={dashboardMockup}
-              alt="Sistema Eclini - Agenda"
-              className="rounded-xl shadow-2xl border-4 border-white/20 group-hover:shadow-primary/30 transition-all duration-500"
-            />
-            {/* Brilho sutil */}
-            <div className="absolute inset-0 rounded-xl bg-gradient-to-tr from-transparent via-white/5 to-white/10 pointer-events-none" />
+                <p className="mt-6 text-center text-sm text-muted-foreground">
+                  {view === "login" ? "Você ainda não tem conta Eclini?" : "Já tem uma conta?"}{" "}
+                  <button
+                    type="button"
+                    onClick={() => switchView(view === "login" ? "signup" : "login")}
+                    className="font-medium text-primary hover:underline transition-colors"
+                  >
+                    {view === "login" ? "Crie sua conta teste grátis aqui!" : "Fazer login"}
+                  </button>
+                </p>
+              </>
+            )}
           </div>
-        </div>
-        
-        {/* Conteúdo textual na parte inferior */}
-        <div className="relative z-10 flex flex-col justify-end items-start p-10 text-left w-full">
-          <h3 className="text-3xl font-bold text-white drop-shadow-lg">
-            Simplifique sua gestão
-          </h3>
-          <p className="mt-3 text-lg text-white/90 max-w-md drop-shadow-md">
-            Agendamento inteligente, lembretes automáticos e menos faltas. 
-            Tudo para sua clínica funcionar melhor.
-          </p>
           
-          {/* Cards de estatísticas em linha */}
-          <div className="mt-6 flex gap-3">
-            {[
-              { value: "50%", label: "menos faltas" },
-              { value: "2x", label: "mais produtivo" },
-              { value: "24/7", label: "disponível" },
-              { value: "100%", label: "digital" },
-            ].map((stat, i) => (
-              <div
-                key={i}
-                className="px-4 py-3 rounded-xl bg-white/15 backdrop-blur-md border border-white/25"
-              >
-                <div className="text-xl font-bold text-white">{stat.value}</div>
-                <div className="text-xs text-white/80">{stat.label}</div>
+          {/* Painel direito - Promocional */}
+          <div className="hidden lg:flex lg:w-[420px] bg-gradient-to-br from-primary via-primary to-primary-dark relative overflow-hidden p-8">
+            {/* Background pattern */}
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-0 right-0 w-40 h-40 border-2 border-white rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-32 h-32 border-2 border-white rounded-full translate-y-1/2 -translate-x-1/2" />
+            </div>
+            
+            {/* Conteúdo */}
+            <div className="relative z-10 flex flex-col h-full">
+              {/* Mockup do dashboard */}
+              <div className="relative mb-6">
+                <img 
+                  src={dashboardMockup}
+                  alt="Sistema Eclini"
+                  className="rounded-xl shadow-2xl border-2 border-white/20"
+                />
+                {/* Brilho */}
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-tr from-transparent via-white/5 to-white/15 pointer-events-none" />
               </div>
-            ))}
+              
+              {/* Card informativo */}
+              <div className="bg-white rounded-xl p-5 shadow-xl flex-1">
+                <div className="flex items-start justify-between mb-3">
+                  <span className="text-xs text-muted-foreground">•••</span>
+                </div>
+                
+                <p className="text-sm text-muted-foreground mb-1">
+                  Clínicas orientadas por dados
+                </p>
+                <h3 className="text-2xl font-bold text-primary mb-4">
+                  crescem <span className="text-3xl">30%</span> mais!
+                </h3>
+                
+                <p className="text-sm text-muted-foreground mb-3">
+                  Com o <strong>Módulo de Indicadores</strong>, você pode ver em tempo real:
+                </p>
+                
+                <ul className="space-y-1.5 text-sm text-foreground mb-4">
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Ocupação da agenda
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Cancelamentos e inadimplência
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Ticket médio e contas a receber
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Despesas e projeção financeira
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    Perfil dos pacientes
+                  </li>
+                </ul>
+                
+                <p className="text-xs text-muted-foreground mb-4">
+                  Transforme dados da rotina em <strong>clareza para decidir melhor</strong> e crescer com estrutura.
+                </p>
+                
+                <Button size="sm" className="w-full gap-2" asChild>
+                  <Link to="/cadastro">
+                    Quero saber mais
+                    <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
+                  </Link>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
