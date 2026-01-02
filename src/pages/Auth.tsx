@@ -878,9 +878,10 @@ export default function Auth() {
                       }}
                       onErrored={() => {
                         setRecaptchaToken(null);
+                        const hostname = window.location.hostname;
                         toast({
                           title: "Erro no reCAPTCHA",
-                          description: "Houve um erro. Por favor, tente novamente.",
+                          description: `Domínio atual: ${hostname}. Verifique se este domínio está autorizado na chave do site.`,
                           variant: "destructive",
                         });
                       }}
