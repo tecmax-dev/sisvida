@@ -1221,7 +1221,10 @@ async function handleBookingFlow(
 
   // Fast-path CPF (don’t depend on AI; WhatsApp sometimes sends formats the AI won’t parse)
   const maybeCpf = messageText.replace(/\D/g, '');
-  if (CPF_REGEX.test(maybeCpf) && validateCpf(maybeCpf)) {
+  const skipFastPathStates: BookingState[] = ['WAITING_REGISTRATION_TITULAR_CPF', 'SELECT_REGISTRATION_TYPE', 'SELECT_INSURANCE_PLAN', 'WAITING_REGISTRATION_NAME', 'WAITING_REGISTRATION_BIRTHDATE', 'WAITING_REGISTRATION_CNPJ', 'CONFIRM_COMPANY', 'CONFIRM_REGISTRATION', 'OFFER_REGISTRATION'];
+  const shouldSkipFastPath = session && skipFastPathStates.includes(session.state as BookingState);
+  
+  if (CPF_REGEX.test(maybeCpf) && validateCpf(maybeCpf) && !shouldSkipFastPath) {
     const currentSession = session ?? await createOrResetSession(supabase, config.clinic_id, phone, 'WAITING_CPF');
     return await handleWaitingCpf(supabase, config, phone, maybeCpf, currentSession);
   }
