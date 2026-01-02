@@ -385,14 +385,17 @@ export default function SubscriptionPage() {
             </CardContent>
           </Card>
 
-          {/* Features Section */}
+          {/* Features Section - Redesigned */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Available Features */}
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-green-600">
                   <Check className="h-5 w-5" />
-                  Recursos Incluídos ({availableFeatures.length})
+                  Recursos Incluídos
+                  <Badge variant="secondary" className="ml-auto">
+                    {availableFeatures.length}
+                  </Badge>
                 </CardTitle>
                 <CardDescription>
                   Recursos disponíveis no seu plano atual
@@ -404,14 +407,35 @@ export default function SubscriptionPage() {
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : availableFeatures.length > 0 ? (
-                  <ul className="space-y-2">
-                    {availableFeatures.map((feature) => (
-                      <li key={feature.id} className="flex items-center gap-2 text-sm">
-                        <Check className="h-4 w-4 text-green-600" />
-                        <span>{feature.name}</span>
-                      </li>
+                  <div className="space-y-3">
+                    {/* Group features by category */}
+                    {Object.entries(
+                      availableFeatures.reduce((acc, feature) => {
+                        const cat = feature.category || 'Geral';
+                        if (!acc[cat]) acc[cat] = [];
+                        acc[cat].push(feature);
+                        return acc;
+                      }, {} as Record<string, typeof availableFeatures>)
+                    ).map(([category, features]) => (
+                      <div key={category} className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          {category}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {features.map((feature) => (
+                            <Badge 
+                              key={feature.id} 
+                              variant="secondary"
+                              className="bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300 border-green-200 dark:border-green-800 gap-1"
+                            >
+                              <Check className="h-3 w-3" />
+                              {feature.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Nenhum recurso vinculado ao plano.</p>
                 )}
@@ -420,10 +444,13 @@ export default function SubscriptionPage() {
 
             {/* Blocked Features */}
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-muted-foreground">
                   <Lock className="h-5 w-5" />
-                  Recursos Bloqueados ({blockedFeatures.length})
+                  Recursos Bloqueados
+                  <Badge variant="outline" className="ml-auto">
+                    {blockedFeatures.length}
+                  </Badge>
                 </CardTitle>
                 <CardDescription>
                   Faça upgrade para desbloquear estes recursos
@@ -435,16 +462,40 @@ export default function SubscriptionPage() {
                     <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                   </div>
                 ) : blockedFeatures.length > 0 ? (
-                  <ul className="space-y-2">
-                    {blockedFeatures.map((feature) => (
-                      <li key={feature.id} className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Lock className="h-4 w-4" />
-                        <span>{feature.name}</span>
-                      </li>
+                  <div className="space-y-3">
+                    {/* Group blocked features by category */}
+                    {Object.entries(
+                      blockedFeatures.reduce((acc, feature) => {
+                        const cat = feature.category || 'Geral';
+                        if (!acc[cat]) acc[cat] = [];
+                        acc[cat].push(feature);
+                        return acc;
+                      }, {} as Record<string, typeof blockedFeatures>)
+                    ).map(([category, features]) => (
+                      <div key={category} className="space-y-1">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          {category}
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {features.map((feature) => (
+                            <Badge 
+                              key={feature.id} 
+                              variant="outline"
+                              className="text-muted-foreground gap-1 opacity-70"
+                            >
+                              <Lock className="h-3 w-3" />
+                              {feature.name}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Todos os recursos estão disponíveis!</p>
+                  <div className="flex items-center gap-2 text-sm text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                    <span>Todos os recursos estão disponíveis!</span>
+                  </div>
                 )}
               </CardContent>
             </Card>
