@@ -3464,20 +3464,57 @@ async function handleConfirmRegistration(
           return { handled: true, newState: 'WAITING_CPF' };
         }
         
-        // Create dependent record linked to titular
+        // Generate card number for dependent
+        const { data: dependentCardNumber, error: cardNumberError } = await supabase.rpc(
+          'generate_card_number',
+          { p_clinic_id: config.clinic_id }
+        );
+        
+        if (cardNumberError) {
+          console.error('[registration] Error generating dependent card number:', cardNumberError);
+        }
+        
+        // Get titular's card to sync expiry date
+        const { data: titularCard } = await supabase
+          .from('patient_cards')
+          .select('expires_at')
+          .eq('patient_id', titularPatient.id)
+          .eq('is_active', true)
+          .order('expires_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        // Calculate expiry: use titular's or default 15 days
+        let cardExpiresAt: string;
+        if (titularCard?.expires_at) {
+          cardExpiresAt = titularCard.expires_at;
+        } else {
+          const expiresDate = new Date();
+          expiresDate.setDate(expiresDate.getDate() + 15);
+          cardExpiresAt = expiresDate.toISOString();
+        }
+        
+        // Ensure CPF is properly formatted (digits only)
+        const dependentCpf = session.pending_registration_cpf?.replace(/\D/g, '') || null;
+        console.log(`[registration] Creating dependent with CPF: ${dependentCpf}`);
+        
+        // Create dependent record linked to titular with card data
         const { data: dependent, error: dependentError } = await supabase
           .from('patient_dependents')
           .insert({
             clinic_id: config.clinic_id,
             patient_id: titularPatient.id,
             name: session.pending_registration_name!.trim(),
-            cpf: session.pending_registration_cpf,
+            cpf: dependentCpf,
             birth_date: session.pending_registration_birthdate,
             phone: cleanPhone,
             relationship: session.pending_registration_relationship || null,
+            card_number: dependentCardNumber || null,
+            card_expires_at: cardExpiresAt,
+            insurance_plan_id: titularPatient.insurance_plan_id || null,
             is_active: true,
           })
-          .select('id, name')
+          .select('id, name, cpf, card_number, card_expires_at')
           .single();
         
         if (dependentError) {
@@ -3491,26 +3528,7 @@ async function handleConfirmRegistration(
           return { handled: true, newState: 'FINISHED' };
         }
         
-        console.log(`[registration] Dependent created: ${dependent.id} - ${dependent.name} linked to titular ${titularPatient.id}`);
-        
-        // Get titular's card to sync expiry date
-        const { data: titularCard } = await supabase
-          .from('patient_cards')
-          .select('expires_at')
-          .eq('patient_id', titularPatient.id)
-          .eq('is_active', true)
-          .order('expires_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        if (titularCard) {
-          // Update dependent with same card expiry as titular
-          await supabase
-            .from('patient_dependents')
-            .update({ card_expires_at: titularCard.expires_at })
-            .eq('id', dependent.id);
-          console.log(`[registration] Dependent card expiry synced with titular: ${titularCard.expires_at}`);
-        }
+        console.log(`[registration] Dependent created: ${dependent.id} - ${dependent.name} (CPF: ${dependent.cpf}, Card: ${dependent.card_number}, Expires: ${dependent.card_expires_at}) linked to titular ${titularPatient.id}`);
         
         // Clear registration data
         await updateSession(supabase, session.id, {
@@ -3527,11 +3545,11 @@ async function handleConfirmRegistration(
         });
         
         const firstName = dependent.name.split(' ')[0];
-        const titularFirstName = titularPatient.name.split(' ')[0];
         await sendWhatsAppMessage(config, phone, 
           `✅ *Cadastro de dependente realizado com sucesso!*\n\n` +
           `👤 Dependente: *${dependent.name}*\n` +
-          `👨‍👩‍👧 Titular: *${titularPatient.name}*\n\n` +
+          `👨‍👩‍👧 Titular: *${titularPatient.name}*\n` +
+          `💳 Carteirinha: *${dependent.card_number || 'Gerada'}*\n\n` +
           `Olá, *${firstName}*! Seja bem-vindo(a)! 🎉\n\n` +
           `Agora você já pode agendar sua consulta! Por favor, informe novamente seu *CPF*:`
         );
