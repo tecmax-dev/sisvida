@@ -72,34 +72,28 @@ interface AutomationDialogProps {
 
 const triggers = [
   {
-    value: "post_appointment",
+    value: "post_attendance",
     label: "Pós-atendimento",
     description: "Após consulta ser concluída",
     icon: Calendar,
   },
   {
-    value: "appointment_reminder",
-    label: "Lembrete de consulta",
-    description: "Antes da consulta agendada",
+    value: "appointment_confirmed",
+    label: "Confirmação de consulta",
+    description: "Quando paciente confirma a consulta",
     icon: BellRing,
   },
   {
-    value: "birthday",
-    label: "Aniversário",
-    description: "No dia do aniversário",
-    icon: Calendar,
+    value: "post_registration",
+    label: "Pós-cadastro",
+    description: "Após novo cadastro de paciente",
+    icon: UserPlus,
   },
   {
     value: "inactivity",
     label: "Inatividade",
     description: "Após período sem visita",
     icon: Clock,
-  },
-  {
-    value: "post_signup",
-    label: "Pós-cadastro",
-    description: "Após novo cadastro",
-    icon: UserPlus,
   },
   {
     value: "return_reminder",

@@ -52,11 +52,10 @@ interface Automation {
 }
 
 const triggerLabels: Record<string, string> = {
-  post_appointment: "Pós-atendimento",
-  appointment_reminder: "Lembrete de consulta",
-  birthday: "Aniversário",
+  post_attendance: "Pós-atendimento",
+  appointment_confirmed: "Confirmação de consulta",
+  post_registration: "Pós-cadastro",
   inactivity: "Inatividade",
-  post_signup: "Pós-cadastro",
   return_reminder: "Lembrete de retorno",
 };
 
