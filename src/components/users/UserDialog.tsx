@@ -229,70 +229,30 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         // Generate temp password if not provided
         const tempPassword = createData.password || generateTempPassword();
         
-        // First, create auth user
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: createData.email,
-          password: tempPassword,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth`,
-            data: {
-              name: createData.name,
-            },
+        // Use edge function to create user via Admin API (doesn't affect current session)
+        const { data: createResult, error: createError } = await supabase.functions.invoke('create-clinic-user', {
+          body: {
+            email: createData.email,
+            password: tempPassword,
+            name: createData.name,
+            phone: createData.phone || null,
+            role: createData.role,
+            clinicId: clinicId,
+            accessGroupId: createData.access_group_id || null,
           },
         });
 
-        if (authError) {
-          if (authError.message.includes('already registered')) {
+        if (createError || !createResult?.success) {
+          const errorMessage = createResult?.error || createError?.message || 'Erro ao criar usuário';
+          if (errorMessage.includes('já está cadastrado') || errorMessage.includes('already registered')) {
             toast.error('Este email já está cadastrado no sistema');
             setLoading(false);
             return;
           }
-          throw authError;
+          throw new Error(errorMessage);
         }
 
-        if (!authData.user) {
-          throw new Error('Falha ao criar usuário');
-        }
-
-        // Create user role for the clinic with access_group_id
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            clinic_id: clinicId,
-            role: data.role,
-            access_group_id: createData.access_group_id || null,
-          });
-
-        if (roleError) throw roleError;
-
-        // Update profile with phone if provided
-        if (data.phone) {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ phone: data.phone })
-            .eq('user_id', authData.user.id);
-
-          if (profileError) console.error('Error updating profile:', profileError);
-        }
-
-        // Auto-create professional record when role is 'professional'
-        if (createData.role === 'professional') {
-          const { error: professionalError } = await supabase
-            .from('professionals')
-            .insert({
-              clinic_id: clinicId,
-              user_id: authData.user.id,
-              name: createData.name,
-              email: createData.email,
-              phone: createData.phone || null,
-              is_active: true,
-            });
-
-          if (professionalError) {
-            console.error('Error creating professional record:', professionalError);
-          }
-        }
+        const userId = createResult.userId;
 
         // Get clinic name for the email
         let clinicName = "";
@@ -324,7 +284,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         await logAction({
           action: 'create_user',
           entityType: 'user',
-          entityId: authData.user.id,
+          entityId: userId,
           details: {
             user_name: createData.name,
             user_email: createData.email,
