@@ -120,5 +120,5 @@ verify_jwt = false
 [functions.send-campaign]
 verify_jwt = true
 
-[functions.sindsystem-webhook]
+[functions.sindsystem-sync]
 verify_jwt = false
