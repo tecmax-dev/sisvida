@@ -1766,6 +1766,34 @@ async function handleWaitingCpf(
   messageText: string,
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
+  // Check if user clicked "Fazer cadastro" button from the identity denial flow
+  if (messageText === 'new_register' || messageText === '2') {
+    // User wants to register - go to registration type selection
+    await updateSession(supabase, session.id, { state: 'SELECT_REGISTRATION_TYPE' });
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '📝 Tipo de Cadastro',
+      MESSAGES.selectRegistrationType,
+      [
+        { id: 'reg_titular', text: '1️⃣ Titular' },
+        { id: 'reg_dependent', text: '2️⃣ Dependente' }
+      ],
+      'Responda 1 ou 2'
+    );
+    return { handled: true, newState: 'SELECT_REGISTRATION_TYPE' };
+  }
+
+  // Check if user clicked "retry_cpf" button - just prompt for CPF again
+  if (messageText === 'retry_cpf' || messageText === '1') {
+    // Check if this is truly the first time (not a number being treated as a CPF)
+    // Only handle as retry if session was just reset (no patient_id)
+    if (!session.patient_id) {
+      await sendWhatsAppMessage(config, phone, `📋 Por favor, informe seu *CPF* (apenas números):`);
+      return { handled: true, newState: 'WAITING_CPF' };
+    }
+  }
+
   const cleanCpf = messageText.replace(/\D/g, '');
   
   if (!CPF_REGEX.test(cleanCpf) || !validateCpf(cleanCpf)) {
@@ -1995,9 +2023,24 @@ async function handleConfirmIdentity(
   }
   
   if (messageText === 'confirm_no' || messageText.toLowerCase() === 'não sou eu' || messageText.toLowerCase() === '❌ não sou eu') {
-    await updateSession(supabase, session.id, { state: 'FINISHED' });
-    await sendWhatsAppMessage(config, phone, MESSAGES.identityDenied);
-    return { handled: true, newState: 'FINISHED' };
+    // Instead of just ending, offer alternatives
+    await updateSession(supabase, session.id, { 
+      state: 'WAITING_CPF',
+      patient_id: null,
+      patient_name: null,
+    });
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '🔄 Próximos passos',
+      `Sem problemas! Você pode:\n\n1️⃣ *Tentar outro CPF* - talvez tenha digitado errado\n2️⃣ *Fazer novo cadastro* - se ainda não é cadastrado`,
+      [
+        { id: 'retry_cpf', text: '1️⃣ Digitar outro CPF' },
+        { id: 'new_register', text: '2️⃣ Fazer cadastro' }
+      ],
+      'Responda 1 ou 2'
+    );
+    return { handled: true, newState: 'WAITING_CPF' };
   }
 
   // Try regex patterns
@@ -2006,9 +2049,24 @@ async function handleConfirmIdentity(
   }
 
   if (NEGATIVE_REGEX.test(messageText)) {
-    await updateSession(supabase, session.id, { state: 'FINISHED' });
-    await sendWhatsAppMessage(config, phone, MESSAGES.identityDenied);
-    return { handled: true, newState: 'FINISHED' };
+    // Instead of just ending, offer alternatives
+    await updateSession(supabase, session.id, { 
+      state: 'WAITING_CPF',
+      patient_id: null,
+      patient_name: null,
+    });
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '🔄 Próximos passos',
+      `Sem problemas! Você pode:\n\n1️⃣ *Tentar outro CPF* - talvez tenha digitado errado\n2️⃣ *Fazer novo cadastro* - se ainda não é cadastrado`,
+      [
+        { id: 'retry_cpf', text: '1️⃣ Digitar outro CPF' },
+        { id: 'new_register', text: '2️⃣ Fazer cadastro' }
+      ],
+      'Responda 1 ou 2'
+    );
+    return { handled: true, newState: 'WAITING_CPF' };
   }
 
   // Try AI for natural language confirmation
@@ -2020,9 +2078,24 @@ async function handleConfirmIdentity(
       return await proceedAfterConfirmation();
     }
     if (aiResult.intent === 'deny') {
-      await updateSession(supabase, session.id, { state: 'FINISHED' });
-      await sendWhatsAppMessage(config, phone, MESSAGES.identityDenied);
-      return { handled: true, newState: 'FINISHED' };
+      // Instead of just ending, offer alternatives
+      await updateSession(supabase, session.id, { 
+        state: 'WAITING_CPF',
+        patient_id: null,
+        patient_name: null,
+      });
+      await sendWhatsAppButtons(
+        config,
+        phone,
+        '🔄 Próximos passos',
+        `Sem problemas! Você pode:\n\n1️⃣ *Tentar outro CPF* - talvez tenha digitado errado\n2️⃣ *Fazer novo cadastro* - se ainda não é cadastrado`,
+        [
+          { id: 'retry_cpf', text: '1️⃣ Digitar outro CPF' },
+          { id: 'new_register', text: '2️⃣ Fazer cadastro' }
+        ],
+        'Responda 1 ou 2'
+      );
+      return { handled: true, newState: 'WAITING_CPF' };
     }
   }
 
