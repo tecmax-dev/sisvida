@@ -204,7 +204,12 @@ interface AIExtractedIntent {
 // ==========================================
 
 function normalizePhone(phone: string): string {
-  let cleaned = phone.replace(/@s\.whatsapp\.net$/, '').replace(/\D/g, '');
+  // Evolution can send remoteJid like "55DDDNÚMERO:device@s.whatsapp.net".
+  // For session consistency, strip the ":device" suffix and keep only the real phone digits.
+  let base = phone.replace(/@s\.whatsapp\.net$/, '');
+  base = base.replace(/:\d+$/, '');
+
+  let cleaned = base.replace(/\D/g, '');
   if (!cleaned.startsWith('55')) cleaned = '55' + cleaned;
   return cleaned;
 }
