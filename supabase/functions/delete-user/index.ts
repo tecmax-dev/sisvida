@@ -112,29 +112,62 @@ Deno.serve(async (req) => {
 
     console.log(`[delete-user] Super admin ${requestingUser.email} deleting user ${targetUserEmail} (${targetUserName})`);
 
-    // Clean up related data before deleting user
-    // Delete user_roles first (these may block the user deletion)
+    const safeNullOrDelete = async (table: string, column: string) => {
+      // 1) Try NULLing the reference (keeps historical data)
+      const { error: nullErr } = await supabaseAdmin
+        .from(table)
+        // deno-lint-ignore no-explicit-any
+        .update({ [column]: null } as any)
+        .eq(column, targetUserId);
+
+      if (!nullErr) {
+        console.log(`[delete-user] Cleared ${table}.${column} references for ${targetUserId}`);
+        return;
+      }
+
+      console.warn(`[delete-user] Could not NULL ${table}.${column}: ${nullErr.message}. Trying DELETE...`);
+
+      // 2) If NULL is not allowed, delete dependent rows
+      const { error: delErr } = await supabaseAdmin.from(table).delete().eq(column, targetUserId);
+      if (delErr) {
+        console.error(`[delete-user] Could not DELETE ${table} rows for ${column}=${targetUserId}:`, delErr.message);
+      } else {
+        console.log(`[delete-user] Deleted ${table} rows for ${column}=${targetUserId}`);
+      }
+    };
+
+    // Clean up related data before deleting user (avoid FK blocks)
+    // Tables with FK -> auth.users
+    await safeNullOrDelete('appointments', 'created_by');
+    await safeNullOrDelete('addon_requests', 'requested_by');
+    await safeNullOrDelete('clinic_addons', 'activated_by');
+    await safeNullOrDelete('import_logs', 'created_by');
+    await safeNullOrDelete('patient_cards', 'created_by');
+    await safeNullOrDelete('smtp_settings', 'created_by');
+    await safeNullOrDelete('upgrade_requests', 'requested_by');
+    await safeNullOrDelete('upgrade_requests', 'processed_by');
+    await safeNullOrDelete('webhooks', 'created_by');
+
+    // Special: roles + profiles should be removed (not just nulled)
     const { error: rolesError } = await supabaseAdmin
       .from('user_roles')
       .delete()
       .eq('user_id', targetUserId);
-
     if (rolesError) {
       console.error('[delete-user] Error deleting user_roles:', rolesError.message);
-      // Continue anyway, as this might not block deletion
     } else {
       console.log(`[delete-user] Deleted user_roles for ${targetUserId}`);
     }
 
-    // Delete profile (may have foreign key constraint)
+    // Special: professional linkage (prefer unlink, fallback delete)
+    await safeNullOrDelete('professionals', 'user_id');
+
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .delete()
       .eq('user_id', targetUserId);
-
     if (profileError) {
       console.error('[delete-user] Error deleting profile:', profileError.message);
-      // Continue anyway
     } else {
       console.log(`[delete-user] Deleted profile for ${targetUserId}`);
     }
@@ -144,13 +177,16 @@ Deno.serve(async (req) => {
 
     if (deleteError) {
       console.error('[delete-user] Delete error:', deleteError.message);
-      
-      // Try to provide more helpful error message
+
       let errorMsg = deleteError.message;
-      if (errorMsg.includes('violates foreign key constraint')) {
-        errorMsg = 'Existem registros vinculados a este usuário que impedem a exclusão. Verifique prontuários, agendamentos ou outros dados.';
+      if (
+        errorMsg.includes('violates foreign key constraint') ||
+        errorMsg.toLowerCase().includes('foreign key') ||
+        errorMsg.toLowerCase().includes('database error deleting user')
+      ) {
+        errorMsg = 'Não foi possível excluir porque ainda existem registros vinculados a este usuário no banco. Já tentei limpar vínculos comuns; verifique logs para qual tabela ainda está bloqueando.';
       }
-      
+
       return new Response(
         JSON.stringify({ error: `Erro ao excluir usuário: ${errorMsg}` }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -173,9 +209,9 @@ Deno.serve(async (req) => {
     console.log(`[delete-user] Successfully deleted user ${targetUserEmail}`);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: `Usuário ${targetUserName} excluído com sucesso` 
+      JSON.stringify({
+        success: true,
+        message: `Usuário ${targetUserName} excluído com sucesso`
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
