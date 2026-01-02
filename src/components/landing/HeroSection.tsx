@@ -30,20 +30,20 @@ export function HeroSection() {
         {/* Social proof badge */}
         {showSocialProof && (
           <div className="flex justify-center mb-8 animate-fade-in">
-            <div className="inline-flex items-center gap-3 px-5 py-2.5 bg-card border border-border rounded-full shadow-sm">
-              <div className="flex -space-x-2">
-                <div className="w-8 h-8 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center">
-                  <span className="text-xs font-medium text-primary">👩‍⚕️</span>
+            <div className="section-badge">
+              <div className="flex -space-x-2 mr-2">
+                <div className="w-7 h-7 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center">
+                  <span className="text-xs">👩‍⚕️</span>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-cta/20 border-2 border-card flex items-center justify-center">
-                  <span className="text-xs font-medium text-cta">👨‍⚕️</span>
+                <div className="w-7 h-7 rounded-full bg-cta/20 border-2 border-card flex items-center justify-center">
+                  <span className="text-xs">👨‍⚕️</span>
                 </div>
-                <div className="w-8 h-8 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center">
-                  <span className="text-xs font-medium text-primary">👩‍⚕️</span>
+                <div className="w-7 h-7 rounded-full bg-primary/20 border-2 border-card flex items-center justify-center">
+                  <span className="text-xs">👩‍⚕️</span>
                 </div>
               </div>
-              <span className="text-sm font-medium text-muted-foreground">
-                Junte-se a <span className="text-primary font-semibold">{socialProofUsers.toLocaleString('pt-BR')}+</span> profissionais da saúde
+              <span className="text-sm font-medium">
+                Junte-se a <span className="font-bold">{socialProofUsers.toLocaleString('pt-BR')}+</span> profissionais da saúde
               </span>
             </div>
           </div>
@@ -56,7 +56,7 @@ export function HeroSection() {
             {subtitle && (
               <>
                 <br />
-                <span className="text-foreground">{subtitle}</span>
+                <span className="gradient-text">{subtitle}</span>
               </>
             )}
           </h1>
@@ -69,7 +69,7 @@ export function HeroSection() {
           <div className="mt-8 animate-fade-in" style={{ animationDelay: '200ms' }}>
             <Button 
               size="lg" 
-              className="bg-primary hover:bg-primary-dark text-primary-foreground rounded-full px-10 h-14 text-base font-semibold shadow-lg transition-all duration-300 hover:shadow-xl"
+              className="btn-eclini px-10 h-14 text-base shadow-lg"
               asChild
             >
               <Link to={primaryButtonLink}>
@@ -94,8 +94,8 @@ export function HeroSection() {
               <div className="absolute left-0 top-1/4 -translate-x-1/2 hidden xl:block animate-float">
                 <div className="bg-card border border-border rounded-2xl p-4 shadow-xl w-48">
                   <div className="flex items-center gap-2 mb-3">
-                    <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <span className="text-primary">💰</span>
+                    <div className="feature-card-icon w-8 h-8 rounded-lg">
+                      <span>💰</span>
                     </div>
                     <span className="text-xs font-medium text-muted-foreground">Controle financeiro</span>
                   </div>

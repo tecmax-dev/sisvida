@@ -4,18 +4,20 @@ import { Link } from "react-router-dom";
 
 export function CTASection() {
   return (
-    <section id="contact" className="py-20 lg:py-28 bg-gradient-to-br from-primary via-primary to-primary-dark relative overflow-hidden">
+    <section id="contact" className="py-20 lg:py-28 relative overflow-hidden" style={{
+      background: 'linear-gradient(135deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%)'
+    }}>
       {/* Decorative shapes */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-white/5 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/5 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cta/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-white/5 rounded-full blur-3xl" />
       
       <div className="container relative z-10">
         <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-primary-foreground mb-6">
+          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-6">
             Pronto para transformar sua clínica?
           </h2>
-          <p className="text-lg md:text-xl text-primary-foreground/80 mb-10 max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto">
             Junte-se a milhares de profissionais de saúde que já simplificaram sua gestão com o Eclini.
           </p>
           
@@ -33,7 +35,7 @@ export function CTASection() {
             <Button 
               size="lg"
               variant="outline"
-              className="border-2 border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 rounded-full px-8 h-14 text-base font-semibold"
+              className="border-2 border-white/30 text-white hover:bg-white/10 rounded-full px-8 h-14 text-base font-semibold"
               asChild
             >
               <a 
@@ -48,7 +50,7 @@ export function CTASection() {
             </Button>
           </div>
 
-          <p className="mt-8 text-primary-foreground/60 text-sm">
+          <p className="mt-8 text-white/60 text-sm">
             7 dias grátis • Sem cartão de crédito • Suporte em português
           </p>
         </div>

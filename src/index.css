@@ -7,43 +7,43 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Eclini Design System - Amplimed-inspired Purple Theme */
+/* Eclini Design System - Blue-Cyan-Green Gradient Theme */
 
 @layer base {
   :root {
-    /* Primary - Purple/Violet (Amplimed Style) */
-    --primary: 271 76% 53%;
+    /* Primary - Blue to Cyan (Main Brand Gradient Start) */
+    --primary: 195 100% 45%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 271 60% 97%;
-    --primary-glow: 271 70% 65%;
-    --primary-dark: 271 76% 40%;
+    --primary-soft: 195 80% 96%;
+    --primary-glow: 180 80% 50%;
+    --primary-dark: 195 100% 35%;
     
-    /* CTA - Pink/Magenta (Action Color) */
-    --cta: 320 70% 55%;
+    /* CTA - Green (Gradient End / Action Color) */
+    --cta: 85 70% 50%;
     --cta-foreground: 0 0% 100%;
-    --cta-hover: 320 70% 48%;
+    --cta-hover: 85 70% 42%;
     
-    /* Background & Surfaces - Very Light Gray/Off-white */
-    --background: 240 10% 98%;
-    --foreground: 240 10% 10%;
+    /* Background & Surfaces - Clean white/light gray */
+    --background: 0 0% 99%;
+    --foreground: 210 20% 15%;
     
     --card: 0 0% 100%;
-    --card-foreground: 240 10% 10%;
+    --card-foreground: 210 20% 15%;
     
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 10%;
+    --popover-foreground: 210 20% 15%;
     
-    /* Secondary - Light Purple tint */
-    --secondary: 271 30% 96%;
-    --secondary-foreground: 271 50% 30%;
+    /* Secondary - Light Cyan tint */
+    --secondary: 195 40% 96%;
+    --secondary-foreground: 195 60% 30%;
     
     /* Muted */
-    --muted: 240 10% 94%;
-    --muted-foreground: 240 5% 50%;
+    --muted: 210 15% 94%;
+    --muted-foreground: 210 10% 50%;
     
-    /* Accent - Soft Purple */
-    --accent: 271 40% 94%;
-    --accent-foreground: 271 70% 45%;
+    /* Accent - Soft Cyan/Teal */
+    --accent: 180 50% 94%;
+    --accent-foreground: 180 70% 35%;
     
     /* Destructive */
     --destructive: 0 72% 51%;
@@ -62,37 +62,38 @@
     --info-foreground: 0 0% 100%;
     
     /* Borders & Inputs */
-    --border: 240 10% 90%;
-    --input: 240 10% 90%;
-    --ring: 271 76% 53%;
+    --border: 210 15% 90%;
+    --input: 210 15% 90%;
+    --ring: 195 100% 45%;
     
     --radius: 0.75rem;
     
-    /* Sidebar - Dark Purple Professional Theme */
-    --sidebar-background: 271 40% 20%;
+    /* Sidebar - Dark Professional Theme with brand colors */
+    --sidebar-background: 195 50% 18%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
-    --sidebar-primary-foreground: 271 76% 53%;
-    --sidebar-accent: 271 40% 28%;
+    --sidebar-primary-foreground: 195 100% 45%;
+    --sidebar-accent: 195 50% 25%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 271 40% 25%;
+    --sidebar-border: 195 50% 22%;
     --sidebar-ring: 0 0% 100%;
     
-    /* Custom Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(271 76% 53%) 0%, hsl(320 70% 55%) 100%);
-    --gradient-hero: linear-gradient(135deg, hsl(271 40% 97%) 0%, hsl(240 10% 98%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(271 30% 99%) 100%);
-    --gradient-soft: linear-gradient(135deg, hsl(271 60% 97%) 0%, hsl(320 40% 98%) 100%);
-    --gradient-stats: linear-gradient(135deg, hsl(271 76% 53%) 0%, hsl(271 60% 45%) 100%);
+    /* Custom Gradients - Blue to Cyan to Green */
+    --gradient-primary: linear-gradient(135deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(195 40% 97%) 0%, hsl(0 0% 99%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(195 30% 99%) 100%);
+    --gradient-soft: linear-gradient(135deg, hsl(195 60% 97%) 0%, hsl(95 40% 98%) 100%);
+    --gradient-stats: linear-gradient(135deg, hsl(200 100% 45%) 0%, hsl(95 70% 50%) 100%);
+    --gradient-text: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
     
     /* Shadows */
-    --shadow-sm: 0 1px 2px 0 hsl(271 20% 20% / 0.04);
-    --shadow-md: 0 4px 6px -1px hsl(271 20% 20% / 0.06), 0 2px 4px -2px hsl(271 20% 20% / 0.04);
-    --shadow-lg: 0 10px 15px -3px hsl(271 20% 20% / 0.06), 0 4px 6px -4px hsl(271 20% 20% / 0.04);
-    --shadow-xl: 0 20px 25px -5px hsl(271 20% 20% / 0.08), 0 8px 10px -6px hsl(271 20% 20% / 0.06);
-    --shadow-glow: 0 0 40px hsl(271 76% 53% / 0.15);
-    --shadow-card: 0 1px 3px 0 hsl(271 20% 20% / 0.04), 0 1px 2px -1px hsl(271 20% 20% / 0.04);
-    --shadow-float: 0 25px 50px -12px hsl(271 20% 20% / 0.2);
+    --shadow-sm: 0 1px 2px 0 hsl(195 20% 20% / 0.04);
+    --shadow-md: 0 4px 6px -1px hsl(195 20% 20% / 0.06), 0 2px 4px -2px hsl(195 20% 20% / 0.04);
+    --shadow-lg: 0 10px 15px -3px hsl(195 20% 20% / 0.06), 0 4px 6px -4px hsl(195 20% 20% / 0.04);
+    --shadow-xl: 0 20px 25px -5px hsl(195 20% 20% / 0.08), 0 8px 10px -6px hsl(195 20% 20% / 0.06);
+    --shadow-glow: 0 0 40px hsl(195 100% 45% / 0.15);
+    --shadow-card: 0 1px 3px 0 hsl(195 20% 20% / 0.04), 0 1px 2px -1px hsl(195 20% 20% / 0.04);
+    --shadow-float: 0 25px 50px -12px hsl(195 20% 20% / 0.2);
     
     /* Transitions */
     --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
@@ -102,46 +103,46 @@
   }
 
   .dark {
-    --primary: 271 70% 65%;
+    --primary: 195 80% 55%;
     --primary-foreground: 0 0% 100%;
-    --primary-soft: 271 30% 15%;
-    --primary-glow: 271 60% 55%;
+    --primary-soft: 195 30% 15%;
+    --primary-glow: 180 60% 50%;
     
-    --background: 240 10% 6%;
-    --foreground: 240 5% 92%;
+    --background: 210 15% 6%;
+    --foreground: 210 5% 92%;
     
-    --card: 240 10% 10%;
-    --card-foreground: 240 5% 92%;
+    --card: 210 15% 10%;
+    --card-foreground: 210 5% 92%;
     
-    --popover: 240 10% 10%;
-    --popover-foreground: 240 5% 92%;
+    --popover: 210 15% 10%;
+    --popover-foreground: 210 5% 92%;
     
-    --secondary: 271 25% 15%;
-    --secondary-foreground: 271 30% 85%;
+    --secondary: 195 25% 15%;
+    --secondary-foreground: 195 30% 85%;
     
-    --muted: 240 10% 18%;
-    --muted-foreground: 240 5% 60%;
+    --muted: 210 15% 18%;
+    --muted-foreground: 210 5% 60%;
     
-    --accent: 271 30% 18%;
-    --accent-foreground: 271 60% 75%;
+    --accent: 180 30% 18%;
+    --accent-foreground: 180 60% 70%;
     
     --destructive: 0 62% 45%;
     --destructive-foreground: 0 0% 100%;
     
-    --border: 240 10% 18%;
-    --input: 240 10% 18%;
-    --ring: 271 70% 65%;
+    --border: 210 15% 18%;
+    --input: 210 15% 18%;
+    --ring: 195 80% 55%;
     
-    --sidebar-background: 240 10% 4%;
-    --sidebar-foreground: 240 5% 80%;
-    --sidebar-primary: 271 70% 65%;
+    --sidebar-background: 210 15% 4%;
+    --sidebar-foreground: 210 5% 80%;
+    --sidebar-primary: 195 80% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 10% 10%;
-    --sidebar-accent-foreground: 240 5% 85%;
-    --sidebar-border: 240 10% 12%;
+    --sidebar-accent: 210 15% 10%;
+    --sidebar-accent-foreground: 210 5% 85%;
+    --sidebar-border: 210 15% 12%;
     
-    --gradient-hero: linear-gradient(135deg, hsl(240 10% 6%) 0%, hsl(271 20% 10%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(240 10% 10%) 0%, hsl(240 10% 8%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(210 15% 6%) 0%, hsl(195 20% 10%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(210 15% 10%) 0%, hsl(210 15% 8%) 100%);
   }
 }
 
@@ -174,12 +175,19 @@
     @apply bg-card/95 backdrop-blur-lg border border-border/60;
   }
   
+  /* Eclini gradient text - blue to green */
   .gradient-text {
-    @apply bg-gradient-to-r from-primary to-cta bg-clip-text text-transparent;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
   
-  .gradient-text-purple {
-    @apply bg-gradient-to-r from-primary via-primary-glow to-cta bg-clip-text text-transparent;
+  .gradient-text-brand {
+    background: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
   
   .card-hover {
@@ -200,15 +208,26 @@
     @apply opacity-100;
   }
   
-  /* Amplimed-style button */
-  .btn-amplimed {
-    @apply bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-full transition-all duration-300;
-    @apply hover:bg-primary-dark hover:shadow-lg hover:-translate-y-0.5;
+  /* Eclini-style gradient button */
+  .btn-eclini {
+    @apply font-semibold px-6 py-3 rounded-full transition-all duration-300 text-white;
+    background: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    @apply hover:shadow-lg hover:-translate-y-0.5;
   }
   
-  .btn-amplimed-outline {
-    @apply border-2 border-primary text-primary font-semibold px-6 py-3 rounded-full transition-all duration-300;
-    @apply hover:bg-primary hover:text-primary-foreground;
+  .btn-eclini:hover {
+    background: linear-gradient(90deg, hsl(200 100% 40%) 0%, hsl(180 80% 40%) 50%, hsl(95 70% 45%) 100%);
+  }
+  
+  .btn-eclini-outline {
+    @apply border-2 font-semibold px-6 py-3 rounded-full transition-all duration-300;
+    border-color: hsl(180 80% 45%);
+    color: hsl(180 80% 40%);
+  }
+  
+  .btn-eclini-outline:hover {
+    background: linear-gradient(90deg, hsl(200 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(95 70% 50%) 100%);
+    @apply text-white border-transparent;
   }
   
   .animate-float {
@@ -240,29 +259,32 @@
     @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-xl;
   }
   
-  /* Premium Card Styles - Amplimed inspired */
+  /* Premium Card Styles - Eclini inspired */
   .card-premium {
     @apply relative overflow-hidden border border-border/50 bg-card rounded-2xl;
-    box-shadow: 0 2px 8px hsl(271 20% 20% / 0.04), 0 8px 24px hsl(271 20% 20% / 0.03);
+    box-shadow: 0 2px 8px hsl(195 20% 20% / 0.04), 0 8px 24px hsl(195 20% 20% / 0.03);
   }
   
   .card-premium::before {
     content: '';
-    @apply absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 transition-opacity duration-300;
+    @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+    background: linear-gradient(135deg, hsl(195 100% 45% / 0.05) 0%, hsl(95 70% 50% / 0.05) 100%);
   }
   
   .card-premium:hover::before {
     @apply opacity-100;
   }
   
-  /* Feature Card - Amplimed style */
+  /* Feature Card - Eclini style */
   .feature-card {
     @apply bg-card border border-border/40 rounded-2xl p-6 transition-all duration-300;
     @apply hover:border-primary/30 hover:shadow-lg hover:-translate-y-1;
   }
   
   .feature-card-icon {
-    @apply w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary;
+    @apply w-12 h-12 rounded-xl flex items-center justify-center;
+    background: linear-gradient(135deg, hsl(200 100% 45% / 0.1) 0%, hsl(95 70% 50% / 0.1) 100%);
+    color: hsl(180 80% 40%);
   }
   
   /* Stat Card Decoration */
@@ -287,15 +309,21 @@
     }
   }
   
-  /* Amplimed-style section header */
+  /* Eclini-style section header */
   .section-badge {
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium;
-    @apply bg-primary/10 text-primary border border-primary/20;
+    background: linear-gradient(90deg, hsl(200 100% 45% / 0.1) 0%, hsl(95 70% 50% / 0.1) 100%);
+    color: hsl(180 80% 40%);
+    border: 1px solid hsl(180 80% 45% / 0.2);
   }
   
-  /* Stats counter style */
+  /* Stats counter style with gradient */
   .stat-value {
-    @apply text-4xl md:text-5xl font-bold text-primary;
+    @apply text-4xl md:text-5xl font-bold;
+    background: var(--gradient-text);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
   
   .stat-label {
@@ -370,7 +398,7 @@
   }
 }
 
-/* Custom Scrollbar - Purple theme */
+/* Custom Scrollbar - Eclini theme */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -381,11 +409,12 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-primary/30 rounded-full;
+  @apply rounded-full;
+  background: linear-gradient(180deg, hsl(200 100% 45% / 0.3) 0%, hsl(95 70% 50% / 0.3) 100%);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-primary/50;
+  background: linear-gradient(180deg, hsl(200 100% 45% / 0.5) 0%, hsl(95 70% 50% / 0.5) 100%);
 }
 
 /* Focus styles */
