@@ -151,7 +151,12 @@ export function AdminLayout() {
     <div className="min-h-screen flex flex-col bg-background">
       <div className="flex flex-1">
         {/* Sidebar */}
-        <aside className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+        <aside 
+          className="w-64 border-r border-white/15 flex flex-col"
+          style={{
+            background: 'linear-gradient(180deg, hsl(200 85% 38%) 0%, hsl(175 70% 36%) 45%, hsl(145 55% 40%) 100%)'
+          }}
+        >
           <div className="p-4 border-b border-sidebar-border">
             <Logo size="sm" />
             <div className="mt-3 flex items-center gap-2 text-xs">
