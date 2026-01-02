@@ -36,10 +36,10 @@ const faqs = [
 
 export function FAQSection() {
   return (
-    <section className="py-24 bg-muted/30">
+    <section id="faq" className="py-24 bg-card">
       <div className="container mx-auto px-4">
         <div className="text-center mb-16">
-          <span className="inline-block px-4 py-2 bg-primary/10 text-primary rounded-full text-sm font-medium mb-4">
+          <span className="section-badge mb-4">
             Tire suas dúvidas
           </span>
           <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
@@ -56,9 +56,9 @@ export function FAQSection() {
               <AccordionItem
                 key={index}
                 value={`item-${index}`}
-                className="bg-background border border-border rounded-xl px-6 data-[state=open]:shadow-lg transition-shadow"
+                className="bg-background border border-border rounded-2xl px-6 data-[state=open]:shadow-lg data-[state=open]:border-primary/30 transition-all"
               >
-                <AccordionTrigger className="text-left text-base md:text-lg font-medium hover:no-underline py-5">
+                <AccordionTrigger className="text-left text-base md:text-lg font-medium hover:no-underline py-5 hover:text-primary">
                   {faq.question}
                 </AccordionTrigger>
                 <AccordionContent className="text-muted-foreground pb-5">
@@ -72,11 +72,12 @@ export function FAQSection() {
             <p className="text-muted-foreground mb-4">
               Ainda tem dúvidas? Fale com nossa equipe
             </p>
-            <Button asChild size="lg" variant="outline" className="gap-2">
+            <Button asChild size="lg" className="bg-primary hover:bg-primary-dark text-primary-foreground rounded-full px-8 font-semibold">
               <a
                 href="https://wa.me/5571982786864?text=Olá! Tenho uma dúvida sobre o Eclini"
                 target="_blank"
                 rel="noopener noreferrer"
+                className="flex items-center gap-2"
               >
                 <MessageCircle className="h-5 w-5" />
                 Falar no WhatsApp
