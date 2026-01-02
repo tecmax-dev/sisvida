@@ -2976,6 +2976,40 @@ async function handleWaitingRegistrationBirthdate(
   const dbDate = parsedDate.toISOString().split('T')[0];
   const displayDate = parsedDate.toLocaleDateString('pt-BR');
   
+  // Check if registering as dependent - skip CNPJ step (only titular is linked to company)
+  const isDependent = session.pending_registration_type === 'dependent' && session.pending_registration_titular_cpf;
+  
+  if (isDependent) {
+    // Skip CNPJ step - go directly to confirmation
+    await updateSession(supabase, session.id, {
+      state: 'CONFIRM_REGISTRATION',
+      pending_registration_birthdate: dbDate,
+      pending_registration_cnpj: null, // Ensure no CNPJ for dependent
+    });
+    
+    // Build confirmation message for dependent (no CNPJ)
+    const confirmMsg = `📋 *Confirme seus dados:*\n\n` +
+      `👤 *Nome:* ${session.pending_registration_name || ''}\n` +
+      `📅 *Nascimento:* ${displayDate}\n` +
+      `📱 *WhatsApp:* _(este número)_\n\n` +
+      `Os dados estão corretos?`;
+    
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '📋 Confirmar Cadastro',
+      confirmMsg,
+      [
+        { id: 'confirm_yes', text: '✅ Confirmar' },
+        { id: 'confirm_no', text: '❌ Recomeçar' }
+      ],
+      'Responda 1 ou 2'
+    );
+    
+    return { handled: true, newState: 'CONFIRM_REGISTRATION' };
+  }
+  
+  // For titular, ask for CNPJ
   await updateSession(supabase, session.id, {
     state: 'WAITING_REGISTRATION_CNPJ',
     pending_registration_birthdate: dbDate,
