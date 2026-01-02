@@ -40,6 +40,9 @@ type BookingState =
   | 'RESCHEDULE_SELECT_TIME'
   | 'CONFIRM_RESCHEDULE'
   | 'OFFER_REGISTRATION'
+  | 'SELECT_REGISTRATION_TYPE'
+  | 'WAITING_REGISTRATION_TITULAR_CPF'
+  | 'SELECT_INSURANCE_PLAN'
   | 'WAITING_REGISTRATION_NAME'
   | 'WAITING_REGISTRATION_BIRTHDATE'
   | 'WAITING_REGISTRATION_CNPJ'
@@ -147,6 +150,10 @@ interface BookingSession {
   pending_registration_name?: string | null;
   pending_registration_birthdate?: string | null;
   pending_registration_cnpj?: string | null;
+  pending_registration_type?: 'titular' | 'dependent' | null;
+  pending_registration_titular_cpf?: string | null;
+  pending_registration_insurance_plan_id?: string | null;
+  available_insurance_plans?: Array<{ id: string; name: string }> | null;
 }
 
 interface EvolutionConfig {
@@ -723,6 +730,33 @@ _Digite apenas os números ou envie "pular" para continuar sem CNPJ._`,
     msg += `2️⃣ *Não*, começar novamente`;
     return msg;
   },
+
+  // Registration type selection (titular or dependent)
+  selectRegistrationType: `📝 *Tipo de cadastro:*
+
+Você deseja se cadastrar como:
+
+1️⃣ *Titular* (paciente principal)
+2️⃣ *Dependente* de outro paciente`,
+
+  askTitularCpf: `Você está se cadastrando como *dependente*.
+
+Por favor, informe o *CPF do titular* (responsável):`,
+
+  titularNotFound: `❌ Não encontramos o titular com este CPF.
+
+Verifique o número e tente novamente, ou digite *1* para se cadastrar como titular.`,
+
+  // Insurance plan selection
+  selectInsurancePlan: (plans: Array<{ name: string }>) => {
+    let msg = `🏥 *Selecione o convênio:*\n\n`;
+    plans.forEach((p, i) => {
+      msg += `${i + 1}️⃣ ${p.name}\n`;
+    });
+    return msg.trim();
+  },
+
+  noInsurancePlans: `ℹ️ Esta clínica não possui convênios cadastrados. Continuando com cadastro particular.`,
 
   registrationSuccess: (name: string) => `✅ *Cadastro realizado com sucesso!*
 
@@ -1400,6 +1434,15 @@ async function handleBookingFlow(
     // Registration flow states
     case 'OFFER_REGISTRATION':
       return await handleOfferRegistration(supabase, config, phone, messageText, session);
+    
+    case 'SELECT_REGISTRATION_TYPE':
+      return await handleSelectRegistrationType(supabase, config, phone, messageText, session);
+    
+    case 'WAITING_REGISTRATION_TITULAR_CPF':
+      return await handleWaitingRegistrationTitularCpf(supabase, config, phone, messageText, session);
+    
+    case 'SELECT_INSURANCE_PLAN':
+      return await handleSelectInsurancePlan(supabase, config, phone, messageText, session);
     
     case 'WAITING_REGISTRATION_NAME':
       return await handleWaitingRegistrationName(supabase, config, phone, messageText, session);
@@ -2557,9 +2600,20 @@ async function handleOfferRegistration(
   const isNo = NEGATIVE_REGEX.test(messageText) || messageText.includes('register_no') || messageText === '2';
   
   if (isYes) {
-    await updateSession(supabase, session.id, { state: 'WAITING_REGISTRATION_NAME' });
-    await sendWhatsAppMessage(config, phone, MESSAGES.offerRegistration);
-    return { handled: true, newState: 'WAITING_REGISTRATION_NAME' };
+    // Go to registration type selection first
+    await updateSession(supabase, session.id, { state: 'SELECT_REGISTRATION_TYPE' });
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '📝 Tipo de Cadastro',
+      MESSAGES.selectRegistrationType,
+      [
+        { id: 'reg_titular', text: '1️⃣ Titular' },
+        { id: 'reg_dependent', text: '2️⃣ Dependente' }
+      ],
+      'Responda 1 ou 2'
+    );
+    return { handled: true, newState: 'SELECT_REGISTRATION_TYPE' };
   }
   
   if (isNo) {
@@ -2571,6 +2625,206 @@ async function handleOfferRegistration(
   // Invalid response
   await sendWhatsAppMessage(config, phone, `Por favor, responda *1* para cadastrar ou *2* para não.`);
   return { handled: true, newState: 'OFFER_REGISTRATION' };
+}
+
+// Handler for SELECT_REGISTRATION_TYPE state
+async function handleSelectRegistrationType(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const isTitular = messageText === '1' || messageText.includes('reg_titular') || /titular/i.test(messageText);
+  const isDependent = messageText === '2' || messageText.includes('reg_dependent') || /dependente/i.test(messageText);
+  
+  if (isTitular) {
+    // Mark as titular and proceed to insurance plan selection
+    await updateSession(supabase, session.id, {
+      state: 'SELECT_INSURANCE_PLAN',
+      pending_registration_type: 'titular',
+    });
+    return await promptInsurancePlanSelection(supabase, config, phone, session);
+  }
+  
+  if (isDependent) {
+    // Mark as dependent and ask for titular's CPF
+    await updateSession(supabase, session.id, {
+      state: 'WAITING_REGISTRATION_TITULAR_CPF',
+      pending_registration_type: 'dependent',
+    });
+    await sendWhatsAppMessage(config, phone, MESSAGES.askTitularCpf);
+    return { handled: true, newState: 'WAITING_REGISTRATION_TITULAR_CPF' };
+  }
+  
+  // Invalid response
+  await sendWhatsAppButtons(
+    config,
+    phone,
+    '📝 Tipo de Cadastro',
+    `Por favor, escolha uma opção:\n\n1️⃣ *Titular* (paciente principal)\n2️⃣ *Dependente* de outro paciente`,
+    [
+      { id: 'reg_titular', text: '1️⃣ Titular' },
+      { id: 'reg_dependent', text: '2️⃣ Dependente' }
+    ],
+    'Responda 1 ou 2'
+  );
+  return { handled: true, newState: 'SELECT_REGISTRATION_TYPE' };
+}
+
+// Handler for WAITING_REGISTRATION_TITULAR_CPF state
+async function handleWaitingRegistrationTitularCpf(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const input = messageText.trim();
+  
+  // Check if user wants to switch to titular
+  if (input === '1') {
+    await updateSession(supabase, session.id, {
+      state: 'SELECT_INSURANCE_PLAN',
+      pending_registration_type: 'titular',
+      pending_registration_titular_cpf: null,
+    });
+    return await promptInsurancePlanSelection(supabase, config, phone, session);
+  }
+  
+  // Clean and validate CPF
+  const cleanCpf = input.replace(/\D/g, '');
+  
+  if (cleanCpf.length !== 11) {
+    await sendWhatsAppMessage(config, phone, `❌ CPF inválido. Informe os 11 dígitos do CPF do titular ou digite *1* para se cadastrar como titular.`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_TITULAR_CPF' };
+  }
+  
+  if (!validateCpf(cleanCpf)) {
+    await sendWhatsAppMessage(config, phone, `❌ CPF com dígitos verificadores inválidos. Verifique e tente novamente.`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_TITULAR_CPF' };
+  }
+  
+  // Look for titular patient
+  const { data: titularPatient, error } = await supabase
+    .from('patients')
+    .select('id, name, insurance_plan_id')
+    .eq('clinic_id', config.clinic_id)
+    .eq('cpf', cleanCpf)
+    .eq('is_active', true)
+    .single();
+  
+  if (error || !titularPatient) {
+    await sendWhatsAppMessage(config, phone, MESSAGES.titularNotFound);
+    return { handled: true, newState: 'WAITING_REGISTRATION_TITULAR_CPF' };
+  }
+  
+  // Store titular info and use same insurance plan as titular
+  await updateSession(supabase, session.id, {
+    state: 'WAITING_REGISTRATION_NAME',
+    pending_registration_titular_cpf: cleanCpf,
+    pending_registration_insurance_plan_id: titularPatient.insurance_plan_id,
+  });
+  
+  const titularFirstName = titularPatient.name.split(' ')[0];
+  await sendWhatsAppMessage(config, phone, `✅ Titular encontrado: *${titularPatient.name}*\n\nAgora, informe o *nome completo* do dependente:`);
+  return { handled: true, newState: 'WAITING_REGISTRATION_NAME' };
+}
+
+// Helper to prompt insurance plan selection
+async function promptInsurancePlanSelection(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  // Fetch active insurance plans for the clinic
+  const { data: plans, error } = await supabase
+    .from('insurance_plans')
+    .select('id, name')
+    .eq('clinic_id', config.clinic_id)
+    .eq('is_active', true)
+    .order('name');
+  
+  if (error || !plans || plans.length === 0) {
+    // No plans available, continue without one
+    await updateSession(supabase, session.id, {
+      state: 'WAITING_REGISTRATION_NAME',
+      pending_registration_insurance_plan_id: null,
+      available_insurance_plans: null,
+    });
+    await sendWhatsAppMessage(config, phone, MESSAGES.noInsurancePlans + `\n\n` + MESSAGES.offerRegistration);
+    return { handled: true, newState: 'WAITING_REGISTRATION_NAME' };
+  }
+  
+  // Store plans in session and show selection
+  await updateSession(supabase, session.id, {
+    state: 'SELECT_INSURANCE_PLAN',
+    available_insurance_plans: plans,
+  });
+  
+  // Create list buttons (max 10)
+  const listItems = plans.slice(0, 10).map((p: any, i: number) => ({
+    id: `plan_${p.id}`,
+    text: `${i + 1}️⃣ ${p.name}`.substring(0, 24)
+  }));
+  
+  await sendWhatsAppList(
+    config,
+    phone,
+    '🏥 Convênio',
+    MESSAGES.selectInsurancePlan(plans),
+    'Selecionar Convênio',
+    listItems,
+    'Escolha o número do convênio'
+  );
+  
+  return { handled: true, newState: 'SELECT_INSURANCE_PLAN' };
+}
+
+// Handler for SELECT_INSURANCE_PLAN state
+async function handleSelectInsurancePlan(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const plans = session.available_insurance_plans || [];
+  
+  // Try numeric selection
+  const numChoice = parseInt(messageText.trim());
+  let selectedPlan: { id: string; name: string } | null = null;
+  
+  if (!isNaN(numChoice) && numChoice >= 1 && numChoice <= plans.length) {
+    selectedPlan = plans[numChoice - 1];
+  } else {
+    // Try to match by button ID
+    const planIdMatch = messageText.match(/plan_([a-f0-9-]+)/i);
+    if (planIdMatch) {
+      selectedPlan = plans.find(p => p.id === planIdMatch[1]) || null;
+    }
+    
+    // Try to match by name
+    if (!selectedPlan) {
+      const lowerInput = messageText.toLowerCase().trim();
+      selectedPlan = plans.find(p => p.name.toLowerCase().includes(lowerInput)) || null;
+    }
+  }
+  
+  if (!selectedPlan) {
+    await sendWhatsAppMessage(config, phone, `❌ Opção inválida. Por favor, digite o *número* do convênio:\n\n${plans.map((p: any, i: number) => `${i + 1}️⃣ ${p.name}`).join('\n')}`);
+    return { handled: true, newState: 'SELECT_INSURANCE_PLAN' };
+  }
+  
+  // Store selected plan and proceed to name
+  await updateSession(supabase, session.id, {
+    state: 'WAITING_REGISTRATION_NAME',
+    pending_registration_insurance_plan_id: selectedPlan.id,
+  });
+  
+  await sendWhatsAppMessage(config, phone, `✅ Convênio selecionado: *${selectedPlan.name}*\n\n` + MESSAGES.offerRegistration);
+  return { handled: true, newState: 'WAITING_REGISTRATION_NAME' };
 }
 
 async function handleWaitingRegistrationName(
@@ -2952,13 +3206,17 @@ async function handleConfirmRegistration(
   const isNo = NEGATIVE_REGEX.test(messageText) || messageText.includes('confirm_no') || messageText === '2';
   
   if (isNo) {
-    // Start over
+    // Start over - clear all registration data
     await updateSession(supabase, session.id, {
       state: 'WAITING_CPF',
       pending_registration_cpf: null,
       pending_registration_name: null,
       pending_registration_birthdate: null,
       pending_registration_cnpj: null,
+      pending_registration_type: null,
+      pending_registration_titular_cpf: null,
+      pending_registration_insurance_plan_id: null,
+      available_insurance_plans: null,
     });
     await sendWhatsAppMessage(config, phone, MESSAGES.welcome + MESSAGES.hintCpf);
     return { handled: true, newState: 'WAITING_CPF' };
@@ -2987,79 +3245,178 @@ async function handleConfirmRegistration(
         }
       }
       
-      // Create patient with employer data
-      const { data: patient, error: patientError } = await supabase
-        .from('patients')
-        .insert({
-          clinic_id: config.clinic_id,
-          name: session.pending_registration_name!.trim(),
-          cpf: session.pending_registration_cpf,
-          birth_date: session.pending_registration_birthdate,
-          phone: cleanPhone,
-          employer_cnpj: employerCnpj,
-          employer_name: employerName,
-        })
-        .select('id, name')
-        .single();
+      // Check if registering as dependent
+      const isDependent = session.pending_registration_type === 'dependent' && session.pending_registration_titular_cpf;
       
-      if (patientError) {
-        console.error('[registration] Error creating patient:', patientError);
-        if (patientError.message?.includes('CPF_DUPLICADO')) {
-          await sendWhatsAppMessage(config, phone, `❌ Este CPF já está cadastrado no sistema.\n\nPor favor, informe outro CPF ou entre em contato conosco.`);
+      if (isDependent) {
+        // Find titular patient
+        const { data: titularPatient, error: titularError } = await supabase
+          .from('patients')
+          .select('id, name, insurance_plan_id')
+          .eq('clinic_id', config.clinic_id)
+          .eq('cpf', session.pending_registration_titular_cpf)
+          .eq('is_active', true)
+          .single();
+        
+        if (titularError || !titularPatient) {
+          console.error('[registration] Titular not found for dependent:', titularError);
+          await sendWhatsAppMessage(config, phone, `❌ Não foi possível localizar o titular. Por favor, tente novamente.`);
           await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
           return { handled: true, newState: 'WAITING_CPF' };
         }
-        await sendWhatsAppMessage(config, phone, MESSAGES.registrationError);
-        return { handled: true, newState: 'FINISHED' };
-      }
-      
-      console.log(`[registration] Patient created: ${patient.id} - ${patient.name}`);
-      
-      // Generate card number
-      const { data: cardNumber, error: cardError } = await supabase.rpc(
-        'generate_card_number',
-        { p_clinic_id: config.clinic_id }
-      );
-      
-      if (cardError) {
-        console.error('[registration] Error generating card number:', cardError);
-      } else {
-        // Calculate 15 days from now
-        const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 15);
         
-        // Create patient card
-        const { error: insertCardError } = await supabase
-          .from('patient_cards')
+        // Create dependent record linked to titular
+        const { data: dependent, error: dependentError } = await supabase
+          .from('patient_dependents')
           .insert({
             clinic_id: config.clinic_id,
-            patient_id: patient.id,
-            card_number: cardNumber,
-            issued_at: new Date().toISOString(),
-            expires_at: expiresAt.toISOString(),
+            patient_id: titularPatient.id,
+            name: session.pending_registration_name!.trim(),
+            cpf: session.pending_registration_cpf,
+            birth_date: session.pending_registration_birthdate,
+            phone: cleanPhone,
+            relationship: null, // Could ask for relationship in future
             is_active: true,
-            token: crypto.randomUUID(),
-          });
+          })
+          .select('id, name')
+          .single();
         
-        if (insertCardError) {
-          console.error('[registration] Error creating card:', insertCardError);
-        } else {
-          console.log(`[registration] Card created for patient ${patient.id}`);
+        if (dependentError) {
+          console.error('[registration] Error creating dependent:', dependentError);
+          if (dependentError.message?.includes('CPF_DUPLICADO') || dependentError.message?.includes('duplicate')) {
+            await sendWhatsAppMessage(config, phone, `❌ Este CPF já está cadastrado no sistema.\n\nPor favor, informe outro CPF ou entre em contato conosco.`);
+            await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
+            return { handled: true, newState: 'WAITING_CPF' };
+          }
+          await sendWhatsAppMessage(config, phone, MESSAGES.registrationError);
+          return { handled: true, newState: 'FINISHED' };
         }
+        
+        console.log(`[registration] Dependent created: ${dependent.id} - ${dependent.name} linked to titular ${titularPatient.id}`);
+        
+        // Get titular's card to sync expiry date
+        const { data: titularCard } = await supabase
+          .from('patient_cards')
+          .select('expires_at')
+          .eq('patient_id', titularPatient.id)
+          .eq('is_active', true)
+          .order('expires_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (titularCard) {
+          // Update dependent with same card expiry as titular
+          await supabase
+            .from('patient_dependents')
+            .update({ card_expires_at: titularCard.expires_at })
+            .eq('id', dependent.id);
+          console.log(`[registration] Dependent card expiry synced with titular: ${titularCard.expires_at}`);
+        }
+        
+        // Clear registration data
+        await updateSession(supabase, session.id, {
+          state: 'WAITING_CPF',
+          pending_registration_cpf: null,
+          pending_registration_name: null,
+          pending_registration_birthdate: null,
+          pending_registration_cnpj: null,
+          pending_registration_type: null,
+          pending_registration_titular_cpf: null,
+          pending_registration_insurance_plan_id: null,
+          available_insurance_plans: null,
+        });
+        
+        const firstName = dependent.name.split(' ')[0];
+        const titularFirstName = titularPatient.name.split(' ')[0];
+        await sendWhatsAppMessage(config, phone, 
+          `✅ *Cadastro de dependente realizado com sucesso!*\n\n` +
+          `👤 Dependente: *${dependent.name}*\n` +
+          `👨‍👩‍👧 Titular: *${titularPatient.name}*\n\n` +
+          `Olá, *${firstName}*! Seja bem-vindo(a)! 🎉\n\n` +
+          `Agora você já pode agendar sua consulta! Por favor, informe novamente seu *CPF*:`
+        );
+        return { handled: true, newState: 'WAITING_CPF' };
+        
+      } else {
+        // Create patient as titular with insurance plan
+        const { data: patient, error: patientError } = await supabase
+          .from('patients')
+          .insert({
+            clinic_id: config.clinic_id,
+            name: session.pending_registration_name!.trim(),
+            cpf: session.pending_registration_cpf,
+            birth_date: session.pending_registration_birthdate,
+            phone: cleanPhone,
+            employer_cnpj: employerCnpj,
+            employer_name: employerName,
+            insurance_plan_id: session.pending_registration_insurance_plan_id || null,
+          })
+          .select('id, name')
+          .single();
+        
+        if (patientError) {
+          console.error('[registration] Error creating patient:', patientError);
+          if (patientError.message?.includes('CPF_DUPLICADO')) {
+            await sendWhatsAppMessage(config, phone, `❌ Este CPF já está cadastrado no sistema.\n\nPor favor, informe outro CPF ou entre em contato conosco.`);
+            await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
+            return { handled: true, newState: 'WAITING_CPF' };
+          }
+          await sendWhatsAppMessage(config, phone, MESSAGES.registrationError);
+          return { handled: true, newState: 'FINISHED' };
+        }
+        
+        console.log(`[registration] Patient created: ${patient.id} - ${patient.name}`);
+        
+        // Generate card number
+        const { data: cardNumber, error: cardError } = await supabase.rpc(
+          'generate_card_number',
+          { p_clinic_id: config.clinic_id }
+        );
+        
+        if (cardError) {
+          console.error('[registration] Error generating card number:', cardError);
+        } else {
+          // Calculate 15 days from now
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 15);
+          
+          // Create patient card
+          const { error: insertCardError } = await supabase
+            .from('patient_cards')
+            .insert({
+              clinic_id: config.clinic_id,
+              patient_id: patient.id,
+              card_number: cardNumber,
+              issued_at: new Date().toISOString(),
+              expires_at: expiresAt.toISOString(),
+              is_active: true,
+              token: crypto.randomUUID(),
+            });
+          
+          if (insertCardError) {
+            console.error('[registration] Error creating card:', insertCardError);
+          } else {
+            console.log(`[registration] Card created for patient ${patient.id}`);
+          }
+        }
+        
+        // Clear registration data and reset to ask for CPF again
+        await updateSession(supabase, session.id, {
+          state: 'WAITING_CPF',
+          pending_registration_cpf: null,
+          pending_registration_name: null,
+          pending_registration_birthdate: null,
+          pending_registration_cnpj: null,
+          pending_registration_type: null,
+          pending_registration_titular_cpf: null,
+          pending_registration_insurance_plan_id: null,
+          available_insurance_plans: null,
+        });
+        
+        const firstName = patient.name.split(' ')[0];
+        await sendWhatsAppMessage(config, phone, MESSAGES.registrationSuccess(firstName));
+        return { handled: true, newState: 'WAITING_CPF' };
       }
-      
-      // Clear registration data and reset to ask for CPF again
-      await updateSession(supabase, session.id, {
-        state: 'WAITING_CPF',
-        pending_registration_cpf: null,
-        pending_registration_name: null,
-        pending_registration_birthdate: null,
-        pending_registration_cnpj: null,
-      });
-      
-      const firstName = patient.name.split(' ')[0];
-      await sendWhatsAppMessage(config, phone, MESSAGES.registrationSuccess(firstName));
-      return { handled: true, newState: 'WAITING_CPF' };
       
     } catch (error) {
       console.error('[registration] Unexpected error:', error);
