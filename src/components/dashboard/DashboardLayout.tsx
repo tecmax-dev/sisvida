@@ -279,20 +279,20 @@ export function DashboardLayout() {
 
     setOpenCategories(prev => {
       const isOpening = !prev.includes(categoryId);
-      const newCategories = isOpening
-        ? [...prev, categoryId]
-        : prev.filter(id => id !== categoryId);
-
-      // Set auto-close timeout when opening a category
+      
+      // Accordion effect: only one category open at a time
       if (isOpening) {
+        // Set auto-close timeout when opening a category
         autoCloseTimeoutRef.current = setTimeout(() => {
           setOpenCategories(current => 
             current.filter(id => id !== categoryId)
           );
         }, AUTO_CLOSE_DELAY);
+        
+        return [categoryId]; // Close all others, open only this one
       }
-
-      return newCategories;
+      
+      return []; // Close if clicking the same open category
     });
   }, []);
 
