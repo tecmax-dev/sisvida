@@ -1249,8 +1249,11 @@ async function handleBookingFlow(
 
   // Handle high-confidence AI intents that can override current state
   if (aiResult.confidence >= 0.6) {
-    // Extract CPF from AI if detected (any state)
-    if (aiResult.entities?.cpf) {
+    // Extract CPF from AI if detected - BUT skip during registration states where CPF has different meaning
+    const skipAiCpfStates: BookingState[] = ['WAITING_REGISTRATION_TITULAR_CPF', 'SELECT_REGISTRATION_TYPE', 'SELECT_INSURANCE_PLAN', 'WAITING_REGISTRATION_NAME', 'WAITING_REGISTRATION_BIRTHDATE', 'WAITING_REGISTRATION_CNPJ', 'CONFIRM_COMPANY', 'CONFIRM_REGISTRATION', 'OFFER_REGISTRATION'];
+    const shouldSkipAiCpf = skipAiCpfStates.includes(session.state as BookingState);
+    
+    if (aiResult.entities?.cpf && !shouldSkipAiCpf) {
       const cleanCpf = aiResult.entities.cpf.replace(/\D/g, '');
       if (CPF_REGEX.test(cleanCpf) && validateCpf(cleanCpf)) {
         console.log('[booking] AI detected valid CPF:', cleanCpf.slice(0, 3) + '***');
