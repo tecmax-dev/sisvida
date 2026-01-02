@@ -32,7 +32,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Loader2, AlertTriangle, Shield } from "lucide-react";
+import { Loader2, AlertTriangle, Shield, User } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 // Generate a secure temporary password
@@ -51,6 +51,7 @@ interface ClinicUser {
   user_id: string;
   role: 'owner' | 'admin' | 'receptionist' | 'professional' | 'administrative';
   access_group_id?: string | null;
+  professional_id?: string | null;
   created_at: string;
   profile: {
     name: string;
@@ -73,6 +74,7 @@ const createUserSchema = z.object({
   phone: z.string().optional(),
   role: z.enum(['admin', 'professional', 'administrative', 'receptionist']),
   access_group_id: z.string().optional(),
+  professional_id: z.string().optional(),
   password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres").optional(),
 });
 
@@ -82,6 +84,7 @@ const editUserSchema = z.object({
   phone: z.string().optional(),
   role: z.enum(['admin', 'professional', 'administrative', 'receptionist']),
   access_group_id: z.string().optional(),
+  professional_id: z.string().optional(),
 });
 
 type CreateFormData = z.infer<typeof createUserSchema>;
@@ -123,6 +126,23 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
     enabled: open && !!clinicId,
   });
 
+  // Fetch professionals for this clinic
+  const { data: professionals } = useQuery({
+    queryKey: ['professionals-for-linking', clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('professionals')
+        .select('id, name')
+        .eq('clinic_id', clinicId)
+        .eq('is_active', true)
+        .order('name');
+
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: open && !!clinicId,
+  });
+
   const form = useForm<FormData>({
     resolver: zodResolver(isEditing ? editUserSchema : createUserSchema),
     defaultValues: {
@@ -131,6 +151,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
       phone: "",
       role: "receptionist",
       access_group_id: "",
+      professional_id: "",
       password: "",
     },
   });
@@ -143,6 +164,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         phone: clinicUser.profile?.phone || "",
         role: clinicUser.role === 'owner' ? 'admin' : clinicUser.role,
         access_group_id: clinicUser.access_group_id || "",
+        professional_id: clinicUser.professional_id || "",
       });
     } else {
       form.reset({
@@ -151,6 +173,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
         phone: "",
         role: "receptionist",
         access_group_id: "",
+        professional_id: "",
         password: "",
       });
     }
@@ -191,7 +214,8 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
           .from('user_roles')
           .update({ 
             role: data.role,
-            access_group_id: data.access_group_id || null
+            access_group_id: data.access_group_id || null,
+            professional_id: data.professional_id || null
           })
           .eq('id', clinicUser.id);
 
@@ -217,6 +241,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
             new_role: data.role,
             previous_role: clinicUser.role,
             access_group_id: data.access_group_id || null,
+            professional_id: data.professional_id || null,
           },
         });
 
@@ -239,6 +264,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
             role: createData.role,
             clinicId: clinicId,
             accessGroupId: createData.access_group_id || null,
+            professionalId: createData.professional_id || null,
           },
         });
 
@@ -290,6 +316,7 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
             user_email: createData.email,
             role: createData.role,
             access_group_id: createData.access_group_id || null,
+            professional_id: createData.professional_id || null,
             clinic_id: clinicId,
           },
         });
@@ -473,6 +500,44 @@ export function UserDialog({ open, onClose, clinicUser, clinicId }: UserDialogPr
                   </Select>
                   <FormDescription>
                     Quando definido, as permissões do grupo sobrescrevem o perfil base.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="professional_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Vincular a Profissional
+                  </FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(value === "none" ? "" : value)} 
+                    value={field.value || "none"}
+                    disabled={isOwner}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um profissional (opcional)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        <span className="text-muted-foreground">Nenhum (ver toda a agenda)</span>
+                      </SelectItem>
+                      {professionals?.map((prof) => (
+                        <SelectItem key={prof.id} value={prof.id}>
+                          {prof.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Quando vinculado, o usuário só poderá ver a agenda deste profissional.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

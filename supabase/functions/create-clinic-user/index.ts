@@ -46,7 +46,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, password, name, phone, role, clinicId, accessGroupId } = body;
+    const { email, password, name, phone, role, clinicId, accessGroupId, professionalId } = body;
 
     // Validate required fields
     if (!email || !password || !name || !role || !clinicId) {
@@ -122,6 +122,7 @@ Deno.serve(async (req) => {
         clinic_id: clinicId,
         role: role,
         access_group_id: accessGroupId || null,
+        professional_id: professionalId || null,
       });
 
     if (roleInsertError) {

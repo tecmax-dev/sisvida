@@ -6939,6 +6939,7 @@ export type Database = {
           clinic_id: string
           created_at: string
           id: string
+          professional_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -6947,6 +6948,7 @@ export type Database = {
           clinic_id: string
           created_at?: string
           id?: string
+          professional_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
@@ -6955,6 +6957,7 @@ export type Database = {
           clinic_id?: string
           created_at?: string
           id?: string
+          professional_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -6971,6 +6974,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
             referencedColumns: ["id"]
           },
         ]
