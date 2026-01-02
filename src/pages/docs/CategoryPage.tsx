@@ -40,11 +40,12 @@ export default function CategoryPage() {
       {/* Articles List */}
       <div className="space-y-3">
         {category.articles.map((article, index) => (
-          <Link
+          <Card
             key={article.slug}
-            to={`/ajuda/${category.id}/${article.slug}`}
+            asChild
+            className="hover:border-primary/30 hover:shadow-md transition-all group cursor-pointer"
           >
-            <Card className="hover:border-primary/30 hover:shadow-md transition-all group cursor-pointer">
+            <Link to={`/ajuda/${category.id}/${article.slug}`} className="block">
               <CardContent className="flex items-center gap-4 p-4">
                 <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
                   <span className="font-semibold">{index + 1}</span>
@@ -53,14 +54,12 @@ export default function CategoryPage() {
                   <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
                     {article.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Tutorial passo a passo
-                  </p>
+                  <p className="text-sm text-muted-foreground">Tutorial passo a passo</p>
                 </div>
                 <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
               </CardContent>
-            </Card>
-          </Link>
+            </Link>
+          </Card>
         ))}
       </div>
 
