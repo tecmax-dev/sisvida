@@ -70,7 +70,7 @@ const navItems: NavItem[] = [
   { href: "/dashboard/calendar", icon: Calendar, label: "Agenda", permission: "scheduling" },
   { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients" },
   { href: "/dashboard/dependents", icon: Users, label: "Dependentes", permission: "view_patients" },
-  { href: "/dashboard/employers", icon: Building2, label: "Empresas", permission: "view_patients" },
+  { href: "/dashboard/empresas", icon: Building2, label: "Empresas", permission: "view_patients" },
   { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais", permission: "view_professionals" },
   { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
   { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },

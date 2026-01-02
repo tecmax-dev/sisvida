@@ -291,7 +291,7 @@ const App = () => (
                   <Route path="dependents" element={<DependentsPage />} />
                   <Route path="atendimento/:appointmentId" element={<AttendancePage />} />
                   <Route path="exams" element={<ExamsPage />} />
-                  <Route path="employers" element={<EmployersPage />} />
+                  <Route path="empresas" element={<EmployersPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
