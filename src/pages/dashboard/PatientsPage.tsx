@@ -17,6 +17,7 @@ import {
   UserCheck,
 } from "lucide-react";
 import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
+import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -764,6 +765,9 @@ export default function PatientsPage() {
   const canPrev = page > 1;
   const canNext = page < pageCount;
 
+      {/* Alerts Panel */}
+      <PatientAlertsPanel />
+
 
   return (
     <div className="space-y-6">
@@ -914,6 +918,9 @@ export default function PatientsPage() {
         </Dialog>
         )}
       </div>
+
+      {/* Alerts Panel */}
+      <PatientAlertsPanel />
 
       {/* Search */}
       <Card>
