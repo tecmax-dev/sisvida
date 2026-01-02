@@ -543,27 +543,29 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
             <AlertDialogTitle>
               {canPermanentDelete ? "Remover dependente?" : "Inativar dependente?"}
             </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-2">
-              {canPermanentDelete ? (
-                <>
-                  <p>
-                    O que deseja fazer com <strong>{dependentToDelete?.name}</strong>?
-                  </p>
-                  <p className="text-sm">
-                    <strong>Inativar:</strong> O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.
-                  </p>
-                  <p className="text-sm">
-                    <strong>Excluir permanentemente:</strong> Remove todos os dados do dependente. Esta ação não pode ser desfeita.
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p>
-                    Tem certeza que deseja inativar <strong>{dependentToDelete?.name}</strong>?
-                  </p>
-                  <p className="text-sm">O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.</p>
-                </>
-              )}
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm text-muted-foreground">
+                {canPermanentDelete ? (
+                  <>
+                    <p>
+                      O que deseja fazer com <strong>{dependentToDelete?.name}</strong>?
+                    </p>
+                    <p>
+                      <strong>Inativar:</strong> O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.
+                    </p>
+                    <p>
+                      <strong>Excluir permanentemente:</strong> Remove todos os dados do dependente. Esta ação não pode ser desfeita.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p>
+                      Tem certeza que deseja inativar <strong>{dependentToDelete?.name}</strong>?
+                    </p>
+                    <p>O dependente não aparecerá mais nas listagens, mas poderá ser reativado posteriormente.</p>
+                  </>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
 
