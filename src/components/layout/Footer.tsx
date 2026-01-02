@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Logo } from "./Logo";
-import { MessageCircle, Mail, Shield, Instagram, Linkedin, Youtube } from "lucide-react";
+import { MessageCircle, Mail, Shield, Instagram, Linkedin, Youtube, Phone } from "lucide-react";
 
 export function Footer() {
   return (
@@ -18,19 +18,22 @@ export function Footer() {
             <div className="mt-6 flex gap-3">
               <a 
                 href="#" 
-                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                aria-label="Instagram"
               >
                 <Instagram className="h-5 w-5" />
               </a>
               <a 
                 href="#" 
-                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                aria-label="LinkedIn"
               >
                 <Linkedin className="h-5 w-5" />
               </a>
               <a 
                 href="#" 
-                className="w-10 h-10 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:bg-primary/10 hover:text-primary transition-colors"
+                className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                aria-label="YouTube"
               >
                 <Youtube className="h-5 w-5" />
               </a>
@@ -48,7 +51,7 @@ export function Footer() {
               </li>
               <li>
                 <a href="/#pricing" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Preços
+                  Planos e preços
                 </a>
               </li>
               <li>
@@ -63,7 +66,7 @@ export function Footer() {
               </li>
               <li>
                 <Link to="/cadastro" className="text-sm text-muted-foreground hover:text-primary transition-colors">
-                  Criar conta
+                  Criar conta gratuita
                 </Link>
               </li>
             </ul>
@@ -103,7 +106,7 @@ export function Footer() {
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors"
                 >
                   <MessageCircle className="h-4 w-4" />
-                  (71) 98278-6864
+                  WhatsApp: (71) 98278-6864
                 </a>
               </li>
               <li>
@@ -149,7 +152,7 @@ export function Footer() {
           {/* LGPD Compliance */}
           <div className="mt-6 pt-6 border-t border-border/50">
             <div className="flex flex-col md:flex-row justify-center items-center gap-3 text-center">
-              <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-full">
+              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
                 <Shield className="h-4 w-4 text-primary" />
                 <span className="text-xs font-medium text-primary">Em conformidade com a LGPD</span>
               </div>
