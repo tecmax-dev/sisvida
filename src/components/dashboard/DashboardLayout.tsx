@@ -541,10 +541,10 @@ export function DashboardLayout() {
                   </span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-foreground truncate">
+                  <p className="text-sm font-semibold text-sidebar-foreground truncate">
                     {displayName}
                   </p>
-                  <p className="text-xs text-muted-foreground truncate">
+                  <p className="text-xs text-sidebar-foreground/70 truncate">
                     {user?.email}
                   </p>
                 </div>
