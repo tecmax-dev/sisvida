@@ -2,8 +2,9 @@ import { Navigate, useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, ArrowRight, Clock, Lightbulb, AlertCircle, CheckCircle2 } from "lucide-react";
-import dashboardMockup from "@/assets/dashboard-mockup.png";
-import heroMockup from "@/assets/hero-mockup.png";
+import atendimentoFluxo from "@/assets/docs/atendimento-fluxo.png";
+import prescricaoDigital from "@/assets/docs/prescricao-digital.png";
+import agendaCalendar from "@/assets/docs/agenda-calendar.png";
 
 const articles: Record<string, {
   title: string;
@@ -58,7 +59,7 @@ const articles: Record<string, {
 
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
-            src={dashboardMockup} 
+            src={atendimentoFluxo} 
             alt="Dashboard Eclini - Fluxo de Atendimento" 
             className="rounded-lg w-full"
           />
@@ -107,7 +108,7 @@ const articles: Record<string, {
 
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
-            src="/docs/tela-home.png" 
+            src={agendaCalendar} 
             alt="Tela de Agenda Eclini" 
             className="rounded-lg w-full"
           />
@@ -176,7 +177,7 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src={heroMockup} 
+              src={prescricaoDigital} 
               alt="Tela de Prescrição Eclini" 
               className="rounded-lg w-full"
             />
@@ -239,7 +240,7 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src={dashboardMockup} 
+              src={prescricaoDigital} 
               alt="Emissão de documentos Eclini" 
               className="rounded-lg w-full"
             />

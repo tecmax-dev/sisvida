@@ -2,8 +2,8 @@ import { Navigate, useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, ArrowRight, Clock, Lightbulb, AlertCircle, TrendingUp, TrendingDown } from "lucide-react";
-import dashboardMockup from "@/assets/dashboard-mockup.png";
-import heroMockupScreens from "@/assets/hero-mockup-screens.png";
+import financeiroDashboard from "@/assets/docs/financeiro-dashboard.png";
+import agendaCalendar from "@/assets/docs/agenda-calendar.png";
 
 const articles: Record<string, {
   title: string;
@@ -27,7 +27,7 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src={dashboardMockup} 
+              src={financeiroDashboard} 
               alt="Dashboard Financeiro Eclini" 
               className="rounded-lg w-full"
             />
@@ -97,7 +97,7 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="/docs/tela-home.png" 
+              src={financeiroDashboard} 
               alt="Tela de Transações Financeiras Eclini" 
               className="rounded-lg w-full"
             />
@@ -168,7 +168,7 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src={heroMockupScreens} 
+              src={financeiroDashboard} 
               alt="Controle de despesas Eclini" 
               className="rounded-lg w-full"
             />
@@ -261,7 +261,7 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src={dashboardMockup} 
+              src={financeiroDashboard} 
               alt="Relatórios Financeiros Eclini" 
               className="rounded-lg w-full"
             />
