@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import {
   RefreshCw, 
   Settings,
   Phone,
-  Calendar,
   Send,
   Loader2,
   TestTube2
@@ -21,7 +20,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, isToday, isYesterday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Dialog,
@@ -30,6 +29,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 
 interface BirthdayLog {
@@ -305,6 +310,34 @@ Equipe {clinica}`;
     return phone;
   };
 
+  // Group logs by date
+  const groupedLogs = useMemo(() => {
+    const groups: { [key: string]: { label: string; logs: BirthdayLog[] } } = {};
+    
+    logs.forEach((log) => {
+      const date = parseISO(log.sent_at);
+      const dateKey = format(date, 'yyyy-MM-dd');
+      
+      let label: string;
+      if (isToday(date)) {
+        label = 'Hoje';
+      } else if (isYesterday(date)) {
+        label = 'Ontem';
+      } else {
+        label = format(date, "dd 'de' MMMM", { locale: ptBR });
+      }
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = { label, logs: [] };
+      }
+      groups[dateKey].logs.push(log);
+    });
+    
+    return Object.entries(groups)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([key, value]) => ({ key, ...value }));
+  }, [logs]);
+
   return (
     <Card className="border border-border/60 bg-card shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-2 border-b border-border/40">
@@ -433,53 +466,67 @@ Equipe {clinica}`;
            </p>
         </div>
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+          <div className="flex items-center justify-center py-6">
+            <RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : logs.length > 0 ? (
-          <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-            {logs.map((log) => (
-              <div
-                key={log.id}
-                className="flex items-center gap-3 p-3 rounded-lg border border-border/50 hover:bg-muted/30 transition-colors"
-              >
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  log.success ? 'bg-success/15' : 'bg-destructive/15'
-                }`}>
-                  {log.success ? (
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-destructive" />
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{log.patient_name}</p>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Phone className="h-3 w-3" />
-                    <span>{formatPhone(log.patient_phone)}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <Badge variant={log.success ? "default" : "destructive"} className="text-xs">
-                    {log.success ? 'Enviado' : 'Falhou'}
-                  </Badge>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {format(new Date(log.sent_at), "dd/MM HH:mm", { locale: ptBR })}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <Accordion type="single" collapsible className="w-full" defaultValue={groupedLogs[0]?.key}>
+            {groupedLogs.map((group) => {
+              const successCount = group.logs.filter(l => l.success).length;
+              const failCount = group.logs.length - successCount;
+              
+              return (
+                <AccordionItem key={group.key} value={group.key} className="border-border/50">
+                  <AccordionTrigger className="py-2 hover:no-underline">
+                    <div className="flex items-center justify-between w-full pr-2">
+                      <span className="text-sm font-medium">{group.label}</span>
+                      <div className="flex items-center gap-2">
+                        {successCount > 0 && (
+                          <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            {successCount}
+                          </Badge>
+                        )}
+                        {failCount > 0 && (
+                          <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive/30">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            {failCount}
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-1 pt-1">
+                      {group.logs.map((log) => (
+                        <div
+                          key={log.id}
+                          className="flex items-center gap-2 py-1.5 px-2 rounded hover:bg-muted/30 transition-colors"
+                        >
+                          {log.success ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
+                          ) : (
+                            <XCircle className="h-3.5 w-3.5 text-destructive shrink-0" />
+                          )}
+                          <span className="text-sm truncate flex-1">{log.patient_name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            {format(new Date(log.sent_at), "HH:mm")}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              );
+            })}
+          </Accordion>
         ) : (
-          <div className="text-center py-8">
-            <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
-              <Cake className="h-6 w-6 text-muted-foreground/50" />
+          <div className="text-center py-6">
+            <div className="w-10 h-10 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-2">
+              <Cake className="h-5 w-5 text-muted-foreground/50" />
             </div>
             <p className="text-sm text-muted-foreground">
-              Nenhuma mensagem de aniversário enviada ainda
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Configure o envio automático para começar
+              Nenhuma mensagem enviada ainda
             </p>
           </div>
         )}
