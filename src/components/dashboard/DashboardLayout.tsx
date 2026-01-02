@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef, useCallback } from "react";
 import { Link, useLocation, Outlet } from "react-router-dom";
 import NotificationBell from "@/components/notifications/NotificationBell";
 import { ChatWidget } from "@/components/chat/ChatWidget";
@@ -223,6 +223,8 @@ export function DashboardLayout() {
     }
     return ["overview", "attendance", "patients"];
   });
+  const autoCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const AUTO_CLOSE_DELAY = 5000; // 5 seconds
   const location = useLocation();
   const { user, profile, currentClinic, userRoles, signOut, setCurrentClinic } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
@@ -234,6 +236,15 @@ export function DashboardLayout() {
   useEffect(() => {
     localStorage.setItem("sidebar-open-categories", JSON.stringify(openCategories));
   }, [openCategories]);
+
+  // Cleanup auto-close timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (autoCloseTimeoutRef.current) {
+        clearTimeout(autoCloseTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Filter categories based on permissions
   const filteredCategories = navCategories.map(category => ({
@@ -259,13 +270,31 @@ export function DashboardLayout() {
     return category.items.some(item => isActive(item.href));
   };
 
-  const toggleCategory = (categoryId: string) => {
-    setOpenCategories(prev =>
-      prev.includes(categoryId)
-        ? prev.filter(id => id !== categoryId)
-        : [...prev, categoryId]
-    );
-  };
+  const toggleCategory = useCallback((categoryId: string) => {
+    // Clear any existing auto-close timeout
+    if (autoCloseTimeoutRef.current) {
+      clearTimeout(autoCloseTimeoutRef.current);
+      autoCloseTimeoutRef.current = null;
+    }
+
+    setOpenCategories(prev => {
+      const isOpening = !prev.includes(categoryId);
+      const newCategories = isOpening
+        ? [...prev, categoryId]
+        : prev.filter(id => id !== categoryId);
+
+      // Set auto-close timeout when opening a category
+      if (isOpening) {
+        autoCloseTimeoutRef.current = setTimeout(() => {
+          setOpenCategories(current => 
+            current.filter(id => id !== categoryId)
+          );
+        }, AUTO_CLOSE_DELAY);
+      }
+
+      return newCategories;
+    });
+  }, []);
 
   const displayName = profile?.name || user?.user_metadata?.name || "Usuário";
 
@@ -375,7 +404,7 @@ export function DashboardLayout() {
             )}
           </button>
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-0.5 mt-1">
+        <CollapsibleContent className="collapsible-content space-y-0.5 mt-1 overflow-hidden">
           {category.items.map((item) => (
             <NavItemLink key={item.href} item={item} isSubItem />
           ))}
