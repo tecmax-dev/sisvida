@@ -14,10 +14,18 @@ import { RedirectDoubleDashboard } from "@/components/routing/RedirectDoubleDash
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
 import { AdminLayout } from "./components/admin/AdminLayout";
+import DocsLayout from "./pages/docs/DocsLayout";
 
 // Landing page (carregamento imediato - primeira página)
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+
+// Documentation pages
+import AjudaIndex from "./pages/docs/AjudaIndex";
+import CategoryPage from "./pages/docs/CategoryPage";
+import PrimeirosPassosArticle from "./pages/docs/articles/PrimeirosPassos";
+import AgendaArticle from "./pages/docs/articles/AgendaArticles";
+import GenericArticle from "./pages/docs/articles/GenericArticle";
 
 // Páginas com lazy loading - Auth & Setup
 const Auth = lazy(() => import("./pages/Auth"));
@@ -189,6 +197,16 @@ const App = () => (
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/cadastro" element={<PublicSignup />} />
                 <Route path="/aguardando-confirmacao" element={<AwaitingConfirmation />} />
+                {/* Documentation / Help Center */}
+                <Route path="/ajuda" element={<DocsLayout />}>
+                  <Route index element={<AjudaIndex />} />
+                  <Route path="primeiros-passos" element={<CategoryPage />} />
+                  <Route path="primeiros-passos/:articleSlug" element={<PrimeirosPassosArticle />} />
+                  <Route path="agenda" element={<CategoryPage />} />
+                  <Route path="agenda/:articleSlug" element={<AgendaArticle />} />
+                  <Route path=":categoryId" element={<CategoryPage />} />
+                  <Route path=":categoryId/:articleSlug" element={<GenericArticle />} />
+                </Route>
                 <Route path="/confirm-email" element={<ConfirmEmail />} />
                 {/* Compat: corrige URLs duplicadas /dashboard/dashboard/... */}
                 <Route path="/dashboard/dashboard/*" element={<RedirectDoubleDashboard />} />

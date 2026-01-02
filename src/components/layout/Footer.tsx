@@ -56,6 +56,11 @@ export function Footer() {
                 </a>
               </li>
               <li>
+                <a href="/ajuda" className="text-sm text-muted-foreground hover:text-primary transition-colors">
+                  Central de Ajuda
+                </a>
+              </li>
+              <li>
                 <a href="/cadastro" className="text-sm text-muted-foreground hover:text-primary transition-colors">
                   Criar conta
                 </a>
