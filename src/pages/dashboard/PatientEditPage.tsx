@@ -383,7 +383,7 @@ export default function PatientEditPage() {
   });
 
   const handleTabChange = (tab: PatientTab) => {
-    if (tab === 'cadastro') {
+    if (tab === 'cadastro' || tab === 'dependentes') {
       setActiveTab(tab);
     } else if (tab === 'prontuario') {
       openModal('patientRecords', { patientId: id, patientName: formData.name });
