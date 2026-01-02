@@ -25,6 +25,11 @@ import AjudaIndex from "./pages/docs/AjudaIndex";
 import CategoryPage from "./pages/docs/CategoryPage";
 import PrimeirosPassosArticle from "./pages/docs/articles/PrimeirosPassos";
 import AgendaArticle from "./pages/docs/articles/AgendaArticles";
+import PacientesArticle from "./pages/docs/articles/PacientesArticles";
+import FinanceiroArticle from "./pages/docs/articles/FinanceiroArticles";
+import AtendimentoArticle from "./pages/docs/articles/AtendimentoArticles";
+import WhatsAppArticle from "./pages/docs/articles/WhatsAppArticles";
+import ConfiguracoesArticle from "./pages/docs/articles/ConfiguracoesArticles";
 import GenericArticle from "./pages/docs/articles/GenericArticle";
 
 // Páginas com lazy loading - Auth & Setup
@@ -204,6 +209,16 @@ const App = () => (
                   <Route path="primeiros-passos/:articleSlug" element={<PrimeirosPassosArticle />} />
                   <Route path="agenda" element={<CategoryPage />} />
                   <Route path="agenda/:articleSlug" element={<AgendaArticle />} />
+                  <Route path="pacientes" element={<CategoryPage />} />
+                  <Route path="pacientes/:articleSlug" element={<PacientesArticle />} />
+                  <Route path="financeiro" element={<CategoryPage />} />
+                  <Route path="financeiro/:articleSlug" element={<FinanceiroArticle />} />
+                  <Route path="atendimento" element={<CategoryPage />} />
+                  <Route path="atendimento/:articleSlug" element={<AtendimentoArticle />} />
+                  <Route path="whatsapp" element={<CategoryPage />} />
+                  <Route path="whatsapp/:articleSlug" element={<WhatsAppArticle />} />
+                  <Route path="configuracoes" element={<CategoryPage />} />
+                  <Route path="configuracoes/:articleSlug" element={<ConfiguracoesArticle />} />
                   <Route path=":categoryId" element={<CategoryPage />} />
                   <Route path=":categoryId/:articleSlug" element={<GenericArticle />} />
                 </Route>
