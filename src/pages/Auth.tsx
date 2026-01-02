@@ -11,7 +11,7 @@ import { z } from "zod";
 import ReCAPTCHA from "react-google-recaptcha";
 import dashboardMockup from "@/assets/dashboard-mockup.png";
 
-const RECAPTCHA_SITE_KEY = "6Ldo7j0sAAAAAIekvXAZmH_AmwixcFhuwBWAR38N";
+const RECAPTCHA_SITE_KEY = "6Ld57z0sAAAAALhKQGqzGspRkCr8iYbNOvWcbLDW";
 
 const emailSchema = z.string().email("Email inválido");
 const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres");
