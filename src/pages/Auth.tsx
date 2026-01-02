@@ -334,12 +334,18 @@ export default function Auth() {
 
     try {
       // Verificar reCAPTCHA no servidor para login e signup
-      if ((view === "login" || view === "signup") && recaptchaToken) {
+      if ((view === "login" || view === "signup")) {
+        if (!recaptchaToken) {
+          setErrors({ recaptcha: "Complete o reCAPTCHA para continuar" });
+          setLoading(false);
+          return;
+        }
+        
         const isValid = await verifyRecaptcha(recaptchaToken);
         if (!isValid) {
           toast({
             title: "Verificação falhou",
-            description: "O reCAPTCHA não pôde ser verificado. Tente novamente.",
+            description: "O reCAPTCHA não pôde ser verificado. Complete novamente.",
             variant: "destructive",
           });
           recaptchaRef.current?.reset();
@@ -853,11 +859,32 @@ export default function Auth() {
                   {/* reCAPTCHA */}
                   <div className="flex flex-col items-center">
                     <ReCAPTCHA
+                      key={`recaptcha-${view}`}
                       ref={recaptchaRef}
                       sitekey={RECAPTCHA_SITE_KEY}
-                      onChange={(token) => setRecaptchaToken(token)}
-                      onExpired={() => setRecaptchaToken(null)}
-                      onErrored={() => setRecaptchaToken(null)}
+                      onChange={(token) => {
+                        setRecaptchaToken(token);
+                        if (errors.recaptcha) {
+                          setErrors(prev => ({ ...prev, recaptcha: undefined }));
+                        }
+                      }}
+                      onExpired={() => {
+                        setRecaptchaToken(null);
+                        toast({
+                          title: "reCAPTCHA expirou",
+                          description: "Por favor, complete o reCAPTCHA novamente.",
+                          variant: "destructive",
+                        });
+                      }}
+                      onErrored={() => {
+                        setRecaptchaToken(null);
+                        toast({
+                          title: "Erro no reCAPTCHA",
+                          description: "Houve um erro. Por favor, tente novamente.",
+                          variant: "destructive",
+                        });
+                      }}
+                      hl="pt-BR"
                     />
                     {errors.recaptcha && (
                       <p className="mt-1 text-sm text-destructive">{errors.recaptcha}</p>
