@@ -106,9 +106,10 @@ async function generateCardNumber(supabase: any, clinicId: string): Promise<stri
 }
 
 async function fetchSociosFromSindSystem(token: string): Promise<SindSystemSocio[]> {
-  const url = `${SINDSYSTEM_BASE_URL}/${token}/socios`
+  // Endpoint correto conforme documentação: /{token}/socio/todos
+  const url = `${SINDSYSTEM_BASE_URL}/${token}/socio/todos`
   
-  console.log(`📡 Buscando sócios da API SindSystem: ${SINDSYSTEM_BASE_URL}/${token.slice(0, 8)}***/socios`)
+  console.log(`📡 Buscando sócios da API SindSystem: ${SINDSYSTEM_BASE_URL}/${token.slice(0, 8)}***/socio/todos`)
   
   const response = await fetch(url, {
     method: 'GET',
@@ -126,11 +127,14 @@ async function fetchSociosFromSindSystem(token: string): Promise<SindSystemSocio
   
   const data = await response.json()
   
+  console.log('📦 Resposta da API:', JSON.stringify(data).slice(0, 500))
+  
   // A API pode retornar um objeto com array ou diretamente um array
   if (Array.isArray(data)) {
     return data
   }
   
+  // Tenta diferentes formatos de resposta
   if (data.socios && Array.isArray(data.socios)) {
     return data.socios
   }
@@ -139,7 +143,11 @@ async function fetchSociosFromSindSystem(token: string): Promise<SindSystemSocio
     return data.data
   }
   
-  console.log('⚠️ Formato de resposta não reconhecido:', JSON.stringify(data).slice(0, 200))
+  if (data.resultado && Array.isArray(data.resultado)) {
+    return data.resultado
+  }
+  
+  console.log('⚠️ Formato de resposta não reconhecido, tentando usar objeto diretamente')
   return []
 }
 
