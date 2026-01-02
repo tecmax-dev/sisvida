@@ -110,6 +110,7 @@ import ChatSupportPage from "./pages/admin/ChatSupportPage";
 import HeroSettingsPage from "./pages/admin/HeroSettingsPage";
 import CarouselBannersPage from "./pages/admin/CarouselBannersPage";
 import GlobalConfigPage from "./pages/admin/GlobalConfigPage";
+import AddonRequestsPage from "./pages/admin/AddonRequestsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -272,6 +273,7 @@ const App = () => (
                   <Route path="access-groups" element={<AccessGroupsPage />} />
                   <Route path="notifications" element={<NotificationsPage />} />
                   <Route path="upgrades" element={<UpgradeRequestsPage />} />
+                  <Route path="addon-requests" element={<AddonRequestsPage />} />
                   <Route path="import" element={<DataImportPage />} />
                   <Route path="smtp" element={<SmtpSettingsPage />} />
                   <Route path="audit" element={<AuditLogsPage />} />

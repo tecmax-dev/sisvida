@@ -84,6 +84,63 @@ export type Database = {
           },
         ]
       }
+      addon_requests: {
+        Row: {
+          addon_id: string
+          admin_notes: string | null
+          clinic_id: string
+          created_at: string | null
+          id: string
+          request_reason: string | null
+          requested_by: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          addon_id: string
+          admin_notes?: string | null
+          clinic_id: string
+          created_at?: string | null
+          id?: string
+          request_reason?: string | null
+          requested_by: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          addon_id?: string
+          admin_notes?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          id?: string
+          request_reason?: string | null
+          requested_by?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "addon_requests_addon_id_fkey"
+            columns: ["addon_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_addons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "addon_requests_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anamnese_answers: {
         Row: {
           answer_option_ids: string[] | null
@@ -1394,6 +1451,63 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      clinic_addons: {
+        Row: {
+          activated_at: string | null
+          activated_by: string | null
+          addon_id: string
+          clinic_id: string
+          created_at: string | null
+          id: string
+          notes: string | null
+          status: string
+          suspended_at: string | null
+          suspended_by: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          activated_at?: string | null
+          activated_by?: string | null
+          addon_id: string
+          clinic_id: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          suspended_at?: string | null
+          suspended_by?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          activated_at?: string | null
+          activated_by?: string | null
+          addon_id?: string
+          clinic_id?: string
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          status?: string
+          suspended_at?: string | null
+          suspended_by?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clinic_addons_addon_id_fkey"
+            columns: ["addon_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_addons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clinic_addons_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clinic_holidays: {
         Row: {
@@ -5891,6 +6005,45 @@ export type Database = {
           },
         ]
       }
+      subscription_addons: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          key: string
+          monthly_price: number
+          name: string
+          order_index: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          key: string
+          monthly_price?: number
+          name: string
+          order_index?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          key?: string
+          monthly_price?: number
+          name?: string
+          order_index?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       subscription_plans: {
         Row: {
           created_at: string
@@ -7246,6 +7399,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      clinic_has_addon: {
+        Args: { _addon_key: string; _clinic_id: string }
+        Returns: boolean
+      }
       generate_card_number: { Args: { p_clinic_id: string }; Returns: string }
       generate_queue_ticket: {
         Args: { p_queue_id: string }
