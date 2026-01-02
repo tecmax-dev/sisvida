@@ -2771,6 +2771,37 @@ async function handleSelectRegistrationType(
   return { handled: true, newState: 'SELECT_REGISTRATION_TYPE' };
 }
 
+// Handler for WAITING_REGISTRATION_DEPENDENT_CPF state
+async function handleWaitingRegistrationDependentCpf(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const input = messageText.trim();
+  const cleanCpf = input.replace(/\D/g, '');
+
+  if (cleanCpf.length !== 11) {
+    await sendWhatsAppMessage(config, phone, `❌ CPF inválido. Informe os 11 dígitos do CPF do dependente.`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_DEPENDENT_CPF' };
+  }
+
+  if (!validateCpf(cleanCpf)) {
+    await sendWhatsAppMessage(config, phone, `❌ CPF com dígitos verificadores inválidos. Verifique e tente novamente.`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_DEPENDENT_CPF' };
+  }
+
+  // Store the dependent's CPF and proceed to ask for titular's CPF
+  await updateSession(supabase, session.id, {
+    state: 'WAITING_REGISTRATION_TITULAR_CPF',
+    pending_registration_cpf: cleanCpf,
+  });
+
+  await sendWhatsAppMessage(config, phone, MESSAGES.askTitularCpf);
+  return { handled: true, newState: 'WAITING_REGISTRATION_TITULAR_CPF' };
+}
+
 // Handler for WAITING_REGISTRATION_TITULAR_CPF state
 async function handleWaitingRegistrationTitularCpf(
   supabase: SupabaseClient,
