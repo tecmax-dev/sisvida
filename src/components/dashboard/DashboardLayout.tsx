@@ -58,6 +58,10 @@ import {
   Briefcase,
   Receipt,
   LayoutDashboard,
+  MessageSquare,
+  Youtube,
+  BookOpen,
+  Sparkles,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -65,6 +69,16 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+const SYSTEM_VERSION = "2026.01.2";
+
+// Format clinic ID: year prefix + sequential number
+const formatClinicId = (createdAt: string, id: string) => {
+  const year = new Date(createdAt).getFullYear();
+  // Use first 8 chars of UUID as numeric-like identifier
+  const numericPart = parseInt(id.replace(/-/g, '').substring(0, 8), 16) % 100000000;
+  return `${year}${String(numericPart).padStart(8, '0')}`;
+};
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -572,7 +586,7 @@ export function DashboardLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 lg:p-6">
+        <main className="flex-1 p-4 lg:p-6 pb-16">
           <Suspense fallback={
             <div className="flex items-center justify-center h-64">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -581,6 +595,49 @@ export function DashboardLayout() {
             <Outlet />
           </Suspense>
         </main>
+
+        {/* Footer */}
+        <footer className="h-10 bg-muted/50 border-t border-border flex items-center justify-between px-4 text-xs shrink-0">
+          <div className="flex items-center gap-4">
+            <Logo size="sm" />
+            {currentClinic && (
+              <span className="text-muted-foreground">
+                ID <span className="font-semibold text-foreground">{formatClinicId(currentClinic.created_at, currentClinic.id)}</span>
+              </span>
+            )}
+            <span className="text-muted-foreground hidden sm:inline">
+              VERSÃO <span className="font-semibold text-primary">{SYSTEM_VERSION}</span>
+            </span>
+          </div>
+
+          <div className="hidden md:flex items-center gap-4">
+            <a 
+              href="https://wa.me/5500000000000" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              Fale Conosco
+            </a>
+            <a 
+              href="https://youtube.com" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <Youtube className="h-3.5 w-3.5" />
+              YouTube
+            </a>
+            <a 
+              href="/ajuda" 
+              className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <BookOpen className="h-3.5 w-3.5" />
+              Ajuda
+            </a>
+          </div>
+        </footer>
       </div>
 
       {/* Chat Widget */}

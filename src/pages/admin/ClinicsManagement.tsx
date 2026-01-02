@@ -707,6 +707,7 @@ export default function ClinicsManagement() {
       phone: clinic.phone,
       cnpj: clinic.cnpj,
       logo_url: null,
+      created_at: clinic.created_at,
       is_blocked: clinic.is_blocked,
       blocked_reason: clinic.blocked_reason,
       is_maintenance: clinic.is_maintenance,

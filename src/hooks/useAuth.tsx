@@ -21,6 +21,7 @@ interface Clinic {
   phone: string | null;
   cnpj: string | null;
   logo_url: string | null;
+  created_at: string;
   is_blocked?: boolean;
   blocked_reason?: string | null;
   is_maintenance?: boolean;
