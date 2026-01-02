@@ -300,13 +300,40 @@ export function usePermissions() {
     // Resolve the permission to its canonical form
     const resolvedPermission = resolvePermission(permission);
 
+    // Hard safety: a "professional" should only access what is needed for agenda + atendimento.
+    // This applies even when the user is in an access group, to avoid accidentally granting extra access.
+    if (currentRole === "professional") {
+      const allowed: Permission[] = [
+        "view_dashboard",
+        "dashboard_default",
+        "scheduling",
+        "view_calendar",
+        "view_professional_schedule",
+        "view_medical_records",
+        "manage_medical_records",
+        "view_anamnesis",
+        "view_prescriptions",
+        "manage_prescriptions",
+        "change_password",
+      ];
+
+      const isAllowed =
+        allowed.includes(permission) || allowed.includes(resolvedPermission as Permission);
+
+      if (!isAllowed) return false;
+    }
+
     // If user has an access_group_id, ALWAYS use database permissions
     if (accessGroupId) {
       // While loading, deny access to prevent flickering
       if (permissionsLoading) return false;
-      
+
       // Check both the original permission and the resolved one
-      return dbPermissions?.has(permission) || dbPermissions?.has(resolvedPermission) || false;
+      return (
+        dbPermissions?.has(permission) ||
+        dbPermissions?.has(resolvedPermission) ||
+        false
+      );
     }
 
     // Fallback to legacy role-based permissions for users without access_group_id
@@ -316,7 +343,11 @@ export function usePermissions() {
     if (permissions === "*") return true;
 
     // Check if the permission is in the role's permission list (check both original and resolved)
-    return permissions?.includes(permission) || permissions?.includes(resolvedPermission as Permission) || false;
+    return (
+      permissions?.includes(permission) ||
+      permissions?.includes(resolvedPermission as Permission) ||
+      false
+    );
   };
 
   const hasAnyPermission = (permissions: Permission[]): boolean => {

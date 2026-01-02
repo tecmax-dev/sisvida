@@ -199,7 +199,7 @@ const navCategories: NavCategory[] = [
     items: [
       { href: "/dashboard/holidays", icon: CalendarOff, label: "Feriados", permission: "manage_settings" },
       { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano", permission: "manage_subscription" },
-      { href: "/dashboard/settings", icon: Settings, label: "Configurações" },
+      { href: "/dashboard/settings", icon: Settings, label: "Configurações", permission: "change_password" },
     ],
   },
 ];
