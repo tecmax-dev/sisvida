@@ -43,6 +43,7 @@ type BookingState =
   | 'WAITING_REGISTRATION_NAME'
   | 'WAITING_REGISTRATION_BIRTHDATE'
   | 'WAITING_REGISTRATION_CNPJ'
+  | 'CONFIRM_COMPANY'
   | 'CONFIRM_REGISTRATION'
   | 'FINISHED'
   | 'EXPIRED';
@@ -1409,6 +1410,9 @@ async function handleBookingFlow(
     case 'WAITING_REGISTRATION_CNPJ':
       return await handleWaitingRegistrationCnpj(supabase, config, phone, messageText, session);
     
+    case 'CONFIRM_COMPANY':
+      return await handleConfirmCompany(supabase, config, phone, messageText, session);
+    
     case 'CONFIRM_REGISTRATION':
       return await handleConfirmRegistration(supabase, config, phone, messageText, session);
     
@@ -2726,100 +2730,215 @@ async function handleWaitingRegistrationCnpj(
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   const input = messageText.trim().toLowerCase();
-  let cnpj: string | null = null;
-  let employerName: string | null = null;
   
   // Check if user wants to skip
   if (input === 'pular' || input === 'skip' || input === '0' || input === 'não' || input === 'nao') {
-    cnpj = null;
-    employerName = null;
-  } else {
-    // Clean and validate CNPJ
-    const cleanCnpj = messageText.replace(/\D/g, '');
-    
-    if (cleanCnpj.length !== 14) {
-      await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido (deve ter 14 dígitos).\n\nDigite o CNPJ ou "pular" para continuar sem:`);
-      return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
-    }
-    
-    // Validate CNPJ checksum
-    if (!isValidCNPJ(cleanCnpj)) {
-      await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido. Verifique os dígitos e tente novamente.\n\nDigite o CNPJ ou "pular" para continuar sem:`);
-      return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
-    }
-    
-    // Send "searching" feedback to user
-    await sendWhatsAppMessage(config, phone, `🔍 Buscando dados da empresa...`);
-    
-    // Fetch company data from Receita Federal via Brasil API
-    const companyData = await fetchCNPJData(cleanCnpj);
-    
-    if (!companyData.valid) {
-      await sendWhatsAppMessage(config, phone, `⚠️ Não foi possível encontrar este CNPJ na Receita Federal.\n\nVerifique o número e tente novamente, ou digite "pular" para continuar sem:`);
-      return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
-    }
-    
-    cnpj = cleanCnpj;
-    // Prefer nome_fantasia, fallback to razao_social
-    employerName = companyData.nomeFantasia || companyData.razaoSocial || null;
-    
-    if (employerName) {
-      console.log(`[cnpj] Company found: ${employerName}`);
-    }
-  }
-  
-  // Store employer name in session for confirmation display
-  // We'll pass it through the session as part of CNPJ field (we need to store it)
-  // Actually, let's update the session with a combined approach
-  await updateSession(supabase, session.id, {
-    state: 'CONFIRM_REGISTRATION',
-    pending_registration_cnpj: cnpj,
-  });
-  
-  // Store employer name in a special format for now (we'll parse it in confirm)
-  // Actually, we need to pass this to the patient creation step
-  // Let's store it in session temporarily using a trick - we'll encode it
-  if (employerName && cnpj) {
-    // Store employer name as JSON in the cnpj field temporarily
+    // Skip CNPJ - go directly to confirm registration
     await updateSession(supabase, session.id, {
-      pending_registration_cnpj: JSON.stringify({ cnpj, employerName }),
+      state: 'CONFIRM_REGISTRATION',
+      pending_registration_cnpj: null,
     });
+    
+    // Format display date
+    const birthDate = session.pending_registration_birthdate 
+      ? new Date(session.pending_registration_birthdate + 'T00:00:00').toLocaleDateString('pt-BR')
+      : '';
+    
+    const confirmMsg = MESSAGES.confirmRegistration(session.pending_registration_name || '', birthDate, null);
+    
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '📋 Confirmar Cadastro',
+      confirmMsg,
+      [
+        { id: 'confirm_yes', text: '✅ Confirmar' },
+        { id: 'confirm_no', text: '❌ Recomeçar' }
+      ],
+      'Responda 1 ou 2'
+    );
+    
+    return { handled: true, newState: 'CONFIRM_REGISTRATION' };
   }
   
-  // Format display date
-  const birthDate = session.pending_registration_birthdate 
-    ? new Date(session.pending_registration_birthdate + 'T00:00:00').toLocaleDateString('pt-BR')
-    : '';
+  // Clean and validate CNPJ
+  const cleanCnpj = messageText.replace(/\D/g, '');
   
-  // Format CNPJ for display
-  const formattedCnpj = cnpj 
-    ? cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
-    : null;
-  
-  // Build confirmation message with company name if available
-  let confirmMsg = MESSAGES.confirmRegistration(session.pending_registration_name || '', birthDate, formattedCnpj);
-  if (employerName && cnpj) {
-    confirmMsg = `📋 *Confirme seus dados:*\n\n` +
-      `👤 *Nome:* ${session.pending_registration_name || ''}\n` +
-      `📅 *Nascimento:* ${birthDate}\n` +
-      `🏢 *Empresa:* ${employerName}\n` +
-      `📝 *CNPJ:* ${formattedCnpj}\n\n` +
-      `Os dados estão corretos?`;
+  if (cleanCnpj.length !== 14) {
+    await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido (deve ter 14 dígitos).\n\nDigite o CNPJ ou "pular" para continuar sem:`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
   }
   
+  // Validate CNPJ checksum
+  if (!isValidCNPJ(cleanCnpj)) {
+    await sendWhatsAppMessage(config, phone, `❌ CNPJ inválido. Verifique os dígitos e tente novamente.\n\nDigite o CNPJ ou "pular" para continuar sem:`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
+  }
+  
+  // Send "searching" feedback to user
+  await sendWhatsAppMessage(config, phone, `🔍 Buscando dados da empresa...`);
+  
+  // Fetch company data from Receita Federal via Brasil API
+  const companyData = await fetchCNPJData(cleanCnpj);
+  
+  if (!companyData.valid) {
+    await sendWhatsAppMessage(config, phone, `⚠️ Não foi possível encontrar este CNPJ na Receita Federal.\n\nVerifique o número e tente novamente, ou digite "pular" para continuar sem:`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
+  }
+  
+  // Prefer nome_fantasia, fallback to razao_social
+  const employerName = companyData.nomeFantasia || companyData.razaoSocial || null;
+  
+  if (employerName) {
+    console.log(`[cnpj] Company found: ${employerName}`);
+    
+    // Format CNPJ for display
+    const formattedCnpj = cleanCnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    
+    // Store CNPJ and employer name in session, go to CONFIRM_COMPANY state
+    await updateSession(supabase, session.id, {
+      state: 'CONFIRM_COMPANY',
+      pending_registration_cnpj: JSON.stringify({ cnpj: cleanCnpj, employerName }),
+    });
+    
+    // Ask user to confirm the company
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '🏢 Confirmar Empresa',
+      `✅ *Empresa encontrada:*\n\n🏢 *${employerName}*\n📝 CNPJ: ${formattedCnpj}\n\nEssa é a sua empresa?`,
+      [
+        { id: 'company_yes', text: '✅ Sim, confirmar' },
+        { id: 'company_no', text: '❌ Não, digitar outro' }
+      ],
+      'Responda 1 ou 2'
+    );
+    
+    return { handled: true, newState: 'CONFIRM_COMPANY' };
+  } else {
+    // Company found but no name - just store CNPJ and proceed
+    await updateSession(supabase, session.id, {
+      state: 'CONFIRM_REGISTRATION',
+      pending_registration_cnpj: cleanCnpj,
+    });
+    
+    // Format display date
+    const birthDate = session.pending_registration_birthdate 
+      ? new Date(session.pending_registration_birthdate + 'T00:00:00').toLocaleDateString('pt-BR')
+      : '';
+    
+    const formattedCnpj = cleanCnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    const confirmMsg = MESSAGES.confirmRegistration(session.pending_registration_name || '', birthDate, formattedCnpj);
+    
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '📋 Confirmar Cadastro',
+      confirmMsg,
+      [
+        { id: 'confirm_yes', text: '✅ Confirmar' },
+        { id: 'confirm_no', text: '❌ Recomeçar' }
+      ],
+      'Responda 1 ou 2'
+    );
+    
+    return { handled: true, newState: 'CONFIRM_REGISTRATION' };
+  }
+}
+
+async function handleConfirmCompany(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  const isYes = POSITIVE_REGEX.test(messageText) || messageText.includes('company_yes') || messageText === '1';
+  const isNo = NEGATIVE_REGEX.test(messageText) || messageText.includes('company_no') || messageText === '2';
+  
+  if (isNo) {
+    // User wants to enter a different CNPJ
+    await updateSession(supabase, session.id, {
+      state: 'WAITING_REGISTRATION_CNPJ',
+      pending_registration_cnpj: null,
+    });
+    await sendWhatsAppMessage(config, phone, `📝 Digite o CNPJ correto da sua empresa ou "pular" para continuar sem:`);
+    return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
+  }
+  
+  if (isYes) {
+    // Company confirmed - proceed to final registration confirmation
+    // Parse the stored data
+    let employerName: string | null = null;
+    let cnpj: string | null = null;
+    
+    if (session.pending_registration_cnpj) {
+      try {
+        const cnpjData = JSON.parse(session.pending_registration_cnpj);
+        cnpj = cnpjData.cnpj || null;
+        employerName = cnpjData.employerName || null;
+      } catch {
+        cnpj = session.pending_registration_cnpj;
+      }
+    }
+    
+    // Update state to CONFIRM_REGISTRATION
+    await updateSession(supabase, session.id, {
+      state: 'CONFIRM_REGISTRATION',
+    });
+    
+    // Format display date
+    const birthDate = session.pending_registration_birthdate 
+      ? new Date(session.pending_registration_birthdate + 'T00:00:00').toLocaleDateString('pt-BR')
+      : '';
+    
+    // Format CNPJ for display
+    const formattedCnpj = cnpj 
+      ? cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
+      : null;
+    
+    // Build confirmation message with company name
+    let confirmMsg: string;
+    if (employerName && cnpj) {
+      confirmMsg = `📋 *Confirme seus dados:*\n\n` +
+        `👤 *Nome:* ${session.pending_registration_name || ''}\n` +
+        `📅 *Nascimento:* ${birthDate}\n` +
+        `🏢 *Empresa:* ${employerName}\n` +
+        `📝 *CNPJ:* ${formattedCnpj}\n\n` +
+        `Os dados estão corretos?`;
+    } else {
+      confirmMsg = MESSAGES.confirmRegistration(session.pending_registration_name || '', birthDate, formattedCnpj);
+    }
+    
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '📋 Confirmar Cadastro',
+      confirmMsg,
+      [
+        { id: 'confirm_yes', text: '✅ Confirmar' },
+        { id: 'confirm_no', text: '❌ Recomeçar' }
+      ],
+      'Responda 1 ou 2'
+    );
+    
+    return { handled: true, newState: 'CONFIRM_REGISTRATION' };
+  }
+  
+  // Unrecognized response
   await sendWhatsAppButtons(
     config,
     phone,
-    '📋 Confirmar Cadastro',
-    confirmMsg,
+    '🏢 Confirmar Empresa',
+    `Por favor, confirme se esta é a sua empresa:\n\nResponda *1* para SIM ou *2* para NÃO`,
     [
-      { id: 'confirm_yes', text: '✅ Confirmar' },
-      { id: 'confirm_no', text: '❌ Recomeçar' }
+      { id: 'company_yes', text: '✅ Sim, confirmar' },
+      { id: 'company_no', text: '❌ Não, digitar outro' }
     ],
     'Responda 1 ou 2'
   );
   
-  return { handled: true, newState: 'CONFIRM_REGISTRATION' };
+  return { handled: true, newState: 'CONFIRM_COMPANY' };
 }
 
 async function handleConfirmRegistration(

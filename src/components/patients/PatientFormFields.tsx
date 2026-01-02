@@ -73,6 +73,7 @@ export interface PatientFormData {
   profession: string;
   education: string;
   employerCnpj: string;
+  employerName: string;
   motherName: string;
   fatherName: string;
   
@@ -669,6 +670,17 @@ export function PatientFormFields({
             value={formData.employerCnpj}
             onChange={(e) => updateField('employerCnpj', formatCNPJ(e.target.value))}
             placeholder="00.000.000/0000-00"
+            className="mt-1"
+          />
+        </div>
+        
+        <div>
+          <Label htmlFor="employerName">Nome da Empresa</Label>
+          <Input
+            id="employerName"
+            value={formData.employerName}
+            onChange={(e) => updateField('employerName', e.target.value)}
+            placeholder="Razão Social ou Nome Fantasia"
             className="mt-1"
           />
         </div>

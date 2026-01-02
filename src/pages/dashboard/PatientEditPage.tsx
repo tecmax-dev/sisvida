@@ -117,6 +117,7 @@ const initialFormData: PatientFormData = {
   profession: '',
   education: '',
   employerCnpj: '',
+  employerName: '',
   motherName: '',
   fatherName: '',
   notes: '',
@@ -239,6 +240,7 @@ export default function PatientEditPage() {
           profession: data.profession || '',
           education: data.education || '',
           employerCnpj: (data as any).employer_cnpj || '',
+          employerName: (data as any).employer_name || '',
           motherName: data.mother_name || '',
           fatherName: data.father_name || '',
           notes: data.notes || '',
@@ -464,6 +466,7 @@ export default function PatientEditPage() {
           profession: formData.profession.trim() || null,
           education: formData.education || null,
           employer_cnpj: formData.employerCnpj?.replace(/\D/g, '') || null,
+          employer_name: formData.employerName?.trim() || null,
           mother_name: formData.motherName.trim() || null,
           father_name: formData.fatherName.trim() || null,
         })
