@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import ecliniLogo from "@/assets/eclini-logo.png";
 
 interface LogoProps {
   variant?: "light" | "dark";
@@ -9,17 +10,17 @@ interface LogoProps {
 
 export function Logo({ variant = "dark", size = "md", showText = true, customSrc }: LogoProps) {
   const sizes = {
-    sm: { img: "h-8", text: "text-lg" },
-    md: { img: "h-10", text: "text-xl" },
-    lg: { img: "h-14", text: "text-2xl" },
+    sm: "h-8",
+    md: "h-10",
+    lg: "h-14",
   };
 
   return (
     <Link to="/" className="flex items-center gap-2 group">
       <img 
-        src={customSrc || "/logo.png"} 
-        alt="Eclini" 
-        className={`${sizes[size].img} w-auto object-contain`}
+        src={customSrc || ecliniLogo} 
+        alt="Eclini - Sistema para Clínicas" 
+        className={`${sizes[size]} w-auto object-contain`}
       />
     </Link>
   );

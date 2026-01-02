@@ -59,7 +59,7 @@ export function Header() {
             </Link>
           </Button>
           <Button 
-            className="bg-primary hover:bg-primary-dark text-primary-foreground rounded-full px-6 font-semibold shadow-md transition-all duration-300 hover:shadow-lg"
+            className="btn-eclini px-6 font-semibold"
             asChild
           >
             <Link to="/cadastro">
@@ -106,7 +106,7 @@ export function Header() {
                 </Link>
               </Button>
               <Button 
-                className="bg-primary hover:bg-primary-dark text-primary-foreground w-full rounded-full font-semibold"
+                className="btn-eclini w-full font-semibold"
                 asChild
               >
                 <Link to="/cadastro" onClick={() => setIsMenuOpen(false)}>

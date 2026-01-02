@@ -18,24 +18,27 @@ export function Footer() {
             <div className="mt-6 flex gap-3">
               <a 
                 href="#" 
-                className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+                style={{ background: 'linear-gradient(135deg, hsl(200 100% 45% / 0.1) 0%, hsl(95 70% 50% / 0.1) 100%)' }}
                 aria-label="Instagram"
               >
-                <Instagram className="h-5 w-5" />
+                <Instagram className="h-5 w-5 text-primary" />
               </a>
               <a 
                 href="#" 
-                className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+                style={{ background: 'linear-gradient(135deg, hsl(200 100% 45% / 0.1) 0%, hsl(95 70% 50% / 0.1) 100%)' }}
                 aria-label="LinkedIn"
               >
-                <Linkedin className="h-5 w-5" />
+                <Linkedin className="h-5 w-5 text-primary" />
               </a>
               <a 
                 href="#" 
-                className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors"
+                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:scale-110"
+                style={{ background: 'linear-gradient(135deg, hsl(200 100% 45% / 0.1) 0%, hsl(95 70% 50% / 0.1) 100%)' }}
                 aria-label="YouTube"
               >
-                <Youtube className="h-5 w-5" />
+                <Youtube className="h-5 w-5 text-primary" />
               </a>
             </div>
           </div>
@@ -152,9 +155,9 @@ export function Footer() {
           {/* LGPD Compliance */}
           <div className="mt-6 pt-6 border-t border-border/50">
             <div className="flex flex-col md:flex-row justify-center items-center gap-3 text-center">
-              <div className="flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
-                <Shield className="h-4 w-4 text-primary" />
-                <span className="text-xs font-medium text-primary">Em conformidade com a LGPD</span>
+              <div className="section-badge py-1.5 px-3">
+                <Shield className="h-4 w-4" />
+                <span className="text-xs font-medium">Em conformidade com a LGPD</span>
               </div>
               <p className="text-xs text-muted-foreground">
                 Tecmax Tecnologia • CNPJ: 03.025.212/0001-11

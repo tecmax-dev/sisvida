@@ -65,7 +65,8 @@ export function FeaturesSection() {
             CONECTAR PARA CUIDAR
           </span>
           <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground mb-4">
-            Gestão clínica simplificada para você<br />focar no seu paciente
+            Gestão clínica simplificada para você<br />
+            <span className="gradient-text">focar no seu paciente</span>
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
             Conheça a solução intuitiva e completa que cuida da sua clínica enquanto você prioriza a experiência de quem confia em você.
@@ -73,7 +74,7 @@ export function FeaturesSection() {
           <div className="mt-8">
             <Button 
               size="lg"
-              className="bg-primary hover:bg-primary-dark text-primary-foreground rounded-full px-8 h-14 text-base font-semibold shadow-lg"
+              className="btn-eclini px-8 h-14 text-base shadow-lg"
               asChild
             >
               <Link to="/cadastro">
@@ -90,7 +91,10 @@ export function FeaturesSection() {
               key={i}
               className="feature-card group cursor-pointer"
             >
-              <span className="text-xs font-bold text-primary tracking-wider mb-3 block">
+              <div className="feature-card-icon mb-4">
+                <feature.icon className="h-6 w-6" />
+              </div>
+              <span className="text-xs font-bold tracking-wider mb-3 block gradient-text">
                 {feature.category}
               </span>
               <h3 className="text-xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors">
