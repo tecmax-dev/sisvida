@@ -3387,7 +3387,6 @@ async function handleConfirmRegistration(
             name: session.pending_registration_name!.trim(),
             cpf: session.pending_registration_cpf,
             birth_date: session.pending_registration_birthdate,
-            phone: cleanPhone,
             relationship: null, // Could ask for relationship in future
             is_active: true,
           })
