@@ -5385,6 +5385,40 @@ serve(async (req) => {
         clinicId = configData.clinic_id;
         console.log(`[webhook] Processing booking flow for clinic ${clinicId}`);
 
+        // Check if clinic has whatsapp_booking feature in their plan
+        const { data: hasBookingFeature } = await supabase
+          .from('subscriptions')
+          .select(`
+            plan_id,
+            status,
+            subscription_plans!inner (
+              plan_features!inner (
+                system_features!inner (
+                  key
+                )
+              )
+            )
+          `)
+          .eq('clinic_id', clinicId)
+          .in('status', ['active', 'trial'])
+          .eq('subscription_plans.plan_features.system_features.key', 'whatsapp_booking')
+          .maybeSingle();
+
+        if (!hasBookingFeature) {
+          console.log(`[webhook] Clinic ${clinicId} does NOT have whatsapp_booking feature - blocking booking flow`);
+          await sendWhatsAppMessage(
+            configData, 
+            phone, 
+            `⚠️ *Recurso indisponível*\n\nO agendamento por WhatsApp não está disponível para esta clínica.\n\nPor favor, entre em contato diretamente com a clínica para realizar seu agendamento.`
+          );
+          return new Response(
+            JSON.stringify({ success: true, message: 'Feature not available for clinic' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        console.log(`[webhook] Clinic ${clinicId} has whatsapp_booking feature - proceeding`);
+
         // Check if clinic uses AI booking
         const { data: clinicSettings } = await supabase
           .from('clinics')
