@@ -300,39 +300,43 @@
   }
 }
 
-/* Collapsible smooth animations */
-@keyframes collapsible-slide-down {
-  from {
-    opacity: 0;
-    height: 0;
-    transform: translateY(-4px);
-  }
-  to {
-    opacity: 1;
-    height: var(--radix-collapsible-content-height);
-    transform: translateY(0);
-  }
-}
-
-@keyframes collapsible-slide-up {
-  from {
-    opacity: 1;
-    height: var(--radix-collapsible-content-height);
-    transform: translateY(0);
-  }
-  to {
-    opacity: 0;
-    height: 0;
-    transform: translateY(-4px);
-  }
+/* Collapsible smooth accordion animations */
+.collapsible-content {
+  overflow: hidden;
 }
 
 .collapsible-content[data-state="open"] {
-  animation: collapsible-slide-down 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: accordion-expand 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .collapsible-content[data-state="closed"] {
-  animation: collapsible-slide-up 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: accordion-collapse 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes accordion-expand {
+  from {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+}
+
+@keyframes accordion-collapse {
+  from {
+    opacity: 1;
+    max-height: 500px;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-8px);
+  }
 }
 
 /* Custom Scrollbar */

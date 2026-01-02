@@ -216,13 +216,8 @@ export function DashboardLayout() {
     }
     return false;
   });
-  const [openCategories, setOpenCategories] = useState<string[]>(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("sidebar-open-categories");
-      return saved ? JSON.parse(saved) : ["overview", "attendance", "patients"];
-    }
-    return ["overview", "attendance", "patients"];
-  });
+  // Accordion mode: only keep track of the single open category
+  const [openCategories, setOpenCategories] = useState<string[]>([]);
   const autoCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const AUTO_CLOSE_DELAY = 5000; // 5 seconds
   const location = useLocation();
@@ -233,9 +228,7 @@ export function DashboardLayout() {
     localStorage.setItem("sidebar-collapsed", String(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
-  useEffect(() => {
-    localStorage.setItem("sidebar-open-categories", JSON.stringify(openCategories));
-  }, [openCategories]);
+  // No longer persisting open categories - accordion resets on page load
 
   // Cleanup auto-close timeout on unmount
   useEffect(() => {
