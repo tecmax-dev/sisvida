@@ -281,7 +281,7 @@ interface Appointment {
 }
 
 export default function CalendarPage() {
-  const { currentClinic, user } = useAuth();
+  const { currentClinic, user, userRoles } = useAuth();
   const { isProfessionalOnly, hasPermission } = usePermissions();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -566,10 +566,23 @@ export default function CalendarPage() {
     }
   }, [currentClinic]);
 
-  // Fetch logged-in professional's ID if user is a professional
+  // Fetch logged-in professional's ID if user is linked to a professional via user_roles
   useEffect(() => {
     const fetchLoggedInProfessional = async () => {
-      if (!isProfessionalOnly || !user?.id || !currentClinic?.id) return;
+      if (!user?.id || !currentClinic?.id) return;
+      
+      // First check if user has a professional_id linked in user_roles
+      const currentRole = userRoles.find(r => r.clinic_id === currentClinic.id);
+      if (currentRole?.professional_id) {
+        setLoggedInProfessionalId(currentRole.professional_id);
+        setFormProfessional(currentRole.professional_id);
+        // Auto-filter to this professional
+        setFilterProfessionals([currentRole.professional_id]);
+        return;
+      }
+      
+      // Fallback: If user is professional-only, check by user_id in professionals table
+      if (!isProfessionalOnly) return;
       
       const { data } = await supabase
         .from('professionals')
@@ -585,7 +598,7 @@ export default function CalendarPage() {
     };
 
     fetchLoggedInProfessional();
-  }, [isProfessionalOnly, user?.id, currentClinic?.id]);
+  }, [isProfessionalOnly, user?.id, currentClinic?.id, userRoles]);
 
   useEffect(() => {
     if (currentClinic) {

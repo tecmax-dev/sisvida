@@ -23,6 +23,7 @@ interface ClinicUserWithStatus {
   user_id: string;
   role: 'owner' | 'admin' | 'receptionist' | 'professional' | 'administrative';
   access_group_id: string | null;
+  professional_id: string | null;
   created_at: string;
   profile: {
     name: string;
@@ -30,6 +31,9 @@ interface ClinicUserWithStatus {
     avatar_url: string | null;
   } | null;
   access_group?: {
+    name: string;
+  } | null;
+  professional?: {
     name: string;
   } | null;
   email?: string | null;
@@ -229,6 +233,15 @@ export default function UsersManagementPage() {
           )}
         </TableCell>
         <TableCell>
+          {clinicUser.professional ? (
+            <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-400">
+              {clinicUser.professional.name}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground text-sm">-</span>
+          )}
+        </TableCell>
+        <TableCell>
           {isConfirmed ? (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -379,6 +392,7 @@ export default function UsersManagementPage() {
                     <TableHead>Telefone</TableHead>
                     <TableHead>Perfil</TableHead>
                     <TableHead>Grupo de Acesso</TableHead>
+                    <TableHead>Profissional Vinculado</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Desde</TableHead>
                     <TableHead className="w-[100px]">Ações</TableHead>
@@ -403,6 +417,7 @@ export default function UsersManagementPage() {
           user_id: selectedUser.user_id,
           role: selectedUser.role,
           access_group_id: selectedUser.access_group_id,
+          professional_id: selectedUser.professional_id,
           created_at: selectedUser.created_at,
           profile: selectedUser.profile
         } : null}

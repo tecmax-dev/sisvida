@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     // Get user roles for this clinic
     const { data: clinicRoles, error: rolesError } = await supabaseAdmin
       .from("user_roles")
-      .select("user_id, role, access_group_id, created_at")
+      .select("user_id, role, access_group_id, professional_id, created_at")
       .eq("clinic_id", clinic_id);
 
     if (rolesError) {
@@ -128,6 +128,25 @@ Deno.serve(async (req) => {
       }, {} as Record<string, { name: string }>);
     }
 
+    // Get professionals
+    const professionalIds = clinicRoles
+      .map(r => r.professional_id)
+      .filter((id): id is string => !!id);
+
+    let professionalsMap: Record<string, { name: string }> = {};
+    
+    if (professionalIds.length > 0) {
+      const { data: professionalsData } = await supabaseAdmin
+        .from("professionals")
+        .select("id, name")
+        .in("id", professionalIds);
+
+      professionalsMap = (professionalsData || []).reduce((acc, prof) => {
+        acc[prof.id] = { name: prof.name };
+        return acc;
+      }, {} as Record<string, { name: string }>);
+    }
+
     // Combine all data
     const usersWithStatus = clinicRoles.map(role => {
       const authUser = clinicAuthUsers.find(u => u.id === role.user_id);
@@ -137,9 +156,11 @@ Deno.serve(async (req) => {
         user_id: role.user_id,
         role: role.role,
         access_group_id: role.access_group_id,
+        professional_id: role.professional_id,
         created_at: role.created_at,
         profile: profile || null,
         access_group: role.access_group_id ? accessGroupsMap[role.access_group_id] || null : null,
+        professional: role.professional_id ? professionalsMap[role.professional_id] || null : null,
         email: authUser?.email || null,
         email_confirmed_at: authUser?.email_confirmed_at || null,
         last_sign_in_at: authUser?.last_sign_in_at || null,

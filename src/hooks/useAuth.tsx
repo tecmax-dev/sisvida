@@ -32,6 +32,7 @@ interface UserRole {
   clinic_id: string;
   role: 'owner' | 'admin' | 'receptionist' | 'professional' | 'administrative';
   access_group_id: string | null;
+  professional_id: string | null;
   clinic: Clinic;
 }
 
@@ -137,6 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clinic_id,
         role,
         access_group_id,
+        professional_id,
         clinic:clinics (
           id,
           name,
@@ -163,6 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clinic_id: item.clinic_id,
         role: item.role as UserRole['role'],
         access_group_id: item.access_group_id as string | null,
+        professional_id: item.professional_id as string | null,
         clinic: item.clinic as unknown as Clinic,
       }));
 
@@ -197,6 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clinic_id: c.id,
         role: 'admin',
         access_group_id: null,
+        professional_id: null,
         clinic: c as Clinic,
       }));
 
