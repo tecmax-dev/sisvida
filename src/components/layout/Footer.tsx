@@ -125,34 +125,36 @@ export function Footer() {
               <p className="text-sm text-muted-foreground">
                 © {new Date().getFullYear()} Eclini. Todos os direitos reservados.
               </p>
-              <span className="hidden md:inline text-muted-foreground/50">•</span>
-              <p className="text-xs text-muted-foreground/70">
-                CNPJ: 03.025.212/0001-11
-              </p>
             </div>
             
-            {/* LGPD Badge */}
-            <div className="flex items-center gap-4">
+            {/* Developer credit */}
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Desenvolvido por</span>
+              <a
+                href="https://danielasales.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:opacity-80 transition-opacity"
+              >
+                <img
+                  src="https://danielasales.com/assets/logo-tecmax-DxAeqUGw.png"
+                  alt="Tecmax Tecnologia"
+                  className="h-5"
+                />
+              </a>
+            </div>
+          </div>
+          
+          {/* LGPD Compliance */}
+          <div className="mt-6 pt-6 border-t border-border/50">
+            <div className="flex flex-col md:flex-row justify-center items-center gap-3 text-center">
               <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-full">
                 <Shield className="h-4 w-4 text-primary" />
                 <span className="text-xs font-medium text-primary">Em conformidade com a LGPD</span>
               </div>
-              
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>Desenvolvido por</span>
-                <a
-                  href="https://danielasales.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:opacity-80 transition-opacity"
-                >
-                  <img
-                    src="https://danielasales.com/assets/logo-tecmax-DxAeqUGw.png"
-                    alt="Tecmax Tecnologia"
-                    className="h-5"
-                  />
-                </a>
-              </div>
+              <p className="text-xs text-muted-foreground">
+                Tecmax Tecnologia • CNPJ: 03.025.212/0001-11
+              </p>
             </div>
           </div>
         </div>
