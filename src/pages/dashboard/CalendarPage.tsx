@@ -2467,6 +2467,25 @@ export default function CalendarPage() {
   const WeekView = () => {
     const weekDaysData = getWeekDays();
 
+    // Gera cores suaves diferentes para cada profissional
+    const professionalColors = useMemo(() => {
+      const colors = [
+        'hsl(45 90% 65%)',   // Amarelo suave
+        'hsl(160 60% 55%)',  // Verde água
+        'hsl(200 70% 60%)',  // Azul claro
+        'hsl(280 50% 65%)',  // Roxo suave
+        'hsl(25 80% 60%)',   // Laranja suave
+        'hsl(340 60% 65%)',  // Rosa suave
+        'hsl(100 50% 55%)',  // Verde limão
+        'hsl(220 60% 60%)',  // Azul médio
+      ];
+      const colorMap: Record<string, string> = {};
+      professionals.forEach((prof, index) => {
+        colorMap[prof.id] = colors[index % colors.length];
+      });
+      return colorMap;
+    }, [professionals]);
+
     return (
       <div className="flex gap-4">
         {/* Painel de horários do dia selecionado */}
@@ -2475,7 +2494,7 @@ export default function CalendarPage() {
         </div>
         
         {/* Grade da semana */}
-        <div className="flex-1 grid grid-cols-7 gap-2">
+        <div className="flex-1 grid grid-cols-7 gap-3">
           {weekDaysData.map((date, i) => {
             const dayAppointments = getAppointmentsForDate(date);
             const isTodayDate = isToday(date);
@@ -2484,21 +2503,23 @@ export default function CalendarPage() {
             const holidayName = isHoliday(date);
 
             return (
-              <div key={i} className="min-h-[300px]">
+              <div key={i} className="min-h-[320px]">
+                {/* Cabeçalho do dia */}
                 <button
                   onClick={() => handleDayClick(date)}
                   title={holidayName || undefined}
                   className={cn(
-                    "w-full p-2 rounded-lg text-center mb-2 transition-colors",
+                    "w-full p-3 rounded-xl text-center mb-3 transition-all",
                     holidayName && "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400",
                     isTodayDate && !holidayName && "bg-primary/10",
-                    isSelectedDate && !holidayName && "bg-primary text-primary-foreground"
+                    isSelectedDate && !holidayName && "bg-primary text-primary-foreground shadow-lg",
+                    !isSelectedDate && !holidayName && !isTodayDate && "hover:bg-muted/50"
                   )}
                 >
-                  <div className={cn("text-xs", holidayName ? "text-red-500" : "text-muted-foreground")}>{weekDaysFull[i]}</div>
-                  <div className="text-lg font-semibold">{date.getDate()}</div>
+                  <div className={cn("text-xs font-medium", holidayName ? "text-red-500" : "text-muted-foreground")}>{weekDaysFull[i]}</div>
+                  <div className="text-2xl font-bold mt-1">{date.getDate()}</div>
                   {holidayName && (
-                    <div className="text-[10px] font-normal truncate" title={holidayName}>Feriado</div>
+                    <div className="text-[10px] font-medium truncate mt-1" title={holidayName}>Feriado</div>
                   )}
                 </button>
                 
@@ -2508,7 +2529,7 @@ export default function CalendarPage() {
                   time="08:00" 
                   showTime={false}
                   isOccupied={dayAppointments.length >= 8 || !!holidayName}
-                  className="space-y-1 min-h-[200px] p-1"
+                  className="space-y-2 min-h-[240px] p-1"
                 >
                   {holidayName ? (
                     <div className="flex items-center justify-center h-full text-xs text-red-500/60 italic">
@@ -2517,28 +2538,47 @@ export default function CalendarPage() {
                   ) : (
                     <>
                       {dayAppointments.slice(0, 4).map((apt) => {
-                        const status = statusConfig[apt.status as keyof typeof statusConfig] || statusConfig.scheduled;
                         const canDrag = apt.status !== "cancelled" && apt.status !== "completed" && apt.status !== "no_show" && apt.status !== "in_progress";
+                        const professionalColor = professionalColors[apt.professional_id] || 'hsl(var(--primary))';
+                        const displayName = getAppointmentDisplayName(apt);
                         
                         return (
                           <DraggableAppointment key={apt.id} appointment={apt}>
                             <div
                               onClick={() => canDrag ? openRescheduleDialog(apt) : undefined}
                               className={cn(
-                                "p-2 rounded-lg text-xs transition-opacity",
-                                canDrag && "cursor-pointer hover:opacity-80",
-                                status.bgColor,
+                                "relative rounded-lg transition-all overflow-hidden bg-card border border-border/50 shadow-sm hover:shadow-md",
+                                canDrag && "cursor-pointer hover:scale-[1.02]",
                                 apt.status === "cancelled" && "opacity-50"
                               )}
                             >
-                              <div className="font-medium truncate">{apt.start_time.slice(0, 5)}</div>
-                              <div className="truncate text-muted-foreground">{getAppointmentDisplayName(apt)}</div>
+                              {/* Borda colorida à esquerda */}
+                              <div 
+                                className="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg"
+                                style={{ backgroundColor: professionalColor }}
+                              />
+                              <div className="pl-3 pr-2 py-2">
+                                {/* Horário */}
+                                <div 
+                                  className="text-xs font-bold mb-1"
+                                  style={{ color: professionalColor }}
+                                >
+                                  {apt.start_time.slice(0, 5)}
+                                </div>
+                                {/* Nome do paciente */}
+                                <div className="text-xs font-medium text-foreground truncate uppercase">
+                                  {displayName}
+                                </div>
+                              </div>
                             </div>
                           </DraggableAppointment>
                         );
                       })}
                       {dayAppointments.length > 4 && (
-                        <div className="text-xs text-center text-muted-foreground">
+                        <div 
+                          className="text-xs text-center py-1.5 rounded-lg bg-muted/50 text-primary font-medium cursor-pointer hover:bg-muted"
+                          onClick={() => handleDayClick(date)}
+                        >
                           +{dayAppointments.length - 4} mais
                         </div>
                       )}
