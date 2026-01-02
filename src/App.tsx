@@ -111,6 +111,7 @@ import HeroSettingsPage from "./pages/admin/HeroSettingsPage";
 import CarouselBannersPage from "./pages/admin/CarouselBannersPage";
 import GlobalConfigPage from "./pages/admin/GlobalConfigPage";
 import AddonRequestsPage from "./pages/admin/AddonRequestsPage";
+import AddonsManagementPage from "./pages/admin/AddonsManagementPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -269,6 +270,7 @@ const App = () => (
                   <Route path="clinics" element={<ClinicsManagement />} />
                   <Route path="users" element={<UsersManagement />} />
                   <Route path="plans" element={<PlansManagement />} />
+                  <Route path="addons" element={<AddonsManagementPage />} />
                   <Route path="features" element={<FeaturesManagement />} />
                   <Route path="access-groups" element={<AccessGroupsPage />} />
                   <Route path="notifications" element={<NotificationsPage />} />
