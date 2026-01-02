@@ -50,10 +50,10 @@ const docsCategories = [
     icon: Users,
     description: "Cadastro e prontuário",
     articles: [
-      { slug: "cadastro-pacientes", title: "Cadastro de Pacientes" },
+      { slug: "cadastrando-pacientes", title: "Cadastro de Pacientes" },
       { slug: "prontuario-eletronico", title: "Prontuário Eletrônico" },
-      { slug: "anamnese", title: "Anamnese Digital" },
       { slug: "anexos-documentos", title: "Anexos e Documentos" },
+      { slug: "historico-atendimentos", title: "Histórico de Atendimentos" },
     ]
   },
   {
@@ -62,9 +62,9 @@ const docsCategories = [
     icon: CreditCard,
     description: "Controle financeiro completo",
     articles: [
-      { slug: "lancamentos", title: "Lançamentos Financeiros" },
-      { slug: "contas-pagar-receber", title: "Contas a Pagar e Receber" },
-      { slug: "comissoes", title: "Comissões de Profissionais" },
+      { slug: "visao-geral-financeiro", title: "Visão Geral do Financeiro" },
+      { slug: "lancando-receitas", title: "Lançando Receitas" },
+      { slug: "controlando-despesas", title: "Controlando Despesas" },
       { slug: "relatorios-financeiros", title: "Relatórios Financeiros" },
     ]
   },
@@ -74,10 +74,10 @@ const docsCategories = [
     icon: Stethoscope,
     description: "Fluxo de atendimento clínico",
     articles: [
-      { slug: "painel-atendimento", title: "Painel de Atendimento" },
-      { slug: "prescricoes", title: "Prescrições Digitais" },
-      { slug: "atestados-declaracoes", title: "Atestados e Declarações" },
-      { slug: "telemedicina", title: "Telemedicina" },
+      { slug: "fluxo-atendimento", title: "Fluxo de Atendimento" },
+      { slug: "iniciando-consulta", title: "Iniciando uma Consulta" },
+      { slug: "prescricoes-receitas", title: "Prescrições e Receitas" },
+      { slug: "atestados-documentos", title: "Atestados e Documentos" },
     ]
   },
   {
@@ -87,8 +87,8 @@ const docsCategories = [
     description: "Integração com WhatsApp",
     articles: [
       { slug: "configurando-whatsapp", title: "Configurando WhatsApp" },
-      { slug: "agendamento-automatico", title: "Agendamento Automático" },
       { slug: "lembretes-automaticos", title: "Lembretes Automáticos" },
+      { slug: "confirmacao-consultas", title: "Confirmação de Consultas" },
       { slug: "mensagens-aniversario", title: "Mensagens de Aniversário" },
     ]
   },
@@ -98,10 +98,10 @@ const docsCategories = [
     icon: Settings,
     description: "Personalize o sistema",
     articles: [
+      { slug: "configuracoes-gerais", title: "Configurações Gerais" },
       { slug: "usuarios-permissoes", title: "Usuários e Permissões" },
-      { slug: "documentos-impressos", title: "Documentos Impressos" },
-      { slug: "convenios", title: "Convênios e Planos" },
-      { slug: "procedimentos", title: "Procedimentos e Valores" },
+      { slug: "personalizando-documentos", title: "Personalizando Documentos" },
+      { slug: "backup-seguranca", title: "Backup e Segurança" },
     ]
   },
 ];

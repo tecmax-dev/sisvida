@@ -2,6 +2,8 @@ import { Navigate, useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, ArrowRight, Clock, Lightbulb, AlertCircle, CheckCircle2, MessageSquare } from "lucide-react";
+import whatsappIntegracao from "@/assets/docs/whatsapp-integracao.png";
+import agendaCalendar from "@/assets/docs/agenda-calendar.png";
 
 const articles: Record<string, {
   title: string;
@@ -50,7 +52,7 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src="/eclini-whatsapp-header.jpg" 
+              src={whatsappIntegracao} 
               alt="Configuração WhatsApp Eclini" 
               className="rounded-lg w-full"
             />
@@ -90,7 +92,7 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src="/docs/tela-home.png" 
+              src={agendaCalendar} 
               alt="Dashboard Eclini com lembretes" 
               className="rounded-lg w-full"
             />
@@ -188,7 +190,7 @@ const articles: Record<string, {
 
         <div className="bg-muted/50 rounded-lg p-4 border">
           <img 
-            src="/docs/tela-home.png" 
+            src={agendaCalendar} 
             alt="Tela de agenda Eclini com status" 
             className="rounded-lg w-full"
           />

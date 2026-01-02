@@ -1,8 +1,8 @@
 import { Link, useParams, Navigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, CheckCircle2, Clock, Lightbulb, AlertCircle, MousePointer, Calendar } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import dashboardMockup from "@/assets/dashboard-mockup.png";
-import heroScreens from "@/assets/hero-mockup-screens.png";
+import agendaCalendar from "@/assets/docs/agenda-calendar.png";
+import whatsappIntegracao from "@/assets/docs/whatsapp-integracao.png";
 
 const articles: Record<string, {
   title: string;
@@ -27,7 +27,7 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src={dashboardMockup} 
+            src={agendaCalendar} 
             alt="Visão geral da agenda do Eclini" 
             className="rounded-lg w-full shadow-lg"
           />
@@ -121,7 +121,7 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src={heroScreens} 
+            src={agendaCalendar} 
             alt="Formulário de agendamento do Eclini" 
             className="rounded-lg w-full shadow-lg"
           />
@@ -192,7 +192,7 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src="/eclini-whatsapp-header.jpg" 
+            src={whatsappIntegracao} 
             alt="Integração WhatsApp do Eclini" 
             className="rounded-lg w-full shadow-lg"
           />
@@ -264,7 +264,7 @@ const articles: Record<string, {
 
         <div className="my-6 rounded-lg border bg-muted/50 p-4">
           <img 
-            src={dashboardMockup} 
+            src={agendaCalendar} 
             alt="Lista de espera no Eclini" 
             className="rounded-lg w-full shadow-lg"
           />

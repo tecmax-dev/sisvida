@@ -2,9 +2,10 @@ import { Navigate, useParams, Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ArrowLeft, ArrowRight, Clock, Lightbulb, AlertCircle, CheckCircle2 } from "lucide-react";
-import dashboardMockup from "@/assets/dashboard-mockup.png";
-import heroScreens from "@/assets/hero-mockup-screens.png";
-import heroMockup from "@/assets/hero-mockup.png";
+import pacientesCadastro from "@/assets/docs/pacientes-cadastro.png";
+import prontuarioEletronico from "@/assets/docs/prontuario-eletronico.png";
+import anexosDocumentos from "@/assets/docs/anexos-documentos.png";
+import agendaCalendar from "@/assets/docs/agenda-calendar.png";
 
 const articles: Record<string, {
   title: string;
@@ -27,7 +28,7 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src={dashboardMockup} 
+              src={pacientesCadastro} 
               alt="Tela de cadastro de pacientes do Eclini" 
               className="rounded-lg w-full shadow-lg"
             />
@@ -66,7 +67,7 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src={heroScreens} 
+              src={pacientesCadastro} 
               alt="Cadastro rápido de paciente no Eclini" 
               className="rounded-lg w-full shadow-lg"
             />
@@ -125,7 +126,7 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src={heroMockup} 
+              src={prontuarioEletronico} 
               alt="Prontuário eletrônico do Eclini" 
               className="rounded-lg w-full shadow-lg"
             />
@@ -198,7 +199,7 @@ const articles: Record<string, {
           </ol>
           <div className="bg-muted/50 rounded-lg p-4 border mt-4">
             <img 
-              src={dashboardMockup} 
+              src={anexosDocumentos} 
               alt="Gerenciamento de anexos no Eclini" 
               className="rounded-lg w-full shadow-lg"
             />
@@ -266,7 +267,7 @@ const articles: Record<string, {
           </p>
           <div className="bg-muted/50 rounded-lg p-4 border">
             <img 
-              src={heroScreens} 
+              src={agendaCalendar} 
               alt="Histórico de atendimentos no Eclini" 
               className="rounded-lg w-full shadow-lg"
             />
