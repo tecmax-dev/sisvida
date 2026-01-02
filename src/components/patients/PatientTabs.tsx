@@ -2,6 +2,7 @@ import { cn } from "@/lib/utils";
 
 export type PatientTab = 
   | 'cadastro' 
+  | 'dependentes'
   | 'prontuario' 
   | 'anamnese' 
   | 'prescricoes' 
@@ -19,6 +20,7 @@ interface PatientTabsProps {
 
 const tabs: { id: PatientTab; label: string }[] = [
   { id: 'cadastro', label: 'Cadastro' },
+  { id: 'dependentes', label: 'Dependentes' },
   { id: 'prontuario', label: 'Prontuário' },
   { id: 'anamnese', label: 'Anamnese' },
   { id: 'prescricoes', label: 'Prescrições' },
