@@ -19,11 +19,12 @@ interface PatientHeaderProps {
   noShowBlockedAt?: string | null;
   noShowUnblockedAt?: string | null;
   onUnblockNoShow?: () => void;
-  isAdmin?: boolean;
+  canUnblock?: boolean;
   // Active status
   isActive?: boolean;
   onToggleActive?: () => void;
   togglingActive?: boolean;
+  isAdmin?: boolean;
 }
 
 export function PatientHeader({
@@ -37,10 +38,11 @@ export function PatientHeader({
   noShowBlockedAt,
   noShowUnblockedAt,
   onUnblockNoShow,
-  isAdmin = false,
+  canUnblock = false,
   isActive = true,
   onToggleActive,
   togglingActive = false,
+  isAdmin = false,
 }: PatientHeaderProps) {
   const calculateAge = (dateString?: string) => {
     if (!dateString) return null;
@@ -109,7 +111,7 @@ export function PatientHeader({
                   Bloqueado em: {format(new Date(noShowBlockedAt), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                 </p>
               )}
-              {isAdmin && onUnblockNoShow && (
+              {canUnblock && onUnblockNoShow && (
                 <div className="mt-2">
                   <Button 
                     variant="outline" 
