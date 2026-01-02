@@ -1753,6 +1753,65 @@ export type Database = {
         }
         Relationships: []
       }
+      employers: {
+        Row: {
+          address: string | null
+          city: string | null
+          clinic_id: string
+          cnpj: string
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          state: string | null
+          trade_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          clinic_id: string
+          cnpj: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          trade_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          clinic_id?: string
+          cnpj?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          trade_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       evolution_configs: {
         Row: {
           api_key: string
