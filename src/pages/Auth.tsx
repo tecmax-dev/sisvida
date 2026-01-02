@@ -8,7 +8,10 @@ import { Logo } from "@/components/layout/Logo";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2, ArrowLeft, Mail, KeyRound } from "lucide-react";
 import { z } from "zod";
+import ReCAPTCHA from "react-google-recaptcha";
 import dashboardMockup from "@/assets/dashboard-mockup.png";
+
+const RECAPTCHA_SITE_KEY = "6LcKFsgqAAAAADNaIxhCcvVSn7FwEZH2EBfxc7Q0";
 
 const emailSchema = z.string().email("Email inválido");
 const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres");
@@ -29,6 +32,8 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [fromExpiredLink, setFromExpiredLink] = useState(false);
   const [isFirstAccess, setIsFirstAccess] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
   
   // useRef para controlar o fluxo de primeiro acesso - atualizado imediatamente sem re-render
   const isFirstAccessFlowRef = useRef(false);
@@ -36,7 +41,8 @@ export default function Auth() {
     email?: string; 
     password?: string; 
     confirmPassword?: string;
-    name?: string 
+    name?: string;
+    recaptcha?: string;
   }>({});
   
   // useRef para controlar o fluxo de recuperação - atualizado imediatamente sem re-render
@@ -214,8 +220,31 @@ export default function Auth() {
       newErrors.name = "Nome é obrigatório";
     }
 
+    // Validar reCAPTCHA para login e signup
+    if ((view === "login" || view === "signup") && !recaptchaToken) {
+      newErrors.recaptcha = "Complete o reCAPTCHA";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const verifyRecaptcha = async (token: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-recaptcha", {
+        body: { token },
+      });
+      
+      if (error) {
+        console.error("Erro ao verificar reCAPTCHA:", error);
+        return false;
+      }
+      
+      return data?.success === true;
+    } catch (err) {
+      console.error("Erro ao verificar reCAPTCHA:", err);
+      return false;
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -304,6 +333,22 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      // Verificar reCAPTCHA no servidor para login e signup
+      if ((view === "login" || view === "signup") && recaptchaToken) {
+        const isValid = await verifyRecaptcha(recaptchaToken);
+        if (!isValid) {
+          toast({
+            title: "Verificação falhou",
+            description: "O reCAPTCHA não pôde ser verificado. Tente novamente.",
+            variant: "destructive",
+          });
+          recaptchaRef.current?.reset();
+          setRecaptchaToken(null);
+          setLoading(false);
+          return;
+        }
+      }
+
       if (view === "login") {
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
@@ -805,7 +850,21 @@ export default function Auth() {
                     </div>
                   )}
 
-                  <Button type="submit" className="w-full h-12 text-base gap-2" disabled={loading}>
+                  {/* reCAPTCHA */}
+                  <div className="flex flex-col items-center">
+                    <ReCAPTCHA
+                      ref={recaptchaRef}
+                      sitekey={RECAPTCHA_SITE_KEY}
+                      onChange={(token) => setRecaptchaToken(token)}
+                      onExpired={() => setRecaptchaToken(null)}
+                      onErrored={() => setRecaptchaToken(null)}
+                    />
+                    {errors.recaptcha && (
+                      <p className="mt-1 text-sm text-destructive">{errors.recaptcha}</p>
+                    )}
+                  </div>
+
+                  <Button type="submit" className="w-full h-12 text-base gap-2" disabled={loading || !recaptchaToken}>
                     {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                     {view === "login" ? "Entrar" : "Criar conta"}
                     {!loading && <ArrowLeft className="h-4 w-4 rotate-180" />}
