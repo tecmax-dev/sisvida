@@ -1215,10 +1215,46 @@ async function handleBookingFlow(
   wasExpired: boolean = false
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   
-  // Check for global commands
+  // Define registration states that should NOT allow navigation/interruption
+  const registrationStates: BookingState[] = [
+    'OFFER_REGISTRATION',
+    'SELECT_REGISTRATION_TYPE', 
+    'WAITING_REGISTRATION_DEPENDENT_CPF',
+    'WAITING_REGISTRATION_TITULAR_CPF',
+    'SELECT_INSURANCE_PLAN',
+    'WAITING_REGISTRATION_NAME',
+    'WAITING_REGISTRATION_BIRTHDATE',
+    'WAITING_REGISTRATION_RELATIONSHIP',
+    'WAITING_REGISTRATION_CNPJ',
+    'CONFIRM_COMPANY',
+    'CONFIRM_REGISTRATION'
+  ];
+  
+  const isInRegistrationFlow = session && registrationStates.includes(session.state as BookingState);
+
+  // Check for global commands - BUT block MENU during registration to prevent skipping steps
   if (MENU_REGEX.test(messageText)) {
+    if (isInRegistrationFlow) {
+      // During registration, don't allow MENU - user must complete or explicitly cancel
+      console.log(`[booking] Blocking MENU command during registration state: ${session!.state}`);
+      await sendWhatsAppMessage(config, phone, 
+        `⚠️ Você está no meio do cadastro e precisa completá-lo para continuar.\n\n` +
+        `Por favor, responda à pergunta atual ou digite *CANCELAR* se deseja desistir do cadastro.`
+      );
+      return { handled: true, newState: session!.state };
+    }
     await resetSession(supabase, config.clinic_id, phone);
     await sendWhatsAppMessage(config, phone, MESSAGES.welcome + MESSAGES.hintCpf);
+    return { handled: true, newState: 'WAITING_CPF' };
+  }
+  
+  // Check for explicit cancel during registration
+  if (isInRegistrationFlow && /^(cancelar|desistir|sair)$/i.test(messageText.trim())) {
+    console.log(`[booking] User cancelled registration at state: ${session!.state}`);
+    await resetSession(supabase, config.clinic_id, phone);
+    await sendWhatsAppMessage(config, phone, 
+      `❌ Cadastro cancelado.\n\nSe quiser tentar novamente, digite *MENU* ou informe seu CPF.`
+    );
     return { handled: true, newState: 'WAITING_CPF' };
   }
 
@@ -1265,7 +1301,8 @@ async function handleBookingFlow(
     }
 
     // Handle INFO intent - respond to informational questions without requiring CPF
-    if (aiResult.intent === 'info' && aiResult.friendly_response) {
+    // BUT block during registration to prevent skipping steps
+    if (aiResult.intent === 'info' && aiResult.friendly_response && !isInRegistrationFlow) {
       console.log('[booking] AI detected info intent - responding directly');
       const infoMsg = `${aiResult.friendly_response}\n\n` +
         '💡 Posso ajudar com mais alguma coisa?\n\n' +
@@ -1276,7 +1313,8 @@ async function handleBookingFlow(
     }
 
     // Handle QUERY_SCHEDULE intent - respond with professional schedules without requiring CPF
-    if (aiResult.intent === 'query_schedule') {
+    // BUT block during registration to prevent skipping steps
+    if (aiResult.intent === 'query_schedule' && !isInRegistrationFlow) {
       console.log('[booking] AI detected query_schedule intent');
       
       // Fetch professionals with schedules
@@ -1369,24 +1407,33 @@ async function handleBookingFlow(
     }
 
     // Handle main menu navigation intents from any state after identity confirmed
-    if (session.patient_id && aiResult.intent === 'schedule') {
-      console.log('[booking] AI detected schedule intent');
-      return await navigateToSchedule(supabase, config, phone, session);
-    }
+    // BUT NEVER allow navigation away from registration states - user MUST complete registration flow
+    // (registrationStates and isInRegistrationFlow are already defined at the top of the function)
     
-    if (session.patient_id && aiResult.intent === 'cancel') {
-      console.log('[booking] AI detected cancel intent');
-      return await navigateToCancel(supabase, config, phone, session);
-    }
-    
-    if (session.patient_id && aiResult.intent === 'reschedule') {
-      console.log('[booking] AI detected reschedule intent');
-      return await navigateToReschedule(supabase, config, phone, session);
-    }
-    
-    if (session.patient_id && aiResult.intent === 'list') {
-      console.log('[booking] AI detected list intent');
-      return await navigateToList(supabase, config, phone, session);
+    // Block navigation intents during registration - user must complete the flow
+    if (isInRegistrationFlow && ['schedule', 'cancel', 'reschedule', 'list'].includes(aiResult.intent)) {
+      console.log(`[booking] Blocking ${aiResult.intent} intent during registration state: ${session.state}`);
+      // Don't navigate, let the state handler process the message
+    } else {
+      if (session.patient_id && aiResult.intent === 'schedule') {
+        console.log('[booking] AI detected schedule intent');
+        return await navigateToSchedule(supabase, config, phone, session);
+      }
+      
+      if (session.patient_id && aiResult.intent === 'cancel') {
+        console.log('[booking] AI detected cancel intent');
+        return await navigateToCancel(supabase, config, phone, session);
+      }
+      
+      if (session.patient_id && aiResult.intent === 'reschedule') {
+        console.log('[booking] AI detected reschedule intent');
+        return await navigateToReschedule(supabase, config, phone, session);
+      }
+      
+      if (session.patient_id && aiResult.intent === 'list') {
+        console.log('[booking] AI detected list intent');
+        return await navigateToList(supabase, config, phone, session);
+      }
     }
   }
 
