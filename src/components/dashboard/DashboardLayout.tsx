@@ -421,10 +421,13 @@ export function DashboardLayout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 bg-sidebar border-r border-sidebar-border shadow-sm transform transition-all duration-300 lg:translate-x-0 lg:static",
+          "fixed inset-y-0 left-0 z-50 border-r border-sidebar-border shadow-sm transform transition-all duration-300 lg:translate-x-0 lg:static",
           sidebarOpen ? "translate-x-0" : "-translate-x-full",
           sidebarCollapsed ? "w-16" : "w-64"
         )}
+        style={{
+          background: 'linear-gradient(180deg, hsl(195 80% 45%) 0%, hsl(172 60% 42%) 50%, hsl(150 50% 45%) 100%)'
+        }}
       >
         <div className="flex flex-col h-full">
           <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
