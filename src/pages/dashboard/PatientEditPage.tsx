@@ -160,6 +160,7 @@ export default function PatientEditPage() {
   const canViewMedicalRecords = hasPermission('view_medical_records');
   const canViewPrescriptions = hasPermission('view_prescriptions');
   const isAdmin = hasPermission('manage_patients');
+  const canUnblockPatients = hasPermission('unblock_patients');
   
   // Determine which tabs to hide based on permissions
   const hiddenTabs: PatientTab[] = [];
@@ -679,10 +680,11 @@ export default function PatientEditPage() {
         noShowBlockedAt={noShowBlockedAt}
         noShowUnblockedAt={noShowUnblockedAt}
         onUnblockNoShow={handleUnblockNoShow}
-        isAdmin={isAdmin}
+        canUnblock={canUnblockPatients || isAdmin}
         isActive={isPatientActive}
         onToggleActive={handleToggleActive}
         togglingActive={togglingActive}
+        isAdmin={isAdmin}
       />
 
       {/* Tabs Navigation */}
