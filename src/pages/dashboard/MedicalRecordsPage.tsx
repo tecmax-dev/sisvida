@@ -537,26 +537,26 @@ export default function MedicalRecordsPage() {
   }, [records, documents]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Prontuário Eletrônico</h1>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             Registre e consulte o histórico médico dos pacientes
           </p>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200/50 dark:border-blue-800/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/20">
-                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-blue-500/20">
+                <Users className="h-4 w-4 text-blue-600 dark:text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{patients.length}</p>
+                <p className="text-xl font-bold text-blue-600 dark:text-blue-400">{patients.length}</p>
                 <p className="text-xs text-muted-foreground">Pacientes</p>
               </div>
             </div>
@@ -564,13 +564,13 @@ export default function MedicalRecordsPage() {
         </Card>
 
         <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-200/50 dark:border-emerald-800/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/20">
-                <Activity className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-emerald-500/20">
+                <Activity className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.totalRecords}</p>
+                <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{stats.totalRecords}</p>
                 <p className="text-xs text-muted-foreground">Registros</p>
               </div>
             </div>
@@ -578,13 +578,13 @@ export default function MedicalRecordsPage() {
         </Card>
 
         <Card className="bg-gradient-to-br from-violet-500/10 to-violet-600/5 border-violet-200/50 dark:border-violet-800/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-violet-500/20">
-                <Pill className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-violet-500/20">
+                <Pill className="h-4 w-4 text-violet-600 dark:text-violet-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{stats.prescriptions}</p>
+                <p className="text-xl font-bold text-violet-600 dark:text-violet-400">{stats.prescriptions}</p>
                 <p className="text-xs text-muted-foreground">Receituários</p>
               </div>
             </div>
@@ -592,13 +592,13 @@ export default function MedicalRecordsPage() {
         </Card>
 
         <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-200/50 dark:border-amber-800/50">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/20">
-                <Award className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-amber-500/20">
+                <Award className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.certificates}</p>
+                <p className="text-xl font-bold text-amber-600 dark:text-amber-400">{stats.certificates}</p>
                 <p className="text-xs text-muted-foreground">Atestados</p>
               </div>
             </div>
@@ -606,49 +606,49 @@ export default function MedicalRecordsPage() {
         </Card>
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
+      <div className="grid lg:grid-cols-3 gap-4">
         {/* Patient List */}
         <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <User className="h-5 w-5" />
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <User className="h-4 w-4" />
               Pacientes
             </CardTitle>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="relative mt-2">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               {searchingPatients && (
-                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 animate-spin text-muted-foreground" />
               )}
               <Input
                 placeholder="Buscar por nome ou CPF..."
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-9 pr-9"
+                className="pl-8 pr-8 h-8 text-sm"
               />
             </div>
           </CardHeader>
-          <CardContent className="max-h-[500px] overflow-y-auto space-y-2">
+          <CardContent className="px-3 pb-3 max-h-[600px] overflow-y-auto space-y-1">
             {loading ? (
-              <div className="text-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+              <div className="text-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin mx-auto" />
               </div>
             ) : filteredPatients.length > 0 ? (
               filteredPatients.map((patient) => (
                 <div
                   key={patient.id}
                   onClick={() => setSelectedPatient(patient)}
-                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                  className={`p-2 rounded-md border cursor-pointer transition-colors ${
                     selectedPatient?.id === patient.id
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-primary/50"
                   }`}
                 >
-                  <p className="font-medium text-foreground">{patient.name}</p>
-                  <p className="text-sm text-muted-foreground">{patient.phone}</p>
+                  <p className="font-medium text-sm text-foreground">{patient.name}</p>
+                  <p className="text-xs text-muted-foreground">{patient.phone}</p>
                 </div>
               ))
             ) : (
-              <p className="text-center text-muted-foreground py-4">
+              <p className="text-center text-muted-foreground py-3 text-sm">
                 Nenhum paciente encontrado
               </p>
             )}
@@ -657,100 +657,102 @@ export default function MedicalRecordsPage() {
 
         {/* Patient Records */}
         <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5" />
+              <CardTitle className="text-base flex items-center gap-2">
+                <FileText className="h-4 w-4" />
                 {selectedPatient ? `Histórico - ${selectedPatient.name}` : "Selecione um paciente"}
               </CardTitle>
               {selectedPatient && (
-                <CardDescription className="flex items-center gap-2">
+                <CardDescription className="flex items-center gap-2 mt-1">
                   {selectedPatient.birth_date && (
-                    <Badge variant="outline">{calculateAge(selectedPatient.birth_date)} anos</Badge>
+                    <Badge variant="outline" className="text-xs">{calculateAge(selectedPatient.birth_date)} anos</Badge>
                   )}
-                  {records.length} registro(s) encontrado(s)
+                  <span className="text-xs">{records.length} registro(s)</span>
                 </CardDescription>
               )}
             </div>
             {selectedPatient && (
-              <Button onClick={() => setDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button size="sm" onClick={() => setDialogOpen(true)}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Novo Registro
               </Button>
             )}
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 pb-3">
             {!selectedPatient ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Stethoscope className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Selecione um paciente para ver o histórico</p>
+              <div className="text-center py-8 text-muted-foreground">
+                <Stethoscope className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Selecione um paciente para ver o histórico</p>
               </div>
             ) : records.length > 0 ? (
-              <Accordion type="single" collapsible className="space-y-2">
+              <Accordion type="single" collapsible className="space-y-1">
                 {records.map((record) => (
-                  <AccordionItem key={record.id} value={record.id} className="border rounded-lg px-4">
-                    <AccordionTrigger className="hover:no-underline py-4">
-                      <div className="flex items-center justify-between w-full pr-4">
+                  <AccordionItem key={record.id} value={record.id} className="border rounded-md px-3">
+                    <AccordionTrigger className="hover:no-underline py-2">
+                      <div className="flex items-center justify-between w-full pr-2">
                         <div className="text-left">
-                          <p className="font-medium text-foreground">
+                          <p className="font-medium text-sm text-foreground">
                             {format(parseISO(record.record_date), "dd/MM/yyyy", { locale: ptBR })}
                           </p>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {record.professional?.name || "Profissional não informado"}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
                           {record.prescription && (
                             <Button
                               variant="outline"
-                              size="sm"
+                              size="icon"
+                              className="h-7 w-7"
                               onClick={() => handleSendWhatsApp(record)}
                               disabled={sendingWhatsApp === record.id || !selectedPatient?.phone}
                               title={!selectedPatient?.phone ? "Paciente sem telefone" : "Enviar receituário via WhatsApp"}
                             >
                               {sendingWhatsApp === record.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               ) : (
-                                <Send className="h-4 w-4" />
+                                <Send className="h-3.5 w-3.5" />
                               )}
                             </Button>
                           )}
                           <Button
                             variant="outline"
-                            size="sm"
+                            size="icon"
+                            className="h-7 w-7"
                             onClick={() => handlePrintRecord(record)}
                           >
-                            <Printer className="h-4 w-4" />
+                            <Printer className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
                     </AccordionTrigger>
-                    <AccordionContent className="pb-4">
-                      <div className="space-y-4 pt-2">
+                    <AccordionContent className="pb-3">
+                      <div className="space-y-2 pt-1">
                         {record.chief_complaint && (
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Queixa Principal</p>
-                            <p className="text-foreground mt-1">{record.chief_complaint}</p>
+                            <p className="text-xs font-medium text-muted-foreground">Queixa Principal</p>
+                            <p className="text-sm text-foreground">{record.chief_complaint}</p>
                           </div>
                         )}
                         {record.diagnosis && (
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Diagnóstico</p>
-                            <p className="text-foreground mt-1">{record.diagnosis}</p>
+                            <p className="text-xs font-medium text-muted-foreground">Diagnóstico</p>
+                            <p className="text-sm text-foreground">{record.diagnosis}</p>
                           </div>
                         )}
                         {record.treatment_plan && (
                           <div>
-                            <p className="text-sm font-medium text-muted-foreground">Plano de Tratamento</p>
-                            <p className="text-foreground mt-1">{record.treatment_plan}</p>
+                            <p className="text-xs font-medium text-muted-foreground">Plano de Tratamento</p>
+                            <p className="text-sm text-foreground">{record.treatment_plan}</p>
                           </div>
                         )}
                         {record.prescription && (
-                          <div className="flex items-start gap-2 pt-3 border-t border-border">
-                            <Pill className="h-4 w-4 text-muted-foreground mt-0.5" />
+                          <div className="flex items-start gap-2 pt-2 border-t border-border">
+                            <Pill className="h-3.5 w-3.5 text-muted-foreground mt-0.5" />
                             <div>
-                              <p className="text-sm font-medium text-muted-foreground">Prescrição</p>
-                              <p className="text-foreground mt-1">{record.prescription}</p>
+                              <p className="text-xs font-medium text-muted-foreground">Prescrição</p>
+                              <p className="text-sm text-foreground">{record.prescription}</p>
                             </div>
                           </div>
                         )}
@@ -760,11 +762,11 @@ export default function MedicalRecordsPage() {
                 ))}
               </Accordion>
             ) : (
-              <div className="text-center py-12 text-muted-foreground">
-                <ClipboardList className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhum registro encontrado</p>
-                <Button className="mt-4" onClick={() => setDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
+              <div className="text-center py-8 text-muted-foreground">
+                <ClipboardList className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                <p className="text-sm">Nenhum registro encontrado</p>
+                <Button size="sm" className="mt-3" onClick={() => setDialogOpen(true)}>
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
                   Criar primeiro registro
                 </Button>
               </div>
@@ -776,28 +778,28 @@ export default function MedicalRecordsPage() {
       {/* Patient Attachments Section */}
       {selectedPatient && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between">
             <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Paperclip className="h-5 w-5" />
+              <CardTitle className="text-base flex items-center gap-2">
+                <Paperclip className="h-4 w-4" />
                 Anexos do Paciente
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs mt-0.5">
                 Exames, documentos e arquivos do paciente
               </CardDescription>
             </div>
-            <Button onClick={() => setUploadDialogOpen(true)}>
-              <Upload className="h-4 w-4 mr-2" />
+            <Button size="sm" onClick={() => setUploadDialogOpen(true)}>
+              <Upload className="h-3.5 w-3.5 mr-1.5" />
               Enviar Arquivo
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 pb-3">
             {attachmentsLoading ? (
-              <div className="text-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin mx-auto" />
+              <div className="text-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin mx-auto" />
               </div>
             ) : (
-              <div className="grid lg:grid-cols-4 gap-4">
+              <div className="grid lg:grid-cols-4 gap-3">
                 <div className="lg:col-span-1">
                   <FolderTree
                     folders={folders}
@@ -829,39 +831,39 @@ export default function MedicalRecordsPage() {
       {/* Issued Documents History */}
       {selectedPatient && documents.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-4 w-4" />
               Documentos Emitidos
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs mt-0.5">
               Histórico de documentos emitidos para este paciente
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <CardContent className="px-3 pb-3">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
               {documents.map((doc) => (
                 <div
                   key={doc.id}
-                  className="p-4 border border-border rounded-lg hover:border-primary/50 transition-colors"
+                  className="p-2.5 border border-border rounded-md hover:border-primary/50 transition-colors"
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
+                  <div className="flex items-start justify-between gap-1">
+                    <div className="flex items-center gap-1.5">
                       {getDocumentTypeIcon(doc.document_type)}
-                      <Badge variant={getDocumentTypeBadgeVariant(doc.document_type)}>
+                      <Badge variant={getDocumentTypeBadgeVariant(doc.document_type)} className="text-xs">
                         {getDocumentTypeLabel(doc.document_type)}
                       </Badge>
                     </div>
                     {doc.sent_via_whatsapp && (
-                      <Badge variant="outline" className="text-green-600 border-green-600 text-xs">
+                      <Badge variant="outline" className="text-green-600 border-green-600 text-[10px] px-1">
                         ✓ WhatsApp
                       </Badge>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="text-xs text-muted-foreground mt-1.5">
                     {format(new Date(doc.document_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
                   </p>
-                  <p className="text-sm text-foreground mt-1 line-clamp-2">
+                  <p className="text-xs text-foreground mt-0.5 line-clamp-2">
                     {doc.content}
                   </p>
                 </div>
@@ -874,25 +876,25 @@ export default function MedicalRecordsPage() {
       {/* Pending Appointments for Quick Access */}
       {pendingAppointments.length > 0 && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
+          <CardHeader className="py-3 px-4">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
               Consultas Aguardando Registro
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <CardContent className="px-3 pb-3">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
               {pendingAppointments.map((apt) => (
                 <div
                   key={apt.id}
                   onClick={() => startRecordFromAppointment(apt)}
-                  className="p-3 border border-border rounded-lg cursor-pointer hover:border-primary transition-colors"
+                  className="p-2 border border-border rounded-md cursor-pointer hover:border-primary transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <p className="font-medium text-foreground">{apt.patient?.name}</p>
-                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    <p className="font-medium text-sm text-foreground">{apt.patient?.name}</p>
+                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
                   </div>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     {new Date(apt.appointment_date + "T12:00:00").toLocaleDateString('pt-BR')} às {apt.start_time.slice(0, 5)}
                   </p>
                 </div>
