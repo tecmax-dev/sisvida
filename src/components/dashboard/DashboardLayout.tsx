@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
+import { UserMenu } from "@/components/layout/UserMenu";
 import ecliniDashboardLogo from "@/assets/eclini-dashboard-logo.png";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -622,7 +623,10 @@ export function DashboardLayout() {
 
           <div className="flex-1" />
 
-          <NotificationBell />
+          <div className="flex items-center gap-2">
+            <NotificationBell />
+            <UserMenu compact showName={false} />
+          </div>
         </header>
 
         {/* Page content */}
