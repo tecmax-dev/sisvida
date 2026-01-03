@@ -73,6 +73,7 @@ import { PatientMedicalHistory } from "@/components/appointments/PatientMedicalH
 import { PrintDialog } from "@/components/medical/PrintDialog";
 import { MedicationSearch } from "@/components/medical/MedicationSearch";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Patient {
   id: string;
@@ -173,6 +174,7 @@ export default function AttendancePageRedesign() {
   const { toast } = useToast();
   const { currentClinic } = useAuth();
   
+  const isMobile = useIsMobile();
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loadingAppointment, setLoadingAppointment] = useState(true);
   const [elapsedTime, setElapsedTime] = useState<string>("00:00:00");
@@ -184,6 +186,7 @@ export default function AttendancePageRedesign() {
   const [isDentalSpecialty, setIsDentalSpecialty] = useState(false);
   const [activeSection, setActiveSection] = useState("resumo");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [patientStats, setPatientStats] = useState<PatientStats>({ totalAppointments: 0, firstVisit: null, missedAppointments: 0 });
   
   const [recordForm, setRecordForm] = useState({
@@ -974,244 +977,341 @@ export default function AttendancePageRedesign() {
   const sidebarItems = SIDEBAR_ITEMS.filter(item => !item.dentalOnly || isDentalSpecialty);
 
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-gradient-to-br from-primary/5 via-background to-muted/40">
-      {/* Left Sidebar */}
-      <div className={cn(
-        "bg-card border-r border-border flex flex-col transition-all duration-300",
-        sidebarCollapsed ? "w-14" : "w-52"
-      )}>
-        {/* Header */}
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center justify-between">
-            {!sidebarCollapsed && (
-              <h2 className="font-semibold text-foreground">Prontuários</h2>
-            )}
+    <div className="flex flex-col md:flex-row h-[calc(100vh-80px)] bg-gradient-to-br from-primary/5 via-background to-muted/40">
+      {/* Mobile Header */}
+      {isMobile && (
+        <div className="bg-card border-b border-border p-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="h-9 w-9"
             >
-              {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              {mobileMenuOpen ? <ChevronLeft className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
             </Button>
+            <div>
+              <h2 className="font-semibold text-sm">
+                {sidebarItems.find(i => i.id === activeSection)?.label || "Prontuário"}
+              </h2>
+              <p className="text-xs text-muted-foreground truncate max-w-[150px]">
+                {appointment.patient.name}
+              </p>
+            </div>
           </div>
-        </div>
-
-        {/* Timer Section - Clean Style */}
-        <div className="p-4 border-b border-border">
-          {!sidebarCollapsed && (
-            <p className="text-xs text-muted-foreground mb-3">Duração da consulta</p>
-          )}
           
-          <div className={cn(
-            "flex items-center justify-center py-3 mb-4",
-            sidebarCollapsed ? "px-1" : "px-4"
-          )}>
-            <div className="flex items-center gap-2">
-              <Clock className={cn(
-                "text-muted-foreground",
-                sidebarCollapsed ? "h-4 w-4" : "h-5 w-5"
-              )} />
-              {!sidebarCollapsed && (
-                <span className={cn(
-                  "font-mono font-bold tracking-wider",
-                  isInProgress ? "text-primary text-2xl" : 
-                  isCompleted ? "text-accent text-xl" : 
-                  "text-foreground text-2xl"
-                )}>
-                  {isInProgress ? elapsedTime : 
-                   isCompleted && appointment.duration_minutes ? formatDuration(appointment.duration_minutes) : 
-                   "00:00:00"}
-                </span>
-              )}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 text-sm font-mono">
+              <Clock className="h-4 w-4 text-muted-foreground" />
+              <span className={cn(
+                "font-bold",
+                isInProgress ? "text-primary" : "text-foreground"
+              )}>
+                {isInProgress ? elapsedTime : 
+                 isCompleted && appointment.duration_minutes ? formatDuration(appointment.duration_minutes) : 
+                 "00:00"}
+              </span>
             </div>
+            
+            {!isInProgress && !isCompleted ? (
+              <Button onClick={handleStartAppointment} disabled={loading} size="sm" className="h-8">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              </Button>
+            ) : isInProgress ? (
+              <Button onClick={handleEndAppointment} disabled={loading} variant="destructive" size="sm" className="h-8">
+                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Square className="h-4 w-4" />}
+              </Button>
+            ) : (
+              <Badge variant="secondary" className="h-8 px-2">
+                <Lock className="h-3 w-3 mr-1" />
+                Finalizado
+              </Badge>
+            )}
           </div>
-
-          {/* Action Button */}
-          {!isInProgress && !isCompleted ? (
-            <Button
-              onClick={handleStartAppointment}
-              disabled={loading}
-              className={cn(
-                "w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium",
-                sidebarCollapsed ? "h-10 w-10 p-0" : ""
-              )}
-              size={sidebarCollapsed ? "icon" : "default"}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <Play className="h-4 w-4" />
-                  {!sidebarCollapsed && <span className="ml-2">Iniciar atendimento</span>}
-                </>
-              )}
-            </Button>
-          ) : isInProgress ? (
-            <Button
-              onClick={handleEndAppointment}
-              disabled={loading}
-              variant="destructive"
-              className={cn(
-                "w-full font-medium",
-                sidebarCollapsed ? "h-10 w-10 p-0" : ""
-              )}
-              size={sidebarCollapsed ? "icon" : "default"}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <>
-                  <Square className="h-4 w-4" />
-                  {!sidebarCollapsed && <span className="ml-2">Finalizar</span>}
-                </>
-              )}
-            </Button>
-          ) : (
-            <div className={cn(
-              "flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-muted text-muted-foreground text-sm",
-              sidebarCollapsed && "p-2"
-            )}>
-              <Lock className="h-4 w-4" />
-              {!sidebarCollapsed && <span>Finalizado</span>}
-            </div>
-          )}
         </div>
+      )}
 
-        {/* Navigation - Clean Minimal Style */}
-        <ScrollArea className="flex-1">
-          <nav className="p-2">
+      {/* Mobile Navigation Menu */}
+      {isMobile && mobileMenuOpen && (
+        <div className="bg-card border-b border-border">
+          <div className="grid grid-cols-4 gap-1 p-2">
             {sidebarItems.map((item) => {
               const isActive = activeSection === item.id;
               return (
                 <button
                   key={item.id}
-                  onClick={() => setActiveSection(item.id)}
+                  onClick={() => {
+                    setActiveSection(item.id);
+                    setMobileMenuOpen(false);
+                  }}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                    "flex flex-col items-center gap-1 p-2 rounded-md text-xs transition-colors",
                     isActive 
                       ? "bg-primary/10 text-primary font-medium" 
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      : "text-muted-foreground hover:bg-muted"
                   )}
                 >
-                  <item.icon className={cn(
-                    "h-4 w-4 flex-shrink-0",
-                    isActive ? "text-primary" : "text-muted-foreground"
-                  )} />
-                  {!sidebarCollapsed && <span>{item.label}</span>}
+                  <item.icon className="h-5 w-5" />
+                  <span className="truncate w-full text-center">{item.label}</span>
                 </button>
               );
             })}
-          </nav>
-        </ScrollArea>
-      </div>
+          </div>
+        </div>
+      )}
+
+      {/* Desktop Left Sidebar */}
+      {!isMobile && (
+        <div className={cn(
+          "bg-card border-r border-border flex flex-col transition-all duration-300",
+          sidebarCollapsed ? "w-14" : "w-52"
+        )}>
+          {/* Header */}
+          <div className="p-4 border-b border-border">
+            <div className="flex items-center justify-between">
+              {!sidebarCollapsed && (
+                <h2 className="font-semibold text-foreground">Prontuários</h2>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+              >
+                {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Timer Section - Clean Style */}
+          <div className="p-4 border-b border-border">
+            {!sidebarCollapsed && (
+              <p className="text-xs text-muted-foreground mb-3">Duração da consulta</p>
+            )}
+            
+            <div className={cn(
+              "flex items-center justify-center py-3 mb-4",
+              sidebarCollapsed ? "px-1" : "px-4"
+            )}>
+              <div className="flex items-center gap-2">
+                <Clock className={cn(
+                  "text-muted-foreground",
+                  sidebarCollapsed ? "h-4 w-4" : "h-5 w-5"
+                )} />
+                {!sidebarCollapsed && (
+                  <span className={cn(
+                    "font-mono font-bold tracking-wider",
+                    isInProgress ? "text-primary text-2xl" : 
+                    isCompleted ? "text-accent text-xl" : 
+                    "text-foreground text-2xl"
+                  )}>
+                    {isInProgress ? elapsedTime : 
+                     isCompleted && appointment.duration_minutes ? formatDuration(appointment.duration_minutes) : 
+                     "00:00:00"}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Action Button */}
+            {!isInProgress && !isCompleted ? (
+              <Button
+                onClick={handleStartAppointment}
+                disabled={loading}
+                className={cn(
+                  "w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium",
+                  sidebarCollapsed ? "h-10 w-10 p-0" : ""
+                )}
+                size={sidebarCollapsed ? "icon" : "default"}
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Play className="h-4 w-4" />
+                    {!sidebarCollapsed && <span className="ml-2">Iniciar atendimento</span>}
+                  </>
+                )}
+              </Button>
+            ) : isInProgress ? (
+              <Button
+                onClick={handleEndAppointment}
+                disabled={loading}
+                variant="destructive"
+                className={cn(
+                  "w-full font-medium",
+                  sidebarCollapsed ? "h-10 w-10 p-0" : ""
+                )}
+                size={sidebarCollapsed ? "icon" : "default"}
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Square className="h-4 w-4" />
+                    {!sidebarCollapsed && <span className="ml-2">Finalizar</span>}
+                  </>
+                )}
+              </Button>
+            ) : (
+              <div className={cn(
+                "flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-muted text-muted-foreground text-sm",
+                sidebarCollapsed && "p-2"
+              )}>
+                <Lock className="h-4 w-4" />
+                {!sidebarCollapsed && <span>Finalizado</span>}
+              </div>
+            )}
+          </div>
+
+          {/* Navigation - Clean Minimal Style */}
+          <ScrollArea className="flex-1">
+            <nav className="p-2">
+              {sidebarItems.map((item) => {
+                const isActive = activeSection === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => setActiveSection(item.id)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
+                      isActive 
+                        ? "bg-primary/10 text-primary font-medium" 
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className={cn(
+                      "h-4 w-4 flex-shrink-0",
+                      isActive ? "text-primary" : "text-muted-foreground"
+                    )} />
+                    {!sidebarCollapsed && <span>{item.label}</span>}
+                  </button>
+                );
+              })}
+            </nav>
+          </ScrollArea>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         <ScrollArea className="h-full">
-          <div className="p-6">
+          <div className={cn("p-4 md:p-6", isMobile && "pb-20")}>
             {/* Patient Summary Header - Always visible */}
             {activeSection === "resumo" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h1 className="text-xl font-semibold">Resumo do Paciente</h1>
-                  <Button variant="outline" onClick={() => navigate(`/dashboard/patients/${appointment.patient_id}`)}>
+              <div className="space-y-4 md:space-y-6">
+                <div className={cn("flex items-center justify-between", isMobile && "flex-col gap-2 items-stretch")}>
+                  <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Resumo do Paciente</h1>
+                  <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => navigate(`/dashboard/patients/${appointment.patient_id}`)}>
+                    <Eye className="h-4 w-4 mr-1.5" />
                     Visualizar Cadastro
                   </Button>
                 </div>
 
                 {/* Patient Header Card - Enhanced Design */}
                 <Card className="bg-gradient-to-r from-primary/5 via-background to-accent/5 border-primary/20">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-6">
-                      <Avatar className="h-24 w-24 text-3xl ring-4 ring-primary/20 ring-offset-2 ring-offset-background">
+                  <CardContent className={cn("p-4 md:p-6", isMobile && "p-3")}>
+                    <div className={cn("flex items-start gap-4 md:gap-6", isMobile && "flex-col items-center text-center")}>
+                      <Avatar className={cn(
+                        "ring-4 ring-primary/20 ring-offset-2 ring-offset-background",
+                        isMobile ? "h-16 w-16 text-xl" : "h-24 w-24 text-3xl"
+                      )}>
                         <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                           {getInitials(appointment.patient.name)}
                         </AvatarFallback>
                       </Avatar>
                       
-                      <div className="flex-1 space-y-4">
+                      <div className="flex-1 space-y-3 md:space-y-4 w-full">
                         <div>
-                          <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                          <h2 className={cn(
+                            "font-bold text-foreground tracking-tight",
+                            isMobile ? "text-lg" : "text-2xl"
+                          )}>
                             {appointment.patient.name.toUpperCase()}
                           </h2>
-                          <p className="text-muted-foreground text-sm mt-1">
+                          <p className="text-muted-foreground text-xs md:text-sm mt-1">
                             Paciente desde {patientStats.firstVisit ? format(new Date(patientStats.firstVisit + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "hoje"}
                           </p>
                         </div>
 
                         {/* Stats Cards Grid */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
                           {/* Age Card */}
-                          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
-                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
-                              <Calendar className="h-4 w-4" />
-                              <span className="text-xs font-medium uppercase tracking-wide">Idade</span>
+                          <div className={cn("bg-blue-500/10 border border-blue-500/20 rounded-lg", isMobile ? "p-2" : "p-3")}>
+                            <div className="flex items-center gap-1.5 md:gap-2 text-blue-600 dark:text-blue-400 mb-1">
+                              <Calendar className="h-3 w-3 md:h-4 md:w-4" />
+                              <span className="text-[10px] md:text-xs font-medium uppercase tracking-wide">Idade</span>
                             </div>
-                            <p className="text-lg font-bold text-foreground">
-                              {getPatientAge(appointment.patient.birth_date) || "N/I"}
+                            <p className={cn("font-bold text-foreground", isMobile ? "text-sm" : "text-lg")}>
+                              {isMobile && appointment.patient.birth_date 
+                                ? `${differenceInYears(new Date(), new Date(appointment.patient.birth_date))} anos`
+                                : getPatientAge(appointment.patient.birth_date) || "N/I"}
                             </p>
                           </div>
 
                           {/* Appointments Card */}
-                          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
-                            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
-                              <Stethoscope className="h-4 w-4" />
-                              <span className="text-xs font-medium uppercase tracking-wide">Atendimentos</span>
+                          <div className={cn("bg-emerald-500/10 border border-emerald-500/20 rounded-lg", isMobile ? "p-2" : "p-3")}>
+                            <div className="flex items-center gap-1.5 md:gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
+                              <Stethoscope className="h-3 w-3 md:h-4 md:w-4" />
+                              <span className="text-[10px] md:text-xs font-medium uppercase tracking-wide">Consultas</span>
                             </div>
-                            <p className="text-lg font-bold text-foreground">
+                            <p className={cn("font-bold text-foreground", isMobile ? "text-sm" : "text-lg")}>
                               {patientStats.totalAppointments}
                             </p>
                           </div>
 
                           {/* No Show Card */}
                           <div className={cn(
-                            "rounded-lg p-3 border",
+                            "rounded-lg border",
+                            isMobile ? "p-2" : "p-3",
                             patientStats.missedAppointments > 0 
                               ? "bg-red-500/10 border-red-500/20" 
                               : "bg-muted/50 border-border"
                           )}>
                             <div className={cn(
-                              "flex items-center gap-2 mb-1",
+                              "flex items-center gap-1.5 md:gap-2 mb-1",
                               patientStats.missedAppointments > 0 
                                 ? "text-red-600 dark:text-red-400" 
                                 : "text-muted-foreground"
                             )}>
-                              <UserX className="h-4 w-4" />
-                              <span className="text-xs font-medium uppercase tracking-wide">Faltas</span>
+                              <UserX className="h-3 w-3 md:h-4 md:w-4" />
+                              <span className="text-[10px] md:text-xs font-medium uppercase tracking-wide">Faltas</span>
                             </div>
                             <p className={cn(
-                              "text-lg font-bold",
+                              "font-bold",
+                              isMobile ? "text-sm" : "text-lg",
                               patientStats.missedAppointments > 0 ? "text-red-600 dark:text-red-400" : "text-foreground"
                             )}>
                               {patientStats.missedAppointments}
                             </p>
                           </div>
 
-                          {/* Blood Type or Phone Card */}
-                          <div className="bg-violet-500/10 border border-violet-500/20 rounded-lg p-3">
-                            <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 mb-1">
-                              <Phone className="h-4 w-4" />
-                              <span className="text-xs font-medium uppercase tracking-wide">Contato</span>
+                          {/* Phone Card */}
+                          <div className={cn("bg-violet-500/10 border border-violet-500/20 rounded-lg", isMobile ? "p-2" : "p-3")}>
+                            <div className="flex items-center gap-1.5 md:gap-2 text-violet-600 dark:text-violet-400 mb-1">
+                              <Phone className="h-3 w-3 md:h-4 md:w-4" />
+                              <span className="text-[10px] md:text-xs font-medium uppercase tracking-wide">Contato</span>
                             </div>
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {appointment.patient.phone || "Não informado"}
+                            <p className={cn("font-medium text-foreground truncate", isMobile ? "text-xs" : "text-sm")}>
+                              {appointment.patient.phone || "N/I"}
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2 pt-2">
-                          <Button variant="outline" size="sm" className="text-xs">
-                            <Tag className="h-3.5 w-3.5 mr-1.5" />
-                            Adicionar tag
-                          </Button>
-                          {appointment.patient.email && (
-                            <Badge variant="secondary" className="text-xs">
-                              <Mail className="h-3 w-3 mr-1" />
-                              {appointment.patient.email}
-                            </Badge>
-                          )}
-                        </div>
+                        {!isMobile && (
+                          <div className="flex items-center gap-2 pt-2">
+                            <Button variant="outline" size="sm" className="text-xs">
+                              <Tag className="h-3.5 w-3.5 mr-1.5" />
+                              Adicionar tag
+                            </Button>
+                            {appointment.patient.email && (
+                              <Badge variant="secondary" className="text-xs">
+                                <Mail className="h-3 w-3 mr-1" />
+                                {appointment.patient.email}
+                              </Badge>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -1223,36 +1323,36 @@ export default function AttendancePageRedesign() {
                 {/* Quick Anamnesis Summary - Enhanced */}
                 {anamnesis && (
                   <Card className="border-amber-500/20">
-                    <CardHeader className="pb-3 bg-amber-500/5 rounded-t-lg">
-                      <CardTitle className="text-base flex items-center gap-2">
+                    <CardHeader className={cn("pb-3 bg-amber-500/5 rounded-t-lg", isMobile && "p-3")}>
+                      <CardTitle className="text-sm md:text-base flex items-center gap-2">
                         <FileText className="h-4 w-4 text-amber-600" />
                         Informações de Saúde
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-4">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <CardContent className={cn("pt-4", isMobile && "p-3 pt-3")}>
+                      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-4">
                         {anamnesis.blood_type && (
-                          <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3">
-                            <span className="text-xs text-red-600 dark:text-red-400 font-medium uppercase">Tipo Sanguíneo</span>
-                            <p className="text-lg font-bold text-foreground mt-1">{anamnesis.blood_type}</p>
+                          <div className={cn("bg-red-500/5 border border-red-500/10 rounded-lg", isMobile ? "p-2" : "p-3")}>
+                            <span className="text-[10px] md:text-xs text-red-600 dark:text-red-400 font-medium uppercase">Tipo Sanguíneo</span>
+                            <p className={cn("font-bold text-foreground mt-1", isMobile ? "text-sm" : "text-lg")}>{anamnesis.blood_type}</p>
                           </div>
                         )}
                         {anamnesis.allergies && (
-                          <div className="bg-orange-500/5 border border-orange-500/10 rounded-lg p-3">
-                            <span className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase">Alergias</span>
-                            <p className="text-sm font-medium text-foreground mt-1 line-clamp-2">{anamnesis.allergies}</p>
+                          <div className={cn("bg-orange-500/5 border border-orange-500/10 rounded-lg", isMobile ? "p-2" : "p-3")}>
+                            <span className="text-[10px] md:text-xs text-orange-600 dark:text-orange-400 font-medium uppercase">Alergias</span>
+                            <p className={cn("font-medium text-foreground mt-1 line-clamp-2", isMobile ? "text-xs" : "text-sm")}>{anamnesis.allergies}</p>
                           </div>
                         )}
                         {anamnesis.chronic_diseases && (
-                          <div className="bg-purple-500/5 border border-purple-500/10 rounded-lg p-3">
-                            <span className="text-xs text-purple-600 dark:text-purple-400 font-medium uppercase">Doenças Crônicas</span>
-                            <p className="text-sm font-medium text-foreground mt-1 line-clamp-2">{anamnesis.chronic_diseases}</p>
+                          <div className={cn("bg-purple-500/5 border border-purple-500/10 rounded-lg", isMobile ? "p-2" : "p-3")}>
+                            <span className="text-[10px] md:text-xs text-purple-600 dark:text-purple-400 font-medium uppercase">Doenças Crônicas</span>
+                            <p className={cn("font-medium text-foreground mt-1 line-clamp-2", isMobile ? "text-xs" : "text-sm")}>{anamnesis.chronic_diseases}</p>
                           </div>
                         )}
                         {anamnesis.current_medications && (
-                          <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-lg p-3">
-                            <span className="text-xs text-cyan-600 dark:text-cyan-400 font-medium uppercase">Medicamentos</span>
-                            <p className="text-sm font-medium text-foreground mt-1 line-clamp-2">{anamnesis.current_medications}</p>
+                          <div className={cn("bg-cyan-500/5 border border-cyan-500/10 rounded-lg", isMobile ? "p-2" : "p-3")}>
+                            <span className="text-[10px] md:text-xs text-cyan-600 dark:text-cyan-400 font-medium uppercase">Medicamentos</span>
+                            <p className={cn("font-medium text-foreground mt-1 line-clamp-2", isMobile ? "text-xs" : "text-sm")}>{anamnesis.current_medications}</p>
                           </div>
                         )}
                       </div>
@@ -1264,8 +1364,8 @@ export default function AttendancePageRedesign() {
 
             {/* Odontogram Section */}
             {activeSection === "odontograma" && isDentalSpecialty && (
-              <div className="space-y-6">
-                <h1 className="text-xl font-semibold">Odontograma</h1>
+              <div className="space-y-4 md:space-y-6">
+                <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Odontograma</h1>
                 <RealisticOdontogram 
                   patientId={appointment.patient_id} 
                   clinicId={appointment.clinic_id} 
@@ -1278,77 +1378,77 @@ export default function AttendancePageRedesign() {
 
             {/* Prontuário Section */}
             {activeSection === "prontuario" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h1 className="text-xl font-semibold">Prontuário</h1>
+              <div className="space-y-4 md:space-y-6">
+                <div className={cn("flex items-center justify-between", isMobile && "flex-col gap-2 items-start")}>
+                  <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Prontuário</h1>
                   <div className="flex items-center gap-2 text-sm">
                     {autoSaveStatus === 'saving' && (
                       <span className="flex items-center gap-1.5 text-muted-foreground animate-pulse">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Salvando...
+                        {!isMobile && "Salvando..."}
                       </span>
                     )}
                     {autoSaveStatus === 'saved' && (
                       <span className="flex items-center gap-1.5 text-emerald-600">
                         <Cloud className="h-3.5 w-3.5" />
-                        Salvo
+                        {!isMobile && "Salvo"}
                       </span>
                     )}
                     {autoSaveStatus === 'error' && (
                       <span className="flex items-center gap-1.5 text-destructive">
                         <CloudOff className="h-3.5 w-3.5" />
-                        Erro
+                        {!isMobile && "Erro"}
                       </span>
                     )}
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4">
                   <div>
-                    <Label>Queixa Principal</Label>
+                    <Label className="text-xs md:text-sm">Queixa Principal</Label>
                     <Textarea 
                       value={recordForm.chief_complaint} 
                       onChange={(e) => setRecordForm({ ...recordForm, chief_complaint: e.target.value })} 
                       placeholder="Descreva a queixa principal do paciente..." 
-                      className="min-h-[100px]" 
+                      className={cn("min-h-[80px] md:min-h-[100px]", isMobile && "text-sm")}
                       disabled={isCompleted} 
                     />
                   </div>
                   <div>
-                    <Label>Diagnóstico</Label>
+                    <Label className="text-xs md:text-sm">Diagnóstico</Label>
                     <Textarea 
                       value={recordForm.diagnosis} 
                       onChange={(e) => setRecordForm({ ...recordForm, diagnosis: e.target.value })} 
                       placeholder="Diagnóstico..." 
-                      className="min-h-[100px]" 
+                      className={cn("min-h-[80px] md:min-h-[100px]", isMobile && "text-sm")}
                       disabled={isCompleted} 
                     />
                   </div>
                   <div>
-                    <Label>Plano de Tratamento</Label>
+                    <Label className="text-xs md:text-sm">Plano de Tratamento</Label>
                     <Textarea 
                       value={recordForm.treatment_plan} 
                       onChange={(e) => setRecordForm({ ...recordForm, treatment_plan: e.target.value })} 
                       placeholder="Plano de tratamento..." 
-                      className="min-h-[100px]" 
+                      className={cn("min-h-[80px] md:min-h-[100px]", isMobile && "text-sm")}
                       disabled={isCompleted} 
                     />
                   </div>
                   <div>
-                    <Label>Observações</Label>
+                    <Label className="text-xs md:text-sm">Observações</Label>
                     <Textarea 
                       value={recordForm.notes} 
                       onChange={(e) => setRecordForm({ ...recordForm, notes: e.target.value })} 
                       placeholder="Observações adicionais..." 
-                      className="min-h-[100px]" 
+                      className={cn("min-h-[80px] md:min-h-[100px]", isMobile && "text-sm")}
                       disabled={isCompleted} 
                     />
                   </div>
                 </div>
                 {!isCompleted && (
-                  <Button onClick={handleSaveRecord} disabled={savingRecord} variant="outline" className="w-full">
+                  <Button onClick={handleSaveRecord} disabled={savingRecord} variant="outline" className="w-full" size={isMobile ? "sm" : "default"}>
                     {savingRecord ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
-                    Salvar Prontuário Manualmente
+                    Salvar Prontuário
                   </Button>
                 )}
               </div>
@@ -1356,8 +1456,8 @@ export default function AttendancePageRedesign() {
 
             {/* Anamnese Section */}
             {activeSection === "anamnese" && (
-              <div className="space-y-6">
-                <h1 className="text-xl font-semibold">Anamnese</h1>
+              <div className="space-y-4 md:space-y-6">
+                <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Anamnese</h1>
                 {loadingData ? (
                   <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
                 ) : anamnesis ? (
@@ -1389,7 +1489,7 @@ export default function AttendancePageRedesign() {
             {/* Histórico Section */}
             {activeSection === "historico" && (
               <div className="space-y-4">
-                <h1 className="text-xl font-semibold">Histórico</h1>
+                <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Histórico</h1>
                 <PatientMedicalHistory 
                   records={medicalHistory} 
                   loading={loadingData}
@@ -1400,23 +1500,26 @@ export default function AttendancePageRedesign() {
 
             {/* Prescrições Section */}
             {activeSection === "prescricoes" && (
-              <div className="space-y-6">
-                <h1 className="text-xl font-semibold">Prescrições</h1>
+              <div className="space-y-4 md:space-y-6">
+                <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Prescrições</h1>
                 
                 {!isCompleted && previousPrescriptions.length > 0 && (
-                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border border-dashed">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <div className={cn(
+                    "flex items-center justify-between p-2 md:p-3 bg-muted/50 rounded-lg border border-dashed",
+                    isMobile && "flex-col gap-2 items-stretch"
+                  )}>
+                    <div className="flex items-center gap-2 text-xs md:text-sm text-muted-foreground">
                       <Copy className="h-4 w-4" />
                       <span>Copiar de prescrições anteriores</span>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className={cn("flex items-center gap-2", isMobile && "flex-wrap justify-end")}>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="outline" size="sm" disabled={loadingPrescriptions}>
                             {loadingPrescriptions ? <Loader2 className="h-4 w-4 animate-spin" /> : <>Selecionar<ChevronDown className="h-4 w-4 ml-1" /></>}
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-80 max-h-[300px] overflow-y-auto">
+                        <DropdownMenuContent align="end" className={cn("max-h-[300px] overflow-y-auto", isMobile ? "w-72" : "w-80")}>
                           <DropdownMenuLabel>Prescrições Anteriores</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           {previousPrescriptions.map((prescription) => (
@@ -1433,7 +1536,7 @@ export default function AttendancePageRedesign() {
                       </DropdownMenu>
                       <Button variant="outline" size="sm" onClick={() => { setPrintDialogInitialTab("controlado"); setPrintDialogOpen(true); }}>
                         <Pill className="h-4 w-4 mr-1" />
-                        Receita Controlada
+                        {!isMobile && "Receita "}Controlada
                       </Button>
                     </div>
                   </div>
@@ -1441,7 +1544,7 @@ export default function AttendancePageRedesign() {
                 
                 {!isCompleted && (
                   <div className="border rounded-lg p-3 bg-muted/30">
-                    <Label className="text-sm font-medium mb-2 block">Buscar Medicamentos</Label>
+                    <Label className="text-xs md:text-sm font-medium mb-2 block">Buscar Medicamentos</Label>
                     <MedicationSearch 
                       onSelectMedication={(text) => { 
                         const current = recordForm.prescription || ""; 
@@ -1453,19 +1556,19 @@ export default function AttendancePageRedesign() {
                 )}
                 
                 <div>
-                  <Label>Prescrição Médica</Label>
+                  <Label className="text-xs md:text-sm">Prescrição Médica</Label>
                   <Textarea 
                     value={recordForm.prescription} 
                     onChange={(e) => setRecordForm({ ...recordForm, prescription: e.target.value })} 
                     placeholder="Descreva a prescrição médica..." 
-                    className="min-h-[200px]" 
+                    className={cn("min-h-[150px] md:min-h-[200px]", isMobile && "text-sm")}
                     disabled={isCompleted} 
                   />
                 </div>
                 
-                <div className="flex flex-wrap gap-2">
+                <div className={cn("flex flex-wrap gap-2", isMobile && "flex-col")}>
                   {!isCompleted && (
-                    <Button onClick={handleSaveRecord} disabled={savingRecord} className="flex-1 min-w-[140px]">
+                    <Button onClick={handleSaveRecord} disabled={savingRecord} className={cn(isMobile ? "w-full" : "flex-1 min-w-[140px]")} size={isMobile ? "sm" : "default"}>
                       {savingRecord ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
                       Salvar Receituário
                     </Button>
@@ -1474,12 +1577,13 @@ export default function AttendancePageRedesign() {
                     variant={isCompleted ? "default" : "outline"} 
                     onClick={handleSendPrescriptionWhatsApp} 
                     disabled={sendingWhatsApp || !recordForm.prescription?.trim() || !appointment.patient.phone} 
-                    className={isCompleted ? "flex-1 min-w-[140px]" : "min-w-[140px]"}
+                    className={cn(isMobile ? "w-full" : (isCompleted ? "flex-1 min-w-[140px]" : "min-w-[140px]"))}
+                    size={isMobile ? "sm" : "default"}
                   >
                     {sendingWhatsApp ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
                     Enviar WhatsApp
                   </Button>
-                  <Button variant="outline" onClick={() => { setPrintDialogInitialTab("receituario"); setPrintDialogOpen(true); }} className="min-w-[160px]">
+                  <Button variant="outline" onClick={() => { setPrintDialogInitialTab("receituario"); setPrintDialogOpen(true); }} className={cn(isMobile ? "w-full" : "min-w-[160px]")} size={isMobile ? "sm" : "default"}>
                     <Printer className="h-4 w-4 mr-2" />
                     Imprimir Receituário
                   </Button>
@@ -1489,65 +1593,65 @@ export default function AttendancePageRedesign() {
 
             {/* Exames Section */}
             {activeSection === "exames" && (
-              <div className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h1 className="text-xl font-semibold">Exames</h1>
+              <div className="space-y-4 md:space-y-6">
+                <div className={cn("flex items-center justify-between", isMobile && "flex-col gap-2 items-start")}>
+                  <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Exames</h1>
                   <div className="flex items-center gap-2 text-sm">
                     {examAutoSaveStatus === 'saving' && (
                       <span className="flex items-center gap-1.5 text-muted-foreground animate-pulse">
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Salvando...
+                        {!isMobile && "Salvando..."}
                       </span>
                     )}
                     {examAutoSaveStatus === 'saved' && (
                       <span className="flex items-center gap-1.5 text-emerald-600">
                         <Cloud className="h-3.5 w-3.5" />
-                        Salvo
+                        {!isMobile && "Salvo"}
                       </span>
                     )}
                     {examAutoSaveStatus === 'error' && (
                       <span className="flex items-center gap-1.5 text-destructive">
                         <CloudOff className="h-3.5 w-3.5" />
-                        Erro
+                        {!isMobile && "Erro"}
                       </span>
                     )}
                   </div>
                 </div>
                 
                 <div>
-                  <Label>Exames Solicitados</Label>
+                  <Label className="text-xs md:text-sm">Exames Solicitados</Label>
                   <Textarea 
                     value={examRequest} 
                     onChange={(e) => setExamRequest(e.target.value)} 
                     placeholder="1. Hemograma completo&#10;2. Glicemia de jejum&#10;3. Colesterol total..." 
-                    className="min-h-[150px] font-mono" 
+                    className={cn("min-h-[120px] md:min-h-[150px] font-mono", isMobile && "text-sm")}
                     disabled={isCompleted} 
                   />
                 </div>
                 <div>
-                  <Label>Indicação Clínica (opcional)</Label>
+                  <Label className="text-xs md:text-sm">Indicação Clínica (opcional)</Label>
                   <Textarea 
                     value={clinicalIndication} 
                     onChange={(e) => setClinicalIndication(e.target.value)} 
                     placeholder="Descrição da indicação clínica..." 
-                    className="min-h-[80px]" 
+                    className={cn("min-h-[60px] md:min-h-[80px]", isMobile && "text-sm")}
                     disabled={isCompleted} 
                   />
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className={cn("flex flex-wrap gap-2", isMobile && "flex-col")}>
                   {!isCompleted && (
-                    <Button onClick={handleSaveExamRequest} disabled={!examRequest.trim()} variant="outline" className="flex-1 min-w-[140px]">
+                    <Button onClick={handleSaveExamRequest} disabled={!examRequest.trim()} variant="outline" className={cn(isMobile ? "w-full" : "flex-1 min-w-[140px]")} size={isMobile ? "sm" : "default"}>
                       <Save className="h-4 w-4 mr-2" />
-                      Salvar Manualmente
+                      Salvar
                     </Button>
                   )}
-                  <Button onClick={() => setShowExamWhatsAppDialog(true)} disabled={!examRequest.trim() || isCompleted} variant={isCompleted ? "default" : "outline"} className="flex-1 min-w-[140px]">
+                  <Button onClick={() => setShowExamWhatsAppDialog(true)} disabled={!examRequest.trim() || isCompleted} variant={isCompleted ? "default" : "outline"} className={cn(isMobile ? "w-full" : "flex-1 min-w-[140px]")} size={isMobile ? "sm" : "default"}>
                     <Send className="h-4 w-4 mr-2" />
                     Enviar WhatsApp
                   </Button>
-                  <Button variant="outline" onClick={() => { setPrintDialogInitialTab("exames"); setPrintDialogOpen(true); }} className="min-w-[160px]">
+                  <Button variant="outline" onClick={() => { setPrintDialogInitialTab("exames"); setPrintDialogOpen(true); }} className={cn(isMobile ? "w-full" : "min-w-[160px]")} size={isMobile ? "sm" : "default"}>
                     <Printer className="h-4 w-4 mr-2" />
-                    Imprimir Solicitação
+                    Imprimir
                   </Button>
                 </div>
               </div>
@@ -1555,8 +1659,8 @@ export default function AttendancePageRedesign() {
 
             {/* Exame Físico Section */}
             {activeSection === "exame-fisico" && (
-              <div className="space-y-6">
-                <h1 className="text-xl font-semibold">Exame Físico</h1>
+              <div className="space-y-4 md:space-y-6">
+                <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Exame Físico</h1>
                 <VitalSignsDisplay appointmentId={appointment.id} />
               </div>
             )}
