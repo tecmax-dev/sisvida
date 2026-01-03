@@ -34,7 +34,8 @@ interface NoShowPatient {
 
 export default function NoShowReportPage() {
   const { currentClinic } = useAuth();
-  const { isAdmin } = usePermissions();
+  const { hasPermission } = usePermissions();
+  const canUnblockPatients = hasPermission('unblock_patients');
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("current");
   const [stats, setStats] = useState<NoShowStats>({ total: 0, noShows: 0, rate: 0, blockedPatients: 0 });
@@ -336,7 +337,7 @@ export default function NoShowReportPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {patient.isBlocked && isAdmin && (
+                      {patient.isBlocked && canUnblockPatients && (
                         <Button
                           size="sm"
                           variant="ghost"
