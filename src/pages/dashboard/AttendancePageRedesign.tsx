@@ -943,7 +943,7 @@ export default function AttendancePageRedesign() {
   const sidebarItems = SIDEBAR_ITEMS.filter(item => !item.dentalOnly || isDentalSpecialty);
 
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-muted/30">
+    <div className="flex h-[calc(100vh-80px)] bg-gradient-to-br from-primary/5 via-background to-muted/40">
       {/* Left Sidebar */}
       <div className={cn(
         "bg-card border-r flex flex-col transition-all duration-300",
@@ -970,41 +970,55 @@ export default function AttendancePageRedesign() {
         </div>
 
         {/* Timer */}
-        <div className={cn(
-          "p-4 border-b",
-          sidebarCollapsed ? "flex justify-center" : ""
-        )}>
-          <div className={cn(
-            "flex flex-col items-center justify-center rounded-xl border-2 p-4",
-            isInProgress ? "border-info bg-info/5" : isCompleted ? "border-success bg-success/5" : "border-muted"
-          )}>
+        <div
+          className={cn(
+            "p-4 border-b",
+            sidebarCollapsed ? "flex justify-center" : ""
+          )}
+        >
+          <div
+            className={cn(
+              "flex flex-col items-center justify-center rounded-xl border p-4 shadow-sm",
+              isInProgress
+                ? "border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background"
+                : isCompleted
+                  ? "border-accent/30 bg-gradient-to-br from-accent/15 via-background to-background"
+                  : "border-muted bg-muted/30"
+            )}
+          >
             {isInProgress ? (
               <>
-                <Timer className="h-5 w-5 text-info mb-1" />
-                <span className={cn(
-                  "font-mono font-bold text-info",
-                  sidebarCollapsed ? "text-sm" : "text-2xl"
-                )}>
+                <Timer className="h-5 w-5 text-primary mb-1" />
+                <span
+                  className={cn(
+                    "font-mono font-bold text-primary",
+                    sidebarCollapsed ? "text-sm" : "text-2xl"
+                  )}
+                >
                   {elapsedTime}
                 </span>
               </>
             ) : isCompleted && appointment.duration_minutes ? (
               <>
-                <CheckCircle2 className="h-5 w-5 text-success mb-1" />
-                <span className={cn(
-                  "font-semibold text-success",
-                  sidebarCollapsed ? "text-xs" : "text-lg"
-                )}>
+                <CheckCircle2 className="h-5 w-5 text-accent mb-1" />
+                <span
+                  className={cn(
+                    "font-semibold text-accent",
+                    sidebarCollapsed ? "text-xs" : "text-lg"
+                  )}
+                >
                   {formatDuration(appointment.duration_minutes)}
                 </span>
               </>
             ) : (
               <>
                 <Clock className="h-5 w-5 text-muted-foreground mb-1" />
-                <span className={cn(
-                  "text-muted-foreground",
-                  sidebarCollapsed ? "text-xs" : "text-sm"
-                )}>
+                <span
+                  className={cn(
+                    "text-muted-foreground",
+                    sidebarCollapsed ? "text-xs" : "text-sm"
+                  )}
+                >
                   00:00:00
                 </span>
               </>
@@ -1015,23 +1029,31 @@ export default function AttendancePageRedesign() {
         {/* Action Button */}
         <div className="p-4 border-b">
           {!isInProgress && !isCompleted ? (
-            <Button 
-              onClick={handleStartAppointment} 
-              disabled={loading} 
+            <Button
+              onClick={handleStartAppointment}
+              disabled={loading}
               className="w-full bg-primary hover:bg-primary/90"
               size={sidebarCollapsed ? "icon" : "default"}
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
               {!sidebarCollapsed && <span className="ml-2">Iniciar</span>}
             </Button>
           ) : isInProgress ? (
-            <Button 
-              onClick={handleEndAppointment} 
-              disabled={loading} 
-              className="w-full bg-success hover:bg-success/90"
+            <Button
+              onClick={handleEndAppointment}
+              disabled={loading}
+              className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
               size={sidebarCollapsed ? "icon" : "default"}
             >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-4 w-4" />
+              )}
               {!sidebarCollapsed && <span className="ml-2">Finalizar</span>}
             </Button>
           ) : (
@@ -1280,8 +1302,14 @@ export default function AttendancePageRedesign() {
                         <CardHeader className="pb-2">
                           <div className="flex items-center gap-2">
                             <FileText className="h-4 w-4 text-primary" />
-                            <span className="font-medium text-sm">{format(new Date(record.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
-                            {record.professional?.name && <span className="text-sm text-muted-foreground">- {record.professional.name}</span>}
+                            <span className="font-medium text-sm">
+                              {record.record_date
+                                ? format(new Date(`${record.record_date}T12:00:00`), "dd/MM/yyyy", { locale: ptBR })
+                                : format(new Date(record.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            </span>
+                            {record.professional?.name && (
+                              <span className="text-sm text-muted-foreground">- {record.professional.name}</span>
+                            )}
                           </div>
                         </CardHeader>
                         <CardContent className="text-sm space-y-2">
