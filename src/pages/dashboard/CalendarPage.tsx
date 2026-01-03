@@ -2693,7 +2693,7 @@ export default function CalendarPage() {
                             return (
                               <DraggableAppointment key={apt.id} appointment={apt}>
                                 <div
-                                  onClick={() => canDrag ? openRescheduleDialog(apt) : undefined}
+                                  onClick={() => openAppointmentPanel(apt)}
                                   style={{ 
                                     backgroundColor: profColor,
                                     borderLeftColor: shiftHslHue(profColor, -20)
