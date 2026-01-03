@@ -70,12 +70,14 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
 
-    // Search patient - return necessary fields plus id
+    // Search patient - support both formatted (XXX.XXX.XXX-XX) and unformatted CPF
+    const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    
     const { data, error } = await supabase
       .from('patients')
       .select('id, name, phone, email, is_active, inactivation_reason')
       .eq('clinic_id', clinicId)
-      .eq('cpf', cleanCpf)
+      .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
       .maybeSingle();
 
     if (error) {

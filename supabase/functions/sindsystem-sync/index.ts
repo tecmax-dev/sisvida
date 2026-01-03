@@ -196,13 +196,14 @@ async function processSocio(supabase: any, socio: SindSystemSocio): Promise<{ su
     let patientId: string | null = null
     let action = 'created'
 
-    // Tenta encontrar paciente existente pelo CPF
+    // Tenta encontrar paciente existente pelo CPF - support both formatted and unformatted
     if (cpf) {
+      const formattedCpf = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
       const { data: existingPatient } = await supabase
         .from('patients')
         .select('id')
         .eq('clinic_id', SINDICATO_COMERCIARIOS_CLINIC_ID)
-        .eq('cpf', cpf)
+        .or(`cpf.eq.${cpf},cpf.eq.${formattedCpf}`)
         .maybeSingle()
 
       if (existingPatient) {

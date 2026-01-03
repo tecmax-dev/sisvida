@@ -1874,11 +1874,15 @@ async function handleWaitingCpf(
   const clinicName = clinicInfo?.name || 'a clínica';
   
   // First, try to find a titular patient by CPF
+  // Support both formatted (XXX.XXX.XXX-XX) and unformatted (XXXXXXXXXXX) CPF
+  const formattedCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  console.log(`[booking] Searching patient by CPF: ${cleanCpf.substring(0, 3)}*** or formatted ${formattedCpf.substring(0, 7)}***`);
+  
   const { data: patient, error } = await supabase
     .from('patients')
     .select('id, name, cpf, is_active, inactivation_reason')
     .eq('clinic_id', config.clinic_id)
-    .eq('cpf', cleanCpf)
+    .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
     .maybeSingle();
 
   if (error) {
@@ -1898,11 +1902,12 @@ async function handleWaitingCpf(
 
   // If no patient found by CPF, check if it's a dependent's CPF
   if (!patientData) {
+    // Support both formatted and unformatted CPF for dependents
     const { data: dependentByCpf } = await supabase
       .from('patient_dependents')
       .select('id, name, cpf, patient_id, card_expires_at, relationship')
       .eq('clinic_id', config.clinic_id)
-      .eq('cpf', cleanCpf)
+      .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
       .eq('is_active', true)
       .maybeSingle();
 
@@ -3018,14 +3023,15 @@ async function handleWaitingRegistrationTitularCpf(
     return { handled: true, newState: 'WAITING_REGISTRATION_TITULAR_CPF' };
   }
   
-  // Look for titular patient
+  // Look for titular patient - support both formatted and unformatted CPF
+  const formattedTitularCpf = cleanCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
   const { data: titularPatient, error } = await supabase
     .from('patients')
     .select('id, name, insurance_plan_id')
     .eq('clinic_id', config.clinic_id)
-    .eq('cpf', cleanCpf)
+    .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedTitularCpf}`)
     .eq('is_active', true)
-    .single();
+    .maybeSingle();
   
   if (error || !titularPatient) {
     await sendWhatsAppMessage(config, phone, MESSAGES.titularNotFound);
@@ -3665,14 +3671,16 @@ async function handleConfirmRegistration(
       const isDependent = session.pending_registration_type === 'dependent' && session.pending_registration_titular_cpf;
       
       if (isDependent) {
-        // Find titular patient
+        // Find titular patient - support both formatted and unformatted CPF
+        const titularCpfClean = session.pending_registration_titular_cpf?.replace(/\D/g, '') || '';
+        const titularCpfFormatted = titularCpfClean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
         const { data: titularPatient, error: titularError } = await supabase
           .from('patients')
           .select('id, name, insurance_plan_id')
           .eq('clinic_id', config.clinic_id)
-          .eq('cpf', session.pending_registration_titular_cpf)
+          .or(`cpf.eq.${titularCpfClean},cpf.eq.${titularCpfFormatted}`)
           .eq('is_active', true)
-          .single();
+          .maybeSingle();
         
         if (titularError || !titularPatient) {
           console.error('[registration] Titular not found for dependent:', titularError);
