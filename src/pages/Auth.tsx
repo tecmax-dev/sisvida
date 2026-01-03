@@ -10,7 +10,7 @@ import { Eye, EyeOff, Loader2, ArrowLeft, Mail, KeyRound, Chrome } from "lucide-
 import { Separator } from "@/components/ui/separator";
 import { z } from "zod";
 import ReCAPTCHA from "react-google-recaptcha";
-import dashboardMockup from "@/assets/dashboard-mockup.png";
+import authDashboardMockup from "@/assets/auth-dashboard-mockup.png";
 
 const RECAPTCHA_SITE_KEY = "6Ld57z0sAAAAALhKQGqzGspRkCr8iYbNOvWcbLDW";
 
@@ -958,8 +958,13 @@ export default function Auth() {
             )}
           </div>
           
-          {/* Painel direito - Promocional */}
-          <div className="hidden lg:flex lg:w-[420px] bg-gradient-to-br from-primary to-primary/90 relative overflow-hidden p-8">
+          {/* Painel direito - Promocional com cores da logomarca */}
+          <div 
+            className="hidden lg:flex lg:w-[420px] relative overflow-hidden p-8"
+            style={{
+              background: 'linear-gradient(135deg, hsl(195 100% 45%) 0%, hsl(180 80% 45%) 50%, hsl(85 70% 50%) 100%)'
+            }}
+          >
             {/* Background pattern */}
             <div className="absolute inset-0 opacity-10">
               <div className="absolute top-10 right-10 w-32 h-32 border-2 border-white rounded-full" />
@@ -972,8 +977,8 @@ export default function Auth() {
               {/* Mockup do dashboard */}
               <div className="relative mb-6">
                 <img 
-                  src={dashboardMockup}
-                  alt="Sistema Eclini"
+                  src={authDashboardMockup}
+                  alt="Sistema Eclini - Painel com Cards"
                   className="rounded-xl shadow-2xl border-2 border-white/20"
                 />
                 {/* Brilho */}
