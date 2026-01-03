@@ -475,22 +475,22 @@ export default function DashboardOverview() {
               <Settings className="h-4 w-4" />
             </Button>
           </div>
-          <CardContent className="p-5">
-            <div className="flex justify-around mb-4 text-center">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex justify-around mb-4 text-center gap-2">
               <div>
-                <p className="text-2xl font-bold text-indigo-600">{totalSessions}</p>
-                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-xl sm:text-2xl font-bold text-indigo-600">{totalSessions}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-emerald-600">{sessionsRate}%</p>
-                <p className="text-sm text-muted-foreground">Taxa Realização</p>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600">{sessionsRate}%</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Taxa Realização</p>
               </div>
-              <div>
+              <div className="hidden sm:block">
                 <p className="text-2xl font-bold text-gray-600">+0%</p>
                 <p className="text-sm text-muted-foreground">vs. 6m anteriores</p>
               </div>
             </div>
-            <div className="h-64">
+            <div className="h-52 sm:h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -542,37 +542,18 @@ export default function DashboardOverview() {
               <Settings className="h-4 w-4" />
             </Button>
           </div>
-          <CardContent className="p-5">
-            <div className="flex gap-4">
-              {/* Legend */}
-              <div className="flex-1 space-y-3">
-                {procedureData.map((item, index) => (
-                  <div key={item.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                      />
-                      <span className="text-sm text-muted-foreground truncate max-w-[200px]">
-                        {item.name}
-                      </span>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {item.value} pacientes
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-              {/* Chart */}
-              <div className="w-48 h-48">
+          <CardContent className="p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row gap-4">
+              {/* Chart - Show first on mobile */}
+              <div className="w-full sm:w-48 h-40 sm:h-48 order-1 sm:order-2">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={procedureData}
                       cx="50%"
                       cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
+                      innerRadius={40}
+                      outerRadius={65}
                       paddingAngle={2}
                       dataKey="value"
                     >
@@ -587,9 +568,28 @@ export default function DashboardOverview() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
+              {/* Legend */}
+              <div className="flex-1 space-y-2 sm:space-y-3 order-2 sm:order-1">
+                {procedureData.map((item, index) => (
+                  <div key={item.name} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
+                      />
+                      <span className="text-xs sm:text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-[200px]">
+                        {item.name}
+                      </span>
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {item.value}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground mt-4">
-              ⓘ Dados dos últimos 6 meses • Hover para detalhes
+            <p className="text-xs text-muted-foreground mt-3 sm:mt-4">
+              ⓘ Dados dos últimos 6 meses
             </p>
           </CardContent>
         </Card>
