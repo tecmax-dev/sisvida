@@ -547,49 +547,26 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-[#0d1117]">
-      {/* Background decorativo */}
+    <div className="min-h-screen relative overflow-hidden bg-background">
+      {/* Background decorativo sutil */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {/* Elemento decorativo esquerdo - forma abstrata */}
-        <div className="absolute left-0 top-0 w-[400px] h-full">
-          <svg viewBox="0 0 400 900" className="h-full w-full" preserveAspectRatio="none">
-            <path
-              d="M0 0 L200 0 L200 300 Q300 450 200 600 L200 900 L0 900 Z"
-              fill="hsl(var(--primary))"
-              opacity="0.15"
-            />
-          </svg>
-        </div>
+        {/* Gradiente de fundo */}
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-primary/10" />
         
-        {/* Círculos decorativos */}
-        <div className="absolute top-10 right-20 w-32 h-32 rounded-full bg-primary/5 blur-xl" />
-        <div className="absolute bottom-20 left-40 w-24 h-24 rounded-full bg-primary/10 blur-lg" />
-        <div className="absolute top-1/3 right-1/4 w-16 h-16 rounded-full bg-primary/5 blur-md" />
-        
-        {/* Elementos sparkle */}
-        <div className="absolute top-20 right-40 text-primary/40 text-4xl animate-pulse">✦</div>
-        <div className="absolute bottom-32 right-60 text-primary/30 text-2xl animate-pulse delay-300">✧</div>
-        <div className="absolute top-1/2 right-20 text-primary/20 text-3xl animate-pulse delay-500">✦</div>
-      </div>
-
-      {/* Título decorativo "Feliz 2026" estilo */}
-      <div className="absolute top-6 left-1/2 -translate-x-1/2 text-center pointer-events-none">
-        <div className="relative">
-          <span className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent drop-shadow-[0_0_15px_rgba(251,191,36,0.5)]">
-            ✨ Bem-vindo ao Eclini ✨
-          </span>
-        </div>
+        {/* Círculos decorativos sutis */}
+        <div className="absolute -top-24 -right-24 w-96 h-96 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-80 h-80 rounded-full bg-primary/5 blur-3xl" />
       </div>
 
       {/* Container principal */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-20">
-        <div className="w-full max-w-5xl bg-card rounded-2xl shadow-2xl overflow-hidden flex flex-col lg:flex-row">
+      <div className="relative z-10 min-h-screen flex items-center justify-center px-4 py-8 lg:py-12">
+        <div className="w-full max-w-5xl bg-card/95 backdrop-blur-sm rounded-2xl shadow-xl border border-border/50 overflow-hidden flex flex-col lg:flex-row">
           
           {/* Painel esquerdo - Formulário */}
-          <div className="flex-1 p-8 lg:p-12">
+          <div className="flex-1 p-6 sm:p-8 lg:p-12">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6"
+              className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
             >
               <ArrowLeft className="w-4 h-4" />
               Voltar ao site
@@ -599,7 +576,7 @@ export default function Auth() {
               <Logo size="lg" />
             </div>
             
-            <h2 className="text-2xl font-bold text-foreground mb-1">
+            <h2 className="text-2xl lg:text-3xl font-bold text-foreground mb-2">
               {getTitle()}
             </h2>
             <p className="text-muted-foreground mb-8">
@@ -921,15 +898,16 @@ export default function Auth() {
           </div>
           
           {/* Painel direito - Promocional */}
-          <div className="hidden lg:flex lg:w-[420px] bg-gradient-to-br from-primary via-primary to-primary-dark relative overflow-hidden p-8">
+          <div className="hidden lg:flex lg:w-[420px] bg-gradient-to-br from-primary to-primary/90 relative overflow-hidden p-8">
             {/* Background pattern */}
             <div className="absolute inset-0 opacity-10">
-              <div className="absolute top-0 right-0 w-40 h-40 border-2 border-white rounded-full -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 border-2 border-white rounded-full translate-y-1/2 -translate-x-1/2" />
+              <div className="absolute top-10 right-10 w-32 h-32 border-2 border-white rounded-full" />
+              <div className="absolute bottom-20 left-10 w-24 h-24 border-2 border-white rounded-full" />
+              <div className="absolute top-1/2 right-1/3 w-16 h-16 border border-white rounded-full" />
             </div>
             
             {/* Conteúdo */}
-            <div className="relative z-10 flex flex-col h-full">
+            <div className="relative z-10 flex flex-col h-full justify-between">
               {/* Mockup do dashboard */}
               <div className="relative mb-6">
                 <img 
@@ -942,48 +920,32 @@ export default function Auth() {
               </div>
               
               {/* Card informativo */}
-              <div className="bg-white rounded-xl p-5 shadow-xl flex-1">
-                <div className="flex items-start justify-between mb-3">
-                  <span className="text-xs text-muted-foreground">•••</span>
-                </div>
-                
+              <div className="bg-white rounded-xl p-5 shadow-xl">
                 <p className="text-sm text-muted-foreground mb-1">
                   Clínicas orientadas por dados
                 </p>
-                <h3 className="text-2xl font-bold text-primary mb-4">
-                  crescem <span className="text-3xl">30%</span> mais!
+                <h3 className="text-xl font-bold text-primary mb-3">
+                  crescem <span className="text-2xl">30%</span> mais!
                 </h3>
                 
                 <p className="text-sm text-muted-foreground mb-3">
                   Com o <strong>Módulo de Indicadores</strong>, você pode ver em tempo real:
                 </p>
                 
-                <ul className="space-y-1.5 text-sm text-foreground mb-4">
+                <ul className="space-y-1 text-sm text-foreground mb-4">
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                     Ocupação da agenda
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                     Cancelamentos e inadimplência
                   </li>
                   <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
                     Ticket médio e contas a receber
                   </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    Despesas e projeção financeira
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                    Perfil dos pacientes
-                  </li>
                 </ul>
-                
-                <p className="text-xs text-muted-foreground mb-4">
-                  Transforme dados da rotina em <strong>clareza para decidir melhor</strong> e crescer com estrutura.
-                </p>
                 
                 <Button size="sm" className="w-full gap-2" asChild>
                   <Link to="/cadastro">
