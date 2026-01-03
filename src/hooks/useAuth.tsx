@@ -279,6 +279,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(session?.user ?? null);
       
       if (session?.user) {
+        // Garantir que o tempo de login existe (para sessões restauradas)
+        const loginTime = localStorage.getItem('eclini_session_login_time');
+        if (!loginTime) {
+          saveLoginTime();
+        }
         loadUserData(session.user.id);
       } else {
         setLoading(false);
