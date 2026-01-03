@@ -137,6 +137,14 @@ function formatAppointmentReminder(
   confirmationLink?: string,
   directReplyEnabled?: boolean
 ): string {
+  // Aviso amigável sobre bloqueio por falta e incentivo para cancelar
+  const noShowWarning = [
+    `⚠️ *Atenção, Associado(a):*`,
+    `Ao confirmar sua presença, você se compromete a comparecer. Caso não possa comparecer, por gentileza *cancele com antecedência* para que outro associado da fila de espera possa ser atendido.`,
+    ``,
+    `❗ Lembramos que a *falta sem cancelamento prévio* poderá resultar em *bloqueio temporário* para novos agendamentos com este profissional.`,
+  ];
+
   // If direct reply is enabled, use the new format without links
   if (directReplyEnabled) {
     const lines = [
@@ -148,6 +156,8 @@ function formatAppointmentReminder(
       `🕐 *Horário:* ${time}`,
       `👨‍⚕️ *Profissional:* ${professionalName}`,
       `🏥 *Clínica:* ${clinicName}`,
+      ``,
+      ...noShowWarning,
       ``,
       `✅ *Responda SIM para confirmar*`,
       `❌ *Responda NÃO para cancelar*`,
@@ -168,6 +178,8 @@ function formatAppointmentReminder(
     `🕐 *Horário:* ${time}`,
     `👨‍⚕️ *Profissional:* ${professionalName}`,
     `🏥 *Clínica:* ${clinicName}`,
+    ``,
+    ...noShowWarning,
     ``,
     confirmationLink ? `Para confirmar ou cancelar sua consulta, acesse:` : `Por favor, confirme sua presença respondendo esta mensagem.`,
     confirmationLink ? confirmationLink : null,
