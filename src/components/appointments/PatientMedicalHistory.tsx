@@ -128,21 +128,15 @@ export function PatientMedicalHistory({
           className="space-y-1"
         >
           {records.map((record) => {
-            const raw =
-              record.appointment?.appointment_date ||
-              record.record_date ||
-              record.created_at;
+            // Priority: record_date (always correct for imports) > created_at
+            const raw = record.record_date || record.created_at;
 
-            // Prefer date-only when available; avoid timezone shifts.
+            // Extract date-only portion, removing time if present
             const normalized = (raw || "").includes("T") ? (raw || "").split("T")[0] : (raw || "");
 
-            // Supports: YYYY-MM-DD (default) and dd/MM/yyyy (imports)
-            const recordDate = normalized.includes("/")
-              ? parse(normalized, "dd/MM/yyyy", new Date())
-              : (() => {
-                  const [y, m, d] = normalized.split("-").map((n) => Number(n));
-                  return new Date(y, (m || 1) - 1, d || 1);
-                })();
+            // Parse YYYY-MM-DD format without timezone issues
+            const [y, m, d] = normalized.split("-").map((n) => Number(n));
+            const recordDate = new Date(y, (m || 1) - 1, d || 1);
 
             const appointmentType = record.appointment?.type || "return";
 
