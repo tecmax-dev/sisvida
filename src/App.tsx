@@ -94,7 +94,6 @@ import AttendancePage from "./pages/dashboard/AttendancePageRedesign";
 import PatientOdontogramPage from "./pages/dashboard/PatientOdontogramPage";
 import ExamsPage from "./pages/dashboard/ExamsPage";
 import EmployersPage from "./pages/dashboard/EmployersPage";
-import WhatsAppMultiattendancePage from "./pages/dashboard/WhatsAppMultiattendancePage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -328,7 +327,6 @@ const App = () => (
                   <Route path="queue" element={<QueueManagementPage />} />
                   <Route path="panel-banners" element={<PanelBannersPage />} />
                   <Route path="marketing" element={<MarketingPage />} />
-                  <Route path="whatsapp-atendimento" element={<WhatsAppMultiattendancePage />} />
                   <Route path="tiss" element={<TissPage />} />
                   <Route path="holidays" element={<HolidaysPage />} />
                   <Route path="dependents" element={<DependentsPage />} />
