@@ -1,7 +1,7 @@
 // Types for WhatsApp Multi-attendance Module
 
-export type WhatsAppOperatorStatus = 'online' | 'offline' | 'paused';
-export type WhatsAppOperatorRole = 'admin' | 'supervisor' | 'attendant';
+export type WhatsAppOperatorStatus = 'online' | 'offline' | 'away';
+export type WhatsAppOperatorRole = 'admin' | 'supervisor' | 'operator';
 export type WhatsAppTicketStatus = 'pending' | 'open' | 'waiting' | 'closed';
 export type MessageSenderType = 'contact' | 'operator' | 'bot' | 'system';
 export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'document' | 'location' | 'sticker';
@@ -213,17 +213,17 @@ export const TICKET_STATUS_COLORS: Record<WhatsAppTicketStatus, string> = {
 export const OPERATOR_STATUS_LABELS: Record<WhatsAppOperatorStatus, string> = {
   online: 'Online',
   offline: 'Offline',
-  paused: 'Em Pausa',
+  away: 'Ausente',
 };
 
 export const OPERATOR_STATUS_COLORS: Record<WhatsAppOperatorStatus, string> = {
   online: '#10B981',
   offline: '#6B7280',
-  paused: '#F59E0B',
+  away: '#F59E0B',
 };
 
 export const OPERATOR_ROLE_LABELS: Record<WhatsAppOperatorRole, string> = {
   admin: 'Administrador',
   supervisor: 'Supervisor',
-  attendant: 'Atendente',
+  operator: 'Atendente',
 };
