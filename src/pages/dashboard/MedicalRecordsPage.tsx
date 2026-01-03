@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { 
   FileText, 
   Plus, 
@@ -18,6 +18,10 @@ import {
   ClipboardCheck,
   Paperclip,
   Upload,
+  Activity,
+  FileHeart,
+  FilePlus,
+  Users,
 } from "lucide-react";
 import { usePatientAttachments } from "@/hooks/usePatientAttachments";
 import { AttachmentsList } from "@/components/attachments/AttachmentsList";
@@ -522,6 +526,16 @@ export default function MedicalRecordsPage() {
     return result;
   };
 
+  // Stats calculations
+  const stats = useMemo(() => {
+    const totalRecords = records.length;
+    const totalDocuments = documents.length;
+    const prescriptions = documents.filter(d => d.document_type === 'prescription').length;
+    const certificates = documents.filter(d => d.document_type === 'certificate').length;
+    
+    return { totalRecords, totalDocuments, prescriptions, certificates };
+  }, [records, documents]);
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -531,6 +545,65 @@ export default function MedicalRecordsPage() {
             Registre e consulte o histórico médico dos pacientes
           </p>
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 border-blue-200/50 dark:border-blue-800/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-blue-500/20">
+                <Users className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{patients.length}</p>
+                <p className="text-xs text-muted-foreground">Pacientes</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 border-emerald-200/50 dark:border-emerald-800/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/20">
+                <Activity className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{stats.totalRecords}</p>
+                <p className="text-xs text-muted-foreground">Registros</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-violet-500/10 to-violet-600/5 border-violet-200/50 dark:border-violet-800/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-violet-500/20">
+                <Pill className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">{stats.prescriptions}</p>
+                <p className="text-xs text-muted-foreground">Receituários</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-200/50 dark:border-amber-800/50">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-amber-500/20">
+                <Award className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.certificates}</p>
+                <p className="text-xs text-muted-foreground">Atestados</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid lg:grid-cols-3 gap-6">
