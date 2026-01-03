@@ -140,3 +140,6 @@ verify_jwt = false
 
 [functions.test-card-expiry]
 verify_jwt = false
+
+[functions.test-reminder-message]
+verify_jwt = false
