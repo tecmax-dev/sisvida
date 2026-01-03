@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,7 +71,9 @@ export function TicketChatDialog({ ticket, onClose, clinicId }: TicketChatDialog
 
     try {
       await sendMessage(text, currentOperator.id, currentOperator.name);
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      toast.error(`Erro ao enviar mensagem: ${error?.message || 'Erro desconhecido'}`);
       setInputValue(text);
     }
 
