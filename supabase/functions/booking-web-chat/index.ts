@@ -12,6 +12,8 @@ const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 type BookingState =
   | "WAITING_CPF"
   | "CONFIRM_IDENTITY"
+  | "SELECT_BOOKING_FOR"
+  | "SELECT_DEPENDENT"
   | "SELECT_PROFESSIONAL"
   | "SELECT_DATE"
   | "SELECT_TIME"
@@ -33,6 +35,10 @@ interface BookingSession {
   available_professionals: Array<{ id: string; name: string; specialty: string }> | null;
   available_dates: Array<{ date: string; formatted: string; weekday: string }> | null;
   available_times: Array<{ time: string; formatted: string }> | null;
+  available_dependents: Array<{ id: string; name: string; cpf: string }> | null;
+  selected_dependent_id: string | null;
+  selected_dependent_name: string | null;
+  booking_for: "titular" | "dependent" | null;
   expires_at: string;
 }
 
@@ -602,6 +608,37 @@ serve(async (req) => {
     // 2) CONFIRM_IDENTITY
     if (session.state === "CONFIRM_IDENTITY") {
       if (msg === "1" || /^sim/i.test(msg)) {
+        // Check if patient has active dependents
+        const { data: dependents } = await supabase
+          .from("patient_dependents")
+          .select("id, name, cpf")
+          .eq("patient_id", session.patient_id)
+          .eq("is_active", true)
+          .order("name", { ascending: true });
+
+        const activeDependents = (dependents || []).map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          cpf: d.cpf,
+        }));
+
+        if (activeDependents.length > 0) {
+          // Has dependents - ask who the appointment is for
+          await updateSession(supabase, session.id, {
+            state: "SELECT_BOOKING_FOR",
+            available_dependents: activeDependents,
+          });
+
+          return new Response(
+            JSON.stringify({
+              response: `Para quem é o agendamento?\n\n1 - Para mim (*${session.patient_name}*)\n2 - Para um dependente`,
+              state: "SELECT_BOOKING_FOR",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        // No dependents - go directly to professional selection
         const { data: pros, error } = await supabase
           .from("professionals")
           .select("id, name, specialty")
@@ -630,6 +667,7 @@ serve(async (req) => {
         await updateSession(supabase, session.id, {
           state: "SELECT_PROFESSIONAL",
           available_professionals: professionals,
+          booking_for: "titular",
         });
 
         return new Response(
@@ -649,6 +687,152 @@ serve(async (req) => {
         JSON.stringify({
           response: "Sem problemas. Informe novamente o CPF do titular (11 números):",
           state: "WAITING_CPF",
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 2.1) SELECT_BOOKING_FOR - Choose between titular or dependent
+    if (session.state === "SELECT_BOOKING_FOR") {
+      if (msg === "1") {
+        // Booking for titular
+        const { data: pros, error } = await supabase
+          .from("professionals")
+          .select("id, name, specialty")
+          .eq("clinic_id", clinic_id)
+          .eq("is_active", true)
+          .order("name", { ascending: true });
+
+        if (error) throw error;
+
+        const professionals = (pros || []).map((p: any) => ({
+          id: p.id,
+          name: p.name,
+          specialty: p.specialty || "Não informada",
+        }));
+
+        if (!professionals.length) {
+          return new Response(
+            JSON.stringify({
+              response: "No momento não há profissionais disponíveis para agendamento.",
+              state: "SELECT_BOOKING_FOR",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        await updateSession(supabase, session.id, {
+          state: "SELECT_PROFESSIONAL",
+          available_professionals: professionals,
+          booking_for: "titular",
+          selected_dependent_id: null,
+          selected_dependent_name: null,
+        });
+
+        return new Response(
+          JSON.stringify({
+            response: `Agendando para *${session.patient_name}*.\n\nCom qual profissional você quer agendar?\n\n${numberedList(
+              professionals.map((p) => `${p.name} (${p.specialty})`)
+            )}`,
+            state: "SELECT_PROFESSIONAL",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      if (msg === "2") {
+        // Booking for dependent - show list
+        const dependents = session.available_dependents || [];
+        
+        if (!dependents.length) {
+          return new Response(
+            JSON.stringify({
+              response: "Não encontrei dependentes ativos no seu cadastro. O agendamento será para você.",
+              state: "SELECT_BOOKING_FOR",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        await updateSession(supabase, session.id, {
+          state: "SELECT_DEPENDENT",
+        });
+
+        return new Response(
+          JSON.stringify({
+            response: `Escolha o dependente:\n\n${numberedList(dependents.map((d: any) => d.name))}`,
+            state: "SELECT_DEPENDENT",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          response: "Opção inválida. Escolha 1 ou 2.",
+          state: session.state,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // 2.2) SELECT_DEPENDENT - Choose which dependent
+    if (session.state === "SELECT_DEPENDENT") {
+      const dependents = session.available_dependents || [];
+      const choice = parseInt(msg, 10);
+      
+      if (isNaN(choice) || choice < 1 || choice > dependents.length) {
+        return new Response(
+          JSON.stringify({
+            response: `Opção inválida. Escolha um número de 1 a ${dependents.length}.`,
+            state: session.state,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const selectedDependent = dependents[choice - 1];
+
+      // Get professionals
+      const { data: pros, error } = await supabase
+        .from("professionals")
+        .select("id, name, specialty")
+        .eq("clinic_id", clinic_id)
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+
+      if (error) throw error;
+
+      const professionals = (pros || []).map((p: any) => ({
+        id: p.id,
+        name: p.name,
+        specialty: p.specialty || "Não informada",
+      }));
+
+      if (!professionals.length) {
+        return new Response(
+          JSON.stringify({
+            response: "No momento não há profissionais disponíveis para agendamento.",
+            state: "SELECT_DEPENDENT",
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      await updateSession(supabase, session.id, {
+        state: "SELECT_PROFESSIONAL",
+        available_professionals: professionals,
+        booking_for: "dependent",
+        selected_dependent_id: selectedDependent.id,
+        selected_dependent_name: selectedDependent.name,
+      });
+
+      return new Response(
+        JSON.stringify({
+          response: `Agendando para *${selectedDependent.name}*.\n\nCom qual profissional você quer agendar?\n\n${numberedList(
+            professionals.map((p) => `${p.name} (${p.specialty})`)
+          )}`,
+          state: "SELECT_PROFESSIONAL",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -774,9 +958,14 @@ serve(async (req) => {
         selected_time: selectedTime.time,
       });
 
+      // Build confirmation message with dependent name if applicable
+      const bookingForName = session.booking_for === "dependent" && session.selected_dependent_name
+        ? session.selected_dependent_name
+        : session.patient_name;
+
       return new Response(
         JSON.stringify({
-          response: `Confirma o agendamento?\n\nProfissional: *${session.selected_professional_name}*\nData: *${formatDate(session.selected_date!)}*\nHorário: *${selectedTime.formatted}*\n\n1 - Confirmar\n2 - Cancelar`,
+          response: `Confirma o agendamento?\n\nPaciente: *${bookingForName}*\nProfissional: *${session.selected_professional_name}*\nData: *${formatDate(session.selected_date!)}*\nHorário: *${selectedTime.formatted}*\n\n1 - Confirmar\n2 - Cancelar`,
           state: "CONFIRM_APPOINTMENT",
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -818,19 +1007,27 @@ serve(async (req) => {
         const endTime = `${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}:00`;
 
         // Create the appointment - database triggers will validate all rules
+        // Include dependent_id if booking is for a dependent
+        const appointmentData: any = {
+          clinic_id: clinic_id,
+          patient_id: patientId,
+          professional_id: professionalId,
+          appointment_date: appointmentDate,
+          start_time: startTime + ":00",
+          end_time: endTime,
+          duration_minutes: duration,
+          status: "scheduled",
+          type: "primeira-consulta",
+        };
+
+        // Add dependent_id if booking for dependent
+        if (session.booking_for === "dependent" && session.selected_dependent_id) {
+          appointmentData.dependent_id = session.selected_dependent_id;
+        }
+
         const { data: appointment, error: insertError } = await supabase
           .from("appointments")
-          .insert({
-            clinic_id: clinic_id,
-            patient_id: patientId,
-            professional_id: professionalId,
-            appointment_date: appointmentDate,
-            start_time: startTime + ":00",
-            end_time: endTime,
-            duration_minutes: duration,
-            status: "scheduled",
-            type: "primeira-consulta",
-          })
+          .insert(appointmentData)
           .select("id")
           .single();
 
@@ -845,6 +1042,18 @@ serve(async (req) => {
             return new Response(
               JSON.stringify({
                 response: "❌ Você já atingiu o limite de agendamentos com este profissional neste mês.",
+                state: "FINISHED",
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
+          if (errMsg.includes("LIMITE_AGENDAMENTO_DEPENDENTE")) {
+            const depName = session.selected_dependent_name || "O dependente";
+            await updateSession(supabase, session.id, { state: "FINISHED" });
+            return new Response(
+              JSON.stringify({
+                response: `❌ ${depName} já atingiu o limite de agendamentos com este profissional neste mês.`,
                 state: "FINISHED",
               }),
               { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -907,9 +1116,14 @@ serve(async (req) => {
 
         await updateSession(supabase, session.id, { state: "FINISHED" });
         
+        // Build success message with patient name
+        const bookingForName = session.booking_for === "dependent" && session.selected_dependent_name
+          ? session.selected_dependent_name
+          : session.patient_name;
+
         return new Response(
           JSON.stringify({
-            response: `✅ Agendamento confirmado!\n\nProfissional: *${session.selected_professional_name}*\nData: *${formatDate(appointmentDate)}*\nHorário: *${formatTime(startTime)}*\n\nCompareça com 10 minutos de antecedência.`,
+            response: `✅ Agendamento confirmado!\n\nPaciente: *${bookingForName}*\nProfissional: *${session.selected_professional_name}*\nData: *${formatDate(appointmentDate)}*\nHorário: *${formatTime(startTime)}*\n\nCompareça com 10 minutos de antecedência.`,
             state: "FINISHED",
             booking_complete: true,
           }),
