@@ -35,11 +35,14 @@ import {
   FlaskConical,
   Copy,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Printer,
   Eye,
   EyeOff,
   AlertCircle,
   Tag,
+  Square,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -153,14 +156,14 @@ interface PatientStats {
 }
 
 const SIDEBAR_ITEMS = [
-  { id: "resumo", label: "Resumo", icon: User, color: "text-violet-500", bgColor: "bg-violet-500/10" },
-  { id: "exame-fisico", label: "Exame físico", icon: Stethoscope, color: "text-rose-500", bgColor: "bg-rose-500/10" },
-  { id: "anamnese", label: "Anamnese", icon: ClipboardList, color: "text-amber-500", bgColor: "bg-amber-500/10" },
-  { id: "odontograma", label: "Odontograma", icon: Stethoscope, color: "text-emerald-500", bgColor: "bg-emerald-500/10", dentalOnly: true },
-  { id: "prontuario", label: "Prontuário", icon: FileText, color: "text-blue-500", bgColor: "bg-blue-500/10" },
-  { id: "prescricoes", label: "Prescrições", icon: Pill, color: "text-pink-500", bgColor: "bg-pink-500/10" },
-  { id: "exames", label: "Exames", icon: FlaskConical, color: "text-cyan-500", bgColor: "bg-cyan-500/10" },
-  { id: "historico", label: "Histórico", icon: History, color: "text-sky-500", bgColor: "bg-sky-500/10" },
+  { id: "resumo", label: "Resumo", icon: User, dentalOnly: false },
+  { id: "exame-fisico", label: "Exame físico", icon: Stethoscope, dentalOnly: false },
+  { id: "anamnese", label: "Anamnese", icon: ClipboardList, dentalOnly: false },
+  { id: "odontograma", label: "Odontograma", icon: Stethoscope, dentalOnly: true },
+  { id: "prontuario", label: "Prontuário", icon: FileText, dentalOnly: false },
+  { id: "prescricoes", label: "Prescrições", icon: Pill, dentalOnly: false },
+  { id: "exames", label: "Exames", icon: FlaskConical, dentalOnly: false },
+  { id: "historico", label: "Histórico", icon: History, dentalOnly: false },
 ];
 
 export default function AttendancePageRedesign() {
@@ -947,127 +950,110 @@ export default function AttendancePageRedesign() {
     <div className="flex h-[calc(100vh-80px)] bg-gradient-to-br from-primary/5 via-background to-muted/40">
       {/* Left Sidebar */}
       <div className={cn(
-        "bg-card border-r flex flex-col transition-all duration-300",
-        sidebarCollapsed ? "w-16" : "w-56"
+        "bg-card border-r border-border flex flex-col transition-all duration-300",
+        sidebarCollapsed ? "w-14" : "w-52"
       )}>
         {/* Header */}
-        <div className="p-4 border-b">
+        <div className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
-            <h2 className={cn("font-semibold text-foreground", sidebarCollapsed && "hidden")}>
-              Prontuários
-            </h2>
+            {!sidebarCollapsed && (
+              <h2 className="font-semibold text-foreground">Prontuários</h2>
+            )}
             <Button
               variant="ghost"
-              size="sm"
+              size="icon"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="h-8 w-8 p-0"
+              className="h-7 w-7 text-muted-foreground hover:text-foreground"
             >
-              {sidebarCollapsed ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+              {sidebarCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </Button>
           </div>
+        </div>
+
+        {/* Timer Section - Clean Style */}
+        <div className="p-4 border-b border-border">
           {!sidebarCollapsed && (
-            <span className="text-xs text-muted-foreground">Duração da consulta</span>
+            <p className="text-xs text-muted-foreground mb-3">Duração da consulta</p>
           )}
-        </div>
-
-        {/* Timer */}
-        <div
-          className={cn(
-            "p-4 border-b",
-            sidebarCollapsed ? "flex justify-center" : ""
-          )}
-        >
-          <div
-            className={cn(
-              "flex flex-col items-center justify-center rounded-xl border p-4 shadow-sm",
-              isInProgress
-                ? "border-primary/30 bg-gradient-to-br from-primary/10 via-background to-background"
-                : isCompleted
-                  ? "border-accent/30 bg-gradient-to-br from-accent/15 via-background to-background"
-                  : "border-muted bg-muted/30"
-            )}
-          >
-            {isInProgress ? (
-              <>
-                <Timer className="h-5 w-5 text-primary mb-1" />
-                <span
-                  className={cn(
-                    "font-mono font-bold text-primary",
-                    sidebarCollapsed ? "text-sm" : "text-2xl"
-                  )}
-                >
-                  {elapsedTime}
+          
+          <div className={cn(
+            "flex items-center justify-center py-3 mb-4",
+            sidebarCollapsed ? "px-1" : "px-4"
+          )}>
+            <div className="flex items-center gap-2">
+              <Clock className={cn(
+                "text-muted-foreground",
+                sidebarCollapsed ? "h-4 w-4" : "h-5 w-5"
+              )} />
+              {!sidebarCollapsed && (
+                <span className={cn(
+                  "font-mono font-bold tracking-wider",
+                  isInProgress ? "text-primary text-2xl" : 
+                  isCompleted ? "text-accent text-xl" : 
+                  "text-foreground text-2xl"
+                )}>
+                  {isInProgress ? elapsedTime : 
+                   isCompleted && appointment.duration_minutes ? formatDuration(appointment.duration_minutes) : 
+                   "00:00:00"}
                 </span>
-              </>
-            ) : isCompleted && appointment.duration_minutes ? (
-              <>
-                <CheckCircle2 className="h-5 w-5 text-accent mb-1" />
-                <span
-                  className={cn(
-                    "font-semibold text-accent",
-                    sidebarCollapsed ? "text-xs" : "text-lg"
-                  )}
-                >
-                  {formatDuration(appointment.duration_minutes)}
-                </span>
-              </>
-            ) : (
-              <>
-                <Clock className="h-5 w-5 text-muted-foreground mb-1" />
-                <span
-                  className={cn(
-                    "text-muted-foreground",
-                    sidebarCollapsed ? "text-xs" : "text-sm"
-                  )}
-                >
-                  00:00:00
-                </span>
-              </>
-            )}
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Action Button */}
-        <div className="p-4 border-b">
+          {/* Action Button */}
           {!isInProgress && !isCompleted ? (
             <Button
               onClick={handleStartAppointment}
               disabled={loading}
-              className="w-full bg-primary hover:bg-primary/90"
+              className={cn(
+                "w-full bg-primary hover:bg-primary/90 text-primary-foreground font-medium",
+                sidebarCollapsed ? "h-10 w-10 p-0" : ""
+              )}
               size={sidebarCollapsed ? "icon" : "default"}
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Play className="h-4 w-4" />
+                <>
+                  <Play className="h-4 w-4" />
+                  {!sidebarCollapsed && <span className="ml-2">Iniciar atendimento</span>}
+                </>
               )}
-              {!sidebarCollapsed && <span className="ml-2">Iniciar</span>}
             </Button>
           ) : isInProgress ? (
             <Button
               onClick={handleEndAppointment}
               disabled={loading}
-              className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+              variant="destructive"
+              className={cn(
+                "w-full font-medium",
+                sidebarCollapsed ? "h-10 w-10 p-0" : ""
+              )}
               size={sidebarCollapsed ? "icon" : "default"}
             >
               {loading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <CheckCircle2 className="h-4 w-4" />
+                <>
+                  <Square className="h-4 w-4" />
+                  {!sidebarCollapsed && <span className="ml-2">Finalizar</span>}
+                </>
               )}
-              {!sidebarCollapsed && <span className="ml-2">Finalizar</span>}
             </Button>
           ) : (
-            <Badge variant="secondary" className="w-full justify-center py-2">
-              <Lock className="h-3 w-3 mr-1" />
-              {!sidebarCollapsed && "Finalizado"}
-            </Badge>
+            <div className={cn(
+              "flex items-center justify-center gap-2 py-2 px-3 rounded-md bg-muted text-muted-foreground text-sm",
+              sidebarCollapsed && "p-2"
+            )}>
+              <Lock className="h-4 w-4" />
+              {!sidebarCollapsed && <span>Finalizado</span>}
+            </div>
           )}
         </div>
 
-        {/* Navigation */}
+        {/* Navigation - Clean Minimal Style */}
         <ScrollArea className="flex-1">
-          <nav className="p-3 space-y-1.5">
+          <nav className="p-2">
             {sidebarItems.map((item) => {
               const isActive = activeSection === item.id;
               return (
@@ -1075,21 +1061,16 @@ export default function AttendancePageRedesign() {
                   key={item.id}
                   onClick={() => setActiveSection(item.id)}
                   className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                    "w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors",
                     isActive 
-                      ? `${item.bgColor} ${item.color} shadow-sm` 
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                      ? "bg-primary/10 text-primary font-medium" 
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
                   )}
                 >
-                  <div className={cn(
-                    "flex items-center justify-center rounded-lg p-1.5 transition-colors",
-                    isActive ? item.bgColor : "bg-muted/50"
-                  )}>
-                    <item.icon className={cn(
-                      "h-4 w-4 flex-shrink-0 transition-colors",
-                      isActive ? item.color : "text-muted-foreground"
-                    )} />
-                  </div>
+                  <item.icon className={cn(
+                    "h-4 w-4 flex-shrink-0",
+                    isActive ? "text-primary" : "text-muted-foreground"
+                  )} />
                   {!sidebarCollapsed && <span>{item.label}</span>}
                 </button>
               );
