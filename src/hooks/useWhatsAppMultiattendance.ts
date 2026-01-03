@@ -469,14 +469,44 @@ export function useWhatsAppModuleAccess(clinicId: string | undefined) {
       }
 
       try {
-        const { data, error } = await supabase
+        // First check if clinic has the addon
+        const { data: addonData, error: addonError } = await supabase
           .rpc('clinic_has_addon', { 
             _clinic_id: clinicId, 
             _addon_key: 'whatsapp_multiattendance' 
           });
 
-        if (error) throw error;
-        setHasAccess(data === true);
+        if (addonError) {
+          console.error('Error checking addon:', addonError);
+        }
+
+        // If addon is active, grant access
+        if (addonData === true) {
+          setHasAccess(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // Fallback: check if there are any tickets for this clinic (for testing/demo)
+        const { data: ticketsData, error: ticketsError } = await fromTable('whatsapp_tickets')
+          .select('id')
+          .eq('clinic_id', clinicId)
+          .limit(1);
+
+        if (!ticketsError && ticketsData && ticketsData.length > 0) {
+          setHasAccess(true);
+          setIsLoading(false);
+          return;
+        }
+
+        // No addon and no tickets - check if user is admin (allow setup)
+        const { data: isAdmin } = await supabase
+          .rpc('is_clinic_admin', { 
+            _user_id: (await supabase.auth.getUser()).data.user?.id,
+            _clinic_id: clinicId 
+          });
+
+        setHasAccess(isAdmin === true);
       } catch (error) {
         console.error('Error checking module access:', error);
         setHasAccess(false);
