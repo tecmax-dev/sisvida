@@ -3,7 +3,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useWhatsAppModuleAccess } from '@/hooks/useWhatsAppMultiattendance';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2, MessageSquare, Users, Settings, Zap, LayoutGrid } from 'lucide-react';
-import { TicketsKanban } from '@/components/whatsapp-multiattendance/TicketsKanban';
+import { ChatLayout } from '@/components/whatsapp-multiattendance/ChatLayout';
 import { OperatorsPanel } from '@/components/whatsapp-multiattendance/OperatorsPanel';
 import { SectorsPanel } from '@/components/whatsapp-multiattendance/SectorsPanel';
 import { QuickRepliesPanel } from '@/components/whatsapp-multiattendance/QuickRepliesPanel';
@@ -16,7 +16,7 @@ export default function WhatsAppMultiattendancePage() {
   const { currentClinic } = useAuth();
   const clinicId = currentClinic?.id;
   const { hasAccess, isLoading } = useWhatsAppModuleAccess(clinicId);
-  const [activeTab, setActiveTab] = useState('kanban');
+  const [activeTab, setActiveTab] = useState('chat');
 
   if (isLoading) {
     return (
@@ -69,7 +69,7 @@ export default function WhatsAppMultiattendancePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold">Multiatendimento WhatsApp</h1>
         <p className="text-muted-foreground">
@@ -79,16 +79,16 @@ export default function WhatsAppMultiattendancePage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="kanban" className="gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            Kanban
+          <TabsTrigger value="chat" className="gap-2">
+            <MessageSquare className="h-4 w-4" />
+            Conversas
           </TabsTrigger>
           <TabsTrigger value="operators" className="gap-2">
             <Users className="h-4 w-4" />
             Operadores
           </TabsTrigger>
           <TabsTrigger value="sectors" className="gap-2">
-            <MessageSquare className="h-4 w-4" />
+            <LayoutGrid className="h-4 w-4" />
             Setores
           </TabsTrigger>
           <TabsTrigger value="quick-replies" className="gap-2">
@@ -101,8 +101,8 @@ export default function WhatsAppMultiattendancePage() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="kanban" className="space-y-4">
-          <TicketsKanban clinicId={clinicId} />
+        <TabsContent value="chat" className="mt-0">
+          <ChatLayout clinicId={clinicId} />
         </TabsContent>
 
         <TabsContent value="operators" className="space-y-4">
