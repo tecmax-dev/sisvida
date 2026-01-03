@@ -29,7 +29,7 @@ export function useWhatsAppTickets(clinicId: string | undefined) {
           *,
           contact:whatsapp_contacts(*),
           sector:whatsapp_sectors(*),
-          assigned_operator:whatsapp_operators(*)
+          assigned_operator:whatsapp_operators!whatsapp_tickets_assigned_operator_id_fkey(*)
         `)
         .eq('clinic_id', clinicId)
         .neq('status', 'closed')
@@ -95,7 +95,7 @@ export function useWhatsAppTickets(clinicId: string | undefined) {
   const assignTicket = async (ticketId: string, operatorId: string | null) => {
     const updates: Record<string, any> = { 
       assigned_operator_id: operatorId,
-      status: operatorId ? 'in_progress' : 'new',
+      status: operatorId ? 'open' : 'pending',
       is_bot_active: !operatorId,
     };
 
