@@ -368,7 +368,7 @@ export function OperatorsPanel({ clinicId }: OperatorsPanelProps) {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="attendant">Atendente</SelectItem>
+                  <SelectItem value="operator">Atendente</SelectItem>
                   <SelectItem value="supervisor">Supervisor</SelectItem>
                   <SelectItem value="admin">Administrador</SelectItem>
                 </SelectContent>
