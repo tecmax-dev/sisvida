@@ -7757,51 +7757,76 @@ export type Database = {
       }
       whatsapp_tickets: {
         Row: {
+          assigned_operator_id: string | null
           clinic_id: string
           closed_at: string | null
           closed_by: string | null
           contact_id: string
           created_at: string | null
+          first_response_at: string | null
           id: string
+          is_bot_active: boolean | null
+          last_message: string | null
           last_message_at: string | null
           operator_id: string | null
           priority: string | null
+          protocol: string | null
           sector_id: string | null
           status: string | null
           subject: string | null
+          unread_count: number | null
           updated_at: string | null
         }
         Insert: {
+          assigned_operator_id?: string | null
           clinic_id: string
           closed_at?: string | null
           closed_by?: string | null
           contact_id: string
           created_at?: string | null
+          first_response_at?: string | null
           id?: string
+          is_bot_active?: boolean | null
+          last_message?: string | null
           last_message_at?: string | null
           operator_id?: string | null
           priority?: string | null
+          protocol?: string | null
           sector_id?: string | null
           status?: string | null
           subject?: string | null
+          unread_count?: number | null
           updated_at?: string | null
         }
         Update: {
+          assigned_operator_id?: string | null
           clinic_id?: string
           closed_at?: string | null
           closed_by?: string | null
           contact_id?: string
           created_at?: string | null
+          first_response_at?: string | null
           id?: string
+          is_bot_active?: boolean | null
+          last_message?: string | null
           last_message_at?: string | null
           operator_id?: string | null
           priority?: string | null
+          protocol?: string | null
           sector_id?: string | null
           status?: string | null
           subject?: string | null
+          unread_count?: number | null
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_tickets_assigned_operator_id_fkey"
+            columns: ["assigned_operator_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_operators"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "whatsapp_tickets_clinic_id_fkey"
             columns: ["clinic_id"]
