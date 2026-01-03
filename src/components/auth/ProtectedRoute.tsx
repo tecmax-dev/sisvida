@@ -47,12 +47,15 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
     return <Navigate to="/clinic-setup" replace />;
   }
 
-  // Redirect professional-only users to the professional portal
-  // Allow access to professional routes and dashboard home
+  // Redirect professional-only users directly to their calendar
   if (isProfessionalOnly && location.pathname.startsWith("/dashboard")) {
+    // If professional lands on /dashboard, redirect to calendar
+    if (location.pathname === "/dashboard") {
+      return <Navigate to="/dashboard/calendar" replace />;
+    }
+    
     // Allow access to specific routes that professionals can use
     const allowedProfessionalPaths = [
-      "/dashboard",
       "/dashboard/calendar",
       "/dashboard/patients",
       "/dashboard/medical-records",
@@ -66,7 +69,7 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
     );
     
     if (!isAllowedPath) {
-      return <Navigate to="/dashboard" replace />;
+      return <Navigate to="/dashboard/calendar" replace />;
     }
   }
 
