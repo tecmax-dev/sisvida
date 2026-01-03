@@ -41,6 +41,7 @@ const InstallPage = lazy(() => import("./pages/InstallPage"));
 // Páginas públicas
 const PublicBooking = lazy(() => import("./pages/PublicBooking"));
 const PublicAnamnesis = lazy(() => import("./pages/PublicAnamnesis"));
+const PublicNPS = lazy(() => import("./pages/PublicNPS"));
 const AppointmentConfirmation = lazy(() => import("./pages/AppointmentConfirmation"));
 const PublicSignup = lazy(() => import("./pages/PublicSignup"));
 const ProfessionalProfile = lazy(() => import("./pages/ProfessionalProfile"));
@@ -93,6 +94,11 @@ import DependentsPage from "./pages/dashboard/DependentsPage";
 import AttendancePage from "./pages/dashboard/AttendancePageRedesign";
 import PatientOdontogramPage from "./pages/dashboard/PatientOdontogramPage";
 import ExamsPage from "./pages/dashboard/ExamsPage";
+import ExamResultsPage from "./pages/dashboard/ExamResultsPage";
+import NPSDashboardPage from "./pages/dashboard/NPSDashboardPage";
+import ProductivityReportPage from "./pages/dashboard/ProductivityReportPage";
+import NoShowReportPage from "./pages/dashboard/NoShowReportPage";
+import InactivePatientsPage from "./pages/dashboard/InactivePatientsPage";
 import EmployersPage from "./pages/dashboard/EmployersPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
@@ -237,6 +243,8 @@ const App = () => (
                 <Route path="/profissional/:clinicSlug/:professionalSlug" element={<ProfessionalProfile />} />
                 {/* Public anamnesis form via token */}
                 <Route path="/anamnese/:token" element={<PublicAnamnesis />} />
+                {/* Public NPS survey */}
+                <Route path="/nps/:token" element={<PublicNPS />} />
                 {/* Appointment confirmation via token */}
                 <Route path="/consulta/:token" element={<AppointmentConfirmation />} />
                 {/* Telemedicine patient room */}
@@ -332,6 +340,11 @@ const App = () => (
                   <Route path="dependents" element={<DependentsPage />} />
                   <Route path="atendimento/:appointmentId" element={<AttendancePage />} />
                   <Route path="exams" element={<ExamsPage />} />
+                  <Route path="exam-results" element={<ExamResultsPage />} />
+                  <Route path="nps" element={<NPSDashboardPage />} />
+                  <Route path="productivity" element={<ProductivityReportPage />} />
+                  <Route path="no-show" element={<NoShowReportPage />} />
+                  <Route path="inactive-patients" element={<InactivePatientsPage />} />
                   <Route path="empresas" element={<EmployersPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />

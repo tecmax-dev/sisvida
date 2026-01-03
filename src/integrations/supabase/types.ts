@@ -1991,6 +1991,92 @@ export type Database = {
           },
         ]
       }
+      exam_results: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          file_name: string
+          file_path: string
+          file_size: number | null
+          file_type: string | null
+          id: string
+          notification_sent: boolean | null
+          notification_sent_at: string | null
+          patient_id: string
+          professional_id: string | null
+          title: string
+          viewed_at: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name: string
+          file_path: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          notification_sent?: boolean | null
+          notification_sent_at?: string | null
+          patient_id: string
+          professional_id?: string | null
+          title: string
+          viewed_at?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          file_name?: string
+          file_path?: string
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          notification_sent?: boolean | null
+          notification_sent_at?: string | null
+          patient_id?: string
+          professional_id?: string | null
+          title?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_results_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_results_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_results_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_results_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exams: {
         Row: {
           category: string
@@ -3345,6 +3431,115 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      nps_settings: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          delay_hours: number | null
+          id: string
+          is_enabled: boolean | null
+          message_template: string | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          delay_hours?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          message_template?: string | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          delay_hours?: number | null
+          id?: string
+          is_enabled?: boolean | null
+          message_template?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nps_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      nps_surveys: {
+        Row: {
+          appointment_id: string | null
+          clinic_id: string
+          created_at: string
+          feedback: string | null
+          id: string
+          patient_id: string
+          professional_id: string | null
+          responded_at: string | null
+          response_token: string | null
+          score: number | null
+          sent_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          clinic_id: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          patient_id: string
+          professional_id?: string | null
+          responded_at?: string | null
+          response_token?: string | null
+          score?: number | null
+          sent_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          clinic_id?: string
+          created_at?: string
+          feedback?: string | null
+          id?: string
+          patient_id?: string
+          professional_id?: string | null
+          responded_at?: string | null
+          response_token?: string | null
+          score?: number | null
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "nps_surveys_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nps_surveys_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nps_surveys_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nps_surveys_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       odontogram_records: {
         Row: {
@@ -7011,12 +7206,16 @@ export type Database = {
           id: string
           is_active: boolean | null
           notes: string | null
+          notification_sent: boolean | null
+          notification_sent_at: string | null
           notified_at: string | null
           patient_id: string
           preferred_dates: string[] | null
           preferred_times: string[] | null
           professional_id: string | null
           queue_id: string | null
+          slot_expires_at: string | null
+          slot_offered_at: string | null
           ticket_number: number | null
           ticket_prefix: string | null
         }
@@ -7026,12 +7225,16 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           notes?: string | null
+          notification_sent?: boolean | null
+          notification_sent_at?: string | null
           notified_at?: string | null
           patient_id: string
           preferred_dates?: string[] | null
           preferred_times?: string[] | null
           professional_id?: string | null
           queue_id?: string | null
+          slot_expires_at?: string | null
+          slot_offered_at?: string | null
           ticket_number?: number | null
           ticket_prefix?: string | null
         }
@@ -7041,12 +7244,16 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           notes?: string | null
+          notification_sent?: boolean | null
+          notification_sent_at?: string | null
           notified_at?: string | null
           patient_id?: string
           preferred_dates?: string[] | null
           preferred_times?: string[] | null
           professional_id?: string | null
           queue_id?: string | null
+          slot_expires_at?: string | null
+          slot_offered_at?: string | null
           ticket_number?: number | null
           ticket_prefix?: string | null
         }
