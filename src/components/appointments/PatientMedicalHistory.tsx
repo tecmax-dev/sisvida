@@ -128,7 +128,10 @@ export function PatientMedicalHistory({
           className="space-y-1"
         >
           {records.map((record) => {
-            const recordDate = parseISO(record.record_date || record.created_at);
+            // Parse date-only format (YYYY-MM-DD) without timezone issues
+            const dateStr = record.record_date || record.created_at?.split('T')[0];
+            const [year, month, day] = dateStr.split('-').map(Number);
+            const recordDate = new Date(year, month - 1, day);
             const appointmentType = record.appointment?.type || "return";
 
             return (
