@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -33,7 +33,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { MessageSquare, Mail, Smartphone, Calendar, Users, Info } from "lucide-react";
+import { MessageSquare, Mail, Smartphone, Calendar, Users, Info, ImageIcon, X, Upload, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 
 const formSchema = z.object({
@@ -43,6 +43,7 @@ const formSchema = z.object({
   channel: z.enum(["whatsapp", "email", "sms"]),
   message_template: z.string().min(1, "Mensagem é obrigatória"),
   scheduled_at: z.string().optional(),
+  image_url: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -56,6 +57,7 @@ interface Campaign {
   message_template: string;
   scheduled_at: string | null;
   status: string;
+  image_url?: string | null;
 }
 
 interface CampaignDialogProps {
@@ -81,6 +83,7 @@ export default function CampaignDialog({
 }: CampaignDialogProps) {
   const queryClient = useQueryClient();
   const isEditing = !!campaign;
+  const [isUploading, setIsUploading] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -91,6 +94,7 @@ export default function CampaignDialog({
       channel: "whatsapp",
       message_template: "",
       scheduled_at: "",
+      image_url: "",
     },
   });
 
@@ -121,6 +125,7 @@ export default function CampaignDialog({
         scheduled_at: campaign.scheduled_at
           ? format(new Date(campaign.scheduled_at), "yyyy-MM-dd'T'HH:mm")
           : "",
+        image_url: campaign.image_url || "",
       });
     } else {
       form.reset({
@@ -130,9 +135,56 @@ export default function CampaignDialog({
         channel: "whatsapp",
         message_template: "",
         scheduled_at: "",
+        image_url: "",
       });
     }
   }, [campaign, form, open]);
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validar tipo de arquivo
+    if (!file.type.startsWith("image/")) {
+      toast.error("Por favor, selecione uma imagem");
+      return;
+    }
+
+    // Validar tamanho (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("A imagem deve ter no máximo 5MB");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split(".").pop();
+      const fileName = `campaign-${Date.now()}.${fileExt}`;
+      const filePath = `${clinicId}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("clinic-assets")
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from("clinic-assets")
+        .getPublicUrl(filePath);
+
+      form.setValue("image_url", urlData.publicUrl);
+      toast.success("Imagem carregada com sucesso");
+    } catch (error) {
+      console.error("Erro ao fazer upload:", error);
+      toast.error("Erro ao fazer upload da imagem");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const removeImage = () => {
+    form.setValue("image_url", "");
+  };
 
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
@@ -145,6 +197,7 @@ export default function CampaignDialog({
         message_template: data.message_template,
         scheduled_at: data.scheduled_at ? new Date(data.scheduled_at).toISOString() : null,
         status: data.scheduled_at ? "scheduled" : "draft",
+        image_url: data.image_url || null,
       };
 
       const { error } = await (supabase as any).from("campaigns").insert(payload);
@@ -171,6 +224,7 @@ export default function CampaignDialog({
         scheduled_at: data.scheduled_at ? new Date(data.scheduled_at).toISOString() : null,
         status: data.scheduled_at ? "scheduled" : campaign?.status || "draft",
         updated_at: new Date().toISOString(),
+        image_url: data.image_url || null,
       };
 
       const { error } = await (supabase as any)
@@ -206,6 +260,7 @@ export default function CampaignDialog({
   const messageTemplate = form.watch("message_template");
   const selectedSegmentId = form.watch("segment_id");
   const selectedSegment = segments?.find((s) => s.id === selectedSegmentId);
+  const imageUrl = form.watch("image_url");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -463,18 +518,77 @@ export default function CampaignDialog({
                   )}
                 />
 
-                {messageTemplate && (
+                {/* Upload de imagem para WhatsApp */}
+                {selectedChannel === "whatsapp" && (
+                  <FormItem>
+                    <FormLabel>Imagem (opcional)</FormLabel>
+                    <div className="space-y-3">
+                      {imageUrl ? (
+                        <div className="relative inline-block">
+                          <img
+                            src={imageUrl}
+                            alt="Imagem da campanha"
+                            className="max-h-40 rounded-lg border"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            className="absolute -top-2 -right-2 h-6 w-6"
+                            onClick={removeImage}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-3">
+                          <label className="cursor-pointer">
+                            <Input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleImageUpload}
+                              disabled={isUploading}
+                            />
+                            <div className="flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted transition-colors">
+                              {isUploading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                <Upload className="h-4 w-4" />
+                              )}
+                              <span>{isUploading ? "Enviando..." : "Carregar imagem"}</span>
+                            </div>
+                          </label>
+                        </div>
+                      )}
+                      <FormDescription>
+                        A imagem será enviada junto com a mensagem. Formatos aceitos: JPG, PNG, WEBP. Max 5MB.
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+
+                {(messageTemplate || imageUrl) && (
                   <Card className="bg-muted/50">
                     <CardContent className="pt-4">
                       <div className="text-sm font-medium mb-2">Pré-visualização:</div>
-                      <div className="bg-background rounded-lg p-4 whitespace-pre-wrap text-sm">
-                        {messageTemplate
-                          .replace("{nome}", "Maria Silva")
-                          .replace("{primeiro_nome}", "Maria")
-                          .replace("{clinica}", "Clínica Exemplo")
-                          .replace("{data}", format(new Date(), "dd/MM/yyyy"))
-                          .replace("{telefone}", "(11) 99999-9999")}
-                      </div>
+                      {imageUrl && (
+                        <img
+                          src={imageUrl}
+                          alt="Preview"
+                          className="max-h-32 rounded-lg mb-3"
+                        />
+                      )}
+                      {messageTemplate && (
+                        <div className="bg-background rounded-lg p-4 whitespace-pre-wrap text-sm">
+                          {messageTemplate
+                            .replace("{nome}", "Maria Silva")
+                            .replace("{primeiro_nome}", "Maria")
+                            .replace("{clinica}", "Clínica Exemplo")
+                            .replace("{data}", format(new Date(), "dd/MM/yyyy"))
+                            .replace("{telefone}", "(11) 99999-9999")}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 )}

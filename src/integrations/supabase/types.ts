@@ -868,6 +868,7 @@ export type Database = {
           description: string | null
           failed_count: number | null
           id: string
+          image_url: string | null
           message_template: string
           name: string
           scheduled_at: string | null
@@ -886,6 +887,7 @@ export type Database = {
           description?: string | null
           failed_count?: number | null
           id?: string
+          image_url?: string | null
           message_template: string
           name: string
           scheduled_at?: string | null
@@ -904,6 +906,7 @@ export type Database = {
           description?: string | null
           failed_count?: number | null
           id?: string
+          image_url?: string | null
           message_template?: string
           name?: string
           scheduled_at?: string | null
