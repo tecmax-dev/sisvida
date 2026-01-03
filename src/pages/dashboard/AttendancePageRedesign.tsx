@@ -568,18 +568,42 @@ export default function AttendancePageRedesign() {
     setExamAutoSaveStatus('saving');
 
     try {
-      const { error } = await supabase
+      // Check if document already exists for this appointment
+      const { data: existing } = await supabase
         .from("medical_documents")
-        .upsert({
-          clinic_id: appointment.clinic_id,
-          patient_id: appointment.patient_id,
-          professional_id: appointment.professional_id,
-          appointment_id: appointment.id,
-          document_type: "exam_request",
-          content: examRequest.trim(),
-          additional_info: { clinical_indication: clinicalIndication || null },
-          document_date: new Date().toISOString().split("T")[0],
-        }, { onConflict: 'appointment_id,document_type', ignoreDuplicates: false });
+        .select("id")
+        .eq("appointment_id", appointment.id)
+        .eq("document_type", "exam_request")
+        .maybeSingle();
+
+      let error;
+      if (existing?.id) {
+        // Update existing
+        const result = await supabase
+          .from("medical_documents")
+          .update({
+            content: examRequest.trim(),
+            additional_info: { clinical_indication: clinicalIndication || null },
+            document_date: new Date().toISOString().split("T")[0],
+          })
+          .eq("id", existing.id);
+        error = result.error;
+      } else {
+        // Insert new
+        const result = await supabase
+          .from("medical_documents")
+          .insert({
+            clinic_id: appointment.clinic_id,
+            patient_id: appointment.patient_id,
+            professional_id: appointment.professional_id,
+            appointment_id: appointment.id,
+            document_type: "exam_request",
+            content: examRequest.trim(),
+            additional_info: { clinical_indication: clinicalIndication || null },
+            document_date: new Date().toISOString().split("T")[0],
+          });
+        error = result.error;
+      }
 
       if (error) {
         setExamAutoSaveStatus('error');
