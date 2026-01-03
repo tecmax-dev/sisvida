@@ -92,13 +92,12 @@ export function PatientMedicalHistory({
   };
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 border-b">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <FileText className="h-3.5 w-3.5" />
-          <span className="font-medium">{records.length} prontuário(s)</span>
-        </div>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-muted-foreground">
+          {records.length} registro(s)
+        </span>
         <div className="flex gap-1">
           <Button 
             variant="ghost" 
@@ -128,125 +127,71 @@ export function PatientMedicalHistory({
           className="space-y-1"
         >
           {records.map((record) => {
-            // Priority: record_date (always correct for imports) > created_at
             const raw = record.record_date || record.created_at;
-
-            // Extract date-only portion, removing time if present
             const normalized = (raw || "").includes("T") ? (raw || "").split("T")[0] : (raw || "");
-
-            // Parse YYYY-MM-DD format without timezone issues
             const [y, m, d] = normalized.split("-").map((n) => Number(n));
             const recordDate = new Date(y, (m || 1) - 1, d || 1);
-
-            const appointmentType = record.appointment?.type || "return";
 
             return (
               <AccordionItem 
                 key={record.id} 
                 value={record.id}
-                className="border rounded-md bg-card px-3 py-0 data-[state=open]:bg-muted/30"
+                className="border-0 border-b last:border-b-0"
               >
-                <AccordionTrigger className="py-2 hover:no-underline gap-2">
-                  <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
-                    {/* Date */}
-                    <div className="flex items-center gap-1.5 min-w-[90px]">
-                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-sm font-medium">
-                        {format(recordDate, "dd/MM/yyyy")}
-                      </span>
-                    </div>
-
-                    {/* Type Badge */}
-                    <Badge 
-                      variant="secondary" 
-                      className={cn(
-                        "text-[10px] px-1.5 py-0 h-5 font-normal",
-                        typeColors[appointmentType] || "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {typeLabels[appointmentType] || appointmentType}
-                    </Badge>
-
-                    {/* Professional */}
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
-                      <User className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{record.professional?.name || "—"}</span>
-                    </div>
-
-                    {/* Preview */}
-                    {record.chief_complaint && (
-                      <span className="text-xs text-muted-foreground truncate hidden md:block">
-                        • {record.chief_complaint.slice(0, 40)}{record.chief_complaint.length > 40 ? "..." : ""}
-                      </span>
-                    )}
+                <AccordionTrigger className="py-2 px-0 hover:no-underline hover:bg-transparent">
+                  <div className="flex items-center gap-2 text-left">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-semibold text-foreground">
+                      {format(recordDate, "dd/MM/yyyy")}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      — {record.professional?.name || "Profissional"}
+                    </span>
                   </div>
                 </AccordionTrigger>
 
-                {hasContent(record) && (
-                  <AccordionContent className="pt-2 pb-3">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                      {record.chief_complaint && (
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase">
-                            <ClipboardList className="h-3 w-3" />
-                            Queixa
-                          </div>
-                          <p className="text-xs bg-muted/40 p-2 rounded whitespace-pre-wrap">
-                            {record.chief_complaint}
-                          </p>
-                        </div>
-                      )}
+                <AccordionContent className="pb-3 pt-1 pl-6">
+                  <div className="space-y-2 text-sm">
+                    {record.chief_complaint && (
+                      <p>
+                        <span className="font-medium text-muted-foreground">Queixa: </span>
+                        <span className="text-foreground">{record.chief_complaint}</span>
+                      </p>
+                    )}
 
-                      {record.diagnosis && (
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase">
-                            <Stethoscope className="h-3 w-3" />
-                            Diagnóstico
-                          </div>
-                          <p className="text-xs bg-muted/40 p-2 rounded whitespace-pre-wrap">
-                            {record.diagnosis}
-                          </p>
-                        </div>
-                      )}
+                    {record.diagnosis && (
+                      <p>
+                        <span className="font-medium text-muted-foreground">Diagnóstico: </span>
+                        <span className="text-foreground">{record.diagnosis}</span>
+                      </p>
+                    )}
 
-                      {record.treatment_plan && (
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase">
-                            <FileText className="h-3 w-3" />
-                            Tratamento
-                          </div>
-                          <p className="text-xs bg-muted/40 p-2 rounded whitespace-pre-wrap">
-                            {record.treatment_plan}
-                          </p>
-                        </div>
-                      )}
+                    {record.treatment_plan && (
+                      <p>
+                        <span className="font-medium text-muted-foreground">Tratamento: </span>
+                        <span className="text-foreground">{record.treatment_plan}</span>
+                      </p>
+                    )}
 
-                      {record.prescription && (
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase">
-                            <Pill className="h-3 w-3" />
-                            Prescrição
-                          </div>
-                          <p className="text-xs bg-muted/40 p-2 rounded whitespace-pre-wrap font-mono">
-                            {record.prescription}
-                          </p>
-                        </div>
-                      )}
+                    {record.prescription && (
+                      <p>
+                        <span className="font-medium text-muted-foreground">Prescrição: </span>
+                        <span className="text-foreground">{record.prescription}</span>
+                      </p>
+                    )}
 
-                      {record.notes && (
-                        <div className="space-y-0.5 md:col-span-2">
-                          <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase">
-                            <MessageSquare className="h-3 w-3" />
-                            Observações
-                          </div>
-                          <p className="text-xs bg-muted/40 p-2 rounded whitespace-pre-wrap">
-                            {record.notes}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </AccordionContent>
-                )}
+                    {record.notes && (
+                      <p>
+                        <span className="font-medium text-muted-foreground">Obs: </span>
+                        <span className="text-foreground">{record.notes}</span>
+                      </p>
+                    )}
+
+                    {!hasContent(record) && (
+                      <p className="text-xs text-muted-foreground italic">Sem dados registrados.</p>
+                    )}
+                  </div>
+                </AccordionContent>
               </AccordionItem>
             );
           })}
