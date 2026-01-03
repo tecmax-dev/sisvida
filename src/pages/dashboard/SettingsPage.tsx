@@ -25,7 +25,7 @@ import { FeatureGate, FeatureGateInline } from "@/components/features/FeatureGat
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { UserAvatarUpload } from "@/components/users/UserAvatarUpload";
 import { SettingsWidgetWrapper } from "@/components/settings/SettingsWidgetWrapper";
-import { useSettingsWidgets } from "@/hooks/useSettingsWidgets";
+import { useSettingsWidgets, WidgetColumn } from "@/hooks/useSettingsWidgets";
 import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
@@ -55,13 +55,15 @@ export default function SettingsPage() {
 
   // Widget management
   const {
-    widgetOrder,
     loading: widgetsLoading,
     isWidgetVisible,
     moveWidgetUp,
     moveWidgetDown,
+    moveWidgetToColumn,
     toggleWidgetVisibility,
     resetToDefault,
+    getWidgetsForColumn,
+    getWidgetPlacement,
   } = useSettingsWidgets();
   
   const [isEditMode, setIsEditMode] = useState(false);
@@ -924,20 +926,25 @@ export default function SettingsPage() {
     handleToggleScheduleValidation, handleChangePassword
   ]);
 
-  // Sort widgets by user order
-  const sortedWidgets = useMemo(() => {
-    return [...widgetDefinitions].sort((a, b) => {
-      const indexA = widgetOrder.indexOf(a.id);
-      const indexB = widgetOrder.indexOf(b.id);
-      const posA = indexA === -1 ? 999 : indexA;
-      const posB = indexB === -1 ? 999 : indexB;
-      return posA - posB;
-    });
-  }, [widgetDefinitions, widgetOrder]);
+  // Get widgets for each column
+  const leftColumnWidgets = useMemo(() => {
+    const columnPlacements = getWidgetsForColumn("left");
+    return columnPlacements
+      .map(p => widgetDefinitions.find(w => w.id === p.id))
+      .filter((w): w is typeof widgetDefinitions[0] => w !== undefined);
+  }, [widgetDefinitions, getWidgetsForColumn]);
+
+  const rightColumnWidgets = useMemo(() => {
+    const columnPlacements = getWidgetsForColumn("right");
+    return columnPlacements
+      .map(p => widgetDefinitions.find(w => w.id === p.id))
+      .filter((w): w is typeof widgetDefinitions[0] => w !== undefined);
+  }, [widgetDefinitions, getWidgetsForColumn]);
 
   // Render widget with proper guards
-  const renderWidget = (widget: typeof widgetDefinitions[0], index: number) => {
+  const renderWidget = (widget: typeof widgetDefinitions[0], columnWidgets: typeof widgetDefinitions, column: "left" | "right") => {
     const isVisible = isWidgetVisible(widget.id);
+    const index = columnWidgets.findIndex(w => w.id === widget.id);
     
     // Check permission
     if (widget.permission && !hasPermission(widget.permission)) {
@@ -976,10 +983,12 @@ export default function SettingsPage() {
         isEditMode={isEditMode}
         isVisible={isVisible}
         isFirst={index === 0}
-        isLast={index === sortedWidgets.length - 1}
+        isLast={index === columnWidgets.length - 1}
+        currentColumn={column}
         onMoveUp={() => moveWidgetUp(widget.id)}
         onMoveDown={() => moveWidgetDown(widget.id)}
         onToggleVisibility={() => toggleWidgetVisibility(widget.id)}
+        onMoveToColumn={(targetColumn) => moveWidgetToColumn(widget.id, targetColumn)}
       >
         {widget.content}
       </SettingsWidgetWrapper>
@@ -998,7 +1007,7 @@ export default function SettingsPage() {
 
   return (
     <RoleGuard permissions={["manage_settings", "change_password"]}>
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
@@ -1026,13 +1035,13 @@ export default function SettingsPage() {
       {isEditMode && (
         <Card className="border-primary/50 bg-primary/5">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-3">
                 <Settings2 className="h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium text-foreground">Modo de personalização ativo</p>
                   <p className="text-sm text-muted-foreground">
-                    Use as setas para reordenar e o ícone de olho para ocultar/exibir widgets
+                    Use as setas para reordenar, ↔ para mover entre colunas, e 👁 para ocultar/exibir
                   </p>
                 </div>
               </div>
@@ -1045,27 +1054,63 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* Render sorted widgets */}
+      {/* Two column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column */}
+        <div className="space-y-4">
+          {isEditMode && (
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
+              Coluna Esquerda
+            </div>
+          )}
+          <RoleGuard permission="manage_settings">
+            {leftColumnWidgets
+              .filter(w => w.permission === "manage_settings" || w.permission === null)
+              .map((widget) => renderWidget(widget, leftColumnWidgets, "left"))}
+          </RoleGuard>
+          
+          {/* Password change widget if in left column */}
+          {hasPermission('change_password') && leftColumnWidgets.some(w => w.id === "password-change") && (
+            <>
+              {leftColumnWidgets
+                .filter(w => w.id === "password-change")
+                .map((widget) => renderWidget(widget, leftColumnWidgets, "left"))}
+            </>
+          )}
+        </div>
+
+        {/* Right Column */}
+        <div className="space-y-4">
+          {isEditMode && (
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
+              Coluna Direita
+            </div>
+          )}
+          <RoleGuard permission="manage_settings">
+            {rightColumnWidgets
+              .filter(w => w.permission === "manage_settings" || w.permission === null)
+              .map((widget) => renderWidget(widget, rightColumnWidgets, "right"))}
+          </RoleGuard>
+          
+          {/* Password change widget if in right column */}
+          {hasPermission('change_password') && rightColumnWidgets.some(w => w.id === "password-change") && (
+            <>
+              {rightColumnWidgets
+                .filter(w => w.id === "password-change")
+                .map((widget) => renderWidget(widget, rightColumnWidgets, "right"))}
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Save button */}
       <RoleGuard permission="manage_settings">
-        {sortedWidgets
-          .filter(w => w.permission === "manage_settings" || w.permission === null)
-          .map((widget, index) => renderWidget(widget, index))}
-        
         <div className="flex justify-end">
           <Button variant="hero" onClick={handleSave} disabled={saving}>
             {saving ? "Salvando..." : "Salvar alterações"}
           </Button>
         </div>
       </RoleGuard>
-
-      {/* Password change widget (outside manage_settings guard) */}
-      {hasPermission('change_password') && (
-        <>
-          {sortedWidgets
-            .filter(w => w.id === "password-change")
-            .map((widget, index) => renderWidget(widget, index))}
-        </>
-      )}
     </div>
     </RoleGuard>
   );

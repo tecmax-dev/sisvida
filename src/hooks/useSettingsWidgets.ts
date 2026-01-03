@@ -2,42 +2,40 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
-export interface WidgetConfig {
+export type WidgetColumn = "left" | "right";
+
+export interface WidgetPlacement {
   id: string;
-  title: string;
-  icon: string;
-  isVisible: boolean;
+  column: WidgetColumn;
+  order: number;
 }
 
-interface WidgetSettings {
-  widget_order: string[];
-  hidden_widgets: string[];
-}
-
-// Default widget order
-const DEFAULT_WIDGETS = [
-  "profile",
-  "clinic-info",
-  "whatsapp-reminders",
-  "whatsapp-header",
-  "working-hours",
-  "schedule-validation",
-  "cpf-limit",
-  "map-view",
-  "online-booking",
-  "whatsapp-provider",
-  "evolution-api",
-  "twilio-config",
-  "message-history",
-  "api-keys",
-  "webhooks",
-  "ai-assistant",
-  "password-change",
+// Default widget placements - two columns
+const DEFAULT_PLACEMENTS: WidgetPlacement[] = [
+  // Left column
+  { id: "profile", column: "left", order: 0 },
+  { id: "clinic-info", column: "left", order: 1 },
+  { id: "whatsapp-reminders", column: "left", order: 2 },
+  { id: "whatsapp-header", column: "left", order: 3 },
+  { id: "working-hours", column: "left", order: 4 },
+  { id: "schedule-validation", column: "left", order: 5 },
+  { id: "cpf-limit", column: "left", order: 6 },
+  { id: "whatsapp-provider", column: "left", order: 7 },
+  { id: "evolution-api", column: "left", order: 8 },
+  { id: "twilio-config", column: "left", order: 9 },
+  // Right column
+  { id: "map-view", column: "right", order: 0 },
+  { id: "online-booking", column: "right", order: 1 },
+  { id: "message-history", column: "right", order: 2 },
+  { id: "api-keys", column: "right", order: 3 },
+  { id: "webhooks", column: "right", order: 4 },
+  { id: "ai-assistant", column: "right", order: 5 },
+  { id: "password-change", column: "right", order: 6 },
 ];
 
 export function useSettingsWidgets() {
   const { user, currentClinic } = useAuth();
-  const [widgetOrder, setWidgetOrder] = useState<string[]>(DEFAULT_WIDGETS);
+  const [placements, setPlacements] = useState<WidgetPlacement[]>(DEFAULT_PLACEMENTS);
   const [hiddenWidgets, setHiddenWidgets] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,21 +61,25 @@ export function useSettingsWidgets() {
         }
 
         if (data) {
-          const savedOrder = data.widget_order as string[];
+          const savedPlacements = data.widget_order as WidgetPlacement[];
           const savedHidden = data.hidden_widgets as string[];
           
-          // Merge saved order with default widgets (in case new widgets were added)
-          const mergedOrder = [...savedOrder];
-          DEFAULT_WIDGETS.forEach(widgetId => {
-            if (!mergedOrder.includes(widgetId)) {
-              mergedOrder.push(widgetId);
-            }
-          });
+          // Merge saved placements with default (in case new widgets were added)
+          if (Array.isArray(savedPlacements) && savedPlacements.length > 0 && savedPlacements[0]?.column) {
+            const mergedPlacements = [...savedPlacements];
+            DEFAULT_PLACEMENTS.forEach(defaultPlacement => {
+              if (!mergedPlacements.find(p => p.id === defaultPlacement.id)) {
+                mergedPlacements.push(defaultPlacement);
+              }
+            });
+            setPlacements(mergedPlacements);
+          } else {
+            setPlacements(DEFAULT_PLACEMENTS);
+          }
           
-          setWidgetOrder(mergedOrder);
           setHiddenWidgets(savedHidden || []);
         } else {
-          setWidgetOrder(DEFAULT_WIDGETS);
+          setPlacements(DEFAULT_PLACEMENTS);
           setHiddenWidgets([]);
         }
       } catch (error) {
@@ -91,7 +93,7 @@ export function useSettingsWidgets() {
   }, [user?.id, currentClinic?.id]);
 
   // Save widget settings
-  const saveSettings = useCallback(async (order: string[], hidden: string[]) => {
+  const saveSettings = useCallback(async (newPlacements: WidgetPlacement[], hidden: string[]) => {
     if (!user?.id || !currentClinic?.id) return;
 
     setSaving(true);
@@ -101,7 +103,7 @@ export function useSettingsWidgets() {
         .upsert({
           user_id: user.id,
           clinic_id: currentClinic.id,
-          widget_order: order,
+          widget_order: newPlacements,
           hidden_widgets: hidden,
         }, {
           onConflict: "user_id,clinic_id",
@@ -117,29 +119,83 @@ export function useSettingsWidgets() {
     }
   }, [user?.id, currentClinic?.id]);
 
-  // Move widget up
+  // Get widgets for a specific column
+  const getWidgetsForColumn = useCallback((column: WidgetColumn) => {
+    return placements
+      .filter(p => p.column === column)
+      .sort((a, b) => a.order - b.order);
+  }, [placements]);
+
+  // Move widget up within column
   const moveWidgetUp = useCallback((widgetId: string) => {
-    setWidgetOrder(prev => {
-      const index = prev.indexOf(widgetId);
-      if (index <= 0) return prev;
+    setPlacements(prev => {
+      const widget = prev.find(p => p.id === widgetId);
+      if (!widget || widget.order <= 0) return prev;
       
-      const newOrder = [...prev];
-      [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
-      saveSettings(newOrder, hiddenWidgets);
-      return newOrder;
+      const columnWidgets = prev.filter(p => p.column === widget.column).sort((a, b) => a.order - b.order);
+      const currentIndex = columnWidgets.findIndex(p => p.id === widgetId);
+      if (currentIndex <= 0) return prev;
+      
+      const newPlacements = prev.map(p => {
+        if (p.id === widgetId) {
+          return { ...p, order: widget.order - 1 };
+        }
+        if (p.column === widget.column && p.id === columnWidgets[currentIndex - 1].id) {
+          return { ...p, order: p.order + 1 };
+        }
+        return p;
+      });
+      
+      saveSettings(newPlacements, hiddenWidgets);
+      return newPlacements;
     });
   }, [hiddenWidgets, saveSettings]);
 
-  // Move widget down
+  // Move widget down within column
   const moveWidgetDown = useCallback((widgetId: string) => {
-    setWidgetOrder(prev => {
-      const index = prev.indexOf(widgetId);
-      if (index >= prev.length - 1) return prev;
+    setPlacements(prev => {
+      const widget = prev.find(p => p.id === widgetId);
+      if (!widget) return prev;
       
-      const newOrder = [...prev];
-      [newOrder[index], newOrder[index + 1]] = [newOrder[index + 1], newOrder[index]];
-      saveSettings(newOrder, hiddenWidgets);
-      return newOrder;
+      const columnWidgets = prev.filter(p => p.column === widget.column).sort((a, b) => a.order - b.order);
+      const currentIndex = columnWidgets.findIndex(p => p.id === widgetId);
+      if (currentIndex >= columnWidgets.length - 1) return prev;
+      
+      const newPlacements = prev.map(p => {
+        if (p.id === widgetId) {
+          return { ...p, order: widget.order + 1 };
+        }
+        if (p.column === widget.column && p.id === columnWidgets[currentIndex + 1].id) {
+          return { ...p, order: p.order - 1 };
+        }
+        return p;
+      });
+      
+      saveSettings(newPlacements, hiddenWidgets);
+      return newPlacements;
+    });
+  }, [hiddenWidgets, saveSettings]);
+
+  // Move widget to other column
+  const moveWidgetToColumn = useCallback((widgetId: string, targetColumn: WidgetColumn) => {
+    setPlacements(prev => {
+      const widget = prev.find(p => p.id === widgetId);
+      if (!widget || widget.column === targetColumn) return prev;
+      
+      const targetColumnWidgets = prev.filter(p => p.column === targetColumn);
+      const maxOrder = targetColumnWidgets.length > 0 
+        ? Math.max(...targetColumnWidgets.map(p => p.order)) + 1 
+        : 0;
+      
+      const newPlacements = prev.map(p => {
+        if (p.id === widgetId) {
+          return { ...p, column: targetColumn, order: maxOrder };
+        }
+        return p;
+      });
+      
+      saveSettings(newPlacements, hiddenWidgets);
+      return newPlacements;
     });
   }, [hiddenWidgets, saveSettings]);
 
@@ -149,52 +205,40 @@ export function useSettingsWidgets() {
       const newHidden = prev.includes(widgetId)
         ? prev.filter(id => id !== widgetId)
         : [...prev, widgetId];
-      saveSettings(widgetOrder, newHidden);
+      saveSettings(placements, newHidden);
       return newHidden;
     });
-  }, [widgetOrder, saveSettings]);
-
-  // Update order (for drag and drop)
-  const updateOrder = useCallback((newOrder: string[]) => {
-    setWidgetOrder(newOrder);
-    saveSettings(newOrder, hiddenWidgets);
-  }, [hiddenWidgets, saveSettings]);
+  }, [placements, saveSettings]);
 
   // Check if widget is visible
   const isWidgetVisible = useCallback((widgetId: string) => {
     return !hiddenWidgets.includes(widgetId);
   }, [hiddenWidgets]);
 
-  // Get sorted widgets
-  const getSortedWidgets = useCallback(<T extends { id: string }>(widgets: T[]) => {
-    return [...widgets].sort((a, b) => {
-      const indexA = widgetOrder.indexOf(a.id);
-      const indexB = widgetOrder.indexOf(b.id);
-      // If not in order, put at the end
-      const posA = indexA === -1 ? 999 : indexA;
-      const posB = indexB === -1 ? 999 : indexB;
-      return posA - posB;
-    });
-  }, [widgetOrder]);
+  // Get widget placement
+  const getWidgetPlacement = useCallback((widgetId: string) => {
+    return placements.find(p => p.id === widgetId);
+  }, [placements]);
 
   // Reset to default
   const resetToDefault = useCallback(() => {
-    setWidgetOrder(DEFAULT_WIDGETS);
+    setPlacements(DEFAULT_PLACEMENTS);
     setHiddenWidgets([]);
-    saveSettings(DEFAULT_WIDGETS, []);
+    saveSettings(DEFAULT_PLACEMENTS, []);
   }, [saveSettings]);
 
   return {
-    widgetOrder,
+    placements,
     hiddenWidgets,
     loading,
     saving,
+    getWidgetsForColumn,
     moveWidgetUp,
     moveWidgetDown,
+    moveWidgetToColumn,
     toggleWidgetVisibility,
-    updateOrder,
     isWidgetVisible,
-    getSortedWidgets,
+    getWidgetPlacement,
     resetToDefault,
   };
 }
