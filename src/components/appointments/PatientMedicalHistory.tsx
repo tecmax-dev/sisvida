@@ -1,13 +1,15 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   FileText,
-  ChevronDown,
-  ChevronRight,
   User,
   Calendar,
   Stethoscope,
@@ -45,7 +47,7 @@ interface PatientMedicalHistoryProps {
 }
 
 const typeLabels: Record<string, string> = {
-  first_visit: "Primeira Consulta",
+  first_visit: "1ª Consulta",
   return: "Retorno",
   exam: "Exame",
   procedure: "Procedimento",
@@ -53,68 +55,34 @@ const typeLabels: Record<string, string> = {
 };
 
 const typeColors: Record<string, string> = {
-  first_visit: "bg-blue-100 text-blue-700 border-blue-200",
-  return: "bg-green-100 text-green-700 border-green-200",
-  exam: "bg-purple-100 text-purple-700 border-purple-200",
-  procedure: "bg-orange-100 text-orange-700 border-orange-200",
-  telemedicine: "bg-cyan-100 text-cyan-700 border-cyan-200",
+  first_visit: "bg-blue-100 text-blue-700",
+  return: "bg-green-100 text-green-700",
+  exam: "bg-purple-100 text-purple-700",
+  procedure: "bg-orange-100 text-orange-700",
+  telemedicine: "bg-cyan-100 text-cyan-700",
 };
 
 export function PatientMedicalHistory({ 
   records, 
   loading = false,
-  patientName 
 }: PatientMedicalHistoryProps) {
-  const [expandedRecords, setExpandedRecords] = useState<Set<string>>(new Set());
-
-  const toggleRecord = (recordId: string) => {
-    setExpandedRecords(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(recordId)) {
-        newSet.delete(recordId);
-      } else {
-        newSet.add(recordId);
-      }
-      return newSet;
-    });
-  };
-
-  const expandAll = () => {
-    setExpandedRecords(new Set(records.map(r => r.id)));
-  };
-
-  const collapseAll = () => {
-    setExpandedRecords(new Set());
-  };
-
-  // Group records by year and month
-  const groupedRecords = records.reduce((acc, record) => {
-    const date = parseISO(record.record_date || record.created_at);
-    const yearMonth = format(date, "yyyy-MM");
-    if (!acc[yearMonth]) {
-      acc[yearMonth] = [];
-    }
-    acc[yearMonth].push(record);
-    return acc;
-  }, {} as Record<string, MedicalRecord[]>);
-
-  const sortedMonths = Object.keys(groupedRecords).sort((a, b) => b.localeCompare(a));
+  const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mb-4" />
-        <p className="text-sm">Carregando histórico...</p>
+      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mb-2" />
+        <p className="text-xs">Carregando histórico...</p>
       </div>
     );
   }
 
   if (records.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <History className="h-16 w-16 mx-auto mb-4 opacity-30" />
-        <h3 className="text-lg font-medium mb-1">Nenhum histórico encontrado</h3>
-        <p className="text-sm">Este paciente ainda não possui prontuários registrados.</p>
+      <div className="text-center py-8 text-muted-foreground">
+        <History className="h-12 w-12 mx-auto mb-2 opacity-30" />
+        <h3 className="text-sm font-medium mb-1">Nenhum histórico</h3>
+        <p className="text-xs">Sem prontuários registrados.</p>
       </div>
     );
   }
@@ -124,210 +92,156 @@ export function PatientMedicalHistory({
   };
 
   return (
-    <div className="space-y-4">
-      {/* Header Stats */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <FileText className="h-4 w-4" />
-            <span className="font-medium">{records.length} registro(s)</span>
-          </div>
+    <div className="space-y-2">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-2 border-b">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <FileText className="h-3.5 w-3.5" />
+          <span className="font-medium">{records.length} prontuário(s)</span>
         </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={expandAll} className="text-xs">
-            Expandir todos
+        <div className="flex gap-1">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setExpandedItems(records.map(r => r.id))} 
+            className="text-xs h-6 px-2"
+          >
+            Expandir
           </Button>
-          <Button variant="ghost" size="sm" onClick={collapseAll} className="text-xs">
-            Recolher todos
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => setExpandedItems([])} 
+            className="text-xs h-6 px-2"
+          >
+            Recolher
           </Button>
         </div>
       </div>
 
-      {/* Timeline */}
-      <ScrollArea className="h-[calc(100vh-400px)] pr-4">
-        <div className="space-y-6">
-          {sortedMonths.map((monthKey) => {
-            const monthRecords = groupedRecords[monthKey];
-            const monthDate = parseISO(monthKey + "-01");
-            const monthLabel = format(monthDate, "MMMM 'de' yyyy", { locale: ptBR });
+      {/* Accordion List */}
+      <ScrollArea className="h-[calc(100vh-420px)]">
+        <Accordion 
+          type="multiple" 
+          value={expandedItems}
+          onValueChange={setExpandedItems}
+          className="space-y-1"
+        >
+          {records.map((record) => {
+            const recordDate = parseISO(record.record_date || record.created_at);
+            const appointmentType = record.appointment?.type || "return";
 
             return (
-              <div key={monthKey} className="relative">
-                {/* Month Header */}
-                <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm py-2 mb-3">
-                  <h3 className="text-sm font-semibold text-primary capitalize flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    {monthLabel}
-                    <Badge variant="secondary" className="ml-2 text-xs">
-                      {monthRecords.length} registro(s)
+              <AccordionItem 
+                key={record.id} 
+                value={record.id}
+                className="border rounded-md bg-card px-3 py-0 data-[state=open]:bg-muted/30"
+              >
+                <AccordionTrigger className="py-2 hover:no-underline gap-2">
+                  <div className="flex items-center gap-3 flex-1 min-w-0 text-left">
+                    {/* Date */}
+                    <div className="flex items-center gap-1.5 min-w-[90px]">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-sm font-medium">
+                        {format(recordDate, "dd/MM/yyyy")}
+                      </span>
+                    </div>
+
+                    {/* Type Badge */}
+                    <Badge 
+                      variant="secondary" 
+                      className={cn(
+                        "text-[10px] px-1.5 py-0 h-5 font-normal",
+                        typeColors[appointmentType] || "bg-gray-100 text-gray-700"
+                      )}
+                    >
+                      {typeLabels[appointmentType] || appointmentType}
                     </Badge>
-                  </h3>
-                </div>
 
-                {/* Records for this month */}
-                <div className="relative pl-6 border-l-2 border-border space-y-3">
-                  {monthRecords.map((record, index) => {
-                    const recordDate = parseISO(record.record_date || record.created_at);
-                    const isExpanded = expandedRecords.has(record.id);
-                    const appointmentType = record.appointment?.type || "return";
+                    {/* Professional */}
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                      <User className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{record.professional?.name || "—"}</span>
+                    </div>
 
-                    return (
-                      <div key={record.id} className="relative">
-                        {/* Timeline dot */}
-                        <div className="absolute -left-[31px] w-4 h-4 rounded-full border-2 border-background bg-primary" />
+                    {/* Preview */}
+                    {record.chief_complaint && (
+                      <span className="text-xs text-muted-foreground truncate hidden md:block">
+                        • {record.chief_complaint.slice(0, 40)}{record.chief_complaint.length > 40 ? "..." : ""}
+                      </span>
+                    )}
+                  </div>
+                </AccordionTrigger>
 
-                        <Collapsible open={isExpanded} onOpenChange={() => toggleRecord(record.id)}>
-                          <Card className={cn(
-                            "transition-all duration-200 hover:shadow-md",
-                            isExpanded && "ring-1 ring-primary/20"
-                          )}>
-                            <CollapsibleTrigger asChild>
-                              <div className="p-4 cursor-pointer">
-                                <div className="flex items-start justify-between gap-4">
-                                  {/* Left: Date and Type */}
-                                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                                    <div className="flex flex-col items-center min-w-[70px] bg-primary/10 rounded-lg p-2">
-                                      <span className="text-2xl font-bold text-primary">
-                                        {format(recordDate, "dd")}
-                                      </span>
-                                      <span className="text-xs font-medium text-primary/80">
-                                        {format(recordDate, "MMM", { locale: ptBR })}
-                                      </span>
-                                      <span className="text-xs text-muted-foreground">
-                                        {format(recordDate, "yyyy")}
-                                      </span>
-                                    </div>
+                {hasContent(record) && (
+                  <AccordionContent className="pt-2 pb-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      {record.chief_complaint && (
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase">
+                            <ClipboardList className="h-3 w-3" />
+                            Queixa
+                          </div>
+                          <p className="text-xs bg-muted/40 p-2 rounded whitespace-pre-wrap">
+                            {record.chief_complaint}
+                          </p>
+                        </div>
+                      )}
 
-                                    <div className="min-w-0 flex-1">
-                                      <div className="flex items-center gap-2 flex-wrap mb-1">
-                                        <Badge 
-                                          variant="outline" 
-                                          className={cn(
-                                            "text-xs",
-                                            typeColors[appointmentType] || "bg-gray-100 text-gray-700"
-                                          )}
-                                        >
-                                          {typeLabels[appointmentType] || appointmentType}
-                                        </Badge>
-                                      </div>
+                      {record.diagnosis && (
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase">
+                            <Stethoscope className="h-3 w-3" />
+                            Diagnóstico
+                          </div>
+                          <p className="text-xs bg-muted/40 p-2 rounded whitespace-pre-wrap">
+                            {record.diagnosis}
+                          </p>
+                        </div>
+                      )}
 
-                                      {/* Professional */}
-                                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                                        <User className="h-3.5 w-3.5" />
-                                        <span>{record.professional?.name || "Profissional não identificado"}</span>
-                                      </div>
+                      {record.treatment_plan && (
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase">
+                            <FileText className="h-3 w-3" />
+                            Tratamento
+                          </div>
+                          <p className="text-xs bg-muted/40 p-2 rounded whitespace-pre-wrap">
+                            {record.treatment_plan}
+                          </p>
+                        </div>
+                      )}
 
-                                      {/* Preview of chief complaint */}
-                                      {record.chief_complaint && (
-                                        <p className="text-sm text-foreground mt-1 line-clamp-1">
-                                          <span className="font-medium">Queixa:</span> {record.chief_complaint}
-                                        </p>
-                                      )}
-                                    </div>
-                                  </div>
+                      {record.prescription && (
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase">
+                            <Pill className="h-3 w-3" />
+                            Prescrição
+                          </div>
+                          <p className="text-xs bg-muted/40 p-2 rounded whitespace-pre-wrap font-mono">
+                            {record.prescription}
+                          </p>
+                        </div>
+                      )}
 
-                                  {/* Right: Time and Expand */}
-                                  <div className="flex items-center gap-2 text-muted-foreground">
-                                    <div className="text-right">
-                                      <div className="text-xs font-medium text-foreground">
-                                        {format(recordDate, "dd/MM/yyyy")}
-                                      </div>
-                                      <div className="text-xs">
-                                        {format(parseISO(record.created_at), "HH:mm")}
-                                      </div>
-                                    </div>
-                                    {hasContent(record) && (
-                                      isExpanded ? (
-                                        <ChevronDown className="h-5 w-5" />
-                                      ) : (
-                                        <ChevronRight className="h-5 w-5" />
-                                      )
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </CollapsibleTrigger>
-
-                            <CollapsibleContent>
-                              <CardContent className="pt-0 pb-4 border-t mt-0">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                                  {/* Queixa Principal */}
-                                  {record.chief_complaint && (
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase">
-                                        <ClipboardList className="h-3.5 w-3.5" />
-                                        Queixa Principal
-                                      </div>
-                                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded">
-                                        {record.chief_complaint}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Diagnóstico */}
-                                  {record.diagnosis && (
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase">
-                                        <Stethoscope className="h-3.5 w-3.5" />
-                                        Diagnóstico
-                                      </div>
-                                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded">
-                                        {record.diagnosis}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Plano de Tratamento */}
-                                  {record.treatment_plan && (
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase">
-                                        <FileText className="h-3.5 w-3.5" />
-                                        Plano de Tratamento
-                                      </div>
-                                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded">
-                                        {record.treatment_plan}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Prescrição */}
-                                  {record.prescription && (
-                                    <div className="space-y-1">
-                                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase">
-                                        <Pill className="h-3.5 w-3.5" />
-                                        Prescrição
-                                      </div>
-                                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded font-mono text-xs">
-                                        {record.prescription}
-                                      </p>
-                                    </div>
-                                  )}
-
-                                  {/* Observações */}
-                                  {record.notes && (
-                                    <div className="space-y-1 md:col-span-2">
-                                      <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground uppercase">
-                                        <MessageSquare className="h-3.5 w-3.5" />
-                                        Observações
-                                      </div>
-                                      <p className="text-sm text-foreground whitespace-pre-wrap bg-muted/30 p-2 rounded">
-                                        {record.notes}
-                                      </p>
-                                    </div>
-                                  )}
-                                </div>
-                              </CardContent>
-                            </CollapsibleContent>
-                          </Card>
-                        </Collapsible>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+                      {record.notes && (
+                        <div className="space-y-0.5 md:col-span-2">
+                          <div className="flex items-center gap-1 text-[10px] font-medium text-muted-foreground uppercase">
+                            <MessageSquare className="h-3 w-3" />
+                            Observações
+                          </div>
+                          <p className="text-xs bg-muted/40 p-2 rounded whitespace-pre-wrap">
+                            {record.notes}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </AccordionContent>
+                )}
+              </AccordionItem>
             );
           })}
-        </div>
+        </Accordion>
       </ScrollArea>
     </div>
   );
