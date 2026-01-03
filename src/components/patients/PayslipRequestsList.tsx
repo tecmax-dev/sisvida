@@ -26,6 +26,8 @@ import {
 } from '@/components/ui/dialog';
 import { usePayslipRequests, PayslipRequest } from '@/hooks/usePayslipRequests';
 import { PayslipImageViewer } from './PayslipImageViewer';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface PayslipRequestsListProps {
   clinicId: string;
@@ -33,10 +35,11 @@ interface PayslipRequestsListProps {
 }
 
 export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsListProps) {
-  const { requests, isLoading, reviewRequest, isReviewing, getAttachmentUrl } = usePayslipRequests(
+  const { requests, isLoading, reviewRequest, isReviewing, getAttachmentUrl, refetch } = usePayslipRequests(
     clinicId,
     patientId
   );
+  const { toast } = useToast();
 
   const [viewerOpen, setViewerOpen] = useState(false);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
@@ -47,6 +50,7 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
   const [selectedRequest, setSelectedRequest] = useState<PayslipRequest | null>(null);
   const [reviewNotes, setReviewNotes] = useState('');
   const [newExpiresAt, setNewExpiresAt] = useState('');
+  const [isRejecting, setIsRejecting] = useState(false);
 
   const handleViewImage = async (request: PayslipRequest) => {
     if (!request.attachment_path) return;
@@ -82,15 +86,58 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
     });
   };
 
-  const handleReject = () => {
+  const handleReject = async () => {
     if (!selectedRequest) return;
-    reviewRequest({
-      requestId: selectedRequest.id,
-      status: 'rejected',
-      notes: reviewNotes || undefined,
-    }, {
-      onSuccess: () => setReviewDialogOpen(false),
-    });
+    
+    if (!reviewNotes.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Motivo obrigatório",
+        description: "Informe o motivo da rejeição nas observações.",
+      });
+      return;
+    }
+
+    setIsRejecting(true);
+    try {
+      // First update the request status
+      reviewRequest({
+        requestId: selectedRequest.id,
+        status: 'rejected',
+        notes: reviewNotes,
+      });
+
+      // Then send rejection notification and create new pending request
+      if (selectedRequest.patients?.phone) {
+        await supabase.functions.invoke('send-payslip-rejection', {
+          body: {
+            clinic_id: clinicId,
+            patient_id: selectedRequest.patient_id,
+            patient_name: selectedRequest.patients.name,
+            patient_phone: selectedRequest.patients.phone,
+            card_id: selectedRequest.card_id,
+            rejection_reason: reviewNotes
+          }
+        });
+      }
+
+      toast({
+        title: "Contracheque rejeitado",
+        description: "O paciente foi notificado e uma nova solicitação foi criada.",
+      });
+
+      setReviewDialogOpen(false);
+      refetch();
+    } catch (error) {
+      console.error('Error rejecting payslip:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao rejeitar",
+        description: "Não foi possível enviar a notificação.",
+      });
+    } finally {
+      setIsRejecting(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -246,15 +293,19 @@ export function PayslipRequestsList({ clinicId, patientId }: PayslipRequestsList
             <Button
               variant="destructive"
               onClick={handleReject}
-              disabled={isReviewing}
+              disabled={isReviewing || isRejecting}
               className="gap-1"
             >
-              <XCircle className="h-4 w-4" />
+              {isRejecting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )}
               Rejeitar
             </Button>
             <Button
               onClick={handleApprove}
-              disabled={isReviewing || !newExpiresAt}
+              disabled={isReviewing || isRejecting || !newExpiresAt}
               className="gap-1"
             >
               {isReviewing ? (
