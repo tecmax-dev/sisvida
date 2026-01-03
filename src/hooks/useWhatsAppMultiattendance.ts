@@ -76,9 +76,7 @@ export function useWhatsAppTickets(clinicId: string | undefined) {
   const updateTicketStatus = async (ticketId: string, status: WhatsAppTicketStatus) => {
     const updates: Record<string, any> = { status };
     
-    if (status === 'resolved') {
-      updates.resolved_at = new Date().toISOString();
-    } else if (status === 'closed') {
+    if (status === 'closed') {
       updates.closed_at = new Date().toISOString();
     }
 
