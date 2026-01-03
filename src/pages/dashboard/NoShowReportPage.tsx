@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -33,6 +34,7 @@ interface NoShowPatient {
 
 export default function NoShowReportPage() {
   const { currentClinic } = useAuth();
+  const { isAdmin } = usePermissions();
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("current");
   const [stats, setStats] = useState<NoShowStats>({ total: 0, noShows: 0, rate: 0, blockedPatients: 0 });
@@ -334,7 +336,7 @@ export default function NoShowReportPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {patient.isBlocked && (
+                      {patient.isBlocked && isAdmin && (
                         <Button
                           size="sm"
                           variant="ghost"
