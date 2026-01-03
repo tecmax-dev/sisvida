@@ -303,6 +303,8 @@ export function usePermissions() {
 
     // Hard safety: a "professional" should only access what is needed for agenda + atendimento.
     // This applies even when the user is in an access group, to avoid accidentally granting extra access.
+    // IMPORTANT: For the permissions listed below, we always ALLOW access for professionals.
+    // Otherwise, a misconfigured access group could block core flows like "iniciar atendimento".
     if (currentRole === "professional") {
       const allowed: Permission[] = [
         "view_dashboard",
@@ -321,7 +323,11 @@ export function usePermissions() {
       const isAllowed =
         allowed.includes(permission) || allowed.includes(resolvedPermission as Permission);
 
+      // Deny anything outside the professional whitelist.
       if (!isAllowed) return false;
+
+      // Allow whitelisted permissions regardless of DB access-group permissions.
+      return true;
     }
 
     // If user has an access_group_id, ALWAYS use database permissions
