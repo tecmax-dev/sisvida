@@ -8,6 +8,7 @@ import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import ecliniDashboardLogo from "@/assets/eclini-dashboard-logo.png";
+import { UserAvatar } from "@/components/users/UserAvatar";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -545,11 +546,12 @@ export function DashboardLayout() {
           <div className={cn("p-4 border-t border-sidebar-border bg-sidebar-accent/30", sidebarCollapsed && "p-2")}>
             {!sidebarCollapsed && (
               <div className="flex items-center gap-3 mb-4 px-3">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-primary-dark flex items-center justify-center ring-2 ring-primary/20">
-                  <span className="text-sm font-medium text-primary-foreground">
-                    {displayName.charAt(0).toUpperCase()}
-                  </span>
-                </div>
+                <UserAvatar 
+                  avatarUrl={profile?.avatar_url} 
+                  name={displayName} 
+                  size="md"
+                  className="ring-2 ring-primary/20"
+                />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-sidebar-foreground truncate">
                     {displayName}

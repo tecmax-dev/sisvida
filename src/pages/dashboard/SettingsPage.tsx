@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { TwilioConfigPanel } from "@/components/settings/TwilioConfigPanel";
@@ -23,9 +23,10 @@ import { useAutoSave, AutoSaveStatus } from "@/hooks/useAutoSave";
 import { AutoSaveIndicator } from "@/components/ui/auto-save-indicator";
 import { FeatureGate, FeatureGateInline } from "@/components/features/FeatureGate";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { UserAvatarUpload } from "@/components/users/UserAvatarUpload";
 
 export default function SettingsPage() {
-  const { user, currentClinic } = useAuth();
+  const { user, currentClinic, profile } = useAuth();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [clinicName, setClinicName] = useState("Clínica Saúde Total");
@@ -367,6 +368,43 @@ export default function SettingsPage() {
         </div>
         <AutoSaveIndicator status={autoSaveStatus} />
       </div>
+
+      {/* User Profile - Avatar */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+              <User className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">Meu Perfil</CardTitle>
+              <CardDescription>
+                Personalize sua foto de perfil
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center gap-6">
+            {user?.id && (
+              <UserAvatarUpload
+                userId={user.id}
+                currentAvatarUrl={profile?.avatar_url}
+                userName={profile?.name || user?.email || "Usuário"}
+                size="lg"
+                editable={true}
+              />
+            )}
+            <div className="flex-1">
+              <p className="font-medium text-foreground">{profile?.name || "Usuário"}</p>
+              <p className="text-sm text-muted-foreground">{user?.email}</p>
+              <p className="text-xs text-muted-foreground mt-2">
+                Clique no ícone de câmera para alterar sua foto
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <RoleGuard permission="manage_settings">
 
