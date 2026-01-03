@@ -153,14 +153,14 @@ interface PatientStats {
 }
 
 const SIDEBAR_ITEMS = [
-  { id: "resumo", label: "Resumo", icon: User },
-  { id: "exame-fisico", label: "Exame físico", icon: Stethoscope },
-  { id: "anamnese", label: "Anamnese", icon: ClipboardList },
-  { id: "odontograma", label: "Odontograma", icon: Stethoscope, dentalOnly: true },
-  { id: "prontuario", label: "Prontuário", icon: FileText },
-  { id: "prescricoes", label: "Prescrições", icon: Pill },
-  { id: "exames", label: "Exames", icon: FlaskConical },
-  { id: "historico", label: "Histórico", icon: History },
+  { id: "resumo", label: "Resumo", icon: User, color: "text-violet-500", bgColor: "bg-violet-500/10" },
+  { id: "exame-fisico", label: "Exame físico", icon: Stethoscope, color: "text-rose-500", bgColor: "bg-rose-500/10" },
+  { id: "anamnese", label: "Anamnese", icon: ClipboardList, color: "text-amber-500", bgColor: "bg-amber-500/10" },
+  { id: "odontograma", label: "Odontograma", icon: Stethoscope, color: "text-emerald-500", bgColor: "bg-emerald-500/10", dentalOnly: true },
+  { id: "prontuario", label: "Prontuário", icon: FileText, color: "text-blue-500", bgColor: "bg-blue-500/10" },
+  { id: "prescricoes", label: "Prescrições", icon: Pill, color: "text-pink-500", bgColor: "bg-pink-500/10" },
+  { id: "exames", label: "Exames", icon: FlaskConical, color: "text-cyan-500", bgColor: "bg-cyan-500/10" },
+  { id: "historico", label: "Histórico", icon: History, color: "text-sky-500", bgColor: "bg-sky-500/10" },
 ];
 
 export default function AttendancePageRedesign() {
@@ -1067,22 +1067,33 @@ export default function AttendancePageRedesign() {
 
         {/* Navigation */}
         <ScrollArea className="flex-1">
-          <nav className="p-2 space-y-1">
-            {sidebarItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => setActiveSection(item.id)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors",
-                  activeSection === item.id 
-                    ? "bg-primary/10 text-primary font-medium" 
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <item.icon className="h-4 w-4 flex-shrink-0" />
-                {!sidebarCollapsed && <span>{item.label}</span>}
-              </button>
-            ))}
+          <nav className="p-3 space-y-1.5">
+            {sidebarItems.map((item) => {
+              const isActive = activeSection === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setActiveSection(item.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200",
+                    isActive 
+                      ? `${item.bgColor} ${item.color} shadow-sm` 
+                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
+                  )}
+                >
+                  <div className={cn(
+                    "flex items-center justify-center rounded-lg p-1.5 transition-colors",
+                    isActive ? item.bgColor : "bg-muted/50"
+                  )}>
+                    <item.icon className={cn(
+                      "h-4 w-4 flex-shrink-0 transition-colors",
+                      isActive ? item.color : "text-muted-foreground"
+                    )} />
+                  </div>
+                  {!sidebarCollapsed && <span>{item.label}</span>}
+                </button>
+              );
+            })}
           </nav>
         </ScrollArea>
       </div>
