@@ -901,183 +901,274 @@ export default function AttendancePage() {
     );
   }
 
+  // Calculate patient age
+  const getPatientAge = () => {
+    if (!appointment?.patient?.birth_date) return null;
+    const birthDate = new Date(appointment.patient.birth_date + "T12:00:00");
+    const today = new Date();
+    const years = today.getFullYear() - birthDate.getFullYear();
+    const months = today.getMonth() - birthDate.getMonth();
+    const totalMonths = years * 12 + months;
+    const displayYears = Math.floor(totalMonths / 12);
+    const displayMonths = totalMonths % 12;
+    return { years: displayYears, months: displayMonths };
+  };
+
+  const patientAge = getPatientAge();
+
+  // Get initials
+  const getInitials = (name: string) => {
+    return name
+      .split(" ")
+      .filter((n) => n.length > 0)
+      .slice(0, 2)
+      .map((n) => n[0].toUpperCase())
+      .join("");
+  };
+
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate("/dashboard/calendar")}
-                aria-label="Voltar para agenda"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div>
-                <h1 className="text-xl font-semibold flex items-center gap-2">
-                  <Stethoscope className="h-5 w-5 text-primary" />
-                  Painel de Atendimento
-                  {isCompleted && (
-                    <Badge variant="secondary" className="ml-2">
-                      <Lock className="h-3 w-3 mr-1" />
-                      Finalizado
-                    </Badge>
-                  )}
-                </h1>
-                <p className="text-sm text-muted-foreground">
-                  {typeLabels[appointment.type] || appointment.type} - {format(new Date(appointment.appointment_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} às {appointment.start_time.substring(0, 5)}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {!isInProgress && !isCompleted && (
-                <Button onClick={handleStartAppointment} disabled={loading}>
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : isTelemedicine ? (
-                    <Video className="h-4 w-4 mr-2" />
-                  ) : (
-                    <Play className="h-4 w-4 mr-2" />
-                  )}
-                  {isTelemedicine ? "Iniciar Teleconsulta" : "Iniciar Atendimento"}
-                </Button>
-              )}
-              {isInProgress && (
-                <Button
-                  onClick={handleEndAppointment}
-                  disabled={loading}
-                  className="bg-success hover:bg-success/90"
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                  )}
-                  Finalizar
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Patient + Timer */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Card className="lg:col-span-2">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center">
-                <User className="h-5 w-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="font-semibold truncate">{appointment.patient.name}</h2>
-                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <Phone className="h-3.5 w-3.5" />
-                    {appointment.patient.phone}
-                  </span>
-                  {appointment.patient.email && (
-                    <span className="flex items-center gap-1">
-                      <Mail className="h-3.5 w-3.5" />
-                      {appointment.patient.email}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex flex-col items-center justify-center text-center">
-              {isInProgress ? (
-                <>
-                  <Timer className="h-5 w-5 text-info mb-1" />
-                  <span className="text-2xl font-mono font-bold text-info">{elapsedTime}</span>
-                  <span className="text-xs text-muted-foreground">Tempo de atendimento</span>
-                </>
-              ) : isCompleted && appointment.duration_minutes ? (
-                <>
-                  <CheckCircle2 className="h-5 w-5 text-success mb-1" />
-                  <span className="text-xl font-semibold text-success">{formatDuration(appointment.duration_minutes)}</span>
-                  <span className="text-xs text-muted-foreground">Duração total</span>
-                </>
-              ) : (
-                <>
-                  <Clock className="h-5 w-5 text-muted-foreground mb-1" />
-                  <span className="text-sm text-muted-foreground">Aguardando início</span>
-                </>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+    <div className="space-y-4 p-2">
+      {/* Compact Header with Breadcrumb */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate("/dashboard/calendar")}
+            className="h-8 px-2"
+          >
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Voltar
+          </Button>
+          <span className="text-muted-foreground">/</span>
+          <h1 className="font-semibold text-lg flex items-center gap-2">
+            Prontuários
+            {isCompleted && (
+              <Badge variant="secondary" className="text-xs">
+                <Lock className="h-3 w-3 mr-1" />
+                Finalizado
+              </Badge>
+            )}
+          </h1>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={() => navigate(`/dashboard/patients/${appointment.patient_id}/edit`)}
+        >
+          Visualizar Cadastro
+        </Button>
       </div>
 
-      {/* Vital Signs */}
-      <Card>
-        <CardContent className="p-4">
+      {/* Main Grid: Sidebar + Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-4">
+        
+        {/* LEFT SIDEBAR */}
+        <div className="space-y-4">
+          {/* Timer Card - Prominent */}
+          <Card className={`relative overflow-hidden ${isInProgress ? 'bg-gradient-to-br from-info/10 via-info/5 to-background border-info/30' : isCompleted ? 'bg-gradient-to-br from-success/10 via-success/5 to-background border-success/30' : 'bg-gradient-to-br from-muted via-background to-background'}`}>
+            <CardContent className="p-4">
+              <div className="flex flex-col items-center text-center space-y-2">
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Duração da consulta</span>
+                
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center border-4 ${isInProgress ? 'border-info bg-info/10' : isCompleted ? 'border-success bg-success/10' : 'border-muted-foreground/30 bg-muted/50'}`}>
+                  {isInProgress ? (
+                    <div className="text-center">
+                      <Timer className="h-5 w-5 text-info mx-auto mb-1" />
+                      <span className="text-xl font-mono font-bold text-info">{elapsedTime}</span>
+                    </div>
+                  ) : isCompleted && appointment.duration_minutes ? (
+                    <div className="text-center">
+                      <CheckCircle2 className="h-5 w-5 text-success mx-auto mb-1" />
+                      <span className="text-lg font-semibold text-success">{formatDuration(appointment.duration_minutes)}</span>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Clock className="h-6 w-6 text-muted-foreground mx-auto" />
+                      <span className="text-xs text-muted-foreground font-mono mt-1">00:00:00</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Start/End Button */}
+                {!isInProgress && !isCompleted && (
+                  <Button 
+                    onClick={handleStartAppointment} 
+                    disabled={loading} 
+                    className="w-full bg-primary hover:bg-primary/90"
+                    size="lg"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : isTelemedicine ? (
+                      <Video className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Play className="h-4 w-4 mr-2" />
+                    )}
+                    Iniciar
+                  </Button>
+                )}
+                {isInProgress && (
+                  <Button
+                    onClick={handleEndAppointment}
+                    disabled={loading}
+                    className="w-full bg-success hover:bg-success/90 text-success-foreground"
+                    size="lg"
+                  >
+                    {loading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                    )}
+                    Finalizar
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Navigation Tabs - Vertical */}
+          <Card>
+            <CardContent className="p-2">
+              <nav className="flex flex-col space-y-1">
+                {[
+                  { value: "resumo", label: "Resumo", icon: User },
+                  { value: "exame-fisico", label: "Exame físico", icon: Stethoscope },
+                  { value: "anamnese", label: "Anamnese", icon: ClipboardList },
+                  { value: "prontuario", label: "Prontuário", icon: FileText },
+                  { value: "receituario", label: "Prescrições", icon: Pill },
+                  { value: "exames", label: "Exames", icon: FlaskConical },
+                  { value: "historico", label: "Histórico", icon: History },
+                ].map((item) => (
+                  <Button
+                    key={item.value}
+                    variant="ghost"
+                    className="justify-start h-10 px-3 text-sm font-normal hover:bg-primary/10 hover:text-primary"
+                  >
+                    <item.icon className="h-4 w-4 mr-3 text-muted-foreground" />
+                    {item.label}
+                  </Button>
+                ))}
+                {isDentalSpecialty && (
+                  <Button
+                    variant="ghost"
+                    className="justify-start h-10 px-3 text-sm font-normal hover:bg-primary/10 hover:text-primary"
+                  >
+                    <Stethoscope className="h-4 w-4 mr-3 text-muted-foreground" />
+                    Odontograma
+                  </Button>
+                )}
+              </nav>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* RIGHT CONTENT AREA */}
+        <div className="space-y-4">
+          {/* Patient Info Card - Colorful */}
+          <Card className="border-l-4 border-l-primary">
+            <CardContent className="p-5">
+              <div className="flex items-start gap-4">
+                {/* Avatar */}
+                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center flex-shrink-0 ring-2 ring-primary/20">
+                  <span className="text-xl font-bold text-primary">
+                    {getInitials(appointment.patient.name)}
+                  </span>
+                </div>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-lg font-bold uppercase tracking-wide text-foreground truncate">
+                    {appointment.patient.name}
+                  </h2>
+                  
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
+                    {patientAge && (
+                      <span className="flex items-center gap-1">
+                        <span className="font-medium text-foreground">Idade:</span>
+                        {patientAge.years} anos, {patientAge.months} meses
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1">
+                      <span className="font-medium text-foreground">Atendimentos:</span>
+                      {medicalHistory.length}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <span className="font-medium text-foreground">Primeira consulta em:</span>
+                      {format(new Date(appointment.appointment_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}
+                    </span>
+                  </div>
+
+                  {/* Tags placeholder */}
+                  <div className="mt-3">
+                    <Button variant="outline" size="sm" className="h-7 text-xs">
+                      <ClipboardList className="h-3 w-3 mr-1" />
+                      Adicionar tag
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Vital Signs */}
           <VitalSignsDisplay appointmentId={appointment.id} />
-        </CardContent>
-      </Card>
 
-      {/* Main Content */}
-      <Card>
-        <CardContent className="p-4">
-          <Tabs defaultValue="prontuario" className="w-full">
-            <TabsList className={`w-full grid ${isDentalSpecialty ? 'grid-cols-6' : 'grid-cols-5'} h-auto gap-2 bg-transparent p-0`}>
-              {/** Shared trigger styling (sem cores fixas) */}
-              <TabsTrigger 
-                value="prontuario" 
-                className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
-              >
-                <FileText className="h-5 w-5" />
-                <span className="text-xs font-medium">Prontuário</span>
-              </TabsTrigger>
-              {isDentalSpecialty && (
-                <TabsTrigger 
-                  value="odontograma"
-                  className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
-                >
-                  <Stethoscope className="h-5 w-5" />
-                  <span className="text-xs font-medium">Odontograma</span>
-                </TabsTrigger>
-              )}
-              <TabsTrigger 
-                value="anamnese"
-                className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
-              >
-                <ClipboardList className="h-5 w-5" />
-                <span className="text-xs font-medium">Anamnese</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="historico"
-                className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
-              >
-                <History className="h-5 w-5" />
-                <span className="text-xs font-medium">Histórico</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="receituario"
-                className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
-              >
-                <Pill className="h-5 w-5" />
-                <span className="text-xs font-medium">Receituário</span>
-              </TabsTrigger>
-              <TabsTrigger 
-                value="exames"
-                className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
-              >
-                <FlaskConical className="h-5 w-5" />
-                <span className="text-xs font-medium">Exames</span>
-              </TabsTrigger>
-            </TabsList>
+          {/* Main Content */}
+          <Card>
+            <CardContent className="p-4">
+              <Tabs defaultValue="prontuario" className="w-full">
+                <TabsList className={`w-full grid ${isDentalSpecialty ? 'grid-cols-6' : 'grid-cols-5'} h-auto gap-2 bg-transparent p-0`}>
+                  {/** Shared trigger styling */}
+                  <TabsTrigger 
+                    value="prontuario" 
+                    className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+                  >
+                    <FileText className="h-5 w-5" />
+                    <span className="text-xs font-medium">Prontuário</span>
+                  </TabsTrigger>
+                  {isDentalSpecialty && (
+                    <TabsTrigger 
+                      value="odontograma"
+                      className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+                    >
+                      <Stethoscope className="h-5 w-5" />
+                      <span className="text-xs font-medium">Odontograma</span>
+                    </TabsTrigger>
+                  )}
+                  <TabsTrigger 
+                    value="anamnese"
+                    className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+                  >
+                    <ClipboardList className="h-5 w-5" />
+                    <span className="text-xs font-medium">Anamnese</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="historico"
+                    className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+                  >
+                    <History className="h-5 w-5" />
+                    <span className="text-xs font-medium">Histórico</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="receituario"
+                    className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+                  >
+                    <Pill className="h-5 w-5" />
+                    <span className="text-xs font-medium">Receituário</span>
+                  </TabsTrigger>
+                  <TabsTrigger 
+                    value="exames"
+                    className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+                  >
+                    <FlaskConical className="h-5 w-5" />
+                    <span className="text-xs font-medium">Exames</span>
+                  </TabsTrigger>
+                </TabsList>
 
-        {/* Prontuário Tab */}
         <TabsContent value="prontuario" className="mt-4 space-y-4">
           {/* Auto-save indicator */}
           <div className="flex items-center justify-end gap-2 text-sm">
@@ -1314,6 +1405,10 @@ export default function AttendancePage() {
         />
       )}
 
+        </div>
+        {/* END RIGHT CONTENT AREA */}
+      </div>
+      {/* END MAIN GRID */}
     </div>
   );
 }
