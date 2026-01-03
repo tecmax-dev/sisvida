@@ -637,9 +637,9 @@ async function findOrCreateWhatsAppTicket(
       clinic_id: clinicId,
       contact_id: contactId,
       status: 'pending',
-      channel: 'whatsapp',
       is_bot_active: true,
       unread_count: 0,
+      last_message_at: new Date().toISOString(),
     })
     .select('id, protocol, unread_count')
     .single();
