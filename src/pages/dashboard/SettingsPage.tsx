@@ -24,9 +24,23 @@ import { AutoSaveIndicator } from "@/components/ui/auto-save-indicator";
 import { FeatureGate, FeatureGateInline } from "@/components/features/FeatureGate";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { UserAvatarUpload } from "@/components/users/UserAvatarUpload";
-import { SettingsWidgetWrapper } from "@/components/settings/SettingsWidgetWrapper";
+import { DraggableWidget } from "@/components/settings/DraggableWidget";
+import { DroppableColumn } from "@/components/settings/DroppableColumn";
 import { useSettingsWidgets, WidgetColumn } from "@/hooks/useSettingsWidgets";
 import { Badge } from "@/components/ui/badge";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragOverEvent,
+  DragOverlay,
+  DragStartEvent,
+} from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 export default function SettingsPage() {
   const { user, currentClinic, profile } = useAuth();
@@ -57,6 +71,7 @@ export default function SettingsPage() {
   const {
     loading: widgetsLoading,
     isWidgetVisible,
+    handleDragEnd,
     moveWidgetUp,
     moveWidgetDown,
     moveWidgetToColumn,
@@ -67,6 +82,19 @@ export default function SettingsPage() {
   } = useSettingsWidgets();
   
   const [isEditMode, setIsEditMode] = useState(false);
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Initial data for auto-save comparison
   const [initialSettingsData, setInitialSettingsData] = useState({
@@ -941,10 +969,46 @@ export default function SettingsPage() {
       .filter((w): w is typeof widgetDefinitions[0] => w !== undefined);
   }, [widgetDefinitions, getWidgetsForColumn]);
 
+  const leftWidgetIds = useMemo(() => leftColumnWidgets.map(w => w.id), [leftColumnWidgets]);
+  const rightWidgetIds = useMemo(() => rightColumnWidgets.map(w => w.id), [rightColumnWidgets]);
+
+  // Find active widget for drag overlay
+  const activeWidget = useMemo(() => {
+    if (!activeId) return null;
+    return widgetDefinitions.find(w => w.id === activeId);
+  }, [activeId, widgetDefinitions]);
+
+  // DnD handlers
+  const onDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+  };
+
+  const onDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+    
+    if (!over) return;
+
+    const activeId = active.id as string;
+    const overId = over.id as string;
+
+    // Check if dropped on a column
+    if (overId === "column-left" || overId === "column-right") {
+      const targetColumn = overId === "column-left" ? "left" : "right";
+      handleDragEnd(activeId, null, targetColumn);
+    } else {
+      // Dropped on another widget
+      const overWidget = widgetDefinitions.find(w => w.id === overId);
+      if (overWidget) {
+        const overPlacement = getWidgetPlacement(overId);
+        handleDragEnd(activeId, overId, overPlacement?.column || null);
+      }
+    }
+  };
+
   // Render widget with proper guards
-  const renderWidget = (widget: typeof widgetDefinitions[0], columnWidgets: typeof widgetDefinitions, column: "left" | "right") => {
+  const renderWidget = (widget: typeof widgetDefinitions[0]) => {
     const isVisible = isWidgetVisible(widget.id);
-    const index = columnWidgets.findIndex(w => w.id === widget.id);
     
     // Check permission
     if (widget.permission && !hasPermission(widget.permission)) {
@@ -974,7 +1038,7 @@ export default function SettingsPage() {
 
     // Regular widgets with content
     const widgetContent = (
-      <SettingsWidgetWrapper
+      <DraggableWidget
         key={widget.id}
         id={widget.id}
         title={widget.title}
@@ -982,16 +1046,10 @@ export default function SettingsPage() {
         icon={widget.icon}
         isEditMode={isEditMode}
         isVisible={isVisible}
-        isFirst={index === 0}
-        isLast={index === columnWidgets.length - 1}
-        currentColumn={column}
-        onMoveUp={() => moveWidgetUp(widget.id)}
-        onMoveDown={() => moveWidgetDown(widget.id)}
         onToggleVisibility={() => toggleWidgetVisibility(widget.id)}
-        onMoveToColumn={(targetColumn) => moveWidgetToColumn(widget.id, targetColumn)}
       >
         {widget.content}
-      </SettingsWidgetWrapper>
+      </DraggableWidget>
     );
 
     if (widget.feature) {
@@ -1041,7 +1099,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="font-medium text-foreground">Modo de personalização ativo</p>
                   <p className="text-sm text-muted-foreground">
-                    Use as setas para reordenar, ↔ para mover entre colunas, e 👁 para ocultar/exibir
+                    Arraste os widgets para reordenar ou mover entre colunas. Use o ícone 👁 para ocultar/exibir.
                   </p>
                 </div>
               </div>
@@ -1054,54 +1112,82 @@ export default function SettingsPage() {
         </Card>
       )}
 
-      {/* Two column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column */}
-        <div className="space-y-4">
-          {isEditMode && (
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
-              Coluna Esquerda
-            </div>
-          )}
-          <RoleGuard permission="manage_settings">
-            {leftColumnWidgets
-              .filter(w => w.permission === "manage_settings" || w.permission === null)
-              .map((widget) => renderWidget(widget, leftColumnWidgets, "left"))}
-          </RoleGuard>
-          
-          {/* Password change widget if in left column */}
-          {hasPermission('change_password') && leftColumnWidgets.some(w => w.id === "password-change") && (
-            <>
+      {/* Two column layout with DnD */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+      >
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Left Column */}
+          <DroppableColumn 
+            id="column-left" 
+            label="Coluna Esquerda" 
+            widgetIds={leftWidgetIds}
+            isEditMode={isEditMode}
+          >
+            <RoleGuard permission="manage_settings">
               {leftColumnWidgets
-                .filter(w => w.id === "password-change")
-                .map((widget) => renderWidget(widget, leftColumnWidgets, "left"))}
-            </>
-          )}
+                .filter(w => w.permission === "manage_settings" || w.permission === null)
+                .map((widget) => renderWidget(widget))}
+            </RoleGuard>
+            
+            {/* Password change widget if in left column */}
+            {hasPermission('change_password') && leftColumnWidgets.some(w => w.id === "password-change") && (
+              <>
+                {leftColumnWidgets
+                  .filter(w => w.id === "password-change")
+                  .map((widget) => renderWidget(widget))}
+              </>
+            )}
+          </DroppableColumn>
+
+          {/* Right Column */}
+          <DroppableColumn 
+            id="column-right" 
+            label="Coluna Direita" 
+            widgetIds={rightWidgetIds}
+            isEditMode={isEditMode}
+          >
+            <RoleGuard permission="manage_settings">
+              {rightColumnWidgets
+                .filter(w => w.permission === "manage_settings" || w.permission === null)
+                .map((widget) => renderWidget(widget))}
+            </RoleGuard>
+            
+            {/* Password change widget if in right column */}
+            {hasPermission('change_password') && rightColumnWidgets.some(w => w.id === "password-change") && (
+              <>
+                {rightColumnWidgets
+                  .filter(w => w.id === "password-change")
+                  .map((widget) => renderWidget(widget))}
+              </>
+            )}
+          </DroppableColumn>
         </div>
 
-        {/* Right Column */}
-        <div className="space-y-4">
-          {isEditMode && (
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider px-1">
-              Coluna Direita
-            </div>
-          )}
-          <RoleGuard permission="manage_settings">
-            {rightColumnWidgets
-              .filter(w => w.permission === "manage_settings" || w.permission === null)
-              .map((widget) => renderWidget(widget, rightColumnWidgets, "right"))}
-          </RoleGuard>
-          
-          {/* Password change widget if in right column */}
-          {hasPermission('change_password') && rightColumnWidgets.some(w => w.id === "password-change") && (
-            <>
-              {rightColumnWidgets
-                .filter(w => w.id === "password-change")
-                .map((widget) => renderWidget(widget, rightColumnWidgets, "right"))}
-            </>
-          )}
-        </div>
-      </div>
+        {/* Drag Overlay */}
+        <DragOverlay>
+          {activeWidget ? (
+            <Card className="opacity-90 shadow-xl ring-2 ring-primary">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    {activeWidget.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-base">{activeWidget.title}</CardTitle>
+                    {activeWidget.description && (
+                      <CardDescription className="text-xs">{activeWidget.description}</CardDescription>
+                    )}
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
 
       {/* Save button */}
       <RoleGuard permission="manage_settings">

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { arrayMove } from "@dnd-kit/sortable";
 
 export type WidgetColumn = "left" | "right";
 
@@ -126,6 +127,100 @@ export function useSettingsWidgets() {
       .sort((a, b) => a.order - b.order);
   }, [placements]);
 
+  // Handle drag end - reorder within column or move between columns
+  const handleDragEnd = useCallback((activeId: string, overId: string | null, overColumn: WidgetColumn | null) => {
+    if (!overId && !overColumn) return;
+
+    setPlacements(prev => {
+      const activeWidget = prev.find(p => p.id === activeId);
+      if (!activeWidget) return prev;
+
+      // If dropped on a column droppable (not on another widget)
+      if (overColumn && !overId) {
+        // Move to end of target column
+        const targetColumnWidgets = prev.filter(p => p.column === overColumn);
+        const maxOrder = targetColumnWidgets.length > 0 
+          ? Math.max(...targetColumnWidgets.map(p => p.order)) + 1 
+          : 0;
+
+        const newPlacements = prev.map(p => {
+          if (p.id === activeId) {
+            return { ...p, column: overColumn, order: maxOrder };
+          }
+          return p;
+        });
+
+        saveSettings(newPlacements, hiddenWidgets);
+        return newPlacements;
+      }
+
+      // Dropped on another widget
+      const overWidget = prev.find(p => p.id === overId);
+      if (!overWidget) return prev;
+
+      // Same column - reorder
+      if (activeWidget.column === overWidget.column) {
+        const columnWidgets = prev
+          .filter(p => p.column === activeWidget.column)
+          .sort((a, b) => a.order - b.order);
+        
+        const activeIndex = columnWidgets.findIndex(p => p.id === activeId);
+        const overIndex = columnWidgets.findIndex(p => p.id === overId);
+        
+        if (activeIndex === overIndex) return prev;
+
+        const reorderedColumn = arrayMove(columnWidgets, activeIndex, overIndex);
+        
+        const newPlacements = prev.map(p => {
+          if (p.column === activeWidget.column) {
+            const newIndex = reorderedColumn.findIndex(rp => rp.id === p.id);
+            return { ...p, order: newIndex };
+          }
+          return p;
+        });
+
+        saveSettings(newPlacements, hiddenWidgets);
+        return newPlacements;
+      }
+
+      // Different column - move to position
+      const targetColumn = overWidget.column;
+      const targetColumnWidgets = prev
+        .filter(p => p.column === targetColumn)
+        .sort((a, b) => a.order - b.order);
+      
+      const overIndex = targetColumnWidgets.findIndex(p => p.id === overId);
+
+      // Remove from source column and recalculate orders
+      const newPlacements = prev.map(p => {
+        if (p.id === activeId) {
+          return { ...p, column: targetColumn, order: overIndex };
+        }
+        // Shift items in target column that are at or after the drop position
+        if (p.column === targetColumn && p.order >= overIndex) {
+          return { ...p, order: p.order + 1 };
+        }
+        return p;
+      });
+
+      // Recalculate source column orders
+      const sourceColumnWidgets = newPlacements
+        .filter(p => p.column === activeWidget.column && p.id !== activeId)
+        .sort((a, b) => a.order - b.order);
+      
+      const finalPlacements = newPlacements.map(p => {
+        if (p.column === activeWidget.column && p.id !== activeId) {
+          const newOrder = sourceColumnWidgets.findIndex(sp => sp.id === p.id);
+          return { ...p, order: newOrder };
+        }
+        return p;
+      });
+
+      saveSettings(finalPlacements, hiddenWidgets);
+      return finalPlacements;
+    });
+  }, [hiddenWidgets, saveSettings]);
+
   // Move widget up within column
   const moveWidgetUp = useCallback((widgetId: string) => {
     setPlacements(prev => {
@@ -233,6 +328,7 @@ export function useSettingsWidgets() {
     loading,
     saving,
     getWidgetsForColumn,
+    handleDragEnd,
     moveWidgetUp,
     moveWidgetDown,
     moveWidgetToColumn,
