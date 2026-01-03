@@ -16,6 +16,7 @@ import {
   Clock,
   CheckCircle2,
   User,
+  UserX,
   Phone,
   Mail,
   Calendar,
@@ -1113,43 +1114,103 @@ export default function AttendancePageRedesign() {
             {activeSection === "resumo" && (
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-xl font-semibold">Resumo</h1>
+                  <h1 className="text-xl font-semibold">Resumo do Paciente</h1>
                   <Button variant="outline" onClick={() => navigate(`/dashboard/patients/${appointment.patient_id}`)}>
                     Visualizar Cadastro
                   </Button>
                 </div>
 
-                <Card>
+                {/* Patient Header Card - Enhanced Design */}
+                <Card className="bg-gradient-to-r from-primary/5 via-background to-accent/5 border-primary/20">
                   <CardContent className="p-6">
                     <div className="flex items-start gap-6">
-                      <Avatar className="h-20 w-20 text-2xl">
-                        <AvatarFallback className="bg-primary/10 text-primary">
+                      <Avatar className="h-24 w-24 text-3xl ring-4 ring-primary/20 ring-offset-2 ring-offset-background">
+                        <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                           {getInitials(appointment.patient.name)}
                         </AvatarFallback>
                       </Avatar>
                       
-                      <div className="flex-1 space-y-3">
+                      <div className="flex-1 space-y-4">
                         <div>
-                          <h2 className="text-xl font-semibold">{appointment.patient.name}</h2>
-                          <div className="flex flex-wrap gap-4 mt-2 text-sm text-muted-foreground">
-                            <span><strong>Idade:</strong> {getPatientAge(appointment.patient.birth_date)}</span>
-                            <span><strong>Atendimentos:</strong> {patientStats.totalAppointments}</span>
+                          <h2 className="text-2xl font-bold text-foreground tracking-tight">
+                            {appointment.patient.name.toUpperCase()}
+                          </h2>
+                          <p className="text-muted-foreground text-sm mt-1">
+                            Paciente desde {patientStats.firstVisit ? format(new Date(patientStats.firstVisit + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "hoje"}
+                          </p>
+                        </div>
+
+                        {/* Stats Cards Grid */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                          {/* Age Card */}
+                          <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3">
+                            <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
+                              <Calendar className="h-4 w-4" />
+                              <span className="text-xs font-medium uppercase tracking-wide">Idade</span>
+                            </div>
+                            <p className="text-lg font-bold text-foreground">
+                              {getPatientAge(appointment.patient.birth_date) || "N/I"}
+                            </p>
                           </div>
-                          <div className="flex flex-wrap gap-4 mt-1 text-sm text-muted-foreground">
-                            {patientStats.firstVisit && (
-                              <span><strong>Primeira consulta em:</strong> {format(new Date(patientStats.firstVisit + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })}</span>
-                            )}
-                            {patientStats.missedAppointments > 0 && (
-                              <span><strong>Faltas:</strong> {patientStats.missedAppointments}</span>
-                            )}
+
+                          {/* Appointments Card */}
+                          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+                            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
+                              <Stethoscope className="h-4 w-4" />
+                              <span className="text-xs font-medium uppercase tracking-wide">Atendimentos</span>
+                            </div>
+                            <p className="text-lg font-bold text-foreground">
+                              {patientStats.totalAppointments}
+                            </p>
+                          </div>
+
+                          {/* No Show Card */}
+                          <div className={cn(
+                            "rounded-lg p-3 border",
+                            patientStats.missedAppointments > 0 
+                              ? "bg-red-500/10 border-red-500/20" 
+                              : "bg-muted/50 border-border"
+                          )}>
+                            <div className={cn(
+                              "flex items-center gap-2 mb-1",
+                              patientStats.missedAppointments > 0 
+                                ? "text-red-600 dark:text-red-400" 
+                                : "text-muted-foreground"
+                            )}>
+                              <UserX className="h-4 w-4" />
+                              <span className="text-xs font-medium uppercase tracking-wide">Faltas</span>
+                            </div>
+                            <p className={cn(
+                              "text-lg font-bold",
+                              patientStats.missedAppointments > 0 ? "text-red-600 dark:text-red-400" : "text-foreground"
+                            )}>
+                              {patientStats.missedAppointments}
+                            </p>
+                          </div>
+
+                          {/* Blood Type or Phone Card */}
+                          <div className="bg-violet-500/10 border border-violet-500/20 rounded-lg p-3">
+                            <div className="flex items-center gap-2 text-violet-600 dark:text-violet-400 mb-1">
+                              <Phone className="h-4 w-4" />
+                              <span className="text-xs font-medium uppercase tracking-wide">Contato</span>
+                            </div>
+                            <p className="text-sm font-medium text-foreground truncate">
+                              {appointment.patient.phone || "Não informado"}
+                            </p>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
-                            <Tag className="h-3.5 w-3.5 mr-1" />
+                        <div className="flex items-center gap-2 pt-2">
+                          <Button variant="outline" size="sm" className="text-xs">
+                            <Tag className="h-3.5 w-3.5 mr-1.5" />
                             Adicionar tag
                           </Button>
+                          {appointment.patient.email && (
+                            <Badge variant="secondary" className="text-xs">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {appointment.patient.email}
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1159,25 +1220,42 @@ export default function AttendancePageRedesign() {
                 {/* Vital Signs */}
                 <VitalSignsDisplay appointmentId={appointment.id} />
 
-                {/* Quick Anamnesis Summary */}
+                {/* Quick Anamnesis Summary - Enhanced */}
                 {anamnesis && (
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-base">Informações de Saúde</CardTitle>
+                  <Card className="border-amber-500/20">
+                    <CardHeader className="pb-3 bg-amber-500/5 rounded-t-lg">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-amber-600" />
+                        Informações de Saúde
+                      </CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      {anamnesis.blood_type && (
-                        <div><strong>Tipo Sanguíneo:</strong> {anamnesis.blood_type}</div>
-                      )}
-                      {anamnesis.allergies && (
-                        <div><strong>Alergias:</strong> {anamnesis.allergies}</div>
-                      )}
-                      {anamnesis.chronic_diseases && (
-                        <div><strong>Doenças Crônicas:</strong> {anamnesis.chronic_diseases}</div>
-                      )}
-                      {anamnesis.current_medications && (
-                        <div><strong>Medicamentos:</strong> {anamnesis.current_medications}</div>
-                      )}
+                    <CardContent className="pt-4">
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {anamnesis.blood_type && (
+                          <div className="bg-red-500/5 border border-red-500/10 rounded-lg p-3">
+                            <span className="text-xs text-red-600 dark:text-red-400 font-medium uppercase">Tipo Sanguíneo</span>
+                            <p className="text-lg font-bold text-foreground mt-1">{anamnesis.blood_type}</p>
+                          </div>
+                        )}
+                        {anamnesis.allergies && (
+                          <div className="bg-orange-500/5 border border-orange-500/10 rounded-lg p-3">
+                            <span className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase">Alergias</span>
+                            <p className="text-sm font-medium text-foreground mt-1 line-clamp-2">{anamnesis.allergies}</p>
+                          </div>
+                        )}
+                        {anamnesis.chronic_diseases && (
+                          <div className="bg-purple-500/5 border border-purple-500/10 rounded-lg p-3">
+                            <span className="text-xs text-purple-600 dark:text-purple-400 font-medium uppercase">Doenças Crônicas</span>
+                            <p className="text-sm font-medium text-foreground mt-1 line-clamp-2">{anamnesis.chronic_diseases}</p>
+                          </div>
+                        )}
+                        {anamnesis.current_medications && (
+                          <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-lg p-3">
+                            <span className="text-xs text-cyan-600 dark:text-cyan-400 font-medium uppercase">Medicamentos</span>
+                            <p className="text-sm font-medium text-foreground mt-1 line-clamp-2">{anamnesis.current_medications}</p>
+                          </div>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 )}
