@@ -160,8 +160,8 @@ export default function PatientEditPage() {
   const canViewMedicalRecords = hasPermission('view_medical_records');
   const canViewPrescriptions = hasPermission('view_prescriptions');
   const isAdmin = hasPermission('manage_patients');
-  // Somente admins podem desbloquear pacientes bloqueados por falta
-  const canUnblockPatients = isAdmin;
+  // Permissão de desbloquear pacientes - disponível apenas para admins ou usuários com permissão específica
+  const canUnblockPatients = hasPermission('unblock_patients');
   
   // Determine which tabs to hide based on permissions
   const hiddenTabs: PatientTab[] = [];
