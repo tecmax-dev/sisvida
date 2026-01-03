@@ -53,21 +53,22 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
     if (location.pathname === "/dashboard") {
       return <Navigate to="/dashboard/calendar" replace />;
     }
-    
+
     // Allow access to specific routes that professionals can use
     const allowedProfessionalPaths = [
       "/dashboard/calendar",
+      "/dashboard/atendimento",
       "/dashboard/patients",
       "/dashboard/medical-records",
       "/dashboard/anamnesis",
       "/dashboard/anamnesis-dynamic",
       "/dashboard/prescription",
     ];
-    
+
     const isAllowedPath = allowedProfessionalPaths.some(
       (path) => location.pathname === path || location.pathname.startsWith(path + "/")
     );
-    
+
     if (!isAllowedPath) {
       return <Navigate to="/dashboard/calendar" replace />;
     }
