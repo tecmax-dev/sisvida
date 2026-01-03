@@ -2292,6 +2292,7 @@ export default function CalendarPage() {
           )}>
             {getAppointmentDisplayName(appointment)}
           </span>
+          {/* Badge de dependente */}
           {appointment.dependent_id && (
             <Badge
               variant="outline"
@@ -2300,29 +2301,19 @@ export default function CalendarPage() {
               DEP
             </Badge>
           )}
-          {/* Badge do convênio com diferenciação titular/dependente */}
-          {appointment.patient?.insurance_plan && (() => {
+          {/* Badge do convênio - apenas para titular (não dependentes) */}
+          {appointment.patient?.insurance_plan && !appointment.dependent_id && (() => {
             const insuranceColor =
               toHslColor(appointment.patient.insurance_plan.color) ??
               "hsl(var(--accent))";
-
-            // Titular: usa a cor do convênio
-            // Dependente: usa a cor verde primária do layout
-            const isDependent = !!appointment.dependent_id;
 
             return (
               <Badge
                 className="text-[10px] px-1.5 py-0 h-4 flex-shrink-0 font-medium border"
                 style={{
-                  backgroundColor: isDependent 
-                    ? 'hsl(var(--primary) / 0.2)' 
-                    : hslWithAlpha(insuranceColor, 0.22),
-                  color: isDependent 
-                    ? 'hsl(var(--primary))' 
-                    : insuranceColor,
-                  borderColor: isDependent 
-                    ? 'hsl(var(--primary) / 0.5)' 
-                    : hslWithAlpha(insuranceColor, 0.55),
+                  backgroundColor: hslWithAlpha(insuranceColor, 0.22),
+                  color: insuranceColor,
+                  borderColor: hslWithAlpha(insuranceColor, 0.55),
                 }}
               >
                 {appointment.patient.insurance_plan.name}
