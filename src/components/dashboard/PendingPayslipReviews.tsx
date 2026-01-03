@@ -284,9 +284,30 @@ export default function PendingPayslipReviews() {
 
       if (error) throw error;
 
+      // Get patient phone for notification
+      const { data: patient } = await supabase
+        .from('patients')
+        .select('phone')
+        .eq('id', selectedRequest.patient_id)
+        .single();
+
+      // Send rejection notification and create new pending request
+      if (patient?.phone) {
+        await supabase.functions.invoke('send-payslip-rejection', {
+          body: {
+            clinic_id: currentClinic?.id,
+            patient_id: selectedRequest.patient_id,
+            patient_name: selectedRequest.patient.name,
+            patient_phone: patient.phone,
+            card_id: selectedRequest.card_id,
+            rejection_reason: reviewNotes
+          }
+        });
+      }
+
       toast({
         title: "Contracheque rejeitado",
-        description: `O contracheque de ${selectedRequest.patient.name} foi rejeitado.`,
+        description: `O contracheque de ${selectedRequest.patient.name} foi rejeitado e o paciente foi notificado.`,
       });
 
       closeReview();
