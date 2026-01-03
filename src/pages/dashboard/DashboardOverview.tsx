@@ -264,39 +264,48 @@ export default function DashboardOverview() {
   const fetchProcedureData = async () => {
     if (!currentClinic) return;
 
+    // Calculate date 6 months ago
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const sixMonthsAgoStr = sixMonthsAgo.toISOString().split('T')[0];
+
     const { data: procedures } = await supabase
       .from('appointments')
       .select(`
         procedure_id,
-        procedures:procedure_id (name)
+        procedures:procedure_id (name, color)
       `)
       .eq('clinic_id', currentClinic.id)
       .not('procedure_id', 'is', null)
-      .limit(100);
+      .gte('appointment_date', sixMonthsAgoStr);
 
     if (procedures && procedures.length > 0) {
-      const counts: Record<string, number> = {};
+      const counts: Record<string, { count: number; color: string | null }> = {};
       procedures.forEach((p: any) => {
         const name = p.procedures?.name || 'Outros';
-        counts[name] = (counts[name] || 0) + 1;
+        const color = p.procedures?.color || null;
+        if (!counts[name]) {
+          counts[name] = { count: 0, color };
+        }
+        counts[name].count += 1;
       });
 
       const data = Object.entries(counts)
-        .map(([name, value]) => ({ name, value }))
+        .map(([name, { count, color }]) => ({ name, value: count, color }))
         .sort((a, b) => b.value - a.value)
         .slice(0, 5);
 
       setProcedureData(data);
     } else {
-      setProcedureData([
-        { name: 'Consulta Geral', value: 5 },
-        { name: 'Retorno', value: 4 },
-        { name: 'Exame', value: 3 },
-      ]);
+      setProcedureData([]);
     }
   };
 
   const CHART_COLORS = ['#6366f1', '#22c55e', '#f59e0b', '#ef4444', '#8b5cf6'];
+  
+  const getProcedureColor = (item: any, index: number) => {
+    return item.color || CHART_COLORS[index % CHART_COLORS.length];
+  };
 
   // Stat cards with gradient backgrounds matching the reference
   const topCards = [
@@ -543,51 +552,59 @@ export default function DashboardOverview() {
             </Button>
           </div>
           <CardContent className="p-4 sm:p-5">
-            <div className="flex flex-col sm:flex-row gap-4">
-              {/* Chart - Show first on mobile */}
-              <div className="w-full sm:w-48 h-40 sm:h-48 order-1 sm:order-2">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={procedureData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={40}
-                      outerRadius={65}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {procedureData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={CHART_COLORS[index % CHART_COLORS.length]}
+            {procedureData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
+                <Brain className="h-12 w-12 mb-2 opacity-50" />
+                <p className="text-sm">Nenhum procedimento registrado</p>
+                <p className="text-xs">nos últimos 6 meses</p>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-4">
+                {/* Legend */}
+                <div className="flex-1 space-y-2 sm:space-y-3 order-2 sm:order-1">
+                  {procedureData.map((item, index) => (
+                    <div key={item.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: getProcedureColor(item, index) }}
                         />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              {/* Legend */}
-              <div className="flex-1 space-y-2 sm:space-y-3 order-2 sm:order-1">
-                {procedureData.map((item, index) => (
-                  <div key={item.name} className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: CHART_COLORS[index % CHART_COLORS.length] }}
-                      />
-                      <span className="text-xs sm:text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-[200px]">
-                        {item.name}
-                      </span>
+                        <span className="text-xs sm:text-sm text-muted-foreground truncate max-w-[150px] sm:max-w-[200px]">
+                          {item.name}
+                        </span>
+                      </div>
+                      <Badge variant="secondary" className="text-xs font-semibold">
+                        {item.value}
+                      </Badge>
                     </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {item.value}
-                    </Badge>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                {/* Chart */}
+                <div className="w-full sm:w-48 h-40 sm:h-48 order-1 sm:order-2">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={procedureData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={65}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {procedureData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={getProcedureColor(entry, index)}
+                          />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            </div>
+            )}
             <p className="text-xs text-muted-foreground mt-3 sm:mt-4">
               ⓘ Dados dos últimos 6 meses
             </p>
