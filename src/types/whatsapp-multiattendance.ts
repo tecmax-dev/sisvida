@@ -94,15 +94,13 @@ export interface WhatsAppTicketMessage {
   sender_type: MessageSenderType;
   sender_id: string | null;
   sender_name: string | null;
-  message: string | null;
+  content: string | null;
   message_type: MessageType;
   media_url: string | null;
   media_mime_type: string | null;
-  media_filename: string | null;
-  is_from_me: boolean;
   is_read: boolean;
   read_at: string | null;
-  external_id: string | null;
+  metadata: Record<string, unknown> | null;
   created_at: string;
 }
 
