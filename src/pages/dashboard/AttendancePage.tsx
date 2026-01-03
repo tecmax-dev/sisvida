@@ -64,6 +64,7 @@ import { Odontogram } from "@/components/medical/Odontogram";
 import { VitalSignsDisplay } from "@/components/appointments/VitalSignsDisplay";
 import { PrintDialog } from "@/components/medical/PrintDialog";
 import { MedicationSearch } from "@/components/medical/MedicationSearch";
+import { PatientMedicalHistory } from "@/components/appointments/PatientMedicalHistory";
 
 interface Patient {
   id: string;
@@ -110,6 +111,9 @@ interface MedicalRecord {
   professional: {
     id: string;
     name: string;
+  } | null;
+  appointment?: {
+    type: string;
   } | null;
 }
 
@@ -385,18 +389,19 @@ export default function AttendancePage() {
         setAnamnesis(anamnesisData);
       }
 
-      // Load medical history
+      // Load medical history (all records, most recent first)
       const { data: historyData } = await supabase
         .from("medical_records")
         .select(`
           id, record_date, chief_complaint, diagnosis, treatment_plan,
           prescription, notes, created_at,
-          professional:professionals(id, name)
+          professional:professionals(id, name),
+          appointment:appointments(type)
         `)
         .eq("patient_id", appointment.patient_id)
         .eq("clinic_id", appointment.clinic_id)
-        .order("created_at", { ascending: false })
-        .limit(10);
+        .order("record_date", { ascending: false })
+        .order("created_at", { ascending: false });
 
       if (historyData) {
         setMedicalHistory(historyData as MedicalRecord[]);
@@ -1114,32 +1119,11 @@ export default function AttendancePage() {
 
         {/* Histórico Tab */}
         <TabsContent value="historico" className="mt-4">
-          {loadingData ? (
-            <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
-          ) : medicalHistory.length > 0 ? (
-            <div className="space-y-3">
-              {medicalHistory.map((record) => (
-                <Card key={record.id}>
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-sm">{format(new Date(record.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
-                      {record.professional?.name && <span className="text-sm text-muted-foreground">- {record.professional.name}</span>}
-                    </div>
-                  </CardHeader>
-                  <CardContent className="text-sm space-y-2">
-                    {record.chief_complaint && <p><strong>Queixa:</strong> {record.chief_complaint}</p>}
-                    {record.diagnosis && <p><strong>Diagnóstico:</strong> {record.diagnosis}</p>}
-                    {record.treatment_plan && <p><strong>Tratamento:</strong> {record.treatment_plan}</p>}
-                    {record.prescription && <p><strong>Prescrição:</strong> {record.prescription}</p>}
-                    {record.notes && <p><strong>Obs:</strong> {record.notes}</p>}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground"><History className="h-12 w-12 mx-auto mb-2 opacity-50" /><p>Nenhum histórico de atendimentos anteriores</p></div>
-          )}
+          <PatientMedicalHistory 
+            records={medicalHistory} 
+            loading={loadingData}
+            patientName={appointment.patient.name}
+          />
         </TabsContent>
 
         {/* Receituário Tab */}
