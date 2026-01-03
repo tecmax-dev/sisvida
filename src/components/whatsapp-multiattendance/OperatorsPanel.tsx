@@ -176,9 +176,9 @@ export function OperatorsPanel({ clinicId }: OperatorsPanelProps) {
       setDialogOpen(false);
       resetForm();
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving operator:', error);
-      toast.error('Erro ao salvar operador');
+      toast.error(`Erro ao salvar operador: ${error?.message || error?.code || 'Erro desconhecido'}`);
     } finally {
       setIsSaving(false);
     }
