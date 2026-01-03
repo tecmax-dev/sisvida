@@ -366,14 +366,18 @@ export function useWhatsAppMessages(ticketId: string | undefined) {
       });
 
     if (error) {
-      toast.error('Erro ao enviar mensagem');
+      toast.error(`Erro ao enviar mensagem: ${error.message}`);
       throw error;
     }
 
     // Update ticket last_message_at
-    await fromTable('whatsapp_tickets')
+    const { error: ticketUpdateError } = await fromTable('whatsapp_tickets')
       .update({ last_message_at: new Date().toISOString() })
       .eq('id', ticketId);
+
+    if (ticketUpdateError) {
+      toast.error(`Mensagem enviada, mas falhou ao atualizar ticket: ${ticketUpdateError.message}`);
+    }
   };
 
   return {
