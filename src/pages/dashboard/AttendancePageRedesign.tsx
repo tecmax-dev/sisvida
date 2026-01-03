@@ -65,6 +65,7 @@ import { format, differenceInYears, differenceInMonths, differenceInDays } from 
 import { ptBR } from "date-fns/locale";
 import { RealisticOdontogram } from "@/components/medical/RealisticOdontogram";
 import { VitalSignsDisplay } from "@/components/appointments/VitalSignsDisplay";
+import { PatientMedicalHistory } from "@/components/appointments/PatientMedicalHistory";
 import { PrintDialog } from "@/components/medical/PrintDialog";
 import { MedicationSearch } from "@/components/medical/MedicationSearch";
 import { cn } from "@/lib/utils";
@@ -1291,43 +1292,13 @@ export default function AttendancePageRedesign() {
 
             {/* Histórico Section */}
             {activeSection === "historico" && (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <h1 className="text-xl font-semibold">Histórico</h1>
-                {loadingData ? (
-                  <div className="flex items-center justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
-                ) : medicalHistory.length > 0 ? (
-                  <div className="space-y-3">
-                    {medicalHistory.map((record) => (
-                      <Card key={record.id}>
-                        <CardHeader className="pb-2">
-                          <div className="flex items-center gap-2">
-                            <FileText className="h-4 w-4 text-primary" />
-                            <span className="font-medium text-sm">
-                              {record.record_date
-                                ? format(new Date(`${record.record_date}T12:00:00`), "dd/MM/yyyy", { locale: ptBR })
-                                : format(new Date(record.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                            </span>
-                            {record.professional?.name && (
-                              <span className="text-sm text-muted-foreground">- {record.professional.name}</span>
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="text-sm space-y-2">
-                          {record.chief_complaint && <p><strong>Queixa:</strong> {record.chief_complaint}</p>}
-                          {record.diagnosis && <p><strong>Diagnóstico:</strong> {record.diagnosis}</p>}
-                          {record.treatment_plan && <p><strong>Tratamento:</strong> {record.treatment_plan}</p>}
-                          {record.prescription && <p><strong>Prescrição:</strong> {record.prescription}</p>}
-                          {record.notes && <p><strong>Obs:</strong> {record.notes}</p>}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <History className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>Nenhum histórico de atendimentos anteriores</p>
-                  </div>
-                )}
+                <PatientMedicalHistory 
+                  records={medicalHistory} 
+                  loading={loadingData}
+                  patientName={appointment?.patient?.name}
+                />
               </div>
             )}
 
