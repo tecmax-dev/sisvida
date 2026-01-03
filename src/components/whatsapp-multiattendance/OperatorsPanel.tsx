@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useWhatsAppOperators, useWhatsAppSectors } from '@/hooks/useWhatsAppMultiattendance';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,11 +56,14 @@ interface OperatorsPanelProps {
 const fromTable = (table: string) => supabase.from(table as any);
 
 export function OperatorsPanel({ clinicId }: OperatorsPanelProps) {
+  const { user, currentClinic } = useAuth();
   const { operators, isLoading, refetch } = useWhatsAppOperators(clinicId);
   const { sectors } = useWhatsAppSectors(clinicId);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingOperator, setEditingOperator] = useState<WhatsAppOperator | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  const canManage = Boolean(clinicId && currentClinic?.id === clinicId);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -70,6 +74,19 @@ export function OperatorsPanel({ clinicId }: OperatorsPanelProps) {
     max_simultaneous_tickets: 5,
     sector_ids: [] as string[],
   });
+
+  // Auto-preencher com o usuário logado para facilitar "Assumir" tickets
+  useEffect(() => {
+    if (!dialogOpen || editingOperator) return;
+    if (!user?.id) return;
+
+    setFormData((prev) => ({
+      ...prev,
+      user_id: prev.user_id || user.id,
+      email: prev.email || (user.email ?? ''),
+      name: prev.name || (user.user_metadata?.name ?? ''),
+    }));
+  }, [dialogOpen, editingOperator, user?.id]);
 
   const resetForm = () => {
     setFormData({
@@ -108,7 +125,7 @@ export function OperatorsPanel({ clinicId }: OperatorsPanelProps) {
             name: formData.name,
             email: formData.email || null,
             role: formData.role,
-            max_simultaneous_tickets: formData.max_simultaneous_tickets,
+            max_concurrent_tickets: formData.max_simultaneous_tickets,
           })
           .eq('id', editingOperator.id);
 
@@ -133,11 +150,11 @@ export function OperatorsPanel({ clinicId }: OperatorsPanelProps) {
         const { data: newOp, error } = await fromTable('whatsapp_operators')
           .insert({
             clinic_id: clinicId,
-            user_id: formData.user_id || crypto.randomUUID(), // Temporary until user selection is implemented
+            user_id: formData.user_id || user?.id || crypto.randomUUID(),
             name: formData.name,
             email: formData.email || null,
             role: formData.role,
-            max_simultaneous_tickets: formData.max_simultaneous_tickets,
+            max_concurrent_tickets: formData.max_simultaneous_tickets,
           })
           .select()
           .single();

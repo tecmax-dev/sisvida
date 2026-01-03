@@ -145,12 +145,29 @@ export function useWhatsAppOperators(clinicId: string | undefined) {
         .order('name');
 
       if (error) throw error;
-      
+
+      // Count tickets currently assigned per operator
+      const { data: assignedTickets } = await fromTable('whatsapp_tickets')
+        .select('assigned_operator_id')
+        .eq('clinic_id', clinicId)
+        .neq('status', 'closed')
+        .not('assigned_operator_id', 'is', null);
+
+      const ticketCountByOperator = new Map<string, number>();
+      (assignedTickets || []).forEach((t: any) => {
+        const id = t.assigned_operator_id as string | null;
+        if (!id) return;
+        ticketCountByOperator.set(id, (ticketCountByOperator.get(id) || 0) + 1);
+      });
+
       const formatted = (data || []).map((op: any) => ({
         ...op,
+        // UI expects these names
+        max_simultaneous_tickets: op.max_concurrent_tickets ?? op.max_simultaneous_tickets ?? 5,
+        current_ticket_count: ticketCountByOperator.get(op.id) || 0,
         sectors: op.sectors?.map((s: any) => s.sector) || [],
       }));
-      
+
       setOperators(formatted as WhatsAppOperator[]);
     } catch (error) {
       console.error('Error fetching operators:', error);
