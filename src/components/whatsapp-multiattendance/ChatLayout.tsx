@@ -84,22 +84,22 @@ export function ChatLayout({ clinicId }: ChatLayoutProps) {
     const matchesSearch = searchQuery === '' || 
       ticket.contact?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       ticket.contact?.phone?.includes(searchQuery) ||
-      ticket.protocol?.includes(searchQuery);
+      ticket.id?.includes(searchQuery);
 
-    // Tab filter
+    // Tab filter - using actual DB status values: pending, open, waiting, closed
     let matchesTab = false;
     switch (activeTab) {
       case 'open':
-        matchesTab = ['new', 'in_progress'].includes(ticket.status);
+        matchesTab = ['pending', 'open'].includes(ticket.status);
         break;
       case 'pending':
-        matchesTab = ticket.status === 'waiting_client';
+        matchesTab = ticket.status === 'waiting';
         break;
       case 'closed':
-        matchesTab = ['resolved', 'closed'].includes(ticket.status);
+        matchesTab = ticket.status === 'closed';
         break;
       case 'bot':
-        matchesTab = ticket.is_bot_active === true;
+        matchesTab = false; // No bot flag in current schema
         break;
     }
 
@@ -109,13 +109,13 @@ export function ChatLayout({ clinicId }: ChatLayoutProps) {
   const getTabCount = (tab: TabFilter) => {
     switch (tab) {
       case 'open':
-        return tickets.filter(t => ['new', 'in_progress'].includes(t.status)).length;
+        return tickets.filter(t => ['pending', 'open'].includes(t.status)).length;
       case 'pending':
-        return tickets.filter(t => t.status === 'waiting_client').length;
+        return tickets.filter(t => t.status === 'waiting').length;
       case 'closed':
-        return tickets.filter(t => ['resolved', 'closed'].includes(t.status)).length;
+        return tickets.filter(t => t.status === 'closed').length;
       case 'bot':
-        return tickets.filter(t => t.is_bot_active).length;
+        return 0;
     }
   };
 
@@ -483,18 +483,12 @@ function ChatWindow({ ticket, clinicId, onBack, onStatusChange, onAssign, curren
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onStatusChange('waiting_client')}>
+              <DropdownMenuItem onClick={() => onStatusChange('waiting')}>
                 <Clock className="h-4 w-4 mr-2" />
                 Aguardando cliente
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onStatusChange('resolved')}>
+              <DropdownMenuItem onClick={() => onStatusChange('closed')}>
                 <CheckCircle2 className="h-4 w-4 mr-2" />
-                Marcar resolvido
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => onStatusChange('closed')}
-                className="text-destructive"
-              >
                 Finalizar ticket
               </DropdownMenuItem>
             </DropdownMenuContent>

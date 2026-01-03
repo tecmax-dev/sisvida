@@ -38,10 +38,9 @@ interface TicketsKanbanProps {
 }
 
 const KANBAN_COLUMNS: { status: WhatsAppTicketStatus; label: string; color: string }[] = [
-  { status: 'new', label: 'Novos', color: '#EF4444' },
-  { status: 'in_progress', label: 'Em Atendimento', color: '#3B82F6' },
-  { status: 'waiting_client', label: 'Aguardando Cliente', color: '#F59E0B' },
-  { status: 'resolved', label: 'Resolvidos', color: '#10B981' },
+  { status: 'pending', label: 'Pendentes', color: '#EF4444' },
+  { status: 'open', label: 'Em Atendimento', color: '#3B82F6' },
+  { status: 'waiting', label: 'Aguardando Cliente', color: '#F59E0B' },
 ];
 
 export function TicketsKanban({ clinicId }: TicketsKanbanProps) {
@@ -206,14 +205,9 @@ function TicketCard({
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              {ticket.status !== 'waiting_client' && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onChangeStatus('waiting_client'); }}>
+              {ticket.status !== 'waiting' && (
+                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onChangeStatus('waiting'); }}>
                   Aguardando Cliente
-                </DropdownMenuItem>
-              )}
-              {ticket.status !== 'resolved' && (
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onChangeStatus('resolved'); }}>
-                  Marcar Resolvido
                 </DropdownMenuItem>
               )}
               <DropdownMenuItem 

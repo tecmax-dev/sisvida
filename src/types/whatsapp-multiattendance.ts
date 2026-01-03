@@ -2,7 +2,7 @@
 
 export type WhatsAppOperatorStatus = 'online' | 'offline' | 'paused';
 export type WhatsAppOperatorRole = 'admin' | 'supervisor' | 'attendant';
-export type WhatsAppTicketStatus = 'new' | 'in_progress' | 'waiting_client' | 'resolved' | 'closed';
+export type WhatsAppTicketStatus = 'pending' | 'open' | 'waiting' | 'closed';
 export type MessageSenderType = 'contact' | 'operator' | 'bot' | 'system';
 export type MessageType = 'text' | 'image' | 'audio' | 'video' | 'document' | 'location' | 'sticker';
 
@@ -197,18 +197,16 @@ export interface WhatsAppAuditLog {
 
 // Utility types
 export const TICKET_STATUS_LABELS: Record<WhatsAppTicketStatus, string> = {
-  new: 'Novo',
-  in_progress: 'Em Atendimento',
-  waiting_client: 'Aguardando Cliente',
-  resolved: 'Resolvido',
+  pending: 'Pendente',
+  open: 'Em Atendimento',
+  waiting: 'Aguardando Cliente',
   closed: 'Finalizado',
 };
 
 export const TICKET_STATUS_COLORS: Record<WhatsAppTicketStatus, string> = {
-  new: '#EF4444',
-  in_progress: '#3B82F6',
-  waiting_client: '#F59E0B',
-  resolved: '#10B981',
+  pending: '#EF4444',
+  open: '#3B82F6',
+  waiting: '#F59E0B',
   closed: '#6B7280',
 };
 
