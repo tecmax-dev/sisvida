@@ -100,7 +100,7 @@ serve(async (req) => {
 
     // Get Evolution config for clinic
     const { data: evolutionConfig } = await supabase
-      .from('evolution_instances')
+      .from('evolution_configs')
       .select('api_url, api_key, instance_name, is_connected')
       .eq('clinic_id', clinic_id)
       .eq('is_connected', true)
