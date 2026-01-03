@@ -1362,6 +1362,10 @@ export default function AttendancePage() {
           </Tabs>
         </CardContent>
       </Card>
+        </div>
+        {/* END RIGHT CONTENT AREA */}
+      </div>
+      {/* END MAIN GRID */}
 
       {/* Exam WhatsApp Dialog */}
       <Dialog open={showExamWhatsAppDialog} onOpenChange={setShowExamWhatsAppDialog}>
@@ -1404,11 +1408,6 @@ export default function AttendancePage() {
           }
         />
       )}
-
-        </div>
-        {/* END RIGHT CONTENT AREA */}
-      </div>
-      {/* END MAIN GRID */}
     </div>
   );
 }
