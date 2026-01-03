@@ -2528,7 +2528,7 @@ export default function CalendarPage() {
     // Agrupa agendamentos por dia e horário
     const getAppointmentsForSlot = (date: Date, time: string) => {
       const dateStr = toDateKey(date);
-      return appointments.filter(apt => {
+      return filteredAppointments.filter(apt => {
         if (apt.appointment_date !== dateStr) return false;
         // Verifica se o agendamento começa neste slot ou está em andamento neste horário
         const aptStartMinutes = parseInt(apt.start_time.slice(0, 2)) * 60 + parseInt(apt.start_time.slice(3, 5));
@@ -2536,7 +2536,7 @@ export default function CalendarPage() {
         const slotMinutes = parseInt(time.slice(0, 2)) * 60 + parseInt(time.slice(3, 5));
         // Retorna se o slot está dentro do período do agendamento
         return aptStartMinutes <= slotMinutes && slotMinutes < aptEndMinutes;
-      }).filter(apt => showCancelledNoShow || (apt.status !== 'cancelled' && apt.status !== 'no_show'));
+      });
     };
 
     return (
