@@ -2763,6 +2763,22 @@ export default function CalendarPage() {
     );
   };
 
+  // Stats for the selected date
+  const selectedDateAppointments = useMemo(() => {
+    const dateStr = toDateKey(selectedDate);
+    return appointments.filter(apt => apt.appointment_date === dateStr);
+  }, [appointments, selectedDate]);
+
+  const stats = useMemo(() => {
+    const total = selectedDateAppointments.length;
+    const confirmed = selectedDateAppointments.filter(apt => apt.status === 'confirmed' || apt.status === 'arrived').length;
+    const pending = selectedDateAppointments.filter(apt => apt.status === 'scheduled').length;
+    const completed = selectedDateAppointments.filter(apt => apt.status === 'completed').length;
+    const cancelled = selectedDateAppointments.filter(apt => apt.status === 'cancelled' || apt.status === 'no_show').length;
+    const inProgress = selectedDateAppointments.filter(apt => apt.status === 'in_progress').length;
+    return { total, confirmed, pending, completed, cancelled, inProgress };
+  }, [selectedDateAppointments]);
+
   return (
     <DndContext
       onDragStart={handleDragStart}
@@ -2770,14 +2786,18 @@ export default function CalendarPage() {
       onDragCancel={handleDragCancel}
       collisionDetection={pointerWithin}
     >
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Agenda</h1>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <CalendarIcon className="h-6 w-6 text-primary" />
+            Agenda
+          </h1>
           <p className="text-muted-foreground">
             Gerencie os agendamentos da clínica
           </p>
+          <RealtimeIndicator className="mt-1" />
         </div>
         <div className="flex items-center gap-2">
           {/* Calendar Toggle - apenas em view day */}
@@ -2952,6 +2972,64 @@ export default function CalendarPage() {
             </Dialog>
           )}
         </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+        <Card className="border-l-4 border-l-primary bg-primary/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <CalendarIcon className="h-4 w-4 text-primary" />
+              <span className="text-xs font-medium text-muted-foreground">Total</span>
+            </div>
+            <p className="text-xl font-bold text-foreground mt-1">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-amber-500 bg-amber-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <span className="text-xs font-medium text-muted-foreground">Pendentes</span>
+            </div>
+            <p className="text-xl font-bold text-amber-600 mt-1">{stats.pending}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-blue-500 bg-blue-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-blue-500" />
+              <span className="text-xs font-medium text-muted-foreground">Confirmados</span>
+            </div>
+            <p className="text-xl font-bold text-blue-600 mt-1">{stats.confirmed}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-purple-500 bg-purple-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Stethoscope className="h-4 w-4 text-purple-500" />
+              <span className="text-xs font-medium text-muted-foreground">Atendendo</span>
+            </div>
+            <p className="text-xl font-bold text-purple-600 mt-1">{stats.inProgress}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span className="text-xs font-medium text-muted-foreground">Concluídos</span>
+            </div>
+            <p className="text-xl font-bold text-emerald-600 mt-1">{stats.completed}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-rose-500 bg-rose-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-rose-500" />
+              <span className="text-xs font-medium text-muted-foreground">Faltas/Canc.</span>
+            </div>
+            <p className="text-xl font-bold text-rose-600 mt-1">{stats.cancelled}</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Active Filters */}
