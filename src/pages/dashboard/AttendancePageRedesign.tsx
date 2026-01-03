@@ -983,12 +983,15 @@ export default function AttendancePageRedesign() {
         <div className="bg-card border-b border-border p-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button
-              variant="ghost"
+              variant={mobileMenuOpen ? "ghost" : "default"}
               size="icon"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="h-9 w-9"
+              className={cn(
+                "h-10 w-10 transition-all",
+                !mobileMenuOpen && "bg-primary text-primary-foreground shadow-lg ring-2 ring-primary/30 animate-pulse-soft"
+              )}
             >
-              {mobileMenuOpen ? <ChevronLeft className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+              {mobileMenuOpen ? <ChevronLeft className="h-5 w-5" /> : <FileText className="h-6 w-6" />}
             </Button>
             <div>
               <h2 className="font-semibold text-sm">
