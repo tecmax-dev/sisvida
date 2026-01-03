@@ -396,7 +396,7 @@ export default function AttendancePage() {
           id, record_date, chief_complaint, diagnosis, treatment_plan,
           prescription, notes, created_at,
           professional:professionals(id, name),
-          appointment:appointments(type)
+          appointment:appointments(type, appointment_date)
         `)
         .eq("patient_id", appointment.patient_id)
         .eq("clinic_id", appointment.clinic_id)
@@ -902,145 +902,180 @@ export default function AttendancePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard/calendar")}>
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
-              <Stethoscope className="h-6 w-6 text-primary" />
-              Painel de Atendimento
-              {isCompleted && (
-                <Badge variant="secondary" className="ml-2">
-                  <Lock className="h-3 w-3 mr-1" />
-                  Finalizado
-                </Badge>
-              )}
-            </h1>
-            <p className="text-muted-foreground">
-              {typeLabels[appointment.type] || appointment.type} - {format(new Date(appointment.appointment_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} às {appointment.start_time.substring(0, 5)}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {!isInProgress && !isCompleted && (
-            <Button onClick={handleStartAppointment} disabled={loading} size="lg">
-              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : isTelemedicine ? <Video className="h-4 w-4 mr-2" /> : <Play className="h-4 w-4 mr-2" />}
-              {isTelemedicine ? "Iniciar Teleconsulta" : "Iniciar Atendimento"}
-            </Button>
-          )}
-          {isInProgress && (
-            <Button onClick={handleEndAppointment} disabled={loading} size="lg" className="bg-success hover:bg-success/90">
-              {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-              Finalizar Atendimento
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Patient Info & Timer */}
-      <div className="flex flex-col lg:flex-row gap-4 p-4 bg-muted/50 rounded-lg">
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-              <User className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-lg">{appointment.patient.name}</h3>
-              <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Phone className="h-3.5 w-3.5" />
-                  {appointment.patient.phone}
-                </span>
-                {appointment.patient.email && (
-                  <span className="flex items-center gap-1">
-                    <Mail className="h-3.5 w-3.5" />
-                    {appointment.patient.email}
-                  </span>
-                )}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate("/dashboard/calendar")}
+                aria-label="Voltar para agenda"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <h1 className="text-xl font-semibold flex items-center gap-2">
+                  <Stethoscope className="h-5 w-5 text-primary" />
+                  Painel de Atendimento
+                  {isCompleted && (
+                    <Badge variant="secondary" className="ml-2">
+                      <Lock className="h-3 w-3 mr-1" />
+                      Finalizado
+                    </Badge>
+                  )}
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  {typeLabels[appointment.type] || appointment.type} - {format(new Date(appointment.appointment_date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR })} às {appointment.start_time.substring(0, 5)}
+                </p>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Timer */}
-        <div className="flex flex-col items-center justify-center p-4 bg-background rounded-lg border min-w-[160px]">
-          {isInProgress ? (
-            <>
-              <Timer className="h-5 w-5 text-info mb-1" />
-              <span className="text-2xl font-mono font-bold text-info">{elapsedTime}</span>
-              <span className="text-xs text-muted-foreground">Tempo de atendimento</span>
-            </>
-          ) : isCompleted && appointment.duration_minutes ? (
-            <>
-              <CheckCircle2 className="h-5 w-5 text-success mb-1" />
-              <span className="text-xl font-semibold text-success">{formatDuration(appointment.duration_minutes)}</span>
-              <span className="text-xs text-muted-foreground">Duração total</span>
-            </>
-          ) : (
-            <>
-              <Clock className="h-5 w-5 text-muted-foreground mb-1" />
-              <span className="text-sm text-muted-foreground">Aguardando início</span>
-            </>
-          )}
-        </div>
+            <div className="flex items-center gap-2">
+              {!isInProgress && !isCompleted && (
+                <Button onClick={handleStartAppointment} disabled={loading}>
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : isTelemedicine ? (
+                    <Video className="h-4 w-4 mr-2" />
+                  ) : (
+                    <Play className="h-4 w-4 mr-2" />
+                  )}
+                  {isTelemedicine ? "Iniciar Teleconsulta" : "Iniciar Atendimento"}
+                </Button>
+              )}
+              {isInProgress && (
+                <Button
+                  onClick={handleEndAppointment}
+                  disabled={loading}
+                  className="bg-success hover:bg-success/90"
+                >
+                  {loading ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                  )}
+                  Finalizar
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Patient + Timer */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="h-11 w-11 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="h-5 w-5 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <h2 className="font-semibold truncate">{appointment.patient.name}</h2>
+                <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1">
+                    <Phone className="h-3.5 w-3.5" />
+                    {appointment.patient.phone}
+                  </span>
+                  {appointment.patient.email && (
+                    <span className="flex items-center gap-1">
+                      <Mail className="h-3.5 w-3.5" />
+                      {appointment.patient.email}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex flex-col items-center justify-center text-center">
+              {isInProgress ? (
+                <>
+                  <Timer className="h-5 w-5 text-info mb-1" />
+                  <span className="text-2xl font-mono font-bold text-info">{elapsedTime}</span>
+                  <span className="text-xs text-muted-foreground">Tempo de atendimento</span>
+                </>
+              ) : isCompleted && appointment.duration_minutes ? (
+                <>
+                  <CheckCircle2 className="h-5 w-5 text-success mb-1" />
+                  <span className="text-xl font-semibold text-success">{formatDuration(appointment.duration_minutes)}</span>
+                  <span className="text-xs text-muted-foreground">Duração total</span>
+                </>
+              ) : (
+                <>
+                  <Clock className="h-5 w-5 text-muted-foreground mb-1" />
+                  <span className="text-sm text-muted-foreground">Aguardando início</span>
+                </>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Vital Signs */}
-      <VitalSignsDisplay appointmentId={appointment.id} />
+      <Card>
+        <CardContent className="p-4">
+          <VitalSignsDisplay appointmentId={appointment.id} />
+        </CardContent>
+      </Card>
 
       {/* Main Content */}
-      <Tabs defaultValue="prontuario" className="w-full">
-        <TabsList className={`w-full grid ${isDentalSpecialty ? 'grid-cols-6' : 'grid-cols-5'} h-auto gap-2 bg-transparent p-0`}>
-          <TabsTrigger 
-            value="prontuario" 
-            className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-blue-50 text-blue-700 data-[state=active]:bg-blue-500 data-[state=active]:text-white data-[state=active]:border-blue-600 data-[state=active]:shadow-lg hover:bg-blue-100 transition-all duration-200"
-          >
-            <FileText className="h-5 w-5" />
-            <span className="text-xs font-medium">Prontuário</span>
-          </TabsTrigger>
-          {isDentalSpecialty && (
-            <TabsTrigger 
-              value="odontograma"
-              className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-cyan-50 text-cyan-700 data-[state=active]:bg-cyan-500 data-[state=active]:text-white data-[state=active]:border-cyan-600 data-[state=active]:shadow-lg hover:bg-cyan-100 transition-all duration-200"
-            >
-              <Stethoscope className="h-5 w-5" />
-              <span className="text-xs font-medium">Odontograma</span>
-            </TabsTrigger>
-          )}
-          <TabsTrigger 
-            value="anamnese"
-            className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-amber-50 text-amber-700 data-[state=active]:bg-amber-500 data-[state=active]:text-white data-[state=active]:border-amber-600 data-[state=active]:shadow-lg hover:bg-amber-100 transition-all duration-200"
-          >
-            <ClipboardList className="h-5 w-5" />
-            <span className="text-xs font-medium">Anamnese</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="historico"
-            className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-emerald-50 text-emerald-700 data-[state=active]:bg-emerald-500 data-[state=active]:text-white data-[state=active]:border-emerald-600 data-[state=active]:shadow-lg hover:bg-emerald-100 transition-all duration-200"
-          >
-            <History className="h-5 w-5" />
-            <span className="text-xs font-medium">Histórico</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="receituario"
-            className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-purple-50 text-purple-700 data-[state=active]:bg-purple-500 data-[state=active]:text-white data-[state=active]:border-purple-600 data-[state=active]:shadow-lg hover:bg-purple-100 transition-all duration-200"
-          >
-            <Pill className="h-5 w-5" />
-            <span className="text-xs font-medium">Receituário</span>
-          </TabsTrigger>
-          <TabsTrigger 
-            value="exames"
-            className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border-2 border-transparent bg-rose-50 text-rose-700 data-[state=active]:bg-rose-500 data-[state=active]:text-white data-[state=active]:border-rose-600 data-[state=active]:shadow-lg hover:bg-rose-100 transition-all duration-200"
-          >
-            <FlaskConical className="h-5 w-5" />
-            <span className="text-xs font-medium">Exames</span>
-          </TabsTrigger>
-        </TabsList>
+      <Card>
+        <CardContent className="p-4">
+          <Tabs defaultValue="prontuario" className="w-full">
+            <TabsList className={`w-full grid ${isDentalSpecialty ? 'grid-cols-6' : 'grid-cols-5'} h-auto gap-2 bg-transparent p-0`}>
+              {/** Shared trigger styling (sem cores fixas) */}
+              <TabsTrigger 
+                value="prontuario" 
+                className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+              >
+                <FileText className="h-5 w-5" />
+                <span className="text-xs font-medium">Prontuário</span>
+              </TabsTrigger>
+              {isDentalSpecialty && (
+                <TabsTrigger 
+                  value="odontograma"
+                  className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+                >
+                  <Stethoscope className="h-5 w-5" />
+                  <span className="text-xs font-medium">Odontograma</span>
+                </TabsTrigger>
+              )}
+              <TabsTrigger 
+                value="anamnese"
+                className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+              >
+                <ClipboardList className="h-5 w-5" />
+                <span className="text-xs font-medium">Anamnese</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="historico"
+                className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+              >
+                <History className="h-5 w-5" />
+                <span className="text-xs font-medium">Histórico</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="receituario"
+                className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+              >
+                <Pill className="h-5 w-5" />
+                <span className="text-xs font-medium">Receituário</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="exames"
+                className="flex flex-col items-center gap-1.5 py-3 px-4 rounded-xl border bg-card text-foreground data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary data-[state=active]:shadow-sm hover:bg-muted/60 transition-colors"
+              >
+                <FlaskConical className="h-5 w-5" />
+                <span className="text-xs font-medium">Exames</span>
+              </TabsTrigger>
+            </TabsList>
 
         {/* Prontuário Tab */}
         <TabsContent value="prontuario" className="mt-4 space-y-4">
@@ -1233,7 +1268,9 @@ export default function AttendancePage() {
             </Button>
           </div>
         </TabsContent>
-      </Tabs>
+          </Tabs>
+        </CardContent>
+      </Card>
 
       {/* Exam WhatsApp Dialog */}
       <Dialog open={showExamWhatsAppDialog} onOpenChange={setShowExamWhatsAppDialog}>

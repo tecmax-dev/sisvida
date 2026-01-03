@@ -434,12 +434,13 @@ export default function AttendancePageRedesign() {
         .select(`
           id, record_date, chief_complaint, diagnosis, treatment_plan,
           prescription, notes, created_at,
-          professional:professionals(id, name)
+          professional:professionals(id, name),
+          appointment:appointments(type, appointment_date)
         `)
         .eq("patient_id", appointment.patient_id)
         .eq("clinic_id", appointment.clinic_id)
-        .order("created_at", { ascending: false })
-        .limit(10);
+        .order("record_date", { ascending: false })
+        .order("created_at", { ascending: false });
 
       if (historyData) {
         setMedicalHistory(historyData as MedicalRecord[]);
