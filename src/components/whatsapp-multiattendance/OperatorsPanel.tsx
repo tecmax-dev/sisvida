@@ -70,7 +70,7 @@ export function OperatorsPanel({ clinicId }: OperatorsPanelProps) {
     user_id: '',
     name: '',
     email: '',
-    role: 'attendant' as WhatsAppOperatorRole,
+    role: 'operator' as WhatsAppOperatorRole,
     max_simultaneous_tickets: 5,
     sector_ids: [] as string[],
   });
@@ -93,7 +93,7 @@ export function OperatorsPanel({ clinicId }: OperatorsPanelProps) {
       user_id: '',
       name: '',
       email: '',
-      role: 'attendant',
+      role: 'operator',
       max_simultaneous_tickets: 5,
       sector_ids: [],
     });
