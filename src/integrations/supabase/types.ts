@@ -571,10 +571,12 @@ export type Database = {
           duration_minutes: number | null
           end_time: string
           id: string
+          is_recurring: boolean | null
           notes: string | null
           patient_id: string
           procedure_id: string | null
           professional_id: string
+          recurrence_group_id: string | null
           reminder_sent: boolean | null
           start_time: string
           started_at: string | null
@@ -596,10 +598,12 @@ export type Database = {
           duration_minutes?: number | null
           end_time: string
           id?: string
+          is_recurring?: boolean | null
           notes?: string | null
           patient_id: string
           procedure_id?: string | null
           professional_id: string
+          recurrence_group_id?: string | null
           reminder_sent?: boolean | null
           start_time: string
           started_at?: string | null
@@ -621,10 +625,12 @@ export type Database = {
           duration_minutes?: number | null
           end_time?: string
           id?: string
+          is_recurring?: boolean | null
           notes?: string | null
           patient_id?: string
           procedure_id?: string | null
           professional_id?: string
+          recurrence_group_id?: string | null
           reminder_sent?: boolean | null
           start_time?: string
           started_at?: string | null

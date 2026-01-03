@@ -10,6 +10,7 @@ import { DraggableAppointment } from "@/components/appointments/DraggableAppoint
 import { DroppableTimeSlot } from "@/components/appointments/DroppableTimeSlot";
 import { DragOverlayContent } from "@/components/appointments/DragOverlayContent";
 import { DragInstructions } from "@/components/appointments/DragInstructions";
+import { RecurrenceSelector, RecurrenceConfig, calculateRecurringDates } from "@/components/appointments/RecurrenceSelector";
 import { 
   findConflictingAppointments, 
   findAllConflictingAppointments, 
@@ -398,6 +399,15 @@ export default function CalendarPage() {
   const [patientSearchResults, setPatientSearchResults] = useState<Patient[]>([]);
   const [isSearchingPatients, setIsSearchingPatients] = useState(false);
   const [selectedPatientName, setSelectedPatientName] = useState("");
+  
+  // Recurrence state
+  const [recurrenceConfig, setRecurrenceConfig] = useState<RecurrenceConfig>({
+    enabled: false,
+    frequency: "weekly",
+    limitType: "sessions",
+    sessions: 4,
+    endDate: "",
+  });
   
   // Professional user state
   const [loggedInProfessionalId, setLoggedInProfessionalId] = useState<string | null>(null);
@@ -929,6 +939,16 @@ export default function CalendarPage() {
 
     if (!currentClinic || !user) return;
 
+    // Validate recurrence config
+    if (recurrenceConfig.enabled && recurrenceConfig.limitType === "date" && !recurrenceConfig.endDate) {
+      toast({
+        title: "Data final obrigatória",
+        description: "Informe a data final para agendamentos recorrentes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     // Check if patient is active before creating appointment
     const { data: patientData, error: patientError } = await supabase
       .from('patients')
@@ -954,60 +974,76 @@ export default function CalendarPage() {
       return;
     }
 
-    const dateStr = selectedDate.toISOString().split('T')[0];
-    const durationMinutes = 30; // Default duration, could be from procedure
+    const durationMinutes = 30; // Default duration
     
-    // Check for conflicts before saving
-    const conflicts = findConflictingAppointments(appointments, {
-      appointmentDate: dateStr,
-      startTime: formTime,
-      durationMinutes,
-      professionalId: formProfessional,
-    });
+    // Calculate all dates for recurring appointments
+    const recurringDates = calculateRecurringDates(selectedDate, recurrenceConfig);
+    
+    // Check for conflicts on all dates
+    for (const date of recurringDates) {
+      const dateStr = date.toISOString().split('T')[0];
+      const conflicts = findConflictingAppointments(appointments, {
+        appointmentDate: dateStr,
+        startTime: formTime,
+        durationMinutes,
+        professionalId: formProfessional,
+      });
 
-    if (conflicts.length > 0) {
-      const patientNames: Record<string, string> = {};
-      conflicts.forEach(c => {
-        const apt = appointments.find(a => a.id === c.id);
-        if (apt?.patient?.name) {
-          patientNames[c.id] = apt.patient.name;
-        }
-      });
-      
-      toast({
-        title: "Conflito de horário",
-        description: getConflictMessage(conflicts, patientNames),
-        variant: "destructive",
-      });
-      return;
+      if (conflicts.length > 0) {
+        const patientNames: Record<string, string> = {};
+        conflicts.forEach(c => {
+          const apt = appointments.find(a => a.id === c.id);
+          if (apt?.patient?.name) {
+            patientNames[c.id] = apt.patient.name;
+          }
+        });
+        
+        toast({
+          title: "Conflito de horário",
+          description: `Conflito em ${date.toLocaleDateString('pt-BR')}: ${getConflictMessage(conflicts, patientNames)}`,
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setSaving(true);
 
     try {
       const endTime = calculateEndTime(formTime, durationMinutes);
+      
+      // Generate recurrence group ID if recurring
+      const recurrenceGroupId = recurrenceConfig.enabled ? crypto.randomUUID() : null;
+      
+      // Create all appointments
+      const appointmentsToCreate = recurringDates.map(date => ({
+        clinic_id: currentClinic.id,
+        patient_id: formPatient,
+        professional_id: formProfessional,
+        appointment_date: date.toISOString().split('T')[0],
+        start_time: formTime,
+        end_time: endTime,
+        type: formType as "first_visit" | "return" | "exam" | "procedure",
+        status: "scheduled" as const,
+        notes: formNotes.trim() || null,
+        created_by: user.id,
+        duration_minutes: durationMinutes,
+        is_recurring: recurrenceConfig.enabled,
+        recurrence_group_id: recurrenceGroupId,
+      }));
 
       const { error } = await supabase
         .from('appointments')
-        .insert({
-          clinic_id: currentClinic.id,
-          patient_id: formPatient,
-          professional_id: formProfessional,
-          appointment_date: dateStr,
-          start_time: formTime,
-          end_time: endTime,
-          type: formType as "first_visit" | "return" | "exam" | "procedure",
-          status: "scheduled" as const,
-          notes: formNotes.trim() || null,
-          created_by: user.id,
-          duration_minutes: durationMinutes,
-        });
+        .insert(appointmentsToCreate);
 
       if (error) throw error;
 
+      const count = recurringDates.length;
       toast({
-        title: "Agendamento criado",
-        description: "A consulta foi agendada com sucesso.",
+        title: count > 1 ? `${count} agendamentos criados` : "Agendamento criado",
+        description: count > 1 
+          ? `Foram agendadas ${count} consultas recorrentes com sucesso.`
+          : "A consulta foi agendada com sucesso.",
       });
 
       setDialogOpen(false);
@@ -1452,6 +1488,14 @@ export default function CalendarPage() {
     setFormTime("");
     setFormType("first_visit");
     setFormNotes("");
+    // Reset recurrence
+    setRecurrenceConfig({
+      enabled: false,
+      frequency: "weekly",
+      limitType: "sessions",
+      sessions: 4,
+      endDate: "",
+    });
   };
 
   const openNewAppointmentWithTime = (time: string, date?: Date) => {
@@ -2163,6 +2207,15 @@ export default function CalendarPage() {
           placeholder="Anotações sobre o agendamento (opcional)"
         />
       </div>
+
+      {/* Recurrence selector - only for new appointments, not edit */}
+      {!editingAppointment && (
+        <RecurrenceSelector
+          value={recurrenceConfig}
+          onChange={setRecurrenceConfig}
+          minDate={selectedDate.toISOString().split('T')[0]}
+        />
+      )}
     </>
   );
 
@@ -2952,7 +3005,7 @@ export default function CalendarPage() {
                   Novo Agendamento
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Novo Agendamento</DialogTitle>
                 </DialogHeader>
@@ -2968,7 +3021,9 @@ export default function CalendarPage() {
                     </Button>
                     <Button type="submit" disabled={saving}>
                       {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Agendar
+                      {recurrenceConfig.enabled 
+                        ? `Agendar ${calculateRecurringDates(selectedDate, recurrenceConfig).length} consultas`
+                        : "Agendar"}
                     </Button>
                   </div>
                 </form>
