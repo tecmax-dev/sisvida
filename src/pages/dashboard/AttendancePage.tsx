@@ -527,8 +527,8 @@ export default function AttendancePage() {
     // Don't save if nothing changed
     if (currentExamJson === lastSavedExamRef.current) return;
     
-    // Don't save if form is completely empty
-    if (!examRequest.trim() && !clinicalIndication.trim()) return;
+    // Don't save if examRequest is empty (content is NOT NULL in DB)
+    if (!examRequest.trim()) return;
     
     setExamAutoSaveStatus('saving');
     
@@ -541,7 +541,7 @@ export default function AttendancePage() {
           professional_id: appointment.professional_id,
           appointment_id: appointment.id,
           document_type: "exam_request",
-          content: examRequest || null,
+          content: examRequest.trim(),
           additional_info: { clinical_indication: clinicalIndication || null },
           document_date: new Date().toISOString().split("T")[0],
         }, { onConflict: 'appointment_id,document_type', ignoreDuplicates: false });
