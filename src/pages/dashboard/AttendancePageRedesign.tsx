@@ -557,14 +557,16 @@ export default function AttendancePageRedesign() {
   // Exam auto-save function
   const performExamAutoSave = useCallback(async () => {
     if (!appointment || isCompleted) return;
-    
+
     const currentExamJson = JSON.stringify({ examRequest, clinicalIndication });
-    
+
     if (currentExamJson === lastSavedExamRef.current) return;
-    if (!examRequest.trim() && !clinicalIndication.trim()) return;
-    
+
+    // content is NOT NULL in DB, so only autosave when examRequest has content
+    if (!examRequest.trim()) return;
+
     setExamAutoSaveStatus('saving');
-    
+
     try {
       const { error } = await supabase
         .from("medical_documents")
@@ -574,7 +576,7 @@ export default function AttendancePageRedesign() {
           professional_id: appointment.professional_id,
           appointment_id: appointment.id,
           document_type: "exam_request",
-          content: examRequest || null,
+          content: examRequest.trim(),
           additional_info: { clinical_indication: clinicalIndication || null },
           document_date: new Date().toISOString().split("T")[0],
         }, { onConflict: 'appointment_id,document_type', ignoreDuplicates: false });
