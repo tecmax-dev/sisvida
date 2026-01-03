@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { TwilioConfigPanel } from "@/components/settings/TwilioConfigPanel";
@@ -18,12 +18,15 @@ import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { MessageHistoryPanel } from "@/components/settings/MessageHistoryPanel";
 import { AIAssistantChat } from "@/components/chat/AIAssistantChat";
 import { RoleGuard } from "@/components/auth/RoleGuard";
-import { usePermissions } from "@/hooks/usePermissions";
+import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { useAutoSave, AutoSaveStatus } from "@/hooks/useAutoSave";
 import { AutoSaveIndicator } from "@/components/ui/auto-save-indicator";
 import { FeatureGate, FeatureGateInline } from "@/components/features/FeatureGate";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { UserAvatarUpload } from "@/components/users/UserAvatarUpload";
+import { SettingsWidgetWrapper } from "@/components/settings/SettingsWidgetWrapper";
+import { useSettingsWidgets } from "@/hooks/useSettingsWidgets";
+import { Badge } from "@/components/ui/badge";
 
 export default function SettingsPage() {
   const { user, currentClinic, profile } = useAuth();
@@ -49,6 +52,19 @@ export default function SettingsPage() {
   // CPF appointment limit state
   const [maxCpfAppointments, setMaxCpfAppointments] = useState<number | null>(null);
   const [savingCpfLimit, setSavingCpfLimit] = useState(false);
+
+  // Widget management
+  const {
+    widgetOrder,
+    loading: widgetsLoading,
+    isWidgetVisible,
+    moveWidgetUp,
+    moveWidgetDown,
+    toggleWidgetVisibility,
+    resetToDefault,
+  } = useSettingsWidgets();
+  
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Initial data for auto-save comparison
   const [initialSettingsData, setInitialSettingsData] = useState({
@@ -356,282 +372,223 @@ export default function SettingsPage() {
     }
   };
 
-  return (
-    <RoleGuard permissions={["manage_settings", "change_password"]}>
-    <div className="space-y-6 max-w-3xl">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-          <p className="text-muted-foreground">
-            Personalize as configurações da sua clínica
-          </p>
-        </div>
-        <AutoSaveIndicator status={autoSaveStatus} />
-      </div>
-
-      {/* User Profile - Avatar */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <User className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Meu Perfil</CardTitle>
-              <CardDescription>
-                Personalize sua foto de perfil
-              </CardDescription>
-            </div>
+  // Widget definitions with content
+  const widgetDefinitions: Array<{
+    id: string;
+    title: string;
+    description: string;
+    icon: React.ReactNode;
+    permission: Permission | null;
+    feature: string | null;
+    content?: React.ReactNode;
+    isComponent?: boolean;
+    component?: React.ReactNode;
+  }> = useMemo(() => [
+    {
+      id: "profile",
+      title: "Meu Perfil",
+      description: "Personalize sua foto de perfil",
+      icon: <User className="h-5 w-5 text-primary" />,
+      permission: null,
+      feature: null,
+      content: (
+        <div className="flex items-center gap-6">
+          {user?.id && (
+            <UserAvatarUpload
+              userId={user.id}
+              currentAvatarUrl={profile?.avatar_url}
+              userName={profile?.name || user?.email || "Usuário"}
+              size="lg"
+              editable={true}
+            />
+          )}
+          <div className="flex-1">
+            <p className="font-medium text-foreground">{profile?.name || "Usuário"}</p>
+            <p className="text-sm text-muted-foreground">{user?.email}</p>
+            <p className="text-xs text-muted-foreground mt-2">
+              Clique no ícone de câmera para alterar sua foto
+            </p>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-6">
-            {user?.id && (
-              <UserAvatarUpload
-                userId={user.id}
-                currentAvatarUrl={profile?.avatar_url}
-                userName={profile?.name || user?.email || "Usuário"}
-                size="lg"
-                editable={true}
-              />
-            )}
-            <div className="flex-1">
-              <p className="font-medium text-foreground">{profile?.name || "Usuário"}</p>
-              <p className="text-sm text-muted-foreground">{user?.email}</p>
-              <p className="text-xs text-muted-foreground mt-2">
-                Clique no ícone de câmera para alterar sua foto
+        </div>
+      ),
+    },
+    {
+      id: "clinic-info",
+      title: "Dados da Clínica",
+      description: "Informações básicas da sua clínica",
+      icon: <Building2 className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      content: (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="clinicName">Nome da Clínica</Label>
+            <Input
+              id="clinicName"
+              value={clinicName}
+              onChange={(e) => setClinicName(e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={user?.email || ""}
+              disabled
+              className="bg-muted"
+            />
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "whatsapp-reminders",
+      title: "Lembretes WhatsApp",
+      description: "Configure os lembretes automáticos",
+      icon: <Bell className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: "whatsapp_appointment_reminders",
+      content: (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-medium text-foreground">Lembretes automáticos</p>
+              <p className="text-sm text-muted-foreground">
+                Enviar lembretes de consulta via WhatsApp
               </p>
             </div>
+            <Switch
+              checked={reminderEnabled}
+              onCheckedChange={setReminderEnabled}
+            />
           </div>
-        </CardContent>
-      </Card>
-
-      <RoleGuard permission="manage_settings">
-
-      {/* Clinic Info */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Dados da Clínica</CardTitle>
-              <CardDescription>
-                Informações básicas da sua clínica
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          
+          {reminderEnabled && (
             <div className="space-y-2">
-              <Label htmlFor="clinicName">Nome da Clínica</Label>
-              <Input
-                id="clinicName"
-                value={clinicName}
-                onChange={(e) => setClinicName(e.target.value)}
+              <Label htmlFor="reminderTime">Tempo antes da consulta</Label>
+              <select
+                id="reminderTime"
+                value={reminderTime}
+                onChange={(e) => setReminderTime(e.target.value)}
+                className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm"
+              >
+                <option value="1">1 hora antes</option>
+                <option value="2">2 horas antes</option>
+                <option value="6">6 horas antes</option>
+                <option value="12">12 horas antes</option>
+                <option value="24">24 horas antes</option>
+                <option value="48">48 horas antes</option>
+                <option value="72">72 horas antes</option>
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">
+                O lembrete será enviado automaticamente no horário configurado antes da consulta
+              </p>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      id: "whatsapp-header",
+      title: "Imagem do Cabeçalho WhatsApp",
+      description: "Personalize a imagem que aparece nos lembretes e mensagens de aniversário",
+      icon: <ImageIcon className="h-5 w-5 text-primary" />,
+      permission: "manage_whatsapp_header",
+      feature: null,
+      content: (
+        <div className="flex flex-col sm:flex-row gap-4 items-start">
+          <div className="w-full sm:w-48 h-32 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
+            {whatsappHeaderImage ? (
+              <img 
+                src={whatsappHeaderImage} 
+                alt="Cabeçalho WhatsApp" 
+                className="w-full h-full object-cover"
               />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={user?.email || ""}
-                disabled
-                className="bg-muted"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Notifications - Protected by whatsapp_appointment_reminders feature */}
-      <FeatureGate feature="whatsapp_appointment_reminders" showUpgradePrompt>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Bell className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Lembretes WhatsApp</CardTitle>
-                <CardDescription>
-                  Configure os lembretes automáticos
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground">Lembretes automáticos</p>
-                <p className="text-sm text-muted-foreground">
-                  Enviar lembretes de consulta via WhatsApp
-                </p>
-              </div>
-              <Switch
-                checked={reminderEnabled}
-                onCheckedChange={setReminderEnabled}
-              />
-            </div>
-            
-            {reminderEnabled && (
-              <div className="space-y-2">
-                <Label htmlFor="reminderTime">Tempo antes da consulta</Label>
-                <select
-                  id="reminderTime"
-                  value={reminderTime}
-                  onChange={(e) => setReminderTime(e.target.value)}
-                  className="w-full h-10 px-3 rounded-lg border border-input bg-background text-sm"
-                >
-                  <option value="1">1 hora antes</option>
-                  <option value="2">2 horas antes</option>
-                  <option value="6">6 horas antes</option>
-                  <option value="12">12 horas antes</option>
-                  <option value="24">24 horas antes</option>
-                  <option value="48">48 horas antes</option>
-                  <option value="72">72 horas antes</option>
-                </select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  O lembrete será enviado automaticamente no horário configurado antes da consulta
-                </p>
+            ) : (
+              <div className="text-center p-4">
+                <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-xs text-muted-foreground">Imagem padrão do sistema</p>
               </div>
             )}
-          </CardContent>
-        </Card>
-      </FeatureGate>
-
-      {/* WhatsApp Header Image - Protected by manage_whatsapp_header permission */}
-      {hasPermission('manage_whatsapp_header') && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <ImageIcon className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Imagem do Cabeçalho WhatsApp</CardTitle>
-                <CardDescription>
-                  Personalize a imagem que aparece nos lembretes e mensagens de aniversário
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-4 items-start">
-              {/* Preview */}
-              <div className="w-full sm:w-48 h-32 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
-                {whatsappHeaderImage ? (
-                  <img 
-                    src={whatsappHeaderImage} 
-                    alt="Cabeçalho WhatsApp" 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="text-center p-4">
-                    <ImageIcon className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-xs text-muted-foreground">Imagem padrão do sistema</p>
-                  </div>
-                )}
-              </div>
+          </div>
+          
+          <div className="flex-1 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Esta imagem será exibida no topo das mensagens de lembrete de consulta e felicitações de aniversário enviadas via WhatsApp.
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Recomendação: Imagem com proporção 16:9, tamanho máximo 5MB.
+            </p>
+            
+            <div className="flex gap-2">
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={uploadingImage}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={uploadingImage}
+                  asChild
+                >
+                  <span>
+                    <Upload className="h-4 w-4 mr-2" />
+                    {uploadingImage ? "Enviando..." : "Enviar imagem"}
+                  </span>
+                </Button>
+              </label>
               
-              {/* Actions */}
-              <div className="flex-1 space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  Esta imagem será exibida no topo das mensagens de lembrete de consulta e felicitações de aniversário enviadas via WhatsApp.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Recomendação: Imagem com proporção 16:9, tamanho máximo 5MB.
-                </p>
-                
-                <div className="flex gap-2">
-                  <label className="cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      disabled={uploadingImage}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      disabled={uploadingImage}
-                      asChild
-                    >
-                      <span>
-                        <Upload className="h-4 w-4 mr-2" />
-                        {uploadingImage ? "Enviando..." : "Enviar imagem"}
-                      </span>
-                    </Button>
-                  </label>
-                  
-                  {whatsappHeaderImage && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleRemoveImage}
-                      className="text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remover
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Working Hours */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Clock className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Horário de Funcionamento</CardTitle>
-              <CardDescription>
-                Defina os horários padrão da clínica
-              </CardDescription>
+              {whatsappHeaderImage && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRemoveImage}
+                  className="text-destructive hover:text-destructive"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Remover
+                </Button>
+              )}
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="openTime">Abertura</Label>
-              <Input id="openTime" type="time" defaultValue="08:00" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="closeTime">Fechamento</Label>
-              <Input id="closeTime" type="time" defaultValue="18:00" />
-            </div>
+        </div>
+      ),
+    },
+    {
+      id: "working-hours",
+      title: "Horário de Funcionamento",
+      description: "Defina os horários padrão da clínica",
+      icon: <Clock className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      content: (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="openTime">Abertura</Label>
+            <Input id="openTime" type="time" defaultValue="08:00" />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Schedule Validation */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <ShieldCheck className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Validação de Horários</CardTitle>
-              <CardDescription>
-                Controle de agendamentos fora do expediente
-              </CardDescription>
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="closeTime">Fechamento</Label>
+            <Input id="closeTime" type="time" defaultValue="18:00" />
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        </div>
+      ),
+    },
+    {
+      id: "schedule-validation",
+      title: "Validação de Horários",
+      description: "Controle de agendamentos fora do expediente",
+      icon: <ShieldCheck className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      content: (
+        <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <p className="font-medium text-foreground">Bloquear agendamentos fora do horário</p>
@@ -654,25 +611,18 @@ export default function SettingsPage() {
               </p>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* CPF Appointment Limit */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Users className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Limite de Agendamentos por CPF</CardTitle>
-              <CardDescription>
-                Restrinja a quantidade de agendamentos mensais por paciente
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        </div>
+      ),
+    },
+    {
+      id: "cpf-limit",
+      title: "Limite de Agendamentos por CPF",
+      description: "Restrinja a quantidade de agendamentos mensais por paciente",
+      icon: <Users className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      content: (
+        <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="maxCpfAppointments">Máximo de agendamentos por mês (por profissional)</Label>
             <div className="flex gap-3 items-center">
@@ -734,25 +684,18 @@ export default function SettingsPage() {
               </p>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Map View Type */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <MapPin className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Visualização de Localização</CardTitle>
-              <CardDescription>
-                Como exibir a localização na página pública do profissional
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
+        </div>
+      ),
+    },
+    {
+      id: "map-view",
+      title: "Visualização de Localização",
+      description: "Como exibir a localização na página pública do profissional",
+      icon: <MapPin className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      content: (
+        <>
           <RadioGroup value={mapViewType} onValueChange={setMapViewType} className="space-y-3">
             <div className="flex items-start space-x-3">
               <RadioGroupItem value="streetview" id="streetview" className="mt-0.5" />
@@ -791,7 +734,6 @@ export default function SettingsPage() {
             </div>
           </RadioGroup>
 
-          {/* Custom Embed URL Input */}
           {mapViewType === 'custom' && (
             <div className="mt-4 space-y-3">
               <div className="space-y-2">
@@ -820,172 +762,309 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      {/* Online Booking */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Globe className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">Agendamento Online</CardTitle>
-              <CardDescription>
-                Link para agendamento de pacientes
-              </CardDescription>
-            </div>
+        </>
+      ),
+    },
+    {
+      id: "online-booking",
+      title: "Agendamento Online",
+      description: "Link para agendamento de pacientes",
+      icon: <Globe className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      content: (
+        <div className="p-4 rounded-lg bg-muted/50 border border-border">
+          <p className="text-sm text-muted-foreground mb-2">
+            Compartilhe este link com seus pacientes
+          </p>
+          <div className="flex gap-2">
+            <Input readOnly value={bookingLink} className="bg-background" />
+            <Button
+              variant="outline"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(bookingLink);
+                  toast({
+                    title: "Link copiado!",
+                    description: "Agora é só colar e compartilhar com seus pacientes.",
+                  });
+                } catch {
+                  toast({
+                    title: "Não foi possível copiar",
+                    description: "Copie manualmente o link.",
+                    variant: "destructive",
+                  });
+                }
+              }}
+            >
+              Copiar
+            </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 rounded-lg bg-muted/50 border border-border">
-            <p className="text-sm text-muted-foreground mb-2">
-              Compartilhe este link com seus pacientes
-            </p>
-            <div className="flex gap-2">
-              <Input readOnly value={bookingLink} className="bg-background" />
-              <Button
-                variant="outline"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(bookingLink);
-                    toast({
-                      title: "Link copiado!",
-                      description: "Agora é só colar e compartilhar com seus pacientes.",
-                    });
-                  } catch {
-                    toast({
-                      title: "Não foi possível copiar",
-                      description: "Copie manualmente o link.",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-              >
-                Copiar
+        </div>
+      ),
+    },
+    {
+      id: "whatsapp-provider",
+      title: "Provedor WhatsApp",
+      description: "Selecione o provedor de WhatsApp",
+      icon: <Bell className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: "whatsapp_evolution_api",
+      isComponent: true,
+      component: currentClinic ? <WhatsAppProviderSelector clinicId={currentClinic.id} /> : null,
+    },
+    {
+      id: "evolution-api",
+      title: "Evolution API",
+      description: "Configuração do Evolution API",
+      icon: <Bell className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: "whatsapp_evolution_api",
+      isComponent: true,
+      component: currentClinic ? <EvolutionConfigPanel clinicId={currentClinic.id} /> : null,
+    },
+    {
+      id: "twilio-config",
+      title: "Twilio WhatsApp",
+      description: "Configuração do Twilio",
+      icon: <Bell className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: "whatsapp_twilio",
+      isComponent: true,
+      component: currentClinic ? <TwilioConfigPanel clinicId={currentClinic.id} /> : null,
+    },
+    {
+      id: "message-history",
+      title: "Histórico de Mensagens",
+      description: "Histórico de mensagens enviadas",
+      icon: <Bell className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      isComponent: true,
+      component: currentClinic ? <MessageHistoryPanel clinicId={currentClinic.id} /> : null,
+    },
+    {
+      id: "api-keys",
+      title: "Chaves de API",
+      description: "Gerencie suas chaves de API",
+      icon: <Lock className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      isComponent: true,
+      component: currentClinic ? <ApiKeysPanel clinicId={currentClinic.id} /> : null,
+    },
+    {
+      id: "webhooks",
+      title: "Webhooks",
+      description: "Configure webhooks para integrações",
+      icon: <Globe className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      isComponent: true,
+      component: <WebhooksPanel />,
+    },
+    {
+      id: "ai-assistant",
+      title: "Testar Assistente IA",
+      description: "Teste o assistente de agendamento com OpenAI diretamente",
+      icon: <Bot className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: "whatsapp_ai_assistant",
+      content: currentClinic ? <AIAssistantChat clinicId={currentClinic.id} /> : null,
+    },
+    {
+      id: "password-change",
+      title: "Alterar Senha",
+      description: "Atualize sua senha de acesso",
+      icon: <Lock className="h-5 w-5 text-primary" />,
+      permission: "change_password",
+      feature: null,
+      content: (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="newPassword">Nova Senha</Label>
+            <Input
+              id="newPassword"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Digite a nova senha"
+              minLength={6}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Confirme a nova senha"
+              minLength={6}
+            />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            A senha deve ter no mínimo 6 caracteres
+          </p>
+          <Button
+            onClick={handleChangePassword}
+            disabled={savingPassword || !newPassword || !confirmPassword}
+            className="w-full sm:w-auto"
+          >
+            {savingPassword ? "Alterando..." : "Alterar Senha"}
+          </Button>
+        </div>
+      ),
+    },
+  ], [
+    clinicName, user, profile, reminderEnabled, reminderTime, whatsappHeaderImage, 
+    uploadingImage, enforceScheduleValidation, loadingValidation, maxCpfAppointments, 
+    savingCpfLimit, mapViewType, customMapEmbedUrl, bookingLink, currentClinic, 
+    newPassword, confirmPassword, savingPassword, toast, handleImageUpload, handleRemoveImage, 
+    handleToggleScheduleValidation, handleChangePassword
+  ]);
+
+  // Sort widgets by user order
+  const sortedWidgets = useMemo(() => {
+    return [...widgetDefinitions].sort((a, b) => {
+      const indexA = widgetOrder.indexOf(a.id);
+      const indexB = widgetOrder.indexOf(b.id);
+      const posA = indexA === -1 ? 999 : indexA;
+      const posB = indexB === -1 ? 999 : indexB;
+      return posA - posB;
+    });
+  }, [widgetDefinitions, widgetOrder]);
+
+  // Render widget with proper guards
+  const renderWidget = (widget: typeof widgetDefinitions[0], index: number) => {
+    const isVisible = isWidgetVisible(widget.id);
+    
+    // Check permission
+    if (widget.permission && !hasPermission(widget.permission)) {
+      return null;
+    }
+
+    // For component widgets (they have their own Card structure)
+    if (widget.isComponent && widget.component) {
+      if (!isVisible && !isEditMode) return null;
+      
+      if (widget.feature) {
+        return (
+          <div key={widget.id} className={!isVisible ? "opacity-50" : ""}>
+            <FeatureGate feature={widget.feature} showUpgradePrompt>
+              {widget.component}
+            </FeatureGate>
+          </div>
+        );
+      }
+      
+      return (
+        <div key={widget.id} className={!isVisible ? "opacity-50" : ""}>
+          {widget.component}
+        </div>
+      );
+    }
+
+    // Regular widgets with content
+    const widgetContent = (
+      <SettingsWidgetWrapper
+        key={widget.id}
+        id={widget.id}
+        title={widget.title}
+        description={widget.description}
+        icon={widget.icon}
+        isEditMode={isEditMode}
+        isVisible={isVisible}
+        isFirst={index === 0}
+        isLast={index === sortedWidgets.length - 1}
+        onMoveUp={() => moveWidgetUp(widget.id)}
+        onMoveDown={() => moveWidgetDown(widget.id)}
+        onToggleVisibility={() => toggleWidgetVisibility(widget.id)}
+      >
+        {widget.content}
+      </SettingsWidgetWrapper>
+    );
+
+    if (widget.feature) {
+      return (
+        <FeatureGate key={widget.id} feature={widget.feature} showUpgradePrompt>
+          {widgetContent}
+        </FeatureGate>
+      );
+    }
+
+    return widgetContent;
+  };
+
+  return (
+    <RoleGuard permissions={["manage_settings", "change_password"]}>
+    <div className="space-y-6 max-w-3xl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
+          <p className="text-muted-foreground">
+            Personalize as configurações da sua clínica
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <AutoSaveIndicator status={autoSaveStatus} />
+          
+          {/* Widget Edit Mode Toggle */}
+          <Button
+            variant={isEditMode ? "default" : "outline"}
+            size="sm"
+            onClick={() => setIsEditMode(!isEditMode)}
+            className="gap-2"
+          >
+            <Settings2 className="h-4 w-4" />
+            {isEditMode ? "Concluir" : "Personalizar"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Edit Mode Instructions */}
+      {isEditMode && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Settings2 className="h-5 w-5 text-primary" />
+                <div>
+                  <p className="font-medium text-foreground">Modo de personalização ativo</p>
+                  <p className="text-sm text-muted-foreground">
+                    Use as setas para reordenar e o ícone de olho para ocultar/exibir widgets
+                  </p>
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={resetToDefault} className="gap-2">
+                <RotateCcw className="h-4 w-4" />
+                Restaurar padrão
               </Button>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* WhatsApp Provider Selector - Protected by Evolution or Twilio feature */}
-      {currentClinic && (
-        <FeatureGateInline feature="whatsapp_evolution_api">
-          <WhatsAppProviderSelector clinicId={currentClinic.id} />
-        </FeatureGateInline>
-      )}
-
-      {/* Evolution API Integration - Protected by whatsapp_evolution_api feature */}
-      {currentClinic && (
-        <FeatureGate feature="whatsapp_evolution_api" showUpgradePrompt>
-          <EvolutionConfigPanel clinicId={currentClinic.id} />
-        </FeatureGate>
-      )}
-
-      {/* Twilio WhatsApp Integration - Protected by whatsapp_twilio feature */}
-      {currentClinic && (
-        <FeatureGate feature="whatsapp_twilio" showUpgradePrompt>
-          <TwilioConfigPanel clinicId={currentClinic.id} />
-        </FeatureGate>
-      )}
-
-      {/* Message History */}
-      {currentClinic && (
-        <MessageHistoryPanel clinicId={currentClinic.id} />
-      )}
-
-      {/* API Integrations */}
-      {currentClinic && (
-        <ApiKeysPanel clinicId={currentClinic.id} />
-      )}
-
-      {/* Webhooks */}
-      <WebhooksPanel />
-
-      {/* AI Assistant Test - Protected by whatsapp_ai_assistant feature */}
-      {currentClinic && (
-        <FeatureGate feature="whatsapp_ai_assistant" showUpgradePrompt>
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Bot className="h-5 w-5 text-primary" />
-                </div>
-                <div>
-                  <CardTitle className="text-lg">Testar Assistente IA</CardTitle>
-                  <CardDescription>
-                    Teste o assistente de agendamento com OpenAI diretamente
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <AIAssistantChat clinicId={currentClinic.id} />
-            </CardContent>
-          </Card>
-        </FeatureGate>
-      )}
-
-      <div className="flex justify-end">
-        <Button variant="hero" onClick={handleSave} disabled={saving}>
-          {saving ? "Salvando..." : "Salvar alterações"}
-        </Button>
-      </div>
-      </RoleGuard>
-
-      {/* Password Change - Protected by change_password permission */}
-      {hasPermission('change_password') && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                <Lock className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle className="text-lg">Alterar Senha</CardTitle>
-                <CardDescription>
-                  Atualize sua senha de acesso
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="newPassword">Nova Senha</Label>
-              <Input
-                id="newPassword"
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Digite a nova senha"
-                minLength={6}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Confirme a nova senha"
-                minLength={6}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              A senha deve ter no mínimo 6 caracteres
-            </p>
-            <Button
-              onClick={handleChangePassword}
-              disabled={savingPassword || !newPassword || !confirmPassword}
-              className="w-full sm:w-auto"
-            >
-              {savingPassword ? "Alterando..." : "Alterar Senha"}
-            </Button>
           </CardContent>
         </Card>
+      )}
+
+      {/* Render sorted widgets */}
+      <RoleGuard permission="manage_settings">
+        {sortedWidgets
+          .filter(w => w.permission === "manage_settings" || w.permission === null)
+          .map((widget, index) => renderWidget(widget, index))}
+        
+        <div className="flex justify-end">
+          <Button variant="hero" onClick={handleSave} disabled={saving}>
+            {saving ? "Salvando..." : "Salvar alterações"}
+          </Button>
+        </div>
+      </RoleGuard>
+
+      {/* Password change widget (outside manage_settings guard) */}
+      {hasPermission('change_password') && (
+        <>
+          {sortedWidgets
+            .filter(w => w.id === "password-change")
+            .map((widget, index) => renderWidget(widget, index))}
+        </>
       )}
     </div>
     </RoleGuard>
