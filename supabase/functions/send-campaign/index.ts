@@ -258,20 +258,42 @@ serve(async (req: Request) => {
               phone = "55" + phone;
             }
 
-            // Send via Evolution API
-            const evolutionUrl = `${evolutionConfig.api_url}/message/sendText/${evolutionConfig.instance_name}`;
+            let response: Response;
             
-            const response = await fetch(evolutionUrl, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "apikey": evolutionConfig.api_key,
-              },
-              body: JSON.stringify({
-                number: phone,
-                text: message,
-              }),
-            });
+            // Check if campaign has image
+            if (campaign.image_url) {
+              // Send via Evolution API with media
+              const evolutionUrl = `${evolutionConfig.api_url}/message/sendMedia/${evolutionConfig.instance_name}`;
+              
+              response = await fetch(evolutionUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "apikey": evolutionConfig.api_key,
+                },
+                body: JSON.stringify({
+                  number: phone,
+                  mediatype: "image",
+                  media: campaign.image_url,
+                  caption: message,
+                }),
+              });
+            } else {
+              // Send via Evolution API text only
+              const evolutionUrl = `${evolutionConfig.api_url}/message/sendText/${evolutionConfig.instance_name}`;
+              
+              response = await fetch(evolutionUrl, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "apikey": evolutionConfig.api_key,
+                },
+                body: JSON.stringify({
+                  number: phone,
+                  text: message,
+                }),
+              });
+            }
 
             if (response.ok) {
               sentCount++;
