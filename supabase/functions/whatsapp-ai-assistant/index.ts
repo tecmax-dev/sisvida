@@ -256,13 +256,15 @@ async function executeTool(
 
       case "buscar_paciente_por_cpf": {
         const cpf = args.cpf.replace(/\D/g, '');
+        // Support both formatted (XXX.XXX.XXX-XX) and unformatted CPF
+        const formattedCpf = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
         
         const { data: patient } = await supabase
           .from('patients')
           .select('id, name, phone')
           .eq('clinic_id', clinicId)
-          .eq('cpf', cpf)
-          .single();
+          .or(`cpf.eq.${cpf},cpf.eq.${formattedCpf}`)
+          .maybeSingle();
 
         if (!patient) {
           return JSON.stringify({ 
