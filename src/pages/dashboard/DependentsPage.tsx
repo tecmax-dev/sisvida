@@ -1,16 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Users,
+  UsersRound,
   Search,
   Pencil,
   User,
   Phone,
   CreditCard,
   Loader2,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
+  Clock,
+  IdCard,
+  ShieldAlert,
   ChevronLeft,
   ChevronRight,
   UserPlus,
@@ -228,7 +228,7 @@ export default function DependentsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Users className="h-6 w-6 text-primary" />
+            <UsersRound className="h-6 w-6 text-primary" />
             Dependentes
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -242,7 +242,7 @@ export default function DependentsPage() {
         <Card className="border-l-4 border-l-primary bg-primary/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <Users className="h-4 w-4 text-primary" />
+              <UsersRound className="h-4 w-4 text-primary" />
               <span className="text-xs font-medium text-muted-foreground">Total</span>
             </div>
             <p className="text-xl font-bold text-foreground mt-1">{stats.total}</p>
@@ -251,7 +251,7 @@ export default function DependentsPage() {
         <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <IdCard className="h-4 w-4 text-emerald-500" />
               <span className="text-xs font-medium text-muted-foreground">Com Carteirinha</span>
             </div>
             <p className="text-xl font-bold text-emerald-600 mt-1">{stats.withCard}</p>
@@ -260,7 +260,7 @@ export default function DependentsPage() {
         <Card className="border-l-4 border-l-rose-500 bg-rose-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <XCircle className="h-4 w-4 text-rose-500" />
+              <Clock className="h-4 w-4 text-rose-500" />
               <span className="text-xs font-medium text-muted-foreground">Vencidas</span>
             </div>
             <p className="text-xl font-bold text-rose-600 mt-1">{stats.expiredCards}</p>
@@ -269,7 +269,7 @@ export default function DependentsPage() {
         <Card className="border-l-4 border-l-amber-500 bg-amber-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <ShieldAlert className="h-4 w-4 text-amber-500" />
               <span className="text-xs font-medium text-muted-foreground">Sem Carteirinha</span>
             </div>
             <p className="text-xl font-bold text-amber-600 mt-1">{stats.noCard}</p>
@@ -297,7 +297,7 @@ export default function DependentsPage() {
       {dependents.length === 0 && !loading ? (
         <Card>
           <CardContent className="p-8 text-center">
-            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <UsersRound className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <h3 className="text-lg font-medium text-foreground mb-2">
               Nenhum dependente encontrado
             </h3>
