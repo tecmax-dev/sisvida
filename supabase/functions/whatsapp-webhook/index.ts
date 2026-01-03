@@ -5948,12 +5948,12 @@ serve(async (req) => {
             id,
             status,
             subscription_addons!inner (
-              slug
+              key
             )
           `)
           .eq('clinic_id', clinicId)
           .eq('status', 'active')
-          .eq('subscription_addons.slug', 'whatsapp-multiattendance')
+          .eq('subscription_addons.key', 'whatsapp_multiattendance')
           .maybeSingle();
 
         if (hasMultiattendance) {
