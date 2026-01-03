@@ -44,6 +44,10 @@ import {
   Activity,
   History,
   Ban,
+  CalendarClock,
+  ClipboardCheck,
+  UserX,
+  CalendarCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -2979,7 +2983,7 @@ export default function CalendarPage() {
         <Card className="border-l-4 border-l-primary bg-primary/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <CalendarIcon className="h-4 w-4 text-primary" />
+              <CalendarClock className="h-4 w-4 text-primary" />
               <span className="text-xs font-medium text-muted-foreground">Total</span>
             </div>
             <p className="text-xl font-bold text-foreground mt-1">{stats.total}</p>
@@ -2988,7 +2992,7 @@ export default function CalendarPage() {
         <Card className="border-l-4 border-l-amber-500 bg-amber-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <Clock className="h-4 w-4 text-amber-500" />
               <span className="text-xs font-medium text-muted-foreground">Pendentes</span>
             </div>
             <p className="text-xl font-bold text-amber-600 mt-1">{stats.pending}</p>
@@ -2997,7 +3001,7 @@ export default function CalendarPage() {
         <Card className="border-l-4 border-l-blue-500 bg-blue-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-blue-500" />
+              <CalendarCheck className="h-4 w-4 text-blue-500" />
               <span className="text-xs font-medium text-muted-foreground">Confirmados</span>
             </div>
             <p className="text-xl font-bold text-blue-600 mt-1">{stats.confirmed}</p>
@@ -3015,7 +3019,7 @@ export default function CalendarPage() {
         <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <ClipboardCheck className="h-4 w-4 text-emerald-500" />
               <span className="text-xs font-medium text-muted-foreground">Concluídos</span>
             </div>
             <p className="text-xl font-bold text-emerald-600 mt-1">{stats.completed}</p>
@@ -3024,7 +3028,7 @@ export default function CalendarPage() {
         <Card className="border-l-4 border-l-rose-500 bg-rose-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <XCircle className="h-4 w-4 text-rose-500" />
+              <UserX className="h-4 w-4 text-rose-500" />
               <span className="text-xs font-medium text-muted-foreground">Faltas/Canc.</span>
             </div>
             <p className="text-xl font-bold text-rose-600 mt-1">{stats.cancelled}</p>

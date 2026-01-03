@@ -15,12 +15,12 @@ import {
   Users,
   UserX,
   UserCheck,
-  CheckCircle2,
-  XCircle,
-  AlertTriangle,
+  UserCircle,
+  UserCog,
+  Shield,
   ChevronLeft,
   ChevronRight,
-  Heart,
+  HeartPulse,
 } from "lucide-react";
 import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
 import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
@@ -787,7 +787,7 @@ export default function PatientsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Heart className="h-6 w-6 text-primary" />
+            <HeartPulse className="h-6 w-6 text-primary" />
             Pacientes
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -940,7 +940,7 @@ export default function PatientsPage() {
         <Card className="border-l-4 border-l-primary bg-primary/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-primary" />
+              <HeartPulse className="h-4 w-4 text-primary" />
               <span className="text-xs font-medium text-muted-foreground">Total</span>
             </div>
             <p className="text-xl font-bold text-foreground mt-1">{totalPatients}</p>
@@ -949,7 +949,7 @@ export default function PatientsPage() {
         <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <UserCheck className="h-4 w-4 text-emerald-500" />
               <span className="text-xs font-medium text-muted-foreground">Ativos</span>
             </div>
             <p className="text-xl font-bold text-emerald-600 mt-1">{activeCount}</p>
@@ -958,7 +958,7 @@ export default function PatientsPage() {
         <Card className="border-l-4 border-l-rose-500 bg-rose-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <XCircle className="h-4 w-4 text-rose-500" />
+              <UserX className="h-4 w-4 text-rose-500" />
               <span className="text-xs font-medium text-muted-foreground">Inativos</span>
             </div>
             <p className="text-xl font-bold text-rose-600 mt-1">{showInactive ? patients.length : inactiveCount}</p>
@@ -967,7 +967,7 @@ export default function PatientsPage() {
         <Card className="border-l-4 border-l-blue-500 bg-blue-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-blue-500" />
+              <Shield className="h-4 w-4 text-blue-500" />
               <span className="text-xs font-medium text-muted-foreground">Com Convênio</span>
             </div>
             <p className="text-xl font-bold text-blue-600 mt-1">{withInsuranceCount}</p>
@@ -1174,7 +1174,7 @@ export default function PatientsPage() {
             </Table>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
-              <Heart className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <HeartPulse className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="mb-4">Nenhum paciente encontrado</p>
               {hasPermission("manage_patients") && (
                 <Button variant="outline" onClick={() => setDialogOpen(true)}>
