@@ -7199,6 +7199,44 @@ export type Database = {
           },
         ]
       }
+      user_settings_widgets: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          hidden_widgets: Json
+          id: string
+          updated_at: string
+          user_id: string
+          widget_order: Json
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          hidden_widgets?: Json
+          id?: string
+          updated_at?: string
+          user_id: string
+          widget_order?: Json
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          hidden_widgets?: Json
+          id?: string
+          updated_at?: string
+          user_id?: string
+          widget_order?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_settings_widgets_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waiting_list: {
         Row: {
           clinic_id: string
