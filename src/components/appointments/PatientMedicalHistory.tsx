@@ -186,12 +186,15 @@ export function PatientMedicalHistory({
                                 <div className="flex items-start justify-between gap-4">
                                   {/* Left: Date and Type */}
                                   <div className="flex items-center gap-3 min-w-0 flex-1">
-                                    <div className="flex flex-col items-center min-w-[50px]">
-                                      <span className="text-2xl font-bold text-foreground">
+                                    <div className="flex flex-col items-center min-w-[70px] bg-primary/10 rounded-lg p-2">
+                                      <span className="text-2xl font-bold text-primary">
                                         {format(recordDate, "dd")}
                                       </span>
-                                      <span className="text-xs text-muted-foreground uppercase">
-                                        {format(recordDate, "EEE", { locale: ptBR })}
+                                      <span className="text-xs font-medium text-primary/80">
+                                        {format(recordDate, "MMM", { locale: ptBR })}
+                                      </span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {format(recordDate, "yyyy")}
                                       </span>
                                     </div>
 
@@ -225,9 +228,14 @@ export function PatientMedicalHistory({
 
                                   {/* Right: Time and Expand */}
                                   <div className="flex items-center gap-2 text-muted-foreground">
-                                    <span className="text-xs">
-                                      {format(parseISO(record.created_at), "HH:mm")}
-                                    </span>
+                                    <div className="text-right">
+                                      <div className="text-xs font-medium text-foreground">
+                                        {format(recordDate, "dd/MM/yyyy")}
+                                      </div>
+                                      <div className="text-xs">
+                                        {format(parseISO(record.created_at), "HH:mm")}
+                                      </div>
+                                    </div>
                                     {hasContent(record) && (
                                       isExpanded ? (
                                         <ChevronDown className="h-5 w-5" />
