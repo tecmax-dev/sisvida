@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -15,6 +15,12 @@ import {
   Users,
   UserX,
   UserCheck,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
+  Heart,
 } from "lucide-react";
 import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
 import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
@@ -61,6 +67,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
@@ -76,6 +88,8 @@ import { calculateAge } from "@/lib/utils";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
 import { RealtimeIndicator } from "@/components/ui/realtime-indicator";
+
+const ITEMS_PER_PAGE = 15;
 
 interface Patient {
   id: string;
@@ -758,31 +772,33 @@ export default function PatientsPage() {
     }
   };
 
-  const pageCount = Math.max(1, Math.ceil(totalPatients / pageSize));
-  const showingFrom = totalPatients === 0 ? 0 : (page - 1) * pageSize + 1;
-  const showingTo = Math.min(page * pageSize, totalPatients);
+  const totalPages = Math.max(1, Math.ceil(totalPatients / ITEMS_PER_PAGE));
+  const showingFrom = totalPatients === 0 ? 0 : (page - 1) * ITEMS_PER_PAGE + 1;
+  const showingTo = Math.min(page * ITEMS_PER_PAGE, totalPatients);
 
-  const canPrev = page > 1;
-  const canNext = page < pageCount;
-
-      {/* Alerts Panel */}
-      <PatientAlertsPanel />
-
+  // Stats
+  const activeCount = useMemo(() => patients.filter(p => p.is_active !== false).length, [patients]);
+  const inactiveCount = useMemo(() => totalPatients - activeCount, [totalPatients, activeCount]);
+  const withInsuranceCount = useMemo(() => patients.filter(p => p.insurance_plan_id).length, [patients]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-4 p-4 md:p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Pacientes</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Heart className="h-6 w-6 text-primary" />
+            Pacientes
+          </h1>
+          <p className="text-sm text-muted-foreground">
             Gerencie o cadastro dos seus pacientes
           </p>
-          <RealtimeIndicator className="mt-2" />
+          <RealtimeIndicator className="mt-1" />
         </div>
         {hasPermission("manage_patients") && (
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="hero">
+              <Button className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Paciente
               </Button>
@@ -919,90 +935,81 @@ export default function PatientsPage() {
         )}
       </div>
 
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="border-l-4 border-l-primary bg-primary/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Heart className="h-4 w-4 text-primary" />
+              <span className="text-xs font-medium text-muted-foreground">Total</span>
+            </div>
+            <p className="text-xl font-bold text-foreground mt-1">{totalPatients}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span className="text-xs font-medium text-muted-foreground">Ativos</span>
+            </div>
+            <p className="text-xl font-bold text-emerald-600 mt-1">{activeCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-rose-500 bg-rose-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-rose-500" />
+              <span className="text-xs font-medium text-muted-foreground">Inativos</span>
+            </div>
+            <p className="text-xl font-bold text-rose-600 mt-1">{showInactive ? patients.length : inactiveCount}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-blue-500 bg-blue-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-blue-500" />
+              <span className="text-xs font-medium text-muted-foreground">Com Convênio</span>
+            </div>
+            <p className="text-xl font-bold text-blue-600 mt-1">{withInsuranceCount}</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Alerts Panel */}
       <PatientAlertsPanel />
 
-      {/* Search */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, email, CPF ou telefone (com/sem 55)..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      {/* Search + Filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, CPF ou telefone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
+        <div className="flex items-center gap-2">
+          <Switch
+            id="show-inactive"
+            checked={showInactive}
+            onCheckedChange={(checked) => {
+              setShowInactive(checked);
+              setPage(1);
+            }}
+          />
+          <Label htmlFor="show-inactive" className="text-xs cursor-pointer">
+            Mostrar inativos
+          </Label>
+        </div>
+        <Badge variant="outline" className="text-xs">
+          {totalPatients} resultado{totalPatients !== 1 ? "s" : ""}
+        </Badge>
+      </div>
 
       {/* Patients List */}
       <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <CardTitle className="text-lg">Pacientes</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {totalPatients > 0
-                ? `Mostrando ${showingFrom}-${showingTo} de ${totalPatients}`
-                : "0 pacientes"}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-4">
-            {/* Show inactive toggle */}
-            <div className="flex items-center gap-2">
-              <Switch
-                id="show-inactive"
-                checked={showInactive}
-                onCheckedChange={(checked) => {
-                  setShowInactive(checked);
-                  setPage(1);
-                }}
-              />
-              <Label htmlFor="show-inactive" className="text-sm cursor-pointer">
-                Mostrar inativos
-              </Label>
-            </div>
-
-            <Select
-              value={String(pageSize)}
-              onValueChange={(val) => {
-                setPageSize(Number(val));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9 w-[150px]">
-                <SelectValue placeholder="Por página" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="15">15 / página</SelectItem>
-                <SelectItem value="25">25 / página</SelectItem>
-                <SelectItem value="50">50 / página</SelectItem>
-                <SelectItem value="100">100 / página</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!canPrev || loading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!canNext || loading}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Próxima
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent>
+        <div className="overflow-x-auto">
           {loading ? (
             <div className="text-center py-12 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
@@ -1011,55 +1018,69 @@ export default function PatientsPage() {
           ) : patients.length > 0 ? (
             <Table>
               <TableHeader>
-                <TableRow className="h-9">
-                  <TableHead className="py-2 text-xs">Nome</TableHead>
-                  <TableHead className="hidden sm:table-cell py-2 text-xs">CPF</TableHead>
-                  <TableHead className="py-2 text-xs">Telefone</TableHead>
-                  <TableHead className="hidden lg:table-cell py-2 text-xs">Convênio</TableHead>
-                  <TableHead className="hidden md:table-cell py-2 text-xs">Carteirinha</TableHead>
-                  <TableHead className="w-[50px] py-2"></TableHead>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-semibold">Paciente</TableHead>
+                  <TableHead className="hidden sm:table-cell font-semibold">CPF</TableHead>
+                  <TableHead className="font-semibold">Telefone</TableHead>
+                  <TableHead className="hidden lg:table-cell font-semibold">Convênio</TableHead>
+                  <TableHead className="hidden md:table-cell font-semibold">Carteirinha</TableHead>
+                  <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {patients.map((patient) => (
-                  <TableRow key={patient.id} className={`${patient.is_active === false ? "opacity-60" : ""} h-10`}>
-                    <TableCell className="font-medium py-2">
+                  <TableRow key={patient.id} className={`h-12 hover:bg-muted/30 transition-colors ${patient.is_active === false ? "opacity-60" : ""}`}>
+                    <TableCell className="py-2">
                       <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleOpenEdit(patient)}
-                          className="truncate text-primary hover:underline font-medium text-left"
-                        >
-                          {patient.name}
-                        </button>
-                        {patient.birth_date && (
-                          <Badge variant="outline" className="text-xs">
-                            {calculateAge(patient.birth_date)} anos
-                          </Badge>
-                        )}
-                        {patient.is_active === false && (
-                          <Badge variant="secondary" className="text-xs gap-1">
-                            <UserX className="h-3 w-3" />
-                            Inativo
-                            {patient.inactivation_reason && (
-                              <span className="text-muted-foreground">- {patient.inactivation_reason}</span>
+                        <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${
+                          patient.is_active === false 
+                            ? "bg-muted text-muted-foreground" 
+                            : "bg-primary/10 text-primary"
+                        }`}>
+                          <User className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0">
+                          <button
+                            onClick={() => handleOpenEdit(patient)}
+                            className="font-medium text-sm text-primary hover:underline text-left truncate max-w-[180px] block"
+                          >
+                            {patient.name}
+                          </button>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {patient.birth_date && (
+                              <span className="text-xs text-muted-foreground">{calculateAge(patient.birth_date)} anos</span>
                             )}
-                          </Badge>
-                        )}
+                            {patient.is_active === false && (
+                              <Badge variant="outline" className="text-xs bg-rose-50 text-rose-700 border-rose-200">
+                                Inativo
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell py-2">
-                      <span className="text-muted-foreground font-mono text-xs">
-                        {patient.cpf ? formatCPF(patient.cpf) : "—"}
+                      {patient.cpf ? (
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                          {formatCPF(patient.cpf)}
+                        </code>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {patient.phone}
                       </span>
                     </TableCell>
-                    <TableCell className="py-2 text-sm">{patient.phone}</TableCell>
                     <TableCell className="hidden lg:table-cell py-2">
                       {patient.insurance_plan ? (
-                        <span className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground font-medium">
+                        <Badge variant="secondary" className="text-xs">
                           {patient.insurance_plan.name}
-                        </span>
+                        </Badge>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell py-2">
@@ -1074,7 +1095,7 @@ export default function PatientsPage() {
                     <TableCell className="text-right py-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="shrink-0">
+                          <Button variant="ghost" size="icon" className="h-7 w-7">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -1153,6 +1174,7 @@ export default function PatientsPage() {
             </Table>
           ) : (
             <div className="text-center py-12 text-muted-foreground">
+              <Heart className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p className="mb-4">Nenhum paciente encontrado</p>
               {hasPermission("manage_patients") && (
                 <Button variant="outline" onClick={() => setDialogOpen(true)}>
@@ -1162,7 +1184,59 @@ export default function PatientsPage() {
               )}
             </div>
           )}
-        </CardContent>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between px-4 py-3 border-t">
+            <p className="text-xs text-muted-foreground">
+              Mostrando {showingFrom} a {showingTo} de {totalPatients}
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let pageNum: number;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (page <= 3) {
+                  pageNum = i + 1;
+                } else if (page >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = page - 2 + i;
+                }
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={page === pageNum ? "default" : "outline"}
+                    size="icon"
+                    className="h-8 w-8 text-xs"
+                    onClick={() => setPage(pageNum)}
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Profile Dialog */}

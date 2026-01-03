@@ -1,18 +1,23 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Users,
   Search,
-  Edit2,
+  Pencil,
   User,
   Phone,
   CreditCard,
-  Calendar,
   Loader2,
-  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  ChevronLeft,
+  ChevronRight,
+  UserPlus,
+  Calendar,
 } from "lucide-react";
 import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -25,12 +30,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, differenceInYears, isBefore } from "date-fns";
@@ -63,6 +67,8 @@ const RELATIONSHIPS: Record<string, string> = {
   outro: "Outro",
 };
 
+const ITEMS_PER_PAGE = 15;
+
 export default function DependentsPage() {
   const navigate = useNavigate();
   const { currentClinic } = useAuth();
@@ -70,15 +76,22 @@ export default function DependentsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [currentPage, setCurrentPage] = useState(1);
   const [totalDependents, setTotalDependents] = useState(0);
+
+  // Stats
+  const [stats, setStats] = useState({
+    total: 0,
+    withCard: 0,
+    expiredCards: 0,
+    noCard: 0,
+  });
 
   // Debounce search
   useEffect(() => {
     const t = window.setTimeout(() => {
       setDebouncedSearch(searchTerm.trim());
-      setPage(1);
+      setCurrentPage(1);
     }, 300);
     return () => window.clearTimeout(t);
   }, [searchTerm]);
@@ -88,8 +101,8 @@ export default function DependentsPage() {
 
     setLoading(true);
     try {
-      const from = (page - 1) * pageSize;
-      const to = from + pageSize - 1;
+      const from = (currentPage - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
 
       let query = supabase
         .from("patient_dependents")
@@ -123,14 +136,40 @@ export default function DependentsPage() {
 
       if (error) throw error;
 
-      setDependents((data as unknown as DependentWithPatient[]) || []);
+      const deps = (data as unknown as DependentWithPatient[]) || [];
+      setDependents(deps);
       setTotalDependents(count || 0);
+
+      // Calculate stats from all dependents (need separate query)
+      const { data: allDeps } = await supabase
+        .from("patient_dependents")
+        .select("id, card_number, card_expires_at")
+        .eq("clinic_id", currentClinic.id)
+        .eq("is_active", true);
+
+      if (allDeps) {
+        const now = new Date();
+        const withCard = allDeps.filter(d => d.card_number).length;
+        const expiredCards = allDeps.filter(d => {
+          if (!d.card_expires_at) return false;
+          try {
+            return isBefore(parseISO(d.card_expires_at), now);
+          } catch { return false; }
+        }).length;
+
+        setStats({
+          total: allDeps.length,
+          withCard,
+          expiredCards,
+          noCard: allDeps.length - withCard,
+        });
+      }
     } catch (error) {
       console.error("Error fetching dependents:", error);
     } finally {
       setLoading(false);
     }
-  }, [currentClinic, debouncedSearch, page, pageSize]);
+  }, [currentClinic, debouncedSearch, currentPage]);
 
   useEffect(() => {
     if (currentClinic) {
@@ -138,10 +177,7 @@ export default function DependentsPage() {
     }
   }, [currentClinic, fetchDependents]);
 
-  const showingFrom = totalDependents > 0 ? (page - 1) * pageSize + 1 : 0;
-  const showingTo = Math.min(page * pageSize, totalDependents);
-  const canPrev = page > 1;
-  const canNext = page * pageSize < totalDependents;
+  const totalPages = Math.ceil(totalDependents / ITEMS_PER_PAGE);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
@@ -178,200 +214,260 @@ export default function DependentsPage() {
     navigate(`/dashboard/patients/${patientId}/edit`);
   };
 
+  if (loading && dependents.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 p-4 md:p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Users className="h-6 w-6 text-primary" />
             Dependentes
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-sm text-muted-foreground">
             Gerencie os dependentes vinculados aos pacientes titulares
           </p>
         </div>
       </div>
 
-      {/* Search */}
-      <Card>
-        <CardContent className="py-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por nome, CPF ou número da carteirinha..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Dependents List */}
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <div>
-            <CardTitle className="text-lg">Lista de Dependentes</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              {totalDependents > 0
-                ? `Mostrando ${showingFrom}-${showingTo} de ${totalDependents}`
-                : "0 dependentes"}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              value={String(pageSize)}
-              onValueChange={(val) => {
-                setPageSize(Number(val));
-                setPage(1);
-              }}
-            >
-              <SelectTrigger className="h-9 w-[150px]">
-                <SelectValue placeholder="Por página" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="25">25 / página</SelectItem>
-                <SelectItem value="50">50 / página</SelectItem>
-                <SelectItem value="100">100 / página</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!canPrev || loading}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              Anterior
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={!canNext || loading}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              Próxima
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent>
-          {loading ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-              Carregando dependentes...
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <Card className="border-l-4 border-l-primary bg-primary/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-primary" />
+              <span className="text-xs font-medium text-muted-foreground">Total</span>
             </div>
-          ) : dependents.length > 0 ? (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Dependente</TableHead>
-                    <TableHead>Parentesco</TableHead>
-                    <TableHead>Carteirinha</TableHead>
-                    <TableHead>Titular</TableHead>
-                    <TableHead className="w-[100px]">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {dependents.map((dependent) => {
-                    const age = calculateAge(dependent.birth_date);
-                    const expired = isCardExpired(dependent.card_expires_at);
+            <p className="text-xl font-bold text-foreground mt-1">{stats.total}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <span className="text-xs font-medium text-muted-foreground">Com Carteirinha</span>
+            </div>
+            <p className="text-xl font-bold text-emerald-600 mt-1">{stats.withCard}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-rose-500 bg-rose-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <XCircle className="h-4 w-4 text-rose-500" />
+              <span className="text-xs font-medium text-muted-foreground">Vencidas</span>
+            </div>
+            <p className="text-xl font-bold text-rose-600 mt-1">{stats.expiredCards}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-amber-500 bg-amber-500/5">
+          <CardContent className="p-3">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <span className="text-xs font-medium text-muted-foreground">Sem Carteirinha</span>
+            </div>
+            <p className="text-xl font-bold text-amber-600 mt-1">{stats.noCard}</p>
+          </CardContent>
+        </Card>
+      </div>
 
-                    return (
-                      <TableRow key={dependent.id}>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <button
-                                onClick={() => handleEditDependent(dependent)}
-                                className="font-medium text-primary hover:underline text-left"
-                              >
-                                {dependent.name}
-                              </button>
+      {/* Search */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por nome, CPF ou carteirinha..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
+        <Badge variant="outline" className="text-xs">
+          {totalDependents} resultado{totalDependents !== 1 ? "s" : ""}
+        </Badge>
+      </div>
+
+      {/* Table */}
+      {dependents.length === 0 && !loading ? (
+        <Card>
+          <CardContent className="p-8 text-center">
+            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium text-foreground mb-2">
+              Nenhum dependente encontrado
+            </h3>
+            <p className="text-muted-foreground mb-4 text-sm">
+              Dependentes são cadastrados através da ficha do paciente titular.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead className="font-semibold">Dependente</TableHead>
+                  <TableHead className="font-semibold">Parentesco</TableHead>
+                  <TableHead className="font-semibold">Carteirinha</TableHead>
+                  <TableHead className="font-semibold">Titular</TableHead>
+                  <TableHead className="font-semibold text-right w-[80px]">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dependents.map((dependent) => {
+                  const age = calculateAge(dependent.birth_date);
+                  const expired = isCardExpired(dependent.card_expires_at);
+
+                  return (
+                    <TableRow key={dependent.id} className="h-12 hover:bg-muted/30 transition-colors">
+                      <TableCell className="py-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-primary/10 text-primary">
+                            <UserPlus className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <button
+                              onClick={() => handleEditDependent(dependent)}
+                              className="font-medium text-sm text-primary hover:underline text-left truncate max-w-[180px] block"
+                            >
+                              {dependent.name}
+                            </button>
+                            <div className="flex items-center gap-2 mt-0.5">
                               {age !== null && (
-                                <Badge variant="outline" className="text-xs">
-                                  {age} anos
-                                </Badge>
+                                <span className="text-xs text-muted-foreground">{age} anos</span>
+                              )}
+                              {dependent.cpf && (
+                                <code className="text-xs bg-muted px-1 py-0.5 rounded font-mono">
+                                  {dependent.cpf}
+                                </code>
                               )}
                             </div>
-                            {dependent.cpf && (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <CreditCard className="h-3 w-3" />
-                                CPF: {dependent.cpf}
-                              </div>
-                            )}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary">
-                            {RELATIONSHIPS[dependent.relationship || ""] || dependent.relationship || "—"}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            {dependent.card_number ? (
-                              <span className="text-sm">{dependent.card_number}</span>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">Sem carteirinha</span>
-                            )}
-                            <div>
-                              <InlineCardExpiryEdit
-                                entityId={dependent.id}
-                                entityType="dependent"
-                                currentExpiryDate={dependent.card_expires_at}
-                                cardNumber={dependent.card_number}
-                                onUpdate={fetchDependents}
-                              />
-                            </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <Badge variant="secondary" className="text-xs">
+                          {RELATIONSHIPS[dependent.relationship || ""] || dependent.relationship || "—"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <div className="space-y-1">
+                          {dependent.card_number ? (
+                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                              {dependent.card_number}
+                            </code>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Sem carteirinha</span>
+                          )}
+                          <div>
+                            <InlineCardExpiryEdit
+                              entityId={dependent.id}
+                              entityType="dependent"
+                              currentExpiryDate={dependent.card_expires_at}
+                              cardNumber={dependent.card_number}
+                              onUpdate={fetchDependents}
+                            />
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <button
-                              onClick={() => handleEditPatient(dependent.patient.id)}
-                              className="font-medium text-primary hover:underline flex items-center gap-1"
-                            >
-                              <User className="h-3 w-3" />
-                              {dependent.patient.name}
-                            </button>
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Phone className="h-3 w-3" />
-                              {dependent.patient.phone}
-                            </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <div className="space-y-0.5">
+                          <button
+                            onClick={() => handleEditPatient(dependent.patient.id)}
+                            className="font-medium text-sm text-primary hover:underline flex items-center gap-1"
+                          >
+                            <User className="h-3 w-3" />
+                            {dependent.patient.name}
+                          </button>
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Phone className="h-3 w-3" />
+                            {dependent.patient.phone}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleEditDependent(dependent)}
-                              title="Editar dependente"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="mb-2">Nenhum dependente encontrado</p>
-              <p className="text-sm">
-                Dependentes são cadastrados através da ficha do paciente titular.
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2 text-right">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => handleEditDependent(dependent)}
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Editar</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-3 border-t">
+              <p className="text-xs text-muted-foreground">
+                Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} a {Math.min(currentPage * ITEMS_PER_PAGE, totalDependents)} de {totalDependents}
               </p>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                  let page: number;
+                  if (totalPages <= 5) {
+                    page = i + 1;
+                  } else if (currentPage <= 3) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 2) {
+                    page = totalPages - 4 + i;
+                  } else {
+                    page = currentPage - 2 + i;
+                  }
+                  return (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="icon"
+                      className="h-8 w-8 text-xs"
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
-        </CardContent>
-      </Card>
+        </Card>
+      )}
     </div>
   );
 }
