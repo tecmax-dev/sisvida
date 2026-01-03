@@ -42,12 +42,9 @@ export function DroppableTimeSlot({
       ref={setNodeRef}
       onClick={handleClick}
       className={cn(
-        "min-h-[40px] rounded-lg transition-all duration-300",
-        // Slot clicável - cursor e hover
-        isClickable && [
-          "cursor-pointer",
-          "hover:bg-primary/5 hover:border-primary/30 hover:border"
-        ],
+        "min-h-[40px] rounded-lg transition-all duration-200",
+        // Slot clicável - apenas cursor
+        isClickable && "cursor-pointer",
         // Estado padrão durante arraste - destaca zonas de drop
         isActive && !disabled && !isOccupied && [
           "border-2 border-dashed border-green-400/60 bg-green-50/40",

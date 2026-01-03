@@ -2468,7 +2468,7 @@ export default function CalendarPage() {
     }
     
     return (
-      <div className="p-3 rounded-lg border border-dashed border-border/50 bg-muted/20">
+      <div className="p-3 rounded-lg border border-dashed border-border/50">
         <p className="text-xs text-muted-foreground font-medium mb-2 text-center">
           Horários livres - {forDate.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' })}
         </p>
@@ -2489,10 +2489,10 @@ export default function CalendarPage() {
                   openNewAppointmentWithTime(time);
                 }}
                 className={cn(
-                  "p-1.5 text-center rounded-md border border-transparent text-xs",
+                  "p-1.5 text-center rounded-md text-xs transition-colors",
                   hasAppointment 
-                    ? "bg-muted/50 text-muted-foreground/50" 
-                    : "bg-background hover:bg-primary/10"
+                    ? "bg-muted/40 text-muted-foreground/40 cursor-not-allowed" 
+                    : "bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary-foreground"
                 )}
               />
             );
