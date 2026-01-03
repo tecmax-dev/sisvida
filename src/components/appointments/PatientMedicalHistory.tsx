@@ -18,8 +18,7 @@ import {
   MessageSquare,
   History,
 } from "lucide-react";
-import { format, parseISO } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, parse } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface MedicalRecord {
@@ -37,6 +36,7 @@ interface MedicalRecord {
   } | null;
   appointment?: {
     type: string;
+    appointment_date?: string;
   } | null;
 }
 
@@ -55,11 +55,11 @@ const typeLabels: Record<string, string> = {
 };
 
 const typeColors: Record<string, string> = {
-  first_visit: "bg-blue-100 text-blue-700",
-  return: "bg-green-100 text-green-700",
-  exam: "bg-purple-100 text-purple-700",
-  procedure: "bg-orange-100 text-orange-700",
-  telemedicine: "bg-cyan-100 text-cyan-700",
+  first_visit: "bg-primary/10 text-primary",
+  return: "bg-secondary text-secondary-foreground",
+  exam: "bg-accent/50 text-accent-foreground",
+  procedure: "bg-muted text-muted-foreground",
+  telemedicine: "bg-primary/10 text-primary",
 };
 
 export function PatientMedicalHistory({ 
@@ -128,10 +128,22 @@ export function PatientMedicalHistory({
           className="space-y-1"
         >
           {records.map((record) => {
-            // Parse date-only format (YYYY-MM-DD) without timezone issues
-            const dateStr = record.record_date || record.created_at?.split('T')[0];
-            const [year, month, day] = dateStr.split('-').map(Number);
-            const recordDate = new Date(year, month - 1, day);
+            const raw =
+              record.appointment?.appointment_date ||
+              record.record_date ||
+              record.created_at;
+
+            // Prefer date-only when available; avoid timezone shifts.
+            const normalized = (raw || "").includes("T") ? (raw || "").split("T")[0] : (raw || "");
+
+            // Supports: YYYY-MM-DD (default) and dd/MM/yyyy (imports)
+            const recordDate = normalized.includes("/")
+              ? parse(normalized, "dd/MM/yyyy", new Date())
+              : (() => {
+                  const [y, m, d] = normalized.split("-").map((n) => Number(n));
+                  return new Date(y, (m || 1) - 1, d || 1);
+                })();
+
             const appointmentType = record.appointment?.type || "return";
 
             return (
@@ -155,7 +167,7 @@ export function PatientMedicalHistory({
                       variant="secondary" 
                       className={cn(
                         "text-[10px] px-1.5 py-0 h-5 font-normal",
-                        typeColors[appointmentType] || "bg-gray-100 text-gray-700"
+                        typeColors[appointmentType] || "bg-muted text-muted-foreground"
                       )}
                     >
                       {typeLabels[appointmentType] || appointmentType}
