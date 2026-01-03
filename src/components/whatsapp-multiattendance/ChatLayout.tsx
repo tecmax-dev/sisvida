@@ -613,7 +613,7 @@ interface MessageBubbleProps {
 }
 
 function MessageBubble({ message, showDate }: MessageBubbleProps) {
-  const isFromMe = message.is_from_me;
+  const isFromMe = message.sender_type === 'operator';
   const isSystem = message.sender_type === 'system';
   const isBot = message.sender_type === 'bot';
 
@@ -633,7 +633,7 @@ function MessageBubble({ message, showDate }: MessageBubbleProps) {
         {showDate && <DateSeparator date={message.created_at} />}
         <div className="flex justify-center">
           <div className="bg-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-xs shadow-sm">
-            {message.message}
+            {message.content}
           </div>
         </div>
       </>
@@ -664,14 +664,14 @@ function MessageBubble({ message, showDate }: MessageBubbleProps) {
           {message.message_type !== 'text' && message.media_url && (
             <div className="flex items-center gap-2 text-sm opacity-80 mb-1">
               {getMessageIcon()}
-              <span>{message.media_filename || 'Mídia'}</span>
+              <span>Mídia</span>
             </div>
           )}
 
           {/* Message text */}
-          {message.message && (
+          {message.content && (
             <p className="text-sm whitespace-pre-wrap break-words leading-relaxed">
-              {message.message}
+              {message.content}
             </p>
           )}
 

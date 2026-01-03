@@ -360,9 +360,8 @@ export function useWhatsAppMessages(ticketId: string | undefined) {
         sender_type: 'operator',
         sender_id: operatorId,
         sender_name: operatorName,
-        message,
+        content: message,
         message_type: 'text',
-        is_from_me: true,
       });
 
     if (error) {
