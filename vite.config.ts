@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon-eclini.png", "pwa-eclini.jpg", "logo.png"],
+      includeAssets: ["favicon-eclini.png", "logo.png"],
       manifest: {
         name: "Eclini - Gestão para Clínicas",
         short_name: "Eclini",
@@ -28,19 +28,19 @@ export default defineConfig(({ mode }) => ({
         start_url: "/",
         icons: [
           {
-            src: "/pwa-eclini.jpg",
+            src: "/favicon-eclini.png",
             sizes: "192x192",
-            type: "image/jpeg",
+            type: "image/png",
           },
           {
-            src: "/pwa-eclini.jpg",
+            src: "/favicon-eclini.png",
             sizes: "512x512",
-            type: "image/jpeg",
+            type: "image/png",
           },
           {
-            src: "/pwa-eclini.jpg",
+            src: "/favicon-eclini.png",
             sizes: "512x512",
-            type: "image/jpeg",
+            type: "image/png",
             purpose: "maskable",
           },
         ],
