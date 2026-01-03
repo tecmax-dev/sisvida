@@ -1,8 +1,17 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./Logo";
-import { Menu, X, ChevronDown } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/hooks/useAuth";
+import { UserAvatar } from "@/components/users/UserAvatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navLinks = [
   { href: "/#features", label: "Recursos" },
@@ -14,6 +23,8 @@ const navLinks = [
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const { user, profile, signOut } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,6 +33,17 @@ export function Header() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+
+  const getUserDisplayName = () => {
+    if (profile?.name) return profile.name;
+    if (user?.email) return user.email.split("@")[0];
+    return "Usuário";
+  };
 
   return (
     <header 
@@ -49,23 +71,57 @@ export function Header() {
 
         {/* Desktop Actions */}
         <div className="hidden lg:flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            className="text-sm font-medium text-foreground/80 hover:text-primary"
-            asChild
-          >
-            <Link to="/auth">
-              Acessar plataforma
-            </Link>
-          </Button>
-          <Button 
-            className="btn-eclini px-6 font-semibold"
-            asChild
-          >
-            <Link to="/cadastro">
-              Começar agora
-            </Link>
-          </Button>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="flex items-center gap-2 px-2">
+                  <UserAvatar 
+                    avatarUrl={profile?.avatar_url} 
+                    name={getUserDisplayName()} 
+                    size="sm" 
+                  />
+                  <span className="text-sm font-medium text-foreground/80">
+                    {getUserDisplayName()}
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard" className="cursor-pointer">
+                    Ir para o painel
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={handleSignOut}
+                  className="text-destructive cursor-pointer"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Sair
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <>
+              <Button 
+                variant="ghost" 
+                className="text-sm font-medium text-foreground/80 hover:text-primary"
+                asChild
+              >
+                <Link to="/auth">
+                  Acessar plataforma
+                </Link>
+              </Button>
+              <Button 
+                className="btn-eclini px-6 font-semibold"
+                asChild
+              >
+                <Link to="/cadastro">
+                  Começar agora
+                </Link>
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Mobile Menu Button */}
@@ -96,23 +152,60 @@ export function Header() {
               ))}
             </nav>
             <div className="flex flex-col gap-3 pt-4 border-t border-border">
-              <Button 
-                variant="outline" 
-                className="w-full rounded-full border-primary/30 text-primary hover:bg-primary/5"
-                asChild
-              >
-                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                  Acessar plataforma
-                </Link>
-              </Button>
-              <Button 
-                className="btn-eclini w-full font-semibold"
-                asChild
-              >
-                <Link to="/cadastro" onClick={() => setIsMenuOpen(false)}>
-                  Começar agora
-                </Link>
-              </Button>
+              {user ? (
+                <>
+                  <div className="flex items-center gap-3 px-4 py-2">
+                    <UserAvatar 
+                      avatarUrl={profile?.avatar_url} 
+                      name={getUserDisplayName()} 
+                      size="sm" 
+                    />
+                    <span className="text-sm font-medium">
+                      {getUserDisplayName()}
+                    </span>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    className="w-full rounded-full border-primary/30 text-primary hover:bg-primary/5"
+                    asChild
+                  >
+                    <Link to="/dashboard" onClick={() => setIsMenuOpen(false)}>
+                      Ir para o painel
+                    </Link>
+                  </Button>
+                  <Button 
+                    variant="ghost"
+                    className="w-full text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      handleSignOut();
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sair
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button 
+                    variant="outline" 
+                    className="w-full rounded-full border-primary/30 text-primary hover:bg-primary/5"
+                    asChild
+                  >
+                    <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                      Acessar plataforma
+                    </Link>
+                  </Button>
+                  <Button 
+                    className="btn-eclini w-full font-semibold"
+                    asChild
+                  >
+                    <Link to="/cadastro" onClick={() => setIsMenuOpen(false)}>
+                      Começar agora
+                    </Link>
+                  </Button>
+                </>
+              )}
             </div>
           </div>
         </div>
