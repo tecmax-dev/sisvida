@@ -15,6 +15,52 @@ interface RejectionRequest {
   rejection_reason: string;
 }
 
+interface EvolutionConfig {
+  api_url: string;
+  api_key: string;
+  instance_name: string;
+  is_connected: boolean;
+}
+
+async function sendWhatsAppText(
+  config: EvolutionConfig,
+  phone: string,
+  message: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    let formattedPhone = phone.replace(/\D/g, '');
+    if (!formattedPhone.startsWith('55')) {
+      formattedPhone = '55' + formattedPhone;
+    }
+
+    console.log(`[send-payslip-rejection] Sending WhatsApp to ${formattedPhone}`);
+
+    const response = await fetch(`${config.api_url}/message/sendText/${config.instance_name}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': config.api_key,
+      },
+      body: JSON.stringify({
+        number: formattedPhone,
+        text: message,
+      }),
+    });
+
+    const responseText = await response.text();
+    console.log(`[send-payslip-rejection] Evolution API response: ${response.status} - ${responseText}`);
+
+    if (!response.ok) {
+      return { success: false, error: `API error ${response.status}: ${responseText}` };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('[send-payslip-rejection] Error sending WhatsApp:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -52,6 +98,19 @@ serve(async (req) => {
       throw new Error('Clínica não encontrada');
     }
 
+    // Get Evolution config for clinic
+    const { data: evolutionConfig } = await supabase
+      .from('evolution_instances')
+      .select('api_url, api_key, instance_name, is_connected')
+      .eq('clinic_id', clinic_id)
+      .eq('is_connected', true)
+      .single();
+
+    if (!evolutionConfig) {
+      console.log('[send-payslip-rejection] No Evolution instance configured for clinic');
+      // Still create the pending request, just skip WhatsApp
+    }
+
     // Get current month name in Portuguese
     const months = [
       'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
@@ -80,20 +139,16 @@ Basta responder esta mensagem com a foto do documento atualizado.
 Obrigado pela compreensão!
 Equipe ${clinic.name}`;
 
-    // Send WhatsApp message
-    const { error: sendError } = await supabase.functions.invoke('send-whatsapp', {
-      body: {
-        clinicId: clinic_id,
-        phone: patient_phone,
-        message: message
+    // Send WhatsApp message if Evolution is configured
+    let whatsappSent = false;
+    if (evolutionConfig) {
+      const result = await sendWhatsAppText(evolutionConfig as EvolutionConfig, patient_phone, message);
+      whatsappSent = result.success;
+      if (!result.success) {
+        console.error('[send-payslip-rejection] Failed to send WhatsApp:', result.error);
+      } else {
+        console.log('[send-payslip-rejection] WhatsApp notification sent successfully');
       }
-    });
-
-    if (sendError) {
-      console.error('[send-payslip-rejection] Error sending WhatsApp:', sendError);
-      // Don't fail completely if message fails to send
-    } else {
-      console.log('[send-payslip-rejection] WhatsApp notification sent successfully');
     }
 
     // Create a new pending request for the patient to resubmit
@@ -117,7 +172,10 @@ Equipe ${clinic.name}`;
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'Notificação de rejeição enviada e nova solicitação criada' 
+        whatsapp_sent: whatsappSent,
+        message: whatsappSent 
+          ? 'Notificação enviada e nova solicitação criada' 
+          : 'Nova solicitação criada (WhatsApp não configurado)'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
