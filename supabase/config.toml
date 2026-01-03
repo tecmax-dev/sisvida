@@ -143,3 +143,12 @@ verify_jwt = false
 
 [functions.test-reminder-message]
 verify_jwt = false
+
+[functions.send-nps-survey]
+verify_jwt = false
+
+[functions.notify-waiting-list]
+verify_jwt = false
+
+[functions.send-exam-notification]
+verify_jwt = true
