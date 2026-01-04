@@ -101,6 +101,8 @@ interface Employer {
   is_active: boolean;
   created_at: string;
   category_id: string | null;
+  cnae_code?: string | null;
+  cnae_description?: string | null;
   category?: Category | null;
   patients?: { id: string; name: string }[];
 }
@@ -233,6 +235,8 @@ export default function EmployersPage() {
             is_active: true,
             created_at: new Date().toISOString(),
             category_id: null,
+            cnae_code: null,
+            cnae_description: null,
             patients: [],
           };
         }
@@ -620,9 +624,17 @@ export default function EmployersPage() {
                             </div>
                           </TableCell>
                           <TableCell className="py-2">
-                            <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
-                              {formatCNPJ(employer.cnpj)}
-                            </code>
+                            <div className="space-y-1">
+                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                                {formatCNPJ(employer.cnpj)}
+                              </code>
+                              {employer.cnae_code && (
+                                <div className="text-[11px] text-muted-foreground">
+                                  CNAE: {employer.cnae_code}
+                                  {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
+                                </div>
+                              )}
+                            </div>
                           </TableCell>
                           <TableCell className="py-2 hidden md:table-cell">
                             <div className="flex flex-col gap-0.5">
@@ -852,6 +864,18 @@ export default function EmployersPage() {
                 />
               </div>
             </div>
+
+            {selectedEmployer?.cnae_code && (
+              <div className="rounded-lg border bg-muted/30 px-3 py-2">
+                <p className="text-xs font-medium text-muted-foreground">CNAE</p>
+                <p className="text-sm text-foreground">
+                  {selectedEmployer.cnae_code}
+                  {selectedEmployer.cnae_description
+                    ? ` - ${selectedEmployer.cnae_description}`
+                    : ""}
+                </p>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="trade_name">Nome Fantasia</Label>
