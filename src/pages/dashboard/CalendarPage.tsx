@@ -125,6 +125,66 @@ const defaultTimeSlots = [
   "13:00", "14:00", "15:00", "16:00", "17:00", "18:00",
 ];
 
+// Calcula todos os slots (ocupados e livres) para um profissional no dia
+const calculateProfessionalSlots = (
+  professional: { id: string; schedule?: any; appointment_duration?: number | null },
+  appointments: { start_time: string; end_time: string; status: string }[],
+  selectedDate: Date
+): { time: string; type: 'free' | 'booked'; duration: number }[] => {
+  if (!professional.schedule) return [];
+
+  const dayOfWeek = selectedDate.getDay();
+  const dayMap: Record<number, string> = {
+    0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
+    4: 'thursday', 5: 'friday', 6: 'saturday'
+  };
+  const dayKey = dayMap[dayOfWeek];
+  const daySchedule = professional.schedule[dayKey];
+
+  if (!daySchedule?.enabled || !daySchedule.slots?.length) return [];
+
+  const slots: { time: string; type: 'free' | 'booked'; duration: number }[] = [];
+  const defaultDuration = professional.appointment_duration || 30;
+
+  // Filtrar apenas agendamentos ativos
+  const activeAppointments = appointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
+
+  // Gerar todos os slots possíveis para o dia
+  daySchedule.slots.forEach((slot: { start: string; end: string }) => {
+    const [startH, startM] = slot.start.split(':').map(Number);
+    const [endH, endM] = slot.end.split(':').map(Number);
+    
+    let currentMinutes = startH * 60 + startM;
+    const endMinutes = endH * 60 + endM;
+
+    while (currentMinutes < endMinutes) {
+      const hours = Math.floor(currentMinutes / 60);
+      const mins = currentMinutes % 60;
+      const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+      
+      // Verificar se este slot tem agendamento
+      const hasAppointment = activeAppointments.some(apt => {
+        const aptStart = apt.start_time.substring(0, 5);
+        const aptEnd = apt.end_time.substring(0, 5);
+        const [aptStartH, aptStartM] = aptStart.split(':').map(Number);
+        const [aptEndH, aptEndM] = aptEnd.split(':').map(Number);
+        const aptStartMinutes = aptStartH * 60 + aptStartM;
+        const aptEndMinutes = aptEndH * 60 + aptEndM;
+        
+        return currentMinutes >= aptStartMinutes && currentMinutes < aptEndMinutes;
+      });
+
+      if (!hasAppointment) {
+        slots.push({ time: timeStr, type: 'free', duration: defaultDuration });
+      }
+
+      currentMinutes += defaultDuration;
+    }
+  });
+
+  return slots;
+};
+
 // Normaliza texto para busca: remove acentos, pontuação e converte para minúsculo
 const normalizeForSearch = (text: string): string => {
   return text
@@ -3623,15 +3683,76 @@ export default function CalendarPage() {
                             </Button>
                           </div>
                           
-                          {/* Lista de agendamentos do profissional - sem limite de altura */}
+                          {/* Lista de agendamentos e horários livres */}
                           <div className="divide-y divide-border/30">
-                            {group.appointments
-                              .sort((a, b) => a.start_time.localeCompare(b.start_time))
-                              .map((appointment) => (
-                              <DraggableAppointment key={appointment.id} appointment={appointment}>
-                                <AppointmentCard appointment={appointment} />
-                              </DraggableAppointment>
-                            ))}
+                            {(() => {
+                              // Buscar dados completos do profissional (com schedule)
+                              const fullProfessional = professionals.find(p => p.id === group.professional.id);
+                              
+                              // Calcular slots livres
+                              const freeSlots = fullProfessional 
+                                ? calculateProfessionalSlots(fullProfessional, group.appointments, selectedDate)
+                                : [];
+                              
+                              // Criar lista unificada de todos os eventos (agendamentos + slots livres)
+                              const sortedAppointments = [...group.appointments].sort((a, b) => a.start_time.localeCompare(b.start_time));
+                              
+                              // Mesclar agendamentos e slots livres em ordem cronológica
+                              const allEvents: Array<{ type: 'appointment' | 'free'; time: string; data?: Appointment; duration?: number }> = [];
+                              
+                              // Adicionar agendamentos
+                              sortedAppointments.forEach(apt => {
+                                allEvents.push({ type: 'appointment', time: apt.start_time.substring(0, 5), data: apt });
+                              });
+                              
+                              // Adicionar slots livres
+                              freeSlots.forEach(slot => {
+                                allEvents.push({ type: 'free', time: slot.time, duration: slot.duration });
+                              });
+                              
+                              // Ordenar por horário
+                              allEvents.sort((a, b) => a.time.localeCompare(b.time));
+                              
+                              return allEvents.map((event, index) => {
+                                if (event.type === 'appointment' && event.data) {
+                                  return (
+                                    <DraggableAppointment key={event.data.id} appointment={event.data}>
+                                      <AppointmentCard appointment={event.data} />
+                                    </DraggableAppointment>
+                                  );
+                                }
+                                
+                                // Slot livre
+                                return (
+                                  <div
+                                    key={`free-${event.time}-${index}`}
+                                    className="flex items-center gap-3 px-3 py-2 bg-success/5 border-l-2 border-success/40"
+                                  >
+                                    <div className="w-14 text-center py-1 rounded text-xs font-medium bg-success/10 text-success">
+                                      {event.time}
+                                    </div>
+                                    <div className="flex-1 text-sm text-muted-foreground italic">
+                                      Horário disponível
+                                    </div>
+                                    {hasPermission('manage_calendar') && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
+                                        onClick={() => {
+                                          setFormProfessional(group.professional.id);
+                                          setFormTime(event.time);
+                                          setDialogOpen(true);
+                                        }}
+                                      >
+                                        <Plus className="h-3 w-3 mr-1" />
+                                        Agendar
+                                      </Button>
+                                    )}
+                                  </div>
+                                );
+                              });
+                            })()}
                           </div>
                         </div>
                     );
