@@ -145,7 +145,7 @@ export default function ContributionsListTab({
 }: ContributionsListTabProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
@@ -164,7 +164,7 @@ export default function ContributionsListTab({
         c.employers?.cnpj.includes(searchTerm.replace(/\D/g, "")) ||
         c.contribution_types?.name.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesStatus = statusFilter === "all" || c.status === statusFilter;
+      const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
       const matchesYear = c.competence_year === yearFilter;
       const matchesMonth = monthFilter === "all" || c.competence_month === parseInt(monthFilter);
 
@@ -219,6 +219,7 @@ export default function ContributionsListTab({
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="hide_cancelled">Ocultar cancelados</SelectItem>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="pending">Pendentes</SelectItem>
                 <SelectItem value="paid">Pagos</SelectItem>

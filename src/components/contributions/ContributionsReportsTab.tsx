@@ -73,7 +73,7 @@ export default function ContributionsReportsTab({
   const [reportType, setReportType] = useState<string>("by-employer");
   const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
   const [monthFilter, setMonthFilter] = useState<string>("all");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -86,7 +86,7 @@ export default function ContributionsReportsTab({
     return contributions.filter((c) => {
       const matchesYear = c.competence_year === yearFilter;
       const matchesMonth = monthFilter === "all" || c.competence_month === parseInt(monthFilter);
-      const matchesStatus = statusFilter === "all" || c.status === statusFilter;
+      const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
       return matchesYear && matchesMonth && matchesStatus;
     });
   }, [contributions, yearFilter, monthFilter, statusFilter]);
@@ -287,10 +287,12 @@ export default function ContributionsReportsTab({
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="hide_cancelled">Ocultar cancelados</SelectItem>
                 <SelectItem value="all">Todos</SelectItem>
                 <SelectItem value="paid">Pagos</SelectItem>
                 <SelectItem value="pending">Pendentes</SelectItem>
                 <SelectItem value="overdue">Vencidos</SelectItem>
+                <SelectItem value="cancelled">Cancelados</SelectItem>
               </SelectContent>
             </Select>
 
