@@ -1,10 +1,9 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Clock, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Checkbox } from "@/components/ui/checkbox";
 
 interface TimeSlotPickerProps {
   // Todos os slots disponíveis na escala do profissional
@@ -39,16 +38,20 @@ export function TimeSlotPicker({
   duration,
   disabled = false,
 }: TimeSlotPickerProps) {
+  // Garantir que allSlots seja um array válido
+  const safeAllSlots = Array.isArray(allSlots) ? allSlots : [];
+  const safeExistingAppointments = Array.isArray(existingAppointments) ? existingAppointments : [];
+  
   // Calcular quais slots estão ocupados
   const slotStatus = useMemo(() => {
     const status: Record<string, 'free' | 'booked'> = {};
     
     // Filtrar agendamentos ativos
-    const activeAppointments = existingAppointments.filter(
+    const activeAppointments = safeExistingAppointments.filter(
       apt => apt.status !== 'cancelled' && apt.status !== 'no_show'
     );
     
-    for (const slotTime of allSlots) {
+    for (const slotTime of safeAllSlots) {
       const [h, m] = slotTime.split(':').map(Number);
       const slotMinutes = h * 60 + m;
       const slotEndMinutes = slotMinutes + duration;
@@ -68,20 +71,22 @@ export function TimeSlotPicker({
     }
     
     return status;
-  }, [allSlots, existingAppointments, duration]);
+  }, [safeAllSlots, safeExistingAppointments, duration]);
 
   // Apenas slots livres
   const freeSlots = useMemo(() => {
-    return allSlots.filter(slot => slotStatus[slot] === 'free');
-  }, [allSlots, slotStatus]);
+    return safeAllSlots.filter(slot => slotStatus[slot] === 'free');
+  }, [safeAllSlots, slotStatus]);
 
+  const safeSelectedTimes = Array.isArray(selectedTimes) ? selectedTimes : [];
+  
   const handleSlotClick = (time: string) => {
     if (disabled || slotStatus[time] === 'booked') return;
     
     if (multiSelectEnabled && onSelectMultiple) {
-      const newSelection = selectedTimes.includes(time)
-        ? selectedTimes.filter(t => t !== time)
-        : [...selectedTimes, time].sort();
+      const newSelection = safeSelectedTimes.includes(time)
+        ? safeSelectedTimes.filter(t => t !== time)
+        : [...safeSelectedTimes, time].sort();
       onSelectMultiple(newSelection);
       // Também define o primeiro como o principal
       if (newSelection.length > 0 && !newSelection.includes(selectedTime)) {
@@ -154,7 +159,7 @@ export function TimeSlotPicker({
         <div className="p-2 grid grid-cols-4 gap-1.5">
           {freeSlots.map((time) => {
             const isSelected = multiSelectEnabled 
-              ? selectedTimes.includes(time)
+              ? safeSelectedTimes.includes(time)
               : selectedTime === time;
             
             return (
@@ -183,10 +188,10 @@ export function TimeSlotPicker({
         </div>
       </ScrollArea>
 
-      {multiSelectEnabled && selectedTimes.length > 0 && (
+      {multiSelectEnabled && safeSelectedTimes.length > 0 && (
         <div className="flex flex-wrap gap-1.5 pt-1">
           <span className="text-xs text-muted-foreground">Selecionados:</span>
-          {selectedTimes.map(time => (
+          {safeSelectedTimes.map(time => (
             <Badge
               key={time}
               variant="secondary"
