@@ -3953,12 +3953,24 @@ export default function CalendarPage() {
                   }
                 }
 
-                // Complemento: quando existem agendamentos, garantir que profissionais com escala também apareçam
-                // (especialmente útil ao filtrar múltiplos profissionais).
-                if (dayAppointments.length > 0 && filterProfessionals.length > 0) {
+                // Complemento: garantir que profissionais com escala também apareçam,
+                // mesmo quando já existem agendamentos no dia (ex.: profissional com agenda livre).
+                // Regra: se não há busca ativa, mostramos todos os profissionais com escala no dia
+                // (ou apenas os selecionados no filtro, quando houver).
+                if (dayAppointments.length > 0 && searchQuery.trim().length === 0) {
+                  const shouldIncludeIds =
+                    filterProfessionals.length > 0
+                      ? filterProfessionals
+                      : professionals
+                          .filter((p) => getProfessionalTimeSlotsForDate(p.id, selectedDate).length > 0)
+                          .map((p) => p.id);
+
                   const present = new Set(professionalGroups.map((g) => g.professional.id));
                   const missing = professionals.filter(
-                    (p) => filterProfessionals.includes(p.id) && !present.has(p.id) && getProfessionalTimeSlotsForDate(p.id, selectedDate).length > 0
+                    (p) =>
+                      shouldIncludeIds.includes(p.id) &&
+                      !present.has(p.id) &&
+                      getProfessionalTimeSlotsForDate(p.id, selectedDate).length > 0
                   );
 
                   if (missing.length > 0) {
