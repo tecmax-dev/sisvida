@@ -37,6 +37,7 @@ import {
   Send,
   Loader2,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -135,6 +136,10 @@ export default function ContributionDialogs({
   const [editValue, setEditValue] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
   const [updating, setUpdating] = useState(false);
+  
+  // Delete dialog
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -288,6 +293,32 @@ export default function ContributionDialogs({
       toast.error(error.message || "Erro ao atualizar contribuição");
     } finally {
       setUpdating(false);
+    }
+  };
+
+  const handleDeleteContribution = async () => {
+    if (!selectedContribution) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "delete_contribution",
+          contributionId: selectedContribution.id,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Contribuição excluída com sucesso");
+      setDeleteDialogOpen(false);
+      onViewDialogChange(false);
+      onRefresh();
+    } catch (error: any) {
+      console.error("Error deleting:", error);
+      toast.error(error.message || "Erro ao excluir contribuição");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -532,6 +563,13 @@ export default function ContributionDialogs({
                       Editar
                     </Button>
                     <Button
+                      variant="outline"
+                      onClick={() => setDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
+                    <Button
                       variant="destructive"
                       onClick={() => setCancelDialogOpen(true)}
                     >
@@ -622,6 +660,30 @@ export default function ContributionDialogs({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Contribuição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta contribuição permanentemente?
+              {selectedContribution?.lytex_invoice_id && " O boleto também será cancelado na Lytex."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteContribution}
+              disabled={deleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Confirmar Exclusão
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

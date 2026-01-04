@@ -384,7 +384,7 @@ Deno.serve(async (req) => {
           newStatus = "overdue";
         }
 
-        const { error: updateError } = await supabase
+        const { error: updateError2 } = await supabase
           .from("employer_contributions")
           .update({
             status: newStatus,
@@ -394,11 +394,53 @@ Deno.serve(async (req) => {
           })
           .eq("id", params.contributionId);
 
-        if (updateError) {
-          console.error("[Lytex] Erro ao atualizar status:", updateError);
+        if (updateError2) {
+          console.error("[Lytex] Erro ao atualizar status:", updateError2);
         }
 
         result = { success: true, status: newStatus, invoice };
+        break;
+      }
+
+      case "delete_contribution": {
+        if (!params.contributionId) {
+          throw new Error("contributionId é obrigatório");
+        }
+
+        // Buscar contribuição para verificar se tem boleto
+        const { data: contrib, error: fetchErr } = await supabase
+          .from("employer_contributions")
+          .select("lytex_invoice_id, status")
+          .eq("id", params.contributionId)
+          .single();
+
+        if (fetchErr) {
+          throw new Error("Contribuição não encontrada");
+        }
+
+        // Se tem boleto na Lytex e não está cancelado, cancelar primeiro
+        if (contrib.lytex_invoice_id && contrib.status !== "cancelled") {
+          try {
+            await cancelInvoice(contrib.lytex_invoice_id);
+            console.log("[Lytex] Boleto cancelado antes da exclusão");
+          } catch (e) {
+            console.warn("[Lytex] Erro ao cancelar boleto (pode já estar cancelado):", e);
+          }
+        }
+
+        // Excluir do banco
+        const { error: deleteError } = await supabase
+          .from("employer_contributions")
+          .delete()
+          .eq("id", params.contributionId);
+
+        if (deleteError) {
+          console.error("[Lytex] Erro ao excluir contribuição:", deleteError);
+          throw new Error("Erro ao excluir contribuição");
+        }
+
+        console.log("[Lytex] Contribuição excluída:", params.contributionId);
+        result = { success: true };
         break;
       }
 
