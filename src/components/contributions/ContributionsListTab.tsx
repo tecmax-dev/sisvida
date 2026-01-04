@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -101,6 +102,7 @@ export default function ContributionsListTab({
   yearFilter,
   onYearFilterChange,
 }: ContributionsListTabProps) {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
@@ -249,7 +251,12 @@ export default function ContributionsListTab({
                     <TableRow key={contrib.id} className="h-12 hover:bg-muted/30">
                       <TableCell className="py-2">
                         <div>
-                          <p className="font-medium text-sm">{contrib.employers?.name}</p>
+                          <button
+                            onClick={() => navigate(`/dashboard/empresas/${contrib.employer_id}`)}
+                            className="font-medium text-sm text-primary hover:underline text-left"
+                          >
+                            {contrib.employers?.name}
+                          </button>
                           <p className="text-xs text-muted-foreground">
                             {contrib.employers?.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}
                           </p>

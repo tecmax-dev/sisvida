@@ -502,9 +502,18 @@ export default function EmployersPage() {
                                 <Building2 className="h-4 w-4" />
                               </div>
                               <div className="min-w-0">
-                                <p className="font-medium text-sm truncate max-w-[200px]">
-                                  {employer.name}
-                                </p>
+                                {isVirtual ? (
+                                  <p className="font-medium text-sm truncate max-w-[200px]">
+                                    {employer.name}
+                                  </p>
+                                ) : (
+                                  <button
+                                    onClick={() => navigate(`/dashboard/empresas/${employer.id}`)}
+                                    className="font-medium text-sm truncate max-w-[200px] text-primary hover:underline text-left"
+                                  >
+                                    {employer.name}
+                                  </button>
+                                )}
                                 {employer.trade_name && (
                                   <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                                     {employer.trade_name}
