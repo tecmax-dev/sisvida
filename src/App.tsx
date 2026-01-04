@@ -53,6 +53,7 @@ const PublicTotem = lazy(() => import("./pages/PublicTotem"));
 const CardValidation = lazy(() => import("./pages/CardValidation"));
 const LgpdPolicy = lazy(() => import("./pages/LgpdPolicy"));
 const EmployerPortal = lazy(() => import("./pages/EmployerPortal"));
+const AccountingOfficePortal = lazy(() => import("./pages/AccountingOfficePortal"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -103,6 +104,7 @@ import InactivePatientsPage from "./pages/dashboard/InactivePatientsPage";
 import EmployersPage from "./pages/dashboard/EmployersPage";
 import EmployerDetailPage from "./pages/dashboard/EmployerDetailPage";
 import ContributionsPage from "./pages/dashboard/ContributionsPage";
+import AccountingOfficesPage from "./pages/dashboard/AccountingOfficesPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -260,6 +262,8 @@ const App = () => (
                 {/* Public Panel and Totem routes */}
                 <Route path="/portal-empresa" element={<EmployerPortal />} />
                 <Route path="/portal-empresa/:clinicSlug" element={<EmployerPortal />} />
+                <Route path="/portal-contador" element={<AccountingOfficePortal />} />
+                <Route path="/portal-contador/:clinicSlug" element={<AccountingOfficePortal />} />
                 <Route path="/panel/:token" element={<PublicPanel />} />
                 <Route path="/totem/:token" element={<PublicTotem />} />
                 <Route path="/card/:token" element={<CardValidation />} />
@@ -354,6 +358,7 @@ const App = () => (
                   <Route path="empresas" element={<EmployersPage />} />
                   <Route path="empresas/:id" element={<EmployerDetailPage />} />
                   <Route path="contribuicoes" element={<ContributionsPage />} />
+                  <Route path="escritorios" element={<AccountingOfficesPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
