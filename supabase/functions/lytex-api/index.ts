@@ -773,62 +773,29 @@ Deno.serve(async (req) => {
                 break;
               }
 
-              const toInsert: any[] = [];
-              const toUpdate: Array<{ id: string; patch: any }> = [];
-
-              // Pré-carrega contribuições existentes (filtro amplo para reduzir queries)
-              const employerIdsThisPage = Array.from(
-                new Set(
-                  invoices
-                    .map((inv: any) => inv?.client?.cpfCnpj?.replace(/\D/g, ""))
-                    .filter(Boolean)
-                    .map((cnpj: string) => employerByCnpj.get(cnpj))
-                    .filter(Boolean),
-                ),
-              ) as string[];
-
-              const yearsThisPage = Array.from(
-                new Set(
-                  invoices
-                    .map((inv: any) => {
-                      const d = inv?.dueDate ? new Date(inv.dueDate) : null;
-                      return d ? d.getFullYear() : null;
-                    })
-                    .filter(Boolean),
-                ),
-              ) as number[];
-
-              const monthsThisPage = Array.from(
-                new Set(
-                  invoices
-                    .map((inv: any) => {
-                      const d = inv?.dueDate ? new Date(inv.dueDate) : null;
-                      return d ? d.getMonth() + 1 : null;
-                    })
-                    .filter(Boolean),
-                ),
-              ) as number[];
-
-              const existingMap = new Map<string, { id: string; status: string | null }>();
-              if (employerIdsThisPage.length > 0 && yearsThisPage.length > 0 && monthsThisPage.length > 0) {
-                const { data: existingRows, error: existingErr } = await supabase
-                  .from("employer_contributions")
-                  .select("id, employer_id, competence_month, competence_year, status")
-                  .eq("clinic_id", params.clinicId)
-                  .eq("contribution_type_id", contributionTypeId)
-                  .in("employer_id", employerIdsThisPage)
-                  .in("competence_year", yearsThisPage)
-                  .in("competence_month", monthsThisPage);
-
-                if (existingErr) {
-                  console.error("[Lytex] Erro ao pré-carregar contribuições:", existingErr);
-                } else {
-                  for (const r of existingRows || []) {
-                    const key = `${r.employer_id}|${r.competence_month}|${r.competence_year}`;
-                    existingMap.set(key, { id: r.id, status: r.status });
-                  }
+              const pickStatusRank = (s: string) => {
+                // maior = mais “definitivo”
+                switch (s) {
+                  case "paid":
+                    return 5;
+                  case "overdue":
+                    return 4;
+                  case "processing":
+                    return 3;
+                  case "pending":
+                    return 2;
+                  case "cancelled":
+                    return 1;
+                  default:
+                    return 0;
                 }
-              }
+              };
+
+              // Deduplicação por chave única do banco: (employer_id, contribution_type_id, competence_month, competence_year)
+              // Isso evita:
+              // 1) duplicatas dentro do mesmo lote (ex: fatura cancelada + nova no mesmo mês)
+              // 2) erro 23505 ao inserir quando já existe registro
+              const rowsByKey = new Map<string, any>();
 
               for (const invoice of invoices) {
                 if (!invoice?._id) continue;
@@ -841,7 +808,9 @@ Deno.serve(async (req) => {
                 const employerId = employerByCnpj.get(clientCnpj);
                 if (!employerId) continue;
 
-                const dueDate = new Date(invoice.dueDate);
+                const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
+                if (!dueDate || Number.isNaN(dueDate.getTime())) continue;
+
                 const competenceMonth = dueDate.getMonth() + 1;
                 const competenceYear = dueDate.getFullYear();
 
@@ -849,13 +818,17 @@ Deno.serve(async (req) => {
                 if (invoice.status === "paid") status = "paid";
                 else if (invoice.status === "canceled" || invoice.status === "cancelled") status = "cancelled";
                 else if (invoice.status === "overdue") status = "overdue";
+                else if (invoice.status === "processing") status = "processing";
 
                 const value = invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
 
-                const key = `${employerId}|${competenceMonth}|${competenceYear}`;
-                const existing = existingMap.get(key);
-
                 const patch = {
+                  clinic_id: params.clinicId,
+                  employer_id: employerId,
+                  contribution_type_id: contributionTypeId,
+                  competence_month: competenceMonth,
+                  competence_year: competenceYear,
+
                   value,
                   due_date: invoice.dueDate?.split("T")[0],
                   status,
@@ -870,41 +843,45 @@ Deno.serve(async (req) => {
                   payment_method: invoice.paymentMethod || null,
                 };
 
-                if (existing) {
-                  toUpdate.push({ id: existing.id, patch });
-                } else {
-                  toInsert.push({
-                    clinic_id: params.clinicId,
-                    employer_id: employerId,
-                    contribution_type_id: contributionTypeId,
-                    competence_month: competenceMonth,
-                    competence_year: competenceYear,
-                    ...patch,
-                  });
+                const key = `${employerId}|${competenceMonth}|${competenceYear}`;
+                const current = rowsByKey.get(key);
+
+                if (!current) {
+                  rowsByKey.set(key, patch);
+                  continue;
+                }
+
+                // Se houver mais de uma fatura para a mesma competência, mantém a “melhor”
+                // (ex: paid ganha de pending; overdue ganha de pending, etc.)
+                const currentRank = pickStatusRank(String(current.status));
+                const nextRank = pickStatusRank(status);
+                if (nextRank >= currentRank) {
+                  rowsByKey.set(key, patch);
                 }
               }
 
-              if (toInsert.length > 0) {
-                const { error: insErr } = await supabase.from("employer_contributions").insert(toInsert);
-                if (insErr) {
-                  console.error("[Lytex] Erro ao inserir lote de faturas:", insErr);
-                  errors.push(`Insert faturas (status=${statusFilter}, page=${page}): ${insErr.message}`);
-                } else {
-                  invoicesImported += toInsert.length;
-                }
-              }
+              const rows = Array.from(rowsByKey.values());
 
-              for (const u of toUpdate) {
-                const { error: upErr } = await supabase
-                  .from("employer_contributions")
-                  .update(u.patch)
-                  .eq("id", u.id);
+              if (rows.length > 0) {
+                // Upsert em lote (atômico) para evitar 23505 e atualizar registros existentes.
+                // IMPORTANTE: o lote NÃO pode conter chaves duplicadas — garantido por rowsByKey.
+                const chunkSize = 200;
+                for (let i = 0; i < rows.length; i += chunkSize) {
+                  const chunk = rows.slice(i, i + chunkSize);
 
-                if (upErr) {
-                  console.error("[Lytex] Erro ao atualizar fatura:", upErr);
-                  errors.push(`Update fatura ${u.id}: ${upErr.message}`);
-                } else {
-                  invoicesUpdated++;
+                  const { error: upsertErr } = await supabase
+                    .from("employer_contributions")
+                    .upsert(chunk, {
+                      onConflict: "employer_id,contribution_type_id,competence_month,competence_year",
+                    });
+
+                  if (upsertErr) {
+                    console.error("[Lytex] Erro ao upsert lote de faturas:", upsertErr);
+                    errors.push(`Upsert faturas (status=${statusFilter}, page=${page}): ${upsertErr.message}`);
+                  } else {
+                    // Não dá para diferenciar insert vs update sem custo extra; contamos como processadas.
+                    invoicesImported += chunk.length;
+                  }
                 }
               }
 
