@@ -184,24 +184,33 @@ export function EmployerContributionFilters({
     // Load logo if enabled and available
     if (showLogo && clinicInfo?.logoUrl) {
       try {
+        // Fetch image as blob to avoid CORS issues
+        const response = await fetch(clinicInfo.logoUrl);
+        const blob = await response.blob();
+        const base64 = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+        
+        // Create image from base64 to get dimensions
         const img = new Image();
-        img.crossOrigin = "anonymous";
-        await new Promise<void>((resolve, reject) => {
+        await new Promise<void>((resolve) => {
           img.onload = () => {
-            // Calculate dimensions to fit nicely
             const maxWidth = 40;
             const maxHeight = 20;
             const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
             const width = img.width * ratio;
             const height = img.height * ratio;
-            doc.addImage(img, "PNG", 14, yPos, width, height);
+            doc.addImage(base64, "PNG", 14, yPos, width, height);
+            yPos += height + 5;
             resolve();
           };
-          img.onerror = () => resolve(); // Continue without logo on error
-          img.src = clinicInfo.logoUrl!;
+          img.onerror = () => resolve();
+          img.src = base64;
         });
-        yPos += 25;
-      } catch {
+      } catch (e) {
+        console.log("Error loading logo:", e);
         // Continue without logo
       }
     }
