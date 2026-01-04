@@ -467,6 +467,11 @@ export default function CalendarPage() {
 
   const isValidDate = (d: unknown): d is Date => d instanceof Date && !isNaN(d.getTime());
 
+  // Normaliza para uma data LOCAL (12:00) para evitar mudança de dia por timezone/ISO.
+  const normalizeCalendarDate = (d: Date): Date => {
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
+  };
+
   const formatPtBrLongDate = (d: Date) => {
     if (!isValidDate(d)) return "Data selecionada";
     try {
@@ -1841,11 +1846,11 @@ export default function CalendarPage() {
   const openNewAppointmentWithTime = (time: string, date?: Date) => {
     // Check permission before opening dialog
     if (!hasPermission('manage_calendar')) return;
-    
+
     resetForm();
     setFormTime(time);
     if (date) {
-      setSelectedDate(date);
+      setSelectedDate(normalizeCalendarDate(date));
     }
     setDialogOpen(true);
   };
@@ -2034,13 +2039,13 @@ export default function CalendarPage() {
   };
 
   const getWeekDays = () => {
-    const start = new Date(selectedDate);
+    const start = normalizeCalendarDate(new Date(selectedDate));
     start.setDate(start.getDate() - start.getDay());
     const days = [];
     for (let i = 0; i < 7; i++) {
       const day = new Date(start);
       day.setDate(start.getDate() + i);
-      days.push(day);
+      days.push(normalizeCalendarDate(day));
     }
     return days;
   };
@@ -2050,10 +2055,11 @@ export default function CalendarPage() {
   };
 
   const navigateWeek = (direction: number) => {
-    const newDate = new Date(selectedDate);
+    const newDate = normalizeCalendarDate(new Date(selectedDate));
     newDate.setDate(newDate.getDate() + (direction * 7));
-    setSelectedDate(newDate);
-    setCurrentDate(newDate);
+    const normalized = normalizeCalendarDate(newDate);
+    setSelectedDate(normalized);
+    setCurrentDate(normalized);
   };
 
   const isToday = (date: Date) => {
@@ -2074,7 +2080,7 @@ export default function CalendarPage() {
   };
 
   const handleDayClick = (date: Date) => {
-    setSelectedDate(date);
+    setSelectedDate(normalizeCalendarDate(date));
     if (viewMode === "month") {
       setViewMode("day");
     }
@@ -2900,7 +2906,7 @@ export default function CalendarPage() {
                 disabled={hasAppointment}
                 isOccupied={hasAppointment}
                 onClick={() => {
-                  setSelectedDate(forDate);
+                  setSelectedDate(normalizeCalendarDate(forDate));
                   openNewAppointmentWithTime(time);
                 }}
                 className={cn(
