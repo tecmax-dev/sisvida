@@ -837,6 +837,7 @@ export default function EmployerDetailPage() {
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Nº Documento</TableHead>
                     <TableHead>Competência</TableHead>
                     <TableHead>Vencimento</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
@@ -848,7 +849,7 @@ export default function EmployerDetailPage() {
                 <TableBody>
                   {(filteredContributions.length > 0 ? filteredContributions : contributions).length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-32 text-center">
+                      <TableCell colSpan={8} className="h-32 text-center">
                         <Receipt className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                         <p className="text-muted-foreground">Nenhuma contribuição encontrada</p>
                       </TableCell>
@@ -861,6 +862,11 @@ export default function EmployerDetailPage() {
                       return (
                         <TableRow key={contrib.id} className="hover:bg-muted/30">
                           <TableCell>{contrib.contribution_types?.name}</TableCell>
+                          <TableCell>
+                            <span className="text-xs font-mono text-muted-foreground">
+                              {contrib.lytex_invoice_id ? contrib.lytex_invoice_id.slice(-8).toUpperCase() : "-"}
+                            </span>
+                          </TableCell>
                           <TableCell className="font-medium">
                             {MONTHS[contrib.competence_month - 1]?.slice(0, 3)}/{contrib.competence_year}
                           </TableCell>

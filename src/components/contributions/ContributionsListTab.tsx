@@ -299,6 +299,7 @@ export default function ContributionsListTab({
             <TableHeader>
               <TableRow className="bg-muted/50">
                 <TableHead className="font-semibold">Empresa</TableHead>
+                <TableHead className="font-semibold">Nº Documento</TableHead>
                 <TableHead className="font-semibold">Tipo</TableHead>
                 <TableHead className="font-semibold">Competência</TableHead>
                 <TableHead className="font-semibold">Vencimento</TableHead>
@@ -311,7 +312,7 @@ export default function ContributionsListTab({
             <TableBody>
               {paginatedContributions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center">
+                  <TableCell colSpan={9} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Receipt className="h-8 w-8 text-muted-foreground" />
                       <p className="text-muted-foreground">Nenhuma contribuição encontrada</p>
@@ -341,6 +342,11 @@ export default function ContributionsListTab({
                             {contrib.employers?.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}
                           </p>
                         </div>
+                      </TableCell>
+                      <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
+                        <span className="text-xs font-mono text-muted-foreground">
+                          {contrib.lytex_invoice_id ? contrib.lytex_invoice_id.slice(-8).toUpperCase() : "-"}
+                        </span>
                       </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
                         <span className="text-sm">{contrib.contribution_types?.name}</span>
