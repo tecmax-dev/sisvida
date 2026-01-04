@@ -176,7 +176,7 @@ export default function ContributionDialogs({
     try {
       const valueInCents = Math.round(parseFloat(formValue.replace(",", ".")) * 100);
 
-      const { error } = await supabase
+      const { data: newContribution, error } = await supabase
         .from("employer_contributions")
         .insert({
           clinic_id: clinicId,
@@ -188,20 +188,36 @@ export default function ContributionDialogs({
           due_date: formDueDate,
           notes: formNotes || null,
           created_by: userId,
-        });
+        })
+        .select(`
+          *,
+          employers (*),
+          contribution_types (*)
+        `)
+        .single();
 
       if (error) {
-        if (error.message.includes("unique_contribution_per_employer")) {
-          toast.error("Já existe uma contribuição deste tipo para esta competência");
+        if (error.message.includes("unique_active_contribution_per_employer")) {
+          toast.error("Já existe uma contribuição ativa deste tipo para esta competência");
           return;
         }
         throw error;
       }
 
-      toast.success("Contribuição criada com sucesso");
+      toast.success("Contribuição criada! Gerando boleto...");
       onCreateDialogChange(false);
       resetCreateForm();
       onRefresh();
+
+      // Gerar boleto automaticamente
+      if (newContribution) {
+        try {
+          await onGenerateInvoice(newContribution as Contribution);
+        } catch (invoiceError) {
+          console.error("Error generating invoice:", invoiceError);
+          // O erro já será tratado pela função onGenerateInvoice
+        }
+      }
     } catch (error) {
       console.error("Error saving contribution:", error);
       toast.error("Erro ao salvar contribuição");
