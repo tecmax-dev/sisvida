@@ -415,7 +415,7 @@ export default function CalendarPage() {
     }
     return new Date();
   };
-  
+
   const getInitialCurrentDate = (): Date => {
     const stored = sessionStorage.getItem('calendar_current_date');
     if (stored) {
@@ -426,13 +426,29 @@ export default function CalendarPage() {
     }
     return new Date();
   };
-  
+
   const getInitialViewMode = (): ViewMode => {
     const stored = sessionStorage.getItem('calendar_view_mode');
     if (stored && ['day', 'week', 'month'].includes(stored)) {
       return stored as ViewMode;
     }
     return 'day';
+  };
+
+  const isValidDate = (d: unknown): d is Date => d instanceof Date && !isNaN(d.getTime());
+
+  const formatPtBrLongDate = (d: Date) => {
+    if (!isValidDate(d)) return "Data selecionada";
+    try {
+      return d.toLocaleDateString("pt-BR", {
+        weekday: "long",
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+    } catch {
+      return "Data selecionada";
+    }
   };
 
   const [currentDate, setCurrentDate] = useState<Date>(getInitialCurrentDate);
@@ -724,10 +740,24 @@ export default function CalendarPage() {
 
   // Persist selected date, current date, and view mode to sessionStorage
   useEffect(() => {
+    if (!isValidDate(selectedDate)) {
+      console.error('[CalendarPage] selectedDate inválida:', selectedDate);
+      toast({
+        title: "Erro de data",
+        description: "A data selecionada ficou inválida. Recarregue a página e tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     sessionStorage.setItem('calendar_selected_date', selectedDate.toISOString());
-  }, [selectedDate]);
+  }, [selectedDate, toast]);
 
   useEffect(() => {
+    if (!isValidDate(currentDate)) {
+      console.error('[CalendarPage] currentDate inválida:', currentDate);
+      return;
+    }
     sessionStorage.setItem('calendar_current_date', currentDate.toISOString());
   }, [currentDate]);
 
@@ -2261,12 +2291,7 @@ export default function CalendarPage() {
       <div className="flex items-center gap-2 p-3 rounded-lg bg-primary/5 border border-primary/10">
         <CalendarIcon className="h-5 w-5 text-primary" />
         <span className="font-medium text-foreground">
-          {selectedDate.toLocaleDateString("pt-BR", {
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-            year: "numeric",
-          })}
+          {formatPtBrLongDate(selectedDate)}
         </span>
       </div>
 
