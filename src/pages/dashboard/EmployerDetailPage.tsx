@@ -72,6 +72,8 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoWhatsAppDialog";
+import { SendOverdueWhatsAppDialog } from "@/components/contributions/SendOverdueWhatsAppDialog";
+import { EmployerContributionFilters } from "@/components/contributions/EmployerContributionFilters";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -172,8 +174,9 @@ export default function EmployerDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+  const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
+  const [filteredContributions, setFilteredContributions] = useState<Contribution[]>([]);
 
-  // Create contribution form
   const [contribTypeId, setContribTypeId] = useState("");
   const [contribMonth, setContribMonth] = useState(new Date().getMonth() + 1);
   const [contribYear, setContribYear] = useState(new Date().getFullYear());
@@ -259,6 +262,9 @@ export default function EmployerDetailPage() {
 
       if (typesError) throw typesError;
       setContributionTypes(typesData || []);
+      
+      // Initialize filtered contributions with all contributions
+      setFilteredContributions([]);
 
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -714,6 +720,15 @@ export default function EmployerDetailPage() {
             </Card>
           </div>
 
+          {/* Filters */}
+          <EmployerContributionFilters
+            contributions={contributions}
+            onFilterChange={setFilteredContributions}
+            onSendOverdueWhatsApp={() => setOverdueDialogOpen(true)}
+            employerName={employer?.name || ""}
+            employerCnpj={employer?.cnpj || ""}
+          />
+
           {/* Actions */}
           <div className="flex justify-end gap-2">
             <Button
@@ -755,15 +770,15 @@ export default function EmployerDetailPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {contributions.length === 0 ? (
+                  {(filteredContributions.length > 0 ? filteredContributions : contributions).length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="h-32 text-center">
                         <Receipt className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
-                        <p className="text-muted-foreground">Nenhuma contribuição registrada</p>
+                        <p className="text-muted-foreground">Nenhuma contribuição encontrada</p>
                       </TableCell>
                     </TableRow>
                   ) : (
-                    contributions.map((contrib) => {
+                    (filteredContributions.length > 0 ? filteredContributions : contributions).map((contrib) => {
                       const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG];
                       const StatusIcon = statusConfig?.icon || Clock;
 
@@ -1410,6 +1425,16 @@ export default function EmployerDetailPage() {
             phone: employer?.phone,
           },
         }))}
+        clinicId={currentClinic?.id || ""}
+      />
+
+      {/* Overdue WhatsApp Dialog */}
+      <SendOverdueWhatsAppDialog
+        open={overdueDialogOpen}
+        onOpenChange={setOverdueDialogOpen}
+        contributions={contributions}
+        employerName={employer?.name || ""}
+        employerPhone={employer?.phone || null}
         clinicId={currentClinic?.id || ""}
       />
     </div>
