@@ -727,6 +727,13 @@ export default function EmployerDetailPage() {
             onSendOverdueWhatsApp={() => setOverdueDialogOpen(true)}
             employerName={employer?.name || ""}
             employerCnpj={employer?.cnpj || ""}
+            clinicInfo={currentClinic ? {
+              name: currentClinic.name,
+              cnpj: currentClinic.cnpj,
+              phone: currentClinic.phone,
+              address: currentClinic.address,
+              logoUrl: currentClinic.logo_url,
+            } : undefined}
           />
 
           {/* Actions */}
