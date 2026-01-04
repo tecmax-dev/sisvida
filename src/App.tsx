@@ -259,6 +259,7 @@ const App = () => (
                 <Route path="/profissional/atendimento/:appointmentId" element={<ProfessionalAppointment />} />
                 {/* Public Panel and Totem routes */}
                 <Route path="/portal-empresa" element={<EmployerPortal />} />
+                <Route path="/portal-empresa/:clinicSlug" element={<EmployerPortal />} />
                 <Route path="/panel/:token" element={<PublicPanel />} />
                 <Route path="/totem/:token" element={<PublicTotem />} />
                 <Route path="/card/:token" element={<CardValidation />} />
