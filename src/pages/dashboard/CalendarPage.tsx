@@ -3805,9 +3805,9 @@ export default function CalendarPage() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => {
-                        const prev = new Date(selectedDate);
+                        const prev = normalizeCalendarDate(new Date(selectedDate));
                         prev.setDate(prev.getDate() - 1);
-                        setSelectedDate(prev);
+                        setSelectedDate(normalizeCalendarDate(prev));
                       }}
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -3815,7 +3815,7 @@ export default function CalendarPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => setSelectedDate(new Date())}
+                      onClick={() => setSelectedDate(normalizeCalendarDate(new Date()))}
                     >
                       Hoje
                     </Button>
@@ -3824,9 +3824,9 @@ export default function CalendarPage() {
                       size="icon"
                       className="h-8 w-8"
                       onClick={() => {
-                        const next = new Date(selectedDate);
+                        const next = normalizeCalendarDate(new Date(selectedDate));
                         next.setDate(next.getDate() + 1);
-                        setSelectedDate(next);
+                        setSelectedDate(normalizeCalendarDate(next));
                       }}
                     >
                       <ChevronRight className="h-4 w-4" />
@@ -3858,8 +3858,9 @@ export default function CalendarPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setSelectedDate(new Date());
-                      setCurrentDate(new Date());
+                      const today = normalizeCalendarDate(new Date());
+                      setSelectedDate(today);
+                      setCurrentDate(today);
                     }}
                   >
                     Hoje
@@ -3921,23 +3922,45 @@ export default function CalendarPage() {
                   return acc;
                 }, {} as Record<string, { professional: Appointment['professional']; appointments: Appointment[] }>);
                 
-                const professionalGroups = Object.values(groupedByProfessional);
-                
+                let professionalGroups = Object.values(groupedByProfessional);
+
+                // Se não houver agendamentos, ainda assim exibir a escala (horários livres)
+                // quando o usuário estiver filtrando um único profissional (ou for um profissional).
                 if (professionalGroups.length === 0 && dayAppointments.length === 0) {
-                  return (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                      <p className="mb-4">Nenhum agendamento para este dia</p>
-                      {hasPermission('manage_calendar') && (
-                        <Button variant="outline" onClick={() => setDialogOpen(true)}>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Adicionar agendamento
-                        </Button>
-                      )}
-                    </div>
-                  );
+                  const targetProfId =
+                    (filterProfessionals.length === 1 ? filterProfessionals[0] : null) ||
+                    (isProfessionalOnly && loggedInProfessionalId ? loggedInProfessionalId : null);
+
+                  const targetProf = targetProfId ? professionals.find((p) => p.id === targetProfId) : null;
+
+                  if (!targetProf) {
+                    return (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                        <p className="mb-4">Nenhum agendamento para este dia</p>
+                        {hasPermission('manage_calendar') && (
+                          <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Adicionar agendamento
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  }
+
+                  professionalGroups = [
+                    {
+                      professional: {
+                        id: targetProf.id,
+                        name: targetProf.name,
+                        specialty: (targetProf as any).specialty ?? null,
+                        avatar_url: (targetProf as any).avatar_url ?? null,
+                      },
+                      appointments: [],
+                    },
+                  ];
                 }
-                
+
                 if (dayAppointments.length > 0 && filteredAppointments.length === 0) {
                   return (
                     <div className="text-center py-8 text-muted-foreground">
