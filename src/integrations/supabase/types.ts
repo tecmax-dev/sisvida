@@ -1712,6 +1712,66 @@ export type Database = {
         }
         Relationships: []
       }
+      contribution_reissue_requests: {
+        Row: {
+          admin_notes: string | null
+          contribution_id: string | null
+          created_at: string | null
+          employer_id: string | null
+          id: string
+          new_due_date: string | null
+          new_lytex_url: string | null
+          processed_at: string | null
+          processed_by: string | null
+          reason: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          contribution_id?: string | null
+          created_at?: string | null
+          employer_id?: string | null
+          id?: string
+          new_due_date?: string | null
+          new_lytex_url?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          contribution_id?: string | null
+          created_at?: string | null
+          employer_id?: string | null
+          id?: string
+          new_due_date?: string | null
+          new_lytex_url?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contribution_reissue_requests_contribution_id_fkey"
+            columns: ["contribution_id"]
+            isOneToOne: false
+            referencedRelation: "employer_contributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contribution_reissue_requests_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contribution_types: {
         Row: {
           clinic_id: string
@@ -2014,8 +2074,48 @@ export type Database = {
           },
         ]
       }
+      employer_portal_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          employer_id: string | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          employer_id?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          employer_id?: string | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_portal_logs_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employers: {
         Row: {
+          access_code: string | null
+          access_code_expires_at: string | null
           address: string | null
           city: string | null
           clinic_id: string
@@ -2028,11 +2128,14 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          portal_last_access_at: string | null
           state: string | null
           trade_name: string | null
           updated_at: string
         }
         Insert: {
+          access_code?: string | null
+          access_code_expires_at?: string | null
           address?: string | null
           city?: string | null
           clinic_id: string
@@ -2045,11 +2148,14 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          portal_last_access_at?: string | null
           state?: string | null
           trade_name?: string | null
           updated_at?: string
         }
         Update: {
+          access_code?: string | null
+          access_code_expires_at?: string | null
           address?: string | null
           city?: string | null
           clinic_id?: string
@@ -2062,6 +2168,7 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          portal_last_access_at?: string | null
           state?: string | null
           trade_name?: string | null
           updated_at?: string
@@ -8360,6 +8467,7 @@ export type Database = {
         Returns: boolean
       }
       generate_card_number: { Args: { p_clinic_id: string }; Returns: string }
+      generate_employer_access_code: { Args: never; Returns: string }
       generate_queue_ticket: {
         Args: { p_queue_id: string }
         Returns: {

@@ -167,3 +167,6 @@ verify_jwt = false
 
 [functions.fetch-image-base64]
 verify_jwt = false
+
+[functions.employer-portal-auth]
+verify_jwt = false

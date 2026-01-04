@@ -70,6 +70,8 @@ import {
   Trash2,
   ExternalLink,
   MessageCircle,
+  KeyRound,
+  Globe,
 } from "lucide-react";
 import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoWhatsAppDialog";
 import { SendOverdueWhatsAppDialog } from "@/components/contributions/SendOverdueWhatsAppDialog";
@@ -92,6 +94,9 @@ interface Employer {
   state: string | null;
   notes: string | null;
   is_active: boolean;
+  access_code: string | null;
+  access_code_expires_at: string | null;
+  portal_last_access_at: string | null;
 }
 
 interface Patient {
@@ -676,6 +681,10 @@ export default function EmployerDetailPage() {
             <Users className="h-4 w-4" />
             Colaboradores ({patients.length})
           </TabsTrigger>
+          <TabsTrigger value="portal" className="gap-2">
+            <Globe className="h-4 w-4" />
+            Portal
+          </TabsTrigger>
           <TabsTrigger value="data" className="gap-2">
             <FileText className="h-4 w-4" />
             Dados Cadastrais
@@ -927,6 +936,190 @@ export default function EmployerDetailPage() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Portal Tab */}
+        <TabsContent value="portal">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-cta/20 flex items-center justify-center">
+                  <Globe className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Portal da Empresa</CardTitle>
+                  <CardDescription>
+                    Acesso online para a empresa visualizar e gerenciar seus boletos
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Access Code Section */}
+              <div className="p-4 rounded-lg border bg-muted/30 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <KeyRound className="h-5 w-5 text-primary" />
+                    <span className="font-medium">Código de Acesso</span>
+                  </div>
+                  {employer.access_code ? (
+                    <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-200">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Configurado
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">
+                      <Clock className="h-3 w-3 mr-1" />
+                      Não configurado
+                    </Badge>
+                  )}
+                </div>
+
+                {employer.access_code ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1 p-3 rounded-lg bg-card border-2 border-dashed border-primary/30 text-center">
+                        <span className="text-2xl font-mono font-bold tracking-[0.3em] text-primary">
+                          {employer.access_code}
+                        </span>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          navigator.clipboard.writeText(employer.access_code || "");
+                          toast.success("Código copiado!");
+                        }}
+                      >
+                        <Copy className="h-4 w-4" />
+                      </Button>
+                    </div>
+                    {employer.portal_last_access_at && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        Último acesso: {format(new Date(employer.portal_last_access_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      </p>
+                    )}
+                    <div className="flex gap-2 justify-center">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={async () => {
+                          try {
+                            const { data, error } = await supabase.rpc("generate_employer_access_code");
+                            if (error) throw error;
+                            
+                            await supabase
+                              .from("employers")
+                              .update({ access_code: data, access_code_expires_at: null })
+                              .eq("id", employer.id);
+                            
+                            toast.success("Novo código gerado!");
+                            fetchData();
+                          } catch (err) {
+                            toast.error("Erro ao gerar código");
+                          }
+                        }}
+                      >
+                        <RefreshCw className="h-4 w-4 mr-1" />
+                        Gerar Novo Código
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                        onClick={async () => {
+                          await supabase
+                            .from("employers")
+                            .update({ access_code: null, access_code_expires_at: null })
+                            .eq("id", employer.id);
+                          toast.success("Código removido");
+                          fetchData();
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Remover
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Gere um código de acesso para permitir que a empresa visualize seus boletos online.
+                    </p>
+                    <Button
+                      onClick={async () => {
+                        try {
+                          const { data, error } = await supabase.rpc("generate_employer_access_code");
+                          if (error) throw error;
+                          
+                          await supabase
+                            .from("employers")
+                            .update({ access_code: data })
+                            .eq("id", employer.id);
+                          
+                          toast.success("Código de acesso gerado!");
+                          fetchData();
+                        } catch (err) {
+                          toast.error("Erro ao gerar código");
+                        }
+                      }}
+                    >
+                      <KeyRound className="h-4 w-4 mr-2" />
+                      Gerar Código de Acesso
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Portal URL */}
+              <div className="p-4 rounded-lg border space-y-3">
+                <div className="flex items-center gap-2">
+                  <ExternalLink className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">Link do Portal</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Input
+                    readOnly
+                    value={`${window.location.origin}/portal-empresa`}
+                    className="font-mono text-sm"
+                  />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/portal-empresa`);
+                      toast.success("Link copiado!");
+                    }}
+                  >
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    asChild
+                  >
+                    <a href="/portal-empresa" target="_blank" rel="noopener noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  A empresa usa o CNPJ <span className="font-medium">{formatCNPJ(employer.cnpj)}</span> e o código de acesso para entrar.
+                </p>
+              </div>
+
+              {/* Instructions */}
+              <div className="p-4 rounded-lg bg-primary/5 border border-primary/20 space-y-2">
+                <p className="font-medium text-sm">Como funciona:</p>
+                <ol className="text-sm text-muted-foreground space-y-1 list-decimal list-inside">
+                  <li>Gere um código de acesso único para esta empresa</li>
+                  <li>Envie o link do portal e o código para a empresa</li>
+                  <li>A empresa acessa usando CNPJ + código</li>
+                  <li>No portal, ela pode ver boletos, pagar e solicitar 2ª via</li>
+                </ol>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
