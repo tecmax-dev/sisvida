@@ -281,16 +281,16 @@ export function DashboardLayout() {
         to={item.href}
         onClick={() => setSidebarOpen(false)}
         className={cn(
-          "flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+          "flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-colors",
           isActive(item.href)
             ? "bg-sidebar-primary text-sidebar-primary-foreground font-medium"
             : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
           sidebarCollapsed && "justify-center px-2",
-          isSubItem && !sidebarCollapsed && "ml-6"
+          isSubItem && !sidebarCollapsed && "ml-3"
         )}
       >
         <item.icon className="h-4 w-4 shrink-0" />
-        {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+        {!sidebarCollapsed && <span className="leading-tight">{item.label}</span>}
       </Link>
     );
 
@@ -392,7 +392,7 @@ export function DashboardLayout() {
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent className="collapsible-content mt-1">
-          <div className={cn("collapsible-inner space-y-0.5 ml-4 pl-3 border-l", colors?.border || "border-sidebar-border")}>
+          <div className={cn("collapsible-inner space-y-0.5 ml-3 pl-3 border-l", colors?.border || "border-sidebar-border")}>
             {category.items.map((item) => (
               <NavItemLink key={item.href} item={item} isSubItem />
             ))}
