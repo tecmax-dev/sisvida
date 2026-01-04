@@ -670,131 +670,151 @@ Deno.serve(async (req) => {
           console.log(`[Lytex] Clientes importados: ${clientsImported}, atualizados: ${clientsUpdated}`);
 
           // 2. Importar faturas
-          page = 1;
-          hasMore = true;
+          // A API da Lytex pode paginar/filtrar por status; para garantir que tragam
+          // pagos, cancelados, vencidos e a vencer, varremos múltiplos status.
+          const invoiceStatuses = [
+            "pending",
+            "processing",
+            "overdue",
+            "paid",
+            "canceled",
+            "cancelled",
+          ];
 
-          while (hasMore) {
-            const invoicesResponse = await listInvoices(page, 100);
-            const invoices = invoicesResponse.data || invoicesResponse || [];
+          const seenInvoiceIds = new Set<string>();
 
-            if (!Array.isArray(invoices) || invoices.length === 0) {
-              hasMore = false;
-              break;
-            }
+          for (const statusFilter of invoiceStatuses) {
+            page = 1;
+            hasMore = true;
 
-            for (const invoice of invoices) {
-              // Verificar se já existe pelo lytex_invoice_id
-              const { data: existingInvoice } = await supabase
-                .from("employer_contributions")
-                .select("id, status")
-                .eq("lytex_invoice_id", invoice._id)
-                .maybeSingle();
+            while (hasMore) {
+              const invoicesResponse = await listInvoices(page, 100, statusFilter);
+              const invoices = invoicesResponse.data || invoicesResponse || [];
 
-              if (existingInvoice) {
-                // Atualizar status se mudou
-                let newStatus = "pending";
-                if (invoice.status === "paid") newStatus = "paid";
-                else if (invoice.status === "canceled" || invoice.status === "cancelled") newStatus = "cancelled";
-                else if (invoice.status === "overdue") newStatus = "overdue";
+              if (!Array.isArray(invoices) || invoices.length === 0) {
+                hasMore = false;
+                break;
+              }
 
-                if (newStatus !== existingInvoice.status) {
-                  await supabase
+              for (const invoice of invoices) {
+                if (!invoice?._id) continue;
+                if (seenInvoiceIds.has(invoice._id)) continue;
+                seenInvoiceIds.add(invoice._id);
+
+                // Verificar se já existe pelo lytex_invoice_id
+                const { data: existingInvoice } = await supabase
+                  .from("employer_contributions")
+                  .select("id, status")
+                  .eq("lytex_invoice_id", invoice._id)
+                  .maybeSingle();
+
+                if (existingInvoice) {
+                  // Atualizar status se mudou
+                  let newStatus = "pending";
+                  if (invoice.status === "paid") newStatus = "paid";
+                  else if (invoice.status === "canceled" || invoice.status === "cancelled") newStatus = "cancelled";
+                  else if (invoice.status === "overdue") newStatus = "overdue";
+
+                  if (newStatus !== existingInvoice.status) {
+                    await supabase
+                      .from("employer_contributions")
+                      .update({
+                        status: newStatus,
+                        paid_at: invoice.paidAt || null,
+                        paid_value: invoice.payedValue || null,
+                        payment_method: invoice.paymentMethod || null,
+                      })
+                      .eq("id", existingInvoice.id);
+                    invoicesUpdated++;
+                  }
+                } else {
+                  // Tentar vincular a uma empresa existente
+                  const clientCnpj = invoice.client?.cpfCnpj?.replace(/\D/g, "");
+                  if (!clientCnpj) continue;
+
+                  const { data: employer } = await supabase
+                    .from("employers")
+                    .select("id")
+                    .eq("clinic_id", params.clinicId)
+                    .eq("cnpj", clientCnpj)
+                    .maybeSingle();
+
+                  if (!employer) {
+                    console.log(`[Lytex] Empresa não encontrada para fatura ${invoice._id}, CNPJ: ${clientCnpj}`);
+                    continue;
+                  }
+
+                  // Buscar ou criar tipo de contribuição padrão
+                  let { data: contribType } = await supabase
+                    .from("contribution_types")
+                    .select("id")
+                    .eq("clinic_id", params.clinicId)
+                    .eq("name", "Mensalidade")
+                    .maybeSingle();
+
+                  if (!contribType) {
+                    const { data: newType } = await supabase
+                      .from("contribution_types")
+                      .insert({
+                        clinic_id: params.clinicId,
+                        name: "Mensalidade",
+                        default_value: 0,
+                        is_active: true,
+                      })
+                      .select()
+                      .single();
+                    contribType = newType;
+                  }
+
+                  if (!contribType) continue;
+
+                  // Determinar competência pela data de vencimento
+                  const dueDate = new Date(invoice.dueDate);
+                  const competenceMonth = dueDate.getMonth() + 1;
+                  const competenceYear = dueDate.getFullYear();
+
+                  let status = "pending";
+                  if (invoice.status === "paid") status = "paid";
+                  else if (invoice.status === "canceled" || invoice.status === "cancelled") status = "cancelled";
+                  else if (invoice.status === "overdue") status = "overdue";
+
+                  const value =
+                    invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
+
+                  const { error: insertInvoiceError } = await supabase
                     .from("employer_contributions")
-                    .update({
-                      status: newStatus,
+                    .insert({
+                      clinic_id: params.clinicId,
+                      employer_id: employer.id,
+                      contribution_type_id: contribType.id,
+                      competence_month: competenceMonth,
+                      competence_year: competenceYear,
+                      value: value,
+                      due_date: invoice.dueDate?.split("T")[0],
+                      status: status,
+                      lytex_invoice_id: invoice._id,
+                      lytex_invoice_url: invoice.invoiceUrl || null,
+                      lytex_boleto_barcode: invoice.boleto?.barCode || null,
+                      lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
+                      lytex_pix_code: invoice.pix?.code || null,
+                      lytex_pix_qrcode: invoice.pix?.qrCode || null,
                       paid_at: invoice.paidAt || null,
                       paid_value: invoice.payedValue || null,
                       payment_method: invoice.paymentMethod || null,
-                    })
-                    .eq("id", existingInvoice.id);
-                  invoicesUpdated++;
-                }
-              } else {
-                // Tentar vincular a uma empresa existente
-                const clientCnpj = invoice.client?.cpfCnpj?.replace(/\D/g, "");
-                if (!clientCnpj) continue;
+                    });
 
-                const { data: employer } = await supabase
-                  .from("employers")
-                  .select("id")
-                  .eq("clinic_id", params.clinicId)
-                  .eq("cnpj", clientCnpj)
-                  .maybeSingle();
-
-                if (!employer) {
-                  console.log(`[Lytex] Empresa não encontrada para fatura ${invoice._id}, CNPJ: ${clientCnpj}`);
-                  continue;
-                }
-
-                // Buscar ou criar tipo de contribuição padrão
-                let { data: contribType } = await supabase
-                  .from("contribution_types")
-                  .select("id")
-                  .eq("clinic_id", params.clinicId)
-                  .eq("name", "Mensalidade")
-                  .maybeSingle();
-
-                if (!contribType) {
-                  const { data: newType } = await supabase
-                    .from("contribution_types")
-                    .insert({
-                      clinic_id: params.clinicId,
-                      name: "Mensalidade",
-                      default_value: 0,
-                      is_active: true,
-                    })
-                    .select()
-                    .single();
-                  contribType = newType;
-                }
-
-                if (!contribType) continue;
-
-                // Determinar competência pela data de vencimento
-                const dueDate = new Date(invoice.dueDate);
-                const competenceMonth = dueDate.getMonth() + 1;
-                const competenceYear = dueDate.getFullYear();
-
-                let status = "pending";
-                if (invoice.status === "paid") status = "paid";
-                else if (invoice.status === "canceled" || invoice.status === "cancelled") status = "cancelled";
-                else if (invoice.status === "overdue") status = "overdue";
-
-                const value = invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
-
-                const { error: insertInvoiceError } = await supabase
-                  .from("employer_contributions")
-                  .insert({
-                    clinic_id: params.clinicId,
-                    employer_id: employer.id,
-                    contribution_type_id: contribType.id,
-                    competence_month: competenceMonth,
-                    competence_year: competenceYear,
-                    value: value,
-                    due_date: invoice.dueDate?.split("T")[0],
-                    status: status,
-                    lytex_invoice_id: invoice._id,
-                    lytex_invoice_url: invoice.invoiceUrl || null,
-                    lytex_boleto_barcode: invoice.boleto?.barCode || null,
-                    lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
-                    lytex_pix_code: invoice.pix?.code || null,
-                    lytex_pix_qrcode: invoice.pix?.qrCode || null,
-                    paid_at: invoice.paidAt || null,
-                    paid_value: invoice.payedValue || null,
-                    payment_method: invoice.paymentMethod || null,
-                  });
-
-                if (insertInvoiceError) {
-                  console.error("[Lytex] Erro ao inserir fatura:", insertInvoiceError);
-                  errors.push(`Fatura ${invoice._id}: ${insertInvoiceError.message}`);
-                } else {
-                  invoicesImported++;
+                  if (insertInvoiceError) {
+                    console.error("[Lytex] Erro ao inserir fatura:", insertInvoiceError);
+                    errors.push(`Fatura ${invoice._id}: ${insertInvoiceError.message}`);
+                  } else {
+                    invoicesImported++;
+                  }
                 }
               }
-            }
 
-            page++;
-            if (invoices.length < 100) hasMore = false;
+              page++;
+              if (invoices.length < 100) hasMore = false;
+            }
           }
 
           console.log(`[Lytex] Faturas importadas: ${invoicesImported}, atualizadas: ${invoicesUpdated}`);
