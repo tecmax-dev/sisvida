@@ -419,9 +419,16 @@ export default function EmployerDetailPage() {
       setCreateContribDialogOpen(false);
       resetContribForm();
       fetchData();
-    } catch (error) {
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : typeof error === "object" && error && "message" in error
+            ? String((error as any).message)
+            : "Erro desconhecido";
+
       console.error("Error creating contribution:", error);
-      toast.error("Erro ao criar contribuição");
+      toast.error(`Erro ao criar contribuição: ${message}`);
     } finally {
       setSaving(false);
     }
