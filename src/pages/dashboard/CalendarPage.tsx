@@ -1034,7 +1034,9 @@ export default function CalendarPage() {
       return;
     }
 
-    const durationMinutes = 30; // Default duration
+    // Usar duração do profissional selecionado
+    const selectedProfessional = professionals.find(p => p.id === formProfessional);
+    const durationMinutes = selectedProfessional?.appointment_duration || 30;
     
     // Calculate all dates for recurring appointments
     const recurringDates = calculateRecurringDates(selectedDate, recurrenceConfig);
