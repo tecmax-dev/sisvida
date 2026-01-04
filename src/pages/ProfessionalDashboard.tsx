@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,14 +21,29 @@ import {
   XCircle,
   RefreshCw,
   UserCheck,
+  CalendarPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+interface TimeSlot {
+  time: string;
+  type: 'free' | 'booked';
+  appointment?: Appointment;
+}
+
+interface ProfessionalSchedule {
+  [key: string]: {
+    enabled: boolean;
+    slots: { start: string; end: string }[];
+  };
+}
 
 interface Professional {
   id: string;
   name: string;
   specialty: string | null;
   clinic_id: string;
+  schedule: ProfessionalSchedule | null;
   clinic: {
     name: string;
     logo_url: string | null;
@@ -109,6 +124,7 @@ export default function ProfessionalDashboard() {
         name, 
         specialty, 
         clinic_id,
+        schedule,
         clinic:clinics (name, logo_url)
       `)
       .eq('user_id', session.user.id)
@@ -127,7 +143,11 @@ export default function ProfessionalDashboard() {
     }
 
     setProfessional({
-      ...prof,
+      id: prof.id,
+      name: prof.name,
+      specialty: prof.specialty,
+      clinic_id: prof.clinic_id,
+      schedule: prof.schedule as ProfessionalSchedule | null,
       clinic: prof.clinic as { name: string; logo_url: string | null }
     });
     
@@ -204,9 +224,68 @@ export default function ProfessionalDashboard() {
     return null;
   }
 
-  const pendingAppointments = appointments.filter(a => ['scheduled', 'confirmed'].includes(a.status));
+  const pendingAppointments = appointments.filter(a => ['scheduled', 'confirmed', 'arrived'].includes(a.status));
   const inProgressAppointment = appointments.find(a => a.status === 'in_progress');
   const completedAppointments = appointments.filter(a => a.status === 'completed');
+
+  // Calculate free time slots based on professional schedule
+  const timeSlots = useMemo(() => {
+    if (!professional?.schedule) return [];
+
+    const dayOfWeek = new Date().getDay();
+    const dayMap: Record<number, string> = {
+      0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
+      4: 'thursday', 5: 'friday', 6: 'saturday'
+    };
+    const dayKey = dayMap[dayOfWeek];
+    const daySchedule = professional.schedule[dayKey];
+
+    if (!daySchedule?.enabled || !daySchedule.slots?.length) return [];
+
+    const slots: TimeSlot[] = [];
+    const defaultDuration = 30; // 30 minutes default
+
+    // Generate all possible time slots for the day
+    daySchedule.slots.forEach(slot => {
+      const [startH, startM] = slot.start.split(':').map(Number);
+      const [endH, endM] = slot.end.split(':').map(Number);
+      
+      let currentMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+
+      while (currentMinutes < endMinutes) {
+        const hours = Math.floor(currentMinutes / 60);
+        const mins = currentMinutes % 60;
+        const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+        
+        // Check if this slot has an appointment
+        const appointment = appointments.find(apt => {
+          const aptStart = apt.start_time.substring(0, 5);
+          const aptEnd = apt.end_time.substring(0, 5);
+          const [aptStartH, aptStartM] = aptStart.split(':').map(Number);
+          const [aptEndH, aptEndM] = aptEnd.split(':').map(Number);
+          const aptStartMinutes = aptStartH * 60 + aptStartM;
+          const aptEndMinutes = aptEndH * 60 + aptEndM;
+          
+          return currentMinutes >= aptStartMinutes && currentMinutes < aptEndMinutes;
+        });
+
+        if (appointment) {
+          // Only add appointment slot at its start time
+          const aptStart = appointment.start_time.substring(0, 5);
+          if (timeStr === aptStart) {
+            slots.push({ time: timeStr, type: 'booked', appointment });
+          }
+        } else {
+          slots.push({ time: timeStr, type: 'free' });
+        }
+
+        currentMinutes += defaultDuration;
+      }
+    });
+
+    return slots;
+  }, [professional, appointments]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -331,74 +410,124 @@ export default function ProfessionalDashboard() {
           </Card>
         )}
 
-        {/* Pending Appointments */}
+        {/* Day Schedule with Free Slots */}
         <div className="mb-6">
           <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
             <Calendar className="h-5 w-5" />
-            Próximos atendimentos
+            Agenda do dia
           </h2>
           
-          {pendingAppointments.length === 0 ? (
+          {timeSlots.length === 0 ? (
             <Card>
               <CardContent className="py-8 text-center">
-                <CheckCircle2 className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+                <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                 <p className="text-muted-foreground">
-                  Nenhum atendimento pendente para hoje
+                  Nenhum horário configurado para hoje
                 </p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {pendingAppointments.map((appointment) => {
-                const status = statusConfig[appointment.status];
-                const StatusIcon = status?.icon || AlertCircle;
-                
-                return (
-                  <Card key={appointment.id} className="overflow-hidden">
-                    <CardContent className="p-4">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                        <div className="flex items-start gap-4">
+            <div className="space-y-2">
+              {timeSlots.map((slot, index) => {
+                if (slot.type === 'booked' && slot.appointment) {
+                  const appointment = slot.appointment;
+                  const status = statusConfig[appointment.status];
+                  const StatusIcon = status?.icon || AlertCircle;
+                  const isCompleted = appointment.status === 'completed';
+                  const isInProgress = appointment.status === 'in_progress';
+                  
+                  return (
+                    <Card 
+                      key={`${slot.time}-${index}`} 
+                      className={cn(
+                        "overflow-hidden transition-all",
+                        isInProgress && "border-info ring-2 ring-info/20",
+                        isCompleted && "opacity-60"
+                      )}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-4">
                           <div className={cn(
-                            "w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0",
-                            status?.bgColor
+                            "w-16 text-center py-1.5 rounded-md font-medium text-sm",
+                            isInProgress ? "bg-info text-info-foreground" :
+                            isCompleted ? "bg-muted text-muted-foreground" :
+                            "bg-primary/10 text-primary"
                           )}>
-                            <User className={cn("h-6 w-6", status?.color)} />
+                            {slot.time}
                           </div>
                           
-                          <div>
-                            <p className="font-semibold text-foreground">
-                              {appointment.patient.name}
+                          <div className={cn(
+                            "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0",
+                            status?.bgColor
+                          )}>
+                            <StatusIcon className={cn("h-5 w-5", status?.color)} />
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-foreground truncate">
+                              {appointment.patient.name.toUpperCase()}
                             </p>
-                            <div className="flex flex-wrap gap-3 mt-1 text-sm text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="h-3.5 w-3.5" />
-                                {appointment.start_time.substring(0, 5)}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Phone className="h-3.5 w-3.5" />
-                                {appointment.patient.phone}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 mt-2">
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
                               <Badge variant="outline" className="text-xs">
                                 {typeLabels[appointment.type] || appointment.type}
                               </Badge>
                               <Badge className={cn("text-xs", status?.bgColor, status?.color)}>
-                                <StatusIcon className="h-3 w-3 mr-1" />
                                 {status?.label}
                               </Badge>
                             </div>
                           </div>
+                          
+                          {!isCompleted && (
+                            <Button 
+                              size="sm"
+                              variant={isInProgress ? "default" : "outline"}
+                              onClick={() => openAppointmentPanel(appointment)}
+                              disabled={!!inProgressAppointment && !isInProgress}
+                              className={cn(
+                                "flex-shrink-0",
+                                isInProgress && "bg-info hover:bg-info/90"
+                              )}
+                            >
+                              {isInProgress ? (
+                                <>
+                                  <Stethoscope className="h-4 w-4 mr-1" />
+                                  Continuar
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="h-4 w-4 mr-1" />
+                                  Iniciar
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+                
+                // Free slot
+                return (
+                  <Card 
+                    key={`${slot.time}-${index}`} 
+                    className="overflow-hidden border-dashed border-muted-foreground/30 bg-muted/30"
+                  >
+                    <CardContent className="p-3">
+                      <div className="flex items-center gap-4">
+                        <div className="w-16 text-center py-1.5 rounded-md font-medium text-sm bg-success/10 text-success">
+                          {slot.time}
                         </div>
                         
-                        <Button 
-                          onClick={() => openAppointmentPanel(appointment)}
-                          disabled={!!inProgressAppointment}
-                          className="flex-shrink-0"
-                        >
-                          <Play className="h-4 w-4 mr-2" />
-                          Iniciar Atendimento
-                        </Button>
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-success/10">
+                          <CalendarPlus className="h-5 w-5 text-success" />
+                        </div>
+                        
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground italic">
+                            Horário disponível
+                          </p>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -408,44 +537,17 @@ export default function ProfessionalDashboard() {
           )}
         </div>
 
-        {/* Completed Appointments */}
-        {completedAppointments.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-success" />
-              Atendimentos concluídos ({completedAppointments.length})
-            </h2>
-            
-            <div className="space-y-2">
-              {completedAppointments.map((appointment) => (
-                <Card key={appointment.id} className="opacity-70 hover:opacity-100 transition-opacity cursor-pointer" onClick={() => openAppointmentPanel(appointment)}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                          <User className="h-5 w-5 text-muted-foreground" />
-                        </div>
-                        <div>
-                          <p className="font-medium text-foreground">
-                            {appointment.patient.name}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {appointment.start_time.substring(0, 5)} - {typeLabels[appointment.type]}
-                            {appointment.duration_minutes && ` • ${appointment.duration_minutes}min`}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge variant="secondary">
-                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                        Concluído
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+        {/* Summary Stats */}
+        <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">
+              Total: <strong className="text-foreground">{appointments.length}</strong> agendamentos
+            </span>
+            <span className="text-muted-foreground">
+              Livres: <strong className="text-success">{timeSlots.filter(s => s.type === 'free').length}</strong> horários
+            </span>
           </div>
-        )}
+        </div>
       </main>
 
       {/* Appointment Panel */}
