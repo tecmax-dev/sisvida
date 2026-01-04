@@ -89,6 +89,7 @@ serve(async (req) => {
             id: employer.id,
             name: employer.name,
             cnpj: employer.cnpj,
+            clinic_id: employer.clinic_id,
           },
           session_token: sessionToken,
         }),

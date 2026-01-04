@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,10 +38,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
+interface Clinic {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  phone: string | null;
+}
+
 interface Employer {
   id: string;
   name: string;
   cnpj: string;
+  clinic_id: string;
 }
 
 interface Contribution {
@@ -82,10 +91,12 @@ const monthNamesFull = [
 ];
 
 export default function EmployerPortal() {
+  const { clinicSlug } = useParams();
   const [cnpj, setCnpj] = useState("");
   const [accessCode, setAccessCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [employer, setEmployer] = useState<Employer | null>(null);
+  const [clinic, setClinic] = useState<Clinic | null>(null);
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [reissueRequests, setReissueRequests] = useState<ReissueRequest[]>([]);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
@@ -100,6 +111,45 @@ export default function EmployerPortal() {
   const [yearFilter, setYearFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "cards">("table");
+
+  // Load clinic by slug
+  useEffect(() => {
+    if (clinicSlug) {
+      loadClinicBySlug(clinicSlug);
+    }
+  }, [clinicSlug]);
+
+  const loadClinicBySlug = async (slug: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("clinics")
+        .select("id, name, logo_url, phone")
+        .eq("slug", slug)
+        .single();
+      
+      if (!error && data) {
+        setClinic(data);
+      }
+    } catch (err) {
+      console.error("Error loading clinic:", err);
+    }
+  };
+
+  const loadClinicById = async (clinicId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("clinics")
+        .select("id, name, logo_url, phone")
+        .eq("id", clinicId)
+        .single();
+      
+      if (!error && data) {
+        setClinic(data);
+      }
+    } catch (err) {
+      console.error("Error loading clinic:", err);
+    }
+  };
 
   // Extract unique contribution types and years
   const contributionTypes = useMemo(() => {
@@ -142,6 +192,12 @@ export default function EmployerPortal() {
 
       setEmployer(data.employer);
       sessionStorage.setItem("employer_session", JSON.stringify(data.employer));
+      
+      // Load clinic info after login
+      if (data.employer.clinic_id) {
+        loadClinicById(data.employer.clinic_id);
+      }
+      
       toast.success(`Bem-vindo, ${data.employer.name}!`);
       loadContributions(data.employer.id);
     } catch (err) {
@@ -231,6 +287,11 @@ export default function EmployerPortal() {
       const emp = JSON.parse(saved);
       setEmployer(emp);
       loadContributions(emp.id);
+      
+      // Load clinic info for saved session
+      if (emp.clinic_id) {
+        loadClinicById(emp.clinic_id);
+      }
     }
   }, []);
 
@@ -269,10 +330,22 @@ export default function EmployerPortal() {
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-cta/5 flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
           <CardHeader className="text-center pb-2">
-            <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-cta flex items-center justify-center mb-4 shadow-lg">
-              <Building2 className="h-8 w-8 text-white" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Portal da Empresa</CardTitle>
+            {clinic?.logo_url ? (
+              <div className="mx-auto mb-4">
+                <img 
+                  src={clinic.logo_url} 
+                  alt={clinic.name} 
+                  className="h-16 w-auto max-w-[200px] object-contain"
+                />
+              </div>
+            ) : (
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-cta flex items-center justify-center mb-4 shadow-lg">
+                <Building2 className="h-8 w-8 text-white" />
+              </div>
+            )}
+            <CardTitle className="text-2xl font-bold">
+              {clinic?.name ? `Portal ${clinic.name}` : "Portal da Empresa"}
+            </CardTitle>
             <CardDescription className="text-base">
               Acesse seus boletos e contribuições
             </CardDescription>
@@ -310,7 +383,9 @@ export default function EmployerPortal() {
               Entrar
             </Button>
             <p className="text-xs text-center text-muted-foreground pt-2">
-              Não possui código de acesso? Entre em contato com o sindicato.
+              {clinic?.phone 
+                ? `Não possui código de acesso? Ligue: ${clinic.phone}` 
+                : "Não possui código de acesso? Entre em contato com o sindicato."}
             </p>
           </CardContent>
         </Card>
@@ -380,10 +455,18 @@ export default function EmployerPortal() {
       <header className="bg-card border-b sticky top-0 z-10 shadow-sm">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-cta flex items-center justify-center">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
+            {clinic?.logo_url ? (
+              <img 
+                src={clinic.logo_url} 
+                alt={clinic.name} 
+                className="h-10 w-auto max-w-[120px] object-contain"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-cta flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-white" />
+              </div>
+            )}
+            <div className="border-l pl-3">
               <h1 className="font-bold text-base sm:text-lg leading-tight">{employer.name}</h1>
               <p className="text-xs text-muted-foreground">{formatCnpj(employer.cnpj)}</p>
             </div>
