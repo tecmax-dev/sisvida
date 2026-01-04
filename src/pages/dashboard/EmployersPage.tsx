@@ -78,6 +78,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import EmployerCategoryDialog from "@/components/employers/EmployerCategoryDialog";
+import { AutoCategorizeDialog } from "@/components/employers/AutoCategorizeDialog";
 
 interface Category {
   id: string;
@@ -145,6 +146,7 @@ export default function EmployersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
+  const [autoCategorizeDialogOpen, setAutoCategorizeDialogOpen] = useState(false);
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
   const [formData, setFormData] = useState<EmployerFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
@@ -427,6 +429,15 @@ export default function EmployersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setAutoCategorizeDialogOpen(true)}
+            className="gap-2"
+            title="Categorizar automaticamente por CNAE"
+          >
+            <Search className="h-4 w-4" />
+            Auto CNAE
+          </Button>
           <Button 
             variant="outline" 
             onClick={() => setCategoryDialogOpen(true)}
@@ -998,12 +1009,23 @@ export default function EmployersPage() {
 
       {/* Category Management Dialog */}
       {currentClinic && (
-        <EmployerCategoryDialog
-          open={categoryDialogOpen}
-          onOpenChange={setCategoryDialogOpen}
-          clinicId={currentClinic.id}
-          onCategoriesChange={fetchCategories}
-        />
+        <>
+          <EmployerCategoryDialog
+            open={categoryDialogOpen}
+            onOpenChange={setCategoryDialogOpen}
+            clinicId={currentClinic.id}
+            onCategoriesChange={fetchCategories}
+          />
+          <AutoCategorizeDialog
+            open={autoCategorizeDialogOpen}
+            onOpenChange={setAutoCategorizeDialogOpen}
+            clinicId={currentClinic.id}
+            onComplete={() => {
+              fetchEmployers();
+              fetchCategories();
+            }}
+          />
+        </>
       )}
     </div>
   );
