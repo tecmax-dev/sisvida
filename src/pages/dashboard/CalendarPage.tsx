@@ -146,7 +146,10 @@ const calculateProfessionalSlots = (
   const blocks = schedule?._blocks as Array<{ days: string[]; start_time: string; end_time: string; duration?: number; start_date?: string; end_date?: string }> | undefined;
 
   const defaultDuration = professional.appointment_duration || 30;
-  const dateStr = selectedDate.toISOString().split('T')[0];
+  const y = selectedDate.getFullYear();
+  const m = String(selectedDate.getMonth() + 1).padStart(2, '0');
+  const d = String(selectedDate.getDate()).padStart(2, '0');
+  const dateStr = `${y}-${m}-${d}`;
 
   // Filtrar apenas agendamentos ativos
   const activeAppointments = appointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
