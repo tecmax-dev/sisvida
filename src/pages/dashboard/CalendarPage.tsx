@@ -528,85 +528,93 @@ export default function CalendarPage() {
   };
 
   const timeSlots = useMemo(() => {
-    const getDayKey = (date: Date) => {
-      const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      return dayKeys[date.getDay()];
-    };
+    try {
+      const getDayKey = (date: Date) => {
+        const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        return dayKeys[date.getDay()];
+      };
 
-    // Prioridade para definir de qual profissional vem a grade de horários:
-    // 1) Se estiver arrastando para reagendar: profissional do agendamento
-    // 2) Se houver profissional filtrado
-    // 3) Se estiver criando/editando: profissional selecionado no formulário
-    // 4) Se o usuário for um profissional: o próprio
-    const selectedProfId =
-      activeAppointment?.professional_id ||
-      (filterProfessionals.length === 1
-        ? filterProfessionals[0]
-        : (formProfessional || (isProfessionalOnly && loggedInProfessionalId ? loggedInProfessionalId : null)));
+      // Prioridade para definir de qual profissional vem a grade de horários:
+      // 1) Se estiver arrastando para reagendar: profissional do agendamento
+      // 2) Se houver profissional filtrado
+      // 3) Se estiver criando/editando: profissional selecionado no formulário
+      // 4) Se o usuário for um profissional: o próprio
+      const selectedProfId =
+        activeAppointment?.professional_id ||
+        (filterProfessionals.length === 1
+          ? filterProfessionals[0]
+          : (formProfessional || (isProfessionalOnly && loggedInProfessionalId ? loggedInProfessionalId : null)));
 
-    if (!selectedProfId) return defaultTimeSlots;
+      if (!selectedProfId) return defaultTimeSlots;
 
-    const prof = professionals.find((p) => p.id === selectedProfId);
-    const schedule = prof?.schedule as any;
-    const appointmentDuration = prof?.appointment_duration || 30;
-    if (!schedule) return defaultTimeSlots;
+      const prof = professionals.find((p) => p.id === selectedProfId);
+      const schedule = prof?.schedule as any;
+      const appointmentDuration = prof?.appointment_duration || 30;
+      if (!schedule) return defaultTimeSlots;
 
-    const dayKey = getDayKey(selectedDate);
-    const daySchedule = schedule?.[dayKey];
-    const blocks = schedule?._blocks as Array<{ days: string[]; start_time: string; end_time: string; duration?: number; start_date?: string; end_date?: string }> | undefined;
-    
-    const slots: string[] = [];
-    const dateStr = toDateKey(selectedDate);
+      const dayKey = getDayKey(selectedDate);
+      const daySchedule = schedule?.[dayKey];
+      const blocks = schedule?._blocks as Array<{ days: string[]; start_time: string; end_time: string; duration?: number; start_date?: string; end_date?: string }> | undefined;
+      
+      const slots: string[] = [];
+      const dateStr = toDateKey(selectedDate);
 
-    // Primeiro, verificar _blocks (nova estrutura de agenda)
-    if (blocks && blocks.length > 0) {
-      for (const block of blocks) {
-        // Verificar se o bloco está ativo para esta data
-        if (block.start_date && dateStr < block.start_date) continue;
-        if (block.end_date && dateStr > block.end_date) continue;
-        
-        // Verificar se o dia da semana está incluído
-        if (block.days && block.days.length > 0) {
-          if (!block.days.includes(dayKey)) continue;
-        }
-        
-        const [sh, sm] = String(block.start_time).split(':').map(Number);
-        const [eh, em] = String(block.end_time).split(':').map(Number);
-        const interval = block.duration || appointmentDuration;
-        
-        let cur = sh * 60 + sm;
-        const end = eh * 60 + em;
-        
-        while (cur < end) {
-          const h = Math.floor(cur / 60);
-          const m = cur % 60;
-          slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-          cur += interval;
-        }
-      }
-    }
-    
-    // Se não tiver _blocks ou não gerou slots, usar estrutura antiga (slots por dia)
-    if (slots.length === 0 && daySchedule?.enabled && Array.isArray(daySchedule.slots) && daySchedule.slots.length > 0) {
-      for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
-        const [sh, sm] = String(s.start).split(':').map(Number);
-        const [eh, em] = String(s.end).split(':').map(Number);
-        
-        let cur = sh * 60 + sm;
-        const end = eh * 60 + em;
-        
-        while (cur < end) {
-          const h = Math.floor(cur / 60);
-          const m = cur % 60;
-          slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-          cur += appointmentDuration;
+      // Primeiro, verificar _blocks (nova estrutura de agenda)
+      if (blocks && blocks.length > 0) {
+        for (const block of blocks) {
+          // Verificar se o bloco está ativo para esta data
+          if (block.start_date && dateStr < block.start_date) continue;
+          if (block.end_date && dateStr > block.end_date) continue;
+          
+          // Verificar se o dia da semana está incluído
+          if (block.days && block.days.length > 0) {
+            if (!block.days.includes(dayKey)) continue;
+          }
+          
+          const [sh, sm] = String(block.start_time || '').split(':').map(Number);
+          const [eh, em] = String(block.end_time || '').split(':').map(Number);
+          if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) continue;
+          
+          const interval = block.duration || appointmentDuration;
+          
+          let cur = sh * 60 + sm;
+          const end = eh * 60 + em;
+          
+          while (cur < end) {
+            const h = Math.floor(cur / 60);
+            const m = cur % 60;
+            slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+            cur += interval;
+          }
         }
       }
-    }
-    
-    if (slots.length === 0) return defaultTimeSlots;
+      
+      // Se não tiver _blocks ou não gerou slots, usar estrutura antiga (slots por dia)
+      if (slots.length === 0 && daySchedule?.enabled && Array.isArray(daySchedule.slots) && daySchedule.slots.length > 0) {
+        for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
+          const [sh, sm] = String(s.start || '').split(':').map(Number);
+          const [eh, em] = String(s.end || '').split(':').map(Number);
+          if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) continue;
+          
+          let cur = sh * 60 + sm;
+          const end = eh * 60 + em;
+          
+          while (cur < end) {
+            const h = Math.floor(cur / 60);
+            const m = cur % 60;
+            slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+            cur += appointmentDuration;
+          }
+        }
+      }
+      
+      if (slots.length === 0) return defaultTimeSlots;
 
-    return Array.from(new Set(slots)).sort();
+      return Array.from(new Set(slots)).sort();
+    } catch (err) {
+      console.error('[CalendarPage] Error calculating timeSlots:', err);
+      return defaultTimeSlots;
+    }
   }, [activeAppointment, filterProfessionals, formProfessional, isProfessionalOnly, loggedInProfessionalId, professionals, selectedDate]);
 
   // Agendamentos do profissional selecionado para a data selecionada (para TimeSlotPicker)
@@ -1063,13 +1071,18 @@ export default function CalendarPage() {
     if (saving) return;
     
     // Verificar se tem múltiplos horários selecionados (modo manual de recorrência)
-    const hasMultipleSlots = recurrenceConfig.enabled && selectedMultipleTimes.length > 0;
+    const hasMultipleSlots = recurrenceConfig.enabled && Array.isArray(selectedMultipleTimes) && selectedMultipleTimes.length > 0;
     const effectiveTime = hasMultipleSlots ? selectedMultipleTimes[0] : formTime;
     
-    if (!formPatient || !formProfessional || (!effectiveTime && !hasMultipleSlots)) {
+    // Validação mais robusta do horário
+    const isTimeValid = effectiveTime && typeof effectiveTime === 'string' && effectiveTime.match(/^\d{2}:\d{2}$/);
+    
+    if (!formPatient || !formProfessional || (!isTimeValid && !hasMultipleSlots)) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha todos os campos obrigatórios.",
+        description: !formPatient ? "Selecione um paciente." : 
+                     !formProfessional ? "Selecione um profissional." :
+                     "Selecione um horário disponível.",
         variant: "destructive",
       });
       return;
