@@ -21,6 +21,7 @@ interface Clinic {
   phone: string | null;
   cnpj: string | null;
   logo_url: string | null;
+  whatsapp_header_image_url?: string | null;
   created_at: string;
   is_blocked?: boolean;
   blocked_reason?: string | null;
@@ -147,6 +148,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           phone,
           cnpj,
           logo_url,
+          whatsapp_header_image_url,
           is_blocked,
           blocked_reason,
           is_maintenance,
@@ -185,7 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isSa) {
       const { data: clinics, error: clinicsError } = await supabase
         .from('clinics')
-        .select('id, name, slug, address, phone, cnpj, logo_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason')
+        .select('id, name, slug, address, phone, cnpj, logo_url, whatsapp_header_image_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason')
         .order('name');
 
       if (clinicsError) {

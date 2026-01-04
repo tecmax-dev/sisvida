@@ -732,7 +732,7 @@ export default function EmployerDetailPage() {
               cnpj: currentClinic.cnpj,
               phone: currentClinic.phone,
               address: currentClinic.address,
-              logoUrl: currentClinic.logo_url,
+              logoUrl: currentClinic.logo_url ?? currentClinic.whatsapp_header_image_url ?? null,
             } : undefined}
           />
 
