@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -73,6 +74,7 @@ export default function ContributionsPage() {
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (currentClinic) {
@@ -212,6 +214,38 @@ export default function ContributionsPage() {
     }
   };
 
+  const handleImportFromLytex = async () => {
+    if (!currentClinic) return;
+    
+    setImporting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "import_from_lytex",
+          clinicId: currentClinic.id,
+        },
+      });
+
+      if (error) throw error;
+
+      const imported = (data?.clientsImported || 0) + (data?.invoicesImported || 0);
+      const updated = (data?.clientsUpdated || 0) + (data?.invoicesUpdated || 0);
+
+      if (imported > 0 || updated > 0) {
+        toast.success(`Importados: ${data?.clientsImported || 0} empresas, ${data?.invoicesImported || 0} boletos. Atualizados: ${updated}`);
+        fetchData();
+      } else {
+        toast.info("Nenhum dado novo encontrado na Lytex");
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error("Error importing:", error);
+      toast.error(`Erro ao importar: ${errorMessage}`);
+    } finally {
+      setImporting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -233,6 +267,18 @@ export default function ContributionsPage() {
             Gerencie boletos e contribuições das empresas associadas
           </p>
         </div>
+        <Button 
+          variant="outline" 
+          onClick={handleImportFromLytex}
+          disabled={importing}
+        >
+          {importing ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4 mr-2" />
+          )}
+          {importing ? "Importando..." : "Importar da Lytex"}
+        </Button>
       </div>
 
       {/* Tabs */}
