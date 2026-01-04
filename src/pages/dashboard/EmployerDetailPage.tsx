@@ -69,7 +69,9 @@ import {
   Pencil,
   Trash2,
   ExternalLink,
+  MessageCircle,
 } from "lucide-react";
+import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoWhatsAppDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -169,6 +171,7 @@ export default function EmployerDetailPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
+  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
 
   // Create contribution form
   const [contribTypeId, setContribTypeId] = useState("");
@@ -666,7 +669,15 @@ export default function EmployerDetailPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setWhatsappDialogOpen(true)}
+              className="gap-2"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Enviar Boletos
+            </Button>
             <Button onClick={() => setCreateContribDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Contribuição
@@ -1331,6 +1342,21 @@ export default function EmployerDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* WhatsApp Boleto Dialog */}
+      <SendBoletoWhatsAppDialog
+        open={whatsappDialogOpen}
+        onOpenChange={setWhatsappDialogOpen}
+        contributions={contributions.map((c) => ({
+          ...c,
+          employers: {
+            name: employer?.name || "",
+            cnpj: employer?.cnpj || "",
+            phone: employer?.phone,
+          },
+        }))}
+        clinicId={currentClinic?.id || ""}
+      />
     </div>
   );
 }
