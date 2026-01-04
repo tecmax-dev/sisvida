@@ -114,16 +114,23 @@ async function createInvoice(params: CreateInvoiceRequest): Promise<any> {
     referenceId: params.contributionId,
   };
 
-  // Adicionar endereço se disponível
-  if (params.employer.address) {
+  // Adicionar endereço apenas se estiver completo (a API da Lytex rejeita campos vazios)
+  const addr = params.employer.address;
+  const zone = addr?.zone?.trim();
+  const zip = addr?.zip?.replace(/\D/g, "").trim();
+  const city = addr?.city?.trim();
+  const state = addr?.state?.trim();
+  const street = addr?.street?.trim();
+
+  if (addr && zone && zip && city && state && street) {
     invoicePayload.client.address = {
-      street: params.employer.address.street || "",
-      number: params.employer.address.number || "S/N",
-      complement: params.employer.address.complement || "",
-      zone: params.employer.address.zone || "",
-      city: params.employer.address.city || "",
-      state: params.employer.address.state || "",
-      zip: params.employer.address.zip?.replace(/\D/g, "") || "",
+      street,
+      number: addr.number?.trim() || "S/N",
+      complement: addr.complement?.trim() || undefined,
+      zone,
+      city,
+      state,
+      zip,
     };
   }
 
