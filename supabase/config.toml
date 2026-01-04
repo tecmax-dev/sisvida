@@ -161,3 +161,6 @@ verify_jwt = true
 
 [functions.lytex-webhook]
 verify_jwt = false
+
+[functions.lytex-sync-cron]
+verify_jwt = false

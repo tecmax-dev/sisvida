@@ -2024,6 +2024,7 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean
+          lytex_client_id: string | null
           name: string
           notes: string | null
           phone: string | null
@@ -2040,6 +2041,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          lytex_client_id?: string | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -2056,6 +2058,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          lytex_client_id?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
@@ -2680,6 +2683,62 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "insurance_plans_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lytex_sync_logs: {
+        Row: {
+          clients_imported: number | null
+          clients_updated: number | null
+          clinic_id: string
+          completed_at: string | null
+          created_at: string
+          details: Json | null
+          error_message: string | null
+          id: string
+          invoices_imported: number | null
+          invoices_updated: number | null
+          started_at: string
+          status: string
+          sync_type: string
+        }
+        Insert: {
+          clients_imported?: number | null
+          clients_updated?: number | null
+          clinic_id: string
+          completed_at?: string | null
+          created_at?: string
+          details?: Json | null
+          error_message?: string | null
+          id?: string
+          invoices_imported?: number | null
+          invoices_updated?: number | null
+          started_at?: string
+          status?: string
+          sync_type: string
+        }
+        Update: {
+          clients_imported?: number | null
+          clients_updated?: number | null
+          clinic_id?: string
+          completed_at?: string | null
+          created_at?: string
+          details?: Json | null
+          error_message?: string | null
+          id?: string
+          invoices_imported?: number | null
+          invoices_updated?: number | null
+          started_at?: string
+          status?: string
+          sync_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lytex_sync_logs_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"

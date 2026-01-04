@@ -84,6 +84,51 @@ async function getAccessToken(): Promise<string> {
   return accessToken;
 }
 
+// Listar clientes/empresas da Lytex
+async function listClients(page = 1, limit = 100): Promise<any> {
+  const token = await getAccessToken();
+  
+  const response = await fetch(`${LYTEX_API_URL}/clients?page=${page}&limit=${limit}`, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Lytex] Erro ao listar clientes:", errorText);
+    throw new Error(`Erro ao listar clientes: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+// Listar faturas da Lytex
+async function listInvoices(page = 1, limit = 100, status?: string): Promise<any> {
+  const token = await getAccessToken();
+  
+  let url = `${LYTEX_API_URL}/invoices?page=${page}&limit=${limit}`;
+  if (status) {
+    url += `&status=${status}`;
+  }
+  
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Lytex] Erro ao listar faturas:", errorText);
+    throw new Error(`Erro ao listar faturas: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 async function createInvoice(params: CreateInvoiceRequest): Promise<any> {
   const token = await getAccessToken();
 
@@ -525,6 +570,296 @@ Deno.serve(async (req) => {
 
         console.log("[Lytex] Contribuição excluída:", params.contributionId);
         result = { success: true };
+        break;
+      }
+
+      case "import_from_lytex": {
+        // Importar clientes e faturas da Lytex para o sistema
+        if (!params.clinicId) {
+          throw new Error("clinicId é obrigatório");
+        }
+
+        console.log("[Lytex] Iniciando importação para clínica:", params.clinicId);
+
+        // Criar log de sincronização
+        const { data: syncLog, error: logError } = await supabase
+          .from("lytex_sync_logs")
+          .insert({
+            clinic_id: params.clinicId,
+            sync_type: "full",
+            status: "running",
+          })
+          .select()
+          .single();
+
+        if (logError) {
+          console.error("[Lytex] Erro ao criar log:", logError);
+        }
+
+        let clientsImported = 0;
+        let clientsUpdated = 0;
+        let invoicesImported = 0;
+        let invoicesUpdated = 0;
+        const errors: string[] = [];
+
+        try {
+          // 1. Importar clientes
+          let page = 1;
+          let hasMore = true;
+
+          while (hasMore) {
+            const clientsResponse = await listClients(page, 100);
+            const clients = clientsResponse.data || clientsResponse || [];
+
+            if (!Array.isArray(clients) || clients.length === 0) {
+              hasMore = false;
+              break;
+            }
+
+            for (const client of clients) {
+              const cnpj = client.cpfCnpj?.replace(/\D/g, "");
+              if (!cnpj) continue;
+
+              // Verificar se já existe pelo lytex_client_id ou CNPJ
+              const { data: existing } = await supabase
+                .from("employers")
+                .select("id, lytex_client_id")
+                .eq("clinic_id", params.clinicId)
+                .or(`lytex_client_id.eq.${client._id},cnpj.eq.${cnpj}`)
+                .maybeSingle();
+
+              if (existing) {
+                // Atualizar se necessário
+                if (!existing.lytex_client_id) {
+                  await supabase
+                    .from("employers")
+                    .update({ lytex_client_id: client._id })
+                    .eq("id", existing.id);
+                  clientsUpdated++;
+                }
+              } else {
+                // Criar nova empresa
+                const { error: insertError } = await supabase
+                  .from("employers")
+                  .insert({
+                    clinic_id: params.clinicId,
+                    name: client.name,
+                    cnpj: cnpj,
+                    email: client.email || null,
+                    phone: client.cellphone || null,
+                    address: client.address?.street || null,
+                    city: client.address?.city || null,
+                    state: client.address?.state || null,
+                    lytex_client_id: client._id,
+                    is_active: true,
+                  });
+
+                if (insertError) {
+                  console.error("[Lytex] Erro ao inserir empresa:", insertError);
+                  errors.push(`Empresa ${client.name}: ${insertError.message}`);
+                } else {
+                  clientsImported++;
+                }
+              }
+            }
+
+            page++;
+            if (clients.length < 100) hasMore = false;
+          }
+
+          console.log(`[Lytex] Clientes importados: ${clientsImported}, atualizados: ${clientsUpdated}`);
+
+          // 2. Importar faturas
+          page = 1;
+          hasMore = true;
+
+          while (hasMore) {
+            const invoicesResponse = await listInvoices(page, 100);
+            const invoices = invoicesResponse.data || invoicesResponse || [];
+
+            if (!Array.isArray(invoices) || invoices.length === 0) {
+              hasMore = false;
+              break;
+            }
+
+            for (const invoice of invoices) {
+              // Verificar se já existe pelo lytex_invoice_id
+              const { data: existingInvoice } = await supabase
+                .from("employer_contributions")
+                .select("id, status")
+                .eq("lytex_invoice_id", invoice._id)
+                .maybeSingle();
+
+              if (existingInvoice) {
+                // Atualizar status se mudou
+                let newStatus = "pending";
+                if (invoice.status === "paid") newStatus = "paid";
+                else if (invoice.status === "canceled" || invoice.status === "cancelled") newStatus = "cancelled";
+                else if (invoice.status === "overdue") newStatus = "overdue";
+
+                if (newStatus !== existingInvoice.status) {
+                  await supabase
+                    .from("employer_contributions")
+                    .update({
+                      status: newStatus,
+                      paid_at: invoice.paidAt || null,
+                      paid_value: invoice.payedValue || null,
+                      payment_method: invoice.paymentMethod || null,
+                    })
+                    .eq("id", existingInvoice.id);
+                  invoicesUpdated++;
+                }
+              } else {
+                // Tentar vincular a uma empresa existente
+                const clientCnpj = invoice.client?.cpfCnpj?.replace(/\D/g, "");
+                if (!clientCnpj) continue;
+
+                const { data: employer } = await supabase
+                  .from("employers")
+                  .select("id")
+                  .eq("clinic_id", params.clinicId)
+                  .eq("cnpj", clientCnpj)
+                  .maybeSingle();
+
+                if (!employer) {
+                  console.log(`[Lytex] Empresa não encontrada para fatura ${invoice._id}, CNPJ: ${clientCnpj}`);
+                  continue;
+                }
+
+                // Buscar ou criar tipo de contribuição padrão
+                let { data: contribType } = await supabase
+                  .from("contribution_types")
+                  .select("id")
+                  .eq("clinic_id", params.clinicId)
+                  .eq("name", "Mensalidade")
+                  .maybeSingle();
+
+                if (!contribType) {
+                  const { data: newType } = await supabase
+                    .from("contribution_types")
+                    .insert({
+                      clinic_id: params.clinicId,
+                      name: "Mensalidade",
+                      default_value: 0,
+                      is_active: true,
+                    })
+                    .select()
+                    .single();
+                  contribType = newType;
+                }
+
+                if (!contribType) continue;
+
+                // Determinar competência pela data de vencimento
+                const dueDate = new Date(invoice.dueDate);
+                const competenceMonth = dueDate.getMonth() + 1;
+                const competenceYear = dueDate.getFullYear();
+
+                let status = "pending";
+                if (invoice.status === "paid") status = "paid";
+                else if (invoice.status === "canceled" || invoice.status === "cancelled") status = "cancelled";
+                else if (invoice.status === "overdue") status = "overdue";
+
+                const value = invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
+
+                const { error: insertInvoiceError } = await supabase
+                  .from("employer_contributions")
+                  .insert({
+                    clinic_id: params.clinicId,
+                    employer_id: employer.id,
+                    contribution_type_id: contribType.id,
+                    competence_month: competenceMonth,
+                    competence_year: competenceYear,
+                    value: value,
+                    due_date: invoice.dueDate?.split("T")[0],
+                    status: status,
+                    lytex_invoice_id: invoice._id,
+                    lytex_invoice_url: invoice.invoiceUrl || null,
+                    lytex_boleto_barcode: invoice.boleto?.barCode || null,
+                    lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
+                    lytex_pix_code: invoice.pix?.code || null,
+                    lytex_pix_qrcode: invoice.pix?.qrCode || null,
+                    paid_at: invoice.paidAt || null,
+                    paid_value: invoice.payedValue || null,
+                    payment_method: invoice.paymentMethod || null,
+                  });
+
+                if (insertInvoiceError) {
+                  console.error("[Lytex] Erro ao inserir fatura:", insertInvoiceError);
+                  errors.push(`Fatura ${invoice._id}: ${insertInvoiceError.message}`);
+                } else {
+                  invoicesImported++;
+                }
+              }
+            }
+
+            page++;
+            if (invoices.length < 100) hasMore = false;
+          }
+
+          console.log(`[Lytex] Faturas importadas: ${invoicesImported}, atualizadas: ${invoicesUpdated}`);
+
+          // Atualizar log
+          if (syncLog?.id) {
+            await supabase
+              .from("lytex_sync_logs")
+              .update({
+                status: "completed",
+                completed_at: new Date().toISOString(),
+                clients_imported: clientsImported,
+                clients_updated: clientsUpdated,
+                invoices_imported: invoicesImported,
+                invoices_updated: invoicesUpdated,
+                details: { errors },
+              })
+              .eq("id", syncLog.id);
+          }
+
+          result = {
+            success: true,
+            clientsImported,
+            clientsUpdated,
+            invoicesImported,
+            invoicesUpdated,
+            errors: errors.length > 0 ? errors : undefined,
+          };
+
+        } catch (importError: any) {
+          console.error("[Lytex] Erro durante importação:", importError);
+
+          if (syncLog?.id) {
+            await supabase
+              .from("lytex_sync_logs")
+              .update({
+                status: "failed",
+                completed_at: new Date().toISOString(),
+                error_message: importError.message,
+                clients_imported: clientsImported,
+                clients_updated: clientsUpdated,
+                invoices_imported: invoicesImported,
+                invoices_updated: invoicesUpdated,
+              })
+              .eq("id", syncLog.id);
+          }
+
+          throw importError;
+        }
+        break;
+      }
+
+      case "list_lytex_clients": {
+        // Listar clientes diretamente da Lytex
+        const page = params.page || 1;
+        const limit = params.limit || 100;
+        result = await listClients(page, limit);
+        break;
+      }
+
+      case "list_lytex_invoices": {
+        // Listar faturas diretamente da Lytex
+        const page = params.page || 1;
+        const limit = params.limit || 100;
+        result = await listInvoices(page, limit, params.status);
         break;
       }
 
