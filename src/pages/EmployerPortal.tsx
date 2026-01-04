@@ -176,6 +176,13 @@ export default function EmployerPortal() {
       .slice(0, 18);
   };
 
+  const formatCurrency = (cents: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format((cents || 0) / 100);
+  };
+
   const handleLogin = async () => {
     if (!cnpj || !accessCode) {
       toast.error("Preencha todos os campos");
@@ -221,8 +228,8 @@ export default function EmployerPortal() {
         
         const overdue = data.contributions.filter((c: Contribution) => c.status === "overdue");
         if (overdue.length > 0) {
-          const overdueValue = overdue.reduce((sum: number, c: Contribution) => sum + (c.amount || 0), 0);
-          setAlertMessage(`Você possui ${overdue.length} boleto(s) vencido(s) totalizando R$ ${overdueValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}. Regularize sua situação para evitar pendências.`);
+          const overdueCents = overdue.reduce((sum: number, c: Contribution) => sum + (c.amount || 0), 0);
+          setAlertMessage(`Você possui ${overdue.length} boleto(s) vencido(s) totalizando ${formatCurrency(overdueCents)}. Regularize sua situação para evitar pendências.`);
           setShowAlertDialog(true);
         }
       }
@@ -554,7 +561,7 @@ export default function EmployerPortal() {
             <Bell className="h-5 w-5 text-red-600 shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                {stats.overdue} boleto(s) em atraso • R$ {stats.overdueValue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                {stats.overdue} boleto(s) em atraso • {formatCurrency(stats.overdueValue)}
               </p>
             </div>
             <Button 
@@ -721,7 +728,7 @@ export default function EmployerPortal() {
                           {contribution.contribution_type?.name || "—"}
                         </TableCell>
                         <TableCell className="text-right font-medium">
-                          R$ {contribution.amount?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                          {formatCurrency(contribution.amount || 0)}
                         </TableCell>
                         <TableCell className="text-center text-sm text-muted-foreground">
                           {format(new Date(contribution.due_date + "T12:00:00"), "dd/MM/yy")}
@@ -806,7 +813,7 @@ export default function EmployerPortal() {
                       </span>
                       <span className="font-semibold flex items-center gap-1">
                         <DollarSign className="h-3 w-3" />
-                        R$ {contribution.amount?.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+                        {formatCurrency(contribution.amount || 0)}
                       </span>
                     </div>
                     <div className="flex gap-1">
