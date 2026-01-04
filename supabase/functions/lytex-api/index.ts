@@ -179,19 +179,26 @@ interface UpdateInvoiceRequest {
   invoiceId: string;
   value?: number; // em centavos
   dueDate?: string; // YYYY-MM-DD
+  status?: string; // ex: 'cancelled'
 }
 
 async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
   const token = await getAccessToken();
 
   const updatePayload: any = {};
-  
+
+  // A Lytex valida dueDate em alguns cenários (ex: PUT). Sempre envie quando disponível.
+  if (params.dueDate) {
+    updatePayload.dueDate = params.dueDate;
+  }
+
+  // Em várias rotas, a API espera items (mesmo quando só atualiza status)
   if (params.value !== undefined) {
     updatePayload.items = [{ name: "Contribuição", quantity: 1, value: params.value }];
   }
-  
-  if (params.dueDate) {
-    updatePayload.dueDate = params.dueDate;
+
+  if (params.status) {
+    updatePayload.status = params.status;
   }
 
   console.log("[Lytex] Atualizando cobrança:", params.invoiceId, JSON.stringify(updatePayload));
@@ -205,7 +212,8 @@ async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
     body: JSON.stringify(updatePayload),
   });
 
-  const responseData = await response.json();
+  const responseText = await response.text();
+  const responseData = responseText ? JSON.parse(responseText) : {};
 
   if (!response.ok) {
     console.error("[Lytex] Erro ao atualizar cobrança:", JSON.stringify(responseData));
@@ -216,56 +224,16 @@ async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
   return responseData;
 }
 
-async function cancelInvoice(invoiceId: string): Promise<any> {
-  const token = await getAccessToken();
+async function cancelInvoice(params: { invoiceId: string; dueDate: string; value?: number }): Promise<any> {
+  console.log(`[Lytex] Cancelando cobrança ${params.invoiceId} via update (status=cancelled)...`);
 
-  // A API Lytex usa POST /invoices/{id}/cancel para cancelar cobranças
-  console.log(`[Lytex] Cancelando cobrança ${invoiceId} via POST /cancel...`);
-  
-  let response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}/cancel`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${token}`,
-    },
-    body: JSON.stringify({}),
+  // A Lytex exige dueDate em validações no PUT; então cancelamos via update
+  return await updateInvoice({
+    invoiceId: params.invoiceId,
+    dueDate: params.dueDate,
+    value: params.value,
+    status: "cancelled",
   });
-
-  // Se POST /cancel falhar com 404, tentar PATCH com status
-  if (!response.ok && response.status === 404) {
-    console.log("[Lytex] POST /cancel não encontrado, tentando PATCH com status...");
-    response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify({ status: "cancelled" }),
-    });
-  }
-
-  // Se PATCH falhar, tentar DELETE
-  if (!response.ok && (response.status === 404 || response.status === 405)) {
-    console.log("[Lytex] PATCH não suportado, tentando DELETE...");
-    response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
-      method: "DELETE",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-      },
-    });
-  }
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("[Lytex] Erro ao cancelar cobrança:", errorText);
-    throw new Error(`Erro ao cancelar cobrança: ${response.status}`);
-  }
-
-  console.log("[Lytex] Cobrança cancelada com sucesso");
-  
-  // Alguns endpoints retornam 204 No Content
-  const text = await response.text();
-  return text ? JSON.parse(text) : { success: true };
 }
 
 Deno.serve(async (req) => {
@@ -342,7 +310,23 @@ Deno.serve(async (req) => {
           throw new Error("invoiceId e contributionId são obrigatórios");
         }
 
-        await cancelInvoice(params.invoiceId);
+        // Buscar dados necessários para cancelamento (a API exige dueDate no PUT)
+        const { data: contrib, error: contribError } = await supabase
+          .from("employer_contributions")
+          .select("due_date,value")
+          .eq("id", params.contributionId)
+          .single();
+
+        if (contribError || !contrib?.due_date) {
+          console.error("[Lytex] Não foi possível buscar due_date da contribuição:", contribError);
+          throw new Error("Não foi possível cancelar: dados da contribuição incompletos");
+        }
+
+        await cancelInvoice({
+          invoiceId: params.invoiceId,
+          dueDate: contrib.due_date,
+          value: typeof contrib.value === "number" ? contrib.value : undefined,
+        });
 
         // Atualizar status no banco
         const { error: updateError } = await supabase
