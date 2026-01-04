@@ -21,8 +21,10 @@ import {
   Mail,
   Lock,
   Loader2,
-  Printer
+  Printer,
+  RefreshCw
 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
@@ -98,6 +100,12 @@ export default function AccountingOfficePortal() {
   const [filterEmployer, setFilterEmployer] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [filterYear, setFilterYear] = useState<string>("all");
+  
+  // Dialog de segunda via
+  const [showReissueDialog, setShowReissueDialog] = useState(false);
+  const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
+  const [newDueDate, setNewDueDate] = useState("");
+  const [isGeneratingReissue, setIsGeneratingReissue] = useState(false);
 
   // Restaurar sessão do sessionStorage
   useEffect(() => {
@@ -221,6 +229,51 @@ export default function AccountingOfficePortal() {
   const formatCNPJ = (cnpj: string) => {
     if (!cnpj) return "";
     return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  };
+
+  const getMinDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split("T")[0];
+  };
+
+  const handleGenerateReissue = async () => {
+    if (!selectedContribution || !accountingOffice || !newDueDate) {
+      toast.error("Selecione uma nova data de vencimento");
+      return;
+    }
+
+    setIsGeneratingReissue(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-boleto-reissue", {
+        body: {
+          contribution_id: selectedContribution.id,
+          new_due_date: newDueDate,
+          portal_type: "accounting_office",
+          portal_id: accountingOffice.id,
+        },
+      });
+
+      if (error || data.error) {
+        toast.error(data?.error || "Erro ao gerar 2ª via");
+        return;
+      }
+
+      toast.success(data.message || "Segunda via gerada com sucesso!");
+      setShowReissueDialog(false);
+      setNewDueDate("");
+      setSelectedContribution(null);
+      loadData(accountingOffice.id);
+
+      // Abrir o novo boleto automaticamente se disponível
+      if (data.lytex_invoice_url) {
+        window.open(data.lytex_invoice_url, "_blank");
+      }
+    } catch (err) {
+      toast.error("Erro de conexão");
+    } finally {
+      setIsGeneratingReissue(false);
+    }
   };
 
   const handlePrintEmployersList = () => {
@@ -619,51 +672,68 @@ export default function AccountingOfficePortal() {
                       <TableHead>Vencimento</TableHead>
                       <TableHead>Valor</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="text-right">Boleto</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredContributions.map((contrib) => (
-                      <TableRow key={contrib.id}>
-                        <TableCell className="font-medium">
-                          {contrib.employer?.name || "-"}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatCNPJ(contrib.employer?.cnpj || "")}
-                        </TableCell>
-                        <TableCell>
-                          {contrib.contribution_type?.name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {MONTHS[contrib.competence_month - 1]}/{contrib.competence_year}
-                        </TableCell>
-                        <TableCell>
-                          {new Date(contrib.due_date).toLocaleDateString("pt-BR")}
-                        </TableCell>
-                        <TableCell className="font-medium">
-                          {formatCurrency(contrib.value)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={STATUS_CONFIG[contrib.status]?.className || ""}>
-                            {STATUS_CONFIG[contrib.status]?.label || contrib.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {contrib.lytex_invoice_url && contrib.status !== "paid" && contrib.status !== "cancelled" ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => window.open(contrib.lytex_invoice_url, "_blank")}
-                            >
-                              <ExternalLink className="h-4 w-4 mr-1" />
-                              Ver Boleto
-                            </Button>
-                          ) : (
-                            <span className="text-muted-foreground text-sm">-</span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {filteredContributions.map((contrib) => {
+                      const canGenerateReissue = ["pending", "overdue"].includes(contrib.status);
+                      
+                      return (
+                        <TableRow key={contrib.id}>
+                          <TableCell className="font-medium">
+                            {contrib.employer?.name || "-"}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatCNPJ(contrib.employer?.cnpj || "")}
+                          </TableCell>
+                          <TableCell>
+                            {contrib.contribution_type?.name || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {MONTHS[contrib.competence_month - 1]}/{contrib.competence_year}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(contrib.due_date).toLocaleDateString("pt-BR")}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            {formatCurrency(contrib.value)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={STATUS_CONFIG[contrib.status]?.className || ""}>
+                              {STATUS_CONFIG[contrib.status]?.label || contrib.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              {contrib.lytex_invoice_url && contrib.status !== "paid" && contrib.status !== "cancelled" && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => window.open(contrib.lytex_invoice_url, "_blank")}
+                                >
+                                  <ExternalLink className="h-4 w-4 mr-1" />
+                                  Ver Boleto
+                                </Button>
+                              )}
+                              {canGenerateReissue && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedContribution(contrib);
+                                    setShowReissueDialog(true);
+                                  }}
+                                >
+                                  <RefreshCw className="h-4 w-4 mr-1" />
+                                  2ª Via
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -671,6 +741,64 @@ export default function AccountingOfficePortal() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Dialog de Segunda Via */}
+      <Dialog open={showReissueDialog} onOpenChange={(open) => {
+        setShowReissueDialog(open);
+        if (!open) {
+          setNewDueDate("");
+          setSelectedContribution(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Gerar 2ª Via do Boleto
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContribution && (
+                <span>
+                  {selectedContribution.employer?.name} • {MONTHS[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year} • {formatCurrency(selectedContribution.value)}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium block mb-2">Nova Data de Vencimento *</label>
+              <Input
+                type="date"
+                value={newDueDate}
+                onChange={(e) => setNewDueDate(e.target.value)}
+                min={getMinDate()}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                O boleto anterior será cancelado e um novo será gerado com a nova data
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowReissueDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleGenerateReissue} disabled={isGeneratingReissue || !newDueDate}>
+              {isGeneratingReissue ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Gerar Boleto
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

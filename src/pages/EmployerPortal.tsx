@@ -100,10 +100,11 @@ export default function EmployerPortal() {
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [reissueRequests, setReissueRequests] = useState<ReissueRequest[]>([]);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
-  const [reissueReason, setReissueReason] = useState("");
   const [showReissueDialog, setShowReissueDialog] = useState(false);
   const [showAlertDialog, setShowAlertDialog] = useState(false);
   const [alertMessage, setAlertMessage] = useState("");
+  const [newDueDate, setNewDueDate] = useState("");
+  const [isGeneratingReissue, setIsGeneratingReissue] = useState(false);
   
   // Filters
   const [statusFilter, setStatusFilter] = useState("all");
@@ -245,34 +246,49 @@ export default function EmployerPortal() {
     }
   };
 
-  const handleReissueRequest = async () => {
-    if (!selectedContribution || !employer) return;
+  const handleGenerateReissue = async () => {
+    if (!selectedContribution || !employer || !newDueDate) {
+      toast.error("Selecione uma nova data de vencimento");
+      return;
+    }
 
-    setIsLoading(true);
+    setIsGeneratingReissue(true);
     try {
-      const { data, error } = await supabase.functions.invoke("employer-portal-auth", {
+      const { data, error } = await supabase.functions.invoke("generate-boleto-reissue", {
         body: {
-          action: "request_reissue",
-          employer_id: employer.id,
           contribution_id: selectedContribution.id,
-          reason: reissueReason || "Solicitação de 2ª via",
+          new_due_date: newDueDate,
+          portal_type: "employer",
+          portal_id: employer.id,
         },
       });
 
       if (error || data.error) {
-        toast.error(data?.error || "Erro ao solicitar 2ª via");
+        toast.error(data?.error || "Erro ao gerar 2ª via");
         return;
       }
 
-      toast.success("Solicitação enviada com sucesso!");
+      toast.success(data.message || "Segunda via gerada com sucesso!");
       setShowReissueDialog(false);
-      setReissueReason("");
+      setNewDueDate("");
+      setSelectedContribution(null);
       loadContributions(employer.id);
+
+      // Abrir o novo boleto automaticamente se disponível
+      if (data.lytex_invoice_url) {
+        window.open(data.lytex_invoice_url, "_blank");
+      }
     } catch (err) {
       toast.error("Erro de conexão");
     } finally {
-      setIsLoading(false);
+      setIsGeneratingReissue(false);
     }
+  };
+
+  const getMinDate = () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    return tomorrow.toISOString().split("T")[0];
   };
 
   const handleLogout = () => {
@@ -426,36 +442,60 @@ export default function EmployerPortal() {
         </DialogContent>
       </Dialog>
 
-      {/* Reissue Dialog */}
-      <Dialog open={showReissueDialog} onOpenChange={setShowReissueDialog}>
+      {/* Reissue Dialog - Gerar 2ª Via */}
+      <Dialog open={showReissueDialog} onOpenChange={(open) => {
+        setShowReissueDialog(open);
+        if (!open) {
+          setNewDueDate("");
+          setSelectedContribution(null);
+        }
+      }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Solicitar 2ª Via do Boleto</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <RefreshCw className="h-5 w-5" />
+              Gerar 2ª Via do Boleto
+            </DialogTitle>
             <DialogDescription>
               {selectedContribution && (
                 <span>
-                  Competência: {monthNamesFull[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year}
+                  Competência: {monthNamesFull[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year} • 
+                  Valor: {formatCurrency(selectedContribution.amount || 0)}
                 </span>
               )}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Motivo (opcional)</label>
-              <Textarea
-                placeholder="Ex: Boleto perdido, vencimento expirado..."
-                value={reissueReason}
-                onChange={(e) => setReissueReason(e.target.value)}
+              <label className="text-sm font-medium block mb-2">Nova Data de Vencimento *</label>
+              <Input
+                type="date"
+                value={newDueDate}
+                onChange={(e) => setNewDueDate(e.target.value)}
+                min={getMinDate()}
+                className="w-full"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                O boleto anterior será cancelado e um novo será gerado com a nova data
+              </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowReissueDialog(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleReissueRequest} disabled={isLoading}>
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              Solicitar
+            <Button onClick={handleGenerateReissue} disabled={isGeneratingReissue || !newDueDate}>
+              {isGeneratingReissue ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Gerar Boleto
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -712,9 +752,7 @@ export default function EmployerPortal() {
                 <TableBody>
                   {filteredContributions.map((contribution) => {
                     const status = statusConfig[contribution.status] || statusConfig.pending;
-                    const hasPendingRequest = reissueRequests.some(
-                      r => r.contribution_id === contribution.id && r.status === "pending"
-                    );
+                    const canGenerateReissue = ["pending", "overdue"].includes(contribution.status);
 
                     return (
                       <TableRow key={contribution.id} className="group">
@@ -749,7 +787,7 @@ export default function EmployerPortal() {
                                 </a>
                               </Button>
                             )}
-                            {contribution.status === "overdue" && !hasPendingRequest && (
+                            {canGenerateReissue && (
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -763,12 +801,6 @@ export default function EmployerPortal() {
                                 2ª Via
                               </Button>
                             )}
-                            {hasPendingRequest && (
-                              <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs">
-                                <Clock className="h-3 w-3 mr-1" />
-                                Solicitado
-                              </Badge>
-                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -781,9 +813,7 @@ export default function EmployerPortal() {
             <div className="p-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {filteredContributions.map((contribution) => {
                 const status = statusConfig[contribution.status] || statusConfig.pending;
-                const hasPendingRequest = reissueRequests.some(
-                  r => r.contribution_id === contribution.id && r.status === "pending"
-                );
+                const canGenerateReissue = ["pending", "overdue"].includes(contribution.status);
 
                 return (
                   <div
@@ -825,7 +855,7 @@ export default function EmployerPortal() {
                           </a>
                         </Button>
                       )}
-                      {contribution.status === "overdue" && !hasPendingRequest && (
+                      {canGenerateReissue && (
                         <Button
                           size="sm"
                           variant="secondary"
@@ -838,11 +868,6 @@ export default function EmployerPortal() {
                           <RefreshCw className="h-3 w-3 mr-1" />
                           2ª Via
                         </Button>
-                      )}
-                      {hasPendingRequest && (
-                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 text-xs ml-auto">
-                          2ª via solicitada
-                        </Badge>
                       )}
                     </div>
                   </div>
