@@ -62,6 +62,7 @@ interface Contribution {
   lytex_url: string | null;
   lytex_invoice_id: string | null;
   paid_at: string | null;
+  portal_reissue_count: number;
   contribution_type: { name: string } | null;
 }
 
@@ -518,6 +519,15 @@ export default function EmployerPortal() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {selectedContribution && (
+              <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>
+                  Reemissões utilizadas: {selectedContribution.portal_reissue_count || 0}/2. 
+                  {(selectedContribution.portal_reissue_count || 0) >= 1 && " Após o limite, somente o gestor poderá emitir."}
+                </span>
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium block mb-2">Nova Data de Vencimento *</label>
               <Input
@@ -812,8 +822,10 @@ export default function EmployerPortal() {
                     const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
                     const isOverdue90Days = daysDiff > 90;
                     
-                    // Permitir 2ª via apenas para pendente/vencido e não mais de 90 dias
-                    const canGenerateReissue = ["pending", "overdue"].includes(contribution.status) && !isOverdue90Days;
+                    // Permitir 2ª via apenas para pendente/vencido, não mais de 90 dias e máximo 2 reemissões
+                    const reissueCount = contribution.portal_reissue_count || 0;
+                    const reissueLimitReached = reissueCount >= 2;
+                    const canGenerateReissue = ["pending", "overdue"].includes(contribution.status) && !isOverdue90Days && !reissueLimitReached;
 
                     return (
                       <TableRow key={contribution.id} className="group">
@@ -853,19 +865,26 @@ export default function EmployerPortal() {
                                 </a>
                               </Button>
                             )}
-                            {canGenerateReissue && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-7 px-2"
-                                onClick={() => {
-                                  setSelectedContribution(contribution);
-                                  setShowReissueDialog(true);
-                                }}
-                              >
-                                <RefreshCw className="h-3 w-3 mr-1" />
-                                2ª Via
-                              </Button>
+                            {["pending", "overdue"].includes(contribution.status) && !isOverdue90Days && (
+                              reissueLimitReached ? (
+                                <span className="text-xs text-muted-foreground italic" title="Limite de 2 reemissões atingido. Contate o gestor.">
+                                  Limite atingido
+                                </span>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 px-2"
+                                  onClick={() => {
+                                    setSelectedContribution(contribution);
+                                    setShowReissueDialog(true);
+                                  }}
+                                  title={`2ª Via (${reissueCount}/2 usadas)`}
+                                >
+                                  <RefreshCw className="h-3 w-3 mr-1" />
+                                  2ª Via
+                                </Button>
+                              )
                             )}
                             {contribution.status === "awaiting_value" && (
                               <Button
