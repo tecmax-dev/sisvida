@@ -131,8 +131,15 @@ async function createInvoice(params: {
     throw new Error(responseData.message || `Erro ao criar cobrança: ${response.status}`);
   }
 
-  console.log("[Reissue] Cobrança criada com sucesso:", responseData._id);
-  return responseData;
+  // Extrair URL da fatura - Lytex pode retornar em diferentes campos
+  const invoiceUrl = responseData.linkCheckout || responseData.linkBoleto || responseData.invoiceUrl || null;
+
+  console.log("[Reissue] Cobrança criada com sucesso:", responseData._id, "URL:", invoiceUrl);
+  
+  return {
+    ...responseData,
+    invoiceUrl, // Normaliza o campo para uso consistente
+  };
 }
 
 serve(async (req) => {
