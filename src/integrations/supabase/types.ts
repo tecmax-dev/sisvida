@@ -4355,6 +4355,7 @@ export type Database = {
           is_foreigner: boolean | null
           landline: string | null
           marital_status: string | null
+          max_appointments_per_month: number | null
           mother_name: string | null
           name: string
           neighborhood: string | null
@@ -4408,6 +4409,7 @@ export type Database = {
           is_foreigner?: boolean | null
           landline?: string | null
           marital_status?: string | null
+          max_appointments_per_month?: number | null
           mother_name?: string | null
           name: string
           neighborhood?: string | null
@@ -4461,6 +4463,7 @@ export type Database = {
           is_foreigner?: boolean | null
           landline?: string | null
           marital_status?: string | null
+          max_appointments_per_month?: number | null
           mother_name?: string | null
           name?: string
           neighborhood?: string | null
