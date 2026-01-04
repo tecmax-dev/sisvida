@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -14,7 +15,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Filter, X, Download, FileText, MessageCircle, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Filter, X, FileText, AlertTriangle, Settings2 } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -30,12 +39,27 @@ interface FilterState {
   dueDateTo: string;
 }
 
+interface PdfFieldOption {
+  key: string;
+  label: string;
+  enabled: boolean;
+}
+
+interface ClinicInfo {
+  name: string;
+  cnpj?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  logoUrl?: string | null;
+}
+
 interface EmployerContributionFiltersProps {
   contributions: ContributionItem[];
   onFilterChange: (filtered: ContributionItem[]) => void;
   onSendOverdueWhatsApp: () => void;
   employerName: string;
   employerCnpj: string;
+  clinicInfo?: ClinicInfo;
 }
 
 const MONTHS = [
@@ -58,12 +82,24 @@ const formatCurrency = (cents: number) => {
   }).format(cents / 100);
 };
 
+const DEFAULT_PDF_FIELDS: PdfFieldOption[] = [
+  { key: "type", label: "Tipo de Contribuição", enabled: true },
+  { key: "competence", label: "Competência", enabled: true },
+  { key: "due_date", label: "Vencimento", enabled: true },
+  { key: "value", label: "Valor", enabled: true },
+  { key: "status", label: "Status", enabled: true },
+  { key: "paid_at", label: "Data Pagamento", enabled: true },
+  { key: "paid_value", label: "Valor Pago", enabled: true },
+  { key: "notes", label: "Observações", enabled: false },
+];
+
 export function EmployerContributionFilters({
   contributions,
   onFilterChange,
   onSendOverdueWhatsApp,
   employerName,
   employerCnpj,
+  clinicInfo,
 }: EmployerContributionFiltersProps) {
   const [filters, setFilters] = useState<FilterState>({
     status: "all",
@@ -73,6 +109,10 @@ export function EmployerContributionFilters({
     dueDateTo: "",
   });
   const [isOpen, setIsOpen] = useState(false);
+  const [pdfDialogOpen, setPdfDialogOpen] = useState(false);
+  const [pdfFields, setPdfFields] = useState<PdfFieldOption[]>(DEFAULT_PDF_FIELDS);
+  const [showLogo, setShowLogo] = useState(true);
+  const [showClinicInfo, setShowClinicInfo] = useState(true);
 
   const years = [...new Set(contributions.map((c) => c.competence_year))].sort((a, b) => b - a);
 
@@ -129,21 +169,84 @@ export function EmployerContributionFilters({
 
   const overdueCount = contributions.filter((c) => c.status === "overdue").length;
 
-  const exportDetailedPDF = () => {
+  const togglePdfField = (key: string) => {
+    setPdfFields(prev => 
+      prev.map(f => f.key === key ? { ...f, enabled: !f.enabled } : f)
+    );
+  };
+
+  const getEnabledFields = () => pdfFields.filter(f => f.enabled);
+
+  const exportDetailedPDF = async () => {
     const doc = new jsPDF();
+    let yPos = 15;
     
-    // Header
-    doc.setFontSize(16);
+    // Load logo if enabled and available
+    if (showLogo && clinicInfo?.logoUrl) {
+      try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => {
+            // Calculate dimensions to fit nicely
+            const maxWidth = 40;
+            const maxHeight = 20;
+            const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+            const width = img.width * ratio;
+            const height = img.height * ratio;
+            doc.addImage(img, "PNG", 14, yPos, width, height);
+            resolve();
+          };
+          img.onerror = () => resolve(); // Continue without logo on error
+          img.src = clinicInfo.logoUrl!;
+        });
+        yPos += 25;
+      } catch {
+        // Continue without logo
+      }
+    }
+
+    // Clinic header info
+    if (showClinicInfo && clinicInfo) {
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text(clinicInfo.name, 14, yPos);
+      yPos += 6;
+      
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      if (clinicInfo.cnpj) {
+        doc.text(`CNPJ: ${clinicInfo.cnpj}`, 14, yPos);
+        yPos += 5;
+      }
+      if (clinicInfo.phone) {
+        doc.text(`Tel: ${clinicInfo.phone}`, 14, yPos);
+        yPos += 5;
+      }
+      if (clinicInfo.address) {
+        doc.text(clinicInfo.address, 14, yPos);
+        yPos += 5;
+      }
+      yPos += 5;
+    }
+
+    // Title
+    doc.setFontSize(14);
     doc.setFont("helvetica", "bold");
-    doc.text("EXTRATO DE CONTRIBUIÇÕES", 105, 20, { align: "center" });
+    doc.text("EXTRATO DE CONTRIBUIÇÕES", 105, yPos, { align: "center" });
+    yPos += 10;
     
+    // Employer info
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text(`Empresa: ${employerName}`, 14, 35);
-    doc.text(`CNPJ: ${employerCnpj}`, 14, 42);
-    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, 14, 49);
+    doc.text(`Empresa: ${employerName}`, 14, yPos);
+    yPos += 5;
+    doc.text(`CNPJ: ${employerCnpj}`, 14, yPos);
+    yPos += 5;
+    doc.text(`Gerado em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`, 14, yPos);
+    yPos += 10;
 
-    // Filter applied contributions or all
+    // Filter applied contributions
     const dataToExport = hasActiveFilters 
       ? contributions.filter((c) => {
           let pass = true;
@@ -162,30 +265,50 @@ export function EmployerContributionFilters({
     const pendingValue = dataToExport.filter((c) => c.status === "pending").reduce((acc, c) => acc + c.value, 0);
     const overdueValue = dataToExport.filter((c) => c.status === "overdue").reduce((acc, c) => acc + c.value, 0);
 
-    doc.setFontSize(11);
+    doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("Resumo:", 14, 60);
+    doc.text("Resumo:", 14, yPos);
+    yPos += 6;
     doc.setFont("helvetica", "normal");
-    doc.text(`Total de Contribuições: ${dataToExport.length}`, 14, 67);
-    doc.text(`Valor Total: ${formatCurrency(totalValue)}`, 14, 74);
-    doc.text(`Valor Pago: ${formatCurrency(paidValue)}`, 100, 67);
-    doc.text(`Valor Pendente: ${formatCurrency(pendingValue)}`, 100, 74);
-    doc.text(`Valor Vencido: ${formatCurrency(overdueValue)}`, 100, 81);
+    doc.text(`Total: ${dataToExport.length} contribuições  |  Valor Total: ${formatCurrency(totalValue)}`, 14, yPos);
+    yPos += 5;
+    doc.text(`Pago: ${formatCurrency(paidValue)}  |  Pendente: ${formatCurrency(pendingValue)}  |  Vencido: ${formatCurrency(overdueValue)}`, 14, yPos);
+    yPos += 10;
 
-    // Table
-    const tableData = dataToExport.map((c) => [
-      c.contribution_types?.name || "-",
-      `${MONTHS[c.competence_month - 1]?.slice(0, 3)}/${c.competence_year}`,
-      format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy"),
-      formatCurrency(c.value),
-      c.status === "paid" ? "Pago" : c.status === "overdue" ? "Vencido" : c.status === "cancelled" ? "Cancelado" : "Pendente",
-      c.paid_at ? format(new Date(c.paid_at), "dd/MM/yyyy") : "-",
-      c.paid_value ? formatCurrency(c.paid_value) : "-",
-    ]);
+    // Build dynamic columns based on enabled fields
+    const enabledFields = getEnabledFields();
+    const headers: string[] = [];
+    const fieldMap: Record<string, (c: ContributionItem) => string> = {
+      type: (c) => c.contribution_types?.name || "-",
+      competence: (c) => `${MONTHS[c.competence_month - 1]?.slice(0, 3)}/${c.competence_year}`,
+      due_date: (c) => format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy"),
+      value: (c) => formatCurrency(c.value),
+      status: (c) => c.status === "paid" ? "Pago" : c.status === "overdue" ? "Vencido" : c.status === "cancelled" ? "Cancelado" : "Pendente",
+      paid_at: (c) => c.paid_at ? format(new Date(c.paid_at), "dd/MM/yyyy") : "-",
+      paid_value: (c) => c.paid_value ? formatCurrency(c.paid_value) : "-",
+      notes: (c) => c.notes || "-",
+    };
+
+    const headerLabels: Record<string, string> = {
+      type: "Tipo",
+      competence: "Competência",
+      due_date: "Vencimento",
+      value: "Valor",
+      status: "Status",
+      paid_at: "Pago em",
+      paid_value: "Valor Pago",
+      notes: "Observações",
+    };
+
+    enabledFields.forEach(f => headers.push(headerLabels[f.key]));
+
+    const tableData = dataToExport.map((c) => 
+      enabledFields.map(f => fieldMap[f.key](c))
+    );
 
     autoTable(doc, {
-      startY: 90,
-      head: [["Tipo", "Competência", "Vencimento", "Valor", "Status", "Pago em", "Valor Pago"]],
+      startY: yPos,
+      head: [headers],
       body: tableData,
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [59, 130, 246], textColor: 255 },
@@ -193,6 +316,7 @@ export function EmployerContributionFilters({
     });
 
     doc.save(`extrato-${employerName.toLowerCase().replace(/\s+/g, "-")}-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    setPdfDialogOpen(false);
   };
 
   return (
@@ -326,12 +450,92 @@ export function EmployerContributionFilters({
       <Button
         variant="outline"
         size="sm"
-        onClick={exportDetailedPDF}
+        onClick={() => setPdfDialogOpen(true)}
         className="gap-1 h-8"
       >
         <FileText className="h-3.5 w-3.5" />
         Extrato PDF
       </Button>
+
+      {/* PDF Configuration Dialog */}
+      <Dialog open={pdfDialogOpen} onOpenChange={setPdfDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Configurar Extrato PDF</DialogTitle>
+            <DialogDescription>
+              Selecione os campos e opções para o relatório
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            {/* Header options */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Cabeçalho</Label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showLogo"
+                    checked={showLogo}
+                    onCheckedChange={(checked) => setShowLogo(checked === true)}
+                  />
+                  <label htmlFor="showLogo" className="text-sm cursor-pointer">
+                    Exibir logo da clínica
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="showClinicInfo"
+                    checked={showClinicInfo}
+                    onCheckedChange={(checked) => setShowClinicInfo(checked === true)}
+                  />
+                  <label htmlFor="showClinicInfo" className="text-sm cursor-pointer">
+                    Exibir dados da clínica (CNPJ, telefone, endereço)
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Field selection */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">Campos do Relatório</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {pdfFields.map((field) => (
+                  <div key={field.key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={field.key}
+                      checked={field.enabled}
+                      onCheckedChange={() => togglePdfField(field.key)}
+                    />
+                    <label htmlFor={field.key} className="text-sm cursor-pointer">
+                      {field.label}
+                    </label>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {getEnabledFields().length === 0 && (
+              <p className="text-sm text-amber-600">
+                Selecione pelo menos um campo para gerar o relatório.
+              </p>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPdfDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button 
+              onClick={exportDetailedPDF}
+              disabled={getEnabledFields().length === 0}
+              className="gap-1"
+            >
+              <FileText className="h-4 w-4" />
+              Gerar PDF
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
