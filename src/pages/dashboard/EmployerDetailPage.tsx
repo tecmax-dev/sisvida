@@ -1,0 +1,1158 @@
+import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Building2,
+  ArrowLeft,
+  Save,
+  Loader2,
+  Users,
+  Receipt,
+  FileText,
+  Plus,
+  Eye,
+  Send,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
+  Copy,
+  Download,
+  CreditCard,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
+import { format, addDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+interface Employer {
+  id: string;
+  cnpj: string;
+  name: string;
+  trade_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  state: string | null;
+  notes: string | null;
+  is_active: boolean;
+}
+
+interface Patient {
+  id: string;
+  name: string;
+  cpf: string | null;
+  phone: string | null;
+}
+
+interface ContributionType {
+  id: string;
+  name: string;
+  default_value: number;
+  is_active: boolean;
+}
+
+interface Contribution {
+  id: string;
+  contribution_type_id: string;
+  competence_month: number;
+  competence_year: number;
+  value: number;
+  due_date: string;
+  status: string;
+  lytex_invoice_id: string | null;
+  lytex_invoice_url: string | null;
+  lytex_boleto_digitable_line: string | null;
+  lytex_pix_code: string | null;
+  paid_at: string | null;
+  paid_value: number | null;
+  payment_method: string | null;
+  notes: string | null;
+  contribution_types?: ContributionType;
+}
+
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
+const STATUS_CONFIG = {
+  pending: { label: "Pendente", color: "bg-amber-100 text-amber-700", icon: Clock },
+  processing: { label: "Processando", color: "bg-blue-100 text-blue-700", icon: RefreshCw },
+  paid: { label: "Pago", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
+  overdue: { label: "Vencido", color: "bg-rose-100 text-rose-700", icon: AlertTriangle },
+  cancelled: { label: "Cancelado", color: "bg-gray-100 text-gray-700", icon: XCircle },
+};
+
+export default function EmployerDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { currentClinic, session } = useAuth();
+
+  const [employer, setEmployer] = useState<Employer | null>(null);
+  const [patients, setPatients] = useState<Patient[]>([]);
+  const [contributions, setContributions] = useState<Contribution[]>([]);
+  const [contributionTypes, setContributionTypes] = useState<ContributionType[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Form
+  const [formData, setFormData] = useState({
+    name: "",
+    trade_name: "",
+    email: "",
+    phone: "",
+    address: "",
+    city: "",
+    state: "",
+    notes: "",
+    is_active: true,
+  });
+
+  // Contribution dialogs
+  const [createContribDialogOpen, setCreateContribDialogOpen] = useState(false);
+  const [viewContribDialogOpen, setViewContribDialogOpen] = useState(false);
+  const [manualPaymentDialogOpen, setManualPaymentDialogOpen] = useState(false);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
+
+  // Create contribution form
+  const [contribTypeId, setContribTypeId] = useState("");
+  const [contribMonth, setContribMonth] = useState(new Date().getMonth() + 1);
+  const [contribYear, setContribYear] = useState(new Date().getFullYear());
+  const [contribValue, setContribValue] = useState("");
+  const [contribDueDate, setContribDueDate] = useState(format(addDays(new Date(), 10), "yyyy-MM-dd"));
+
+  // Manual payment form
+  const [manualPaymentValue, setManualPaymentValue] = useState("");
+  const [manualPaymentMethod, setManualPaymentMethod] = useState("dinheiro");
+  const [manualPaymentDate, setManualPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
+
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
+
+  useEffect(() => {
+    if (currentClinic && id) {
+      fetchData();
+    }
+  }, [currentClinic, id]);
+
+  const fetchData = async () => {
+    if (!currentClinic || !id) return;
+    setLoading(true);
+
+    try {
+      // Fetch employer
+      const { data: empData, error: empError } = await supabase
+        .from("employers")
+        .select("*")
+        .eq("id", id)
+        .eq("clinic_id", currentClinic.id)
+        .single();
+
+      if (empError) throw empError;
+      setEmployer(empData);
+      setFormData({
+        name: empData.name,
+        trade_name: empData.trade_name || "",
+        email: empData.email || "",
+        phone: empData.phone || "",
+        address: empData.address || "",
+        city: empData.city || "",
+        state: empData.state || "",
+        notes: empData.notes || "",
+        is_active: empData.is_active,
+      });
+
+      // Fetch patients linked to this employer
+      const { data: patientsData, error: patientsError } = await supabase
+        .from("patients")
+        .select("id, name, cpf, phone")
+        .eq("clinic_id", currentClinic.id)
+        .eq("employer_cnpj", empData.cnpj)
+        .order("name");
+
+      if (patientsError) throw patientsError;
+      setPatients(patientsData || []);
+
+      // Fetch contributions for this employer
+      const { data: contribData, error: contribError } = await supabase
+        .from("employer_contributions")
+        .select(`*, contribution_types (id, name, default_value, is_active)`)
+        .eq("employer_id", id)
+        .order("competence_year", { ascending: false })
+        .order("competence_month", { ascending: false });
+
+      if (contribError) throw contribError;
+      setContributions(contribData || []);
+
+      // Fetch contribution types
+      const { data: typesData, error: typesError } = await supabase
+        .from("contribution_types")
+        .select("*")
+        .eq("clinic_id", currentClinic.id)
+        .eq("is_active", true)
+        .order("name");
+
+      if (typesError) throw typesError;
+      setContributionTypes(typesData || []);
+
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      toast.error("Erro ao carregar dados da empresa");
+      navigate("/dashboard/empresas");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (cents: number) => {
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(cents / 100);
+  };
+
+  const formatCNPJ = (cnpj: string) => {
+    return cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  };
+
+  const formatPhone = (value: string) => {
+    const cleaned = value.replace(/\D/g, "").slice(0, 11);
+    if (cleaned.length <= 2) return cleaned;
+    if (cleaned.length <= 7) return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2)}`;
+    return `(${cleaned.slice(0, 2)}) ${cleaned.slice(2, 7)}-${cleaned.slice(7)}`;
+  };
+
+  const handleSaveEmployer = async () => {
+    if (!employer || !currentClinic) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase
+        .from("employers")
+        .update({
+          name: formData.name.trim(),
+          trade_name: formData.trade_name.trim() || null,
+          email: formData.email.trim() || null,
+          phone: formData.phone.replace(/\D/g, "") || null,
+          address: formData.address.trim() || null,
+          city: formData.city.trim() || null,
+          state: formData.state.trim() || null,
+          notes: formData.notes.trim() || null,
+          is_active: formData.is_active,
+        })
+        .eq("id", employer.id);
+
+      if (error) throw error;
+      toast.success("Empresa atualizada com sucesso");
+      fetchData();
+    } catch (error) {
+      console.error("Error saving employer:", error);
+      toast.error("Erro ao salvar empresa");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTypeChange = (typeId: string) => {
+    setContribTypeId(typeId);
+    const type = contributionTypes.find(t => t.id === typeId);
+    if (type && type.default_value > 0) {
+      setContribValue((type.default_value / 100).toFixed(2).replace(".", ","));
+    }
+  };
+
+  const handleCreateContribution = async () => {
+    if (!employer || !currentClinic || !contribTypeId || !contribValue || !contribDueDate) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const valueInCents = Math.round(parseFloat(contribValue.replace(",", ".")) * 100);
+
+      const { error } = await supabase
+        .from("employer_contributions")
+        .insert({
+          clinic_id: currentClinic.id,
+          employer_id: employer.id,
+          contribution_type_id: contribTypeId,
+          competence_month: contribMonth,
+          competence_year: contribYear,
+          value: valueInCents,
+          due_date: contribDueDate,
+          created_by: session?.user.id,
+        });
+
+      if (error) {
+        if (error.message.includes("unique_contribution_per_employer")) {
+          toast.error("Já existe uma contribuição deste tipo para esta competência");
+          return;
+        }
+        throw error;
+      }
+
+      toast.success("Contribuição criada com sucesso");
+      setCreateContribDialogOpen(false);
+      resetContribForm();
+      fetchData();
+    } catch (error) {
+      console.error("Error creating contribution:", error);
+      toast.error("Erro ao criar contribuição");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetContribForm = () => {
+    setContribTypeId("");
+    setContribMonth(new Date().getMonth() + 1);
+    setContribYear(new Date().getFullYear());
+    setContribValue("");
+    setContribDueDate(format(addDays(new Date(), 10), "yyyy-MM-dd"));
+  };
+
+  const handleGenerateInvoice = async (contribution: Contribution) => {
+    if (!employer) return;
+
+    setGeneratingInvoice(true);
+    try {
+      const response = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "create_invoice",
+          contributionId: contribution.id,
+          clinicId: currentClinic?.id,
+          employer: {
+            cnpj: employer.cnpj,
+            name: employer.name,
+            email: employer.email,
+            phone: employer.phone,
+            address: employer.address ? {
+              street: employer.address,
+              city: employer.city,
+              state: employer.state,
+            } : undefined,
+          },
+          value: contribution.value,
+          dueDate: contribution.due_date,
+          description: `${contribution.contribution_types?.name || "Contribuição"} - ${MONTHS[contribution.competence_month - 1]}/${contribution.competence_year}`,
+          enableBoleto: true,
+          enablePix: true,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      toast.success("Boleto gerado com sucesso!");
+      setViewContribDialogOpen(false);
+      fetchData();
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error("Error generating invoice:", error);
+      toast.error(`Erro ao gerar boleto: ${errorMessage}`);
+    } finally {
+      setGeneratingInvoice(false);
+    }
+  };
+
+  const handleManualPayment = async () => {
+    if (!selectedContribution || !manualPaymentValue) {
+      toast.error("Preencha o valor do pagamento");
+      return;
+    }
+
+    try {
+      const valueInCents = Math.round(parseFloat(manualPaymentValue.replace(",", ".")) * 100);
+
+      const { error } = await supabase
+        .from("employer_contributions")
+        .update({
+          status: "paid",
+          paid_at: new Date(manualPaymentDate + "T12:00:00").toISOString(),
+          paid_value: valueInCents,
+          payment_method: manualPaymentMethod,
+        })
+        .eq("id", selectedContribution.id);
+
+      if (error) throw error;
+
+      toast.success("Baixa manual registrada com sucesso");
+      setManualPaymentDialogOpen(false);
+      setViewContribDialogOpen(false);
+      setManualPaymentValue("");
+      fetchData();
+    } catch (error) {
+      console.error("Error registering payment:", error);
+      toast.error("Erro ao registrar pagamento");
+    }
+  };
+
+  const handleCancelContribution = async () => {
+    if (!selectedContribution) return;
+
+    try {
+      if (selectedContribution.lytex_invoice_id) {
+        await supabase.functions.invoke("lytex-api", {
+          body: {
+            action: "cancel_invoice",
+            invoiceId: selectedContribution.lytex_invoice_id,
+            contributionId: selectedContribution.id,
+          },
+        });
+      } else {
+        await supabase
+          .from("employer_contributions")
+          .update({ status: "cancelled" })
+          .eq("id", selectedContribution.id);
+      }
+
+      toast.success("Contribuição cancelada");
+      setCancelDialogOpen(false);
+      setViewContribDialogOpen(false);
+      fetchData();
+    } catch (error) {
+      console.error("Error cancelling:", error);
+      toast.error("Erro ao cancelar contribuição");
+    }
+  };
+
+  const handleCopyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success(`${label} copiado!`);
+  };
+
+  // Stats
+  const stats = useMemo(() => {
+    const currentYear = new Date().getFullYear();
+    const yearContribs = contributions.filter(c => c.competence_year === currentYear);
+    return {
+      total: contributions.length,
+      yearTotal: yearContribs.length,
+      paid: yearContribs.filter(c => c.status === "paid").length,
+      pending: yearContribs.filter(c => c.status === "pending").length,
+      overdue: yearContribs.filter(c => c.status === "overdue").length,
+      totalValue: yearContribs.reduce((acc, c) => acc + c.value, 0),
+      paidValue: yearContribs.filter(c => c.status === "paid").reduce((acc, c) => acc + (c.paid_value || c.value), 0),
+    };
+  }, [contributions]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!employer) {
+    return (
+      <div className="p-6 text-center">
+        <p className="text-muted-foreground">Empresa não encontrada</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4 p-4 md:p-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard/empresas")}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-6 w-6 text-primary" />
+            <h1 className="text-2xl font-bold text-foreground">{employer.name}</h1>
+            <Badge variant={employer.is_active ? "default" : "secondary"}>
+              {employer.is_active ? "Ativa" : "Inativa"}
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground">
+            CNPJ: {formatCNPJ(employer.cnpj)}
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="contributions" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="contributions" className="gap-2">
+            <Receipt className="h-4 w-4" />
+            Contribuições
+          </TabsTrigger>
+          <TabsTrigger value="employees" className="gap-2">
+            <Users className="h-4 w-4" />
+            Colaboradores ({patients.length})
+          </TabsTrigger>
+          <TabsTrigger value="data" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Dados Cadastrais
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Contributions Tab */}
+        <TabsContent value="contributions" className="space-y-4">
+          {/* Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <Card className="border-l-4 border-l-primary">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground">Total {new Date().getFullYear()}</p>
+                <p className="text-xl font-bold">{stats.yearTotal}</p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(stats.totalValue)}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-emerald-500">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground">Pagos</p>
+                <p className="text-xl font-bold text-emerald-600">{stats.paid}</p>
+                <p className="text-xs text-muted-foreground">{formatCurrency(stats.paidValue)}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-amber-500">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground">Pendentes</p>
+                <p className="text-xl font-bold text-amber-600">{stats.pending}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-rose-500">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground">Vencidos</p>
+                <p className="text-xl font-bold text-rose-600">{stats.overdue}</p>
+              </CardContent>
+            </Card>
+            <Card className="border-l-4 border-l-blue-500">
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground">Histórico Total</p>
+                <p className="text-xl font-bold text-blue-600">{stats.total}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end">
+            <Button onClick={() => setCreateContribDialogOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Contribuição
+            </Button>
+          </div>
+
+          {/* Contributions Table */}
+          <Card>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Competência</TableHead>
+                    <TableHead>Vencimento</TableHead>
+                    <TableHead className="text-right">Valor</TableHead>
+                    <TableHead className="text-center">Status</TableHead>
+                    <TableHead className="text-center">Boleto</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {contributions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="h-32 text-center">
+                        <Receipt className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                        <p className="text-muted-foreground">Nenhuma contribuição registrada</p>
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    contributions.map((contrib) => {
+                      const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG];
+                      const StatusIcon = statusConfig?.icon || Clock;
+
+                      return (
+                        <TableRow key={contrib.id} className="hover:bg-muted/30">
+                          <TableCell>{contrib.contribution_types?.name}</TableCell>
+                          <TableCell className="font-medium">
+                            {MONTHS[contrib.competence_month - 1]?.slice(0, 3)}/{contrib.competence_year}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(contrib.due_date + "T12:00:00"), "dd/MM/yyyy")}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">
+                            {formatCurrency(contrib.value)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge className={`${statusConfig?.color} text-xs gap-1`}>
+                              <StatusIcon className="h-3 w-3" />
+                              {statusConfig?.label}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {contrib.lytex_invoice_id ? (
+                              <Badge variant="outline" className="text-xs text-emerald-600">
+                                <CheckCircle2 className="h-3 w-3 mr-1" />
+                                Gerado
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs text-muted-foreground">
+                                Não gerado
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <TooltipProvider>
+                              <div className="flex items-center justify-end gap-1">
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7"
+                                      onClick={() => {
+                                        setSelectedContribution(contrib);
+                                        setViewContribDialogOpen(true);
+                                      }}
+                                    >
+                                      <Eye className="h-4 w-4" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Ver detalhes</TooltipContent>
+                                </Tooltip>
+                                {!contrib.lytex_invoice_id && contrib.status !== "cancelled" && contrib.status !== "paid" && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-primary"
+                                        onClick={() => handleGenerateInvoice(contrib)}
+                                        disabled={generatingInvoice}
+                                      >
+                                        {generatingInvoice ? (
+                                          <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                          <Send className="h-4 w-4" />
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Gerar boleto</TooltipContent>
+                                  </Tooltip>
+                                )}
+                              </div>
+                            </TooltipProvider>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Employees Tab */}
+        <TabsContent value="employees">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Colaboradores Vinculados</CardTitle>
+              <CardDescription>
+                Pacientes cadastrados com o CNPJ desta empresa
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {patients.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>Nenhum colaborador vinculado</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {patients.map((patient) => (
+                    <button
+                      key={patient.id}
+                      onClick={() => navigate(`/dashboard/patients/${patient.id}/edit`)}
+                      className="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 border transition-colors text-left"
+                    >
+                      <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Users className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm truncate">{patient.name}</p>
+                        {patient.cpf && (
+                          <p className="text-xs text-muted-foreground">
+                            CPF: {patient.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")}
+                          </p>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Data Tab */}
+        <TabsContent value="data">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Dados Cadastrais</CardTitle>
+              <CardDescription>
+                Informações da empresa
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>CNPJ</Label>
+                  <Input value={formatCNPJ(employer.cnpj)} disabled />
+                </div>
+                <div>
+                  <Label>Razão Social *</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Nome Fantasia</Label>
+                  <Input
+                    value={formData.trade_name}
+                    onChange={(e) => setFormData({ ...formData, trade_name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Telefone</Label>
+                  <Input
+                    value={formatPhone(formData.phone)}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, "") })}
+                    placeholder="(00) 00000-0000"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>E-mail</Label>
+                <Input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <Label>Endereço</Label>
+                <Input
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Cidade</Label>
+                  <Input
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Estado</Label>
+                  <Input
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value.toUpperCase().slice(0, 2) })}
+                    maxLength={2}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <Label>Observações</Label>
+                <Textarea
+                  value={formData.notes}
+                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                  rows={3}
+                />
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Switch
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                />
+                <Label>Empresa ativa</Label>
+              </div>
+
+              <div className="flex justify-end">
+                <Button onClick={handleSaveEmployer} disabled={saving}>
+                  {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <Save className="h-4 w-4 mr-2" />
+                  Salvar Alterações
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Create Contribution Dialog */}
+      <Dialog open={createContribDialogOpen} onOpenChange={setCreateContribDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Nova Contribuição</DialogTitle>
+            <DialogDescription>
+              Cadastrar contribuição para {employer.name}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Tipo de Contribuição *</Label>
+              <Select value={contribTypeId} onValueChange={handleTypeChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contributionTypes.map((type) => (
+                    <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Mês Competência *</Label>
+                <Select value={String(contribMonth)} onValueChange={(v) => setContribMonth(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map((month, i) => (
+                      <SelectItem key={i} value={String(i + 1)}>{month}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Ano *</Label>
+                <Select value={String(contribYear)} onValueChange={(v) => setContribYear(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[2024, 2025, 2026, 2027].map(year => (
+                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Valor (R$) *</Label>
+                <Input
+                  placeholder="0,00"
+                  value={contribValue}
+                  onChange={(e) => setContribValue(e.target.value)}
+                />
+              </div>
+              <div>
+                <Label>Vencimento *</Label>
+                <Input
+                  type="date"
+                  value={contribDueDate}
+                  onChange={(e) => setContribDueDate(e.target.value)}
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateContribDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateContribution} disabled={saving}>
+              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Contribution Dialog */}
+      <Dialog open={viewContribDialogOpen} onOpenChange={setViewContribDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Detalhes da Contribuição</DialogTitle>
+          </DialogHeader>
+
+          {selectedContribution && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Tipo</p>
+                  <p className="font-medium">{selectedContribution.contribution_types?.name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Competência</p>
+                  <p className="font-medium">
+                    {MONTHS[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Valor</p>
+                  <p className="font-medium text-lg">{formatCurrency(selectedContribution.value)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Vencimento</p>
+                  <p className="font-medium">
+                    {format(new Date(selectedContribution.due_date + "T12:00:00"), "dd/MM/yyyy")}
+                  </p>
+                </div>
+              </div>
+
+              {selectedContribution.lytex_invoice_url && (
+                <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <span className="font-medium">Dados do Boleto</span>
+                  </div>
+
+                  {selectedContribution.lytex_boleto_digitable_line && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">Linha Digitável</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-background p-2 rounded overflow-x-auto">
+                          {selectedContribution.lytex_boleto_digitable_line}
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => handleCopyToClipboard(selectedContribution.lytex_boleto_digitable_line!, "Linha digitável")}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {selectedContribution.lytex_pix_code && (
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">PIX Copia e Cola</p>
+                      <div className="flex items-center gap-2">
+                        <code className="flex-1 text-xs bg-background p-2 rounded overflow-x-auto max-h-20">
+                          {selectedContribution.lytex_pix_code.slice(0, 50)}...
+                        </code>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="shrink-0"
+                          onClick={() => handleCopyToClipboard(selectedContribution.lytex_pix_code!, "Código PIX")}
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    className="w-full"
+                    onClick={() => window.open(selectedContribution.lytex_invoice_url!, "_blank")}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Abrir Boleto / Fatura
+                  </Button>
+                </div>
+              )}
+
+              {selectedContribution.status === "paid" && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-lg">
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                    <CheckCircle2 className="h-5 w-5" />
+                    <span className="font-medium">Pagamento Confirmado</span>
+                  </div>
+                  {selectedContribution.paid_at && (
+                    <p className="text-sm text-emerald-600 dark:text-emerald-500 mt-1">
+                      Pago em {format(new Date(selectedContribution.paid_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                      {selectedContribution.payment_method && ` via ${selectedContribution.payment_method}`}
+                      {selectedContribution.paid_value && ` - ${formatCurrency(selectedContribution.paid_value)}`}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <DialogFooter className="flex-wrap gap-2">
+                {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setManualPaymentValue((selectedContribution.value / 100).toFixed(2).replace(".", ","));
+                        setManualPaymentDialogOpen(true);
+                      }}
+                    >
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Baixa Manual
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setCancelDialogOpen(true)}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Cancelar
+                    </Button>
+                  </>
+                )}
+                {!selectedContribution.lytex_invoice_id && selectedContribution.status !== "cancelled" && selectedContribution.status !== "paid" && (
+                  <Button
+                    onClick={() => handleGenerateInvoice(selectedContribution)}
+                    disabled={generatingInvoice}
+                  >
+                    {generatingInvoice ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    Gerar Boleto
+                  </Button>
+                )}
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Manual Payment Dialog */}
+      <Dialog open={manualPaymentDialogOpen} onOpenChange={setManualPaymentDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Baixa Manual</DialogTitle>
+            <DialogDescription>
+              Registrar pagamento recebido fora do sistema
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Valor Recebido (R$) *</Label>
+              <Input
+                placeholder="0,00"
+                value={manualPaymentValue}
+                onChange={(e) => setManualPaymentValue(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Forma de Pagamento</Label>
+              <Select value={manualPaymentMethod} onValueChange={setManualPaymentMethod}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="transferencia">Transferência</SelectItem>
+                  <SelectItem value="cheque">Cheque</SelectItem>
+                  <SelectItem value="cartao">Cartão</SelectItem>
+                  <SelectItem value="outros">Outros</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Data do Pagamento</Label>
+              <Input
+                type="date"
+                value={manualPaymentDate}
+                onChange={(e) => setManualPaymentDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setManualPaymentDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleManualPayment}>
+              Confirmar Baixa
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancelar Contribuição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja cancelar esta contribuição? 
+              {selectedContribution?.lytex_invoice_id && " O boleto também será cancelado na Lytex."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelContribution}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Confirmar Cancelamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
