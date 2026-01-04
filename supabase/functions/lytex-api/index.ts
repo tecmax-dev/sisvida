@@ -839,6 +839,15 @@ Deno.serve(async (req) => {
 
                 const value = invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
 
+                // A Lytex pode retornar a URL em invoiceUrl ou invoice_url ou url
+                const invoiceUrl = invoice.invoiceUrl || invoice.invoice_url || invoice.url || invoice.link || null;
+
+                // Log para debug
+                if (page === 1 && invoices.indexOf(invoice) < 3) {
+                  console.log(`[Lytex] Sample invoice keys:`, Object.keys(invoice));
+                  console.log(`[Lytex] Invoice URL fields: invoiceUrl=${invoice.invoiceUrl}, invoice_url=${invoice.invoice_url}, url=${invoice.url}, link=${invoice.link}`);
+                }
+
                 const patch = {
                   clinic_id: params.clinicId,
                   employer_id: employerId,
@@ -850,7 +859,7 @@ Deno.serve(async (req) => {
                   due_date: invoice.dueDate?.split("T")[0],
                   status,
                   lytex_invoice_id: invoice._id,
-                  lytex_invoice_url: invoice.invoiceUrl || null,
+                  lytex_invoice_url: invoiceUrl,
                   lytex_boleto_barcode: invoice.boleto?.barCode || null,
                   lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
                   lytex_pix_code: invoice.pix?.code || null,
