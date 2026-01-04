@@ -580,20 +580,31 @@ export default function CalendarPage() {
 
       // Prioridade para definir de qual profissional vem a grade de horários:
       // 1) Se estiver arrastando para reagendar: profissional do agendamento
-      // 2) Se houver profissional filtrado
-      // 3) Se estiver criando/editando: profissional selecionado no formulário
+      // 2) Se houver UM profissional filtrado
+      // 3) Se houver profissional selecionado no formulário
       // 4) Se o usuário for um profissional: o próprio
-      const selectedProfId =
-        activeAppointment?.professional_id ||
-        (filterProfessionals.length === 1
-          ? filterProfessionals[0]
-          : (formProfessional || (isProfessionalOnly && loggedInProfessionalId ? loggedInProfessionalId : null)));
+      let selectedProfId: string | null = null;
+      
+      if (activeAppointment?.professional_id) {
+        selectedProfId = activeAppointment.professional_id;
+      } else if (filterProfessionals.length === 1) {
+        selectedProfId = filterProfessionals[0];
+      } else if (formProfessional) {
+        selectedProfId = formProfessional;
+      } else if (isProfessionalOnly && loggedInProfessionalId) {
+        selectedProfId = loggedInProfessionalId;
+      }
+
+      console.log('[CalendarPage timeSlots] selectedProfId:', selectedProfId, 'filterProfessionals:', filterProfessionals);
 
       if (!selectedProfId) return defaultTimeSlots;
 
       const prof = professionals.find((p) => p.id === selectedProfId);
       const schedule = prof?.schedule as any;
       const appointmentDuration = prof?.appointment_duration || 30;
+      
+      console.log('[CalendarPage timeSlots] prof:', prof?.name, 'hasSchedule:', !!schedule);
+      
       if (!schedule) return defaultTimeSlots;
 
       const dayKey = getDayKey(selectedDate);
@@ -603,7 +614,7 @@ export default function CalendarPage() {
       const slots: string[] = [];
       const dateStr = toDateKey(selectedDate);
 
-      console.log('[CalendarPage] Calculating slots for:', { 
+      console.log('[CalendarPage timeSlots] Calculating slots for:', { 
         profName: prof?.name, 
         dateStr, 
         dayKey, 
@@ -619,15 +630,16 @@ export default function CalendarPage() {
           const skipEndDate = block.end_date && dateStr > block.end_date;
           const skipDay = block.days && block.days.length > 0 && !block.days.includes(dayKey);
           
-          console.log('[CalendarPage] Block check:', { 
+          console.log('[CalendarPage timeSlots] Block check:', { 
             blockDays: block.days, 
             dayKey,
+            dateStr,
             start_date: block.start_date,
             end_date: block.end_date,
-            dateStr,
             skipStartDate,
             skipEndDate,
-            skipDay
+            skipDay,
+            willInclude: !skipStartDate && !skipEndDate && !skipDay
           });
           
           if (skipStartDate) continue;
