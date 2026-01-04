@@ -218,8 +218,8 @@ export function SendBoletoWhatsAppDialog({
                 </span>
               </p>
             ) : (
-              <ScrollArea className="h-[200px] border rounded-md p-2">
-                <div className="space-y-2">
+              <ScrollArea className="h-[240px] border rounded-md">
+                <div className="p-2 space-y-2">
                   {eligibleContributions.map((contrib) => {
                     const monthName = format(
                       new Date(contrib.competence_year, contrib.competence_month - 1),
@@ -229,7 +229,7 @@ export function SendBoletoWhatsAppDialog({
                     return (
                       <div
                         key={contrib.id}
-                        className={`flex items-center gap-3 p-2 rounded-md border cursor-pointer transition-colors ${
+                        className={`flex items-start gap-3 p-3 rounded-md border cursor-pointer transition-colors ${
                           selectedIds.has(contrib.id)
                             ? "bg-primary/5 border-primary"
                             : "hover:bg-muted/50"
@@ -239,22 +239,23 @@ export function SendBoletoWhatsAppDialog({
                         <Checkbox
                           checked={selectedIds.has(contrib.id)}
                           onCheckedChange={() => handleToggle(contrib.id)}
+                          className="mt-0.5"
                         />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <p className="text-sm font-medium leading-tight">
                             {contrib.employers?.name || "Empresa"}
                           </p>
                           <p className="text-xs text-muted-foreground">
                             {monthName} • Venc: {format(new Date(contrib.due_date), "dd/MM/yy")}
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm font-medium">
+                        <div className="flex flex-col items-end gap-1 shrink-0">
+                          <span className="text-sm font-semibold whitespace-nowrap">
                             {formatCurrency(contrib.value)}
-                          </p>
+                          </span>
                           <Badge
-                            variant={contrib.status === "overdue" ? "destructive" : "secondary"}
-                            className="text-[10px]"
+                            variant={contrib.status === "overdue" ? "destructive" : "outline"}
+                            className="text-[10px] px-1.5"
                           >
                             {contrib.status === "overdue" ? "Vencido" : "Pendente"}
                           </Badge>
