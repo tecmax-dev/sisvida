@@ -219,19 +219,23 @@ async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
 async function cancelInvoice(invoiceId: string): Promise<any> {
   const token = await getAccessToken();
 
-  // Tentar DELETE primeiro (padrão de APIs REST modernas)
-  let response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
-    method: "DELETE",
+  // A API Lytex usa POST /invoices/{id}/cancel para cancelar cobranças
+  console.log(`[Lytex] Cancelando cobrança ${invoiceId} via POST /cancel...`);
+  
+  let response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}/cancel`, {
+    method: "POST",
     headers: {
+      "Content-Type": "application/json",
       "Authorization": `Bearer ${token}`,
     },
+    body: JSON.stringify({}),
   });
 
-  // Se DELETE falhar, tentar PUT com status cancelled
+  // Se POST /cancel falhar com 404, tentar PATCH com status
   if (!response.ok && response.status === 404) {
-    console.log("[Lytex] DELETE não suportado, tentando PUT com status cancelled...");
+    console.log("[Lytex] POST /cancel não encontrado, tentando PATCH com status...");
     response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
-      method: "PUT",
+      method: "PATCH",
       headers: {
         "Content-Type": "application/json",
         "Authorization": `Bearer ${token}`,
@@ -240,10 +244,10 @@ async function cancelInvoice(invoiceId: string): Promise<any> {
     });
   }
 
-  // Se ainda falhar, tentar endpoint alternativo /cancel com DELETE
-  if (!response.ok && response.status === 404) {
-    console.log("[Lytex] Tentando endpoint alternativo /cancel com DELETE...");
-    response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}/cancel`, {
+  // Se PATCH falhar, tentar DELETE
+  if (!response.ok && (response.status === 404 || response.status === 405)) {
+    console.log("[Lytex] PATCH não suportado, tentando DELETE...");
+    response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
       method: "DELETE",
       headers: {
         "Authorization": `Bearer ${token}`,
@@ -257,6 +261,8 @@ async function cancelInvoice(invoiceId: string): Promise<any> {
     throw new Error(`Erro ao cancelar cobrança: ${response.status}`);
   }
 
+  console.log("[Lytex] Cobrança cancelada com sucesso");
+  
   // Alguns endpoints retornam 204 No Content
   const text = await response.text();
   return text ? JSON.parse(text) : { success: true };
