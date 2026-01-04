@@ -60,6 +60,7 @@ interface Contribution {
   competence_month: number;
   competence_year: number;
   lytex_url: string | null;
+  lytex_invoice_id: string | null;
   paid_at: string | null;
   contribution_type: { name: string } | null;
 }
@@ -793,6 +794,7 @@ export default function EmployerPortal() {
                 <TableHeader className="sticky top-0 bg-card z-10">
                   <TableRow>
                     <TableHead className="w-[130px]">Competência</TableHead>
+                    <TableHead>Nº Documento</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead className="text-right">Valor</TableHead>
                     <TableHead className="text-center">Vencimento</TableHead>
@@ -820,6 +822,11 @@ export default function EmployerPortal() {
                             <div className={`w-1 h-8 rounded-full ${status.bgClass}`} />
                             <span>{monthNames[contribution.competence_month - 1]}/{contribution.competence_year}</span>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <span className="text-xs font-mono text-muted-foreground">
+                            {contribution.lytex_invoice_id ? contribution.lytex_invoice_id.slice(-8).toUpperCase() : "-"}
+                          </span>
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm">
                           {contribution.contribution_type?.name || "—"}
