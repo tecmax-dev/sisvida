@@ -5,10 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Label } from "@/components/ui/label";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { 
   Building2, 
@@ -22,21 +22,19 @@ import {
   ExternalLink,
   Bell,
   LogOut,
-  Receipt,
   Calendar,
   DollarSign,
   AlertTriangle,
   Loader2,
   Filter,
-  LayoutGrid,
-  LayoutList,
   Search,
   TrendingUp,
-  X
+  X,
+  ChevronRight,
+  Lock
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 interface Clinic {
   id: string;
@@ -75,23 +73,41 @@ interface ReissueRequest {
   new_lytex_url: string | null;
 }
 
-const statusConfig: Record<string, { label: string; color: string; icon: React.ReactNode; bgClass: string }> = {
-  pending: { label: "Pendente", color: "bg-amber-100 text-amber-700 border-amber-300", icon: <Clock className="h-3 w-3" />, bgClass: "bg-amber-500" },
-  paid: { label: "Pago", color: "bg-emerald-100 text-emerald-700 border-emerald-300", icon: <CheckCircle2 className="h-3 w-3" />, bgClass: "bg-emerald-500" },
-  overdue: { label: "Vencido", color: "bg-red-100 text-red-700 border-red-300", icon: <AlertCircle className="h-3 w-3" />, bgClass: "bg-red-500" },
-  cancelled: { label: "Cancelado", color: "bg-gray-100 text-gray-600 border-gray-300", icon: <XCircle className="h-3 w-3" />, bgClass: "bg-gray-400" },
-  awaiting_value: { label: "Aguardando Valor", color: "bg-purple-100 text-purple-700 border-purple-300", icon: <DollarSign className="h-3 w-3" />, bgClass: "bg-purple-500" },
+const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
+  pending: { 
+    label: "Pendente", 
+    color: "text-amber-700", 
+    bgColor: "bg-amber-50 border-amber-200",
+    icon: <Clock className="h-3.5 w-3.5" />
+  },
+  paid: { 
+    label: "Pago", 
+    color: "text-emerald-700", 
+    bgColor: "bg-emerald-50 border-emerald-200",
+    icon: <CheckCircle2 className="h-3.5 w-3.5" />
+  },
+  overdue: { 
+    label: "Vencido", 
+    color: "text-red-700", 
+    bgColor: "bg-red-50 border-red-200",
+    icon: <AlertCircle className="h-3.5 w-3.5" />
+  },
+  cancelled: { 
+    label: "Cancelado", 
+    color: "text-slate-500", 
+    bgColor: "bg-slate-50 border-slate-200",
+    icon: <XCircle className="h-3.5 w-3.5" />
+  },
+  awaiting_value: { 
+    label: "Aguardando", 
+    color: "text-purple-700", 
+    bgColor: "bg-purple-50 border-purple-200",
+    icon: <DollarSign className="h-3.5 w-3.5" />
+  },
 };
 
-const monthNames = [
-  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-  "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-];
-
-const monthNamesFull = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 export default function EmployerPortal() {
   const { clinicSlug } = useParams();
@@ -119,9 +135,7 @@ export default function EmployerPortal() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState<"table" | "cards">("table");
 
-  // Load clinic by slug
   useEffect(() => {
     if (clinicSlug) {
       loadClinicBySlug(clinicSlug);
@@ -130,14 +144,11 @@ export default function EmployerPortal() {
 
   const loadClinicBySlug = async (slug: string) => {
     try {
-      console.log("[EmployerPortal] Loading clinic by slug:", slug);
       const { data, error } = await supabase
         .from("clinics")
         .select("id, name, logo_url, phone")
         .eq("slug", slug)
         .maybeSingle();
-      
-      console.log("[EmployerPortal] Clinic data:", data, "Error:", error);
       
       if (!error && data) {
         setClinic(data);
@@ -163,7 +174,6 @@ export default function EmployerPortal() {
     }
   };
 
-  // Extract unique contribution types and years
   const contributionTypes = useMemo(() => {
     const types = new Set(contributions.map(c => c.contribution_type?.name).filter(Boolean));
     return Array.from(types) as string[];
@@ -174,7 +184,6 @@ export default function EmployerPortal() {
     return Array.from(years).sort((a, b) => b - a);
   }, [contributions]);
 
-  // Format CNPJ
   const formatCnpj = (value: string) => {
     const numbers = value.replace(/\D/g, "");
     return numbers
@@ -212,7 +221,6 @@ export default function EmployerPortal() {
       setEmployer(data.employer);
       sessionStorage.setItem("employer_session", JSON.stringify(data.employer));
       
-      // Load clinic info after login
       if (data.employer.clinic_id) {
         loadClinicById(data.employer.clinic_id);
       }
@@ -238,7 +246,7 @@ export default function EmployerPortal() {
         const overdue = data.contributions.filter((c: Contribution) => c.status === "overdue");
         if (overdue.length > 0) {
           const overdueCents = overdue.reduce((sum: number, c: Contribution) => sum + (c.amount || 0), 0);
-          setAlertMessage(`Você possui ${overdue.length} boleto(s) vencido(s) totalizando ${formatCurrency(overdueCents)}. Regularize sua situação para evitar pendências.`);
+          setAlertMessage(`Você possui ${overdue.length} boleto(s) vencido(s) totalizando ${formatCurrency(overdueCents)}. Regularize sua situação.`);
           setShowAlertDialog(true);
         }
       }
@@ -282,7 +290,6 @@ export default function EmployerPortal() {
       setSelectedContribution(null);
       loadContributions(employer.id);
 
-      // Abrir o novo boleto automaticamente se disponível
       if (data.lytex_invoice_url) {
         window.open(data.lytex_invoice_url, "_blank");
       }
@@ -367,14 +374,12 @@ export default function EmployerPortal() {
       setEmployer(emp);
       loadContributions(emp.id);
       
-      // Load clinic info for saved session
       if (emp.clinic_id) {
         loadClinicById(emp.clinic_id);
       }
     }
   }, []);
 
-  // Filtered contributions
   const filteredContributions = useMemo(() => {
     return contributions.filter((c) => {
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
@@ -382,7 +387,7 @@ export default function EmployerPortal() {
       if (yearFilter !== "all" && c.competence_year.toString() !== yearFilter) return false;
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
-        const competence = `${monthNamesFull[c.competence_month - 1]}/${c.competence_year}`.toLowerCase();
+        const competence = `${MONTHS_FULL[c.competence_month - 1]}/${c.competence_year}`.toLowerCase();
         const type = (c.contribution_type?.name || "").toLowerCase();
         if (!competence.includes(term) && !type.includes(term)) return false;
       }
@@ -395,9 +400,8 @@ export default function EmployerPortal() {
     paid: contributions.filter(c => c.status === "paid").length,
     pending: contributions.filter(c => c.status === "pending").length,
     overdue: contributions.filter(c => c.status === "overdue").length,
-    totalValue: contributions.reduce((sum, c) => sum + (c.amount || 0), 0),
+    totalValue: contributions.filter(c => c.status !== "cancelled" && c.status !== "paid").reduce((sum, c) => sum + (c.amount || 0), 0),
     paidValue: contributions.filter(c => c.status === "paid").reduce((sum, c) => sum + (c.amount || 0), 0),
-    pendingValue: contributions.filter(c => c.status === "pending").reduce((sum, c) => sum + (c.amount || 0), 0),
     overdueValue: contributions.filter(c => c.status === "overdue").reduce((sum, c) => sum + (c.amount || 0), 0),
   }), [contributions]);
 
@@ -406,66 +410,84 @@ export default function EmployerPortal() {
   // Login Screen
   if (!employer) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-cta/5 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-2xl border-0 bg-card/95 backdrop-blur-sm">
-          <CardHeader className="text-center pb-2">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
+        
+        <Card className="w-full max-w-md relative bg-white/95 backdrop-blur shadow-2xl border-0">
+          <CardHeader className="text-center space-y-4 pb-2">
             {clinic?.logo_url ? (
-              <div className="mx-auto mb-4">
-                <img 
-                  src={clinic.logo_url} 
-                  alt={clinic.name} 
-                  className="h-16 w-auto max-w-[200px] object-contain"
-                />
-              </div>
+              <img 
+                src={clinic.logo_url} 
+                alt={clinic.name} 
+                className="h-14 mx-auto object-contain"
+              />
             ) : (
-              <div className="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-cta flex items-center justify-center mb-4 shadow-lg">
-                <Building2 className="h-8 w-8 text-white" />
+              <div className="h-14 w-14 mx-auto bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Building2 className="h-7 w-7 text-white" />
               </div>
             )}
-            <CardTitle className="text-2xl font-bold">
-              {clinic?.name ? `Portal ${clinic.name}` : "Portal da Empresa"}
-            </CardTitle>
-            <CardDescription className="text-base">
-              Acesse seus boletos e contribuições
-            </CardDescription>
+            <div>
+              <CardTitle className="text-xl font-semibold text-slate-800">Portal da Empresa</CardTitle>
+              <CardDescription className="text-slate-500">
+                {clinic?.name || "Acesse seus boletos e contribuições"}
+              </CardDescription>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">CNPJ</label>
-              <Input
-                placeholder="00.000.000/0000-00"
-                value={cnpj}
-                onChange={(e) => setCnpj(formatCnpj(e.target.value))}
-                className="h-12 text-lg"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground">Código de Acesso</label>
-              <Input
-                placeholder="Digite o código"
-                value={accessCode}
-                onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                className="h-12 text-lg font-mono tracking-widest"
-                maxLength={8}
-              />
-            </div>
-            <Button 
-              onClick={handleLogin} 
-              disabled={isLoading}
-              className="w-full h-12 text-lg bg-gradient-to-r from-primary to-cta hover:opacity-90"
-            >
-              {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin mr-2" />
-              ) : (
-                <LogIn className="h-5 w-5 mr-2" />
-              )}
-              Entrar
-            </Button>
-            <p className="text-xs text-center text-muted-foreground pt-2">
-              {clinic?.phone 
-                ? `Não possui código de acesso? Ligue: ${clinic.phone}` 
-                : "Não possui código de acesso? Entre em contato com o sindicato."}
-            </p>
+          <CardContent className="pt-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="cnpj" className="text-slate-700 text-sm font-medium">CNPJ</Label>
+                <div className="relative">
+                  <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="cnpj"
+                    placeholder="00.000.000/0000-00"
+                    value={cnpj}
+                    onChange={(e) => setCnpj(formatCnpj(e.target.value))}
+                    className="pl-10 h-11 border-slate-200 focus:border-amber-500 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="accessCode" className="text-slate-700 text-sm font-medium">Código de Acesso</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                  <Input
+                    id="accessCode"
+                    placeholder="XXXXXXXX"
+                    value={accessCode}
+                    onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                    className="pl-10 h-11 uppercase tracking-widest font-mono border-slate-200 focus:border-amber-500 focus:ring-amber-500"
+                    maxLength={8}
+                  />
+                </div>
+              </div>
+              
+              <Button 
+                type="submit"
+                className="w-full h-11 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-medium shadow-lg shadow-amber-500/25"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Entrando...
+                  </>
+                ) : (
+                  <>
+                    <LogIn className="mr-2 h-4 w-4" />
+                    Acessar Portal
+                  </>
+                )}
+              </Button>
+
+              <p className="text-xs text-center text-slate-500 pt-2">
+                {clinic?.phone 
+                  ? `Não possui código? Ligue: ${clinic.phone}` 
+                  : "Não possui código? Entre em contato com o sindicato."}
+              </p>
+            </form>
           </CardContent>
         </Card>
       </div>
@@ -474,7 +496,7 @@ export default function EmployerPortal() {
 
   // Dashboard
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen bg-slate-50">
       {/* Alert Dialog */}
       <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
         <DialogContent className="sm:max-w-md">
@@ -482,20 +504,20 @@ export default function EmployerPortal() {
             <div className="mx-auto w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
               <AlertTriangle className="h-8 w-8 text-red-600" />
             </div>
-            <DialogTitle className="text-center text-xl">Atenção!</DialogTitle>
-            <DialogDescription className="text-center text-base">
+            <DialogTitle className="text-center text-xl text-slate-900">Atenção!</DialogTitle>
+            <DialogDescription className="text-center text-base text-slate-600">
               {alertMessage}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="sm:justify-center">
-            <Button onClick={() => setShowAlertDialog(false)} className="w-full sm:w-auto">
+            <Button onClick={() => setShowAlertDialog(false)} className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700">
               Entendi
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Reissue Dialog - Gerar 2ª Via */}
+      {/* Reissue Dialog */}
       <Dialog open={showReissueDialog} onOpenChange={(open) => {
         setShowReissueDialog(open);
         if (!open) {
@@ -503,50 +525,55 @@ export default function EmployerPortal() {
           setSelectedContribution(null);
         }
       }}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RefreshCw className="h-5 w-5" />
-              Gerar 2ª Via do Boleto
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <RefreshCw className="h-5 w-5 text-amber-600" />
+              Gerar 2ª Via
             </DialogTitle>
             <DialogDescription>
               {selectedContribution && (
-                <span>
-                  Competência: {monthNamesFull[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year} • 
-                  Valor: {formatCurrency(selectedContribution.amount || 0)}
+                <span className="text-slate-600">
+                  {MONTHS_FULL[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year} • {formatCurrency(selectedContribution.amount || 0)}
                 </span>
               )}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            {selectedContribution && (
-              <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
-                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span>
-                  Reemissões utilizadas: {selectedContribution.portal_reissue_count || 0}/2. 
-                  {(selectedContribution.portal_reissue_count || 0) >= 1 && " Após o limite, somente o gestor poderá emitir."}
-                </span>
+          <div className="space-y-4 py-2">
+            {selectedContribution && (selectedContribution.portal_reissue_count || 0) > 0 && (
+              <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium">Atenção</p>
+                  <p className="text-xs mt-0.5">
+                    {selectedContribution.portal_reissue_count}/2 reemissões utilizadas. Após o limite, somente o gestor poderá emitir.
+                  </p>
+                </div>
               </div>
             )}
             <div>
-              <label className="text-sm font-medium block mb-2">Nova Data de Vencimento *</label>
+              <Label className="text-slate-700 text-sm font-medium">Nova Data de Vencimento</Label>
               <Input
                 type="date"
                 value={newDueDate}
                 onChange={(e) => setNewDueDate(e.target.value)}
                 min={getMinDate()}
-                className="w-full"
+                className="mt-2 h-10 border-slate-200"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                O boleto anterior será cancelado e um novo será gerado com a nova data
+              <p className="text-xs text-slate-500 mt-2">
+                O boleto anterior será cancelado automaticamente.
               </p>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowReissueDialog(false)}>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowReissueDialog(false)} className="border-slate-200">
               Cancelar
             </Button>
-            <Button onClick={handleGenerateReissue} disabled={isGeneratingReissue || !newDueDate}>
+            <Button 
+              onClick={handleGenerateReissue} 
+              disabled={isGeneratingReissue || !newDueDate}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
               {isGeneratingReissue ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -563,467 +590,510 @@ export default function EmployerPortal() {
         </DialogContent>
       </Dialog>
 
-      {/* Header */}
-      <header className="bg-card border-b sticky top-0 z-10 shadow-sm">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {clinic?.logo_url ? (
-              <img 
-                src={clinic.logo_url} 
-                alt={clinic.name} 
-                className="h-10 w-auto max-w-[120px] object-contain"
+      {/* Set Value Dialog */}
+      <Dialog open={showSetValueDialog} onOpenChange={(open) => {
+        setShowSetValueDialog(open);
+        if (!open) {
+          setNewValue("");
+          setSelectedContribution(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
+              <DollarSign className="h-5 w-5 text-purple-600" />
+              Definir Valor
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContribution && (
+                <span className="text-slate-600">
+                  {MONTHS_FULL[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label className="text-slate-700 text-sm font-medium">Valor (R$)</Label>
+              <Input
+                type="text"
+                placeholder="0,00"
+                value={newValue}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9,]/g, "");
+                  setNewValue(val);
+                }}
+                className="mt-2 h-10 text-lg font-medium border-slate-200"
               />
-            ) : (
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-cta flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-white" />
-              </div>
-            )}
-            <div className="border-l pl-3">
-              <h1 className="font-bold text-base sm:text-lg leading-tight">{employer.name}</h1>
-              <p className="text-xs text-muted-foreground">{formatCnpj(employer.cnpj)}</p>
+              <p className="text-xs text-slate-500 mt-2">
+                Após definir o valor, o boleto será gerado automaticamente.
+              </p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-muted-foreground">
-            <LogOut className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Sair</span>
-          </Button>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowSetValueDialog(false)} className="border-slate-200">
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleSetValue} 
+              disabled={isSettingValue || !newValue}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              {isSettingValue ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Gerar Boleto
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Header */}
+      <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white sticky top-0 z-20 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              {clinic?.logo_url ? (
+                <img 
+                  src={clinic.logo_url} 
+                  alt={clinic.name} 
+                  className="h-9 object-contain brightness-0 invert"
+                />
+              ) : (
+                <div className="h-9 w-9 bg-white/10 rounded-lg flex items-center justify-center">
+                  <Building2 className="h-5 w-5" />
+                </div>
+              )}
+              <div className="hidden sm:block">
+                <h1 className="font-semibold text-base leading-tight">{employer.name}</h1>
+                <p className="text-xs text-white/60">{formatCnpj(employer.cnpj)}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => loadContributions(employer.id)}
+                className="text-white/80 hover:text-white hover:bg-white/10"
+              >
+                <RefreshCw className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Atualizar</span>
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={handleLogout}
+                className="text-white/80 hover:text-white hover:bg-white/10"
+              >
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sair</span>
+              </Button>
+            </div>
+          </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-4 space-y-4">
-        {/* Compact Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <button 
-            onClick={() => setStatusFilter("all")} 
-            className={`p-3 rounded-xl border transition-all text-left ${statusFilter === "all" ? "ring-2 ring-primary bg-primary/5" : "bg-card hover:shadow-md"}`}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <Card 
+            className={`bg-white border-0 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "all" ? "ring-2 ring-amber-500" : ""}`}
+            onClick={() => setStatusFilter("all")}
           >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
-                  <Receipt className="h-4 w-4 text-primary" />
-                </div>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Total</p>
-                  <p className="text-lg font-bold">{stats.total}</p>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Total</p>
+                  <p className="text-2xl font-bold text-slate-900 mt-1">{stats.total}</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center">
+                  <FileText className="h-5 w-5 text-slate-600" />
                 </div>
               </div>
-              <TrendingUp className="h-4 w-4 text-muted-foreground/50" />
-            </div>
-          </button>
-
-          <button 
-            onClick={() => setStatusFilter("paid")} 
-            className={`p-3 rounded-xl border transition-all text-left ${statusFilter === "paid" ? "ring-2 ring-emerald-500 bg-emerald-50" : "bg-card hover:shadow-md"}`}
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className={`bg-white border-0 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "pending" ? "ring-2 ring-amber-500" : ""}`}
+            onClick={() => setStatusFilter("pending")}
           >
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Pendentes</p>
+                  <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pending}</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center">
+                  <Clock className="h-5 w-5 text-amber-600" />
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Pagos</p>
-                <p className="text-lg font-bold text-emerald-600">{stats.paid}</p>
-              </div>
-            </div>
-          </button>
-
-          <button 
-            onClick={() => setStatusFilter("pending")} 
-            className={`p-3 rounded-xl border transition-all text-left ${statusFilter === "pending" ? "ring-2 ring-amber-500 bg-amber-50" : "bg-card hover:shadow-md"}`}
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className={`bg-white border-0 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "overdue" ? "ring-2 ring-red-500" : ""}`}
+            onClick={() => setStatusFilter("overdue")}
           >
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Clock className="h-4 w-4 text-amber-600" />
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Vencidos</p>
+                  <p className="text-2xl font-bold text-red-600 mt-1">{stats.overdue}</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Pendentes</p>
-                <p className="text-lg font-bold text-amber-600">{stats.pending}</p>
-              </div>
-            </div>
-          </button>
+            </CardContent>
+          </Card>
 
-          <button 
-            onClick={() => setStatusFilter("overdue")} 
-            className={`p-3 rounded-xl border transition-all text-left ${statusFilter === "overdue" ? "ring-2 ring-red-500 bg-red-50" : "bg-card hover:shadow-md"}`}
+          <Card 
+            className={`bg-white border-0 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "paid" ? "ring-2 ring-emerald-500" : ""}`}
+            onClick={() => setStatusFilter("paid")}
           >
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                <AlertCircle className="h-4 w-4 text-red-600" />
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Pagos</p>
+                  <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.paid}</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-muted-foreground">Vencidos</p>
-                <p className="text-lg font-bold text-red-600">{stats.overdue}</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-gradient-to-br from-amber-500 to-orange-600 border-0 shadow-sm col-span-2 lg:col-span-1">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">A Pagar</p>
+                  <p className="text-xl font-bold text-white mt-1">{formatCurrency(stats.totalValue)}</p>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-white" />
+                </div>
               </div>
-            </div>
-          </button>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Overdue Alert Banner - More compact */}
+        {/* Overdue Alert */}
         {stats.overdue > 0 && statusFilter !== "overdue" && (
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-red-50 border border-red-200 dark:bg-red-950/30 dark:border-red-900">
-            <Bell className="h-5 w-5 text-red-600 shrink-0" />
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
+            <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <Bell className="h-5 w-5 text-red-600" />
+            </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-red-800 dark:text-red-200">
-                {stats.overdue} boleto(s) em atraso • {formatCurrency(stats.overdueValue)}
+              <p className="font-medium text-red-800">
+                Você possui {stats.overdue} boleto(s) em atraso
+              </p>
+              <p className="text-sm text-red-600">
+                Total: {formatCurrency(stats.overdueValue)}
               </p>
             </div>
             <Button 
               size="sm" 
               variant="outline" 
-              className="border-red-300 text-red-700 hover:bg-red-100 shrink-0"
+              className="border-red-300 text-red-700 hover:bg-red-100 flex-shrink-0"
               onClick={() => setStatusFilter("overdue")}
             >
-              Ver
+              Ver boletos
             </Button>
           </div>
         )}
 
-        {/* Filters + Table Card */}
-        <Card className="overflow-hidden">
-          {/* Filters Header */}
-          <div className="p-3 border-b bg-muted/30">
-            <div className="flex flex-col sm:flex-row gap-2">
-              {/* Search */}
-              <div className="relative flex-1 max-w-xs">
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar competência..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8 h-9"
-                />
-              </div>
-
-              {/* Filter Selects */}
-              <div className="flex gap-2 flex-wrap">
-                {contributionTypes.length > 1 && (
-                  <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="h-9 w-[140px]">
-                      <Filter className="h-3 w-3 mr-1" />
-                      <SelectValue placeholder="Tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os tipos</SelectItem>
-                      {contributionTypes.map(type => (
-                        <SelectItem key={type} value={type}>{type}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-
-                {contributionYears.length > 1 && (
-                  <Select value={yearFilter} onValueChange={setYearFilter}>
-                    <SelectTrigger className="h-9 w-[100px]">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      <SelectValue placeholder="Ano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {contributionYears.map(year => (
-                        <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-
-                {hasActiveFilters && (
-                  <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9 px-2">
-                    <X className="h-4 w-4 mr-1" />
-                    Limpar
-                  </Button>
-                )}
-
-                <div className="hidden sm:flex border-l pl-2 ml-auto gap-1">
-                  <Button
-                    variant={viewMode === "table" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-9 w-9 p-0"
-                    onClick={() => setViewMode("table")}
-                  >
-                    <LayoutList className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant={viewMode === "cards" ? "secondary" : "ghost"}
-                    size="sm"
-                    className="h-9 w-9 p-0"
-                    onClick={() => setViewMode("cards")}
-                  >
-                    <LayoutGrid className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  className="h-9"
-                  onClick={() => loadContributions(employer.id)}
-                >
-                  <RefreshCw className="h-3 w-3 sm:mr-1" />
-                  <span className="hidden sm:inline">Atualizar</span>
-                </Button>
-              </div>
-            </div>
-
-            {/* Active filters display */}
-            {hasActiveFilters && (
-              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                <span>Filtros:</span>
-                {statusFilter !== "all" && (
-                  <Badge variant="secondary" className="h-5">
-                    Status: {statusConfig[statusFilter]?.label}
-                  </Badge>
-                )}
-                {typeFilter !== "all" && (
-                  <Badge variant="secondary" className="h-5">
-                    Tipo: {typeFilter}
-                  </Badge>
-                )}
-                {yearFilter !== "all" && (
-                  <Badge variant="secondary" className="h-5">
-                    Ano: {yearFilter}
-                  </Badge>
-                )}
-                <span className="ml-auto">{filteredContributions.length} resultado(s)</span>
-              </div>
-            )}
-          </div>
-
-          {/* Content */}
-          {filteredContributions.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <Receipt className="h-10 w-10 mx-auto mb-3 opacity-50" />
-              <p className="text-sm">Nenhuma contribuição encontrada</p>
+        {/* Filters */}
+        <Card className="bg-white border-0 shadow-sm">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Filter className="h-4 w-4 text-slate-400" />
+              <span className="text-sm font-medium text-slate-600">Filtros</span>
               {hasActiveFilters && (
-                <Button variant="link" size="sm" onClick={clearFilters} className="mt-2">
-                  Limpar filtros
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="h-6 px-2 text-xs ml-auto">
+                  <X className="h-3 w-3 mr-1" />
+                  Limpar
                 </Button>
               )}
             </div>
-          ) : viewMode === "table" ? (
-            <ScrollArea className="max-h-[500px]">
-              <Table>
-                <TableHeader className="sticky top-0 bg-card z-10">
-                  <TableRow>
-                    <TableHead className="w-[130px]">Competência</TableHead>
-                    <TableHead>Nº Documento</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Valor</TableHead>
-                    <TableHead className="text-center">Vencimento</TableHead>
-                    <TableHead className="text-center">Status</TableHead>
-                    <TableHead className="text-right w-[140px]">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredContributions.map((contribution) => {
-                    const status = statusConfig[contribution.status] || statusConfig.pending;
-                    
-                    // Calcular dias de atraso
-                    const dueDate = new Date(contribution.due_date);
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <Input
+                  placeholder="Buscar..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 h-9 text-sm border-slate-200"
+                />
+              </div>
+              
+              {contributionTypes.length > 0 && (
+                <Select value={typeFilter} onValueChange={setTypeFilter}>
+                  <SelectTrigger className="h-9 text-sm border-slate-200">
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    {contributionTypes.map(type => (
+                      <SelectItem key={type} value={type}>{type}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="h-9 text-sm border-slate-200">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pending">Pendente</SelectItem>
+                  <SelectItem value="paid">Pago</SelectItem>
+                  <SelectItem value="overdue">Vencido</SelectItem>
+                  <SelectItem value="awaiting_value">Aguardando</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {contributionYears.length > 0 && (
+                <Select value={yearFilter} onValueChange={setYearFilter}>
+                  <SelectTrigger className="h-9 text-sm border-slate-200">
+                    <SelectValue placeholder="Ano" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">Todos os anos</SelectItem>
+                    {contributionYears.map(year => (
+                      <SelectItem key={year} value={year.toString()}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contributions List */}
+        <Card className="bg-white border-0 shadow-sm">
+          <CardHeader className="pb-3 border-b border-slate-100">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-slate-400" />
+                Contribuições
+              </CardTitle>
+              <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-medium">
+                {filteredContributions.length} registros
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            {filteredContributions.length === 0 ? (
+              <div className="text-center py-16">
+                <FileText className="h-12 w-12 mx-auto mb-3 text-slate-200" />
+                <p className="text-slate-500 text-sm">Nenhuma contribuição encontrada</p>
+                {hasActiveFilters && (
+                  <Button variant="link" size="sm" onClick={clearFilters} className="mt-2">
+                    Limpar filtros
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <ScrollArea className="h-[500px]">
+                <div className="divide-y divide-slate-100">
+                  {filteredContributions.map((contrib) => {
+                    const dueDate = new Date(contrib.due_date + "T12:00:00");
                     const today = new Date();
                     const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
                     const isOverdue90Days = daysDiff > 90;
-                    
-                    // Permitir 2ª via apenas para vencido (não pendente), não mais de 90 dias e máximo 2 reemissões
-                    const reissueCount = contribution.portal_reissue_count || 0;
+                    const reissueCount = contrib.portal_reissue_count || 0;
                     const reissueLimitReached = reissueCount >= 2;
-                    const isOverdue = contribution.status === 'overdue';
-                    const canGenerateReissue = isOverdue && !isOverdue90Days && !reissueLimitReached;
+                    const isOverdue = contrib.status === 'overdue';
+                    const statusConfig = STATUS_CONFIG[contrib.status] || STATUS_CONFIG.pending;
 
                     return (
-                      <TableRow key={contribution.id} className="group">
-                        <TableCell className="font-medium">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-1 h-8 rounded-full ${status.bgClass}`} />
-                            <span>{monthNames[contribution.competence_month - 1]}/{contribution.competence_year}</span>
+                      <div 
+                        key={contrib.id} 
+                        className="p-4 hover:bg-slate-50/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          {/* Left: Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="font-medium text-slate-900 text-sm">
+                                {MONTHS_FULL[contrib.competence_month - 1]}/{contrib.competence_year}
+                              </h3>
+                              <Badge 
+                                variant="outline" 
+                                className={`${statusConfig.bgColor} ${statusConfig.color} border text-xs px-2 py-0 h-5 gap-1`}
+                              >
+                                {statusConfig.icon}
+                                {statusConfig.label}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs text-slate-500">
+                              <span>{contrib.contribution_type?.name || "Contribuição"}</span>
+                              {contrib.lytex_invoice_id && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-mono text-slate-400">#{contrib.lytex_invoice_id.slice(-6).toUpperCase()}</span>
+                                </>
+                              )}
+                            </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs font-mono text-muted-foreground">
-                            {contribution.lytex_invoice_id ? contribution.lytex_invoice_id.slice(-8).toUpperCase() : "-"}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {contribution.contribution_type?.name || "—"}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatCurrency(contribution.amount || 0)}
-                        </TableCell>
-                        <TableCell className="text-center text-sm text-muted-foreground">
-                          {format(new Date(contribution.due_date + "T12:00:00"), "dd/MM/yy")}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge variant="outline" className={`${status.color} text-xs`}>
-                            {status.icon}
-                            <span className="ml-1">{status.label}</span>
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            {contribution.lytex_url && contribution.status !== "paid" && contribution.status !== "cancelled" && (
-                              <Button size="sm" variant="outline" className="h-7 px-2" asChild>
-                                <a href={contribution.lytex_url} target="_blank" rel="noopener noreferrer">
-                                  <ExternalLink className="h-3 w-3 mr-1" />
-                                  Boleto
-                                </a>
-                              </Button>
+
+                          {/* Center: Date & Value */}
+                          <div className="hidden md:flex items-center gap-6 text-sm">
+                            <div className="text-center">
+                              <p className="text-xs text-slate-400 mb-0.5">Vencimento</p>
+                              <p className={`font-medium ${isOverdue ? 'text-red-600' : 'text-slate-700'}`}>
+                                {format(dueDate, "dd/MM/yyyy")}
+                              </p>
+                            </div>
+                            <div className="text-center min-w-[100px]">
+                              <p className="text-xs text-slate-400 mb-0.5">Valor</p>
+                              <p className="font-semibold text-slate-900">
+                                {formatCurrency(contrib.amount || 0)}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Right: Actions */}
+                          <div className="flex items-center gap-2">
+                            {contrib.lytex_url && contrib.status !== "paid" && contrib.status !== "cancelled" && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-8 px-3 text-xs border-slate-200 hover:bg-slate-50"
+                                      onClick={() => window.open(contrib.lytex_url!, "_blank")}
+                                    >
+                                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                      Boleto
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Abrir boleto</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
-                            {contribution.status === 'pending' && !isOverdue90Days && (
-                              <span className="text-xs text-muted-foreground italic" title="2ª via disponível somente após vencimento">
-                                Aguardando vencimento
-                              </span>
+                            
+                            {contrib.status === 'pending' && !isOverdue90Days && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-xs text-slate-400 italic px-2">
+                                      Aguardando venc.
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>2ª via disponível após vencimento</TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                             )}
+                            
                             {isOverdue && !isOverdue90Days && (
                               reissueLimitReached ? (
-                                <span className="text-xs text-muted-foreground italic" title="Limite de 2 reemissões atingido. Contate o gestor.">
-                                  Limite atingido
-                                </span>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <span className="text-xs text-slate-400 flex items-center gap-1">
+                                        <AlertCircle className="h-3 w-3" />
+                                        Limite
+                                      </span>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>Limite de {reissueCount} reemissões atingido</p>
+                                      <p className="text-xs opacity-80">Contate o gestor</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               ) : (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 px-2"
-                                  onClick={() => {
-                                    setSelectedContribution(contribution);
-                                    setShowReissueDialog(true);
-                                  }}
-                                  title={`2ª Via (${reissueCount}/2 usadas)`}
-                                >
-                                  <RefreshCw className="h-3 w-3 mr-1" />
-                                  2ª Via
-                                </Button>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 px-3 text-xs hover:bg-amber-50 hover:text-amber-700"
+                                        onClick={() => {
+                                          setSelectedContribution(contrib);
+                                          setShowReissueDialog(true);
+                                        }}
+                                      >
+                                        <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
+                                        2ª Via
+                                        {reissueCount > 0 && (
+                                          <span className="ml-1 text-slate-400">({reissueCount}/2)</span>
+                                        )}
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Gerar nova via com nova data</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
                               )
                             )}
-                            {contribution.status === "awaiting_value" && (
+                            
+                            {contrib.status === "awaiting_value" && (
                               <Button
                                 size="sm"
-                                variant="default"
-                                className="h-7 px-2"
+                                className="h-8 px-3 text-xs bg-purple-600 hover:bg-purple-700"
                                 onClick={() => {
-                                  setSelectedContribution(contribution);
+                                  setSelectedContribution(contrib);
                                   setShowSetValueDialog(true);
                                 }}
                               >
-                                <DollarSign className="h-3 w-3 mr-1" />
+                                <DollarSign className="h-3.5 w-3.5 mr-1.5" />
                                 Definir Valor
                               </Button>
                             )}
+
+                            <ChevronRight className="h-4 w-4 text-slate-300 hidden lg:block" />
                           </div>
-                        </TableCell>
-                      </TableRow>
+                        </div>
+
+                        {/* Mobile: Extra Info */}
+                        <div className="flex md:hidden items-center gap-4 mt-3 text-xs text-slate-500">
+                          <span className={isOverdue ? 'text-red-600' : ''}>
+                            Venc: {format(dueDate, "dd/MM/yyyy")}
+                          </span>
+                          <span>•</span>
+                          <span className="font-semibold text-slate-900">{formatCurrency(contrib.amount || 0)}</span>
+                        </div>
+                      </div>
                     );
                   })}
-                </TableBody>
-              </Table>
-            </ScrollArea>
-          ) : (
-            <div className="p-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {filteredContributions.map((contribution) => {
-                const status = statusConfig[contribution.status] || statusConfig.pending;
-                
-                // Calcular dias de atraso
-                const dueDate = new Date(contribution.due_date);
-                const today = new Date();
-                const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-                const isOverdue90Days = daysDiff > 90;
-                
-                // Permitir 2ª via apenas para pendente/vencido e não mais de 90 dias
-                const canGenerateReissue = ["pending", "overdue"].includes(contribution.status) && !isOverdue90Days;
-
-                return (
-                  <div
-                    key={contribution.id}
-                    className="p-3 rounded-lg border bg-card hover:shadow-sm transition-shadow"
-                  >
-                    <div className="flex items-start justify-between gap-2 mb-2">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${status.bgClass}`} />
-                          <span className="font-semibold text-sm">
-                            {monthNames[contribution.competence_month - 1]}/{contribution.competence_year}
-                          </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {contribution.contribution_type?.name || "Contribuição"}
-                        </p>
-                      </div>
-                      <Badge variant="outline" className={`${status.color} text-xs shrink-0`}>
-                        {status.label}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center justify-between text-xs mb-2">
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        {format(new Date(contribution.due_date + "T12:00:00"), "dd/MM/yy")}
-                      </span>
-                      <span className="font-semibold flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        {formatCurrency(contribution.amount || 0)}
-                      </span>
-                    </div>
-                    <div className="flex gap-1">
-                      {contribution.lytex_url && contribution.status !== "paid" && contribution.status !== "cancelled" && (
-                        <Button size="sm" variant="outline" className="h-7 flex-1 text-xs" asChild>
-                          <a href={contribution.lytex_url} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-3 w-3 mr-1" />
-                            Ver Boleto
-                          </a>
-                        </Button>
-                      )}
-                      {canGenerateReissue && (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          className="h-7 text-xs"
-                          onClick={() => {
-                            setSelectedContribution(contribution);
-                            setShowReissueDialog(true);
-                          }}
-                        >
-                          <RefreshCw className="h-3 w-3 mr-1" />
-                          2ª Via
-                        </Button>
-                      )}
-                      {contribution.status === "awaiting_value" && (
-                        <Button
-                          size="sm"
-                          variant="default"
-                          className="h-7 text-xs"
-                          onClick={() => {
-                            setSelectedContribution(contribution);
-                            setShowSetValueDialog(true);
-                          }}
-                        >
-                          <DollarSign className="h-3 w-3 mr-1" />
-                          Definir Valor
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              </ScrollArea>
+            )}
+          </CardContent>
         </Card>
 
-        {/* Reissue Requests - Compact */}
+        {/* Reissue Requests */}
         {reissueRequests.length > 0 && (
-          <Card>
-            <CardHeader className="py-3 px-4">
-              <CardTitle className="text-sm flex items-center gap-2">
-                <RefreshCw className="h-4 w-4" />
+          <Card className="bg-white border-0 shadow-sm">
+            <CardHeader className="pb-3 border-b border-slate-100">
+              <CardTitle className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <RefreshCw className="h-4 w-4 text-slate-400" />
                 Solicitações de 2ª Via ({reissueRequests.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="divide-y">
+              <div className="divide-y divide-slate-100">
                 {reissueRequests.slice(0, 3).map((request) => (
-                  <div key={request.id} className="flex items-center justify-between px-4 py-2">
+                  <div key={request.id} className="flex items-center justify-between p-4">
                     <div className="min-w-0">
-                      <p className="text-xs font-medium truncate">
-                        {format(new Date(request.created_at), "dd/MM/yy HH:mm")}
+                      <p className="text-sm font-medium text-slate-700">
+                        {format(new Date(request.created_at), "dd/MM/yyyy HH:mm")}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">{request.reason}</p>
+                      <p className="text-xs text-slate-500 truncate">{request.reason}</p>
                     </div>
-                    <Badge variant="outline" className={`shrink-0 text-xs ${
+                    <Badge variant="outline" className={`text-xs ${
                       request.status === "completed" ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
                       request.status === "processing" ? "bg-blue-50 text-blue-600 border-blue-200" :
                       request.status === "rejected" ? "bg-red-50 text-red-600 border-red-200" :
@@ -1040,74 +1110,6 @@ export default function EmployerPortal() {
           </Card>
         )}
       </main>
-
-      {/* Footer */}
-      <footer className="border-t bg-card/50 py-4 mt-8">
-        <div className="container mx-auto px-4 text-center text-xs text-muted-foreground">
-          Portal da Empresa • Acesso seguro às suas contribuições
-        </div>
-      </footer>
-
-      {/* Dialog de Definir Valor */}
-      <Dialog open={showSetValueDialog} onOpenChange={(open) => {
-        setShowSetValueDialog(open);
-        if (!open) {
-          setNewValue("");
-          setSelectedContribution(null);
-        }
-      }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Definir Valor da Contribuição
-            </DialogTitle>
-            <DialogDescription>
-              {selectedContribution && (
-                <span>
-                  {monthNamesFull[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year} • {selectedContribution.contribution_type?.name || "Contribuição"}
-                </span>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="text-sm font-medium block mb-2">Valor (R$) *</label>
-              <Input
-                type="text"
-                placeholder="0,00"
-                value={newValue}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/[^0-9,]/g, "");
-                  setNewValue(val);
-                }}
-                className="w-full"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Após definir o valor, o boleto será gerado automaticamente
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowSetValueDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSetValue} disabled={isSettingValue || !newValue}>
-              {isSettingValue ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  Gerando...
-                </>
-              ) : (
-                <>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Gerar Boleto
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
