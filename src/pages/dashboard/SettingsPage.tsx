@@ -58,6 +58,9 @@ export default function SettingsPage() {
   const [whatsappHeaderImage, setWhatsappHeaderImage] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   
+  // Logo state
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  
   // Password change state
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -351,6 +354,103 @@ export default function SettingsPage() {
     }
   };
 
+  // Handle Logo upload
+  const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!currentClinic?.id || !event.target.files || !event.target.files[0]) return;
+    
+    const file = event.target.files[0];
+    
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Arquivo inválido",
+        description: "Por favor, selecione uma imagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Arquivo muito grande",
+        description: "A imagem deve ter no máximo 2MB.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setUploadingLogo(true);
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${currentClinic.id}/logo.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('clinic-assets')
+        .upload(fileName, file, { upsert: true });
+      
+      if (uploadError) throw uploadError;
+      
+      const { data: { publicUrl } } = supabase.storage
+        .from('clinic-assets')
+        .getPublicUrl(fileName);
+      
+      const { error: updateError } = await supabase
+        .from('clinics')
+        .update({ logo_url: publicUrl })
+        .eq('id', currentClinic.id);
+      
+      if (updateError) throw updateError;
+      
+      toast({
+        title: "Logo enviada",
+        description: "A logo da clínica foi atualizada com sucesso.",
+      });
+      
+      // Reload page to reflect changes
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      toast({
+        title: "Erro ao enviar logo",
+        description: error.message || "Não foi possível enviar a logo.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  // Handle Logo removal
+  const handleRemoveLogo = async () => {
+    if (!currentClinic?.id) return;
+    
+    try {
+      await supabase.storage
+        .from('clinic-assets')
+        .remove([`${currentClinic.id}/logo.jpg`, `${currentClinic.id}/logo.png`, `${currentClinic.id}/logo.webp`]);
+      
+      const { error: updateError } = await supabase
+        .from('clinics')
+        .update({ logo_url: null })
+        .eq('id', currentClinic.id);
+      
+      if (updateError) throw updateError;
+      
+      toast({
+        title: "Logo removida",
+        description: "A logo da clínica foi removida.",
+      });
+      
+      window.location.reload();
+    } catch (error: any) {
+      toast({
+        title: "Erro ao remover logo",
+        description: error.message || "Não foi possível remover a logo.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleChangePassword = async () => {
     if (!newPassword || !confirmPassword) {
       toast({
@@ -450,24 +550,91 @@ export default function SettingsPage() {
       permission: "manage_settings",
       feature: null,
       content: (
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="clinicName">Nome da Clínica</Label>
-            <Input
-              id="clinicName"
-              value={clinicName}
-              onChange={(e) => setClinicName(e.target.value)}
-            />
+        <div className="space-y-6">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="clinicName">Nome da Clínica</Label>
+              <Input
+                id="clinicName"
+                value={clinicName}
+                onChange={(e) => setClinicName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={user?.email || ""}
+                disabled
+                className="bg-muted"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={user?.email || ""}
-              disabled
-              className="bg-muted"
-            />
+          
+          {/* Logo da Clínica */}
+          <div className="space-y-3">
+            <Label>Logotipo da Clínica</Label>
+            <div className="flex flex-col sm:flex-row gap-4 items-start">
+              <div className="w-32 h-32 rounded-lg border border-border bg-muted/30 flex items-center justify-center overflow-hidden">
+                {currentClinic?.logo_url ? (
+                  <img 
+                    src={currentClinic.logo_url} 
+                    alt="Logo da clínica" 
+                    className="w-full h-full object-contain p-2"
+                  />
+                ) : (
+                  <div className="text-center p-4">
+                    <Building2 className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">Sem logo</p>
+                  </div>
+                )}
+              </div>
+              
+              <div className="flex-1 space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  Esta imagem será exibida no portal da empresa, agendamento online e documentos impressos.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Formatos: JPG, PNG ou WebP • Tamanho máximo: 2MB • Recomendado: 200x200px
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={uploadingLogo}
+                    onClick={() => document.getElementById('logo-upload')?.click()}
+                  >
+                    {uploadingLogo ? (
+                      <>Enviando...</>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        {currentClinic?.logo_url ? 'Alterar Logo' : 'Enviar Logo'}
+                      </>
+                    )}
+                  </Button>
+                  {currentClinic?.logo_url && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleRemoveLogo}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remover
+                    </Button>
+                  )}
+                </div>
+                <input
+                  id="logo-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleLogoUpload}
+                />
+              </div>
+            </div>
           </div>
         </div>
       ),
