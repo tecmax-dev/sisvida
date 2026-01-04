@@ -752,7 +752,15 @@ export default function EmployerPortal() {
                 <TableBody>
                   {filteredContributions.map((contribution) => {
                     const status = statusConfig[contribution.status] || statusConfig.pending;
-                    const canGenerateReissue = ["pending", "overdue"].includes(contribution.status);
+                    
+                    // Calcular dias de atraso
+                    const dueDate = new Date(contribution.due_date);
+                    const today = new Date();
+                    const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+                    const isOverdue90Days = daysDiff > 90;
+                    
+                    // Permitir 2ª via apenas para pendente/vencido e não mais de 90 dias
+                    const canGenerateReissue = ["pending", "overdue"].includes(contribution.status) && !isOverdue90Days;
 
                     return (
                       <TableRow key={contribution.id} className="group">
@@ -813,7 +821,15 @@ export default function EmployerPortal() {
             <div className="p-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {filteredContributions.map((contribution) => {
                 const status = statusConfig[contribution.status] || statusConfig.pending;
-                const canGenerateReissue = ["pending", "overdue"].includes(contribution.status);
+                
+                // Calcular dias de atraso
+                const dueDate = new Date(contribution.due_date);
+                const today = new Date();
+                const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+                const isOverdue90Days = daysDiff > 90;
+                
+                // Permitir 2ª via apenas para pendente/vencido e não mais de 90 dias
+                const canGenerateReissue = ["pending", "overdue"].includes(contribution.status) && !isOverdue90Days;
 
                 return (
                   <div
