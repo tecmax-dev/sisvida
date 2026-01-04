@@ -3749,6 +3749,269 @@ export type Database = {
           },
         ]
       }
+      member_categories: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_categories_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_contributions: {
+        Row: {
+          clinic_id: string
+          competence_month: number
+          competence_year: number
+          contribution_type_id: string
+          created_at: string | null
+          created_by: string | null
+          due_date: string
+          id: string
+          lytex_boleto_barcode: string | null
+          lytex_boleto_digitable_line: string | null
+          lytex_invoice_id: string | null
+          lytex_invoice_url: string | null
+          lytex_pix_code: string | null
+          lytex_pix_qrcode: string | null
+          member_id: string
+          notes: string | null
+          paid_at: string | null
+          paid_value: number | null
+          payment_method: string | null
+          portal_reissue_count: number | null
+          status: string | null
+          updated_at: string | null
+          value: number
+        }
+        Insert: {
+          clinic_id: string
+          competence_month: number
+          competence_year: number
+          contribution_type_id: string
+          created_at?: string | null
+          created_by?: string | null
+          due_date: string
+          id?: string
+          lytex_boleto_barcode?: string | null
+          lytex_boleto_digitable_line?: string | null
+          lytex_invoice_id?: string | null
+          lytex_invoice_url?: string | null
+          lytex_pix_code?: string | null
+          lytex_pix_qrcode?: string | null
+          member_id: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_value?: number | null
+          payment_method?: string | null
+          portal_reissue_count?: number | null
+          status?: string | null
+          updated_at?: string | null
+          value?: number
+        }
+        Update: {
+          clinic_id?: string
+          competence_month?: number
+          competence_year?: number
+          contribution_type_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          due_date?: string
+          id?: string
+          lytex_boleto_barcode?: string | null
+          lytex_boleto_digitable_line?: string | null
+          lytex_invoice_id?: string | null
+          lytex_invoice_url?: string | null
+          lytex_pix_code?: string | null
+          lytex_pix_qrcode?: string | null
+          member_id?: string
+          notes?: string | null
+          paid_at?: string | null
+          paid_value?: number | null
+          payment_method?: string | null
+          portal_reissue_count?: number | null
+          status?: string | null
+          updated_at?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_contributions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_contributions_contribution_type_id_fkey"
+            columns: ["contribution_type_id"]
+            isOneToOne: false
+            referencedRelation: "contribution_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_contributions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      member_portal_logs: {
+        Row: {
+          action: string
+          created_at: string | null
+          details: Json | null
+          id: string
+          ip_address: string | null
+          member_id: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          member_id?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          member_id?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_portal_logs_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "members"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      members: {
+        Row: {
+          access_code: string | null
+          access_code_expires_at: string | null
+          address: string | null
+          birth_date: string | null
+          category_id: string | null
+          cep: string | null
+          city: string | null
+          clinic_id: string
+          cpf: string
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          neighborhood: string | null
+          notes: string | null
+          phone: string | null
+          portal_last_access_at: string | null
+          state: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          access_code?: string | null
+          access_code_expires_at?: string | null
+          address?: string | null
+          birth_date?: string | null
+          category_id?: string | null
+          cep?: string | null
+          city?: string | null
+          clinic_id: string
+          cpf: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          neighborhood?: string | null
+          notes?: string | null
+          phone?: string | null
+          portal_last_access_at?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          access_code?: string | null
+          access_code_expires_at?: string | null
+          address?: string | null
+          birth_date?: string | null
+          category_id?: string | null
+          cep?: string | null
+          city?: string | null
+          clinic_id?: string
+          cpf?: string
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          neighborhood?: string | null
+          notes?: string | null
+          phone?: string | null
+          portal_last_access_at?: string | null
+          state?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "members_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "member_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "members_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mercado_pago_payments: {
         Row: {
           amount: number
