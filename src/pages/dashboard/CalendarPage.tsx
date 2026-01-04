@@ -408,13 +408,42 @@ export default function CalendarPage() {
   const navigate = useNavigate();
   
   // Use sessionStorage to preserve selected date across tab switches
+  const parseStoredCalendarDate = (stored: string): Date | null => {
+    // Accept both legacy ISO strings and new YYYY-MM-DD keys.
+    // We always return a LOCAL date (at noon) to avoid timezone shifting the weekday.
+    try {
+      // New format: YYYY-MM-DD
+      if (/^\d{4}-\d{2}-\d{2}$/.test(stored)) {
+        const [y, m, d] = stored.split('-').map(Number);
+        const local = new Date(y, (m || 1) - 1, d || 1, 12, 0, 0, 0);
+        return isNaN(local.getTime()) ? null : local;
+      }
+
+      // Legacy format: ISO
+      const parsed = new Date(stored);
+      if (isNaN(parsed.getTime())) return null;
+
+      // Use UTC date parts from the ISO moment and rebuild a LOCAL date.
+      const local = new Date(
+        parsed.getUTCFullYear(),
+        parsed.getUTCMonth(),
+        parsed.getUTCDate(),
+        12,
+        0,
+        0,
+        0
+      );
+      return isNaN(local.getTime()) ? null : local;
+    } catch {
+      return null;
+    }
+  };
+
   const getInitialSelectedDate = (): Date => {
     const stored = sessionStorage.getItem('calendar_selected_date');
     if (stored) {
-      const parsed = new Date(stored);
-      if (!isNaN(parsed.getTime())) {
-        return parsed;
-      }
+      const parsed = parseStoredCalendarDate(stored);
+      if (parsed) return parsed;
     }
     return new Date();
   };
@@ -422,10 +451,8 @@ export default function CalendarPage() {
   const getInitialCurrentDate = (): Date => {
     const stored = sessionStorage.getItem('calendar_current_date');
     if (stored) {
-      const parsed = new Date(stored);
-      if (!isNaN(parsed.getTime())) {
-        return parsed;
-      }
+      const parsed = parseStoredCalendarDate(stored);
+      if (parsed) return parsed;
     }
     return new Date();
   };
@@ -808,7 +835,8 @@ export default function CalendarPage() {
       return;
     }
 
-    sessionStorage.setItem('calendar_selected_date', selectedDate.toISOString());
+    // Store as YYYY-MM-DD to avoid timezone shifting when restoring.
+    sessionStorage.setItem('calendar_selected_date', toDateKey(selectedDate));
   }, [selectedDate, toast]);
 
   useEffect(() => {
@@ -816,7 +844,8 @@ export default function CalendarPage() {
       console.error('[CalendarPage] currentDate inválida:', currentDate);
       return;
     }
-    sessionStorage.setItem('calendar_current_date', currentDate.toISOString());
+    // Store as YYYY-MM-DD to avoid timezone shifting when restoring.
+    sessionStorage.setItem('calendar_current_date', toDateKey(currentDate));
   }, [currentDate]);
 
   useEffect(() => {
