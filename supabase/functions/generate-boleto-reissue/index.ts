@@ -152,9 +152,23 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { contribution_id, new_due_date, portal_type, portal_id } = await req.json();
+    const body = await req.json();
+    const { 
+      contribution_id, 
+      contributionId, // alias 
+      new_due_date, 
+      newDueDate, // alias
+      portal_type, 
+      contributionType, // 'employer' ou 'member'
+      portal_id,
+      requestedBy 
+    } = body;
 
-    if (!contribution_id || !new_due_date) {
+    const actualContributionId = contribution_id || contributionId;
+    const actualNewDueDate = new_due_date || newDueDate;
+    const actualContributionType = contributionType || "employer";
+
+    if (!actualContributionId || !actualNewDueDate) {
       return new Response(
         JSON.stringify({ error: "ID da contribuição e nova data de vencimento são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -162,29 +176,36 @@ serve(async (req) => {
     }
 
     // Validar que a nova data é futura
-    // Usar parsing manual para evitar problemas de timezone
-    const [year, month, day] = new_due_date.split("-").map(Number);
-    const newDueDate = new Date(year, month - 1, day, 12, 0, 0); // meio-dia para evitar shift de timezone
+    const [year, month, day] = actualNewDueDate.split("-").map(Number);
+    const newDueDateObj = new Date(year, month - 1, day, 12, 0, 0);
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    if (newDueDate < today) {
+    if (newDueDateObj < today) {
       return new Response(
         JSON.stringify({ error: "A nova data de vencimento deve ser futura" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Buscar a contribuição com dados da empresa
+    // Determinar tabela baseado no tipo
+    const contributionTable = actualContributionType === "member" 
+      ? "member_contributions" 
+      : "employer_contributions";
+    const entityTable = actualContributionType === "member" ? "members" : "employers";
+    const entityField = actualContributionType === "member" ? "member" : "employer";
+    const entityIdField = actualContributionType === "member" ? "member_id" : "employer_id";
+
+    // Buscar a contribuição
     const { data: contribution, error: contribError } = await supabase
-      .from("employer_contributions")
+      .from(contributionTable)
       .select(`
         *,
-        employer:employers(id, name, cnpj, email, phone),
+        ${entityField}:${entityTable}(id, name, ${actualContributionType === "member" ? "cpf" : "cnpj"}, email, phone),
         contribution_type:contribution_types(name)
       `)
-      .eq("id", contribution_id)
+      .eq("id", actualContributionId)
       .single();
 
     if (contribError || !contribution) {
@@ -195,14 +216,17 @@ serve(async (req) => {
       );
     }
 
-    // Validações específicas para portais (empresa/contador)
-    if (portal_type && portal_id) {
-      // Portais só podem gerar 2ª via de boletos VENCIDOS (não pendentes)
+    const entity = contribution[entityField];
+    const entityIdentifier = actualContributionType === "member" ? entity.cpf : entity.cnpj;
+
+    // Validações para portais
+    const isFromPortal = portal_type || requestedBy === "portal";
+    
+    if (isFromPortal) {
       if (contribution.status === 'pending') {
-        console.log(`[Reissue] Boleto ainda não vencido - bloqueado para portal`);
         return new Response(
           JSON.stringify({ 
-            error: "2ª via só disponível para boletos vencidos. Aguarde o vencimento ou contate o gestor." 
+            error: "2ª via só disponível para boletos vencidos. Aguarde o vencimento." 
           }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -211,94 +235,64 @@ serve(async (req) => {
       const dueDate = new Date(contribution.due_date);
       const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
       
-      // Verificar se boleto está vencido há mais de 90 dias - apenas gestor pode alterar
       if (daysDiff > 90) {
-        console.log(`[Reissue] Boleto vencido há ${daysDiff} dias - bloqueado para portal`);
         return new Response(
           JSON.stringify({ 
-            error: "Boletos com mais de 90 dias de atraso só podem ser alterados pelo gestor. Entre em contato com o sindicato." 
+            error: "Boletos com mais de 90 dias de atraso só podem ser alterados pelo gestor." 
           }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      // Verificar limite de reemissões via portal (máximo 2)
       const currentReissueCount = contribution.portal_reissue_count || 0;
       if (currentReissueCount >= 2) {
-        console.log(`[Reissue] Limite de reemissões atingido: ${currentReissueCount}`);
         return new Response(
           JSON.stringify({ 
-            error: "Limite de 2 reemissões atingido. Para novas solicitações, entre em contato com o gestor do sindicato." 
+            error: "Limite de 2 reemissões atingido. Contate o gestor." 
           }),
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     }
 
-    // Verificar se a contribuição pertence ao portal que está solicitando
-    if (portal_type === "employer" && portal_id) {
-      if (contribution.employer_id !== portal_id) {
-        return new Response(
-          JSON.stringify({ error: "Você não tem permissão para acessar esta contribuição" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    } else if (portal_type === "accounting_office" && portal_id) {
-      // Verificar se a empresa está vinculada ao escritório
-      const { data: link } = await supabase
-        .from("accounting_office_employers")
-        .select("id")
-        .eq("accounting_office_id", portal_id)
-        .eq("employer_id", contribution.employer_id)
-        .single();
-
-      if (!link) {
-        return new Response(
-          JSON.stringify({ error: "Você não tem permissão para acessar esta contribuição" }),
-          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    }
-
-    // Cancelar boleto antigo na Lytex (se existir)
-    if (contribution.lytex_invoice_id) {
+    // Cancelar boleto antigo na Lytex
+    const lytexInvoiceId = contribution.lytex_invoice_id;
+    if (lytexInvoiceId) {
       try {
-        await cancelInvoice(
-          contribution.lytex_invoice_id,
-          contribution.due_date,
-          contribution.value
-        );
+        await cancelInvoice(lytexInvoiceId, contribution.due_date, contribution.value);
       } catch (err) {
-        console.error("[Reissue] Erro ao cancelar boleto antigo (continuando):", err);
+        console.error("[Reissue] Erro ao cancelar boleto antigo:", err);
       }
     }
 
-    // Atualizar status da contribuição antiga para cancelado
+    // Atualizar contribuição antiga para cancelada
     await supabase
-      .from("employer_contributions")
+      .from(contributionTable)
       .update({ status: "cancelled" })
-      .eq("id", contribution_id);
+      .eq("id", actualContributionId);
 
-    // Calcular novo contador de reemissões (incrementa apenas se veio de portal)
-    const newReissueCount = portal_type && portal_id 
+    // Calcular novo contador de reemissões
+    const newReissueCount = isFromPortal 
       ? (contribution.portal_reissue_count || 0) + 1 
       : contribution.portal_reissue_count || 0;
 
-    // Criar nova contribuição com a nova data
+    // Criar nova contribuição
+    const newContribData: Record<string, any> = {
+      [entityIdField]: contribution[entityIdField],
+      clinic_id: contribution.clinic_id,
+      contribution_type_id: contribution.contribution_type_id,
+      competence_month: contribution.competence_month,
+      competence_year: contribution.competence_year,
+      value: contribution.value,
+      due_date: actualNewDueDate,
+      status: "pending",
+      notes: `2ª via gerada em ${new Date().toLocaleDateString("pt-BR")}. Original: ${contribution.id}`,
+      portal_reissue_count: newReissueCount,
+    };
+
     const { data: newContribution, error: newContribError } = await supabase
-      .from("employer_contributions")
-      .insert({
-        employer_id: contribution.employer_id,
-        clinic_id: contribution.clinic_id,
-        contribution_type_id: contribution.contribution_type_id,
-        competence_month: contribution.competence_month,
-        competence_year: contribution.competence_year,
-        value: contribution.value,
-        due_date: new_due_date,
-        status: "pending",
-        notes: `2ª via gerada em ${new Date().toLocaleDateString("pt-BR")}. Original: ${contribution.id}`,
-        portal_reissue_count: newReissueCount,
-      })
+      .from(contributionTable)
+      .insert(newContribData)
       .select()
       .single();
 
@@ -319,20 +313,20 @@ serve(async (req) => {
     try {
       const invoice = await createInvoice({
         employer: {
-          cnpj: contribution.employer.cnpj,
-          name: contribution.employer.name,
-          email: contribution.employer.email,
-          phone: contribution.employer.phone,
+          cnpj: entityIdentifier,
+          name: entity.name,
+          email: entity.email,
+          phone: entity.phone,
         },
         value: contribution.value,
-        dueDate: new_due_date,
+        dueDate: actualNewDueDate,
         description,
         contributionId: newContribution.id,
       });
 
       // Atualizar nova contribuição com dados do boleto
       await supabase
-        .from("employer_contributions")
+        .from(contributionTable)
         .update({
           lytex_invoice_id: invoice._id,
           lytex_invoice_url: invoice.invoiceUrl,
@@ -343,23 +337,35 @@ serve(async (req) => {
         })
         .eq("id", newContribution.id);
 
-      // Registrar log
-      const logTable = portal_type === "accounting_office" 
-        ? "accounting_office_portal_logs" 
-        : "employer_portal_logs";
-      const logData = portal_type === "accounting_office"
-        ? { accounting_office_id: portal_id, action: "generate_reissue" }
-        : { employer_id: portal_id, action: "generate_reissue" };
+      // Registrar log se veio do portal
+      if (actualContributionType === "member" && isFromPortal) {
+        await supabase.from("member_portal_logs").insert({
+          member_id: contribution.member_id,
+          action: "generate_reissue",
+          ip_address: req.headers.get("x-forwarded-for") || "unknown",
+          user_agent: req.headers.get("user-agent") || "unknown",
+          details: { 
+            original_contribution_id: actualContributionId,
+            new_contribution_id: newContribution.id,
+            new_due_date: actualNewDueDate,
+          },
+        });
+      } else if (portal_id) {
+        const logTable = portal_type === "accounting_office" 
+          ? "accounting_office_portal_logs" 
+          : "employer_portal_logs";
+        const logData = portal_type === "accounting_office"
+          ? { accounting_office_id: portal_id, action: "generate_reissue" }
+          : { employer_id: portal_id, action: "generate_reissue" };
 
-      if (portal_id) {
         await supabase.from(logTable).insert({
           ...logData,
           ip_address: req.headers.get("x-forwarded-for") || "unknown",
           user_agent: req.headers.get("user-agent") || "unknown",
           details: { 
-            original_contribution_id: contribution_id,
+            original_contribution_id: actualContributionId,
             new_contribution_id: newContribution.id,
-            new_due_date,
+            new_due_date: actualNewDueDate,
           },
         });
       }
@@ -376,13 +382,12 @@ serve(async (req) => {
     } catch (lytexError: any) {
       console.error("[Reissue] Erro ao criar boleto Lytex:", lytexError);
       
-      // Mesmo sem boleto Lytex, a contribuição foi criada
       return new Response(
         JSON.stringify({
           success: true,
           new_contribution_id: newContribution.id,
           lytex_invoice_url: null,
-          message: "Contribuição criada, mas houve erro ao gerar boleto. Tente novamente mais tarde.",
+          message: "Contribuição criada, mas houve erro ao gerar boleto.",
           warning: lytexError.message,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
