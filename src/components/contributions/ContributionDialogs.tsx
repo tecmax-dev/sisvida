@@ -36,6 +36,7 @@ import {
   Download,
   Send,
   Loader2,
+  Pencil,
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -128,6 +129,12 @@ export default function ContributionDialogs({
 
   // Cancel dialog
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  
+  // Edit dialog
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editValue, setEditValue] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [updating, setUpdating] = useState(false);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -229,6 +236,58 @@ export default function ContributionDialogs({
     } catch (error) {
       console.error("Error cancelling:", error);
       toast.error("Erro ao cancelar contribuição");
+    }
+  };
+
+  const handleOpenEditDialog = () => {
+    if (!selectedContribution) return;
+    setEditValue((selectedContribution.value / 100).toFixed(2).replace(".", ","));
+    setEditDueDate(selectedContribution.due_date);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateInvoice = async () => {
+    if (!selectedContribution) return;
+    
+    setUpdating(true);
+    try {
+      const newValueCents = Math.round(parseFloat(editValue.replace(",", ".")) * 100);
+      
+      if (selectedContribution.lytex_invoice_id) {
+        // Atualizar na Lytex e no banco
+        const { error } = await supabase.functions.invoke("lytex-api", {
+          body: {
+            action: "update_invoice",
+            invoiceId: selectedContribution.lytex_invoice_id,
+            contributionId: selectedContribution.id,
+            value: newValueCents,
+            dueDate: editDueDate,
+          },
+        });
+
+        if (error) throw error;
+      } else {
+        // Só atualizar no banco
+        const { error } = await supabase
+          .from("employer_contributions")
+          .update({
+            value: newValueCents,
+            due_date: editDueDate,
+          })
+          .eq("id", selectedContribution.id);
+
+        if (error) throw error;
+      }
+
+      toast.success("Contribuição atualizada com sucesso");
+      setEditDialogOpen(false);
+      onViewDialogChange(false);
+      onRefresh();
+    } catch (error: any) {
+      console.error("Error updating:", error);
+      toast.error(error.message || "Erro ao atualizar contribuição");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -462,15 +521,24 @@ export default function ContributionDialogs({
                 </div>
               )}
 
-              <DialogFooter>
+              <DialogFooter className="flex-col sm:flex-row gap-2">
                 {selectedContribution.status !== "paid" && selectedContribution.status !== "cancelled" && (
-                  <Button
-                    variant="destructive"
-                    onClick={() => setCancelDialogOpen(true)}
-                  >
-                    <XCircle className="h-4 w-4 mr-2" />
-                    Cancelar
-                  </Button>
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={handleOpenEditDialog}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => setCancelDialogOpen(true)}
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Cancelar
+                    </Button>
+                  </>
                 )}
                 {!selectedContribution.lytex_invoice_id && selectedContribution.status !== "cancelled" && (
                   <Button
@@ -511,6 +579,49 @@ export default function ContributionDialogs({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar Contribuição</DialogTitle>
+            <DialogDescription>
+              {selectedContribution?.lytex_invoice_id 
+                ? "A alteração será sincronizada com o boleto na Lytex."
+                : "Altere o valor e/ou vencimento da contribuição."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Valor (R$)</Label>
+              <Input
+                placeholder="0,00"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Vencimento</Label>
+              <Input
+                type="date"
+                value={editDueDate}
+                onChange={(e) => setEditDueDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateInvoice} disabled={updating}>
+              {updating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
