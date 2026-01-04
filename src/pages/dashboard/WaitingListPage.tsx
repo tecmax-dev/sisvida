@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { 
   Clock, 
   Plus, 
@@ -10,6 +10,8 @@ import {
   Trash2,
   Send,
   CheckCircle2,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +43,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -86,6 +102,11 @@ function WaitingListContent() {
   const [selectedProfessional, setSelectedProfessional] = useState("");
   const [preferredTimes, setPreferredTimes] = useState<string[]>([]);
   const [notes, setNotes] = useState("");
+  const [patientPopoverOpen, setPatientPopoverOpen] = useState(false);
+
+  const selectedPatientName = useMemo(() => {
+    return patients.find(p => p.id === selectedPatient)?.name || "";
+  }, [patients, selectedPatient]);
 
   useEffect(() => {
     if (currentClinic) {
@@ -278,18 +299,47 @@ function WaitingListContent() {
             <div className="space-y-4">
               <div>
                 <Label>Paciente *</Label>
-                <Select value={selectedPatient} onValueChange={setSelectedPatient}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue placeholder="Selecione o paciente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {patients.map((patient) => (
-                      <SelectItem key={patient.id} value={patient.id}>
-                        {patient.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Popover open={patientPopoverOpen} onOpenChange={setPatientPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={patientPopoverOpen}
+                      className="w-full justify-between mt-1.5"
+                    >
+                      {selectedPatientName || "Selecione o paciente"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-full p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Buscar paciente..." />
+                      <CommandList>
+                        <CommandEmpty>Nenhum paciente encontrado.</CommandEmpty>
+                        <CommandGroup>
+                          {patients.map((patient) => (
+                            <CommandItem
+                              key={patient.id}
+                              value={patient.name}
+                              onSelect={() => {
+                                setSelectedPatient(patient.id);
+                                setPatientPopoverOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedPatient === patient.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {patient.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
               <div>
                 <Label>Profissional (opcional)</Label>
