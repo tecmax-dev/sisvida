@@ -79,6 +79,8 @@ import {
 } from "@/components/ui/select";
 import EmployerCategoryDialog from "@/components/employers/EmployerCategoryDialog";
 import { AutoCategorizeDialog } from "@/components/employers/AutoCategorizeDialog";
+import { UpdateAddressesDialog } from "@/components/employers/UpdateAddressesDialog";
+import { useCepLookup } from "@/hooks/useCepLookup";
 
 interface Category {
   id: string;
@@ -94,7 +96,9 @@ interface Employer {
   trade_name: string | null;
   email: string | null;
   phone: string | null;
+  cep: string | null;
   address: string | null;
+  neighborhood: string | null;
   city: string | null;
   state: string | null;
   notes: string | null;
@@ -113,7 +117,9 @@ interface EmployerFormData {
   trade_name: string;
   email: string;
   phone: string;
+  cep: string;
   address: string;
+  neighborhood: string;
   city: string;
   state: string;
   notes: string;
@@ -127,7 +133,9 @@ const initialFormData: EmployerFormData = {
   trade_name: "",
   email: "",
   phone: "",
+  cep: "",
   address: "",
+  neighborhood: "",
   city: "",
   state: "",
   notes: "",
@@ -149,7 +157,9 @@ export default function EmployersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [autoCategorizeDialogOpen, setAutoCategorizeDialogOpen] = useState(false);
+  const [updateAddressesDialogOpen, setUpdateAddressesDialogOpen] = useState(false);
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
+  const { lookupCep, loading: cepLoading } = useCepLookup();
   const [formData, setFormData] = useState<EmployerFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
   const [expandedEmployer, setExpandedEmployer] = useState<string | null>(null);
@@ -228,7 +238,9 @@ export default function EmployersPage() {
             trade_name: null,
             email: null,
             phone: null,
+            cep: null,
             address: null,
+            neighborhood: null,
             city: null,
             state: null,
             notes: null,
@@ -278,7 +290,9 @@ export default function EmployersPage() {
         trade_name: employer.trade_name || "",
         email: employer.email || "",
         phone: employer.phone ? formatPhone(employer.phone) : "",
+        cep: employer.cep || "",
         address: employer.address || "",
+        neighborhood: employer.neighborhood || "",
         city: employer.city || "",
         state: employer.state || "",
         notes: employer.notes || "",
@@ -319,7 +333,9 @@ export default function EmployersPage() {
         trade_name: formData.trade_name.trim() || null,
         email: formData.email.trim() || null,
         phone: cleanedPhone || null,
+        cep: formData.cep.replace(/\D/g, '') || null,
         address: formData.address.trim() || null,
+        neighborhood: formData.neighborhood.trim() || null,
         city: formData.city.trim() || null,
         state: formData.state.trim() || null,
         notes: formData.notes.trim() || null,
@@ -433,6 +449,15 @@ export default function EmployersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setUpdateAddressesDialogOpen(true)}
+            className="gap-2"
+            title="Atualizar endereços via CEP"
+          >
+            <MapPin className="h-4 w-4" />
+            Atualizar CEP
+          </Button>
           <Button 
             variant="outline" 
             onClick={() => setAutoCategorizeDialogOpen(true)}
@@ -912,18 +937,65 @@ export default function EmployersPage() {
                 placeholder="email@empresa.com"
               />
             </div>
-            <div>
-              <Label htmlFor="address">Endereço</Label>
-              <Input
-                id="address"
-                value={formData.address}
-                onChange={(e) =>
-                  setFormData({ ...formData, address: e.target.value })
-                }
-                placeholder="Rua, número, bairro"
-              />
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="cep">CEP</Label>
+                <div className="relative">
+                  <Input
+                    id="cep"
+                    value={formData.cep}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '').slice(0, 8);
+                      const formatted = value.length > 5 ? `${value.slice(0, 5)}-${value.slice(5)}` : value;
+                      setFormData({ ...formData, cep: formatted });
+                    }}
+                    onBlur={async () => {
+                      const cleanedCep = formData.cep.replace(/\D/g, '');
+                      if (cleanedCep.length === 8) {
+                        const data = await lookupCep(cleanedCep);
+                        if (data) {
+                          setFormData(prev => ({
+                            ...prev,
+                            address: data.logradouro || prev.address,
+                            neighborhood: data.bairro || prev.neighborhood,
+                            city: data.localidade || prev.city,
+                            state: data.uf || prev.state,
+                          }));
+                        }
+                      }
+                    }}
+                    placeholder="00000-000"
+                    disabled={cepLoading}
+                  />
+                  {cepLoading && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                </div>
+              </div>
+              <div className="col-span-2">
+                <Label htmlFor="address">Endereço</Label>
+                <Input
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) =>
+                    setFormData({ ...formData, address: e.target.value })
+                  }
+                  placeholder="Rua, número"
+                />
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="neighborhood">Bairro</Label>
+                <Input
+                  id="neighborhood"
+                  value={formData.neighborhood}
+                  onChange={(e) =>
+                    setFormData({ ...formData, neighborhood: e.target.value })
+                  }
+                  placeholder="Bairro"
+                />
+              </div>
               <div>
                 <Label htmlFor="city">Cidade</Label>
                 <Input
@@ -936,7 +1008,7 @@ export default function EmployersPage() {
                 />
               </div>
               <div>
-                <Label htmlFor="state">Estado</Label>
+                <Label htmlFor="state">UF</Label>
                 <Input
                   id="state"
                   value={formData.state}
@@ -1047,6 +1119,14 @@ export default function EmployersPage() {
             onComplete={() => {
               fetchEmployers();
               fetchCategories();
+            }}
+          />
+          <UpdateAddressesDialog
+            open={updateAddressesDialogOpen}
+            onOpenChange={setUpdateAddressesDialogOpen}
+            clinicId={currentClinic.id}
+            onComplete={() => {
+              fetchEmployers();
             }}
           />
         </>
