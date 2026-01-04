@@ -43,9 +43,9 @@ interface Contribution {
   competence_month: number;
   competence_year: number;
   due_date: string;
-  amount: number;
+  value: number;
   status: string;
-  lytex_boleto_url?: string;
+  lytex_invoice_url?: string;
   employer?: {
     id: string;
     name: string;
@@ -219,7 +219,7 @@ export default function AccountingOfficePortal() {
     total: filteredContributions.length,
     pending: filteredContributions.filter(c => c.status === "pending").length,
     overdue: filteredContributions.filter(c => c.status === "overdue").length,
-    totalValue: filteredContributions.reduce((sum, c) => sum + (c.amount || 0), 0),
+    totalValue: filteredContributions.reduce((sum, c) => sum + (c.value || 0), 0),
   };
 
   if (!isAuthenticated) {
@@ -514,7 +514,7 @@ export default function AccountingOfficePortal() {
                           {new Date(contrib.due_date).toLocaleDateString("pt-BR")}
                         </TableCell>
                         <TableCell className="font-medium">
-                          {formatCurrency(contrib.amount)}
+                          {formatCurrency(contrib.value)}
                         </TableCell>
                         <TableCell>
                           <Badge className={STATUS_CONFIG[contrib.status]?.className || ""}>
@@ -522,11 +522,11 @@ export default function AccountingOfficePortal() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          {contrib.lytex_boleto_url && contrib.status !== "paid" && contrib.status !== "cancelled" ? (
+                          {contrib.lytex_invoice_url && contrib.status !== "paid" && contrib.status !== "cancelled" ? (
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => window.open(contrib.lytex_boleto_url, "_blank")}
+                              onClick={() => window.open(contrib.lytex_invoice_url, "_blank")}
                             >
                               <ExternalLink className="h-4 w-4 mr-1" />
                               Ver Boleto
