@@ -231,10 +231,22 @@ export default function AccountingOfficePortal() {
     return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
   };
 
+  const parseISODateToLocalNoon = (isoDate: string) => {
+    const [y, m, d] = isoDate.split("-").map(Number);
+    return new Date(y, (m || 1) - 1, d || 1, 12, 0, 0);
+  };
+
+  const formatDateForInput = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
   const getMinDate = () => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    return tomorrow.toISOString().split("T")[0];
+    return formatDateForInput(tomorrow);
   };
 
   const handleGenerateReissue = async () => {
@@ -677,15 +689,15 @@ export default function AccountingOfficePortal() {
                   </TableHeader>
                   <TableBody>
                     {filteredContributions.map((contrib) => {
-                      // Calcular dias de atraso
-                      const dueDate = new Date(contrib.due_date);
+                      // Calcular dias de atraso (parse de data em "meio-dia" para evitar shift de timezone)
+                      const dueDate = parseISODateToLocalNoon(contrib.due_date);
                       const today = new Date();
                       const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
                       const isOverdue90Days = daysDiff > 90;
-                      
+
                       // Permitir 2ª via apenas para pendente/vencido e não mais de 90 dias
                       const canGenerateReissue = ["pending", "overdue"].includes(contrib.status) && !isOverdue90Days;
-                      
+
                       return (
                         <TableRow key={contrib.id}>
                           <TableCell className="font-medium">
@@ -701,7 +713,7 @@ export default function AccountingOfficePortal() {
                             {MONTHS[contrib.competence_month - 1]}/{contrib.competence_year}
                           </TableCell>
                           <TableCell>
-                            {new Date(contrib.due_date).toLocaleDateString("pt-BR")}
+                            {dueDate.toLocaleDateString("pt-BR")}
                           </TableCell>
                           <TableCell className="font-medium">
                             {formatCurrency(contrib.value)}
