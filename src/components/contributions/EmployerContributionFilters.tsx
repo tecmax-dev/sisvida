@@ -184,33 +184,41 @@ export function EmployerContributionFilters({
     // Load logo if enabled and available
     if (showLogo && clinicInfo?.logoUrl) {
       try {
-        // Fetch image as blob to avoid CORS issues
         const response = await fetch(clinicInfo.logoUrl);
+        if (!response.ok) throw new Error(`Logo HTTP ${response.status}`);
         const blob = await response.blob();
-        const base64 = await new Promise<string>((resolve) => {
+        const base64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
+          reader.onerror = () => reject(new Error("Falha ao ler logo"));
           reader.onloadend = () => resolve(reader.result as string);
           reader.readAsDataURL(blob);
         });
-        
-        // Create image from base64 to get dimensions
+
+        // Normalize to PNG via canvas (works for jpg/png/webp as long as browser can decode)
         const img = new Image();
         await new Promise<void>((resolve) => {
           img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) return resolve();
+            ctx.drawImage(img, 0, 0);
+            const pngData = canvas.toDataURL("image/png");
+
             const maxWidth = 40;
             const maxHeight = 20;
             const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
             const width = img.width * ratio;
             const height = img.height * ratio;
-            doc.addImage(base64, "PNG", 14, yPos, width, height);
+            doc.addImage(pngData, "PNG", 14, yPos, width, height);
             yPos += height + 5;
             resolve();
           };
           img.onerror = () => resolve();
           img.src = base64;
         });
-      } catch (e) {
-        console.log("Error loading logo:", e);
+      } catch {
         // Continue without logo
       }
     }
