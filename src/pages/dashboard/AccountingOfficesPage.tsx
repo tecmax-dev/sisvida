@@ -117,6 +117,7 @@ export default function AccountingOfficesPage() {
   });
   
   const [selectedEmployerIds, setSelectedEmployerIds] = useState<string[]>([]);
+  const [linkSearchTerm, setLinkSearchTerm] = useState("");
 
   useEffect(() => {
     if (currentClinic?.id) {
@@ -356,8 +357,30 @@ export default function AccountingOfficesPage() {
       .filter(l => l.accounting_office_id === office.id)
       .map(l => l.employer_id);
     setSelectedEmployerIds(currentLinks);
+    setLinkSearchTerm("");
     setIsLinkDialogOpen(true);
   };
+
+  const handleSelectAllEmployers = () => {
+    const filteredIds = filteredEmployersForLink.map(e => e.id);
+    const allSelected = filteredIds.every(id => selectedEmployerIds.includes(id));
+    
+    if (allSelected) {
+      setSelectedEmployerIds(selectedEmployerIds.filter(id => !filteredIds.includes(id)));
+    } else {
+      const newIds = [...new Set([...selectedEmployerIds, ...filteredIds])];
+      setSelectedEmployerIds(newIds);
+    }
+  };
+
+  const handleClearSelection = () => {
+    setSelectedEmployerIds([]);
+  };
+
+  const filteredEmployersForLink = employers.filter(employer =>
+    employer.name.toLowerCase().includes(linkSearchTerm.toLowerCase()) ||
+    employer.cnpj?.includes(linkSearchTerm.replace(/\D/g, ""))
+  );
 
   const handleSaveLinks = async () => {
     if (!selectedOffice) return;
@@ -763,66 +786,166 @@ export default function AccountingOfficesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Vincular Empresas */}
+      {/* Dialog de Vincular Empresas - Profissional */}
       <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Link2 className="h-5 w-5" />
-              Vincular Empresas
+              <Link2 className="h-5 w-5 text-primary" />
+              Vincular Empresas ao Escritório
             </DialogTitle>
+            {selectedOffice && (
+              <p className="text-sm text-muted-foreground mt-1">
+                {selectedOffice.name}
+              </p>
+            )}
           </DialogHeader>
+          
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Selecione as empresas que este escritório poderá visualizar no portal.
-            </p>
-            <ScrollArea className="h-[300px] border rounded-md p-4">
-              <div className="space-y-3">
+            {/* Barra de busca e ações */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar empresa por nome ou CNPJ..."
+                  value={linkSearchTerm}
+                  onChange={(e) => setLinkSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleSelectAllEmployers}
+                  className="whitespace-nowrap"
+                >
+                  {filteredEmployersForLink.length > 0 && 
+                   filteredEmployersForLink.every(e => selectedEmployerIds.includes(e.id))
+                    ? "Desmarcar Todos"
+                    : "Selecionar Todos"}
+                </Button>
+                {selectedEmployerIds.length > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearSelection}
+                    className="text-destructive hover:text-destructive"
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Estatísticas */}
+            <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Building className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">
+                  {selectedEmployerIds.length} de {employers.length} empresas selecionadas
+                </span>
+              </div>
+              {linkSearchTerm && (
+                <Badge variant="secondary" className="text-xs">
+                  {filteredEmployersForLink.length} resultados
+                </Badge>
+              )}
+            </div>
+
+            {/* Lista de empresas */}
+            <ScrollArea className="h-[350px] border rounded-lg">
+              <div className="p-2">
                 {employers.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">
-                    Nenhuma empresa cadastrada
-                  </p>
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Building className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                    <p className="font-medium">Nenhuma empresa cadastrada</p>
+                    <p className="text-sm mt-1">Cadastre empresas para poder vinculá-las</p>
+                  </div>
+                ) : filteredEmployersForLink.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Search className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                    <p>Nenhuma empresa encontrada</p>
+                    <p className="text-sm mt-1">Tente outro termo de busca</p>
+                  </div>
                 ) : (
-                  employers.map((employer) => (
-                    <div
-                      key={employer.id}
-                      className="flex items-center space-x-3 p-2 rounded hover:bg-muted"
-                    >
-                      <Checkbox
-                        id={employer.id}
-                        checked={selectedEmployerIds.includes(employer.id)}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedEmployerIds([...selectedEmployerIds, employer.id]);
-                          } else {
-                            setSelectedEmployerIds(
-                              selectedEmployerIds.filter((id) => id !== employer.id)
-                            );
-                          }
-                        }}
-                      />
-                      <label
-                        htmlFor={employer.id}
-                        className="flex-1 cursor-pointer"
-                      >
-                        <p className="font-medium text-sm">{employer.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {employer.cnpj?.replace(
-                            /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
-                            "$1.$2.$3/$4-$5"
+                  <div className="grid gap-2">
+                    {filteredEmployersForLink.map((employer) => {
+                      const isSelected = selectedEmployerIds.includes(employer.id);
+                      return (
+                        <div
+                          key={employer.id}
+                          onClick={() => {
+                            if (isSelected) {
+                              setSelectedEmployerIds(selectedEmployerIds.filter(id => id !== employer.id));
+                            } else {
+                              setSelectedEmployerIds([...selectedEmployerIds, employer.id]);
+                            }
+                          }}
+                          className={`
+                            flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-all
+                            border-2 
+                            ${isSelected 
+                              ? "border-primary bg-primary/5 shadow-sm" 
+                              : "border-transparent bg-muted/30 hover:bg-muted/60 hover:border-muted-foreground/20"
+                            }
+                          `}
+                        >
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={() => {}}
+                            className="pointer-events-none"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className={`font-medium truncate ${isSelected ? "text-primary" : ""}`}>
+                              {employer.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              CNPJ: {employer.cnpj?.replace(
+                                /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,
+                                "$1.$2.$3/$4-$5"
+                              ) || "Não informado"}
+                            </p>
+                          </div>
+                          {isSelected && (
+                            <Badge variant="default" className="shrink-0">
+                              Vinculada
+                            </Badge>
                           )}
-                        </p>
-                      </label>
-                    </div>
-                  ))
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </ScrollArea>
-            <div className="text-sm text-muted-foreground">
-              {selectedEmployerIds.length} empresa(s) selecionada(s)
-            </div>
+
+            {/* Resumo das seleções */}
+            {selectedEmployerIds.length > 0 && (
+              <div className="p-3 bg-primary/5 border border-primary/20 rounded-lg">
+                <p className="text-sm font-medium text-primary mb-2">
+                  Empresas que serão vinculadas:
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedEmployerIds.slice(0, 5).map(id => {
+                    const emp = employers.find(e => e.id === id);
+                    return emp ? (
+                      <Badge key={id} variant="secondary" className="text-xs">
+                        {emp.name.length > 20 ? emp.name.substring(0, 20) + "..." : emp.name}
+                      </Badge>
+                    ) : null;
+                  })}
+                  {selectedEmployerIds.length > 5 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{selectedEmployerIds.length - 5} mais
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          <DialogFooter>
+
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setIsLinkDialogOpen(false)}>
               Cancelar
             </Button>
@@ -833,7 +956,10 @@ export default function AccountingOfficesPage() {
                   Salvando...
                 </>
               ) : (
-                "Salvar Vínculos"
+                <>
+                  <Link2 className="h-4 w-4 mr-2" />
+                  Salvar Vínculos ({selectedEmployerIds.length})
+                </>
               )}
             </Button>
           </DialogFooter>
