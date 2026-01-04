@@ -822,10 +822,11 @@ export default function EmployerPortal() {
                     const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
                     const isOverdue90Days = daysDiff > 90;
                     
-                    // Permitir 2ª via apenas para pendente/vencido, não mais de 90 dias e máximo 2 reemissões
+                    // Permitir 2ª via apenas para vencido (não pendente), não mais de 90 dias e máximo 2 reemissões
                     const reissueCount = contribution.portal_reissue_count || 0;
                     const reissueLimitReached = reissueCount >= 2;
-                    const canGenerateReissue = ["pending", "overdue"].includes(contribution.status) && !isOverdue90Days && !reissueLimitReached;
+                    const isOverdue = contribution.status === 'overdue';
+                    const canGenerateReissue = isOverdue && !isOverdue90Days && !reissueLimitReached;
 
                     return (
                       <TableRow key={contribution.id} className="group">
@@ -865,7 +866,12 @@ export default function EmployerPortal() {
                                 </a>
                               </Button>
                             )}
-                            {["pending", "overdue"].includes(contribution.status) && !isOverdue90Days && (
+                            {contribution.status === 'pending' && !isOverdue90Days && (
+                              <span className="text-xs text-muted-foreground italic" title="2ª via disponível somente após vencimento">
+                                Aguardando vencimento
+                              </span>
+                            )}
+                            {isOverdue && !isOverdue90Days && (
                               reissueLimitReached ? (
                                 <span className="text-xs text-muted-foreground italic" title="Limite de 2 reemissões atingido. Contate o gestor.">
                                   Limite atingido
