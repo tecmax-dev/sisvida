@@ -39,6 +39,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Plus,
+  ExternalLink,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -64,6 +65,7 @@ interface Contribution {
   due_date: string;
   status: string;
   lytex_invoice_id: string | null;
+  lytex_invoice_url: string | null;
   employers?: Employer;
   contribution_types?: ContributionType;
 }
@@ -342,10 +344,22 @@ export default function ContributionsListTab({
                       </TableCell>
                       <TableCell className="py-2 text-center">
                         {contrib.lytex_invoice_id ? (
-                          <Badge variant="outline" className="text-xs text-emerald-600">
-                            <CheckCircle2 className="h-3 w-3 mr-1" />
-                            Gerado
-                          </Badge>
+                          contrib.lytex_invoice_url && contrib.status !== "paid" && contrib.status !== "cancelled" ? (
+                            <a
+                              href={contrib.lytex_invoice_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                            >
+                              <ExternalLink className="h-3 w-3" />
+                              Ver Boleto
+                            </a>
+                          ) : (
+                            <Badge variant="outline" className="text-xs text-emerald-600">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Gerado
+                            </Badge>
+                          )
                         ) : (
                           <Badge variant="outline" className="text-xs text-muted-foreground">
                             Não gerado
