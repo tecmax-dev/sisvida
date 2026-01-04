@@ -697,8 +697,6 @@ Deno.serve(async (req) => {
 
           // 2. Importar faturas
           // A API da Lytex pode paginar/filtrar por status; para garantir que tragam
-          // 2. Importar faturas
-          // A API da Lytex pode paginar/filtrar por status; para garantir que tragam
           // pagos, cancelados, vencidos e a vencer, varremos múltiplos status.
           const invoiceStatuses = [
             "pending",
@@ -766,13 +764,8 @@ Deno.serve(async (req) => {
               const invoices = extractList(invoicesResponse);
 
               if (page === 1) {
-                console.log(
-                  `[Lytex] Payload faturas (status=${statusFilter}) chaves:`,
-                  Object.keys(invoicesResponse || {}),
-                );
-                console.log(
-                  `[Lytex] Faturas recebidas (status=${statusFilter}, page=1): ${invoices.length}`,
-                );
+                console.log(`[Lytex] Payload faturas (status=${statusFilter}) chaves:`, Object.keys(invoicesResponse || {}));
+                console.log(`[Lytex] Faturas recebidas (status=${statusFilter}, page=1): ${invoices.length}`);
               }
 
               if (invoices.length === 0) {
@@ -780,8 +773,62 @@ Deno.serve(async (req) => {
                 break;
               }
 
-              // Monta lote para UPSERT (evita erro de unique e reduz roundtrips)
-              const rows: any[] = [];
+              const toInsert: any[] = [];
+              const toUpdate: Array<{ id: string; patch: any }> = [];
+
+              // Pré-carrega contribuições existentes (filtro amplo para reduzir queries)
+              const employerIdsThisPage = Array.from(
+                new Set(
+                  invoices
+                    .map((inv: any) => inv?.client?.cpfCnpj?.replace(/\D/g, ""))
+                    .filter(Boolean)
+                    .map((cnpj: string) => employerByCnpj.get(cnpj))
+                    .filter(Boolean),
+                ),
+              ) as string[];
+
+              const yearsThisPage = Array.from(
+                new Set(
+                  invoices
+                    .map((inv: any) => {
+                      const d = inv?.dueDate ? new Date(inv.dueDate) : null;
+                      return d ? d.getFullYear() : null;
+                    })
+                    .filter(Boolean),
+                ),
+              ) as number[];
+
+              const monthsThisPage = Array.from(
+                new Set(
+                  invoices
+                    .map((inv: any) => {
+                      const d = inv?.dueDate ? new Date(inv.dueDate) : null;
+                      return d ? d.getMonth() + 1 : null;
+                    })
+                    .filter(Boolean),
+                ),
+              ) as number[];
+
+              const existingMap = new Map<string, { id: string; status: string | null }>();
+              if (employerIdsThisPage.length > 0 && yearsThisPage.length > 0 && monthsThisPage.length > 0) {
+                const { data: existingRows, error: existingErr } = await supabase
+                  .from("employer_contributions")
+                  .select("id, employer_id, competence_month, competence_year, status")
+                  .eq("clinic_id", params.clinicId)
+                  .eq("contribution_type_id", contributionTypeId)
+                  .in("employer_id", employerIdsThisPage)
+                  .in("competence_year", yearsThisPage)
+                  .in("competence_month", monthsThisPage);
+
+                if (existingErr) {
+                  console.error("[Lytex] Erro ao pré-carregar contribuições:", existingErr);
+                } else {
+                  for (const r of existingRows || []) {
+                    const key = `${r.employer_id}|${r.competence_month}|${r.competence_year}`;
+                    existingMap.set(key, { id: r.id, status: r.status });
+                  }
+                }
+              }
 
               for (const invoice of invoices) {
                 if (!invoice?._id) continue;
@@ -792,10 +839,7 @@ Deno.serve(async (req) => {
                 if (!clientCnpj) continue;
 
                 const employerId = employerByCnpj.get(clientCnpj);
-                if (!employerId) {
-                  // Empresa pode não ter sido importada por algum motivo
-                  continue;
-                }
+                if (!employerId) continue;
 
                 const dueDate = new Date(invoice.dueDate);
                 const competenceMonth = dueDate.getMonth() + 1;
@@ -806,18 +850,15 @@ Deno.serve(async (req) => {
                 else if (invoice.status === "canceled" || invoice.status === "cancelled") status = "cancelled";
                 else if (invoice.status === "overdue") status = "overdue";
 
-                const value =
-                  invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
+                const value = invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
 
-                rows.push({
-                  clinic_id: params.clinicId,
-                  employer_id: employerId,
-                  contribution_type_id: contributionTypeId,
-                  competence_month: competenceMonth,
-                  competence_year: competenceYear,
-                  value: value,
+                const key = `${employerId}|${competenceMonth}|${competenceYear}`;
+                const existing = existingMap.get(key);
+
+                const patch = {
+                  value,
                   due_date: invoice.dueDate?.split("T")[0],
-                  status: status,
+                  status,
                   lytex_invoice_id: invoice._id,
                   lytex_invoice_url: invoice.invoiceUrl || null,
                   lytex_boleto_barcode: invoice.boleto?.barCode || null,
@@ -827,23 +868,43 @@ Deno.serve(async (req) => {
                   paid_at: invoice.paidAt || null,
                   paid_value: invoice.payedValue || null,
                   payment_method: invoice.paymentMethod || null,
-                });
+                };
+
+                if (existing) {
+                  toUpdate.push({ id: existing.id, patch });
+                } else {
+                  toInsert.push({
+                    clinic_id: params.clinicId,
+                    employer_id: employerId,
+                    contribution_type_id: contributionTypeId,
+                    competence_month: competenceMonth,
+                    competence_year: competenceYear,
+                    ...patch,
+                  });
+                }
               }
 
-              if (rows.length > 0) {
-                const { error: upsertError } = await supabase
-                  .from("employer_contributions")
-                  .upsert(rows, {
-                    onConflict: "employer_id,contribution_type_id,competence_month,competence_year",
-                  });
-
-                if (upsertError) {
-                  console.error("[Lytex] Erro no upsert de faturas:", upsertError);
-                  errors.push(`Upsert faturas (status=${statusFilter}, page=${page}): ${upsertError.message}`);
+              if (toInsert.length > 0) {
+                const { error: insErr } = await supabase.from("employer_contributions").insert(toInsert);
+                if (insErr) {
+                  console.error("[Lytex] Erro ao inserir lote de faturas:", insErr);
+                  errors.push(`Insert faturas (status=${statusFilter}, page=${page}): ${insErr.message}`);
                 } else {
-                  // Não temos como separar com precisão insert vs update sem query extra;
-                  // contabilizamos como importados para feedback.
-                  invoicesImported += rows.length;
+                  invoicesImported += toInsert.length;
+                }
+              }
+
+              for (const u of toUpdate) {
+                const { error: upErr } = await supabase
+                  .from("employer_contributions")
+                  .update(u.patch)
+                  .eq("id", u.id);
+
+                if (upErr) {
+                  console.error("[Lytex] Erro ao atualizar fatura:", upErr);
+                  errors.push(`Update fatura ${u.id}: ${upErr.message}`);
+                } else {
+                  invoicesUpdated++;
                 }
               }
 
