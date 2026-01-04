@@ -453,6 +453,30 @@ export default function CalendarPage() {
 
   const [currentDate, setCurrentDate] = useState<Date>(getInitialCurrentDate);
   const [selectedDate, setSelectedDate] = useState<Date>(getInitialSelectedDate);
+
+  // Proteção: se por qualquer motivo a data ficar inválida, corrigir imediatamente (evita "Algo deu errado")
+  useEffect(() => {
+    const selectedOk = isValidDate(selectedDate);
+    const currentOk = isValidDate(currentDate);
+
+    if (selectedOk && currentOk) return;
+
+    console.error('[CalendarPage] Data inválida detectada. selectedDate/currentDate:', {
+      selectedDate,
+      currentDate,
+    });
+
+    const fallback = new Date();
+    if (!selectedOk) setSelectedDate(fallback);
+    if (!currentOk) setCurrentDate(fallback);
+
+    toast({
+      title: "Erro de calendário",
+      description: "O calendário detectou uma data inválida e foi resetado automaticamente. Tente novamente.",
+      variant: "destructive",
+    });
+  }, [selectedDate, currentDate, toast]);
+
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [professionals, setProfessionals] = useState<Professional[]>([]);
