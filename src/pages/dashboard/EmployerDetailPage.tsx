@@ -66,6 +66,8 @@ import {
   Copy,
   Download,
   CreditCard,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -163,6 +165,8 @@ export default function EmployerDetailPage() {
   const [viewContribDialogOpen, setViewContribDialogOpen] = useState(false);
   const [manualPaymentDialogOpen, setManualPaymentDialogOpen] = useState(false);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
 
   // Create contribution form
@@ -176,6 +180,12 @@ export default function EmployerDetailPage() {
   const [manualPaymentValue, setManualPaymentValue] = useState("");
   const [manualPaymentMethod, setManualPaymentMethod] = useState("dinheiro");
   const [manualPaymentDate, setManualPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
+
+  // Edit contribution form
+  const [editValue, setEditValue] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+  const [updating, setUpdating] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
 
@@ -471,6 +481,80 @@ export default function EmployerDetailPage() {
   const handleCopyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copiado!`);
+  };
+
+  const handleOpenEditDialog = () => {
+    if (!selectedContribution) return;
+    setEditValue((selectedContribution.value / 100).toFixed(2).replace(".", ","));
+    setEditDueDate(selectedContribution.due_date);
+    setEditDialogOpen(true);
+  };
+
+  const handleUpdateContribution = async () => {
+    if (!selectedContribution) return;
+    
+    setUpdating(true);
+    try {
+      const newValueCents = Math.round(parseFloat(editValue.replace(",", ".")) * 100);
+      
+      if (selectedContribution.lytex_invoice_id) {
+        const { error } = await supabase.functions.invoke("lytex-api", {
+          body: {
+            action: "update_invoice",
+            invoiceId: selectedContribution.lytex_invoice_id,
+            contributionId: selectedContribution.id,
+            value: newValueCents,
+            dueDate: editDueDate,
+          },
+        });
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("employer_contributions")
+          .update({
+            value: newValueCents,
+            due_date: editDueDate,
+          })
+          .eq("id", selectedContribution.id);
+        if (error) throw error;
+      }
+
+      toast.success("Contribuição atualizada");
+      setEditDialogOpen(false);
+      setViewContribDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error updating:", error);
+      toast.error(error.message || "Erro ao atualizar");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleDeleteContribution = async () => {
+    if (!selectedContribution) return;
+    
+    setDeleting(true);
+    try {
+      const { error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "delete_contribution",
+          contributionId: selectedContribution.id,
+        },
+      });
+
+      if (error) throw error;
+
+      toast.success("Contribuição excluída");
+      setDeleteDialogOpen(false);
+      setViewContribDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error("Error deleting:", error);
+      toast.error(error.message || "Erro ao excluir");
+    } finally {
+      setDeleting(false);
+    }
   };
 
   // Stats
@@ -1040,6 +1124,20 @@ export default function EmployerDetailPage() {
                   <>
                     <Button
                       variant="outline"
+                      onClick={handleOpenEditDialog}
+                    >
+                      <Pencil className="h-4 w-4 mr-2" />
+                      Editar
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => setDeleteDialogOpen(true)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
+                    <Button
+                      variant="outline"
                       onClick={() => {
                         setManualPaymentValue((selectedContribution.value / 100).toFixed(2).replace(".", ","));
                         setManualPaymentDialogOpen(true);
@@ -1149,6 +1247,73 @@ export default function EmployerDetailPage() {
               className="bg-destructive hover:bg-destructive/90"
             >
               Confirmar Cancelamento
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Edit Contribution Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar Contribuição</DialogTitle>
+            <DialogDescription>
+              {selectedContribution?.lytex_invoice_id 
+                ? "A alteração será sincronizada com o boleto na Lytex."
+                : "Altere o valor e/ou vencimento da contribuição."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <Label>Valor (R$)</Label>
+              <Input
+                placeholder="0,00"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+              />
+            </div>
+            <div>
+              <Label>Vencimento</Label>
+              <Input
+                type="date"
+                value={editDueDate}
+                onChange={(e) => setEditDueDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateContribution} disabled={updating}>
+              {updating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Contribuição</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta contribuição permanentemente?
+              {selectedContribution?.lytex_invoice_id && " O boleto também será cancelado na Lytex."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteContribution}
+              disabled={deleting}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Confirmar Exclusão
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
