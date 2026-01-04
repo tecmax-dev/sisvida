@@ -175,6 +175,47 @@ async function getInvoice(invoiceId: string): Promise<any> {
   return response.json();
 }
 
+interface UpdateInvoiceRequest {
+  invoiceId: string;
+  value?: number; // em centavos
+  dueDate?: string; // YYYY-MM-DD
+}
+
+async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
+  const token = await getAccessToken();
+
+  const updatePayload: any = {};
+  
+  if (params.value !== undefined) {
+    updatePayload.items = [{ name: "Contribuição", quantity: 1, value: params.value }];
+  }
+  
+  if (params.dueDate) {
+    updatePayload.dueDate = params.dueDate;
+  }
+
+  console.log("[Lytex] Atualizando cobrança:", params.invoiceId, JSON.stringify(updatePayload));
+
+  const response = await fetch(`${LYTEX_API_URL}/invoices/${params.invoiceId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify(updatePayload),
+  });
+
+  const responseData = await response.json();
+
+  if (!response.ok) {
+    console.error("[Lytex] Erro ao atualizar cobrança:", JSON.stringify(responseData));
+    throw new Error(responseData.message || `Erro ao atualizar cobrança: ${response.status}`);
+  }
+
+  console.log("[Lytex] Cobrança atualizada com sucesso");
+  return responseData;
+}
+
 async function cancelInvoice(invoiceId: string): Promise<any> {
   const token = await getAccessToken();
 
@@ -281,6 +322,37 @@ Deno.serve(async (req) => {
         }
 
         result = { success: true };
+        break;
+      }
+
+      case "update_invoice": {
+        if (!params.invoiceId || !params.contributionId) {
+          throw new Error("invoiceId e contributionId são obrigatórios");
+        }
+
+        const updatedInvoice = await updateInvoice({
+          invoiceId: params.invoiceId,
+          value: params.value,
+          dueDate: params.dueDate,
+        });
+
+        // Atualizar dados no banco
+        const updateData: any = {};
+        if (params.value !== undefined) updateData.value = params.value;
+        if (params.dueDate) updateData.due_date = params.dueDate;
+        
+        if (Object.keys(updateData).length > 0) {
+          const { error: dbError } = await supabase
+            .from("employer_contributions")
+            .update(updateData)
+            .eq("id", params.contributionId);
+
+          if (dbError) {
+            console.error("[Lytex] Erro ao atualizar contribuição no banco:", dbError);
+          }
+        }
+
+        result = { success: true, invoice: updatedInvoice };
         break;
       }
 
