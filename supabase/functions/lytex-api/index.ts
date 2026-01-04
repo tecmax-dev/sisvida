@@ -419,6 +419,73 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "sync_all_pending": {
+        // Sincronizar status de TODAS as contribuições pendentes da clínica
+        if (!params.clinicId) {
+          throw new Error("clinicId é obrigatório");
+        }
+
+        const { data: pendingContributions, error: listError } = await supabase
+          .from("employer_contributions")
+          .select("id, lytex_invoice_id, status")
+          .eq("clinic_id", params.clinicId)
+          .not("lytex_invoice_id", "is", null)
+          .in("status", ["pending", "overdue", "processing"]);
+
+        if (listError) {
+          throw new Error("Erro ao buscar contribuições pendentes");
+        }
+
+        console.log(`[Lytex] Sincronizando ${pendingContributions?.length || 0} contribuições...`);
+
+        const results: Array<{ id: string; status: string; synced: boolean; error?: string }> = [];
+
+        for (const contrib of pendingContributions || []) {
+          try {
+            const invoice = await getInvoice(contrib.lytex_invoice_id);
+
+            let newStatus = "pending";
+            if (invoice.status === "paid") {
+              newStatus = "paid";
+            } else if (invoice.status === "canceled" || invoice.status === "cancelled") {
+              newStatus = "cancelled";
+            } else if (invoice.status === "overdue" || (invoice.dueDate && new Date(invoice.dueDate) < new Date())) {
+              newStatus = "overdue";
+            }
+
+            if (newStatus !== contrib.status) {
+              const { error: updateErr } = await supabase
+                .from("employer_contributions")
+                .update({
+                  status: newStatus,
+                  paid_at: invoice.paidAt || null,
+                  paid_value: invoice.payedValue || null,
+                  payment_method: invoice.paymentMethod || null,
+                })
+                .eq("id", contrib.id);
+
+              if (updateErr) {
+                results.push({ id: contrib.id, status: newStatus, synced: false, error: updateErr.message });
+              } else {
+                results.push({ id: contrib.id, status: newStatus, synced: true });
+              }
+            } else {
+              results.push({ id: contrib.id, status: newStatus, synced: true });
+            }
+          } catch (e: any) {
+            console.error(`[Lytex] Erro ao sincronizar ${contrib.id}:`, e.message);
+            results.push({ id: contrib.id, status: contrib.status, synced: false, error: e.message });
+          }
+        }
+
+        const syncedCount = results.filter(r => r.synced).length;
+        const updatedCount = results.filter(r => r.synced && r.status !== "pending").length;
+        console.log(`[Lytex] Sincronização concluída: ${syncedCount}/${results.length} sucesso, ${updatedCount} atualizados`);
+
+        result = { success: true, total: results.length, synced: syncedCount, updated: updatedCount, details: results };
+        break;
+      }
+
       case "delete_contribution": {
         if (!params.contributionId) {
           throw new Error("contributionId é obrigatório");

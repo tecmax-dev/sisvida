@@ -73,7 +73,9 @@ interface ContributionsListTabProps {
   onViewContribution: (contribution: Contribution) => void;
   onGenerateInvoice: (contribution: Contribution) => void;
   onOpenCreate: () => void;
+  onSyncAll: () => void;
   generatingInvoice: boolean;
+  syncing: boolean;
   yearFilter: number;
   onYearFilterChange: (year: number) => void;
 }
@@ -123,7 +125,9 @@ export default function ContributionsListTab({
   onViewContribution,
   onGenerateInvoice,
   onOpenCreate,
+  onSyncAll,
   generatingInvoice,
+  syncing,
   yearFilter,
   onYearFilterChange,
 }: ContributionsListTabProps) {
@@ -233,10 +237,28 @@ export default function ContributionsListTab({
             <Badge variant="outline" className="text-xs">
               {filteredContributions.length} resultado{filteredContributions.length !== 1 ? "s" : ""}
             </Badge>
-            <Button onClick={onOpenCreate} className="ml-auto">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Contribuição
-            </Button>
+            <div className="flex items-center gap-2 ml-auto">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={onSyncAll}
+                      disabled={syncing}
+                    >
+                      <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                      {syncing ? "Sincronizando..." : "Sincronizar Lytex"}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Buscar status atualizado de todos os boletos na Lytex</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Button onClick={onOpenCreate}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Contribuição
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

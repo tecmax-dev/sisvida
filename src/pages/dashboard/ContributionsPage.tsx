@@ -71,6 +71,7 @@ export default function ContributionsPage() {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     if (currentClinic) {
@@ -181,6 +182,35 @@ export default function ContributionsPage() {
     }
   };
 
+  const handleSyncAll = async () => {
+    if (!currentClinic) return;
+    
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "sync_all_pending",
+          clinicId: currentClinic.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.updated > 0) {
+        toast.success(`${data.updated} contribuição(ões) atualizada(s)`);
+        fetchData();
+      } else {
+        toast.info("Nenhuma atualização encontrada");
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error("Error syncing:", error);
+      toast.error(`Erro ao sincronizar: ${errorMessage}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -240,7 +270,9 @@ export default function ContributionsPage() {
             onViewContribution={handleViewContribution}
             onGenerateInvoice={handleGenerateInvoice}
             onOpenCreate={() => setCreateDialogOpen(true)}
+            onSyncAll={handleSyncAll}
             generatingInvoice={generatingInvoice}
+            syncing={syncing}
             yearFilter={yearFilter}
             onYearFilterChange={setYearFilter}
           />
