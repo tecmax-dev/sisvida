@@ -328,6 +328,7 @@ export default function ContributionsPage() {
             syncing={syncing}
             yearFilter={yearFilter}
             onYearFilterChange={setYearFilter}
+            clinicId={currentClinic?.id || ""}
           />
         </TabsContent>
 
