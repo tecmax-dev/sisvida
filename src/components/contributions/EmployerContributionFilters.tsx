@@ -27,6 +27,9 @@ import { Filter, X, FileText, AlertTriangle, Settings2 } from "lucide-react";
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ContributionItem = any;
@@ -183,21 +186,28 @@ export function EmployerContributionFilters({
     
     // Load logo if enabled and available
     if (showLogo && clinicInfo?.logoUrl) {
+      const url = clinicInfo.logoUrl;
       try {
-        // Use crossOrigin to avoid CORS taint issues
+        // Fetch via backend function to avoid CORS issues when converting to base64/canvas
+        const { data, error } = await supabase.functions.invoke("fetch-image-base64", {
+          body: { url },
+        });
+
+        if (error) throw error;
+        if (!data?.base64 || !data?.contentType) throw new Error("Resposta inválida ao buscar logo");
+
+        const dataUrl = `data:${data.contentType};base64,${data.base64}`;
+
         const logoHeight = await new Promise<number>((resolve) => {
           const img = new Image();
-          img.crossOrigin = "anonymous";
           img.onload = () => {
             try {
               const canvas = document.createElement("canvas");
               canvas.width = img.width;
               canvas.height = img.height;
               const ctx = canvas.getContext("2d");
-              if (!ctx) {
-                resolve(0);
-                return;
-              }
+              if (!ctx) return resolve(0);
+
               ctx.drawImage(img, 0, 0);
               const pngData = canvas.toDataURL("image/png");
 
@@ -206,6 +216,7 @@ export function EmployerContributionFilters({
               const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
               const width = img.width * ratio;
               const height = img.height * ratio;
+
               doc.addImage(pngData, "PNG", 14, yPos, width, height);
               resolve(height + 5);
             } catch {
@@ -213,11 +224,13 @@ export function EmployerContributionFilters({
             }
           };
           img.onerror = () => resolve(0);
-          img.src = clinicInfo.logoUrl;
+          img.src = dataUrl;
         });
+
         yPos += logoHeight;
-      } catch {
-        // Continue without logo
+      } catch (err: any) {
+        console.error("[pdf] logo error:", err);
+        toast.error("Não foi possível carregar o logo no PDF");
       }
     }
 
