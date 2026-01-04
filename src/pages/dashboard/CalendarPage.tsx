@@ -497,6 +497,7 @@ export default function CalendarPage() {
   const [formTime, setFormTime] = useState("");
   const [formType, setFormType] = useState("first_visit");
   const [formNotes, setFormNotes] = useState("");
+  const [formDuration, setFormDuration] = useState<number | null>(null); // null = usar duração do profissional
   const [patientSearchOpen, setPatientSearchOpen] = useState(false);
   const [patientSearchQuery, setPatientSearchQuery] = useState("");
   const [patientSearchResults, setPatientSearchResults] = useState<Patient[]>([]);
@@ -1077,9 +1078,10 @@ export default function CalendarPage() {
       return;
     }
 
-    // Usar duração do profissional selecionado
+    // Usar duração do formulário (se definida) ou duração padrão do profissional
     const selectedProfessional = professionals.find(p => p.id === formProfessional);
-    const durationMinutes = selectedProfessional?.appointment_duration || 30;
+    const defaultDuration = selectedProfessional?.appointment_duration || 30;
+    const durationMinutes = formDuration ?? defaultDuration;
     
     // Calculate all dates for recurring appointments
     const recurringDates = calculateRecurringDates(selectedDate, recurrenceConfig);
@@ -1203,7 +1205,7 @@ export default function CalendarPage() {
       return;
     }
 
-    const durationMinutes = editingAppointment.duration_minutes || 30;
+    const durationMinutes = formDuration ?? editingAppointment.duration_minutes ?? 30;
     
     // Check for conflicts before saving (exclude current appointment)
     const conflicts = findConflictingAppointments(appointments, {
@@ -1593,6 +1595,7 @@ export default function CalendarPage() {
     setFormTime("");
     setFormType("first_visit");
     setFormNotes("");
+    setFormDuration(null); // Resetar para usar duração padrão do profissional
     // Reset recurrence
     setRecurrenceConfig({
       enabled: false,
@@ -2286,6 +2289,33 @@ export default function CalendarPage() {
             ))}
           </SelectContent>
         </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Duração (minutos)</Label>
+        <Select 
+          value={formDuration?.toString() || ""} 
+          onValueChange={(value) => setFormDuration(value ? parseInt(value) : null)}
+        >
+          <SelectTrigger className="bg-background">
+            <SelectValue placeholder={`Padrão (${professionals.find(p => p.id === formProfessional)?.appointment_duration || 30} min)`} />
+          </SelectTrigger>
+          <SelectContent className="bg-popover border border-border shadow-lg z-50">
+            <SelectItem value="">Padrão do profissional</SelectItem>
+            <SelectItem value="5">5 minutos</SelectItem>
+            <SelectItem value="10">10 minutos</SelectItem>
+            <SelectItem value="15">15 minutos</SelectItem>
+            <SelectItem value="20">20 minutos</SelectItem>
+            <SelectItem value="30">30 minutos</SelectItem>
+            <SelectItem value="45">45 minutos</SelectItem>
+            <SelectItem value="60">60 minutos</SelectItem>
+            <SelectItem value="90">90 minutos</SelectItem>
+            <SelectItem value="120">120 minutos</SelectItem>
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          Se não alterado, usa a duração configurada do profissional
+        </p>
       </div>
 
       <div className="space-y-2">
