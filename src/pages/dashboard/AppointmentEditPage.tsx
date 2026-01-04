@@ -98,6 +98,7 @@ export default function AppointmentEditPage() {
   const [startTime, setStartTime] = useState("");
   const [type, setType] = useState("first_visit");
   const [notes, setNotes] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState<number>(30);
   
   // Initial data for auto-save
   const [initialFormData, setInitialFormData] = useState({
@@ -107,6 +108,7 @@ export default function AppointmentEditPage() {
     startTime: "",
     type: "first_visit",
     notes: "",
+    durationMinutes: 30,
   });
 
   // Current form data for auto-save
@@ -117,7 +119,8 @@ export default function AppointmentEditPage() {
     startTime,
     type,
     notes,
-  }), [patientId, professionalId, appointmentDate, startTime, type, notes]);
+    durationMinutes,
+  }), [patientId, professionalId, appointmentDate, startTime, type, notes, durationMinutes]);
 
   // Generate time slots based on the professional's configured schedule
   const timeSlots = useMemo(() => {
@@ -172,8 +175,7 @@ export default function AppointmentEditPage() {
       return;
     }
     
-    const durationMinutes = appointment.duration_minutes || 30;
-    const endTime = calculateEndTime(data.startTime, durationMinutes);
+    const endTime = calculateEndTime(data.startTime, data.durationMinutes);
     
     const { error } = await supabase
       .from('appointments')
@@ -185,6 +187,7 @@ export default function AppointmentEditPage() {
         end_time: endTime,
         type: data.type as "first_visit" | "return" | "exam" | "procedure" | "telemedicine",
         notes: data.notes.trim() || null,
+        duration_minutes: data.durationMinutes,
       })
       .eq('id', id);
     
@@ -247,6 +250,7 @@ export default function AppointmentEditPage() {
         setStartTime(apt.start_time.slice(0, 5));
         setType(apt.type);
         setNotes(apt.notes || "");
+        setDurationMinutes(apt.duration_minutes || 30);
         
         // Set initial data for auto-save
         setInitialFormData({
@@ -256,6 +260,7 @@ export default function AppointmentEditPage() {
           startTime: apt.start_time.slice(0, 5),
           type: apt.type,
           notes: apt.notes || "",
+          durationMinutes: apt.duration_minutes || 30,
         });
       }
     } catch (error) {
@@ -313,7 +318,6 @@ export default function AppointmentEditPage() {
     setSaving(true);
 
     try {
-      const durationMinutes = appointment?.duration_minutes || 30;
       
       // Fetch existing appointments for the date and professional to check conflicts
       const { data: existingAppointments } = await supabase
@@ -523,6 +527,32 @@ export default function AppointmentEditPage() {
                         {t.label}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="duration" className="flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Duração (minutos)
+                </Label>
+                <Select 
+                  value={durationMinutes.toString()} 
+                  onValueChange={(value) => setDurationMinutes(parseInt(value))}
+                >
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue placeholder="Duração" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 minutos</SelectItem>
+                    <SelectItem value="10">10 minutos</SelectItem>
+                    <SelectItem value="15">15 minutos</SelectItem>
+                    <SelectItem value="20">20 minutos</SelectItem>
+                    <SelectItem value="30">30 minutos</SelectItem>
+                    <SelectItem value="45">45 minutos</SelectItem>
+                    <SelectItem value="60">60 minutos</SelectItem>
+                    <SelectItem value="90">90 minutos</SelectItem>
+                    <SelectItem value="120">120 minutos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
