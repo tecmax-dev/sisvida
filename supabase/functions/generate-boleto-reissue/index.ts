@@ -155,7 +155,10 @@ serve(async (req) => {
     }
 
     // Validar que a nova data é futura
-    const newDueDate = new Date(new_due_date);
+    // Usar parsing manual para evitar problemas de timezone
+    const [year, month, day] = new_due_date.split("-").map(Number);
+    const newDueDate = new Date(year, month - 1, day, 12, 0, 0); // meio-dia para evitar shift de timezone
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
