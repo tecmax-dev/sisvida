@@ -603,17 +603,36 @@ export default function CalendarPage() {
       const slots: string[] = [];
       const dateStr = toDateKey(selectedDate);
 
+      console.log('[CalendarPage] Calculating slots for:', { 
+        profName: prof?.name, 
+        dateStr, 
+        dayKey, 
+        hasBlocks: !!blocks?.length,
+        blocks: blocks?.map(b => ({ days: b.days, start_date: b.start_date, end_date: b.end_date }))
+      });
+
       // Primeiro, verificar _blocks (nova estrutura de agenda)
       if (blocks && blocks.length > 0) {
         for (const block of blocks) {
           // Verificar se o bloco está ativo para esta data
-          if (block.start_date && dateStr < block.start_date) continue;
-          if (block.end_date && dateStr > block.end_date) continue;
+          const skipStartDate = block.start_date && dateStr < block.start_date;
+          const skipEndDate = block.end_date && dateStr > block.end_date;
+          const skipDay = block.days && block.days.length > 0 && !block.days.includes(dayKey);
           
-          // Verificar se o dia da semana está incluído
-          if (block.days && block.days.length > 0) {
-            if (!block.days.includes(dayKey)) continue;
-          }
+          console.log('[CalendarPage] Block check:', { 
+            blockDays: block.days, 
+            dayKey,
+            start_date: block.start_date,
+            end_date: block.end_date,
+            dateStr,
+            skipStartDate,
+            skipEndDate,
+            skipDay
+          });
+          
+          if (skipStartDate) continue;
+          if (skipEndDate) continue;
+          if (skipDay) continue;
           
           const [sh, sm] = String(block.start_time || '').split(':').map(Number);
           const [eh, em] = String(block.end_time || '').split(':').map(Number);
