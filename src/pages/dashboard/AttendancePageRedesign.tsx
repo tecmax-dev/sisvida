@@ -20,6 +20,7 @@ import {
   Phone,
   Mail,
   Calendar,
+  CalendarDays,
   FileText,
   ClipboardList,
   Pill,
@@ -1204,7 +1205,17 @@ export default function AttendancePageRedesign() {
             {activeSection === "resumo" && (
               <div className="space-y-4 md:space-y-6">
                 <div className={cn("flex items-center justify-between", isMobile && "flex-col gap-2 items-stretch")}>
-                  <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Resumo do Paciente</h1>
+                  <div className="flex items-center gap-3">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => navigate('/dashboard/calendar')}
+                      title="Voltar à Agenda"
+                    >
+                      <CalendarDays className="h-4 w-4" />
+                    </Button>
+                    <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Resumo do Paciente</h1>
+                  </div>
                   <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => navigate(`/dashboard/patients/${appointment.patient_id}`)}>
                     <Eye className="h-4 w-4 mr-1.5" />
                     Visualizar Cadastro
