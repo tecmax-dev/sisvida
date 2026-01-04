@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import {
   Building2,
   Plus,
@@ -22,7 +24,8 @@ import {
   Link2,
   ExternalLink,
   Loader2,
-  FileSearch
+  FileSearch,
+  Printer
 } from "lucide-react";
 import {
   Dialog,
@@ -422,6 +425,118 @@ export default function AccountingOfficesPage() {
     return officeEmployerLinks.filter(l => l.accounting_office_id === officeId).length;
   };
 
+  const getLinkedEmployers = (officeId: string) => {
+    const linkedIds = officeEmployerLinks
+      .filter(l => l.accounting_office_id === officeId)
+      .map(l => l.employer_id);
+    return employers.filter(e => linkedIds.includes(e.id));
+  };
+
+  const formatCNPJForPrint = (cnpj: string) => {
+    if (!cnpj) return "-";
+    const clean = cnpj.replace(/\D/g, "");
+    if (clean.length !== 14) return cnpj;
+    return clean.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+  };
+
+  const handlePrintEmployersList = (office: AccountingOffice) => {
+    const linkedEmployers = getLinkedEmployers(office.id);
+    
+    if (linkedEmployers.length === 0) {
+      toast.error("Nenhuma empresa vinculada a este escritório");
+      return;
+    }
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    // Header com cor
+    doc.setFillColor(0, 128, 128);
+    doc.rect(0, 0, pageWidth, 40, "F");
+    
+    // Título
+    doc.setFontSize(18);
+    doc.setTextColor(255, 255, 255);
+    doc.text("Relatório de Empresas Vinculadas", pageWidth / 2, 18, { align: "center" });
+    
+    // Subtítulo
+    doc.setFontSize(11);
+    doc.text(office.name, pageWidth / 2, 28, { align: "center" });
+    doc.setFontSize(9);
+    doc.text(`Gerado em: ${new Date().toLocaleDateString("pt-BR", { 
+      day: "2-digit", 
+      month: "long", 
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    })}`, pageWidth / 2, 35, { align: "center" });
+
+    // Resumo
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    doc.text("Resumo", 14, 52);
+    
+    doc.setFontSize(10);
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Total de empresas vinculadas: ${linkedEmployers.length}`, 14, 60);
+    if (office.email) {
+      doc.text(`E-mail do escritório: ${office.email}`, 14, 66);
+    }
+
+    // Tabela de empresas
+    const tableData = linkedEmployers.map((emp, index) => [
+      (index + 1).toString(),
+      emp.name,
+      formatCNPJForPrint(emp.cnpj)
+    ]);
+
+    autoTable(doc, {
+      startY: 75,
+      head: [["#", "Razão Social", "CNPJ"]],
+      body: tableData,
+      theme: "striped",
+      headStyles: { 
+        fillColor: [0, 128, 128],
+        fontSize: 10,
+        fontStyle: "bold"
+      },
+      bodyStyles: {
+        fontSize: 9
+      },
+      columnStyles: {
+        0: { cellWidth: 12, halign: "center" },
+        1: { cellWidth: 120 },
+        2: { cellWidth: 50 }
+      },
+      alternateRowStyles: {
+        fillColor: [245, 245, 245]
+      },
+      styles: {
+        cellPadding: 3,
+        overflow: "linebreak"
+      }
+    });
+
+    // Footer em todas as páginas
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150);
+      doc.text(
+        `Página ${i} de ${pageCount} • ${currentClinic?.name || "Eclini"}`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: "center" }
+      );
+    }
+
+    // Download
+    const fileName = `empresas-${office.name.toLowerCase().replace(/\s+/g, "-")}-${new Date().toISOString().split("T")[0]}.pdf`;
+    doc.save(fileName);
+    toast.success("Relatório gerado com sucesso!");
+  };
+
   const filteredOffices = offices.filter(office =>
     office.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     office.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -597,6 +712,14 @@ export default function AccountingOfficesPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handlePrintEmployersList(office)}
+                            title="Imprimir lista de empresas"
+                          >
+                            <Printer className="h-4 w-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
