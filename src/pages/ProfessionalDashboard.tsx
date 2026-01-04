@@ -322,11 +322,14 @@ export default function ProfessionalDashboard() {
       });
 
       if (appointment) {
-        // Only add appointment slot at its start time
+        // Mostrar todos os slots dentro do agendamento.
+        // Para evitar repetir o card completo em cada intervalo, anexamos o appointment apenas no horário inicial.
         const aptStart = appointment.start_time.substring(0, 5);
-        if (timeStr === aptStart) {
-          slots.push({ time: timeStr, type: 'booked', appointment });
-        }
+        slots.push({
+          time: timeStr,
+          type: 'booked',
+          appointment: timeStr === aptStart ? appointment : undefined,
+        });
       } else {
         slots.push({ time: timeStr, type: 'free' });
       }
@@ -549,6 +552,30 @@ export default function ProfessionalDashboard() {
                               )}
                             </Button>
                           )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+
+                // Slot ocupado (continuação do agendamento)
+                if (slot.type === 'booked') {
+                  return (
+                    <Card 
+                      key={`${slot.time}-${index}`} 
+                      className="overflow-hidden bg-muted/20 border-muted"
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex items-center gap-4">
+                          <div className="w-16 text-center py-1.5 rounded-md font-medium text-sm bg-muted text-muted-foreground">
+                            {slot.time}
+                          </div>
+                          <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-muted">
+                            <Clock className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-sm text-muted-foreground italic">Ocupado</p>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
