@@ -54,6 +54,7 @@ const CardValidation = lazy(() => import("./pages/CardValidation"));
 const LgpdPolicy = lazy(() => import("./pages/LgpdPolicy"));
 const EmployerPortal = lazy(() => import("./pages/EmployerPortal"));
 const AccountingOfficePortal = lazy(() => import("./pages/AccountingOfficePortal"));
+const PortalsPage = lazy(() => import("./pages/PortalsPage"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -260,6 +261,7 @@ const App = () => (
                 <Route path="/profissional/painel" element={<ProfessionalDashboard />} />
                 <Route path="/profissional/atendimento/:appointmentId" element={<ProfessionalAppointment />} />
                 {/* Public Panel and Totem routes */}
+                <Route path="/acessos" element={<PortalsPage />} />
                 <Route path="/portal-empresa" element={<EmployerPortal />} />
                 <Route path="/portal-empresa/:clinicSlug" element={<EmployerPortal />} />
                 <Route path="/portal-contador" element={<AccountingOfficePortal />} />
