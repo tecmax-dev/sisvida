@@ -721,20 +721,26 @@ export default function EmployerDetailPage() {
           </div>
 
           {/* Filters */}
-          <EmployerContributionFilters
-            contributions={contributions}
-            onFilterChange={setFilteredContributions}
-            onSendOverdueWhatsApp={() => setOverdueDialogOpen(true)}
-            employerName={employer?.name || ""}
-            employerCnpj={employer?.cnpj || ""}
-            clinicInfo={currentClinic ? {
-              name: currentClinic.name,
-              cnpj: currentClinic.cnpj,
-              phone: currentClinic.phone,
-              address: currentClinic.address,
-              logoUrl: currentClinic.logo_url ?? currentClinic.whatsapp_header_image_url ?? null,
-            } : undefined}
-          />
+          {(() => {
+            const logoUrl = currentClinic?.logo_url ?? (currentClinic as any)?.whatsapp_header_image_url ?? null;
+            console.log("[EmployerDetailPage] logo fallback:", { logo_url: currentClinic?.logo_url, whatsapp_header_image_url: (currentClinic as any)?.whatsapp_header_image_url, final: logoUrl });
+            return (
+              <EmployerContributionFilters
+                contributions={contributions}
+                onFilterChange={setFilteredContributions}
+                onSendOverdueWhatsApp={() => setOverdueDialogOpen(true)}
+                employerName={employer?.name || ""}
+                employerCnpj={employer?.cnpj || ""}
+                clinicInfo={currentClinic ? {
+                  name: currentClinic.name,
+                  cnpj: currentClinic.cnpj,
+                  phone: currentClinic.phone,
+                  address: currentClinic.address,
+                  logoUrl,
+                } : undefined}
+              />
+            );
+          })()}
 
           {/* Actions */}
           <div className="flex justify-end gap-2">
