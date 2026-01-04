@@ -29,6 +29,19 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   FileText,
   CheckCircle2,
   XCircle,
@@ -38,7 +51,10 @@ import {
   Loader2,
   Pencil,
   Trash2,
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
@@ -127,6 +143,9 @@ export default function ContributionDialogs({
   const [formDueDate, setFormDueDate] = useState(format(addDays(new Date(), 10), "yyyy-MM-dd"));
   const [formNotes, setFormNotes] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Employer combobox
+  const [employerPopoverOpen, setEmployerPopoverOpen] = useState(false);
 
   // Cancel dialog
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -356,18 +375,54 @@ export default function ContributionDialogs({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Empresa *</Label>
-              <Select value={formEmployerId} onValueChange={setFormEmployerId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employers.map((emp) => (
-                    <SelectItem key={emp.id} value={emp.id}>
-                      {emp.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={employerPopoverOpen} onOpenChange={setEmployerPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={employerPopoverOpen}
+                    className="w-full justify-between font-normal"
+                  >
+                    {formEmployerId
+                      ? employers.find((emp) => emp.id === formEmployerId)?.name
+                      : "Selecione a empresa..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar por nome ou CNPJ..." />
+                    <CommandList>
+                      <CommandEmpty>Nenhuma empresa encontrada.</CommandEmpty>
+                      <CommandGroup>
+                        {employers.map((emp) => (
+                          <CommandItem
+                            key={emp.id}
+                            value={`${emp.name} ${emp.cnpj}`}
+                            onSelect={() => {
+                              setFormEmployerId(emp.id);
+                              setEmployerPopoverOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formEmployerId === emp.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span>{emp.name}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {emp.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}
+                              </span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
