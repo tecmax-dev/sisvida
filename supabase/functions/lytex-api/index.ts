@@ -423,6 +423,7 @@ Deno.serve(async (req) => {
         const updateData: any = {};
         if (params.value !== undefined) updateData.value = params.value;
         if (params.dueDate) updateData.due_date = params.dueDate;
+        if (params.status) updateData.status = params.status;
         
         if (Object.keys(updateData).length > 0) {
           const { error: dbError } = await supabase

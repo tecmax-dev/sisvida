@@ -501,6 +501,15 @@ export default function EmployerDetailPage() {
     try {
       const newValueCents = Math.round(parseFloat(editValue.replace(",", ".")) * 100);
       
+      // Check if due date changed and is in the future - auto change status to pending
+      const dueDateChanged = editDueDate !== selectedContribution.due_date;
+      const newDueDate = new Date(editDueDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const isNewDueDateFuture = newDueDate >= today;
+      const shouldUpdateStatus = dueDateChanged && isNewDueDateFuture && 
+        (selectedContribution.status === "overdue" || selectedContribution.status === "pending");
+      
       if (selectedContribution.lytex_invoice_id) {
         const { error } = await supabase.functions.invoke("lytex-api", {
           body: {
@@ -509,16 +518,21 @@ export default function EmployerDetailPage() {
             contributionId: selectedContribution.id,
             value: newValueCents,
             dueDate: editDueDate,
+            ...(shouldUpdateStatus && { status: "pending" }),
           },
         });
         if (error) throw error;
       } else {
+        const updateData: Record<string, unknown> = {
+          value: newValueCents,
+          due_date: editDueDate,
+        };
+        if (shouldUpdateStatus) {
+          updateData.status = "pending";
+        }
         const { error } = await supabase
           .from("employer_contributions")
-          .update({
-            value: newValueCents,
-            due_date: editDueDate,
-          })
+          .update(updateData)
           .eq("id", selectedContribution.id);
         if (error) throw error;
       }
