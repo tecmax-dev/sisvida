@@ -118,6 +118,12 @@ const STATUS_CONFIG = {
     rowClass: "border-l-4 border-l-gray-300 opacity-60",
     icon: XCircle 
   },
+  awaiting_value: { 
+    label: "Aguardando Valor", 
+    badgeClass: "bg-purple-500/15 text-purple-700 border-purple-300 dark:bg-purple-500/20 dark:text-purple-400 dark:border-purple-600",
+    rowClass: "border-l-4 border-l-purple-400",
+    icon: Clock 
+  },
 };
 
 const MONTHS = [

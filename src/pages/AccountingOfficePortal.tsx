@@ -77,6 +77,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   paid: { label: "Pago", className: "bg-green-100 text-green-800" },
   overdue: { label: "Vencido", className: "bg-red-100 text-red-800" },
   cancelled: { label: "Cancelado", className: "bg-gray-100 text-gray-800" },
+  awaiting_value: { label: "Aguardando Valor", className: "bg-purple-100 text-purple-800" },
 };
 
 export default function AccountingOfficePortal() {
@@ -106,6 +107,11 @@ export default function AccountingOfficePortal() {
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [newDueDate, setNewDueDate] = useState("");
   const [isGeneratingReissue, setIsGeneratingReissue] = useState(false);
+
+  // Dialog de definir valor
+  const [showSetValueDialog, setShowSetValueDialog] = useState(false);
+  const [newValue, setNewValue] = useState("");
+  const [isSettingValue, setIsSettingValue] = useState(false);
 
   // Restaurar sessão do sessionStorage
   useEffect(() => {
@@ -285,6 +291,51 @@ export default function AccountingOfficePortal() {
       toast.error("Erro de conexão");
     } finally {
       setIsGeneratingReissue(false);
+    }
+  };
+
+  const handleSetValue = async () => {
+    if (!selectedContribution || !accountingOffice || !newValue) {
+      toast.error("Informe o valor da contribuição");
+      return;
+    }
+
+    setIsSettingValue(true);
+    try {
+      const valueInCents = Math.round(parseFloat(newValue.replace(",", ".")) * 100);
+      
+      if (isNaN(valueInCents) || valueInCents <= 0) {
+        toast.error("Valor inválido");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("set-contribution-value", {
+        body: {
+          contribution_id: selectedContribution.id,
+          value: valueInCents,
+          portal_type: "accounting_office",
+          portal_id: accountingOffice.id,
+        },
+      });
+
+      if (error || data.error) {
+        toast.error(data?.error || "Erro ao definir valor");
+        return;
+      }
+
+      toast.success(data.message || "Valor definido e boleto gerado!");
+      setShowSetValueDialog(false);
+      setNewValue("");
+      setSelectedContribution(null);
+      loadData(accountingOffice.id);
+
+      if (data.lytex_invoice_url) {
+        window.open(data.lytex_invoice_url, "_blank");
+      }
+    } catch (err) {
+      toast.error("Erro de conexão");
+    } finally {
+      setIsSettingValue(false);
     }
   };
 
@@ -748,6 +799,19 @@ export default function AccountingOfficePortal() {
                                   2ª Via
                                 </Button>
                               )}
+                              {contrib.status === "awaiting_value" && (
+                                <Button
+                                  variant="default"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedContribution(contrib);
+                                    setShowSetValueDialog(true);
+                                  }}
+                                >
+                                  <DollarSign className="h-4 w-4 mr-1" />
+                                  Definir Valor
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
@@ -804,6 +868,68 @@ export default function AccountingOfficePortal() {
             </Button>
             <Button onClick={handleGenerateReissue} disabled={isGeneratingReissue || !newDueDate}>
               {isGeneratingReissue ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Gerar Boleto
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de Definir Valor */}
+      <Dialog open={showSetValueDialog} onOpenChange={(open) => {
+        setShowSetValueDialog(open);
+        if (!open) {
+          setNewValue("");
+          setSelectedContribution(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Definir Valor da Contribuição
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContribution && (
+                <span>
+                  {selectedContribution.employer?.name} • {MONTHS[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium block mb-2">Valor (R$) *</label>
+              <Input
+                type="text"
+                placeholder="0,00"
+                value={newValue}
+                onChange={(e) => {
+                  // Permitir apenas números e vírgula
+                  const val = e.target.value.replace(/[^0-9,]/g, "");
+                  setNewValue(val);
+                }}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Após definir o valor, o boleto será gerado automaticamente
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSetValueDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSetValue} disabled={isSettingValue || !newValue}>
+              {isSettingValue ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   Gerando...
