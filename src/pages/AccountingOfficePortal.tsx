@@ -671,7 +671,7 @@ export default function AccountingOfficePortal() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">A Receber</p>
+                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Total Pendente</p>
                   <p className="text-xl font-bold text-white mt-1">{formatCurrency(stats.totalValue)}</p>
                 </div>
                 <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
