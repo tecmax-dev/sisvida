@@ -99,6 +99,21 @@ export default function AccountingOfficePortal() {
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [filterYear, setFilterYear] = useState<string>("all");
 
+  // Restaurar sessão do sessionStorage
+  useEffect(() => {
+    const savedSession = sessionStorage.getItem("accounting_office_session");
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession);
+        setAccountingOffice(session.accountingOffice);
+        setIsAuthenticated(true);
+        loadData(session.accountingOffice.id);
+      } catch (e) {
+        sessionStorage.removeItem("accounting_office_session");
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (clinicSlug) {
       loadClinicBySlug(clinicSlug);
@@ -139,6 +154,12 @@ export default function AccountingOfficePortal() {
 
       setAccountingOffice(data.accounting_office);
       setIsAuthenticated(true);
+      
+      // Salvar sessão no sessionStorage
+      sessionStorage.setItem("accounting_office_session", JSON.stringify({
+        accountingOffice: data.accounting_office
+      }));
+      
       toast.success("Login realizado com sucesso!");
       
       // Carregar dados
@@ -180,6 +201,7 @@ export default function AccountingOfficePortal() {
   };
 
   const handleLogout = () => {
+    sessionStorage.removeItem("accounting_office_session");
     setIsAuthenticated(false);
     setAccountingOffice(null);
     setEmployers([]);
