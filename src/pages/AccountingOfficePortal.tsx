@@ -188,11 +188,12 @@ export default function AccountingOfficePortal() {
     setAccessCode("");
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (valueInCents: number) => {
+    const valueInReais = (valueInCents || 0) / 100;
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
-    }).format(value);
+    }).format(valueInReais);
   };
 
   const formatCNPJ = (cnpj: string) => {
