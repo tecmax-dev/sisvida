@@ -43,7 +43,8 @@ interface Professional {
   name: string;
   specialty: string | null;
   clinic_id: string;
-  schedule: ProfessionalSchedule | null;
+  schedule: any | null;
+  appointment_duration: number | null;
   clinic: {
     name: string;
     logo_url: string | null;
@@ -125,6 +126,7 @@ export default function ProfessionalDashboard() {
         specialty, 
         clinic_id,
         schedule,
+        appointment_duration,
         clinic:clinics (name, logo_url)
       `)
       .eq('user_id', session.user.id)
@@ -147,7 +149,8 @@ export default function ProfessionalDashboard() {
       name: prof.name,
       specialty: prof.specialty,
       clinic_id: prof.clinic_id,
-      schedule: prof.schedule as ProfessionalSchedule | null,
+      schedule: prof.schedule,
+      appointment_duration: prof.appointment_duration,
       clinic: prof.clinic as { name: string; logo_url: string | null }
     });
     
@@ -232,57 +235,102 @@ export default function ProfessionalDashboard() {
   const timeSlots = useMemo(() => {
     if (!professional?.schedule) return [];
 
-    const dayOfWeek = new Date().getDay();
+    const today = new Date();
+    const dayOfWeek = today.getDay();
     const dayMap: Record<number, string> = {
       0: 'sunday', 1: 'monday', 2: 'tuesday', 3: 'wednesday',
       4: 'thursday', 5: 'friday', 6: 'saturday'
     };
     const dayKey = dayMap[dayOfWeek];
-    const daySchedule = professional.schedule[dayKey];
-
-    if (!daySchedule?.enabled || !daySchedule.slots?.length) return [];
-
-    const slots: TimeSlot[] = [];
-    const defaultDuration = 30; // 30 minutes default
-
-    // Generate all possible time slots for the day
-    daySchedule.slots.forEach(slot => {
-      const [startH, startM] = slot.start.split(':').map(Number);
-      const [endH, endM] = slot.end.split(':').map(Number);
-      
-      let currentMinutes = startH * 60 + startM;
-      const endMinutes = endH * 60 + endM;
-
-      while (currentMinutes < endMinutes) {
-        const hours = Math.floor(currentMinutes / 60);
-        const mins = currentMinutes % 60;
-        const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+    const schedule = professional.schedule;
+    const daySchedule = schedule[dayKey];
+    const blocks = schedule?._blocks as Array<{ days: string[]; start_time: string; end_time: string; duration?: number; start_date?: string; end_date?: string }> | undefined;
+    
+    const defaultDuration = professional.appointment_duration || 30;
+    const dateStr = today.toISOString().split('T')[0];
+    
+    const allTimeSlots: string[] = [];
+    
+    // Primeiro, verificar _blocks (nova estrutura de agenda)
+    if (blocks && blocks.length > 0) {
+      for (const block of blocks) {
+        // Verificar se o bloco está ativo para esta data
+        if (block.start_date && dateStr < block.start_date) continue;
+        if (block.end_date && dateStr > block.end_date) continue;
         
-        // Check if this slot has an appointment
-        const appointment = appointments.find(apt => {
-          const aptStart = apt.start_time.substring(0, 5);
-          const aptEnd = apt.end_time.substring(0, 5);
-          const [aptStartH, aptStartM] = aptStart.split(':').map(Number);
-          const [aptEndH, aptEndM] = aptEnd.split(':').map(Number);
-          const aptStartMinutes = aptStartH * 60 + aptStartM;
-          const aptEndMinutes = aptEndH * 60 + aptEndM;
-          
-          return currentMinutes >= aptStartMinutes && currentMinutes < aptEndMinutes;
-        });
-
-        if (appointment) {
-          // Only add appointment slot at its start time
-          const aptStart = appointment.start_time.substring(0, 5);
-          if (timeStr === aptStart) {
-            slots.push({ time: timeStr, type: 'booked', appointment });
-          }
-        } else {
-          slots.push({ time: timeStr, type: 'free' });
+        // Verificar se o dia da semana está incluído
+        if (block.days && block.days.length > 0) {
+          if (!block.days.includes(dayKey)) continue;
         }
-
-        currentMinutes += defaultDuration;
+        
+        const [sh, sm] = String(block.start_time).split(':').map(Number);
+        const [eh, em] = String(block.end_time).split(':').map(Number);
+        const interval = block.duration || defaultDuration;
+        
+        let cur = sh * 60 + sm;
+        const end = eh * 60 + em;
+        
+        while (cur < end) {
+          const h = Math.floor(cur / 60);
+          const m = cur % 60;
+          allTimeSlots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+          cur += interval;
+        }
       }
-    });
+    }
+    
+    // Se não tiver _blocks ou não gerou slots, usar estrutura antiga (slots por dia)
+    if (allTimeSlots.length === 0 && daySchedule?.enabled && Array.isArray(daySchedule.slots) && daySchedule.slots.length > 0) {
+      for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
+        const [sh, sm] = String(s.start).split(':').map(Number);
+        const [eh, em] = String(s.end).split(':').map(Number);
+        
+        let cur = sh * 60 + sm;
+        const end = eh * 60 + em;
+        
+        while (cur < end) {
+          const h = Math.floor(cur / 60);
+          const m = cur % 60;
+          allTimeSlots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+          cur += defaultDuration;
+        }
+      }
+    }
+    
+    if (allTimeSlots.length === 0) return [];
+    
+    // Remover duplicatas e ordenar
+    const uniqueSlots = Array.from(new Set(allTimeSlots)).sort();
+    
+    // Processar slots
+    const slots: TimeSlot[] = [];
+    
+    for (const timeStr of uniqueSlots) {
+      const [h, m] = timeStr.split(':').map(Number);
+      const slotMinutes = h * 60 + m;
+      
+      // Check if this slot has an appointment
+      const appointment = appointments.find(apt => {
+        const aptStart = apt.start_time.substring(0, 5);
+        const aptEnd = apt.end_time.substring(0, 5);
+        const [aptStartH, aptStartM] = aptStart.split(':').map(Number);
+        const [aptEndH, aptEndM] = aptEnd.split(':').map(Number);
+        const aptStartMinutes = aptStartH * 60 + aptStartM;
+        const aptEndMinutes = aptEndH * 60 + aptEndM;
+        
+        return slotMinutes >= aptStartMinutes && slotMinutes < aptEndMinutes;
+      });
+
+      if (appointment) {
+        // Only add appointment slot at its start time
+        const aptStart = appointment.start_time.substring(0, 5);
+        if (timeStr === aptStart) {
+          slots.push({ time: timeStr, type: 'booked', appointment });
+        }
+      } else {
+        slots.push({ time: timeStr, type: 'free' });
+      }
+    }
 
     return slots;
   }, [professional, appointments]);
