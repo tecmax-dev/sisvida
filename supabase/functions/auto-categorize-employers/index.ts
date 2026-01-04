@@ -68,19 +68,19 @@ serve(async (req) => {
       keywords: generateKeywords(cat.name)
     }));
 
-    // Buscar empresas sem categoria
+    // Buscar empresas sem CNAE (para preencher o CNAE de todas)
     const { data: employers, error: empError } = await supabase
       .from('employers')
-      .select('id, cnpj, name, category_id')
+      .select('id, cnpj, name, category_id, cnae_code')
       .eq('clinic_id', clinic_id)
-      .is('category_id', null);
+      .is('cnae_code', null);
 
     if (empError) {
       console.error('[auto-categorize] Erro ao buscar empresas:', empError);
       throw empError;
     }
 
-    console.log(`[auto-categorize] Empresas sem categoria: ${employers?.length || 0}`);
+    console.log(`[auto-categorize] Empresas sem CNAE: ${employers?.length || 0}`);
 
     const results: Array<{
       employer_id: string;
