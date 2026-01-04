@@ -184,6 +184,9 @@ export function EmployerContributionFilters({
     const doc = new jsPDF();
     let yPos = 15;
     
+    console.log("[PDF] clinicInfo:", clinicInfo);
+    console.log("[PDF] showLogo:", showLogo, "logoUrl:", clinicInfo?.logoUrl);
+
     // Load logo if enabled and available
     if (showLogo && clinicInfo?.logoUrl) {
       const url = clinicInfo.logoUrl;
