@@ -696,9 +696,11 @@ Deno.serve(async (req) => {
           console.log(`[Lytex] Clientes importados: ${clientsImported}, atualizados: ${clientsUpdated}`);
 
           // 2. Importar faturas
-          // A API da Lytex pode paginar/filtrar por status; para garantir que tragam
-          // pagos, cancelados, vencidos e a vencer, varremos múltiplos status.
-          const invoiceStatuses = [
+          // A API da Lytex pode (ou não) exigir filtro por status. Para garantir que boletos
+          // a vencer (abertos) também venham, tentamos primeiro SEM filtro (todas as faturas).
+          // Se a Lytex não retornar nada sem filtro, caímos para uma varredura por status.
+
+          const fallbackInvoiceStatuses = [
             "pending",
             "processing",
             "overdue",
@@ -755,7 +757,20 @@ Deno.serve(async (req) => {
 
           const seenInvoiceIds = new Set<string>();
 
-          for (const statusFilter of invoiceStatuses) {
+          // Detectar se listInvoices sem status funciona
+          let statusFiltersToUse: (string | undefined)[] = [undefined];
+          try {
+            const probeResp = await listInvoices(1, 1);
+            const probeList = extractList(probeResp);
+            if (!probeList || probeList.length === 0) {
+              statusFiltersToUse = [...fallbackInvoiceStatuses];
+            }
+          } catch (e) {
+            // Se a rota sem status falhar, usamos o fallback por status
+            statusFiltersToUse = [...fallbackInvoiceStatuses];
+          }
+
+          for (const statusFilter of statusFiltersToUse) {
             page = 1;
             hasMore = true;
 
@@ -763,9 +778,11 @@ Deno.serve(async (req) => {
               const invoicesResponse = await listInvoices(page, 100, statusFilter);
               const invoices = extractList(invoicesResponse);
 
+              const statusLabel = statusFilter ?? "all";
+
               if (page === 1) {
-                console.log(`[Lytex] Payload faturas (status=${statusFilter}) chaves:`, Object.keys(invoicesResponse || {}));
-                console.log(`[Lytex] Faturas recebidas (status=${statusFilter}, page=1): ${invoices.length}`);
+                console.log(`[Lytex] Payload faturas (status=${statusLabel}) chaves:`, Object.keys(invoicesResponse || {}));
+                console.log(`[Lytex] Faturas recebidas (status=${statusLabel}, page=1): ${invoices.length}`);
               }
 
               if (invoices.length === 0) {
@@ -877,7 +894,7 @@ Deno.serve(async (req) => {
 
                   if (upsertErr) {
                     console.error("[Lytex] Erro ao upsert lote de faturas:", upsertErr);
-                    errors.push(`Upsert faturas (status=${statusFilter}, page=${page}): ${upsertErr.message}`);
+                    errors.push(`Upsert faturas (status=${statusFilter ?? "all"}, page=${page}): ${upsertErr.message}`);
                   } else {
                     // Não dá para diferenciar insert vs update sem custo extra; contamos como processadas.
                     invoicesImported += chunk.length;
