@@ -603,20 +603,96 @@ export default function CalendarPage() {
     return `${y}-${m}-${day}`;
   };
 
+  const getDayKey = (date: Date) => {
+    const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'] as const;
+    return dayKeys[date.getDay()];
+  };
+
+  const getProfessionalTimeSlotsForDate = useCallback(
+    (professionalId: string | null, date: Date): string[] => {
+      if (!professionalId) return [];
+
+      const prof = professionals.find((p) => p.id === professionalId);
+      const schedule = prof?.schedule as any;
+      const appointmentDuration = prof?.appointment_duration || 30;
+      if (!schedule) return [];
+
+      const dayKey = getDayKey(date);
+      const daySchedule = schedule?.[dayKey];
+      const blocks =
+        schedule?._blocks as
+          | Array<{
+              days: string[];
+              start_time: string;
+              end_time: string;
+              duration?: number;
+              start_date?: string;
+              end_date?: string;
+            }>
+          | undefined;
+
+      const slots: string[] = [];
+      const dateStr = toDateKey(date);
+
+      if (blocks && blocks.length > 0) {
+        for (const block of blocks) {
+          const skipStartDate = block.start_date && dateStr < block.start_date;
+          const skipEndDate = block.end_date && dateStr > block.end_date;
+          const skipDay = block.days && block.days.length > 0 && !block.days.includes(dayKey);
+          if (skipStartDate || skipEndDate || skipDay) continue;
+
+          const [sh, sm] = String(block.start_time || '').split(':').map(Number);
+          const [eh, em] = String(block.end_time || '').split(':').map(Number);
+          if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) continue;
+
+          const interval = block.duration || appointmentDuration;
+          let cur = sh * 60 + sm;
+          const end = eh * 60 + em;
+          while (cur < end) {
+            const h = Math.floor(cur / 60);
+            const m = cur % 60;
+            slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+            cur += interval;
+          }
+        }
+      }
+
+      if (
+        slots.length === 0 &&
+        daySchedule?.enabled &&
+        Array.isArray(daySchedule.slots) &&
+        daySchedule.slots.length > 0
+      ) {
+        for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
+          const [sh, sm] = String(s.start || '').split(':').map(Number);
+          const [eh, em] = String(s.end || '').split(':').map(Number);
+          if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) continue;
+
+          let cur = sh * 60 + sm;
+          const end = eh * 60 + em;
+          while (cur < end) {
+            const h = Math.floor(cur / 60);
+            const m = cur % 60;
+            slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+            cur += appointmentDuration;
+          }
+        }
+      }
+
+      return Array.from(new Set(slots)).sort();
+    },
+    [professionals]
+  );
+
   const timeSlots = useMemo(() => {
     try {
-      const getDayKey = (date: Date) => {
-        const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        return dayKeys[date.getDay()];
-      };
-
       // Prioridade para definir de qual profissional vem a grade de horários:
       // 1) Se estiver arrastando para reagendar: profissional do agendamento
       // 2) Se houver UM profissional filtrado
       // 3) Se houver profissional selecionado no formulário
       // 4) Se o usuário for um profissional: o próprio
       let selectedProfId: string | null = null;
-      
+
       if (activeAppointment?.professional_id) {
         selectedProfId = activeAppointment.professional_id;
       } else if (filterProfessionals.length === 1) {
@@ -627,102 +703,23 @@ export default function CalendarPage() {
         selectedProfId = loggedInProfessionalId;
       }
 
-      console.log('[CalendarPage timeSlots] selectedProfId:', selectedProfId, 'filterProfessionals:', filterProfessionals);
-
       if (!selectedProfId) return defaultTimeSlots;
 
-      const prof = professionals.find((p) => p.id === selectedProfId);
-      const schedule = prof?.schedule as any;
-      const appointmentDuration = prof?.appointment_duration || 30;
-      
-      console.log('[CalendarPage timeSlots] prof:', prof?.name, 'hasSchedule:', !!schedule);
-      
-      if (!schedule) return defaultTimeSlots;
-
-      const dayKey = getDayKey(selectedDate);
-      const daySchedule = schedule?.[dayKey];
-      const blocks = schedule?._blocks as Array<{ days: string[]; start_time: string; end_time: string; duration?: number; start_date?: string; end_date?: string }> | undefined;
-      
-      const slots: string[] = [];
-      const dateStr = toDateKey(selectedDate);
-
-      console.log('[CalendarPage timeSlots] Calculating slots for:', { 
-        profName: prof?.name, 
-        dateStr, 
-        dayKey, 
-        hasBlocks: !!blocks?.length,
-        blocks: blocks?.map(b => ({ days: b.days, start_date: b.start_date, end_date: b.end_date }))
-      });
-
-      // Primeiro, verificar _blocks (nova estrutura de agenda)
-      if (blocks && blocks.length > 0) {
-        for (const block of blocks) {
-          // Verificar se o bloco está ativo para esta data
-          const skipStartDate = block.start_date && dateStr < block.start_date;
-          const skipEndDate = block.end_date && dateStr > block.end_date;
-          const skipDay = block.days && block.days.length > 0 && !block.days.includes(dayKey);
-          
-          console.log('[CalendarPage timeSlots] Block check:', { 
-            blockDays: block.days, 
-            dayKey,
-            dateStr,
-            start_date: block.start_date,
-            end_date: block.end_date,
-            skipStartDate,
-            skipEndDate,
-            skipDay,
-            willInclude: !skipStartDate && !skipEndDate && !skipDay
-          });
-          
-          if (skipStartDate) continue;
-          if (skipEndDate) continue;
-          if (skipDay) continue;
-          
-          const [sh, sm] = String(block.start_time || '').split(':').map(Number);
-          const [eh, em] = String(block.end_time || '').split(':').map(Number);
-          if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) continue;
-          
-          const interval = block.duration || appointmentDuration;
-          
-          let cur = sh * 60 + sm;
-          const end = eh * 60 + em;
-          
-          while (cur < end) {
-            const h = Math.floor(cur / 60);
-            const m = cur % 60;
-            slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-            cur += interval;
-          }
-        }
-      }
-      
-      // Se não tiver _blocks ou não gerou slots, usar estrutura antiga (slots por dia)
-      if (slots.length === 0 && daySchedule?.enabled && Array.isArray(daySchedule.slots) && daySchedule.slots.length > 0) {
-        for (const s of daySchedule.slots as Array<{ start: string; end: string }>) {
-          const [sh, sm] = String(s.start || '').split(':').map(Number);
-          const [eh, em] = String(s.end || '').split(':').map(Number);
-          if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) continue;
-          
-          let cur = sh * 60 + sm;
-          const end = eh * 60 + em;
-          
-          while (cur < end) {
-            const h = Math.floor(cur / 60);
-            const m = cur % 60;
-            slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-            cur += appointmentDuration;
-          }
-        }
-      }
-      
-      if (slots.length === 0) return defaultTimeSlots;
-
-      return Array.from(new Set(slots)).sort();
+      const slots = getProfessionalTimeSlotsForDate(selectedProfId, selectedDate);
+      return slots.length > 0 ? slots : defaultTimeSlots;
     } catch (err) {
       console.error('[CalendarPage] Error calculating timeSlots:', err);
       return defaultTimeSlots;
     }
-  }, [activeAppointment, filterProfessionals, formProfessional, isProfessionalOnly, loggedInProfessionalId, professionals, selectedDate]);
+  }, [
+    activeAppointment,
+    filterProfessionals,
+    formProfessional,
+    getProfessionalTimeSlotsForDate,
+    isProfessionalOnly,
+    loggedInProfessionalId,
+    selectedDate,
+  ]);
 
   // Agendamentos do profissional selecionado para a data selecionada (para TimeSlotPicker)
   const professionalAppointmentsForDate = useMemo(() => {
@@ -3028,7 +3025,15 @@ export default function CalendarPage() {
                   const dateStr = toDateKey(date);
                   const holidayName = isHoliday(date);
                   const slotAppointments = getAppointmentsForSlot(date, time);
-                  
+
+                  const weekSelectedProfId = filterProfessionals.length === 1 ? filterProfessionals[0] : null;
+                  const availableSlotsForDay = weekSelectedProfId
+                    ? getProfessionalTimeSlotsForDate(weekSelectedProfId, date)
+                    : [];
+                  const isWithinSchedule = availableSlotsForDay.includes(time);
+                  const hasNonCancelledAppointment = slotAppointments.some(a => a.status !== 'cancelled' && a.status !== 'no_show');
+                  const isFreeSlot = !holidayName && isWithinSchedule && !hasNonCancelledAppointment;
+
                   return (
                     <DroppableTimeSlot
                       key={`${dateStr}-${time}`}
@@ -3038,7 +3043,8 @@ export default function CalendarPage() {
                       isOccupied={!!holidayName}
                       className={cn(
                         "p-1 border-r border-border/20 relative min-h-[80px]",
-                        holidayName && "bg-red-50/50 dark:bg-red-950/10"
+                        holidayName && "bg-red-50/50 dark:bg-red-950/10",
+                        isFreeSlot && "bg-primary/5"
                       )}
                     >
                       {holidayName && timeIndex === 5 ? (
