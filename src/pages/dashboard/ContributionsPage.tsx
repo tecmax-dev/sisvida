@@ -231,8 +231,14 @@ export default function ContributionsPage() {
       const imported = (data?.clientsImported || 0) + (data?.invoicesImported || 0);
       const updated = (data?.clientsUpdated || 0) + (data?.invoicesUpdated || 0);
 
+      if (data?.errors?.length) {
+        toast.error(`Importação finalizada com erros (${data.errors.length}). Ex.: ${data.errors[0]}`);
+      }
+
       if (imported > 0 || updated > 0) {
-        toast.success(`Importados: ${data?.clientsImported || 0} empresas, ${data?.invoicesImported || 0} boletos. Atualizados: ${updated}`);
+        toast.success(
+          `Importados: ${data?.clientsImported || 0} empresas, ${data?.invoicesImported || 0} boletos. Atualizados: ${updated}`,
+        );
         fetchData();
       } else {
         toast.info("Nenhum dado novo encontrado na Lytex");
