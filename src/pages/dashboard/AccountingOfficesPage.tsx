@@ -361,6 +361,11 @@ export default function AccountingOfficesPage() {
     setIsLinkDialogOpen(true);
   };
 
+  const filteredEmployersForLink = employers.filter(employer =>
+    employer.name.toLowerCase().includes(linkSearchTerm.toLowerCase()) ||
+    employer.cnpj?.includes(linkSearchTerm.replace(/\D/g, ""))
+  );
+
   const handleSelectAllEmployers = () => {
     const filteredIds = filteredEmployersForLink.map(e => e.id);
     const allSelected = filteredIds.every(id => selectedEmployerIds.includes(id));
@@ -376,11 +381,6 @@ export default function AccountingOfficesPage() {
   const handleClearSelection = () => {
     setSelectedEmployerIds([]);
   };
-
-  const filteredEmployersForLink = employers.filter(employer =>
-    employer.name.toLowerCase().includes(linkSearchTerm.toLowerCase()) ||
-    employer.cnpj?.includes(linkSearchTerm.replace(/\D/g, ""))
-  );
 
   const handleSaveLinks = async () => {
     if (!selectedOffice) return;
