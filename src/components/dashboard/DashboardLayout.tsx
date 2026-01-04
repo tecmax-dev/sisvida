@@ -96,110 +96,92 @@ interface NavCategory {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   items: NavItem[];
+  color?: string; // Tailwind color class for parent category
 }
 
+// Category color mapping for visual distinction
+const categoryColors: Record<string, { bg: string; text: string; border: string; accent: string }> = {
+  empresas: {
+    bg: "bg-amber-500/20",
+    text: "text-amber-200",
+    border: "border-amber-400/30",
+    accent: "bg-amber-500/30"
+  },
+  socios: {
+    bg: "bg-purple-500/20",
+    text: "text-purple-200",
+    border: "border-purple-400/30",
+    accent: "bg-purple-500/30"
+  },
+  clinica: {
+    bg: "bg-cyan-500/20",
+    text: "text-cyan-200",
+    border: "border-cyan-400/30",
+    accent: "bg-cyan-500/30"
+  },
+  admin: {
+    bg: "bg-rose-500/20",
+    text: "text-rose-200",
+    border: "border-rose-400/30",
+    accent: "bg-rose-500/30"
+  }
+};
+
 const navCategories: NavCategory[] = [
+  // EMPRESAS - Amber/Orange
   {
-    id: "overview",
-    label: "Início",
-    icon: Home,
+    id: "empresas",
+    label: "Empresas",
+    icon: Building2,
+    color: "empresas",
     items: [
-      { href: "/dashboard", icon: LayoutDashboard, label: "Visão Geral", permission: "view_dashboard" },
-    ],
-  },
-  {
-    id: "attendance",
-    label: "Atendimento",
-    icon: Calendar,
-    items: [
-      { href: "/dashboard/calendar", icon: Calendar, label: "Agenda", permission: "scheduling" },
-      { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "view_waiting_list" },
-      { href: "/dashboard/queue", icon: Monitor, label: "Painel/Totem", permission: "view_queue" },
-      { href: "/dashboard/panel-banners", icon: Image, label: "Banners do Painel", permission: "view_queue" },
-    ],
-  },
-  {
-    id: "patients",
-    label: "Cadastros",
-    icon: Users,
-    items: [
-      { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients" },
-      { href: "/dashboard/dependents", icon: Users, label: "Dependentes", permission: "view_patients" },
-      { href: "/dashboard/empresas", icon: Building2, label: "Empresas", permission: "view_patients" },
-      { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais", permission: "view_professionals" },
-    ],
-  },
-  {
-    id: "clinical",
-    label: "Clínico",
-    icon: HeartPulse,
-    items: [
-      { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
-      { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
-      { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "anamnesis_forms" },
-      { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates de Anamnese", permission: "view_anamnesis_templates" },
-    ],
-  },
-  {
-    id: "services",
-    label: "Serviços",
-    icon: Briefcase,
-    items: [
-      { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "insurance_plans" },
-      { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
-      { href: "/dashboard/exams", icon: FlaskConical, label: "Exames", permission: "view_procedures" },
-      { href: "/dashboard/catalog", icon: ShoppingBag, label: "Catálogo", permission: "view_catalog" },
-      { href: "/dashboard/quotes", icon: FileSpreadsheet, label: "Orçamentos", permission: "view_budgets" },
-      { href: "/dashboard/packages", icon: Package, label: "Pacotes", permission: "view_packages" },
-    ],
-  },
-  {
-    id: "financial",
-    label: "Financeiro",
-    icon: DollarSign,
-    items: [
-      { href: "/dashboard/financials", icon: DollarSign, label: "Movimentações", permission: "view_financials" },
-      { href: "/dashboard/repass", icon: Percent, label: "Repasse Médico", permission: "view_repass" },
+      { href: "/dashboard/empresas", icon: Building2, label: "Cadastro de Empresas", permission: "view_patients" },
       { href: "/dashboard/contribuicoes", icon: Receipt, label: "Contribuições", permission: "view_financials" },
     ],
   },
+  // SÓCIOS - Purple
   {
-    id: "tiss",
-    label: "Faturamento TISS",
-    icon: FileCheck2,
+    id: "socios",
+    label: "Sócios",
+    icon: Users,
+    color: "socios",
     items: [
-      { href: "/dashboard/tiss", icon: FileCheck2, label: "TISS", permission: "view_tiss" },
+      { href: "/dashboard/patients", icon: Users, label: "Sócios", permission: "view_patients" },
+      { href: "/dashboard/dependents", icon: Users, label: "Dependentes", permission: "view_patients" },
+      { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
+      { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
     ],
   },
+  // CLÍNICA - Cyan/Teal
   {
-    id: "stock",
-    label: "Estoque",
-    icon: Warehouse,
+    id: "clinica",
+    label: "Clínica",
+    icon: HeartPulse,
+    color: "clinica",
     items: [
-      { href: "/dashboard/stock", icon: Warehouse, label: "Produtos", permission: "view_stock" },
+      { href: "/dashboard", icon: LayoutDashboard, label: "Visão Geral", permission: "view_dashboard" },
+      { href: "/dashboard/calendar", icon: Calendar, label: "Agenda", permission: "scheduling" },
+      { href: "/dashboard/waiting-list", icon: Clock, label: "Lista de Espera", permission: "view_waiting_list" },
+      { href: "/dashboard/queue", icon: Monitor, label: "Painel/Totem", permission: "view_queue" },
+      { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais", permission: "view_professionals" },
+      { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
+      { href: "/dashboard/exams", icon: FlaskConical, label: "Exames", permission: "view_procedures" },
     ],
   },
+  // ADMINISTRATIVO - Rose/Pink
   {
-    id: "marketing",
-    label: "Marketing",
-    icon: Megaphone,
-    items: [
-      { href: "/dashboard/marketing", icon: Megaphone, label: "Campanhas", permission: "view_marketing" },
-    ],
-  },
-  {
-    id: "reports",
-    label: "Relatórios",
-    icon: BarChart3,
-    items: [
-      { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios", permission: "view_reports" },
-    ],
-  },
-  {
-    id: "settings",
-    label: "Configurações",
+    id: "admin",
+    label: "Administrativo",
     icon: Settings,
+    color: "admin",
     items: [
+      { href: "/dashboard/financials", icon: DollarSign, label: "Financeiro", permission: "view_financials" },
+      { href: "/dashboard/repass", icon: Percent, label: "Repasse Médico", permission: "view_repass" },
+      { href: "/dashboard/stock", icon: Warehouse, label: "Estoque", permission: "view_stock" },
+      { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "insurance_plans" },
+      { href: "/dashboard/reports", icon: BarChart3, label: "Relatórios", permission: "view_reports" },
+      { href: "/dashboard/marketing", icon: Megaphone, label: "Marketing", permission: "view_marketing" },
+      { href: "/dashboard/users", icon: UserCog, label: "Usuários", permission: "manage_users" },
       { href: "/dashboard/holidays", icon: CalendarOff, label: "Feriados", permission: "manage_settings" },
       { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano", permission: "manage_subscription" },
       { href: "/dashboard/settings", icon: Settings, label: "Configurações", permission: "change_password" },
@@ -207,9 +189,7 @@ const navCategories: NavCategory[] = [
   },
 ];
 
-const adminNavItems: NavItem[] = [
-  { href: "/dashboard/users", icon: UserCog, label: "Usuários", permission: "manage_users" },
-];
+const adminNavItems: NavItem[] = [];
 
 export function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -331,6 +311,7 @@ export function DashboardLayout() {
     const isOpen = openCategories.includes(category.id);
     const hasActiveItem = isCategoryActive(category);
     const isSingleItem = category.items.length === 1;
+    const colors = category.color ? categoryColors[category.color] : null;
 
     // For single item categories, render just the link
     if (isSingleItem) {
@@ -347,8 +328,9 @@ export function DashboardLayout() {
                   className={cn(
                     "w-full flex items-center justify-center p-2 rounded-lg transition-colors",
                     hasActiveItem
-                      ? "bg-sidebar-primary/20 text-sidebar-primary"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent"
+                      ? colors?.accent || "bg-sidebar-primary/20"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent",
+                    colors?.text
                   )}
                 >
                   <category.icon className="h-5 w-5" />
@@ -383,15 +365,23 @@ export function DashboardLayout() {
         <CollapsibleTrigger asChild>
           <button
             className={cn(
-              "w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors group",
-              hasActiveItem
-                ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                : "text-sidebar-foreground hover:bg-sidebar-accent/50"
+              "w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm transition-all duration-200 group",
+              colors?.border,
+              hasActiveItem || isOpen
+                ? cn(colors?.bg || "bg-sidebar-accent", colors?.text || "text-sidebar-accent-foreground", "font-medium border-l-2")
+                : cn("text-sidebar-foreground hover:bg-sidebar-accent/50 border-l-2 border-transparent")
             )}
           >
             <div className="flex items-center gap-3">
-              <category.icon className="h-4 w-4 shrink-0" />
-              <span>{category.label}</span>
+              <div className={cn(
+                "w-7 h-7 rounded-md flex items-center justify-center transition-colors",
+                hasActiveItem || isOpen
+                  ? colors?.accent || "bg-sidebar-primary/20"
+                  : "bg-sidebar-accent"
+              )}>
+                <category.icon className="h-4 w-4 shrink-0" />
+              </div>
+              <span className="font-medium">{category.label}</span>
             </div>
             {isOpen ? (
               <ChevronDown className="h-4 w-4 text-sidebar-foreground/60 transition-transform" />
@@ -401,7 +391,7 @@ export function DashboardLayout() {
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent className="collapsible-content mt-1">
-          <div className="collapsible-inner space-y-0.5">
+          <div className={cn("collapsible-inner space-y-0.5 ml-4 pl-3 border-l", colors?.border || "border-sidebar-border")}>
             {category.items.map((item) => (
               <NavItemLink key={item.href} item={item} isSubItem />
             ))}
