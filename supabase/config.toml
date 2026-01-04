@@ -173,3 +173,6 @@ verify_jwt = false
 
 [functions.accounting-office-portal-auth]
 verify_jwt = false
+
+[functions.generate-boleto-reissue]
+verify_jwt = false
