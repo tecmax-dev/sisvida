@@ -147,20 +147,29 @@ serve(async (req) => {
           categoryMappings
         );
 
+        // Se não for dry_run, atualizar a empresa (SEMPRE salvar CNAE, mesmo sem match de categoria)
+        if (!dry_run) {
+          const updateData: Record<string, unknown> = {
+            cnae_code: cnpjData.cnae_fiscal.toString(),
+            cnae_description: cnpjData.cnae_fiscal_descricao
+          };
+          
+          if (matchedCategory) {
+            updateData.category_id = matchedCategory.id;
+          }
+
+          const { error: updateError } = await supabase
+            .from('employers')
+            .update(updateData)
+            .eq('id', employer.id);
+
+          if (updateError) {
+            console.error(`[auto-categorize] Erro ao atualizar empresa ${employer.id}:`, updateError);
+          }
+        }
+
         if (matchedCategory) {
           console.log(`[auto-categorize] Match encontrado: ${matchedCategory.name}`);
-          
-          // Se não for dry_run, atualizar a empresa
-          if (!dry_run) {
-            const { error: updateError } = await supabase
-              .from('employers')
-              .update({ category_id: matchedCategory.id })
-              .eq('id', employer.id);
-
-            if (updateError) {
-              console.error(`[auto-categorize] Erro ao atualizar empresa ${employer.id}:`, updateError);
-            }
-          }
 
           results.push({
             employer_id: employer.id,

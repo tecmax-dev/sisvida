@@ -2312,6 +2312,8 @@ export type Database = {
           category_id: string | null
           city: string | null
           clinic_id: string
+          cnae_code: string | null
+          cnae_description: string | null
           cnpj: string
           created_at: string
           email: string | null
@@ -2333,6 +2335,8 @@ export type Database = {
           category_id?: string | null
           city?: string | null
           clinic_id: string
+          cnae_code?: string | null
+          cnae_description?: string | null
           cnpj: string
           created_at?: string
           email?: string | null
@@ -2354,6 +2358,8 @@ export type Database = {
           category_id?: string | null
           city?: string | null
           clinic_id?: string
+          cnae_code?: string | null
+          cnae_description?: string | null
           cnpj?: string
           created_at?: string
           email?: string | null
