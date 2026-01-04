@@ -18,7 +18,9 @@ import {
   XCircle,
   AlertTriangle,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Tag,
+  Filter
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -68,6 +70,20 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import EmployerCategoryDialog from "@/components/employers/EmployerCategoryDialog";
+
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+}
 
 interface Employer {
   id: string;
@@ -83,6 +99,8 @@ interface Employer {
   notes: string | null;
   is_active: boolean;
   created_at: string;
+  category_id: string | null;
+  category?: Category | null;
   patients?: { id: string; name: string }[];
 }
 
@@ -97,6 +115,7 @@ interface EmployerFormData {
   state: string;
   notes: string;
   is_active: boolean;
+  category_id: string;
 }
 
 const initialFormData: EmployerFormData = {
@@ -110,6 +129,7 @@ const initialFormData: EmployerFormData = {
   state: "",
   notes: "",
   is_active: true,
+  category_id: "",
 };
 
 const ITEMS_PER_PAGE = 15;
@@ -118,10 +138,13 @@ export default function EmployersPage() {
   const { currentClinic } = useAuth();
   const navigate = useNavigate();
   const [employers, setEmployers] = useState<Employer[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
   const [formData, setFormData] = useState<EmployerFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
@@ -131,13 +154,31 @@ export default function EmployersPage() {
   useEffect(() => {
     if (currentClinic) {
       fetchEmployers();
+      fetchCategories();
     }
   }, [currentClinic]);
 
-  // Reset to page 1 when search changes
+  // Reset to page 1 when search or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, categoryFilter]);
+
+  const fetchCategories = async () => {
+    if (!currentClinic) return;
+    try {
+      const { data, error } = await supabase
+        .from("employer_categories")
+        .select("id, name, color")
+        .eq("clinic_id", currentClinic.id)
+        .eq("is_active", true)
+        .order("name");
+      
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+    }
+  };
 
   const fetchEmployers = async () => {
     if (!currentClinic) return;
@@ -189,6 +230,7 @@ export default function EmployersPage() {
             notes: null,
             is_active: true,
             created_at: new Date().toISOString(),
+            category_id: null,
             patients: [],
           };
         }
@@ -235,6 +277,7 @@ export default function EmployersPage() {
         state: employer.state || "",
         notes: employer.notes || "",
         is_active: employer.is_active,
+        category_id: employer.category_id || "",
       });
     } else if (employer?.id.startsWith("virtual-")) {
       setSelectedEmployer(null);
@@ -275,6 +318,7 @@ export default function EmployersPage() {
         state: formData.state.trim() || null,
         notes: formData.notes.trim() || null,
         is_active: formData.is_active,
+        category_id: formData.category_id || null,
       };
 
       if (selectedEmployer) {
@@ -333,6 +377,13 @@ export default function EmployersPage() {
 
   const filteredEmployers = useMemo(() => {
     return employers.filter((employer) => {
+      // Filter by category
+      if (categoryFilter !== "all") {
+        if (categoryFilter === "none" && employer.category_id !== null) return false;
+        if (categoryFilter !== "none" && employer.category_id !== categoryFilter) return false;
+      }
+      
+      // Filter by search term
       const search = searchTerm.toLowerCase();
       return (
         employer.name.toLowerCase().includes(search) ||
@@ -341,7 +392,7 @@ export default function EmployersPage() {
         employer.patients?.some((p) => p.name.toLowerCase().includes(search))
       );
     });
-  }, [employers, searchTerm]);
+  }, [employers, searchTerm, categoryFilter]);
 
   // Pagination
   const totalPages = Math.ceil(filteredEmployers.length / ITEMS_PER_PAGE);
@@ -375,10 +426,20 @@ export default function EmployersPage() {
             Gerencie empresas e seus colaboradores vinculados
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90">
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Empresa
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setCategoryDialogOpen(true)}
+            className="gap-2"
+          >
+            <Tag className="h-4 w-4" />
+            Categorias
+          </Button>
+          <Button onClick={() => handleOpenDialog()} className="bg-primary hover:bg-primary/90">
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Empresa
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -421,9 +482,9 @@ export default function EmployersPage() {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="flex items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
+      {/* Search and Filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome, CNPJ ou paciente..."
@@ -432,6 +493,31 @@ export default function EmployersPage() {
             className="pl-9 h-9"
           />
         </div>
+        
+        {categories.length > 0 && (
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-[180px] h-9">
+              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Filtrar categoria" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as categorias</SelectItem>
+              <SelectItem value="none">Sem categoria</SelectItem>
+              {categories.map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  <div className="flex items-center gap-2">
+                    <div 
+                      className="w-3 h-3 rounded-full" 
+                      style={{ backgroundColor: cat.color }}
+                    />
+                    {cat.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        
         <Badge variant="outline" className="text-xs">
           {filteredEmployers.length} resultado{filteredEmployers.length !== 1 ? "s" : ""}
         </Badge>
@@ -827,6 +913,35 @@ export default function EmployersPage() {
                 />
               </div>
             </div>
+            {/* Category Selection */}
+            {categories.length > 0 && (
+              <div>
+                <Label>Categoria</Label>
+                <Select 
+                  value={formData.category_id || "none"} 
+                  onValueChange={(value) => setFormData({ ...formData, category_id: value === "none" ? "" : value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione uma categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem categoria</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          {cat.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
             <div>
               <Label htmlFor="notes">Observações</Label>
               <Textarea
@@ -880,6 +995,16 @@ export default function EmployersPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Category Management Dialog */}
+      {currentClinic && (
+        <EmployerCategoryDialog
+          open={categoryDialogOpen}
+          onOpenChange={setCategoryDialogOpen}
+          clinicId={currentClinic.id}
+          onCategoriesChange={fetchCategories}
+        />
+      )}
     </div>
   );
 }
