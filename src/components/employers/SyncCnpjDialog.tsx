@@ -238,12 +238,25 @@ export function SyncCnpjDialog({ open, onOpenChange, clinicId, onComplete }: Syn
             </ScrollArea>
           )}
 
+          {loading && (
+            <div className="text-center py-8">
+              <Loader2 className="h-12 w-12 mx-auto mb-4 animate-spin text-primary" />
+              <p className="font-medium">Processando empresas em lote...</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Buscando dados na Receita Federal via BrasilAPI
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Isso pode levar alguns minutos dependendo da quantidade de empresas
+              </p>
+            </div>
+          )}
+
           {!results && !loading && (
             <div className="text-center py-8 text-muted-foreground">
               <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Clique em "Executar" para sincronizar dados das empresas via CNPJ</p>
+              <p>Clique em "Executar" para sincronizar dados de <strong>todas as empresas</strong> via CNPJ</p>
               <p className="text-xs mt-2">
-                Serão buscados: endereço, CEP, telefone, email e CNAE
+                Serão buscados: endereço, CEP, bairro, telefone, email e CNAE
               </p>
             </div>
           )}
