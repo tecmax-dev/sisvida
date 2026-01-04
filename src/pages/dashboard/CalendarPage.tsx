@@ -3902,89 +3902,73 @@ export default function CalendarPage() {
                               }
 
                               return timeline.map((slot, index) => {
-                                // Slot ocupado: início do agendamento
-                                if (slot.type === 'booked' && slot.appointment) {
-                                  return (
-                                    <DraggableAppointment key={slot.appointment.id} appointment={slot.appointment}>
-                                      <AppointmentCard appointment={slot.appointment} />
-                                    </DraggableAppointment>
-                                  );
-                                }
+                                try {
+                                  // Slot ocupado: início do agendamento
+                                  if (slot.type === 'booked' && slot.appointment) {
+                                    return (
+                                      <DraggableAppointment key={slot.appointment.id} appointment={slot.appointment}>
+                                        <AppointmentCard appointment={slot.appointment} />
+                                      </DraggableAppointment>
+                                    );
+                                  }
 
-                                // Slot ocupado: continuação do agendamento
-                                if (slot.type === 'booked') {
+                                  // Slot ocupado: continuação do agendamento
+                                  if (slot.type === 'booked') {
+                                    return (
+                                      <div
+                                        key={`busy-${slot.time || index}-${index}`}
+                                        className="flex items-center gap-3 px-3 py-2 bg-muted/20"
+                                      >
+                                        <div className="w-14 text-center py-1 rounded text-xs font-medium bg-muted text-muted-foreground">
+                                          {slot.time || '--:--'}
+                                        </div>
+                                        <div className="flex-1 text-sm text-muted-foreground italic">
+                                          Ocupado
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+
+                                  // Slot livre
+                                  const slotTime = slot.time || '';
+                                  const profId = group?.professional?.id || '';
+
                                   return (
                                     <div
-                                      key={`busy-${slot.time}-${index}`}
-                                      className="flex items-center gap-3 px-3 py-2 bg-muted/20"
+                                      key={`free-${slotTime || index}-${index}`}
+                                      className="flex items-center gap-3 px-3 py-2 bg-success/5 border-l-2 border-success/40"
                                     >
-                                      <div className="w-14 text-center py-1 rounded text-xs font-medium bg-muted text-muted-foreground">
-                                        {slot.time}
+                                      <div className="w-14 text-center py-1 rounded text-xs font-medium bg-success/10 text-success">
+                                        {slotTime || '--:--'}
                                       </div>
                                       <div className="flex-1 text-sm text-muted-foreground italic">
-                                        Ocupado
+                                        Horário disponível
                                       </div>
-                                    </div>
-                                  );
-                                }
-
-                                // Slot livre
-                                return (
-                                  <div
-                                    key={`free-${slot.time}-${index}`}
-                                    className="flex items-center gap-3 px-3 py-2 bg-success/5 border-l-2 border-success/40"
-                                  >
-                                    <div className="w-14 text-center py-1 rounded text-xs font-medium bg-success/10 text-success">
-                                      {slot.time}
-                                    </div>
-                                    <div className="flex-1 text-sm text-muted-foreground italic">
-                                      Horário disponível
-                                    </div>
-                                    {hasPermission('manage_calendar') && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
-                                        onClick={() => {
-                                          try {
-                                            const profId = group?.professional?.id;
-                                            const slotTime = slot?.time;
-                                            if (!profId) {
-                                              toast({
-                                                title: "Profissional inválido",
-                                                description: "Não foi possível identificar o profissional deste horário.",
-                                                variant: "destructive",
-                                              });
-                                              return;
-                                            }
-                                            if (!slotTime || !/^\d{2}:\d{2}$/.test(slotTime)) {
-                                              toast({
-                                                title: "Horário inválido",
-                                                description: "Não foi possível identificar o horário selecionado.",
-                                                variant: "destructive",
-                                              });
-                                              return;
-                                            }
-
+                                      {hasPermission('manage_calendar') && profId && slotTime && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
+                                          onClick={() => {
                                             setFormProfessional(profId);
                                             setFormTime(slotTime);
                                             setDialogOpen(true);
-                                          } catch (err) {
-                                            console.error("[CalendarPage] erro ao abrir agendamento rápido", err);
-                                            toast({
-                                              title: "Erro ao abrir agendamento",
-                                              description: "Tente novamente.",
-                                              variant: "destructive",
-                                            });
-                                          }
-                                        }}
-                                      >
-                                        <Plus className="h-3 w-3 mr-1" />
-                                        Agendar
-                                      </Button>
-                                    )}
-                                  </div>
-                                );
+                                          }}
+                                        >
+                                          <Plus className="h-3 w-3 mr-1" />
+                                          Agendar
+                                        </Button>
+                                      )}
+                                    </div>
+                                  );
+                                } catch (slotErr) {
+                                  console.error('[CalendarPage] Erro ao renderizar slot:', slotErr, slot);
+                                  return (
+                                    <div key={`error-${index}`} className="px-3 py-2 text-xs text-destructive">
+                                      Erro ao exibir slot
+                                    </div>
+                                  );
+                                }
                               });
                             })()}
                           </div>
