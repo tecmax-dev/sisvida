@@ -3924,41 +3924,71 @@ export default function CalendarPage() {
                 
                 let professionalGroups = Object.values(groupedByProfessional);
 
-                // Se não houver agendamentos, ainda assim exibir a escala (horários livres)
-                // quando o usuário estiver filtrando um único profissional (ou for um profissional).
-                if (professionalGroups.length === 0 && dayAppointments.length === 0) {
-                  const targetProfId =
-                    (filterProfessionals.length === 1 ? filterProfessionals[0] : null) ||
-                    (isProfessionalOnly && loggedInProfessionalId ? loggedInProfessionalId : null);
+                // Se não houver agendamentos no dia, ainda assim exibir os profissionais que têm escala
+                // (isso evita "sumir" a agenda quando o dia está vazio).
+                if (dayAppointments.length === 0) {
+                  const shouldAutoShowProfessionals = searchQuery.trim().length === 0;
 
-                  const targetProf = targetProfId ? professionals.find((p) => p.id === targetProfId) : null;
+                  if (shouldAutoShowProfessionals) {
+                    const targetProfessionalIds =
+                      filterProfessionals.length > 0
+                        ? filterProfessionals
+                        : professionals
+                            .filter((p) => getProfessionalTimeSlotsForDate(p.id, selectedDate).length > 0)
+                            .map((p) => p.id);
 
-                  if (!targetProf) {
-                    return (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
-                        <p className="mb-4">Nenhum agendamento para este dia</p>
-                        {hasPermission('manage_calendar') && (
-                          <Button variant="outline" onClick={() => setDialogOpen(true)}>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Adicionar agendamento
-                          </Button>
-                        )}
-                      </div>
+                    const targetProfessionals = professionals.filter((p) => targetProfessionalIds.includes(p.id));
+
+                    if (targetProfessionals.length > 0) {
+                      professionalGroups = targetProfessionals.map((p) => ({
+                        professional: {
+                          id: p.id,
+                          name: p.name,
+                          specialty: (p as any).specialty ?? null,
+                          avatar_url: (p as any).avatar_url ?? null,
+                        },
+                        appointments: [],
+                      }));
+                    }
+                  }
+                }
+
+                // Complemento: quando existem agendamentos, garantir que profissionais com escala também apareçam
+                // (especialmente útil ao filtrar múltiplos profissionais).
+                if (dayAppointments.length > 0 && filterProfessionals.length > 0) {
+                  const present = new Set(professionalGroups.map((g) => g.professional.id));
+                  const missing = professionals.filter(
+                    (p) => filterProfessionals.includes(p.id) && !present.has(p.id) && getProfessionalTimeSlotsForDate(p.id, selectedDate).length > 0
+                  );
+
+                  if (missing.length > 0) {
+                    professionalGroups = professionalGroups.concat(
+                      missing.map((p) => ({
+                        professional: {
+                          id: p.id,
+                          name: p.name,
+                          specialty: (p as any).specialty ?? null,
+                          avatar_url: (p as any).avatar_url ?? null,
+                        },
+                        appointments: [],
+                      }))
                     );
                   }
+                }
 
-                  professionalGroups = [
-                    {
-                      professional: {
-                        id: targetProf.id,
-                        name: targetProf.name,
-                        specialty: (targetProf as any).specialty ?? null,
-                        avatar_url: (targetProf as any).avatar_url ?? null,
-                      },
-                      appointments: [],
-                    },
-                  ];
+                if (dayAppointments.length === 0 && professionalGroups.length === 0) {
+                  return (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <CalendarIcon className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                      <p className="mb-4">Nenhum agendamento para este dia</p>
+                      {hasPermission('manage_calendar') && (
+                        <Button variant="outline" onClick={() => setDialogOpen(true)}>
+                          <Plus className="h-4 w-4 mr-2" />
+                          Adicionar agendamento
+                        </Button>
+                      )}
+                    </div>
+                  );
                 }
 
                 if (dayAppointments.length > 0 && filteredAppointments.length === 0) {
