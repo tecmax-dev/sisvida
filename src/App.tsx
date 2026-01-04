@@ -210,6 +210,7 @@ const App = () => (
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/instalar" element={<InstallPage />} />
+                <Route path="/install" element={<InstallPage />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/cadastro" element={<PublicSignup />} />
                 <Route path="/aguardando-confirmacao" element={<AwaitingConfirmation />} />
