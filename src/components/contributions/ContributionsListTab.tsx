@@ -40,8 +40,10 @@ import {
   ChevronRight,
   Plus,
   ExternalLink,
+  MessageCircle,
 } from "lucide-react";
 import { format } from "date-fns";
+import { SendBoletoWhatsAppDialog } from "./SendBoletoWhatsAppDialog";
 
 interface Employer {
   id: string;
@@ -80,6 +82,7 @@ interface ContributionsListTabProps {
   syncing: boolean;
   yearFilter: number;
   onYearFilterChange: (year: number) => void;
+  clinicId: string;
 }
 
 const ITEMS_PER_PAGE = 15;
@@ -132,12 +135,14 @@ export default function ContributionsListTab({
   syncing,
   yearFilter,
   onYearFilterChange,
+  clinicId,
 }: ContributionsListTabProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -254,6 +259,22 @@ export default function ContributionsListTab({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Buscar status atualizado de todos os boletos na Lytex</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWhatsappDialogOpen(true)}
+                      className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Enviar Boletos
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Enviar boletos selecionados via WhatsApp</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <Button onClick={onOpenCreate}>
@@ -442,6 +463,14 @@ export default function ContributionsListTab({
           </div>
         )}
       </Card>
+
+      {/* WhatsApp Dialog */}
+      <SendBoletoWhatsAppDialog
+        open={whatsappDialogOpen}
+        onOpenChange={setWhatsappDialogOpen}
+        contributions={filteredContributions}
+        clinicId={clinicId}
+      />
     </div>
   );
 }
