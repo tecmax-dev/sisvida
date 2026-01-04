@@ -79,7 +79,7 @@ import {
 } from "@/components/ui/select";
 import EmployerCategoryDialog from "@/components/employers/EmployerCategoryDialog";
 import { AutoCategorizeDialog } from "@/components/employers/AutoCategorizeDialog";
-import { UpdateAddressesDialog } from "@/components/employers/UpdateAddressesDialog";
+import { SyncCnpjDialog } from "@/components/employers/SyncCnpjDialog";
 import { useCepLookup } from "@/hooks/useCepLookup";
 
 interface Category {
@@ -157,7 +157,7 @@ export default function EmployersPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [autoCategorizeDialogOpen, setAutoCategorizeDialogOpen] = useState(false);
-  const [updateAddressesDialogOpen, setUpdateAddressesDialogOpen] = useState(false);
+  const [syncCnpjDialogOpen, setSyncCnpjDialogOpen] = useState(false);
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
   const { lookupCep, loading: cepLoading } = useCepLookup();
   const [formData, setFormData] = useState<EmployerFormData>(initialFormData);
@@ -451,12 +451,12 @@ export default function EmployersPage() {
         <div className="flex items-center gap-2">
           <Button 
             variant="outline" 
-            onClick={() => setUpdateAddressesDialogOpen(true)}
+            onClick={() => setSyncCnpjDialogOpen(true)}
             className="gap-2"
-            title="Atualizar endereços via CEP"
+            title="Sincronizar dados via CNPJ (endereço, telefone, email)"
           >
-            <MapPin className="h-4 w-4" />
-            Atualizar CEP
+            <Building2 className="h-4 w-4" />
+            Sincronizar CNPJ
           </Button>
           <Button 
             variant="outline" 
@@ -1121,9 +1121,9 @@ export default function EmployersPage() {
               fetchCategories();
             }}
           />
-          <UpdateAddressesDialog
-            open={updateAddressesDialogOpen}
-            onOpenChange={setUpdateAddressesDialogOpen}
+          <SyncCnpjDialog
+            open={syncCnpjDialogOpen}
+            onOpenChange={setSyncCnpjDialogOpen}
             clinicId={currentClinic.id}
             onComplete={() => {
               fetchEmployers();
