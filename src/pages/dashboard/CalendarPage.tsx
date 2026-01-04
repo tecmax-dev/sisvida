@@ -12,6 +12,7 @@ import { DragOverlayContent } from "@/components/appointments/DragOverlayContent
 import { DragInstructions } from "@/components/appointments/DragInstructions";
 import { RecurrenceSelector, RecurrenceConfig, calculateRecurringDates } from "@/components/appointments/RecurrenceSelector";
 import { TimeSlotPicker } from "@/components/appointments/TimeSlotPicker";
+import { generateId } from "@/lib/generateId";
 import { 
   findConflictingAppointments, 
   findAllConflictingAppointments, 
@@ -1153,7 +1154,7 @@ export default function CalendarPage() {
       recurrence_group_id: string | null;
     }> = [];
     
-    const recurrenceGroupId = recurrenceConfig.enabled ? crypto.randomUUID() : null;
+    const recurrenceGroupId = recurrenceConfig.enabled ? generateId() : null;
     const dateStr = selectedDate.toISOString().split('T')[0];
     
     if (hasMultipleSlots) {
