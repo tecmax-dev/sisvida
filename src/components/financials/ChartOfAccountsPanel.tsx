@@ -403,16 +403,16 @@ export function ChartOfAccountsPanel({ clinicId }: ChartOfAccountsPanelProps) {
             <div className="space-y-2">
               <Label htmlFor="parent_id">Conta Pai (opcional)</Label>
               <Select
-                value={formData.parent_id}
+                value={formData.parent_id || "__none__"}
                 onValueChange={(value) =>
-                  setFormData({ ...formData, parent_id: value })
+                  setFormData({ ...formData, parent_id: value === "__none__" ? "" : value })
                 }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione a conta pai" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhuma (raiz)</SelectItem>
+                  <SelectItem value="__none__">Nenhuma (raiz)</SelectItem>
                   {parentAccounts
                     .filter((a) => a.id !== editingAccount?.id)
                     .map((account) => (

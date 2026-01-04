@@ -308,14 +308,14 @@ export function CostCentersPanel({ clinicId }: CostCentersPanelProps) {
               <div className="space-y-2">
                 <Label htmlFor="parent_id">Centro Pai</Label>
                 <Select
-                  value={formData.parent_id}
-                  onValueChange={(value) => setFormData({ ...formData, parent_id: value })}
+                  value={formData.parent_id || "__none__"}
+                  onValueChange={(value) => setFormData({ ...formData, parent_id: value === "__none__" ? "" : value })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Nenhum" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum (raiz)</SelectItem>
+                    <SelectItem value="__none__">Nenhum (raiz)</SelectItem>
                     {costCenters
                       .filter((c) => c.id !== editingCenter?.id)
                       .map((center) => (
