@@ -23,6 +23,7 @@ import {
   HeartPulse,
 } from "lucide-react";
 import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
+import { InlineAppointmentLimitEdit } from "@/components/patients/InlineAppointmentLimitEdit";
 import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -110,6 +111,7 @@ interface Patient {
   card_number?: string | null;
   is_active?: boolean;
   inactivation_reason?: string | null;
+  max_appointments_per_month?: number | null;
 }
 
 interface InsurancePlan {
@@ -182,11 +184,12 @@ const patientSchema = z.object({
 
 export default function PatientsPage() {
   const { currentClinic } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isAdmin } = usePermissions();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
+  const [clinicDefaultLimit, setClinicDefaultLimit] = useState<number | null>(null);
 
   // Search + pagination (server-side)
   const [searchTerm, setSearchTerm] = useState("");
@@ -302,6 +305,7 @@ export default function PatientsPage() {
             created_at,
             is_active,
             inactivation_reason,
+            max_appointments_per_month,
             insurance_plan:insurance_plans ( name ),
             patient_dependents ( id ),
             patient_cards ( card_number, expires_at, is_active )
@@ -373,8 +377,23 @@ export default function PatientsPage() {
     if (currentClinic) {
       fetchPatients();
       fetchInsurancePlans();
+      fetchClinicLimit();
     }
   }, [currentClinic, fetchPatients]);
+
+  const fetchClinicLimit = async () => {
+    if (!currentClinic) return;
+    try {
+      const { data } = await supabase
+        .from('clinics')
+        .select('max_appointments_per_cpf_month')
+        .eq('id', currentClinic.id)
+        .single();
+      setClinicDefaultLimit(data?.max_appointments_per_cpf_month ?? null);
+    } catch (error) {
+      console.error("Error fetching clinic limit:", error);
+    }
+  };
 
   // Realtime subscription for automatic updates
   useRealtimeSubscription({
@@ -1024,6 +1043,9 @@ export default function PatientsPage() {
                   <TableHead className="font-semibold">Telefone</TableHead>
                   <TableHead className="hidden lg:table-cell font-semibold">Convênio</TableHead>
                   <TableHead className="hidden md:table-cell font-semibold">Carteirinha</TableHead>
+                  {isAdmin && (
+                    <TableHead className="hidden xl:table-cell font-semibold">Limite/Mês</TableHead>
+                  )}
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -1092,6 +1114,17 @@ export default function PatientsPage() {
                         onUpdate={fetchPatients}
                       />
                     </TableCell>
+                    {isAdmin && (
+                      <TableCell className="hidden xl:table-cell py-2">
+                        <InlineAppointmentLimitEdit
+                          patientId={patient.id}
+                          patientName={patient.name}
+                          currentLimit={patient.max_appointments_per_month ?? null}
+                          clinicDefault={clinicDefaultLimit}
+                          onUpdate={fetchPatients}
+                        />
+                      </TableCell>
+                    )}
                     <TableCell className="text-right py-2">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

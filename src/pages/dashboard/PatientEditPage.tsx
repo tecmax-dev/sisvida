@@ -122,6 +122,7 @@ const initialFormData: PatientFormData = {
   motherName: '',
   fatherName: '',
   notes: '',
+  maxAppointmentsPerMonth: null,
 };
 
 export default function PatientEditPage() {
@@ -144,6 +145,7 @@ export default function PatientEditPage() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [insurancePlanName, setInsurancePlanName] = useState<string>('');
   const [showDependentsForm, setShowDependentsForm] = useState(false);
+  const [clinicDefaultLimit, setClinicDefaultLimit] = useState<number | null>(null);
   
   // No-show blocking state
   const [noShowBlockedUntil, setNoShowBlockedUntil] = useState<string | null>(null);
@@ -191,8 +193,23 @@ export default function PatientEditPage() {
     if (currentClinic && id) {
       fetchPatient();
       fetchInsurancePlans();
+      fetchClinicLimit();
     }
   }, [currentClinic, id]);
+
+  const fetchClinicLimit = async () => {
+    if (!currentClinic) return;
+    try {
+      const { data } = await supabase
+        .from('clinics')
+        .select('max_appointments_per_cpf_month')
+        .eq('id', currentClinic.id)
+        .single();
+      setClinicDefaultLimit(data?.max_appointments_per_cpf_month ?? null);
+    } catch (error) {
+      console.error("Error fetching clinic limit:", error);
+    }
+  };
 
   const fetchPatient = async () => {
     if (!currentClinic || !id) return;
@@ -248,6 +265,7 @@ export default function PatientEditPage() {
           motherName: data.mother_name || '',
           fatherName: data.father_name || '',
           notes: data.notes || '',
+          maxAppointmentsPerMonth: (data as any).max_appointments_per_month ?? null,
         };
         setFormData(loadedData);
         setInitialData(loadedData);
@@ -366,6 +384,7 @@ export default function PatientEditPage() {
         employer_cnpj: dataToSave.employerCnpj?.replace(/\D/g, '') || null,
         mother_name: dataToSave.motherName.trim() || null,
         father_name: dataToSave.fatherName.trim() || null,
+        max_appointments_per_month: dataToSave.maxAppointmentsPerMonth,
       })
       .eq('id', id);
 
@@ -487,6 +506,7 @@ export default function PatientEditPage() {
           employer_name: formData.employerName?.trim() || null,
           mother_name: formData.motherName.trim() || null,
           father_name: formData.fatherName.trim() || null,
+          max_appointments_per_month: formData.maxAppointmentsPerMonth,
         })
         .eq('id', id);
 
@@ -710,6 +730,8 @@ export default function PatientEditPage() {
                 cepLoading={cepLoading}
                 onCnpjLookup={handleCnpjLookup}
                 cnpjLoading={cnpjLoading}
+                isAdmin={isAdmin}
+                clinicDefaultLimit={clinicDefaultLimit}
               />
             </form>
           </div>
