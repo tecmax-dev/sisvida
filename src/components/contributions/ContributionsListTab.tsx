@@ -81,11 +81,36 @@ interface ContributionsListTabProps {
 const ITEMS_PER_PAGE = 15;
 
 const STATUS_CONFIG = {
-  pending: { label: "Pendente", color: "bg-amber-100 text-amber-700", icon: Clock },
-  processing: { label: "Processando", color: "bg-blue-100 text-blue-700", icon: RefreshCw },
-  paid: { label: "Pago", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
-  overdue: { label: "Vencido", color: "bg-rose-100 text-rose-700", icon: AlertTriangle },
-  cancelled: { label: "Cancelado", color: "bg-gray-100 text-gray-700", icon: XCircle },
+  pending: { 
+    label: "Pendente", 
+    badgeClass: "bg-amber-500/15 text-amber-700 border-amber-300 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-600",
+    rowClass: "border-l-4 border-l-amber-400",
+    icon: Clock 
+  },
+  processing: { 
+    label: "Processando", 
+    badgeClass: "bg-blue-500/15 text-blue-700 border-blue-300 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-600",
+    rowClass: "border-l-4 border-l-blue-400",
+    icon: RefreshCw 
+  },
+  paid: { 
+    label: "Pago", 
+    badgeClass: "bg-emerald-500/15 text-emerald-700 border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-600",
+    rowClass: "border-l-4 border-l-emerald-500",
+    icon: CheckCircle2 
+  },
+  overdue: { 
+    label: "Vencido", 
+    badgeClass: "bg-rose-500/15 text-rose-700 border-rose-300 dark:bg-rose-500/20 dark:text-rose-400 dark:border-rose-600",
+    rowClass: "border-l-4 border-l-rose-500",
+    icon: AlertTriangle 
+  },
+  cancelled: { 
+    label: "Cancelado", 
+    badgeClass: "bg-gray-500/10 text-gray-500 border-gray-300 dark:bg-gray-500/20 dark:text-gray-400 dark:border-gray-600 line-through",
+    rowClass: "border-l-4 border-l-gray-300 opacity-60",
+    icon: XCircle 
+  },
 };
 
 const MONTHS = [
@@ -246,14 +271,18 @@ export default function ContributionsListTab({
                 paginatedContributions.map((contrib) => {
                   const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG];
                   const StatusIcon = statusConfig?.icon || Clock;
+                  const isCancelled = contrib.status === "cancelled";
 
                   return (
-                    <TableRow key={contrib.id} className="h-12 hover:bg-muted/30">
+                    <TableRow 
+                      key={contrib.id} 
+                      className={`h-12 hover:bg-muted/30 transition-colors ${statusConfig?.rowClass || ""}`}
+                    >
                       <TableCell className="py-2">
-                        <div>
+                        <div className={isCancelled ? "opacity-60" : ""}>
                           <button
                             onClick={() => navigate(`/dashboard/empresas/${contrib.employer_id}`)}
-                            className="font-medium text-sm text-primary hover:underline text-left"
+                            className={`font-medium text-sm text-primary hover:underline text-left ${isCancelled ? "line-through" : ""}`}
                           >
                             {contrib.employers?.name}
                           </button>
@@ -262,25 +291,30 @@ export default function ContributionsListTab({
                           </p>
                         </div>
                       </TableCell>
-                      <TableCell className="py-2">
+                      <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
                         <span className="text-sm">{contrib.contribution_types?.name}</span>
                       </TableCell>
-                      <TableCell className="py-2">
+                      <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
                         <span className="text-sm font-medium">
                           {MONTHS[contrib.competence_month - 1]?.slice(0, 3)}/{contrib.competence_year}
                         </span>
                       </TableCell>
-                      <TableCell className="py-2">
+                      <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
                         <span className="text-sm">
                           {format(new Date(contrib.due_date + "T12:00:00"), "dd/MM/yyyy")}
                         </span>
                       </TableCell>
-                      <TableCell className="py-2 text-right">
-                        <span className="font-medium">{formatCurrency(contrib.value)}</span>
+                      <TableCell className={`py-2 text-right ${isCancelled ? "opacity-60" : ""}`}>
+                        <span className={`font-medium ${isCancelled ? "line-through" : ""}`}>
+                          {formatCurrency(contrib.value)}
+                        </span>
                       </TableCell>
                       <TableCell className="py-2 text-center">
-                        <Badge className={`${statusConfig?.color} text-xs gap-1`}>
-                          <StatusIcon className="h-3 w-3" />
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs gap-1.5 font-medium px-2.5 py-1 ${statusConfig?.badgeClass}`}
+                        >
+                          <StatusIcon className="h-3.5 w-3.5" />
                           {statusConfig?.label}
                         </Badge>
                       </TableCell>
