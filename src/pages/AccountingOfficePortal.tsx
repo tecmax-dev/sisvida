@@ -796,7 +796,12 @@ export default function AccountingOfficePortal() {
                                   Ver Boleto
                                 </Button>
                               )}
-                              {["pending", "overdue"].includes(contrib.status) && !isOverdue90Days && (
+                              {contrib.status === 'pending' && !isOverdue90Days && (
+                                <span className="text-xs text-muted-foreground italic" title="2ª via disponível somente após vencimento">
+                                  Aguardando vencimento
+                                </span>
+                              )}
+                              {contrib.status === 'overdue' && !isOverdue90Days && (
                                 reissueLimitReached ? (
                                   <span className="text-xs text-muted-foreground italic" title="Limite de 2 reemissões atingido. Contate o gestor.">
                                     Limite atingido

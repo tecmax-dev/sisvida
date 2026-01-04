@@ -195,11 +195,23 @@ serve(async (req) => {
       );
     }
 
-    // Verificar se boleto está vencido há mais de 90 dias - apenas gestor pode alterar
+    // Validações específicas para portais (empresa/contador)
     if (portal_type && portal_id) {
+      // Portais só podem gerar 2ª via de boletos VENCIDOS (não pendentes)
+      if (contribution.status === 'pending') {
+        console.log(`[Reissue] Boleto ainda não vencido - bloqueado para portal`);
+        return new Response(
+          JSON.stringify({ 
+            error: "2ª via só disponível para boletos vencidos. Aguarde o vencimento ou contate o gestor." 
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       const dueDate = new Date(contribution.due_date);
       const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
       
+      // Verificar se boleto está vencido há mais de 90 dias - apenas gestor pode alterar
       if (daysDiff > 90) {
         console.log(`[Reissue] Boleto vencido há ${daysDiff} dias - bloqueado para portal`);
         return new Response(
