@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, ArrowLeft } from "lucide-react";
+import { Loader2, Plus, ArrowLeft, CalendarDays } from "lucide-react";
 import { AppointmentSidebar } from "@/components/appointments/AppointmentSidebar";
 import { PatientSummaryCard } from "@/components/appointments/PatientSummaryCard";
 import { MedicalRecordsTimeline } from "@/components/appointments/MedicalRecordsTimeline";
@@ -371,8 +371,17 @@ export default function ProfessionalAppointment() {
                 variant="ghost" 
                 size="icon"
                 onClick={() => navigate('/profissional/painel')}
+                title="Voltar ao Painel"
               >
                 <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => navigate('/profissional/painel')}
+                title="Voltar à Agenda"
+              >
+                <CalendarDays className="h-5 w-5" />
               </Button>
               <h1 className="text-xl font-semibold text-foreground">
                 {activeTab === 'resumo' && 'Resumo'}
