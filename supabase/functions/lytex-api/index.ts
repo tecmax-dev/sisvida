@@ -84,10 +84,31 @@ async function getAccessToken(): Promise<string> {
   return accessToken;
 }
 
+function extractList(resp: any): any[] {
+  if (!resp) return [];
+  if (Array.isArray(resp)) return resp;
+  if (Array.isArray(resp.data)) return resp.data;
+  if (Array.isArray(resp.items)) return resp.items;
+  if (Array.isArray(resp.results)) return resp.results;
+  if (Array.isArray(resp.docs)) return resp.docs;
+
+  const d = resp.data;
+  if (d) {
+    if (Array.isArray(d.data)) return d.data;
+    if (Array.isArray(d.items)) return d.items;
+    if (Array.isArray(d.results)) return d.results;
+    if (Array.isArray(d.docs)) return d.docs;
+    if (Array.isArray(d.clients)) return d.clients;
+    if (Array.isArray(d.invoices)) return d.invoices;
+  }
+
+  return [];
+}
+
 // Listar clientes/empresas da Lytex
 async function listClients(page = 1, limit = 100): Promise<any> {
   const token = await getAccessToken();
-  
+
   const response = await fetch(`${LYTEX_API_URL}/clients?page=${page}&limit=${limit}`, {
     method: "GET",
     headers: {
@@ -107,12 +128,12 @@ async function listClients(page = 1, limit = 100): Promise<any> {
 // Listar faturas da Lytex
 async function listInvoices(page = 1, limit = 100, status?: string): Promise<any> {
   const token = await getAccessToken();
-  
+
   let url = `${LYTEX_API_URL}/invoices?page=${page}&limit=${limit}`;
   if (status) {
     url += `&status=${status}`;
   }
-  
+
   const response = await fetch(url, {
     method: "GET",
     headers: {
@@ -609,9 +630,14 @@ Deno.serve(async (req) => {
 
           while (hasMore) {
             const clientsResponse = await listClients(page, 100);
-            const clients = clientsResponse.data || clientsResponse || [];
+            const clients = extractList(clientsResponse);
 
-            if (!Array.isArray(clients) || clients.length === 0) {
+            if (page === 1) {
+              console.log("[Lytex] Payload clientes (chaves):", Object.keys(clientsResponse || {}));
+              console.log(`[Lytex] Clientes recebidos (page=1): ${clients.length}`);
+            }
+
+            if (clients.length === 0) {
               hasMore = false;
               break;
             }
@@ -689,9 +715,14 @@ Deno.serve(async (req) => {
 
             while (hasMore) {
               const invoicesResponse = await listInvoices(page, 100, statusFilter);
-              const invoices = invoicesResponse.data || invoicesResponse || [];
+              const invoices = extractList(invoicesResponse);
 
-              if (!Array.isArray(invoices) || invoices.length === 0) {
+              if (page === 1) {
+                console.log(`[Lytex] Payload faturas (status=${statusFilter}) chaves:`, Object.keys(invoicesResponse || {}));
+                console.log(`[Lytex] Faturas recebidas (status=${statusFilter}, page=1): ${invoices.length}`);
+              }
+
+              if (invoices.length === 0) {
                 hasMore = false;
                 break;
               }
