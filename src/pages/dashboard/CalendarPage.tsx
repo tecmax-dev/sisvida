@@ -11,6 +11,7 @@ import { DroppableTimeSlot } from "@/components/appointments/DroppableTimeSlot";
 import { DragOverlayContent } from "@/components/appointments/DragOverlayContent";
 import { DragInstructions } from "@/components/appointments/DragInstructions";
 import { RecurrenceSelector, RecurrenceConfig, calculateRecurringDates } from "@/components/appointments/RecurrenceSelector";
+import { TimeSlotPicker } from "@/components/appointments/TimeSlotPicker";
 import { 
   findConflictingAppointments, 
   findAllConflictingAppointments, 
@@ -513,6 +514,9 @@ export default function CalendarPage() {
     endDate: "",
   });
   
+  // Múltiplos horários para recorrência manual
+  const [selectedMultipleTimes, setSelectedMultipleTimes] = useState<string[]>([]);
+  
   // Professional user state
   const [loggedInProfessionalId, setLoggedInProfessionalId] = useState<string | null>(null);
 
@@ -604,6 +608,29 @@ export default function CalendarPage() {
 
     return Array.from(new Set(slots)).sort();
   }, [activeAppointment, filterProfessionals, formProfessional, isProfessionalOnly, loggedInProfessionalId, professionals, selectedDate]);
+
+  // Agendamentos do profissional selecionado para a data selecionada (para TimeSlotPicker)
+  const professionalAppointmentsForDate = useMemo(() => {
+    const dateStr = toDateKey(selectedDate);
+    const profId = formProfessional || (isProfessionalOnly && loggedInProfessionalId ? loggedInProfessionalId : null);
+    if (!profId) return [];
+    
+    return appointments.filter(apt => 
+      apt.appointment_date === dateStr && 
+      apt.professional_id === profId
+    ).map(apt => ({
+      start_time: apt.start_time,
+      end_time: apt.end_time,
+      status: apt.status,
+    }));
+  }, [appointments, selectedDate, formProfessional, isProfessionalOnly, loggedInProfessionalId]);
+
+  // Duração para o TimeSlotPicker
+  const currentDuration = useMemo(() => {
+    if (formDuration) return formDuration;
+    const prof = professionals.find(p => p.id === formProfessional);
+    return prof?.appointment_duration || 30;
+  }, [formDuration, formProfessional, professionals]);
 
   const getDateRange = useCallback(() => {
     if (viewMode === "day") {
@@ -1035,7 +1062,11 @@ export default function CalendarPage() {
     // Proteção contra clique duplo - verificar se já está salvando
     if (saving) return;
     
-    if (!formPatient || !formProfessional || !formTime) {
+    // Verificar se tem múltiplos horários selecionados (modo manual de recorrência)
+    const hasMultipleSlots = recurrenceConfig.enabled && selectedMultipleTimes.length > 0;
+    const effectiveTime = hasMultipleSlots ? selectedMultipleTimes[0] : formTime;
+    
+    if (!formPatient || !formProfessional || (!effectiveTime && !hasMultipleSlots)) {
       toast({
         title: "Campos obrigatórios",
         description: "Preencha todos os campos obrigatórios.",
@@ -1049,8 +1080,8 @@ export default function CalendarPage() {
     // Mover setSaving para o início para evitar cliques duplos
     setSaving(true);
 
-    // Validate recurrence config
-    if (recurrenceConfig.enabled && recurrenceConfig.limitType === "date" && !recurrenceConfig.endDate) {
+    // Validate recurrence config - só exigir data final se não tiver múltiplos slots selecionados
+    if (recurrenceConfig.enabled && !hasMultipleSlots && recurrenceConfig.limitType === "date" && !recurrenceConfig.endDate) {
       toast({
         title: "Data final obrigatória",
         description: "Informe a data final para agendamentos recorrentes.",
@@ -1092,72 +1123,133 @@ export default function CalendarPage() {
     const defaultDuration = selectedProfessional?.appointment_duration || 30;
     const durationMinutes = formDuration ?? defaultDuration;
     
-    // Calculate all dates for recurring appointments
-    const recurringDates = calculateRecurringDates(selectedDate, recurrenceConfig);
+    // Determinar lista de agendamentos a criar
+    let appointmentsToCreate: Array<{
+      clinic_id: string;
+      patient_id: string;
+      professional_id: string;
+      appointment_date: string;
+      start_time: string;
+      end_time: string;
+      type: "first_visit" | "return" | "exam" | "procedure";
+      status: "scheduled";
+      notes: string | null;
+      created_by: string;
+      duration_minutes: number;
+      is_recurring: boolean;
+      recurrence_group_id: string | null;
+    }> = [];
     
-    // Check for conflicts on all dates
-    for (const date of recurringDates) {
-      const dateStr = date.toISOString().split('T')[0];
-      const conflicts = findConflictingAppointments(appointments, {
-        appointmentDate: dateStr,
-        startTime: formTime,
-        durationMinutes,
-        professionalId: formProfessional,
-      });
+    const recurrenceGroupId = recurrenceConfig.enabled ? crypto.randomUUID() : null;
+    const dateStr = selectedDate.toISOString().split('T')[0];
+    
+    if (hasMultipleSlots) {
+      // Modo com múltiplos horários selecionados - criar na mesma data
+      // Verificar conflitos para cada horário
+      for (const time of selectedMultipleTimes) {
+        const conflicts = findConflictingAppointments(appointments, {
+          appointmentDate: dateStr,
+          startTime: time,
+          durationMinutes,
+          professionalId: formProfessional,
+        });
 
-      if (conflicts.length > 0) {
-        const patientNames: Record<string, string> = {};
-        conflicts.forEach(c => {
-          const apt = appointments.find(a => a.id === c.id);
-          if (apt?.patient?.name) {
-            patientNames[c.id] = apt.patient.name;
-          }
-        });
+        if (conflicts.length > 0) {
+          const patientNames: Record<string, string> = {};
+          conflicts.forEach(c => {
+            const apt = appointments.find(a => a.id === c.id);
+            if (apt?.patient?.name) {
+              patientNames[c.id] = apt.patient.name;
+            }
+          });
+          
+          toast({
+            title: "Conflito de horário",
+            description: `Conflito às ${time}: ${getConflictMessage(conflicts, patientNames)}`,
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
         
-        toast({
-          title: "Conflito de horário",
-          description: `Conflito em ${date.toLocaleDateString('pt-BR')}: ${getConflictMessage(conflicts, patientNames)}`,
-          variant: "destructive",
+        appointmentsToCreate.push({
+          clinic_id: currentClinic.id,
+          patient_id: formPatient,
+          professional_id: formProfessional,
+          appointment_date: dateStr,
+          start_time: time,
+          end_time: calculateEndTime(time, durationMinutes),
+          type: formType as "first_visit" | "return" | "exam" | "procedure",
+          status: "scheduled" as const,
+          notes: formNotes.trim() || null,
+          created_by: user.id,
+          duration_minutes: durationMinutes,
+          is_recurring: true,
+          recurrence_group_id: recurrenceGroupId,
         });
-        setSaving(false);
-        return;
+      }
+    } else {
+      // Modo padrão - usar datas recorrentes calculadas
+      const recurringDates = calculateRecurringDates(selectedDate, recurrenceConfig);
+      
+      // Check for conflicts on all dates
+      for (const date of recurringDates) {
+        const dateDateStr = date.toISOString().split('T')[0];
+        const conflicts = findConflictingAppointments(appointments, {
+          appointmentDate: dateDateStr,
+          startTime: formTime,
+          durationMinutes,
+          professionalId: formProfessional,
+        });
+
+        if (conflicts.length > 0) {
+          const patientNames: Record<string, string> = {};
+          conflicts.forEach(c => {
+            const apt = appointments.find(a => a.id === c.id);
+            if (apt?.patient?.name) {
+              patientNames[c.id] = apt.patient.name;
+            }
+          });
+          
+          toast({
+            title: "Conflito de horário",
+            description: `Conflito em ${date.toLocaleDateString('pt-BR')}: ${getConflictMessage(conflicts, patientNames)}`,
+            variant: "destructive",
+          });
+          setSaving(false);
+          return;
+        }
+        
+        appointmentsToCreate.push({
+          clinic_id: currentClinic.id,
+          patient_id: formPatient,
+          professional_id: formProfessional,
+          appointment_date: dateDateStr,
+          start_time: formTime,
+          end_time: calculateEndTime(formTime, durationMinutes),
+          type: formType as "first_visit" | "return" | "exam" | "procedure",
+          status: "scheduled" as const,
+          notes: formNotes.trim() || null,
+          created_by: user.id,
+          duration_minutes: durationMinutes,
+          is_recurring: recurrenceConfig.enabled,
+          recurrence_group_id: recurrenceGroupId,
+        });
       }
     }
 
     try {
-      const endTime = calculateEndTime(formTime, durationMinutes);
-      
-      // Generate recurrence group ID if recurring
-      const recurrenceGroupId = recurrenceConfig.enabled ? crypto.randomUUID() : null;
-      
-      // Create all appointments
-      const appointmentsToCreate = recurringDates.map(date => ({
-        clinic_id: currentClinic.id,
-        patient_id: formPatient,
-        professional_id: formProfessional,
-        appointment_date: date.toISOString().split('T')[0],
-        start_time: formTime,
-        end_time: endTime,
-        type: formType as "first_visit" | "return" | "exam" | "procedure",
-        status: "scheduled" as const,
-        notes: formNotes.trim() || null,
-        created_by: user.id,
-        duration_minutes: durationMinutes,
-        is_recurring: recurrenceConfig.enabled,
-        recurrence_group_id: recurrenceGroupId,
-      }));
-
       const { error } = await supabase
         .from('appointments')
         .insert(appointmentsToCreate);
 
       if (error) throw error;
 
-      const count = recurringDates.length;
+      const count = appointmentsToCreate.length;
       toast({
         title: count > 1 ? `${count} agendamentos criados` : "Agendamento criado",
         description: count > 1 
-          ? `Foram agendadas ${count} consultas recorrentes com sucesso.`
+          ? `Foram agendadas ${count} consultas com sucesso.`
           : "A consulta foi agendada com sucesso.",
       });
 
@@ -1604,6 +1696,7 @@ export default function CalendarPage() {
     setFormType("first_visit");
     setFormNotes("");
     setFormDuration(null); // Resetar para usar duração padrão do profissional
+    setSelectedMultipleTimes([]); // Limpar seleção múltipla
     // Reset recurrence
     setRecurrenceConfig({
       enabled: false,
@@ -2283,21 +2376,30 @@ export default function CalendarPage() {
         )}
       </div>
 
-      <div className="space-y-2">
-        <Label>Horário *</Label>
-        <Select value={formTime} onValueChange={setFormTime}>
-          <SelectTrigger className="bg-background">
-            <SelectValue placeholder="Selecione o horário" />
-          </SelectTrigger>
-          <SelectContent className="bg-popover border border-border shadow-lg z-50 max-h-60">
-            {timeSlots.map((time) => (
-              <SelectItem key={time} value={time}>
-                {time}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {formProfessional && (
+        <TimeSlotPicker
+          allSlots={timeSlots}
+          existingAppointments={professionalAppointmentsForDate}
+          selectedTime={formTime}
+          onSelectTime={setFormTime}
+          multiSelectEnabled={recurrenceConfig.enabled}
+          selectedTimes={selectedMultipleTimes}
+          onSelectMultiple={setSelectedMultipleTimes}
+          duration={currentDuration}
+          disabled={saving}
+        />
+      )}
+      
+      {!formProfessional && (
+        <div className="space-y-2">
+          <Label>Horário *</Label>
+          <div className="border rounded-lg p-4 bg-muted/50 text-center">
+            <p className="text-sm text-muted-foreground">
+              Selecione um profissional para ver os horários disponíveis
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label>Duração (minutos)</Label>
