@@ -24,6 +24,7 @@ import {
   CalendarPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toDateKey } from "@/lib/dateKey";
 
 interface TimeSlot {
   time: string;
@@ -247,7 +248,7 @@ export default function ProfessionalDashboard() {
     const blocks = schedule?._blocks as Array<{ days: string[]; start_time: string; end_time: string; duration?: number; start_date?: string; end_date?: string }> | undefined;
     
     const defaultDuration = professional.appointment_duration || 30;
-    const dateStr = today.toISOString().split('T')[0];
+    const dateStr = toDateKey(today);
     
     const allTimeSlots: string[] = [];
     

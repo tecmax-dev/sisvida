@@ -31,6 +31,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { toDateKey } from "@/lib/dateKey";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { extractFunctionsError } from "@/lib/functionsError";
@@ -335,7 +336,7 @@ export default function ProfessionalProfile() {
   const fetchExistingAppointments = async () => {
     if (!clinic || !professional || !selectedDate) return;
 
-    const dateStr = selectedDate.toISOString().split('T')[0];
+    const dateStr = toDateKey(selectedDate);
     
     const { data } = await supabase
       .from('appointments')
@@ -630,7 +631,7 @@ export default function ProfessionalProfile() {
 
     setSubmitting(true);
     try {
-      const dateStr = selectedDate.toISOString().split('T')[0];
+      const dateStr = toDateKey(selectedDate);
       const phoneClean = patientPhone.replace(/\D/g, '');
 
       const { data, error } = await supabase.functions.invoke('create-public-booking', {
