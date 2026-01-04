@@ -2125,6 +2125,47 @@ export type Database = {
         }
         Relationships: []
       }
+      employer_categories: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_categories_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employer_contributions: {
         Row: {
           clinic_id: string
@@ -2268,6 +2309,7 @@ export type Database = {
           access_code: string | null
           access_code_expires_at: string | null
           address: string | null
+          category_id: string | null
           city: string | null
           clinic_id: string
           cnpj: string
@@ -2288,6 +2330,7 @@ export type Database = {
           access_code?: string | null
           access_code_expires_at?: string | null
           address?: string | null
+          category_id?: string | null
           city?: string | null
           clinic_id: string
           cnpj: string
@@ -2308,6 +2351,7 @@ export type Database = {
           access_code?: string | null
           access_code_expires_at?: string | null
           address?: string | null
+          category_id?: string | null
           city?: string | null
           clinic_id?: string
           cnpj?: string
@@ -2325,6 +2369,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "employers_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "employer_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "employers_clinic_id_fkey"
             columns: ["clinic_id"]

@@ -20,15 +20,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, FileStack, Building2, CheckCircle2 } from "lucide-react";
+import { Loader2, FileStack, Building2, CheckCircle2, Tag } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
+interface Category {
+  id: string;
+  name: string;
+  color: string;
+}
 
 interface Employer {
   id: string;
   name: string;
   cnpj: string;
+  category_id?: string | null;
 }
 
 interface ContributionType {
@@ -46,6 +53,7 @@ interface BulkContributionDialogProps {
   clinicId: string;
   userId: string;
   onRefresh: () => void;
+  categories?: Category[];
 }
 
 const MONTHS = [
@@ -61,6 +69,7 @@ export default function BulkContributionDialog({
   clinicId,
   userId,
   onRefresh,
+  categories = [],
 }: BulkContributionDialogProps) {
   const [step, setStep] = useState<"config" | "processing" | "result">("config");
   
@@ -86,15 +95,31 @@ export default function BulkContributionDialog({
 
   // Filter employers
   const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   
   const filteredEmployers = useMemo(() => {
-    if (!searchTerm) return employers;
-    const term = searchTerm.toLowerCase();
-    return employers.filter(e => 
-      e.name.toLowerCase().includes(term) || 
-      e.cnpj.includes(term.replace(/\D/g, ""))
-    );
-  }, [employers, searchTerm]);
+    let filtered = employers;
+    
+    // Filter by category
+    if (categoryFilter !== "all") {
+      if (categoryFilter === "none") {
+        filtered = filtered.filter(e => !e.category_id);
+      } else {
+        filtered = filtered.filter(e => e.category_id === categoryFilter);
+      }
+    }
+    
+    // Filter by search term
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(e => 
+        e.name.toLowerCase().includes(term) || 
+        e.cnpj.includes(term.replace(/\D/g, ""))
+      );
+    }
+    
+    return filtered;
+  }, [employers, searchTerm, categoryFilter]);
 
   // Get default value from selected type
   const selectedType = contributionTypes.find(t => t.id === typeId);
@@ -120,16 +145,17 @@ export default function BulkContributionDialog({
       setCustomValue("");
       setGenerateZero(false);
       setSearchTerm("");
+      setCategoryFilter("all");
       setResults({ success: 0, failed: 0, errors: [] });
     }
   }, [open]);
 
-  // Handle select all
+  // Handle select all - now respects category filter
   useEffect(() => {
     if (selectAll) {
-      setSelectedEmployers(employers.map(e => e.id));
+      setSelectedEmployers(filteredEmployers.map(e => e.id));
     }
-  }, [selectAll, employers]);
+  }, [selectAll, filteredEmployers]);
 
   const handleToggleEmployer = (employerId: string) => {
     setSelectedEmployers(prev => 
@@ -143,7 +169,8 @@ export default function BulkContributionDialog({
   const handleSelectAll = (checked: boolean) => {
     setSelectAll(checked);
     if (checked) {
-      setSelectedEmployers(employers.map(e => e.id));
+      // Select only filtered employers (respects category filter)
+      setSelectedEmployers(filteredEmployers.map(e => e.id));
     } else {
       setSelectedEmployers([]);
     }
@@ -386,9 +413,36 @@ export default function BulkContributionDialog({
                 <div className="flex items-center justify-between">
                   <Label>Empresas</Label>
                   <Badge variant="secondary">
-                    {selectedEmployers.length} de {employers.length} selecionadas
+                    {selectedEmployers.length} de {filteredEmployers.length} selecionadas
                   </Badge>
                 </div>
+                
+                {/* Category Filter */}
+                {categories.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-muted-foreground" />
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                      <SelectTrigger className="h-8 flex-1">
+                        <SelectValue placeholder="Filtrar por categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as categorias</SelectItem>
+                        <SelectItem value="none">Sem categoria</SelectItem>
+                        {categories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-3 h-3 rounded-full" 
+                                style={{ backgroundColor: cat.color }}
+                              />
+                              {cat.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex items-center space-x-2">
@@ -398,7 +452,7 @@ export default function BulkContributionDialog({
                       onCheckedChange={(checked) => handleSelectAll(!!checked)}
                     />
                     <label htmlFor="selectAll" className="text-sm font-medium cursor-pointer">
-                      Selecionar todas
+                      Selecionar todas {categoryFilter !== "all" && "(filtradas)"}
                     </label>
                   </div>
                   <Input

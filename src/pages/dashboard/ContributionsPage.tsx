@@ -23,6 +23,7 @@ interface Employer {
   address: string | null;
   city: string | null;
   state: string | null;
+  category_id?: string | null;
 }
 
 interface ContributionType {
@@ -66,6 +67,7 @@ export default function ContributionsPage() {
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [contributionTypes, setContributionTypes] = useState<ContributionType[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; color: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState("overview");
@@ -97,7 +99,7 @@ export default function ContributionsPage() {
         .from("employer_contributions")
         .select(`
           *,
-          employers (id, name, cnpj, email, phone, address, city, state),
+          employers (id, name, cnpj, email, phone, address, city, state, category_id),
           contribution_types (id, name, description, default_value, is_active)
         `)
         .eq("clinic_id", currentClinic.id)
@@ -108,16 +110,27 @@ export default function ContributionsPage() {
       if (contribError) throw contribError;
       setContributions(contribData || []);
 
-      // Fetch employers
+      // Fetch employers with category
       const { data: empData, error: empError } = await supabase
         .from("employers")
-        .select("id, name, cnpj, email, phone, address, city, state")
+        .select("id, name, cnpj, email, phone, address, city, state, category_id")
         .eq("clinic_id", currentClinic.id)
         .eq("is_active", true)
         .order("name");
 
       if (empError) throw empError;
       setEmployers(empData || []);
+
+      // Fetch categories
+      const { data: catData, error: catError } = await supabase
+        .from("employer_categories")
+        .select("id, name, color")
+        .eq("clinic_id", currentClinic.id)
+        .eq("is_active", true)
+        .order("name");
+
+      if (catError) throw catError;
+      setCategories(catData || []);
 
       // Fetch contribution types
       const { data: typesData, error: typesError } = await supabase
@@ -398,6 +411,7 @@ export default function ContributionsPage() {
         clinicId={currentClinic?.id || ""}
         userId={session?.user.id || ""}
         onRefresh={fetchData}
+        categories={categories}
       />
 
       <LytexSyncResultsDialog
