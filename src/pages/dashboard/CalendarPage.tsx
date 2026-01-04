@@ -3946,9 +3946,37 @@ export default function CalendarPage() {
                                         size="sm"
                                         className="h-7 px-2 text-xs text-success hover:text-success hover:bg-success/10"
                                         onClick={() => {
-                                          setFormProfessional(group.professional.id);
-                                          setFormTime(slot.time);
-                                          setDialogOpen(true);
+                                          try {
+                                            const profId = group?.professional?.id;
+                                            const slotTime = slot?.time;
+                                            if (!profId) {
+                                              toast({
+                                                title: "Profissional inválido",
+                                                description: "Não foi possível identificar o profissional deste horário.",
+                                                variant: "destructive",
+                                              });
+                                              return;
+                                            }
+                                            if (!slotTime || !/^\d{2}:\d{2}$/.test(slotTime)) {
+                                              toast({
+                                                title: "Horário inválido",
+                                                description: "Não foi possível identificar o horário selecionado.",
+                                                variant: "destructive",
+                                              });
+                                              return;
+                                            }
+
+                                            setFormProfessional(profId);
+                                            setFormTime(slotTime);
+                                            setDialogOpen(true);
+                                          } catch (err) {
+                                            console.error("[CalendarPage] erro ao abrir agendamento rápido", err);
+                                            toast({
+                                              title: "Erro ao abrir agendamento",
+                                              description: "Tente novamente.",
+                                              variant: "destructive",
+                                            });
+                                          }
                                         }}
                                       >
                                         <Plus className="h-3 w-3 mr-1" />
