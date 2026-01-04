@@ -98,6 +98,8 @@ interface Employer {
   access_code: string | null;
   access_code_expires_at: string | null;
   portal_last_access_at: string | null;
+  cnae_code?: string | null;
+  cnae_description?: string | null;
 }
 
 interface Patient {
@@ -718,9 +720,17 @@ export default function EmployerDetailPage() {
               {employer.is_active ? "Ativa" : "Inativa"}
             </Badge>
           </div>
-          <p className="text-sm text-muted-foreground">
-            CNPJ: {formatCNPJ(employer.cnpj)}
-          </p>
+          <div className="space-y-0.5">
+            <p className="text-sm text-muted-foreground">
+              CNPJ: {formatCNPJ(employer.cnpj)}
+            </p>
+            {employer.cnae_code && (
+              <p className="text-xs text-muted-foreground">
+                CNAE: {employer.cnae_code}
+                {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
@@ -1215,7 +1225,15 @@ export default function EmployerDetailPage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label>CNPJ</Label>
-                  <Input value={formatCNPJ(employer.cnpj)} disabled />
+                  <div className="space-y-1">
+                    <Input value={formatCNPJ(employer.cnpj)} disabled />
+                    {employer.cnae_code && (
+                      <p className="text-xs text-muted-foreground">
+                        CNAE: {employer.cnae_code}
+                        {employer.cnae_description ? ` - ${employer.cnae_description}` : ""}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <Label>Razão Social *</Label>
