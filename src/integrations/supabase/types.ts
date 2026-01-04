@@ -2146,6 +2146,7 @@ export type Database = {
           paid_at: string | null
           paid_value: number | null
           payment_method: string | null
+          portal_reissue_count: number
           status: string
           updated_at: string
           value: number
@@ -2170,6 +2171,7 @@ export type Database = {
           paid_at?: string | null
           paid_value?: number | null
           payment_method?: string | null
+          portal_reissue_count?: number
           status?: string
           updated_at?: string
           value: number
@@ -2194,6 +2196,7 @@ export type Database = {
           paid_at?: string | null
           paid_value?: number | null
           payment_method?: string | null
+          portal_reissue_count?: number
           status?: string
           updated_at?: string
           value?: number

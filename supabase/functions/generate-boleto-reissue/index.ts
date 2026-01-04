@@ -209,6 +209,18 @@ serve(async (req) => {
           { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Verificar limite de reemissões via portal (máximo 2)
+      const currentReissueCount = contribution.portal_reissue_count || 0;
+      if (currentReissueCount >= 2) {
+        console.log(`[Reissue] Limite de reemissões atingido: ${currentReissueCount}`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Limite de 2 reemissões atingido. Para novas solicitações, entre em contato com o gestor do sindicato." 
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     // Verificar se a contribuição pertence ao portal que está solicitando
@@ -255,6 +267,11 @@ serve(async (req) => {
       .update({ status: "cancelled" })
       .eq("id", contribution_id);
 
+    // Calcular novo contador de reemissões (incrementa apenas se veio de portal)
+    const newReissueCount = portal_type && portal_id 
+      ? (contribution.portal_reissue_count || 0) + 1 
+      : contribution.portal_reissue_count || 0;
+
     // Criar nova contribuição com a nova data
     const { data: newContribution, error: newContribError } = await supabase
       .from("employer_contributions")
@@ -268,6 +285,7 @@ serve(async (req) => {
         due_date: new_due_date,
         status: "pending",
         notes: `2ª via gerada em ${new Date().toLocaleDateString("pt-BR")}. Original: ${contribution.id}`,
+        portal_reissue_count: newReissueCount,
       })
       .select()
       .single();
