@@ -184,40 +184,38 @@ export function EmployerContributionFilters({
     // Load logo if enabled and available
     if (showLogo && clinicInfo?.logoUrl) {
       try {
-        const response = await fetch(clinicInfo.logoUrl);
-        if (!response.ok) throw new Error(`Logo HTTP ${response.status}`);
-        const blob = await response.blob();
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onerror = () => reject(new Error("Falha ao ler logo"));
-          reader.onloadend = () => resolve(reader.result as string);
-          reader.readAsDataURL(blob);
-        });
-
-        // Normalize to PNG via canvas (works for jpg/png/webp as long as browser can decode)
-        const img = new Image();
-        await new Promise<void>((resolve) => {
+        // Use crossOrigin to avoid CORS taint issues
+        const logoHeight = await new Promise<number>((resolve) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
           img.onload = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) return resolve();
-            ctx.drawImage(img, 0, 0);
-            const pngData = canvas.toDataURL("image/png");
+            try {
+              const canvas = document.createElement("canvas");
+              canvas.width = img.width;
+              canvas.height = img.height;
+              const ctx = canvas.getContext("2d");
+              if (!ctx) {
+                resolve(0);
+                return;
+              }
+              ctx.drawImage(img, 0, 0);
+              const pngData = canvas.toDataURL("image/png");
 
-            const maxWidth = 40;
-            const maxHeight = 20;
-            const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
-            const width = img.width * ratio;
-            const height = img.height * ratio;
-            doc.addImage(pngData, "PNG", 14, yPos, width, height);
-            yPos += height + 5;
-            resolve();
+              const maxWidth = 40;
+              const maxHeight = 20;
+              const ratio = Math.min(maxWidth / img.width, maxHeight / img.height);
+              const width = img.width * ratio;
+              const height = img.height * ratio;
+              doc.addImage(pngData, "PNG", 14, yPos, width, height);
+              resolve(height + 5);
+            } catch {
+              resolve(0);
+            }
           };
-          img.onerror = () => resolve();
-          img.src = base64;
+          img.onerror = () => resolve(0);
+          img.src = clinicInfo.logoUrl;
         });
+        yPos += logoHeight;
       } catch {
         // Continue without logo
       }
