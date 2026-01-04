@@ -68,6 +68,7 @@ import {
   CreditCard,
   Pencil,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -720,10 +721,22 @@ export default function EmployerDetailPage() {
                           </TableCell>
                           <TableCell className="text-center">
                             {contrib.lytex_invoice_id ? (
-                              <Badge variant="outline" className="text-xs text-emerald-600">
-                                <CheckCircle2 className="h-3 w-3 mr-1" />
-                                Gerado
-                              </Badge>
+                              contrib.lytex_invoice_url && contrib.status !== "paid" && contrib.status !== "cancelled" ? (
+                                <a
+                                  href={contrib.lytex_invoice_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  Ver Boleto
+                                </a>
+                              ) : (
+                                <Badge variant="outline" className="text-xs text-emerald-600">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Gerado
+                                </Badge>
+                              )
                             ) : (
                               <Badge variant="outline" className="text-xs text-muted-foreground">
                                 Não gerado
