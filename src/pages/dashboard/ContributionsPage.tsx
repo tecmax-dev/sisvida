@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download } from "lucide-react";
+import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import ContributionsListTab from "@/components/contributions/ContributionsListTa
 import ContributionTypesTab from "@/components/contributions/ContributionTypesTab";
 import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
 import ContributionDialogs from "@/components/contributions/ContributionDialogs";
+import BulkContributionDialog from "@/components/contributions/BulkContributionDialog";
 
 interface Employer {
   id: string;
@@ -70,6 +71,7 @@ export default function ContributionsPage() {
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
@@ -273,18 +275,27 @@ export default function ContributionsPage() {
             Gerencie boletos e contribuições das empresas associadas
           </p>
         </div>
-        <Button 
-          variant="outline" 
-          onClick={handleImportFromLytex}
-          disabled={importing}
-        >
-          {importing ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Download className="h-4 w-4 mr-2" />
-          )}
-          {importing ? "Importando..." : "Importar da Lytex"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setBulkDialogOpen(true)}
+          >
+            <FileStack className="h-4 w-4 mr-2" />
+            Gerar em Lote
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleImportFromLytex}
+            disabled={importing}
+          >
+            {importing ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            {importing ? "Importando..." : "Importar da Lytex"}
+          </Button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -363,6 +374,16 @@ export default function ContributionsPage() {
         selectedContribution={selectedContribution}
         onGenerateInvoice={handleGenerateInvoice}
         generatingInvoice={generatingInvoice}
+      />
+
+      <BulkContributionDialog
+        open={bulkDialogOpen}
+        onOpenChange={setBulkDialogOpen}
+        employers={employers}
+        contributionTypes={contributionTypes}
+        clinicId={currentClinic?.id || ""}
+        userId={session?.user.id || ""}
+        onRefresh={fetchData}
       />
     </div>
   );
