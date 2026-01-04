@@ -185,6 +185,22 @@ serve(async (req) => {
       );
     }
 
+    // Verificar se boleto está vencido há mais de 90 dias - apenas gestor pode alterar
+    if (portal_type && portal_id) {
+      const dueDate = new Date(contribution.due_date);
+      const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (daysDiff > 90) {
+        console.log(`[Reissue] Boleto vencido há ${daysDiff} dias - bloqueado para portal`);
+        return new Response(
+          JSON.stringify({ 
+            error: "Boletos com mais de 90 dias de atraso só podem ser alterados pelo gestor. Entre em contato com o sindicato." 
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Verificar se a contribuição pertence ao portal que está solicitando
     if (portal_type === "employer" && portal_id) {
       if (contribution.employer_id !== portal_id) {

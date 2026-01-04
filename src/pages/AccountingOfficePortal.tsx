@@ -677,7 +677,14 @@ export default function AccountingOfficePortal() {
                   </TableHeader>
                   <TableBody>
                     {filteredContributions.map((contrib) => {
-                      const canGenerateReissue = ["pending", "overdue"].includes(contrib.status);
+                      // Calcular dias de atraso
+                      const dueDate = new Date(contrib.due_date);
+                      const today = new Date();
+                      const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+                      const isOverdue90Days = daysDiff > 90;
+                      
+                      // Permitir 2ª via apenas para pendente/vencido e não mais de 90 dias
+                      const canGenerateReissue = ["pending", "overdue"].includes(contrib.status) && !isOverdue90Days;
                       
                       return (
                         <TableRow key={contrib.id}>
