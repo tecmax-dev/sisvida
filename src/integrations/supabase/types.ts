@@ -84,6 +84,139 @@ export type Database = {
           },
         ]
       }
+      accounting_office_employers: {
+        Row: {
+          accounting_office_id: string
+          created_at: string
+          created_by: string | null
+          employer_id: string
+          id: string
+        }
+        Insert: {
+          accounting_office_id: string
+          created_at?: string
+          created_by?: string | null
+          employer_id: string
+          id?: string
+        }
+        Update: {
+          accounting_office_id?: string
+          created_at?: string
+          created_by?: string | null
+          employer_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_office_employers_accounting_office_id_fkey"
+            columns: ["accounting_office_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_offices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounting_office_employers_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounting_office_portal_logs: {
+        Row: {
+          accounting_office_id: string
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          accounting_office_id: string
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          accounting_office_id?: string
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_office_portal_logs_accounting_office_id_fkey"
+            columns: ["accounting_office_id"]
+            isOneToOne: false
+            referencedRelation: "accounting_offices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      accounting_offices: {
+        Row: {
+          access_code: string | null
+          access_code_expires_at: string | null
+          clinic_id: string
+          contact_name: string | null
+          created_at: string
+          email: string
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          phone: string | null
+          portal_last_access_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_code?: string | null
+          access_code_expires_at?: string | null
+          clinic_id: string
+          contact_name?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          portal_last_access_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_code?: string | null
+          access_code_expires_at?: string | null
+          clinic_id?: string
+          contact_name?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          portal_last_access_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_offices_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       addon_requests: {
         Row: {
           addon_id: string

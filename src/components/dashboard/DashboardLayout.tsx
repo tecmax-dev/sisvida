@@ -137,6 +137,7 @@ const navCategories: NavCategory[] = [
     items: [
       { href: "/dashboard/empresas", icon: Building2, label: "Cadastro de Empresas", permission: "view_patients" },
       { href: "/dashboard/contribuicoes", icon: Receipt, label: "Contribuições", permission: "view_financials" },
+      { href: "/dashboard/escritorios", icon: Briefcase, label: "Escritórios Contábeis", permission: "view_patients" },
     ],
   },
   // SÓCIOS - Purple
