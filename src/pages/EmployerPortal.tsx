@@ -121,11 +121,14 @@ export default function EmployerPortal() {
 
   const loadClinicBySlug = async (slug: string) => {
     try {
+      console.log("[EmployerPortal] Loading clinic by slug:", slug);
       const { data, error } = await supabase
         .from("clinics")
         .select("id, name, logo_url, phone")
         .eq("slug", slug)
-        .single();
+        .maybeSingle();
+      
+      console.log("[EmployerPortal] Clinic data:", data, "Error:", error);
       
       if (!error && data) {
         setClinic(data);
