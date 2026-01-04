@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,8 @@ import {
   Building,
   Link2,
   ExternalLink,
-  Loader2
+  Loader2,
+  FileSearch
 } from "lucide-react";
 import {
   Dialog,
@@ -60,6 +62,11 @@ interface AccountingOffice {
   email: string;
   phone?: string;
   contact_name?: string;
+  cnpj?: string;
+  trade_name?: string;
+  address?: string;
+  city?: string;
+  state?: string;
   access_code?: string;
   access_code_expires_at?: string;
   portal_last_access_at?: string;
@@ -82,6 +89,7 @@ interface OfficeEmployerLink {
 
 export default function AccountingOfficesPage() {
   const { currentClinic } = useAuth();
+  const { lookupCnpj, cnpjLoading } = useCnpjLookup();
   const [offices, setOffices] = useState<AccountingOffice[]>([]);
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [officeEmployerLinks, setOfficeEmployerLinks] = useState<OfficeEmployerLink[]>([]);
@@ -99,6 +107,11 @@ export default function AccountingOfficesPage() {
     email: "",
     phone: "",
     contact_name: "",
+    cnpj: "",
+    trade_name: "",
+    address: "",
+    city: "",
+    state: "",
     notes: "",
     is_active: true,
   });
@@ -166,6 +179,11 @@ export default function AccountingOfficesPage() {
         email: office.email,
         phone: office.phone || "",
         contact_name: office.contact_name || "",
+        cnpj: office.cnpj || "",
+        trade_name: office.trade_name || "",
+        address: office.address || "",
+        city: office.city || "",
+        state: office.state || "",
         notes: office.notes || "",
         is_active: office.is_active,
       });
@@ -176,11 +194,47 @@ export default function AccountingOfficesPage() {
         email: "",
         phone: "",
         contact_name: "",
+        cnpj: "",
+        trade_name: "",
+        address: "",
+        city: "",
+        state: "",
         notes: "",
         is_active: true,
       });
     }
     setIsDialogOpen(true);
+  };
+
+  const handleCnpjLookup = async () => {
+    if (!formData.cnpj) {
+      toast.error("Digite um CNPJ para consultar");
+      return;
+    }
+
+    const data = await lookupCnpj(formData.cnpj);
+    if (data) {
+      setFormData(prev => ({
+        ...prev,
+        name: data.razao_social || prev.name,
+        trade_name: data.nome_fantasia || "",
+        email: data.email || prev.email,
+        phone: data.telefone || prev.phone,
+        address: data.logradouro ? `${data.logradouro}, ${data.numero} - ${data.bairro}` : "",
+        city: data.municipio || "",
+        state: data.uf || "",
+      }));
+    }
+  };
+
+  const formatCNPJ = (value: string) => {
+    const numbers = value.replace(/\D/g, "");
+    return numbers
+      .replace(/^(\d{2})(\d)/, "$1.$2")
+      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1/$2")
+      .replace(/(\d{4})(\d)/, "$1-$2")
+      .substring(0, 18);
   };
 
   const handleSave = async () => {
@@ -200,6 +254,11 @@ export default function AccountingOfficesPage() {
             email: formData.email.toLowerCase().trim(),
             phone: formData.phone || null,
             contact_name: formData.contact_name || null,
+            cnpj: formData.cnpj?.replace(/\D/g, "") || null,
+            trade_name: formData.trade_name || null,
+            address: formData.address || null,
+            city: formData.city || null,
+            state: formData.state || null,
             notes: formData.notes || null,
             is_active: formData.is_active,
           })
@@ -218,6 +277,11 @@ export default function AccountingOfficesPage() {
             email: formData.email.toLowerCase().trim(),
             phone: formData.phone || null,
             contact_name: formData.contact_name || null,
+            cnpj: formData.cnpj?.replace(/\D/g, "") || null,
+            trade_name: formData.trade_name || null,
+            address: formData.address || null,
+            city: formData.city || null,
+            state: formData.state || null,
             notes: formData.notes || null,
             is_active: formData.is_active,
             access_code: accessCode,
@@ -546,16 +610,57 @@ export default function AccountingOfficesPage() {
               {selectedOffice ? "Editar Escritório" : "Novo Escritório"}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+            {/* CNPJ com busca automática */}
             <div className="space-y-2">
-              <Label htmlFor="name">Nome do Escritório *</Label>
-              <Input
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Nome do escritório"
-              />
+              <Label htmlFor="cnpj">CNPJ</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="cnpj"
+                  value={formData.cnpj}
+                  onChange={(e) => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })}
+                  placeholder="00.000.000/0000-00"
+                  maxLength={18}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCnpjLookup}
+                  disabled={cnpjLoading}
+                >
+                  {cnpjLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <FileSearch className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Digite o CNPJ e clique no ícone para buscar automaticamente
+              </p>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Razão Social *</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Razão social do escritório"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="trade_name">Nome Fantasia</Label>
+                <Input
+                  id="trade_name"
+                  value={formData.trade_name}
+                  onChange={(e) => setFormData({ ...formData, trade_name: e.target.value })}
+                  placeholder="Nome fantasia"
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="email">E-mail *</Label>
               <Input
@@ -566,6 +671,7 @@ export default function AccountingOfficesPage() {
                 placeholder="email@escritorio.com.br"
               />
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="contact_name">Nome do Contato</Label>
@@ -586,6 +692,39 @@ export default function AccountingOfficesPage() {
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address">Endereço</Label>
+              <Input
+                id="address"
+                value={formData.address}
+                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                placeholder="Rua, número - Bairro"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="city">Cidade</Label>
+                <Input
+                  id="city"
+                  value={formData.city}
+                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                  placeholder="Cidade"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="state">Estado</Label>
+                <Input
+                  id="state"
+                  value={formData.state}
+                  onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                  placeholder="UF"
+                  maxLength={2}
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="notes">Observações</Label>
               <Textarea
@@ -596,6 +735,7 @@ export default function AccountingOfficesPage() {
                 rows={3}
               />
             </div>
+
             <div className="flex items-center justify-between">
               <Label htmlFor="is_active">Escritório ativo</Label>
               <Switch

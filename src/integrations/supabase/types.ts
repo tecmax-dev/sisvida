@@ -165,7 +165,10 @@ export type Database = {
         Row: {
           access_code: string | null
           access_code_expires_at: string | null
+          address: string | null
+          city: string | null
           clinic_id: string
+          cnpj: string | null
           contact_name: string | null
           created_at: string
           email: string
@@ -175,12 +178,17 @@ export type Database = {
           notes: string | null
           phone: string | null
           portal_last_access_at: string | null
+          state: string | null
+          trade_name: string | null
           updated_at: string
         }
         Insert: {
           access_code?: string | null
           access_code_expires_at?: string | null
+          address?: string | null
+          city?: string | null
           clinic_id: string
+          cnpj?: string | null
           contact_name?: string | null
           created_at?: string
           email: string
@@ -190,12 +198,17 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           portal_last_access_at?: string | null
+          state?: string | null
+          trade_name?: string | null
           updated_at?: string
         }
         Update: {
           access_code?: string | null
           access_code_expires_at?: string | null
+          address?: string | null
+          city?: string | null
           clinic_id?: string
+          cnpj?: string | null
           contact_name?: string | null
           created_at?: string
           email?: string
@@ -205,6 +218,8 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           portal_last_access_at?: string | null
+          state?: string | null
+          trade_name?: string | null
           updated_at?: string
         }
         Relationships: [
