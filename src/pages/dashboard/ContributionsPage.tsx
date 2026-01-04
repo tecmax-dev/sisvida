@@ -65,6 +65,7 @@ export default function ContributionsPage() {
   const [contributionTypes, setContributionTypes] = useState<ContributionType[]>([]);
   const [loading, setLoading] = useState(true);
   const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
+  const [activeTab, setActiveTab] = useState("overview");
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -235,7 +236,7 @@ export default function ContributionsPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
           <TabsTrigger value="overview" className="gap-2">
             <LayoutDashboard className="h-4 w-4" />
