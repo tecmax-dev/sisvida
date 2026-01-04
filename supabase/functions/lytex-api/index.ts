@@ -812,33 +812,67 @@ Deno.serve(async (req) => {
                   const value =
                     invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
 
-                  const { error: insertInvoiceError } = await supabase
+                  // Verificar se já existe pelo combo unique (empresa + tipo + competência)
+                  const { data: existingByUnique } = await supabase
                     .from("employer_contributions")
-                    .insert({
-                      clinic_id: params.clinicId,
-                      employer_id: employer.id,
-                      contribution_type_id: contribType.id,
-                      competence_month: competenceMonth,
-                      competence_year: competenceYear,
-                      value: value,
-                      due_date: invoice.dueDate?.split("T")[0],
-                      status: status,
+                    .select("id, lytex_invoice_id, status")
+                    .eq("employer_id", employer.id)
+                    .eq("contribution_type_id", contribType.id)
+                    .eq("competence_month", competenceMonth)
+                    .eq("competence_year", competenceYear)
+                    .maybeSingle();
+
+                  if (existingByUnique) {
+                    // Atualizar com dados da Lytex
+                    const updatePayload: any = {
                       lytex_invoice_id: invoice._id,
                       lytex_invoice_url: invoice.invoiceUrl || null,
                       lytex_boleto_barcode: invoice.boleto?.barCode || null,
                       lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
                       lytex_pix_code: invoice.pix?.code || null,
                       lytex_pix_qrcode: invoice.pix?.qrCode || null,
-                      paid_at: invoice.paidAt || null,
-                      paid_value: invoice.payedValue || null,
-                      payment_method: invoice.paymentMethod || null,
-                    });
-
-                  if (insertInvoiceError) {
-                    console.error("[Lytex] Erro ao inserir fatura:", insertInvoiceError);
-                    errors.push(`Fatura ${invoice._id}: ${insertInvoiceError.message}`);
+                    };
+                    if (status !== existingByUnique.status) {
+                      updatePayload.status = status;
+                      updatePayload.paid_at = invoice.paidAt || null;
+                      updatePayload.paid_value = invoice.payedValue || null;
+                      updatePayload.payment_method = invoice.paymentMethod || null;
+                    }
+                    await supabase
+                      .from("employer_contributions")
+                      .update(updatePayload)
+                      .eq("id", existingByUnique.id);
+                    invoicesUpdated++;
                   } else {
-                    invoicesImported++;
+                    // Inserir novo
+                    const { error: insertInvoiceError } = await supabase
+                      .from("employer_contributions")
+                      .insert({
+                        clinic_id: params.clinicId,
+                        employer_id: employer.id,
+                        contribution_type_id: contribType.id,
+                        competence_month: competenceMonth,
+                        competence_year: competenceYear,
+                        value: value,
+                        due_date: invoice.dueDate?.split("T")[0],
+                        status: status,
+                        lytex_invoice_id: invoice._id,
+                        lytex_invoice_url: invoice.invoiceUrl || null,
+                        lytex_boleto_barcode: invoice.boleto?.barCode || null,
+                        lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
+                        lytex_pix_code: invoice.pix?.code || null,
+                        lytex_pix_qrcode: invoice.pix?.qrCode || null,
+                        paid_at: invoice.paidAt || null,
+                        paid_value: invoice.payedValue || null,
+                        payment_method: invoice.paymentMethod || null,
+                      });
+
+                    if (insertInvoiceError) {
+                      console.error("[Lytex] Erro ao inserir fatura:", insertInvoiceError);
+                      errors.push(`Fatura ${invoice._id}: ${insertInvoiceError.message}`);
+                    } else {
+                      invoicesImported++;
+                    }
                   }
                 }
               }
