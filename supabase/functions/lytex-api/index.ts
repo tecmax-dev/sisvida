@@ -839,13 +839,12 @@ Deno.serve(async (req) => {
 
                 const value = invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
 
-                // A Lytex pode retornar a URL em invoiceUrl ou invoice_url ou url
-                const invoiceUrl = invoice.invoiceUrl || invoice.invoice_url || invoice.url || invoice.link || null;
+                // A Lytex retorna linkCheckout (página de pagamento) ou linkBoleto (PDF do boleto)
+                const invoiceUrl = invoice.linkCheckout || invoice.linkBoleto || invoice.invoiceUrl || null;
 
-                // Log para debug
-                if (page === 1 && invoices.indexOf(invoice) < 3) {
-                  console.log(`[Lytex] Sample invoice keys:`, Object.keys(invoice));
-                  console.log(`[Lytex] Invoice URL fields: invoiceUrl=${invoice.invoiceUrl}, invoice_url=${invoice.invoice_url}, url=${invoice.url}, link=${invoice.link}`);
+                // Log para debug (apenas primeiras faturas)
+                if (page === 1 && invoices.indexOf(invoice) < 2) {
+                  console.log(`[Lytex] Invoice ${invoice._id}: linkCheckout=${invoice.linkCheckout}, linkBoleto=${invoice.linkBoleto}`);
                 }
 
                 const patch = {
