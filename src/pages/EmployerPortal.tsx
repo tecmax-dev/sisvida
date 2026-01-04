@@ -131,7 +131,7 @@ export default function EmployerPortal() {
   const [isSettingValue, setIsSettingValue] = useState(false);
   
   // Filters
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("hide_cancelled");
   const [typeFilter, setTypeFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
@@ -361,7 +361,7 @@ export default function EmployerPortal() {
   };
 
   const clearFilters = () => {
-    setStatusFilter("all");
+    setStatusFilter("hide_cancelled");
     setTypeFilter("all");
     setYearFilter("all");
     setSearchTerm("");
@@ -382,7 +382,8 @@ export default function EmployerPortal() {
 
   const filteredContributions = useMemo(() => {
     return contributions.filter((c) => {
-      if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      if (statusFilter === "hide_cancelled" && c.status === "cancelled") return false;
+      if (statusFilter !== "all" && statusFilter !== "hide_cancelled" && c.status !== statusFilter) return false;
       if (typeFilter !== "all" && c.contribution_type?.name !== typeFilter) return false;
       if (yearFilter !== "all" && c.competence_year.toString() !== yearFilter) return false;
       if (searchTerm) {
@@ -405,7 +406,7 @@ export default function EmployerPortal() {
     overdueValue: contributions.filter(c => c.status === "overdue").reduce((sum, c) => sum + (c.amount || 0), 0),
   }), [contributions]);
 
-  const hasActiveFilters = statusFilter !== "all" || typeFilter !== "all" || yearFilter !== "all" || searchTerm;
+  const hasActiveFilters = (statusFilter !== "all" && statusFilter !== "hide_cancelled") || typeFilter !== "all" || yearFilter !== "all" || searchTerm;
 
   // Login Screen
   if (!employer) {
@@ -854,11 +855,13 @@ export default function EmployerPortal() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
+                  <SelectItem value="hide_cancelled">Ocultar cancelados</SelectItem>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="paid">Pago</SelectItem>
                   <SelectItem value="overdue">Vencido</SelectItem>
                   <SelectItem value="awaiting_value">Aguardando</SelectItem>
+                  <SelectItem value="cancelled">Cancelado</SelectItem>
                 </SelectContent>
               </Select>
               

@@ -137,7 +137,7 @@ export default function AccountingOfficePortal() {
   
   // Filtros
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("hide_cancelled");
   const [filterEmployer, setFilterEmployer] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>("all");
   const [filterYear, setFilterYear] = useState<string>("all");
@@ -461,7 +461,7 @@ export default function AccountingOfficePortal() {
       contrib.employer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       contrib.employer?.cnpj?.includes(searchTerm);
     
-    const matchesStatus = filterStatus === "all" || contrib.status === filterStatus;
+    const matchesStatus = filterStatus === "all" || (filterStatus === "hide_cancelled" ? contrib.status !== "cancelled" : contrib.status === filterStatus);
     const matchesEmployer = filterEmployer === "all" || contrib.employer_id === filterEmployer;
     const matchesMonth = filterMonth === "all" || contrib.competence_month === parseInt(filterMonth);
     const matchesYear = filterYear === "all" || contrib.competence_year === parseInt(filterYear);
@@ -721,11 +721,13 @@ export default function AccountingOfficePortal() {
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
+                  <SelectItem value="hide_cancelled">Ocultar cancelados</SelectItem>
                   <SelectItem value="all">Todos</SelectItem>
                   <SelectItem value="pending">Pendente</SelectItem>
                   <SelectItem value="paid">Pago</SelectItem>
                   <SelectItem value="overdue">Vencido</SelectItem>
                   <SelectItem value="awaiting_value">Aguardando</SelectItem>
+                  <SelectItem value="cancelled">Cancelado</SelectItem>
                 </SelectContent>
               </Select>
               
