@@ -67,6 +67,7 @@ interface Patient {
   id: string;
   name: string;
   phone: string;
+  cpf: string | null;
 }
 
 interface Professional {
@@ -148,7 +149,7 @@ function WaitingListContent() {
 
     const { data } = await supabase
       .from('patients')
-      .select('id, name, phone')
+      .select('id, name, phone, cpf')
       .eq('clinic_id', currentClinic.id)
       .order('name');
 
@@ -320,7 +321,7 @@ function WaitingListContent() {
                           {patients.map((patient) => (
                             <CommandItem
                               key={patient.id}
-                              value={patient.name}
+                              value={`${patient.name} ${patient.cpf || ''}`}
                               onSelect={() => {
                                 setSelectedPatient(patient.id);
                                 setPatientPopoverOpen(false);
@@ -332,7 +333,12 @@ function WaitingListContent() {
                                   selectedPatient === patient.id ? "opacity-100" : "opacity-0"
                                 )}
                               />
-                              {patient.name}
+                              <div className="flex flex-col">
+                                <span>{patient.name}</span>
+                                {patient.cpf && (
+                                  <span className="text-xs text-muted-foreground">{patient.cpf}</span>
+                                )}
+                              </div>
                             </CommandItem>
                           ))}
                         </CommandGroup>
