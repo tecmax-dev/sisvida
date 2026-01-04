@@ -788,14 +788,14 @@ export default function AccountingOfficesPage() {
 
       {/* Dialog de Vincular Empresas - Profissional */}
       <Dialog open={isLinkDialogOpen} onOpenChange={setIsLinkDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="w-[min(56rem,calc(100vw-2rem))] max-w-none">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Link2 className="h-5 w-5 text-primary" />
               Vincular Empresas ao Escritório
             </DialogTitle>
             {selectedOffice && (
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className="text-sm text-muted-foreground mt-1 truncate">
                 {selectedOffice.name}
               </p>
             )}
@@ -803,17 +803,17 @@ export default function AccountingOfficesPage() {
           
           <div className="space-y-4">
             {/* Barra de busca e ações */}
-            <div className="flex flex-col sm:flex-row gap-3">
-              <div className="relative flex-1">
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 items-start">
+              <div className="relative min-w-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar empresa por nome ou CNPJ..."
                   value={linkSearchTerm}
                   onChange={(e) => setLinkSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 w-full"
                 />
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
                 <Button
                   variant="outline"
                   size="sm"
@@ -837,8 +837,6 @@ export default function AccountingOfficesPage() {
                 )}
               </div>
             </div>
-
-            {/* Estatísticas */}
             <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-2">
                 <Building className="h-4 w-4 text-primary" />
