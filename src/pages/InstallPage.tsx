@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Smartphone, Share, Plus, MoreVertical, Home, ArrowLeft, Download, CheckCircle2, RefreshCw } from "lucide-react";
+import { Smartphone, Share, Plus, MoreVertical, Home, ArrowLeft, Download, CheckCircle2, RefreshCw, Monitor } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -15,8 +15,11 @@ export default function InstallPage() {
   const [canInstall, setCanInstall] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
 
   useEffect(() => {
+    // Detectar se é desktop
+    setIsDesktop(window.innerWidth >= 1024);
     // Verificar se já está instalado como PWA
     if (window.matchMedia('(display-mode: standalone)').matches) {
       setIsInstalled(true);
@@ -192,6 +195,56 @@ export default function InstallPage() {
                   <p className="font-medium text-foreground">Confirme a instalação</p>
                   <p className="text-sm text-muted-foreground">
                     O ícone do Eclini aparecerá na sua tela inicial
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Desktop Instructions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                  <Monitor className="h-4 w-4 text-blue-600" />
+                </div>
+                Desktop (Chrome/Edge)
+              </CardTitle>
+              <CardDescription>
+                Siga os passos abaixo para instalar no seu computador
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <span className="text-primary font-semibold text-sm">1</span>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Procure o ícone de instalação</p>
+                  <p className="text-sm text-muted-foreground">
+                    Na barra de endereços, procure por um ícone de <Download className="inline h-4 w-4" /> ou ícone de computador
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <span className="text-primary font-semibold text-sm">2</span>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Se não aparecer, use o menu</p>
+                  <p className="text-sm text-muted-foreground">
+                    Clique nos três pontos <MoreVertical className="inline h-4 w-4" /> → "Instalar Eclini" ou "Mais ferramentas" → "Criar atalho"
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <span className="text-primary font-semibold text-sm">3</span>
+                </div>
+                <div>
+                  <p className="font-medium text-foreground">Marque "Abrir como janela"</p>
+                  <p className="text-sm text-muted-foreground">
+                    Isso faz o app abrir em sua própria janela, como um app nativo
                   </p>
                 </div>
               </div>
