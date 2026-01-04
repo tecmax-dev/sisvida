@@ -179,9 +179,3 @@ verify_jwt = false
 
 [functions.set-contribution-value]
 verify_jwt = false
-
-[functions.member-portal-auth]
-verify_jwt = false
-
-[functions.migrate-cpf-to-members]
-verify_jwt = true

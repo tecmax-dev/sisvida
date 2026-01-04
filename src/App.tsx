@@ -54,8 +54,6 @@ const CardValidation = lazy(() => import("./pages/CardValidation"));
 const LgpdPolicy = lazy(() => import("./pages/LgpdPolicy"));
 const EmployerPortal = lazy(() => import("./pages/EmployerPortal"));
 const AccountingOfficePortal = lazy(() => import("./pages/AccountingOfficePortal"));
-const PortalsPage = lazy(() => import("./pages/PortalsPage"));
-const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -107,7 +105,6 @@ import EmployersPage from "./pages/dashboard/EmployersPage";
 import EmployerDetailPage from "./pages/dashboard/EmployerDetailPage";
 import ContributionsPage from "./pages/dashboard/ContributionsPage";
 import AccountingOfficesPage from "./pages/dashboard/AccountingOfficesPage";
-import MembersPage from "./pages/dashboard/MembersPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -263,11 +260,8 @@ const App = () => (
                 <Route path="/profissional/painel" element={<ProfessionalDashboard />} />
                 <Route path="/profissional/atendimento/:appointmentId" element={<ProfessionalAppointment />} />
                 {/* Public Panel and Totem routes */}
-                <Route path="/acessos" element={<PortalsPage />} />
                 <Route path="/portal-empresa" element={<EmployerPortal />} />
                 <Route path="/portal-empresa/:clinicSlug" element={<EmployerPortal />} />
-                <Route path="/portal-socio" element={<MemberPortal />} />
-                <Route path="/portal-socio/:clinicSlug" element={<MemberPortal />} />
                 <Route path="/portal-contador" element={<AccountingOfficePortal />} />
                 <Route path="/portal-contador/:clinicSlug" element={<AccountingOfficePortal />} />
                 <Route path="/panel/:token" element={<PublicPanel />} />
@@ -365,7 +359,6 @@ const App = () => (
                   <Route path="empresas/:id" element={<EmployerDetailPage />} />
                   <Route path="contribuicoes" element={<ContributionsPage />} />
                   <Route path="escritorios" element={<AccountingOfficesPage />} />
-                  <Route path="socios" element={<MembersPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
