@@ -1712,6 +1712,47 @@ export type Database = {
         }
         Relationships: []
       }
+      contribution_types: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          default_value: number
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          default_value?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          default_value?: number
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contribution_types_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cost_centers: {
         Row: {
           clinic_id: string
@@ -1875,6 +1916,103 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      employer_contributions: {
+        Row: {
+          clinic_id: string
+          competence_month: number
+          competence_year: number
+          contribution_type_id: string
+          created_at: string
+          created_by: string | null
+          due_date: string
+          employer_id: string
+          id: string
+          lytex_boleto_barcode: string | null
+          lytex_boleto_digitable_line: string | null
+          lytex_invoice_id: string | null
+          lytex_invoice_url: string | null
+          lytex_pix_code: string | null
+          lytex_pix_qrcode: string | null
+          notes: string | null
+          paid_at: string | null
+          paid_value: number | null
+          payment_method: string | null
+          status: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          clinic_id: string
+          competence_month: number
+          competence_year: number
+          contribution_type_id: string
+          created_at?: string
+          created_by?: string | null
+          due_date: string
+          employer_id: string
+          id?: string
+          lytex_boleto_barcode?: string | null
+          lytex_boleto_digitable_line?: string | null
+          lytex_invoice_id?: string | null
+          lytex_invoice_url?: string | null
+          lytex_pix_code?: string | null
+          lytex_pix_qrcode?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          paid_value?: number | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          clinic_id?: string
+          competence_month?: number
+          competence_year?: number
+          contribution_type_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string
+          employer_id?: string
+          id?: string
+          lytex_boleto_barcode?: string | null
+          lytex_boleto_digitable_line?: string | null
+          lytex_invoice_id?: string | null
+          lytex_invoice_url?: string | null
+          lytex_pix_code?: string | null
+          lytex_pix_qrcode?: string | null
+          notes?: string | null
+          paid_at?: string | null
+          paid_value?: number | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_contributions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employer_contributions_contribution_type_id_fkey"
+            columns: ["contribution_type_id"]
+            isOneToOne: false
+            referencedRelation: "contribution_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employer_contributions_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employers: {
         Row: {
@@ -2545,6 +2683,44 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lytex_webhook_logs: {
+        Row: {
+          clinic_id: string | null
+          contribution_id: string | null
+          created_at: string
+          id: string
+          payload: Json
+          processed: boolean | null
+          webhook_type: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          contribution_id?: string | null
+          created_at?: string
+          id?: string
+          payload: Json
+          processed?: boolean | null
+          webhook_type: string
+        }
+        Update: {
+          clinic_id?: string | null
+          contribution_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          processed?: boolean | null
+          webhook_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lytex_webhook_logs_contribution_id_fkey"
+            columns: ["contribution_id"]
+            isOneToOne: false
+            referencedRelation: "employer_contributions"
             referencedColumns: ["id"]
           },
         ]
@@ -8205,6 +8381,7 @@ export type Database = {
         Args: { p_clinic_id: string }
         Returns: number
       }
+      update_overdue_contributions: { Args: never; Returns: undefined }
       user_has_permission: {
         Args: { _clinic_id: string; _permission_key: string; _user_id: string }
         Returns: boolean

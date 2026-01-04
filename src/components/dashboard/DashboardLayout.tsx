@@ -160,6 +160,7 @@ const navCategories: NavCategory[] = [
     items: [
       { href: "/dashboard/financials", icon: DollarSign, label: "Movimentações", permission: "view_financials" },
       { href: "/dashboard/repass", icon: Percent, label: "Repasse Médico", permission: "view_repass" },
+      { href: "/dashboard/contribuicoes", icon: Receipt, label: "Contribuições", permission: "view_financials" },
     ],
   },
   {

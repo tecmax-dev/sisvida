@@ -155,3 +155,9 @@ verify_jwt = true
 
 [functions.send-payslip-rejection]
 verify_jwt = true
+
+[functions.lytex-api]
+verify_jwt = true
+
+[functions.lytex-webhook]
+verify_jwt = false
