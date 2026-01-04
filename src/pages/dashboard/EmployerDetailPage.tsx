@@ -190,6 +190,7 @@ export default function EmployerDetailPage() {
   const [editDueDate, setEditDueDate] = useState("");
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [syncing, setSyncing] = useState(false);
 
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
 
@@ -575,6 +576,37 @@ export default function EmployerDetailPage() {
     }
   };
 
+  const handleSyncLytex = async () => {
+    if (!currentClinic) return;
+    
+    setSyncing(true);
+    try {
+      // Sync all pending contributions for this employer
+      const pendingContribs = contributions.filter(
+        (c) => c.lytex_invoice_id && ["pending", "overdue", "processing"].includes(c.status)
+      );
+
+      let syncedCount = 0;
+      for (const contrib of pendingContribs) {
+        const { error } = await supabase.functions.invoke("lytex-api", {
+          body: {
+            action: "sync_status",
+            contributionId: contrib.id,
+          },
+        });
+        if (!error) syncedCount++;
+      }
+
+      toast.success(`${syncedCount} contribuição(ões) sincronizada(s)`);
+      fetchData();
+    } catch (error) {
+      console.error("Error syncing:", error);
+      toast.error("Erro ao sincronizar com Lytex");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   // Stats
   const stats = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -684,6 +716,15 @@ export default function EmployerDetailPage() {
 
           {/* Actions */}
           <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={handleSyncLytex}
+              disabled={syncing}
+              className="gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "Sincronizando..." : "Sincronizar Lytex"}
+            </Button>
             <Button
               variant="outline"
               onClick={() => setWhatsappDialogOpen(true)}
