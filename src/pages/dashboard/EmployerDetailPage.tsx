@@ -347,9 +347,14 @@ export default function EmployerDetailPage() {
 
     setSaving(true);
     try {
-      const valueInCents = contribValue 
-        ? Math.round(parseFloat(contribValue.replace(",", ".")) * 100) 
-        : 0;
+      // Parse value - treat empty or invalid as 0
+      let valueInCents = 0;
+      if (contribValue && contribValue.trim() !== "") {
+        const parsed = parseFloat(contribValue.replace(",", "."));
+        if (!isNaN(parsed)) {
+          valueInCents = Math.round(parsed * 100);
+        }
+      }
 
       // Se valor = 0, status = awaiting_value, senão pending
       const initialStatus = valueInCents === 0 ? "awaiting_value" : "pending";
