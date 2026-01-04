@@ -78,6 +78,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: React.R
   paid: { label: "Pago", color: "bg-emerald-100 text-emerald-700 border-emerald-300", icon: <CheckCircle2 className="h-3 w-3" />, bgClass: "bg-emerald-500" },
   overdue: { label: "Vencido", color: "bg-red-100 text-red-700 border-red-300", icon: <AlertCircle className="h-3 w-3" />, bgClass: "bg-red-500" },
   cancelled: { label: "Cancelado", color: "bg-gray-100 text-gray-600 border-gray-300", icon: <XCircle className="h-3 w-3" />, bgClass: "bg-gray-400" },
+  awaiting_value: { label: "Aguardando Valor", color: "bg-purple-100 text-purple-700 border-purple-300", icon: <DollarSign className="h-3 w-3" />, bgClass: "bg-purple-500" },
 };
 
 const monthNames = [
@@ -105,6 +106,11 @@ export default function EmployerPortal() {
   const [alertMessage, setAlertMessage] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
   const [isGeneratingReissue, setIsGeneratingReissue] = useState(false);
+
+  // Dialog de definir valor
+  const [showSetValueDialog, setShowSetValueDialog] = useState(false);
+  const [newValue, setNewValue] = useState("");
+  const [isSettingValue, setIsSettingValue] = useState(false);
   
   // Filters
   const [statusFilter, setStatusFilter] = useState("all");
@@ -282,6 +288,51 @@ export default function EmployerPortal() {
       toast.error("Erro de conexão");
     } finally {
       setIsGeneratingReissue(false);
+    }
+  };
+
+  const handleSetValue = async () => {
+    if (!selectedContribution || !employer || !newValue) {
+      toast.error("Informe o valor da contribuição");
+      return;
+    }
+
+    setIsSettingValue(true);
+    try {
+      const valueInCents = Math.round(parseFloat(newValue.replace(",", ".")) * 100);
+      
+      if (isNaN(valueInCents) || valueInCents <= 0) {
+        toast.error("Valor inválido");
+        return;
+      }
+
+      const { data, error } = await supabase.functions.invoke("set-contribution-value", {
+        body: {
+          contribution_id: selectedContribution.id,
+          value: valueInCents,
+          portal_type: "employer",
+          portal_id: employer.id,
+        },
+      });
+
+      if (error || data.error) {
+        toast.error(data?.error || "Erro ao definir valor");
+        return;
+      }
+
+      toast.success(data.message || "Valor definido e boleto gerado!");
+      setShowSetValueDialog(false);
+      setNewValue("");
+      setSelectedContribution(null);
+      loadContributions(employer.id);
+
+      if (data.lytex_invoice_url) {
+        window.open(data.lytex_invoice_url, "_blank");
+      }
+    } catch (err) {
+      toast.error("Erro de conexão");
+    } finally {
+      setIsSettingValue(false);
     }
   };
 
@@ -809,6 +860,20 @@ export default function EmployerPortal() {
                                 2ª Via
                               </Button>
                             )}
+                            {contribution.status === "awaiting_value" && (
+                              <Button
+                                size="sm"
+                                variant="default"
+                                className="h-7 px-2"
+                                onClick={() => {
+                                  setSelectedContribution(contribution);
+                                  setShowSetValueDialog(true);
+                                }}
+                              >
+                                <DollarSign className="h-3 w-3 mr-1" />
+                                Definir Valor
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -885,6 +950,20 @@ export default function EmployerPortal() {
                           2ª Via
                         </Button>
                       )}
+                      {contribution.status === "awaiting_value" && (
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="h-7 text-xs"
+                          onClick={() => {
+                            setSelectedContribution(contribution);
+                            setShowSetValueDialog(true);
+                          }}
+                        >
+                          <DollarSign className="h-3 w-3 mr-1" />
+                          Definir Valor
+                        </Button>
+                      )}
                     </div>
                   </div>
                 );
@@ -936,6 +1015,67 @@ export default function EmployerPortal() {
           Portal da Empresa • Acesso seguro às suas contribuições
         </div>
       </footer>
+
+      {/* Dialog de Definir Valor */}
+      <Dialog open={showSetValueDialog} onOpenChange={(open) => {
+        setShowSetValueDialog(open);
+        if (!open) {
+          setNewValue("");
+          setSelectedContribution(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Definir Valor da Contribuição
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContribution && (
+                <span>
+                  {monthNamesFull[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year} • {selectedContribution.contribution_type?.name || "Contribuição"}
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-sm font-medium block mb-2">Valor (R$) *</label>
+              <Input
+                type="text"
+                placeholder="0,00"
+                value={newValue}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9,]/g, "");
+                  setNewValue(val);
+                }}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Após definir o valor, o boleto será gerado automaticamente
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowSetValueDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSetValue} disabled={isSettingValue || !newValue}>
+              {isSettingValue ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  Gerando...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Gerar Boleto
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -176,3 +176,6 @@ verify_jwt = false
 
 [functions.generate-boleto-reissue]
 verify_jwt = false
+
+[functions.set-contribution-value]
+verify_jwt = false

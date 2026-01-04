@@ -72,6 +72,7 @@ import {
   MessageCircle,
   KeyRound,
   Globe,
+  DollarSign,
 } from "lucide-react";
 import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoWhatsAppDialog";
 import { SendOverdueWhatsAppDialog } from "@/components/contributions/SendOverdueWhatsAppDialog";
@@ -143,6 +144,7 @@ const STATUS_CONFIG = {
   paid: { label: "Pago", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
   overdue: { label: "Vencido", color: "bg-rose-100 text-rose-700", icon: AlertTriangle },
   cancelled: { label: "Cancelado", color: "bg-gray-100 text-gray-700", icon: XCircle },
+  awaiting_value: { label: "Aguardando Valor", color: "bg-purple-100 text-purple-700", icon: Clock },
 };
 
 export default function EmployerDetailPage() {
@@ -338,16 +340,21 @@ export default function EmployerDetailPage() {
   };
 
   const handleCreateContribution = async () => {
-    if (!employer || !currentClinic || !contribTypeId || !contribValue || !contribDueDate) {
+    if (!employer || !currentClinic || !contribTypeId || !contribDueDate) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
 
     setSaving(true);
     try {
-      const valueInCents = Math.round(parseFloat(contribValue.replace(",", ".")) * 100);
+      const valueInCents = contribValue 
+        ? Math.round(parseFloat(contribValue.replace(",", ".")) * 100) 
+        : 0;
 
-      const { error } = await supabase
+      // Se valor = 0, status = awaiting_value, senão pending
+      const initialStatus = valueInCents === 0 ? "awaiting_value" : "pending";
+
+      const { data: newContrib, error } = await supabase
         .from("employer_contributions")
         .insert({
           clinic_id: currentClinic.id,
@@ -357,18 +364,53 @@ export default function EmployerDetailPage() {
           competence_year: contribYear,
           value: valueInCents,
           due_date: contribDueDate,
+          status: initialStatus,
           created_by: session?.user.id,
-        });
+        })
+        .select()
+        .single();
 
       if (error) {
-        if (error.message.includes("unique_contribution_per_employer")) {
+        if (error.message.includes("unique_contribution_per_employer") || error.message.includes("unique_active_contribution_per_employer")) {
           toast.error("Já existe uma contribuição deste tipo para esta competência");
           return;
         }
         throw error;
       }
 
-      toast.success("Contribuição criada com sucesso");
+      // Se valor > 0, gerar boleto automaticamente
+      if (valueInCents > 0 && newContrib) {
+        try {
+          const contribType = contributionTypes.find(t => t.id === contribTypeId);
+          const description = `${contribType?.name || "Contribuição"} - ${MONTHS[contribMonth - 1]}/${contribYear}`;
+          
+          await supabase.functions.invoke("lytex-api", {
+            body: {
+              action: "create_invoice",
+              contributionId: newContrib.id,
+              clinicId: currentClinic.id,
+              employer: {
+                cnpj: employer.cnpj,
+                name: employer.name,
+                email: employer.email,
+                phone: employer.phone,
+              },
+              value: valueInCents,
+              dueDate: contribDueDate,
+              description,
+              enableBoleto: true,
+              enablePix: true,
+            },
+          });
+          toast.success("Contribuição criada e boleto gerado com sucesso!");
+        } catch (invoiceError) {
+          console.error("Erro ao gerar boleto:", invoiceError);
+          toast.success("Contribuição criada. Boleto será gerado manualmente.");
+        }
+      } else {
+        toast.success("Contribuição criada. Aguardando definição de valor.");
+      }
+
       setCreateContribDialogOpen(false);
       resetContribForm();
       fetchData();
@@ -865,7 +907,25 @@ export default function EmployerDetailPage() {
                                   </TooltipTrigger>
                                   <TooltipContent>Ver detalhes</TooltipContent>
                                 </Tooltip>
-                                {!contrib.lytex_invoice_id && contrib.status !== "cancelled" && contrib.status !== "paid" && (
+                                {contrib.status === "awaiting_value" && (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7 text-purple-600"
+                                        onClick={() => {
+                                          setSelectedContribution(contrib);
+                                          setViewContribDialogOpen(true);
+                                        }}
+                                      >
+                                        <DollarSign className="h-4 w-4" />
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Definir valor e gerar boleto</TooltipContent>
+                                  </Tooltip>
+                                )}
+                                {!contrib.lytex_invoice_id && contrib.status !== "cancelled" && contrib.status !== "paid" && contrib.status !== "awaiting_value" && (
                                   <Tooltip>
                                     <TooltipTrigger asChild>
                                       <Button
