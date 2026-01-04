@@ -1032,6 +1032,9 @@ export default function CalendarPage() {
   const handleCreateAppointment = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Proteção contra clique duplo - verificar se já está salvando
+    if (saving) return;
+    
     if (!formPatient || !formProfessional || !formTime) {
       toast({
         title: "Campos obrigatórios",
@@ -1042,6 +1045,9 @@ export default function CalendarPage() {
     }
 
     if (!currentClinic || !user) return;
+    
+    // Mover setSaving para o início para evitar cliques duplos
+    setSaving(true);
 
     // Validate recurrence config
     if (recurrenceConfig.enabled && recurrenceConfig.limitType === "date" && !recurrenceConfig.endDate) {
@@ -1050,6 +1056,7 @@ export default function CalendarPage() {
         description: "Informe a data final para agendamentos recorrentes.",
         variant: "destructive",
       });
+      setSaving(false);
       return;
     }
 
@@ -1066,6 +1073,7 @@ export default function CalendarPage() {
         description: "O paciente selecionado não foi encontrado.",
         variant: "destructive",
       });
+      setSaving(false);
       return;
     }
 
@@ -1075,6 +1083,7 @@ export default function CalendarPage() {
         description: `${patientData.name} está inativo e não pode realizar agendamentos.`,
         variant: "destructive",
       });
+      setSaving(false);
       return;
     }
 
@@ -1110,11 +1119,10 @@ export default function CalendarPage() {
           description: `Conflito em ${date.toLocaleDateString('pt-BR')}: ${getConflictMessage(conflicts, patientNames)}`,
           variant: "destructive",
         });
+        setSaving(false);
         return;
       }
     }
-
-    setSaving(true);
 
     try {
       const endTime = calculateEndTime(formTime, durationMinutes);
