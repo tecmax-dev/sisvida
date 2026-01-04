@@ -51,6 +51,7 @@ interface Contribution {
   value: number;
   status: string;
   lytex_invoice_url?: string;
+  lytex_invoice_id?: string;
   employer?: {
     id: string;
     name: string;
@@ -730,6 +731,7 @@ export default function AccountingOfficePortal() {
                     <TableRow>
                       <TableHead>Empresa</TableHead>
                       <TableHead>CNPJ</TableHead>
+                      <TableHead>Nº Documento</TableHead>
                       <TableHead>Tipo</TableHead>
                       <TableHead>Competência</TableHead>
                       <TableHead>Vencimento</TableHead>
@@ -756,6 +758,11 @@ export default function AccountingOfficePortal() {
                           </TableCell>
                           <TableCell className="text-muted-foreground">
                             {formatCNPJ(contrib.employer?.cnpj || "")}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs font-mono text-muted-foreground">
+                              {contrib.lytex_invoice_id ? contrib.lytex_invoice_id.slice(-8).toUpperCase() : "-"}
+                            </span>
                           </TableCell>
                           <TableCell>
                             {contrib.contribution_type?.name || "-"}
