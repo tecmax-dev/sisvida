@@ -12,6 +12,7 @@ import ContributionTypesTab from "@/components/contributions/ContributionTypesTa
 import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
 import ContributionDialogs from "@/components/contributions/ContributionDialogs";
 import BulkContributionDialog from "@/components/contributions/BulkContributionDialog";
+import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
 
 interface Employer {
   id: string;
@@ -77,6 +78,8 @@ export default function ContributionsPage() {
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [syncResultsOpen, setSyncResultsOpen] = useState(false);
+  const [syncResult, setSyncResult] = useState<LytexSyncResult | null>(null);
 
   useEffect(() => {
     if (currentClinic) {
@@ -233,18 +236,29 @@ export default function ContributionsPage() {
       const imported = (data?.clientsImported || 0) + (data?.invoicesImported || 0);
       const updated = (data?.clientsUpdated || 0) + (data?.invoicesUpdated || 0);
 
-      if (data?.errors?.length) {
-        toast.error(`Importação finalizada com erros (${data.errors.length}). Ex.: ${data.errors[0]}`);
-      }
+      // Montar resultado para exibição
+      const result: LytexSyncResult = {
+        syncedAt: new Date(),
+        clientsImported: data?.clientsImported || 0,
+        clientsUpdated: data?.clientsUpdated || 0,
+        invoicesImported: data?.invoicesImported || 0,
+        invoicesUpdated: data?.invoicesUpdated || 0,
+        errors: data?.errors || [],
+        details: data?.details,
+      };
+      
+      setSyncResult(result);
+      setSyncResultsOpen(true);
 
-      if (imported > 0 || updated > 0) {
-        toast.success(
-          `Importados: ${data?.clientsImported || 0} empresas, ${data?.invoicesImported || 0} boletos. Atualizados: ${updated}`,
-        );
-        fetchData();
+      if (data?.errors?.length) {
+        toast.warning(`Sincronização concluída com ${data.errors.length} erro(s)`);
+      } else if (imported > 0 || updated > 0) {
+        toast.success("Sincronização concluída com sucesso!");
       } else {
         toast.info("Nenhum dado novo encontrado na Lytex");
       }
+      
+      fetchData();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
       console.error("Error importing:", error);
@@ -384,6 +398,12 @@ export default function ContributionsPage() {
         clinicId={currentClinic?.id || ""}
         userId={session?.user.id || ""}
         onRefresh={fetchData}
+      />
+
+      <LytexSyncResultsDialog
+        open={syncResultsOpen}
+        onOpenChange={setSyncResultsOpen}
+        result={syncResult}
       />
     </div>
   );

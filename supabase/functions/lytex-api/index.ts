@@ -623,6 +623,10 @@ Deno.serve(async (req) => {
         let invoicesImported = 0;
         let invoicesUpdated = 0;
         const errors: string[] = [];
+        
+        // Arrays para armazenar detalhes para exibição
+        const clientDetails: Array<{ name: string; cnpj: string; action: "imported" | "updated" }> = [];
+        const invoiceDetails: Array<{ employerName: string; competence: string; value: number; status: string; action: "imported" | "updated" }> = [];
 
         try {
           // 1. Importar clientes
@@ -663,6 +667,11 @@ Deno.serve(async (req) => {
                     .update({ lytex_client_id: client._id })
                     .eq("id", existing.id);
                   clientsUpdated++;
+                  clientDetails.push({
+                    name: client.name || "Sem nome",
+                    cnpj: cnpj,
+                    action: "updated",
+                  });
                 }
               } else {
                 // Criar nova empresa
@@ -686,6 +695,11 @@ Deno.serve(async (req) => {
                   errors.push(`Empresa ${client.name}: ${insertError.message}`);
                 } else {
                   clientsImported++;
+                  clientDetails.push({
+                    name: client.name || "Sem nome",
+                    cnpj: cnpj,
+                    action: "imported",
+                  });
                 }
               }
             }
@@ -713,7 +727,7 @@ Deno.serve(async (req) => {
           // Otimização: carregar mapa de empresas uma vez (evita 1 SELECT por fatura)
           const { data: employersForMap, error: employersMapError } = await supabase
             .from("employers")
-            .select("id, cnpj")
+            .select("id, cnpj, name")
             .eq("clinic_id", params.clinicId);
 
           if (employersMapError) {
@@ -721,8 +735,10 @@ Deno.serve(async (req) => {
           }
 
           const employerByCnpj = new Map<string, string>();
+          const employerNameById = new Map<string, string>();
           for (const e of employersForMap || []) {
             if (e?.cnpj) employerByCnpj.set(String(e.cnpj).replace(/\D/g, ""), e.id);
+            if (e?.id && e?.name) employerNameById.set(e.id, e.name);
           }
 
           // Buscar ou criar tipo de contribuição padrão (1 vez)
@@ -905,7 +921,17 @@ Deno.serve(async (req) => {
                     console.error("[Lytex] Erro ao upsert lote de faturas:", upsertErr);
                     errors.push(`Upsert faturas (status=${statusFilter ?? "all"}, page=${page}): ${upsertErr.message}`);
                   } else {
-                    // Não dá para diferenciar insert vs update sem custo extra; contamos como processadas.
+                    // Adicionar detalhes das faturas processadas
+                    for (const row of chunk) {
+                      const monthNames = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+                      invoiceDetails.push({
+                        employerName: employerNameById.get(row.employer_id) || "Desconhecido",
+                        competence: `${monthNames[row.competence_month - 1]}/${row.competence_year}`,
+                        value: row.value || 0,
+                        status: row.status,
+                        action: "imported", // upsert = treated as imported/updated
+                      });
+                    }
                     invoicesImported += chunk.length;
                   }
                 }
@@ -941,6 +967,10 @@ Deno.serve(async (req) => {
             invoicesImported,
             invoicesUpdated,
             errors: errors.length > 0 ? errors : undefined,
+            details: {
+              clients: clientDetails,
+              invoices: invoiceDetails,
+            },
           };
 
         } catch (importError: any) {
