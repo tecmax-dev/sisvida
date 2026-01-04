@@ -2310,6 +2310,7 @@ export type Database = {
           access_code_expires_at: string | null
           address: string | null
           category_id: string | null
+          cep: string | null
           city: string | null
           clinic_id: string
           cnae_code: string | null
@@ -2321,6 +2322,7 @@ export type Database = {
           is_active: boolean
           lytex_client_id: string | null
           name: string
+          neighborhood: string | null
           notes: string | null
           phone: string | null
           portal_last_access_at: string | null
@@ -2333,6 +2335,7 @@ export type Database = {
           access_code_expires_at?: string | null
           address?: string | null
           category_id?: string | null
+          cep?: string | null
           city?: string | null
           clinic_id: string
           cnae_code?: string | null
@@ -2344,6 +2347,7 @@ export type Database = {
           is_active?: boolean
           lytex_client_id?: string | null
           name: string
+          neighborhood?: string | null
           notes?: string | null
           phone?: string | null
           portal_last_access_at?: string | null
@@ -2356,6 +2360,7 @@ export type Database = {
           access_code_expires_at?: string | null
           address?: string | null
           category_id?: string | null
+          cep?: string | null
           city?: string | null
           clinic_id?: string
           cnae_code?: string | null
@@ -2367,6 +2372,7 @@ export type Database = {
           is_active?: boolean
           lytex_client_id?: string | null
           name?: string
+          neighborhood?: string | null
           notes?: string | null
           phone?: string | null
           portal_last_access_at?: string | null
