@@ -2467,14 +2467,14 @@ export default function CalendarPage() {
       <div className="space-y-2">
         <Label>Duração (minutos)</Label>
         <Select 
-          value={formDuration?.toString() || ""} 
-          onValueChange={(value) => setFormDuration(value ? parseInt(value) : null)}
+          value={formDuration?.toString() || "__default__"} 
+          onValueChange={(value) => setFormDuration(value === "__default__" ? null : parseInt(value))}
         >
           <SelectTrigger className="bg-background">
             <SelectValue placeholder={`Padrão (${professionals.find(p => p.id === formProfessional)?.appointment_duration || 30} min)`} />
           </SelectTrigger>
           <SelectContent className="bg-popover border border-border shadow-lg z-50">
-            <SelectItem value="">Padrão do profissional</SelectItem>
+            <SelectItem value="__default__">Padrão do profissional</SelectItem>
             <SelectItem value="5">5 minutos</SelectItem>
             <SelectItem value="10">10 minutos</SelectItem>
             <SelectItem value="15">15 minutos</SelectItem>
