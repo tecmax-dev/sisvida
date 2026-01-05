@@ -31,7 +31,8 @@ import {
   XCircle,
   Filter,
   TrendingUp,
-  ChevronRight
+  ChevronRight,
+  Handshake
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -61,6 +62,13 @@ interface Contribution {
   lytex_invoice_url?: string;
   lytex_invoice_id?: string;
   portal_reissue_count?: number;
+  negotiation_id?: string | null;
+  negotiation?: {
+    id: string;
+    negotiation_code: string;
+    status: string;
+    installments_count: number;
+  } | null;
   employer?: {
     id: string;
     name: string;
@@ -117,6 +125,12 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
     color: "text-purple-700", 
     bgColor: "bg-purple-50 border-purple-200",
     icon: <DollarSign className="h-3.5 w-3.5" />
+  },
+  negotiated: { 
+    label: "Em Negociação", 
+    color: "text-indigo-700", 
+    bgColor: "bg-indigo-50 border-indigo-200",
+    icon: <Handshake className="h-3.5 w-3.5" />
   },
 };
 
@@ -796,6 +810,11 @@ export default function AccountingOfficePortal() {
                     const reissueCount = contrib.portal_reissue_count || 0;
                     const reissueLimitReached = reissueCount >= 2;
                     const statusConfig = STATUS_CONFIG[contrib.status] || STATUS_CONFIG.pending;
+                    
+                    // Verificar se está em negociação ativa
+                    const isInActiveNegotiation = contrib.negotiation_id && 
+                      contrib.negotiation && 
+                      ['active', 'approved', 'pending_approval'].includes(contrib.negotiation.status);
 
                     return (
                       <div 
@@ -805,7 +824,7 @@ export default function AccountingOfficePortal() {
                         <div className="flex items-start justify-between gap-4">
                           {/* Left: Company Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <h3 className="font-medium text-slate-900 text-sm truncate">
                                 {contrib.employer?.name || "-"}
                               </h3>
@@ -816,15 +835,30 @@ export default function AccountingOfficePortal() {
                                 {statusConfig.icon}
                                 {statusConfig.label}
                               </Badge>
+                              {isInActiveNegotiation && (
+                                <Badge 
+                                  variant="outline" 
+                                  className="bg-indigo-50 border-indigo-200 text-indigo-700 text-xs px-2 py-0 h-5 gap-1"
+                                >
+                                  <Handshake className="h-3 w-3" />
+                                  Parcelamento {contrib.negotiation?.installments_count}x
+                                </Badge>
+                              )}
                             </div>
-                            <div className="flex items-center gap-3 text-xs text-slate-500">
+                            <div className="flex items-center gap-3 text-xs text-slate-500 flex-wrap">
                               <span className="font-mono">{formatCNPJ(contrib.employer?.cnpj || "")}</span>
                               <span>•</span>
                               <span>{contrib.contribution_type?.name || "Contribuição"}</span>
                               {contrib.lytex_invoice_id && (
                                 <>
                                   <span>•</span>
-                                  <span className="font-mono text-slate-400">#{contrib.lytex_invoice_id.slice(-6).toUpperCase()}</span>
+                                  <span className="font-mono text-slate-400">#{contrib.lytex_invoice_id.slice(-8).toUpperCase()}</span>
+                                </>
+                              )}
+                              {isInActiveNegotiation && contrib.negotiation && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-mono text-indigo-500">Neg. {contrib.negotiation.negotiation_code}</span>
                                 </>
                               )}
                             </div>
@@ -886,7 +920,26 @@ export default function AccountingOfficePortal() {
                               </TooltipProvider>
                             )}
                             
-                            {contrib.status === 'overdue' && !isOverdue90Days && (
+                            {/* Boleto em negociação - bloquear 2ª via */}
+                            {isInActiveNegotiation && contrib.status === 'overdue' && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-xs text-indigo-500 flex items-center gap-1 px-2">
+                                      <Handshake className="h-3 w-3" />
+                                      Em parcelamento
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Esta contribuição faz parte de um parcelamento ativo</p>
+                                    <p className="text-xs opacity-80">Contate o gestor para alterações</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            
+                            {/* 2ª via normal - apenas para boletos não em negociação */}
+                            {!isInActiveNegotiation && contrib.status === 'overdue' && !isOverdue90Days && (
                               reissueLimitReached ? (
                                 <TooltipProvider>
                                   <Tooltip>

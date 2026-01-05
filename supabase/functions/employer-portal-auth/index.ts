@@ -105,12 +105,13 @@ serve(async (req) => {
         );
       }
 
-      // Buscar contribuições
+      // Buscar contribuições com informação de negociação
       const { data: contributions, error } = await supabase
         .from("employer_contributions")
         .select(`
           *,
-          contribution_type:contribution_types(name)
+          contribution_type:contribution_types(name),
+          negotiation:debt_negotiations(id, negotiation_code, status, installments_count)
         `)
         .eq("employer_id", employer_id)
         .order("competence_year", { ascending: false })

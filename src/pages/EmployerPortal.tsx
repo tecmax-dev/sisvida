@@ -31,7 +31,8 @@ import {
   TrendingUp,
   X,
   ChevronRight,
-  Lock
+  Lock,
+  Handshake
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
@@ -62,6 +63,13 @@ interface Contribution {
   paid_at: string | null;
   portal_reissue_count: number;
   contribution_type: { name: string } | null;
+  negotiation_id: string | null;
+  negotiation?: {
+    id: string;
+    negotiation_code: string;
+    status: string;
+    installments_count: number;
+  } | null;
 }
 
 interface ReissueRequest {
@@ -103,6 +111,12 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
     color: "text-purple-700", 
     bgColor: "bg-purple-50 border-purple-200",
     icon: <DollarSign className="h-3.5 w-3.5" />
+  },
+  negotiated: { 
+    label: "Em Negociação", 
+    color: "text-indigo-700", 
+    bgColor: "bg-indigo-50 border-indigo-200",
+    icon: <Handshake className="h-3.5 w-3.5" />
   },
 };
 
@@ -918,6 +932,11 @@ export default function EmployerPortal() {
                     const reissueLimitReached = reissueCount >= 2;
                     const isOverdue = contrib.status === 'overdue';
                     const statusConfig = STATUS_CONFIG[contrib.status] || STATUS_CONFIG.pending;
+                    
+                    // Verificar se está em negociação ativa
+                    const isInActiveNegotiation = contrib.negotiation_id && 
+                      contrib.negotiation && 
+                      ['active', 'approved', 'pending_approval'].includes(contrib.negotiation.status);
 
                     return (
                       <div 
@@ -927,7 +946,7 @@ export default function EmployerPortal() {
                         <div className="flex items-start justify-between gap-4">
                           {/* Left: Info */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1">
+                            <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <h3 className="font-medium text-slate-900 text-sm">
                                 {MONTHS_FULL[contrib.competence_month - 1]}/{contrib.competence_year}
                               </h3>
@@ -938,13 +957,28 @@ export default function EmployerPortal() {
                                 {statusConfig.icon}
                                 {statusConfig.label}
                               </Badge>
+                              {isInActiveNegotiation && (
+                                <Badge 
+                                  variant="outline" 
+                                  className="bg-indigo-50 border-indigo-200 text-indigo-700 text-xs px-2 py-0 h-5 gap-1"
+                                >
+                                  <Handshake className="h-3 w-3" />
+                                  Parcelamento {contrib.negotiation?.installments_count}x
+                                </Badge>
+                              )}
                             </div>
                             <div className="flex items-center gap-3 text-xs text-slate-500">
                               <span>{contrib.contribution_type?.name || "Contribuição"}</span>
                               {contrib.lytex_invoice_id && (
                                 <>
                                   <span>•</span>
-                                  <span className="font-mono text-slate-400">#{contrib.lytex_invoice_id.slice(-6).toUpperCase()}</span>
+                                  <span className="font-mono text-slate-400">#{contrib.lytex_invoice_id.slice(-8).toUpperCase()}</span>
+                                </>
+                              )}
+                              {isInActiveNegotiation && contrib.negotiation && (
+                                <>
+                                  <span>•</span>
+                                  <span className="font-mono text-indigo-500">Neg. {contrib.negotiation.negotiation_code}</span>
                                 </>
                               )}
                             </div>
@@ -1000,7 +1034,26 @@ export default function EmployerPortal() {
                               </TooltipProvider>
                             )}
                             
-                            {isOverdue && !isOverdue90Days && (
+                            {/* Boleto em negociação - bloquear 2ª via */}
+                            {isInActiveNegotiation && isOverdue && (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="text-xs text-indigo-500 flex items-center gap-1 px-2">
+                                      <Handshake className="h-3 w-3" />
+                                      Em parcelamento
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Esta contribuição faz parte de um parcelamento ativo</p>
+                                    <p className="text-xs opacity-80">Contate o gestor para alterações</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )}
+                            
+                            {/* 2ª via normal - apenas para boletos não em negociação */}
+                            {!isInActiveNegotiation && isOverdue && !isOverdue90Days && (
                               reissueLimitReached ? (
                                 <TooltipProvider>
                                   <Tooltip>
