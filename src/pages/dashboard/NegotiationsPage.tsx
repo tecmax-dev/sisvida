@@ -5,7 +5,7 @@ import { FeatureGate } from "@/components/features/FeatureGate";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Plus, Settings, List } from "lucide-react";
+import { Plus, Settings, List, Handshake } from "lucide-react";
 import { toast } from "sonner";
 
 import NegotiationsListTab from "@/components/negotiations/NegotiationsListTab";
@@ -114,28 +114,36 @@ function NegotiationsContent() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Negociações de Débitos</h1>
-          <p className="text-muted-foreground">
-            Gerencie acordos de parcelamento de contribuições em atraso
-          </p>
+        <div className="flex items-center gap-4">
+          <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/25">
+            <Handshake className="h-8 w-8 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">
+              Negociações de Débitos
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              Gerencie acordos de parcelamento de contribuições em atraso
+            </p>
+          </div>
         </div>
         <RoleGuard permission="manage_financials">
-          <Button onClick={() => setIsNewDialogOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
+          <Button onClick={() => setIsNewDialogOpen(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
             Nova Negociação
           </Button>
         </RoleGuard>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="list" className="gap-2">
+        <TabsList className="bg-muted/50">
+          <TabsTrigger value="list" className="gap-2 data-[state=active]:bg-background">
             <List className="h-4 w-4" />
             Negociações
           </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-2">
+          <TabsTrigger value="settings" className="gap-2 data-[state=active]:bg-background">
             <Settings className="h-4 w-4" />
             Configurações
           </TabsTrigger>

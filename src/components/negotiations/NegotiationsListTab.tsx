@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,11 @@ import {
   Ban,
   ChevronLeft,
   ChevronRight,
+  Handshake,
+  TrendingUp,
+  DollarSign,
+  Calendar,
+  Building2,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -127,6 +132,27 @@ export default function NegotiationsListTab({
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
 
+  // Statistics
+  const stats = useMemo(() => {
+    const active = negotiations.filter((n) => n.status === "active");
+    const pending = negotiations.filter((n) => n.status === "pending_approval" || n.status === "simulation");
+    const completed = negotiations.filter((n) => n.status === "completed");
+    const cancelled = negotiations.filter((n) => n.status === "cancelled");
+
+    const totalNegotiatedValue = active.reduce((sum, n) => sum + n.total_negotiated_value, 0);
+    const totalOriginalValue = negotiations.reduce((sum, n) => sum + n.total_original_value, 0);
+
+    return {
+      total: negotiations.length,
+      active: active.length,
+      pending: pending.length,
+      completed: completed.length,
+      cancelled: cancelled.length,
+      totalNegotiatedValue,
+      totalOriginalValue,
+    };
+  }, [negotiations]);
+
   const filteredNegotiations = useMemo(() => {
     return negotiations.filter((neg) => {
       const matchesSearch =
@@ -158,11 +184,114 @@ export default function NegotiationsListTab({
     return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
   };
 
+  const handleCardClick = (status: string) => {
+    setStatusFilter(status);
+    setCurrentPage(1);
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        {/* Total Negociações */}
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] ${
+            statusFilter === "all" ? "ring-2 ring-primary" : ""
+          }`}
+          onClick={() => handleCardClick("all")}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-lg shadow-indigo-500/25">
+                <Handshake className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{stats.total}</p>
+                <p className="text-xs text-muted-foreground font-medium">Total</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Ativas */}
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] ${
+            statusFilter === "active" ? "ring-2 ring-emerald-500" : ""
+          }`}
+          onClick={() => handleCardClick("active")}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 shadow-lg shadow-emerald-500/25">
+                <CheckCircle2 className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-emerald-600">{stats.active}</p>
+                <p className="text-xs text-muted-foreground font-medium">Ativas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Pendentes */}
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] ${
+            statusFilter === "pending_approval" ? "ring-2 ring-amber-500" : ""
+          }`}
+          onClick={() => handleCardClick("pending_approval")}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 shadow-lg shadow-amber-500/25">
+                <Clock className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
+                <p className="text-xs text-muted-foreground font-medium">Pendentes</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Concluídas */}
+        <Card 
+          className={`cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] ${
+            statusFilter === "completed" ? "ring-2 ring-green-500" : ""
+          }`}
+          onClick={() => handleCardClick("completed")}
+        >
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-green-500 to-green-600 shadow-lg shadow-green-500/25">
+                <TrendingUp className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">{stats.completed}</p>
+                <p className="text-xs text-muted-foreground font-medium">Concluídas</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Valor Total Negociado */}
+        <Card className="md:col-span-2">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg shadow-blue-500/25">
+                <DollarSign className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-blue-600">{formatCurrency(stats.totalNegotiatedValue)}</p>
+                <p className="text-xs text-muted-foreground font-medium">Total Negociado (Ativas)</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filters */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -193,25 +322,44 @@ export default function NegotiationsListTab({
 
       {/* Table */}
       <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary" />
+            Negociações
+            <Badge variant="secondary" className="ml-2">{filteredNegotiations.length}</Badge>
+          </CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Empresa</TableHead>
-                <TableHead className="text-right">Valor Original</TableHead>
-                <TableHead className="text-right">Valor Negociado</TableHead>
-                <TableHead className="text-center">Parcelas</TableHead>
-                <TableHead>1ª Parcela</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+              <TableRow className="bg-muted/50">
+                <TableHead className="font-semibold">Código</TableHead>
+                <TableHead className="font-semibold">Empresa</TableHead>
+                <TableHead className="text-right font-semibold">Valor Original</TableHead>
+                <TableHead className="text-right font-semibold">Valor Negociado</TableHead>
+                <TableHead className="text-center font-semibold">Parcelas</TableHead>
+                <TableHead className="font-semibold">1ª Parcela</TableHead>
+                <TableHead className="font-semibold">Status</TableHead>
+                <TableHead className="text-right font-semibold">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginatedNegotiations.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    Nenhuma negociação encontrada
+                  <TableCell colSpan={8} className="text-center py-12">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 rounded-full bg-muted">
+                        <Handshake className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">Nenhuma negociação encontrada</p>
+                        <p className="text-sm text-muted-foreground">
+                          {searchTerm || statusFilter !== "all" 
+                            ? "Tente ajustar os filtros de busca"
+                            : "Crie uma nova negociação para começar"}
+                        </p>
+                      </div>
+                    </div>
                   </TableCell>
                 </TableRow>
               ) : (
@@ -220,29 +368,39 @@ export default function NegotiationsListTab({
                   const StatusIcon = statusConfig.icon;
 
                   return (
-                    <TableRow key={negotiation.id}>
-                      <TableCell className="font-mono font-medium">
+                    <TableRow key={negotiation.id} className="hover:bg-muted/30">
+                      <TableCell className="font-mono font-semibold text-primary">
                         {negotiation.negotiation_code}
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{negotiation.employers?.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {negotiation.employers?.cnpj && formatCNPJ(negotiation.employers.cnpj)}
-                          </p>
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 rounded-lg bg-amber-500/10">
+                            <Building2 className="h-4 w-4 text-amber-600" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-sm">{negotiation.employers?.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {negotiation.employers?.cnpj && formatCNPJ(negotiation.employers.cnpj)}
+                            </p>
+                          </div>
                         </div>
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-right text-muted-foreground">
                         {formatCurrency(negotiation.total_original_value)}
                       </TableCell>
-                      <TableCell className="text-right font-medium">
+                      <TableCell className="text-right font-semibold text-foreground">
                         {formatCurrency(negotiation.total_negotiated_value)}
                       </TableCell>
                       <TableCell className="text-center">
-                        {negotiation.installments_count}x
+                        <Badge variant="outline" className="font-mono">
+                          {negotiation.installments_count}x
+                        </Badge>
                       </TableCell>
                       <TableCell>
-                        {format(new Date(negotiation.first_due_date), "dd/MM/yyyy")}
+                        <div className="flex items-center gap-1.5 text-sm">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          {format(new Date(negotiation.first_due_date), "dd/MM/yyyy")}
+                        </div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className={statusConfig.badgeClass}>
@@ -257,6 +415,7 @@ export default function NegotiationsListTab({
                               <Button
                                 variant="ghost"
                                 size="icon"
+                                className="hover:bg-primary/10"
                                 onClick={() => setSelectedNegotiation(negotiation)}
                               >
                                 <Eye className="h-4 w-4" />
@@ -290,7 +449,7 @@ export default function NegotiationsListTab({
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <span className="text-sm">
+                <span className="text-sm font-medium">
                   {currentPage} / {totalPages}
                 </span>
                 <Button
