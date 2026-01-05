@@ -1193,6 +1193,15 @@ Deno.serve(async (req) => {
         const registrationMap = new Map<string, string>();
         const seenInvoiceIds = new Set<string>();
         const extractedDetails: Array<{ cnpj: string; name: string; registrationNumber: string; action: string }> = [];
+        const debugSamples: Array<{
+          invoiceId: string;
+          status: string;
+          rawClientDoc?: string | null;
+          normalizedClientDoc?: string | null;
+          nameCandidates: string[];
+          clientObjectKeys?: string[];
+          invoiceTopKeys?: string[];
+        }> = [];
 
         // Listar todas as faturas para extrair os números
         const statusFilters = [undefined, "pending", "paid", "overdue", "cancelled", "canceled"];
@@ -1220,9 +1229,36 @@ Deno.serve(async (req) => {
                 if (!invoice?._id || seenInvoiceIds.has(invoice._id)) continue;
                 seenInvoiceIds.add(invoice._id);
 
-                // Extrair CNPJ do cliente
-                const clientCnpj = invoice.client?.cpfCnpj?.replace(/\D/g, "");
-                if (!clientCnpj || clientCnpj.length !== 14) continue;
+                // Extrair documento do cliente (CNPJ/CPF) - a Lytex pode variar o campo
+                const rawClientDoc: string | null =
+                  (invoice.client?.cpfCnpj as string | undefined) ??
+                  ((invoice as any).client?.cnpj as string | undefined) ??
+                  ((invoice as any).client?.document as string | undefined) ??
+                  ((invoice as any).client?.taxId as string | undefined) ??
+                  ((invoice as any).customer?.cpfCnpj as string | undefined) ??
+                  ((invoice as any).customer?.document as string | undefined) ??
+                  ((invoice as any).payer?.cpfCnpj as string | undefined) ??
+                  ((invoice as any).payer?.document as string | undefined) ??
+                  null;
+
+                const normalizedClientDoc = rawClientDoc ? String(rawClientDoc).replace(/\D/g, "") : null;
+
+                // Queremos casar com employers (PJ), então 14 dígitos
+                const clientCnpj = normalizedClientDoc && normalizedClientDoc.length === 14 ? normalizedClientDoc : null;
+                if (!clientCnpj) {
+                  if (debugSamples.length < 10) {
+                    debugSamples.push({
+                      invoiceId: String(invoice._id || ""),
+                      status: String(statusFilter ?? "all"),
+                      rawClientDoc,
+                      normalizedClientDoc,
+                      nameCandidates: [],
+                      clientObjectKeys: invoice.client ? Object.keys(invoice.client) : undefined,
+                      invoiceTopKeys: invoice ? Object.keys(invoice) : undefined,
+                    });
+                  }
+                  continue;
+                }
 
                 // Já temos um número para esse CNPJ?
                 if (registrationMap.has(clientCnpj)) continue;
@@ -1341,6 +1377,8 @@ Deno.serve(async (req) => {
           skipped,
           notFound,
           details: extractedDetails,
+          // Se não encontrou nenhuma matrícula, devolvemos amostras para diagnóstico
+          debugSamples: registrationMap.size === 0 ? debugSamples : undefined,
         };
         break;
       }
