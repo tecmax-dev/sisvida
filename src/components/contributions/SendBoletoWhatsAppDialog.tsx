@@ -26,6 +26,7 @@ interface Contribution {
   status: string;
   competence_month: number;
   competence_year: number;
+  lytex_invoice_id: string | null;
   lytex_invoice_url: string | null;
   employers?: {
     name: string;
@@ -56,9 +57,9 @@ export function SendBoletoWhatsAppDialog({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
 
-  // Filter contributions that have boleto URL and are not paid/cancelled
+  // Filter contributions that have boleto generated (ID) and are not paid/cancelled
   const eligibleContributions = contributions.filter(
-    (c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled"
+    (c) => c.lytex_invoice_id && c.status !== "paid" && c.status !== "cancelled"
   );
 
   const handleToggle = (id: string) => {
