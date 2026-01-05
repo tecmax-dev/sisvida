@@ -123,16 +123,19 @@ export default function NegotiationStepPreview({
     return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
   };
 
-  // Generate installments schedule
+  // Generate installments schedule using addMonths for consistency
+  // Normalize base date to avoid timezone issues
+  const baseDateForSchedule = new Date(firstDueDate);
+  baseDateForSchedule.setHours(12, 0, 0, 0);
+  
   const installmentsSchedule = [];
-  let currentDate = new Date(firstDueDate);
   for (let i = 1; i <= installmentsCount; i++) {
+    const installmentDate = addMonths(baseDateForSchedule, i - 1);
     installmentsSchedule.push({
       number: i,
-      date: new Date(currentDate),
+      date: installmentDate,
       value: totals.installmentValue,
     });
-    currentDate = addMonths(currentDate, 1);
   }
 
   const handleExportPDF = () => {
