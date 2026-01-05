@@ -414,7 +414,7 @@ Deno.serve(async (req) => {
         const cleanCnpj = (params.clientDocument || "").replace(/\D/g, "");
         
         const invoiceRequest: CreateInvoiceRequest = {
-          contributionId: params.clientId || "", // Usar clientId como referência
+          contributionId: params.installmentId || params.clientId || "",
           clinicId: "",
           employer: {
             cnpj: cleanCnpj,
@@ -428,6 +428,31 @@ Deno.serve(async (req) => {
         };
 
         const invoice = await createInvoice(invoiceRequest);
+
+        // Se for uma parcela de negociação, salvar os dados no banco
+        if (params.installmentId) {
+          console.log(`[Lytex] Salvando dados do boleto na parcela ${params.installmentId}`);
+          const invoiceUrl = invoice.invoiceUrl || invoice.linkCheckout || invoice.linkBoleto;
+          
+          const { error: updateError } = await supabase
+            .from("negotiation_installments")
+            .update({
+              lytex_invoice_id: invoice._id,
+              lytex_invoice_url: invoiceUrl,
+              lytex_boleto_barcode: invoice.boleto?.barCode || null,
+              lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
+              lytex_pix_code: invoice.pix?.code || null,
+              lytex_pix_qrcode: invoice.pix?.qrCode || null,
+            })
+            .eq("id", params.installmentId);
+
+          if (updateError) {
+            console.error("[Lytex] Erro ao atualizar parcela:", updateError);
+          } else {
+            console.log(`[Lytex] Parcela atualizada com URL: ${invoiceUrl}`);
+          }
+        }
+
         result = { success: true, invoice };
         break;
       }

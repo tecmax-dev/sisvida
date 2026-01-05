@@ -51,6 +51,7 @@ interface Employer {
   name: string;
   cnpj: string;
   trade_name: string | null;
+  lytex_client_id: string | null;
 }
 
 interface Negotiation {

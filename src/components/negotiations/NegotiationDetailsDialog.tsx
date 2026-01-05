@@ -68,6 +68,7 @@ interface Employer {
   name: string;
   cnpj: string;
   trade_name: string | null;
+  lytex_client_id: string | null;
 }
 
 interface Negotiation {
@@ -207,7 +208,7 @@ export default function NegotiationDetailsDialog({
           .order("installment_number", { ascending: true }),
         supabase
           .from("debt_negotiations")
-          .select(`*, employers (id, name, cnpj, trade_name)`)
+          .select(`*, employers (id, name, cnpj, trade_name, lytex_client_id)`)
           .eq("id", negotiation.id)
           .single(),
         supabase
@@ -378,7 +379,9 @@ export default function NegotiationDetailsDialog({
         const { error: boletoError } = await supabase.functions.invoke("lytex-api", {
           body: {
             action: "createInvoice",
-            clientId: currentNegotiation.employers?.id,
+            installmentId: installment.id,
+            negotiationId: currentNegotiation.id,
+            clientId: currentNegotiation.employers?.lytex_client_id,
             clientName: currentNegotiation.employers?.name,
             clientDocument: currentNegotiation.employers?.cnpj,
             value: installment.value,
