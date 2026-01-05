@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Calendar, Clock, User, Stethoscope } from "lucide-react";
+import { ArrowLeft, Loader2, Calendar, Clock, User, Stethoscope, CheckCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,16 @@ const appointmentTypes = [
   { value: "exam", label: "Exame" },
   { value: "procedure", label: "Procedimento" },
   { value: "telemedicine", label: "Telemedicina" },
+];
+
+const appointmentStatuses = [
+  { value: "scheduled", label: "Agendado" },
+  { value: "confirmed", label: "Confirmado" },
+  { value: "arrived", label: "Chegou" },
+  { value: "in_progress", label: "Em Atendimento" },
+  { value: "completed", label: "Atendido" },
+  { value: "cancelled", label: "Cancelado" },
+  { value: "no_show", label: "Não Compareceu" },
 ];
 
 const defaultTimeSlots = [
@@ -99,6 +109,7 @@ export default function AppointmentEditPage() {
   const [type, setType] = useState("first_visit");
   const [notes, setNotes] = useState("");
   const [durationMinutes, setDurationMinutes] = useState<number>(30);
+  const [status, setStatus] = useState("scheduled");
   
   // Initial data for auto-save
   const [initialFormData, setInitialFormData] = useState({
@@ -109,6 +120,7 @@ export default function AppointmentEditPage() {
     type: "first_visit",
     notes: "",
     durationMinutes: 30,
+    status: "scheduled",
   });
 
   // Current form data for auto-save
@@ -120,7 +132,8 @@ export default function AppointmentEditPage() {
     type,
     notes,
     durationMinutes,
-  }), [patientId, professionalId, appointmentDate, startTime, type, notes, durationMinutes]);
+    status,
+  }), [patientId, professionalId, appointmentDate, startTime, type, notes, durationMinutes, status]);
 
   // Generate time slots based on the professional's configured schedule
   const timeSlots = useMemo(() => {
@@ -251,6 +264,7 @@ export default function AppointmentEditPage() {
         setType(apt.type);
         setNotes(apt.notes || "");
         setDurationMinutes(apt.duration_minutes || 30);
+        setStatus(apt.status);
         
         // Set initial data for auto-save
         setInitialFormData({
@@ -261,6 +275,7 @@ export default function AppointmentEditPage() {
           type: apt.type,
           notes: apt.notes || "",
           durationMinutes: apt.duration_minutes || 30,
+          status: apt.status,
         });
       }
     } catch (error) {
@@ -362,18 +377,26 @@ export default function AppointmentEditPage() {
 
       const endTime = calculateEndTime(startTime, durationMinutes);
 
+      const updateData: any = {
+        patient_id: patientId,
+        professional_id: professionalId,
+        appointment_date: appointmentDate,
+        start_time: startTime,
+        end_time: endTime,
+        type: type as "first_visit" | "return" | "exam" | "procedure" | "telemedicine",
+        notes: notes.trim() || null,
+        duration_minutes: durationMinutes,
+        status: status as "scheduled" | "confirmed" | "arrived" | "in_progress" | "completed" | "cancelled" | "no_show",
+      };
+
+      // Se status mudou para completed, registrar completed_at
+      if (status === 'completed' && appointment?.status !== 'completed') {
+        updateData.completed_at = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('appointments')
-        .update({
-          patient_id: patientId,
-          professional_id: professionalId,
-          appointment_date: appointmentDate,
-          start_time: startTime,
-          end_time: endTime,
-          type: type as "first_visit" | "return" | "exam" | "procedure" | "telemedicine",
-          notes: notes.trim() || null,
-          duration_minutes: durationMinutes,
-        })
+        .update(updateData)
         .eq('id', id);
 
       if (error) throw error;
@@ -515,7 +538,7 @@ export default function AppointmentEditPage() {
                 </Select>
               </div>
               
-              <div className="sm:col-span-2">
+              <div>
                 <Label htmlFor="type">Tipo de Consulta</Label>
                 <Select value={type} onValueChange={setType}>
                   <SelectTrigger className="mt-1.5">
@@ -525,6 +548,25 @@ export default function AppointmentEditPage() {
                     {appointmentTypes.map((t) => (
                       <SelectItem key={t.value} value={t.value}>
                         {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="status" className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4" />
+                  Status
+                </Label>
+                <Select value={status} onValueChange={setStatus}>
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {appointmentStatuses.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
