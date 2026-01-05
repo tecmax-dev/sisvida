@@ -102,6 +102,7 @@ interface Employer {
   portal_last_access_at: string | null;
   cnae_code?: string | null;
   cnae_description?: string | null;
+  registration_number?: string | null;
 }
 
 interface Patient {
@@ -728,6 +729,11 @@ export default function EmployerDetailPage() {
           <div className="flex items-center gap-2">
             <Building2 className="h-6 w-6 text-primary" />
             <h1 className="text-2xl font-bold text-foreground">{employer.name}</h1>
+            {employer.registration_number && (
+              <Badge variant="outline" className="font-mono">
+                Mat. {employer.registration_number}
+              </Badge>
+            )}
             <Badge variant={employer.is_active ? "default" : "secondary"}>
               {employer.is_active ? "Ativa" : "Inativa"}
             </Badge>

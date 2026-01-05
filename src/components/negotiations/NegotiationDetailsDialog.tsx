@@ -77,6 +77,7 @@ interface Employer {
   cnpj: string;
   trade_name: string | null;
   lytex_client_id: string | null;
+  registration_number?: string | null;
 }
 
 interface Negotiation {
@@ -216,7 +217,7 @@ export default function NegotiationDetailsDialog({
           .order("installment_number", { ascending: true }),
         supabase
           .from("debt_negotiations")
-          .select(`*, employers (id, name, cnpj, trade_name, lytex_client_id)`)
+          .select(`*, employers (id, name, cnpj, trade_name, lytex_client_id, registration_number)`)
           .eq("id", negotiation.id)
           .single(),
         supabase

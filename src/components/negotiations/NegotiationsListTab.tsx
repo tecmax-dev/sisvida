@@ -52,6 +52,7 @@ interface Employer {
   cnpj: string;
   trade_name: string | null;
   lytex_client_id: string | null;
+  registration_number?: string | null;
 }
 
 interface Negotiation {
@@ -159,10 +160,12 @@ export default function NegotiationsListTab({
 
   const filteredNegotiations = useMemo(() => {
     return negotiations.filter((neg) => {
+      const searchLower = searchTerm.toLowerCase();
       const matchesSearch =
-        neg.negotiation_code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        neg.employers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        neg.employers?.cnpj.includes(searchTerm);
+        neg.negotiation_code.toLowerCase().includes(searchLower) ||
+        neg.employers?.name.toLowerCase().includes(searchLower) ||
+        neg.employers?.cnpj.includes(searchTerm.replace(/\D/g, "")) ||
+        neg.employers?.registration_number?.includes(searchTerm);
 
       const matchesStatus = statusFilter === "all" || neg.status === statusFilter;
 
@@ -300,7 +303,7 @@ export default function NegotiationsListTab({
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Buscar por código, empresa ou CNPJ..."
+                placeholder="Buscar por código, empresa, CNPJ ou matrícula..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9"
@@ -382,7 +385,14 @@ export default function NegotiationsListTab({
                             <Building2 className="h-4 w-4 text-amber-600" />
                           </div>
                           <div>
-                            <p className="font-medium text-sm">{negotiation.employers?.name}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-sm">{negotiation.employers?.name}</p>
+                              {negotiation.employers?.registration_number && (
+                                <Badge variant="outline" className="text-[10px] font-mono">
+                                  {negotiation.employers.registration_number}
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground">
                               {negotiation.employers?.cnpj && formatCNPJ(negotiation.employers.cnpj)}
                             </p>

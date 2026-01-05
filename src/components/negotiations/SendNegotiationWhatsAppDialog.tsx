@@ -31,6 +31,7 @@ interface Employer {
   name: string;
   cnpj: string;
   phone?: string | null;
+  registration_number?: string | null;
 }
 
 interface NegotiationItem {

@@ -58,6 +58,7 @@ interface NegotiationInstallment {
       id: string;
       name: string;
       cnpj: string;
+      registration_number?: string | null;
     };
   };
 }
@@ -132,7 +133,8 @@ export default function NegotiationInstallmentsTab({
             employers (
               id,
               name,
-              cnpj
+              cnpj,
+              registration_number
             )
           )
         `)
@@ -170,10 +172,12 @@ export default function NegotiationInstallmentsTab({
       const dueYear = new Date(inst.due_date).getFullYear();
       const matchesYear = dueYear === internalYearFilter;
       
+      const searchLower = searchTerm.toLowerCase();
       const matchesSearch = 
-        inst.negotiation?.employers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        inst.negotiation?.employers?.name.toLowerCase().includes(searchLower) ||
         inst.negotiation?.employers?.cnpj.includes(searchTerm.replace(/\D/g, "")) ||
-        inst.negotiation?.negotiation_code.toLowerCase().includes(searchTerm.toLowerCase());
+        inst.negotiation?.employers?.registration_number?.includes(searchTerm) ||
+        inst.negotiation?.negotiation_code.toLowerCase().includes(searchLower);
       
       const matchesStatus = statusFilter === "all" || inst.status === statusFilter;
 
@@ -252,7 +256,7 @@ export default function NegotiationInstallmentsTab({
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar empresa ou código..."
+                placeholder="Buscar empresa, código ou matrícula..."
                 className="pl-9"
                 value={searchTerm}
                 onChange={(e) => {
@@ -295,6 +299,7 @@ export default function NegotiationInstallmentsTab({
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
+                {!employerId && <TableHead className="w-[80px]">Matrícula</TableHead>}
                 {!employerId && <TableHead>Empresa</TableHead>}
                 <TableHead>Acordo</TableHead>
                 <TableHead>Parcela</TableHead>
@@ -307,7 +312,7 @@ export default function NegotiationInstallmentsTab({
             <TableBody>
               {paginatedInstallments.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={employerId ? 6 : 7} className="h-32 text-center">
+                  <TableCell colSpan={employerId ? 6 : 8} className="h-32 text-center">
                     <Handshake className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                     <p className="text-muted-foreground">Nenhuma parcela de negociação encontrada</p>
                   </TableCell>
@@ -320,6 +325,17 @@ export default function NegotiationInstallmentsTab({
 
                   return (
                     <TableRow key={inst.id} className="hover:bg-muted/30">
+                      {!employerId && (
+                        <TableCell>
+                          {inst.negotiation?.employers?.registration_number ? (
+                            <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-semibold">
+                              {inst.negotiation.employers.registration_number}
+                            </code>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      )}
                       {!employerId && (
                         <TableCell>
                           <div>

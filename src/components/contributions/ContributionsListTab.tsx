@@ -49,6 +49,7 @@ interface Employer {
   id: string;
   name: string;
   cnpj: string;
+  registration_number?: string | null;
 }
 
 interface ContributionType {
@@ -159,10 +160,12 @@ export default function ContributionsListTab({
 
   const filteredContributions = useMemo(() => {
     return contributions.filter((c) => {
+      const searchLower = searchTerm.toLowerCase();
       const matchesSearch = 
-        c.employers?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        c.employers?.name.toLowerCase().includes(searchLower) ||
         c.employers?.cnpj.includes(searchTerm.replace(/\D/g, "")) ||
-        c.contribution_types?.name.toLowerCase().includes(searchTerm.toLowerCase());
+        c.employers?.registration_number?.includes(searchTerm) ||
+        c.contribution_types?.name.toLowerCase().includes(searchLower);
       
       const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
       const matchesYear = c.competence_year === yearFilter;
@@ -208,7 +211,7 @@ export default function ContributionsListTab({
             <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Buscar empresa, CNPJ ou tipo..."
+                placeholder="Buscar empresa, CNPJ, matrícula ou tipo..."
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-9 h-9"
@@ -299,6 +302,7 @@ export default function ContributionsListTab({
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
+                <TableHead className="font-semibold w-[80px]">Matrícula</TableHead>
                 <TableHead className="font-semibold">Empresa</TableHead>
                 <TableHead className="font-semibold">Nº Documento</TableHead>
                 <TableHead className="font-semibold">Tipo</TableHead>
@@ -313,7 +317,7 @@ export default function ContributionsListTab({
             <TableBody>
               {paginatedContributions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="h-32 text-center">
+                  <TableCell colSpan={10} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Receipt className="h-8 w-8 text-muted-foreground" />
                       <p className="text-muted-foreground">Nenhuma contribuição encontrada</p>
@@ -331,6 +335,15 @@ export default function ContributionsListTab({
                       key={contrib.id} 
                       className={`h-12 hover:bg-muted/30 transition-colors ${statusConfig?.rowClass || ""}`}
                     >
+                      <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
+                        {contrib.employers?.registration_number ? (
+                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-semibold">
+                            {contrib.employers.registration_number}
+                          </code>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
                       <TableCell className="py-2">
                         <div className={isCancelled ? "opacity-60" : ""}>
                           <button
