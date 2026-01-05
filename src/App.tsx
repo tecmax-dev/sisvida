@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { ModalProvider } from "@/contexts/ModalContext";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -243,6 +243,9 @@ const App = () => (
                 <Route path="/confirm-email" element={<ConfirmEmail />} />
                 {/* Compat: corrige URLs duplicadas /dashboard/dashboard/... */}
                 <Route path="/dashboard/dashboard/*" element={<RedirectDoubleDashboard />} />
+                {/* Rotas alias para agenda - redireciona para a rota correta */}
+                <Route path="/calendar" element={<Navigate to="/dashboard/calendar" replace />} />
+                <Route path="/agenda" element={<Navigate to="/dashboard/calendar" replace />} />
                 {/* Public booking (both legacy and current URLs) */}
                 <Route path="/agendar/:clinicSlug" element={<PublicBooking />} />
                 <Route path="/booking/:clinicSlug" element={<PublicBooking />} />

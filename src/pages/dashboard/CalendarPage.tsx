@@ -2724,7 +2724,7 @@ export default function CalendarPage() {
                 </svg>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-popover min-w-[180px]" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuContent align="end" className="bg-popover min-w-[180px] z-50" onClick={(e) => e.stopPropagation()}>
               {/* Atender - apenas para quem tem permissão de prontuário médico */}
               {canAttend && canAttendPatient && (
                 <DropdownMenuItem onClick={() => openAppointmentPanel(appointment)}>
