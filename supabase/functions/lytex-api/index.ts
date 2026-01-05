@@ -290,16 +290,45 @@ async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
   return responseData;
 }
 
-async function cancelInvoice(params: { invoiceId: string; dueDate: string; value?: number }): Promise<any> {
-  console.log(`[Lytex] Cancelando cobrança ${params.invoiceId} via update (status=cancelled)...`);
+async function cancelInvoice(params: { invoiceId: string; dueDate?: string; value?: number }): Promise<any> {
+  const token = await getAccessToken();
+  
+  console.log(`[Lytex] Cancelando cobrança ${params.invoiceId} via DELETE...`);
 
-  // A Lytex exige dueDate em validações no PUT; então cancelamos via update
-  return await updateInvoice({
-    invoiceId: params.invoiceId,
-    dueDate: params.dueDate,
-    value: params.value,
-    status: "cancelled",
+  // Tentar cancelar via DELETE primeiro
+  const deleteResponse = await fetch(`${LYTEX_API_URL}/invoices/${params.invoiceId}`, {
+    method: "DELETE",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
   });
+
+  if (deleteResponse.ok) {
+    console.log("[Lytex] Cobrança cancelada com sucesso via DELETE");
+    return { success: true };
+  }
+
+  const deleteText = await deleteResponse.text();
+  console.log(`[Lytex] DELETE retornou ${deleteResponse.status}: ${deleteText}`);
+
+  // Se DELETE falhar, tentar via PUT com status cancelled como fallback
+  if (params.dueDate) {
+    console.log("[Lytex] Tentando cancelar via PUT (fallback)...");
+    try {
+      return await updateInvoice({
+        invoiceId: params.invoiceId,
+        dueDate: params.dueDate,
+        value: params.value,
+        status: "cancelled",
+      });
+    } catch (putError) {
+      console.error("[Lytex] Fallback PUT também falhou:", putError);
+      // Propagar o erro original do DELETE se o PUT também falhar
+      throw new Error(deleteText ? JSON.parse(deleteText)?.message || `Erro ao cancelar: ${deleteResponse.status}` : `Erro ao cancelar: ${deleteResponse.status}`);
+    }
+  }
+
+  throw new Error(deleteText ? JSON.parse(deleteText)?.message || `Erro ao cancelar: ${deleteResponse.status}` : `Erro ao cancelar: ${deleteResponse.status}`);
 }
 
 Deno.serve(async (req) => {
