@@ -177,6 +177,11 @@ async function createInvoice(params: CreateInvoiceRequest): Promise<any> {
   // Converter valor para centavos (inteiro) - a API Lytex exige isso
   const valueInCents = normalizeMoneyToCents(params.value);
 
+  // Regras conhecidas da Lytex: inteiro em centavos e mínimo de 200 (R$ 2,00)
+  if (valueInCents < 200) {
+    throw new Error("Valor mínimo para boleto/Pix é R$ 2,00");
+  }
+
   console.log(`[Lytex] Valor original: ${params.value}, Valor em centavos: ${valueInCents}`);
 
   const invoicePayload: any = {
@@ -234,14 +239,27 @@ async function createInvoice(params: CreateInvoiceRequest): Promise<any> {
     body: JSON.stringify(invoicePayload),
   });
 
-  const responseData = await response.json();
+  const responseText = await response.text();
+  let responseData: any = {};
+  if (responseText) {
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { raw: responseText };
+    }
+  }
 
   if (!response.ok) {
     console.error("[Lytex] Erro ao criar cobrança:", JSON.stringify(responseData));
-    throw new Error(responseData.message || `Erro ao criar cobrança: ${response.status}`);
+    const msg =
+      responseData?.message ||
+      responseData?.error ||
+      (typeof responseData?.raw === "string" ? responseData.raw : null) ||
+      `Erro ao criar cobrança: ${response.status}`;
+    throw new Error(msg);
   }
 
-  console.log("[Lytex] Cobrança criada com sucesso:", responseData._id);
+  console.log("[Lytex] Cobrança criada com sucesso:", responseData?._id || responseData?.id || "(sem id)");
   return responseData;
 }
 
@@ -411,17 +429,25 @@ Deno.serve(async (req) => {
       case "createInvoice": {
         // Formato simplificado (usado por negociações): clientId, clientName, clientDocument, value, dueDate, description
         // Criar cobrança diretamente na Lytex sem vincular a uma contribuição
-        const cleanCnpj = (params.clientDocument || "").replace(/\D/g, "");
+        const clientName = String(params.clientName || "").trim();
+        const clientDocumentRaw = String(params.clientDocument || "").trim();
+        const cleanCnpj = clientDocumentRaw.replace(/\D/g, "");
+        const dueDate = String(params.dueDate || "");
+        const dueDateOnly = dueDate.includes("T") ? dueDate.split("T")[0] : dueDate;
+
+        if (!clientName || !cleanCnpj || !dueDateOnly || params.value === undefined || params.value === null) {
+          throw new Error("Dados insuficientes para emitir boleto (empresa, documento, valor e vencimento são obrigatórios)");
+        }
 
         const invoiceRequest: CreateInvoiceRequest = {
           contributionId: params.installmentId || params.clientId || "",
           clinicId: "",
           employer: {
             cnpj: cleanCnpj,
-            name: params.clientName,
+            name: clientName,
           },
-          value: params.value,
-          dueDate: params.dueDate?.split("T")[0] || "",
+          value: Number(params.value),
+          dueDate: dueDateOnly,
           description: params.description || "Negociação",
           enableBoleto: true,
           enablePix: true,
