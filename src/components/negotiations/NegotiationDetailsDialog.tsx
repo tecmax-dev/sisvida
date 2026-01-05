@@ -59,6 +59,7 @@ import { useAuth } from "@/hooks/useAuth";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { SendNegotiationWhatsAppDialog } from "./SendNegotiationWhatsAppDialog";
+import { SendBoletosWhatsAppDialog } from "./SendBoletosWhatsAppDialog";
 import EditNegotiationDialog from "./EditNegotiationDialog";
 import { Pencil } from "lucide-react";
 
@@ -168,6 +169,7 @@ export default function NegotiationDetailsDialog({
 
   // WhatsApp dialog
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
+  const [showBoletosWhatsAppDialog, setShowBoletosWhatsAppDialog] = useState(false);
 
   // Edit dialog
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -1097,11 +1099,21 @@ export default function NegotiationDetailsDialog({
                 </Button>
               )}
               {currentNegotiation.status === "active" && (
-                <Button onClick={handleGenerateBoletos} disabled={processing}>
-                  {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  <Receipt className="h-4 w-4 mr-2" />
-                  Emitir Boletos
-                </Button>
+                <>
+                  <Button onClick={handleGenerateBoletos} disabled={processing}>
+                    {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    <Receipt className="h-4 w-4 mr-2" />
+                    Emitir Boletos
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    onClick={() => setShowBoletosWhatsAppDialog(true)}
+                    className="text-emerald-600 hover:text-emerald-700"
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Enviar Boletos
+                  </Button>
+                </>
               )}
             </div>
           </div>
@@ -1114,6 +1126,15 @@ export default function NegotiationDetailsDialog({
         onOpenChange={setShowWhatsAppDialog}
         negotiation={negotiation}
         items={items}
+        installments={installments}
+        clinicId={clinic?.id || ""}
+      />
+
+      {/* Boletos WhatsApp Dialog */}
+      <SendBoletosWhatsAppDialog
+        open={showBoletosWhatsAppDialog}
+        onOpenChange={setShowBoletosWhatsAppDialog}
+        negotiation={currentNegotiation}
         installments={installments}
         clinicId={clinic?.id || ""}
       />
