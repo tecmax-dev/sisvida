@@ -36,6 +36,7 @@ interface Employer {
   name: string;
   cnpj: string;
   category_id?: string | null;
+  registration_number?: string | null;
 }
 
 interface ContributionType {
@@ -114,7 +115,8 @@ export default function BulkContributionDialog({
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(e => 
         e.name.toLowerCase().includes(term) || 
-        e.cnpj.includes(term.replace(/\D/g, ""))
+        e.cnpj.includes(term.replace(/\D/g, "")) ||
+        e.registration_number?.includes(term)
       );
     }
     
@@ -456,7 +458,7 @@ export default function BulkContributionDialog({
                     </label>
                   </div>
                   <Input
-                    placeholder="Buscar empresa..."
+                    placeholder="Buscar por nome, CNPJ ou matrícula..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="flex-1 h-8"
@@ -479,7 +481,14 @@ export default function BulkContributionDialog({
                         />
                         <Building2 className="h-4 w-4 text-muted-foreground" />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium truncate">{employer.name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium truncate">{employer.name}</p>
+                            {employer.registration_number && (
+                              <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                                {employer.registration_number}
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-xs text-muted-foreground">{formatCNPJ(employer.cnpj)}</p>
                         </div>
                       </div>

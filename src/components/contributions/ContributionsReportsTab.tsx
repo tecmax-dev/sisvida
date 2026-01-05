@@ -32,6 +32,7 @@ interface Employer {
   id: string;
   name: string;
   cnpj: string;
+  registration_number?: string | null;
 }
 
 interface ContributionType {

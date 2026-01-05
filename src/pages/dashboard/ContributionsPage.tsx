@@ -25,6 +25,7 @@ interface Employer {
   city: string | null;
   state: string | null;
   category_id?: string | null;
+  registration_number?: string | null;
 }
 
 interface ContributionType {
@@ -100,7 +101,7 @@ export default function ContributionsPage() {
         .from("employer_contributions")
         .select(`
           *,
-          employers (id, name, cnpj, email, phone, address, city, state, category_id),
+          employers (id, name, cnpj, email, phone, address, city, state, category_id, registration_number),
           contribution_types (id, name, description, default_value, is_active)
         `)
         .eq("clinic_id", currentClinic.id)
@@ -114,7 +115,7 @@ export default function ContributionsPage() {
       // Fetch employers with category
       const { data: empData, error: empError } = await supabase
         .from("employers")
-        .select("id, name, cnpj, email, phone, address, city, state, category_id")
+        .select("id, name, cnpj, email, phone, address, city, state, category_id, registration_number")
         .eq("clinic_id", currentClinic.id)
         .eq("is_active", true)
         .order("name");

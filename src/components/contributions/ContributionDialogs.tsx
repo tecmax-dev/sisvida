@@ -69,6 +69,7 @@ interface Employer {
   address: string | null;
   city: string | null;
   state: string | null;
+  registration_number?: string | null;
 }
 
 interface ContributionType {

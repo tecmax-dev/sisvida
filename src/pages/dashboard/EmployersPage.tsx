@@ -107,6 +107,7 @@ interface Employer {
   category_id: string | null;
   cnae_code?: string | null;
   cnae_description?: string | null;
+  registration_number?: string | null;
   category?: Category | null;
   patients?: { id: string; name: string }[];
 }
@@ -411,6 +412,7 @@ export default function EmployersPage() {
         employer.name.toLowerCase().includes(search) ||
         employer.cnpj.includes(search.replace(/\D/g, "")) ||
         employer.trade_name?.toLowerCase().includes(search) ||
+        employer.registration_number?.includes(search) ||
         employer.patients?.some((p) => p.name.toLowerCase().includes(search))
       );
     });
@@ -527,7 +529,7 @@ export default function EmployersPage() {
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por nome, CNPJ ou paciente..."
+            placeholder="Buscar por nome, CNPJ, matrícula ou paciente..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-9 h-9"
@@ -587,6 +589,7 @@ export default function EmployersPage() {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="w-[40px]"></TableHead>
+                  <TableHead className="font-semibold w-[80px]">Matrícula</TableHead>
                   <TableHead className="font-semibold">Empresa</TableHead>
                   <TableHead className="font-semibold">CNPJ</TableHead>
                   <TableHead className="font-semibold hidden md:table-cell">Contato</TableHead>
@@ -615,6 +618,15 @@ export default function EmployersPage() {
                                 )}
                               </Button>
                             </CollapsibleTrigger>
+                          </TableCell>
+                          <TableCell className="py-2">
+                            {employer.registration_number ? (
+                              <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-semibold">
+                                {employer.registration_number}
+                              </code>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
                           </TableCell>
                           <TableCell className="py-2">
                             <div className="flex items-center gap-2">

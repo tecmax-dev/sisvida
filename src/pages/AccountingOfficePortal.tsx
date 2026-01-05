@@ -49,6 +49,7 @@ interface Employer {
   name: string;
   cnpj: string;
   trade_name?: string;
+  registration_number?: string | null;
 }
 
 interface Contribution {
@@ -73,6 +74,7 @@ interface Contribution {
     id: string;
     name: string;
     cnpj: string;
+    registration_number?: string | null;
   };
   contribution_type?: {
     name: string;
@@ -473,7 +475,8 @@ export default function AccountingOfficePortal() {
   const filteredContributions = contributions.filter(contrib => {
     const matchesSearch = searchTerm === "" || 
       contrib.employer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contrib.employer?.cnpj?.includes(searchTerm);
+      contrib.employer?.cnpj?.includes(searchTerm.replace(/\D/g, "")) ||
+      contrib.employer?.registration_number?.includes(searchTerm);
     
     const matchesStatus = filterStatus === "all" || (filterStatus === "hide_cancelled" ? contrib.status !== "cancelled" : contrib.status === filterStatus);
     const matchesEmployer = filterEmployer === "all" || contrib.employer_id === filterEmployer;

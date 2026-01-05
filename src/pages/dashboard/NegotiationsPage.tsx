@@ -18,6 +18,7 @@ interface Employer {
   cnpj: string;
   trade_name: string | null;
   lytex_client_id: string | null;
+  registration_number?: string | null;
 }
 
 interface Negotiation {
@@ -76,7 +77,7 @@ function NegotiationsContent() {
         .from("debt_negotiations")
         .select(`
           *,
-          employers (id, name, cnpj, trade_name)
+          employers (id, name, cnpj, trade_name, registration_number)
         `)
         .eq("clinic_id", currentClinic.id)
         .order("created_at", { ascending: false });
@@ -87,7 +88,7 @@ function NegotiationsContent() {
       // Fetch employers
       const { data: employersData, error: employersError } = await supabase
         .from("employers")
-        .select("id, name, cnpj, trade_name, lytex_client_id")
+        .select("id, name, cnpj, trade_name, lytex_client_id, registration_number")
         .eq("clinic_id", currentClinic.id)
         .eq("is_active", true)
         .order("name");

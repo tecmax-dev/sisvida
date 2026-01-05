@@ -82,6 +82,7 @@ interface Employer {
   id: string;
   name: string;
   cnpj: string;
+  registration_number?: string | null;
 }
 
 interface OfficeEmployerLink {
@@ -144,7 +145,7 @@ export default function AccountingOfficesPage() {
       // Carregar empresas
       const { data: employersData, error: employersError } = await supabase
         .from("employers")
-        .select("id, name, cnpj")
+        .select("id, name, cnpj, registration_number")
         .eq("clinic_id", currentClinic!.id)
         .order("name");
 
@@ -366,7 +367,8 @@ export default function AccountingOfficesPage() {
 
   const filteredEmployersForLink = employers.filter(employer =>
     employer.name.toLowerCase().includes(linkSearchTerm.toLowerCase()) ||
-    employer.cnpj?.includes(linkSearchTerm.replace(/\D/g, ""))
+    employer.cnpj?.includes(linkSearchTerm.replace(/\D/g, "")) ||
+    employer.registration_number?.includes(linkSearchTerm)
   );
 
   const handleSelectAllEmployers = () => {
@@ -930,7 +932,7 @@ export default function AccountingOfficesPage() {
               <div className="relative min-w-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar empresa por nome ou CNPJ..."
+                  placeholder="Buscar por nome, CNPJ ou matrícula..."
                   value={linkSearchTerm}
                   onChange={(e) => setLinkSearchTerm(e.target.value)}
                   className="pl-10 w-full"
@@ -1018,9 +1020,16 @@ export default function AccountingOfficesPage() {
                             className="pointer-events-none"
                           />
                           <div className="flex-1 min-w-0">
-                            <p className={`font-medium truncate ${isSelected ? "text-primary" : ""}`}>
-                              {employer.name}
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <p className={`font-medium truncate ${isSelected ? "text-primary" : ""}`}>
+                                {employer.name}
+                              </p>
+                              {employer.registration_number && (
+                                <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+                                  {employer.registration_number}
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-xs text-muted-foreground">
                               CNPJ: {employer.cnpj?.replace(
                                 /^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/,

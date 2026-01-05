@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { Search, Building2 } from "lucide-react";
 
 interface Employer {
@@ -10,6 +11,7 @@ interface Employer {
   name: string;
   cnpj: string;
   trade_name: string | null;
+  registration_number?: string | null;
 }
 
 interface NegotiationStepEmployerProps {
@@ -28,8 +30,9 @@ export default function NegotiationStepEmployer({
   const filteredEmployers = employers.filter(
     (emp) =>
       emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.cnpj.includes(searchTerm) ||
-      (emp.trade_name && emp.trade_name.toLowerCase().includes(searchTerm.toLowerCase()))
+      emp.cnpj.includes(searchTerm.replace(/\D/g, "")) ||
+      (emp.trade_name && emp.trade_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (emp.registration_number && emp.registration_number.includes(searchTerm))
   );
 
   const formatCNPJ = (cnpj: string) => {
@@ -41,7 +44,7 @@ export default function NegotiationStepEmployer({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Buscar por nome, razão social ou CNPJ..."
+          placeholder="Buscar por nome, CNPJ ou matrícula..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-9"
@@ -75,7 +78,14 @@ export default function NegotiationStepEmployer({
                 <CardContent className="p-4 flex items-center gap-4">
                   <RadioGroupItem value={employer.id} id={employer.id} />
                   <Label htmlFor={employer.id} className="flex-1 cursor-pointer">
-                    <p className="font-medium">{employer.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium">{employer.name}</p>
+                      {employer.registration_number && (
+                        <Badge variant="outline" className="text-xs font-mono">
+                          Mat. {employer.registration_number}
+                        </Badge>
+                      )}
+                    </div>
                     {employer.trade_name && (
                       <p className="text-sm text-muted-foreground">{employer.trade_name}</p>
                     )}
