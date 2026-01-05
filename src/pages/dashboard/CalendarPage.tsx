@@ -152,7 +152,7 @@ const calculateProfessionalSlots = (
   const dateStr = `${y}-${m}-${d}`;
 
   // Filtrar apenas agendamentos ativos
-  const activeAppointments = appointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
+  const activeAppointments = appointments.filter(a => a.status !== 'cancelled');
 
   const allTimeSlots: string[] = [];
 
@@ -2901,7 +2901,7 @@ export default function CalendarPage() {
         <div className="grid grid-cols-4 gap-1">
           {timeSlots.map((time) => {
             const hasAppointment = dayAppointments.some(
-              apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled' && apt.status !== 'no_show'
+              apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled'
             );
             return (
               <DroppableTimeSlot
@@ -3039,8 +3039,8 @@ export default function CalendarPage() {
                     ? getProfessionalTimeSlotsForDate(weekSelectedProfId, date)
                     : [];
                   const isWithinSchedule = availableSlotsForDay.includes(time);
-                  const hasNonCancelledAppointment = slotAppointments.some(a => a.status !== 'cancelled' && a.status !== 'no_show');
-                  const isFreeSlot = !holidayName && isWithinSchedule && !hasNonCancelledAppointment;
+                   const hasNonCancelledAppointment = slotAppointments.some(a => a.status !== 'cancelled');
+                   const isFreeSlot = !holidayName && isWithinSchedule && !hasNonCancelledAppointment;
 
                   return (
                     <DroppableTimeSlot
@@ -3142,7 +3142,7 @@ export default function CalendarPage() {
               const isTodayDate = isToday(item.date);
               const isSelectedDate = isSelected(item.date);
               const dateStr = toDateKey(item.date);
-              const isOccupied = dayAppointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show').length >= 10;
+              const isOccupied = dayAppointments.filter(a => a.status !== 'cancelled').length >= 10;
               const holidayName = isHoliday(item.date);
               
               return (
@@ -3678,7 +3678,7 @@ export default function CalendarPage() {
             <CardContent className="pt-0">
               {(() => {
                 const todayAppointments = getAppointmentsForDate(selectedDate)
-                  .filter(apt => apt.status !== 'cancelled' && apt.status !== 'no_show')
+                  .filter(apt => apt.status !== 'cancelled')
                   .sort((a, b) => a.start_time.localeCompare(b.start_time));
                 
                 if (todayAppointments.length === 0) {
@@ -4029,7 +4029,7 @@ export default function CalendarPage() {
                     "grid-cols-1 lg:grid-cols-2 xl:grid-cols-3"
                   )}>
                     {professionalGroups.map((group) => {
-                      const activeAppointments = group.appointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show');
+                      const activeAppointments = group.appointments.filter(a => a.status !== 'cancelled');
                       const totalAppointments = group.appointments.length;
                       
                       return (

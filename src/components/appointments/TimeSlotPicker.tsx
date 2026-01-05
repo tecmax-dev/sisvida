@@ -48,7 +48,7 @@ export function TimeSlotPicker({
     
     // Filtrar agendamentos ativos
     const activeAppointments = safeExistingAppointments.filter(
-      apt => apt.status !== 'cancelled' && apt.status !== 'no_show'
+      apt => apt.status !== 'cancelled'
     );
     
     for (const slotTime of safeAllSlots) {
