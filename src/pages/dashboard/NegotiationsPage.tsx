@@ -17,6 +17,7 @@ interface Employer {
   name: string;
   cnpj: string;
   trade_name: string | null;
+  lytex_client_id: string | null;
 }
 
 interface Negotiation {
@@ -86,7 +87,7 @@ function NegotiationsContent() {
       // Fetch employers
       const { data: employersData, error: employersError } = await supabase
         .from("employers")
-        .select("id, name, cnpj, trade_name")
+        .select("id, name, cnpj, trade_name, lytex_client_id")
         .eq("clinic_id", currentClinic.id)
         .eq("is_active", true)
         .order("name");
