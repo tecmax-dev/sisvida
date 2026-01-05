@@ -150,21 +150,33 @@ async function listInvoices(page = 1, limit = 100, status?: string): Promise<any
   return response.json();
 }
 
+function normalizeMoneyToCents(value: number): number {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    throw new Error("Valor inválido para emissão");
+  }
+
+  // A API Lytex exige inteiro em centavos e mínimo de 200.
+  // Na prática, o frontend pode enviar em reais (ex: 15) ou em centavos (ex: 1500).
+  // Heurística segura:
+  // - Se tiver casas decimais, assume reais e converte.
+  // - Se for inteiro < 200, assume reais e converte (pois em centavos seria inválido de qualquer forma).
+  // - Caso contrário, assume que já está em centavos.
+  const hasDecimals = Math.round(value) !== value;
+  const isLikelyReais = hasDecimals || value < 200;
+  const cents = isLikelyReais ? Math.round(value * 100) : Math.round(value);
+
+  return cents;
+}
+
 async function createInvoice(params: CreateInvoiceRequest): Promise<any> {
   const token = await getAccessToken();
 
   // Formatar CPF/CNPJ (remover caracteres especiais)
   const cleanCnpj = params.employer.cnpj.replace(/\D/g, "");
 
-  // Converter valor para centavos (número inteiro) - a API Lytex exige isso
-  // O valor pode vir em reais (ex: 22.24) ou já em centavos (ex: 2224)
-  // Se o valor não for inteiro, está em reais e precisa ser convertido
-  let valueInCents = params.value;
-  if (!Number.isInteger(params.value)) {
-    // Valor está em reais, converter para centavos
-    valueInCents = Math.round(params.value * 100);
-  }
-  
+  // Converter valor para centavos (inteiro) - a API Lytex exige isso
+  const valueInCents = normalizeMoneyToCents(params.value);
+
   console.log(`[Lytex] Valor original: ${params.value}, Valor em centavos: ${valueInCents}`);
 
   const invoicePayload: any = {
