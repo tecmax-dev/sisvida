@@ -999,6 +999,7 @@ export default function NegotiationDetailsDialog({
         onOpenChange={setShowWhatsAppDialog}
         negotiation={negotiation}
         items={items}
+        installments={installments}
         clinicId={clinic?.id || ""}
       />
 
