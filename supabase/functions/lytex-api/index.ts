@@ -279,7 +279,14 @@ async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
   });
 
   const responseText = await response.text();
-  const responseData = responseText ? JSON.parse(responseText) : {};
+  let responseData: any = {};
+  if (responseText) {
+    try {
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { raw: responseText };
+    }
+  }
 
   if (!response.ok) {
     console.error("[Lytex] Erro ao atualizar cobrança:", JSON.stringify(responseData));
@@ -292,7 +299,19 @@ async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
 
 async function cancelInvoice(params: { invoiceId: string; dueDate?: string; value?: number }): Promise<any> {
   const token = await getAccessToken();
-  
+
+  const extractLytexMessage = (bodyText: string | null): string | null => {
+    if (!bodyText) return null;
+    const trimmed = bodyText.trim();
+    if (!trimmed) return null;
+    try {
+      const parsed = JSON.parse(trimmed);
+      return (parsed?.message && String(parsed.message)) || (parsed?.error && String(parsed.error)) || trimmed;
+    } catch {
+      return trimmed;
+    }
+  };
+
   console.log(`[Lytex] Cancelando cobrança ${params.invoiceId} via DELETE...`);
 
   // Tentar cancelar via DELETE primeiro
@@ -309,6 +328,7 @@ async function cancelInvoice(params: { invoiceId: string; dueDate?: string; valu
   }
 
   const deleteText = await deleteResponse.text();
+  const deleteMsg = extractLytexMessage(deleteText) || `Erro ao cancelar: ${deleteResponse.status}`;
   console.log(`[Lytex] DELETE retornou ${deleteResponse.status}: ${deleteText}`);
 
   // Se DELETE falhar, tentar via PUT com status cancelled como fallback
@@ -323,12 +343,12 @@ async function cancelInvoice(params: { invoiceId: string; dueDate?: string; valu
       });
     } catch (putError) {
       console.error("[Lytex] Fallback PUT também falhou:", putError);
-      // Propagar o erro original do DELETE se o PUT também falhar
-      throw new Error(deleteText ? JSON.parse(deleteText)?.message || `Erro ao cancelar: ${deleteResponse.status}` : `Erro ao cancelar: ${deleteResponse.status}`);
+      // Propagar o motivo mais útil do DELETE (sem assumir JSON)
+      throw new Error(deleteMsg);
     }
   }
 
-  throw new Error(deleteText ? JSON.parse(deleteText)?.message || `Erro ao cancelar: ${deleteResponse.status}` : `Erro ao cancelar: ${deleteResponse.status}`);
+  throw new Error(deleteMsg);
 }
 
 Deno.serve(async (req) => {
