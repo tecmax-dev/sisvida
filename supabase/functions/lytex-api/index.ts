@@ -156,6 +156,17 @@ async function createInvoice(params: CreateInvoiceRequest): Promise<any> {
   // Formatar CPF/CNPJ (remover caracteres especiais)
   const cleanCnpj = params.employer.cnpj.replace(/\D/g, "");
 
+  // Converter valor para centavos (número inteiro) - a API Lytex exige isso
+  // O valor pode vir em reais (ex: 22.24) ou já em centavos (ex: 2224)
+  // Se o valor não for inteiro, está em reais e precisa ser convertido
+  let valueInCents = params.value;
+  if (!Number.isInteger(params.value)) {
+    // Valor está em reais, converter para centavos
+    valueInCents = Math.round(params.value * 100);
+  }
+  
+  console.log(`[Lytex] Valor original: ${params.value}, Valor em centavos: ${valueInCents}`);
+
   const invoicePayload: any = {
     client: {
       type: cleanCnpj.length === 14 ? "pj" : "pf",
@@ -168,7 +179,7 @@ async function createInvoice(params: CreateInvoiceRequest): Promise<any> {
       {
         name: params.description,
         quantity: 1,
-        value: params.value,
+        value: valueInCents,
       },
     ],
     dueDate: params.dueDate,
