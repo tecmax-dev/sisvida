@@ -172,7 +172,7 @@ export default function NegotiationDetailsDialog({
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Clinic info for PDF
-  const [clinic, setClinic] = useState<{ id: string; name: string; cnpj: string | null; address: string | null } | null>(null);
+  const [clinic, setClinic] = useState<{ id: string; name: string; cnpj: string | null; address: string | null; logo_url: string | null; phone: string | null; email: string | null } | null>(null);
 
   useEffect(() => {
     if (open && negotiation.id) {
@@ -204,7 +204,7 @@ export default function NegotiationDetailsDialog({
             if (res.data?.clinic_id) {
               return supabase
                 .from("clinics")
-                .select("id, name, cnpj, address")
+                .select("id, name, cnpj, address, logo_url, phone, email")
                 .eq("id", res.data.clinic_id)
                 .single();
             }
@@ -394,145 +394,319 @@ export default function NegotiationDetailsDialog({
     }
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     
     const MONTHS_FULL = [
       "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
       "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
     ];
 
-    // Header
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("ESPELHO DE NEGOCIAÇÃO DE CONTRIBUIÇÕES SINDICAIS", pageWidth / 2, 20, { align: "center" });
-    
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    const statusLabel = STATUS_CONFIG[negotiation.status]?.label || "Simulação";
-    doc.text(`Status: ${statusLabel} | Código: ${negotiation.negotiation_code}`, pageWidth / 2, 28, { align: "center" });
-    doc.text(`Data: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, 34, { align: "center" });
+    // Colors
+    const primaryColor: [number, number, number] = [37, 99, 235]; // Blue 600
+    const darkColor: [number, number, number] = [30, 41, 59]; // Slate 800
+    const grayColor: [number, number, number] = [100, 116, 139]; // Slate 500
+    const successColor: [number, number, number] = [22, 163, 74]; // Green 600
+    const lightBg: [number, number, number] = [248, 250, 252]; // Slate 50
 
-    // Entidade Sindical
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("ENTIDADE SINDICAL", 14, 48);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Nome: ${clinic?.name || "-"}`, 14, 55);
-    doc.text(`CNPJ: ${clinic?.cnpj ? formatCNPJ(clinic.cnpj) : "-"}`, 14, 61);
-    if (clinic?.address) {
-      doc.text(`Endereço: ${clinic.address}`, 14, 67);
+    let startY = 15;
+
+    // Try to load clinic logo
+    let logoBase64: string | null = null;
+    const logoUrl = clinic?.logo_url;
+    if (logoUrl) {
+      try {
+        const { data, error } = await supabase.functions.invoke("fetch-image-base64", {
+          body: { url: logoUrl },
+        });
+        if (!error && data?.base64) {
+          logoBase64 = data.base64;
+        }
+      } catch (err) {
+        console.error("Error loading logo:", err);
+      }
     }
 
-    // Contribuinte
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("CONTRIBUINTE", 14, 80);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.text(`Razão Social: ${negotiation.employers?.name || "-"}`, 14, 87);
-    doc.text(`CNPJ: ${negotiation.employers?.cnpj ? formatCNPJ(negotiation.employers.cnpj) : "-"}`, 14, 93);
+    // Header with gradient effect simulation
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, 0, pageWidth, 45, "F");
 
-    // Contribuições
-    doc.setFontSize(12);
+    // Logo or clinic name
+    if (logoBase64) {
+      try {
+        doc.addImage(logoBase64, "PNG", 14, 8, 30, 30);
+        startY = 12;
+      } catch (e) {
+        console.error("Error adding logo:", e);
+      }
+    }
+
+    // Header text
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
     doc.setFont("helvetica", "bold");
-    doc.text("CONTRIBUIÇÕES NEGOCIADAS", 14, 106);
+    const headerX = logoBase64 ? 50 : 14;
+    doc.text(clinic?.name || "Entidade Sindical", headerX, 20);
+    
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    if (clinic?.cnpj) {
+      doc.text(`CNPJ: ${formatCNPJ(clinic.cnpj)}`, headerX, 27);
+    }
+    if (clinic?.phone || clinic?.email) {
+      const contactInfo = [clinic.phone, clinic.email].filter(Boolean).join(" | ");
+      doc.text(contactInfo, headerX, 33);
+    }
+    if (clinic?.address) {
+      doc.text(clinic.address.substring(0, 80), headerX, 39);
+    }
+
+    // Document title badge
+    doc.setFillColor(...darkColor);
+    doc.roundedRect(pageWidth - 75, 10, 61, 25, 3, 3, "F");
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("ESPELHO DE NEGOCIAÇÃO", pageWidth - 44.5, 18, { align: "center" });
+    doc.setFontSize(10);
+    doc.text(negotiation.negotiation_code, pageWidth - 44.5, 28, { align: "center" });
+
+    startY = 55;
+
+    // Status and date info bar
+    doc.setFillColor(...lightBg);
+    doc.rect(0, 48, pageWidth, 14, "F");
+    doc.setTextColor(...grayColor);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    const statusLabel = STATUS_CONFIG[negotiation.status]?.label || "Simulação";
+    doc.text(`Status: ${statusLabel}`, 14, 56);
+    doc.text(`Emitido em: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth - 14, 56, { align: "right" });
+
+    startY = 70;
+
+    // Section: Contribuinte (styled card)
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, startY - 5, pageWidth - 28, 30, 2, 2, "FD");
+    
+    doc.setTextColor(...primaryColor);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("CONTRIBUINTE", 20, startY + 3);
+    
+    doc.setTextColor(...darkColor);
+    doc.setFontSize(11);
+    doc.text(negotiation.employers?.name || "-", 20, startY + 12);
+    
+    doc.setTextColor(...grayColor);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    const cnpjText = negotiation.employers?.cnpj ? `CNPJ: ${formatCNPJ(negotiation.employers.cnpj)}` : "";
+    doc.text(cnpjText, 20, startY + 20);
+
+    startY += 35;
+
+    // Section: Contribuições Negociadas
+    doc.setTextColor(...primaryColor);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("CONTRIBUIÇÕES NEGOCIADAS", 14, startY);
+    startY += 4;
 
     const contributionsData = items.map((item) => [
       item.contribution_type_name || "-",
       `${MONTHS_FULL[item.competence_month - 1]}/${item.competence_year}`,
       format(new Date(item.due_date), "dd/MM/yyyy"),
       formatCurrency(item.original_value),
-      `${item.days_overdue} dias`,
+      `${item.days_overdue}`,
       formatCurrency(item.interest_value + item.correction_value + item.late_fee_value),
       formatCurrency(item.total_value),
     ]);
 
     autoTable(doc, {
-      startY: 110,
-      head: [["Tipo", "Competência", "Vencimento", "Original", "Atraso", "Encargos", "Total"]],
+      startY,
+      head: [["Tipo", "Competência", "Vencimento", "Valor Original", "Dias Atraso", "Encargos", "Total c/ Encargos"]],
       body: contributionsData,
-      theme: "striped",
-      headStyles: { fillColor: [59, 130, 246] },
-      styles: { fontSize: 8 },
+      theme: "grid",
+      headStyles: { 
+        fillColor: primaryColor,
+        textColor: [255, 255, 255],
+        fontStyle: "bold",
+        fontSize: 8,
+        halign: "center",
+      },
+      bodyStyles: {
+        fontSize: 8,
+        textColor: darkColor,
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252],
+      },
+      columnStyles: {
+        0: { cellWidth: 30 },
+        3: { halign: "right" },
+        4: { halign: "center" },
+        5: { halign: "right" },
+        6: { halign: "right", fontStyle: "bold" },
+      },
+      styles: {
+        cellPadding: 3,
+        lineColor: [226, 232, 240],
+        lineWidth: 0.5,
+      },
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    let currentY = (doc as any).lastAutoTable.finalY + 10;
 
-    // Resumo financeiro
-    doc.setFontSize(12);
+    // Financial Summary Card (highlighted)
+    doc.setFillColor(...lightBg);
+    doc.roundedRect(14, currentY, pageWidth - 28, 55, 3, 3, "F");
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(1);
+    doc.line(14, currentY, 14, currentY + 55);
+
+    currentY += 8;
+    doc.setTextColor(...primaryColor);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("RESUMO FINANCEIRO", 14, finalY);
-    
-    const summaryData = [
-      ["Valor Original Total", formatCurrency(negotiation.total_original_value)],
-      ["Total de Juros", formatCurrency(negotiation.total_interest)],
-      ["Total de Correção Monetária", formatCurrency(negotiation.total_monetary_correction)],
-      ["Total de Multa Moratória", formatCurrency(negotiation.total_late_fee)],
-      ["VALOR TOTAL NEGOCIADO", formatCurrency(negotiation.total_negotiated_value)],
+    doc.text("RESUMO FINANCEIRO", 22, currentY);
+    currentY += 8;
+
+    const summaryItems = [
+      { label: "Valor Original Total", value: formatCurrency(negotiation.total_original_value) },
+      { label: "Juros Aplicados", value: formatCurrency(negotiation.total_interest), sub: `${negotiation.applied_interest_rate}% a.m.` },
+      { label: "Correção Monetária", value: formatCurrency(negotiation.total_monetary_correction), sub: `${negotiation.applied_correction_rate}%` },
+      { label: "Multa Moratória", value: formatCurrency(negotiation.total_late_fee), sub: `${negotiation.applied_late_fee_rate}%` },
     ];
 
-    autoTable(doc, {
-      startY: finalY + 4,
-      body: summaryData,
-      theme: "plain",
-      styles: { fontSize: 10 },
-      columnStyles: { 1: { halign: "right" } },
+    doc.setFontSize(9);
+    summaryItems.forEach((item, idx) => {
+      doc.setTextColor(...grayColor);
+      doc.setFont("helvetica", "normal");
+      doc.text(item.label, 22, currentY);
+      doc.setTextColor(...darkColor);
+      doc.setFont("helvetica", "bold");
+      doc.text(item.value, pageWidth - 22, currentY, { align: "right" });
+      if (item.sub) {
+        doc.setTextColor(...grayColor);
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "normal");
+        doc.text(`(${item.sub})`, pageWidth - 22 - doc.getTextWidth(item.value) - 3, currentY);
+        doc.setFontSize(9);
+      }
+      currentY += 7;
     });
 
-    // Condições
-    const conditionsY = (doc as any).lastAutoTable.finalY + 10;
+    // Total line
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(0.5);
+    doc.line(22, currentY - 2, pageWidth - 22, currentY - 2);
+    currentY += 4;
+    doc.setTextColor(...successColor);
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("CONDIÇÕES DO PARCELAMENTO", 14, conditionsY);
-    
-    const conditionsData = [
-      ["Valor de Entrada", formatCurrency(negotiation.down_payment_value || 0)],
-      ["Quantidade de Parcelas", `${negotiation.installments_count}x`],
-      ["Valor de Cada Parcela", formatCurrency(negotiation.installment_value)],
-      ["Primeira Parcela", format(new Date(negotiation.first_due_date), "dd/MM/yyyy")],
+    doc.text("VALOR TOTAL NEGOCIADO", 22, currentY);
+    doc.text(formatCurrency(negotiation.total_negotiated_value), pageWidth - 22, currentY, { align: "right" });
+
+    currentY = (doc as any).lastAutoTable.finalY + 75;
+
+    // Condições do Parcelamento
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, currentY, pageWidth - 28, 35, 2, 2, "FD");
+
+    currentY += 8;
+    doc.setTextColor(...primaryColor);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("CONDIÇÕES DO PARCELAMENTO", 22, currentY);
+    currentY += 10;
+
+    const conditionsCols = [
+      { label: "Entrada", value: formatCurrency(negotiation.down_payment_value || 0) },
+      { label: "Parcelas", value: `${negotiation.installments_count}x` },
+      { label: "Valor Parcela", value: formatCurrency(negotiation.installment_value) },
+      { label: "1º Vencimento", value: format(new Date(negotiation.first_due_date), "dd/MM/yyyy") },
     ];
 
-    autoTable(doc, {
-      startY: conditionsY + 4,
-      body: conditionsData,
-      theme: "plain",
-      styles: { fontSize: 10 },
-      columnStyles: { 1: { halign: "right" } },
+    const colWidth = (pageWidth - 44) / 4;
+    conditionsCols.forEach((col, idx) => {
+      const x = 22 + (idx * colWidth);
+      doc.setTextColor(...grayColor);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(col.label, x, currentY);
+      doc.setTextColor(...darkColor);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text(col.value, x, currentY + 8);
     });
+
+    currentY += 30;
 
     // Installments schedule if available
-    if (installments.length > 0) {
-      const scheduleY = (doc as any).lastAutoTable.finalY + 10;
-      doc.setFontSize(12);
+    if (installments.length > 0 && currentY < pageHeight - 60) {
+      doc.setTextColor(...primaryColor);
+      doc.setFontSize(11);
       doc.setFont("helvetica", "bold");
-      doc.text("CRONOGRAMA DE PARCELAS", 14, scheduleY);
+      doc.text("CRONOGRAMA DE PARCELAS", 14, currentY);
+      currentY += 4;
 
       const scheduleData = installments.map((inst) => [
-        `Parcela ${inst.installment_number}`,
+        `${inst.installment_number}ª Parcela`,
         format(new Date(inst.due_date), "dd/MM/yyyy"),
         formatCurrency(inst.value),
         inst.status === "paid" ? "Pago" : inst.status === "overdue" ? "Vencido" : "Pendente",
       ]);
 
       autoTable(doc, {
-        startY: scheduleY + 4,
+        startY: currentY,
         head: [["Parcela", "Vencimento", "Valor", "Status"]],
         body: scheduleData,
-        theme: "striped",
-        headStyles: { fillColor: [59, 130, 246] },
-        styles: { fontSize: 8 },
+        theme: "grid",
+        headStyles: { 
+          fillColor: primaryColor,
+          textColor: [255, 255, 255],
+          fontStyle: "bold",
+          fontSize: 8,
+          halign: "center",
+        },
+        bodyStyles: {
+          fontSize: 8,
+          textColor: darkColor,
+          halign: "center",
+        },
+        alternateRowStyles: {
+          fillColor: [248, 250, 252],
+        },
+        styles: {
+          cellPadding: 3,
+          lineColor: [226, 232, 240],
+          lineWidth: 0.5,
+        },
       });
     }
+
+    // Footer
+    const footerY = pageHeight - 15;
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.3);
+    doc.line(14, footerY - 5, pageWidth - 14, footerY - 5);
+    doc.setTextColor(...grayColor);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.text("Documento gerado eletronicamente. Este espelho é válido para conferência dos valores negociados.", pageWidth / 2, footerY, { align: "center" });
+    doc.text(`${clinic?.name || ""} - ${format(new Date(), "dd/MM/yyyy HH:mm")}`, pageWidth / 2, footerY + 4, { align: "center" });
 
     doc.save(`espelho-negociacao-${negotiation.negotiation_code}-${format(new Date(), "yyyyMMdd")}.pdf`);
     toast.success("PDF exportado com sucesso!");
   };
 
-  const handlePrint = () => {
-    handleExportPDF();
+  const handlePrint = async () => {
+    await handleExportPDF();
   };
 
   const statusConfig = STATUS_CONFIG[negotiation.status] || STATUS_CONFIG.simulation;
