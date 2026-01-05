@@ -2780,8 +2780,8 @@ export default function CalendarPage() {
                 </DropdownMenuItem>
               )}
               
-              {/* Atendido - disponível para atendentes marcarem como concluído sem passar pelo fluxo de atendimento */}
-              {(appointment.status === "scheduled" || appointment.status === "confirmed" || appointment.status === "arrived") && !canAttendPatient && (
+              {/* Atendido - disponível para todos os usuários marcarem como concluído */}
+              {(appointment.status === "scheduled" || appointment.status === "confirmed" || appointment.status === "arrived") && (
                 <DropdownMenuItem onClick={() => handleUpdateStatus(appointment, "completed")}>
                   <Check className="h-4 w-4 mr-2 text-green-600" />
                   Atendido
