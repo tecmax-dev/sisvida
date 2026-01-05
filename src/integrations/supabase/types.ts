@@ -2450,6 +2450,7 @@ export type Database = {
           notes: string | null
           phone: string | null
           portal_last_access_at: string | null
+          registration_number: string | null
           state: string | null
           trade_name: string | null
           updated_at: string
@@ -2475,6 +2476,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           portal_last_access_at?: string | null
+          registration_number?: string | null
           state?: string | null
           trade_name?: string | null
           updated_at?: string
@@ -2500,6 +2502,7 @@ export type Database = {
           notes?: string | null
           phone?: string | null
           portal_last_access_at?: string | null
+          registration_number?: string | null
           state?: string | null
           trade_name?: string | null
           updated_at?: string
