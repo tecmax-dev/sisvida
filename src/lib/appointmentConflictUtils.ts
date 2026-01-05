@@ -90,8 +90,8 @@ export function findConflictingAppointments(
       return false;
     }
     
-    // Only check active appointments (not cancelled/no_show)
-    if (apt.status === 'cancelled' || apt.status === 'no_show') {
+    // Only check active appointments (not cancelled)
+    if (apt.status === 'cancelled') {
       return false;
     }
     
@@ -138,7 +138,7 @@ export function findAllConflictingAppointments(appointments: AppointmentSlot[]):
   const grouped: Record<string, AppointmentSlot[]> = {};
   
   for (const apt of appointments) {
-    if (apt.status === 'cancelled' || apt.status === 'no_show') continue;
+    if (apt.status === 'cancelled') continue;
     
     const key = `${apt.appointment_date}_${apt.professional_id}`;
     if (!grouped[key]) {
