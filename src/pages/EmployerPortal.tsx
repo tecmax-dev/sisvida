@@ -143,6 +143,9 @@ export default function EmployerPortal() {
   const [showSetValueDialog, setShowSetValueDialog] = useState(false);
   const [newValue, setNewValue] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
+
+  // Emissão manual (casos sem boleto gerado)
+  const [generatingInvoiceId, setGeneratingInvoiceId] = useState<string | null>(null);
   
   // Filters
   const [statusFilter, setStatusFilter] = useState("hide_cancelled");
@@ -323,7 +326,7 @@ export default function EmployerPortal() {
     setIsSettingValue(true);
     try {
       const valueInCents = Math.round(parseFloat(newValue.replace(",", ".")) * 100);
-      
+
       if (isNaN(valueInCents) || valueInCents <= 0) {
         toast.error("Valor inválido");
         return;
@@ -356,6 +359,64 @@ export default function EmployerPortal() {
       toast.error("Erro de conexão");
     } finally {
       setIsSettingValue(false);
+    }
+  };
+
+  const handleGenerateInvoice = async (contrib: Contribution) => {
+    if (!employer) {
+      toast.error("Sessão expirada. Faça login novamente.");
+      return;
+    }
+    if (!clinic?.id) {
+      toast.error("Clínica não carregada. Atualize a página e tente novamente.");
+      return;
+    }
+    if (contrib.status === "cancelled" || contrib.status === "paid") {
+      toast.error("Não é possível emitir boleto para esta contribuição");
+      return;
+    }
+
+    setGeneratingInvoiceId(contrib.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "create_invoice",
+          contributionId: contrib.id,
+          clinicId: clinic.id,
+          employer: {
+            cnpj: employer.cnpj,
+            name: employer.name,
+          },
+          value: contrib.amount,
+          dueDate: contrib.due_date,
+          description: `${contrib.contribution_type?.name || "Contribuição"} - ${MONTHS[contrib.competence_month - 1]}/${contrib.competence_year}`,
+          enableBoleto: true,
+          enablePix: true,
+        },
+      });
+
+      if (error || data?.error) {
+        throw new Error(data?.error || error?.message || "Erro ao gerar boleto");
+      }
+
+      toast.success("Boleto emitido com sucesso!");
+      loadContributions(employer.id);
+
+      const url =
+        data?.invoiceUrl ||
+        data?.invoice_url ||
+        data?.lytex_invoice_url ||
+        data?.linkCheckout ||
+        data?.linkBoleto;
+
+      if (typeof url === "string" && url.length > 0) {
+        window.open(url, "_blank");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      toast.error(`Erro ao emitir boleto: ${message}`);
+    } finally {
+      setGeneratingInvoiceId(null);
     }
   };
 
@@ -1020,6 +1081,35 @@ export default function EmployerPortal() {
                                 </Tooltip>
                               </TooltipProvider>
                             )}
+
+                            {!contrib.lytex_url &&
+                              !contrib.lytex_invoice_id &&
+                              contrib.status !== "paid" &&
+                              contrib.status !== "cancelled" &&
+                              contrib.status !== "awaiting_value" &&
+                              !isInActiveNegotiation && (
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 px-3 text-xs border-slate-200 hover:bg-slate-50"
+                                        onClick={() => handleGenerateInvoice(contrib)}
+                                        disabled={generatingInvoiceId === contrib.id}
+                                      >
+                                        {generatingInvoiceId === contrib.id ? (
+                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        ) : (
+                                          <FileText className="h-3.5 w-3.5 mr-1.5" />
+                                        )}
+                                        Emitir
+                                      </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>Emitir boleto (Lytex)</TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                              )}
                             
                             {contrib.status === 'pending' && !isOverdue90Days && (
                               <TooltipProvider>
