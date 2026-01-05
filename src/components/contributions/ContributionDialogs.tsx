@@ -660,17 +660,20 @@ export default function ContributionDialogs({
                     </Button>
                   </>
                 )}
-                {!selectedContribution.lytex_invoice_id && selectedContribution.status !== "cancelled" && (
+                {(!selectedContribution.lytex_invoice_id || !selectedContribution.lytex_invoice_url) && 
+                  selectedContribution.status !== "cancelled" && 
+                  selectedContribution.status !== "paid" && (
                   <Button
                     onClick={() => onGenerateInvoice(selectedContribution)}
                     disabled={generatingInvoice}
+                    className="bg-primary hover:bg-primary/90"
                   >
                     {generatingInvoice ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                       <Send className="h-4 w-4 mr-2" />
                     )}
-                    Gerar Boleto
+                    {selectedContribution.lytex_invoice_id ? "Reemitir Boleto" : "Gerar Boleto"}
                   </Button>
                 )}
               </DialogFooter>
