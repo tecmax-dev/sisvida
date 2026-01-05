@@ -176,7 +176,7 @@ export default function NewNegotiationDialog({
         `
         )
         .eq("employer_id", employerId)
-        .in("status", ["pending", "overdue"])
+        .eq("status", "overdue") // Apenas contribuições VENCIDAS podem entrar na negociação
         .is("negotiation_id", null)
         .order("due_date", { ascending: true });
 
