@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack } from "lucide-react";
+import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -13,6 +13,7 @@ import ContributionsReportsTab from "@/components/contributions/ContributionsRep
 import ContributionDialogs from "@/components/contributions/ContributionDialogs";
 import BulkContributionDialog from "@/components/contributions/BulkContributionDialog";
 import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
+import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 
 interface Employer {
   id: string;
@@ -327,7 +328,7 @@ export default function ContributionsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
           <TabsTrigger value="overview" className="gap-2">
             <LayoutDashboard className="h-4 w-4" />
             <span className="hidden sm:inline">Visão Geral</span>
@@ -335,6 +336,10 @@ export default function ContributionsPage() {
           <TabsTrigger value="contributions" className="gap-2">
             <List className="h-4 w-4" />
             <span className="hidden sm:inline">Contribuições</span>
+          </TabsTrigger>
+          <TabsTrigger value="negotiations" className="gap-2">
+            <Handshake className="h-4 w-4" />
+            <span className="hidden sm:inline">Negociações</span>
           </TabsTrigger>
           <TabsTrigger value="types" className="gap-2">
             <Tag className="h-4 w-4" />
@@ -367,6 +372,13 @@ export default function ContributionsPage() {
             yearFilter={yearFilter}
             onYearFilterChange={setYearFilter}
             clinicId={currentClinic?.id || ""}
+          />
+        </TabsContent>
+
+        <TabsContent value="negotiations">
+          <NegotiationInstallmentsTab
+            clinicId={currentClinic?.id || ""}
+            yearFilter={yearFilter}
           />
         </TabsContent>
 
