@@ -20,8 +20,9 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 function parseDateOnly(value: string): Date {
-  const d = parseISO(value);
-  // Avoid timezone shift when backend stores date-only strings (YYYY-MM-DD)
+  // Handles both DATE (YYYY-MM-DD) and TIMESTAMP strings safely
+  const dateOnly = value?.slice(0, 10);
+  const d = parseISO(dateOnly);
   d.setHours(12, 0, 0, 0);
   return d;
 }
