@@ -539,12 +539,23 @@ Deno.serve(async (req) => {
         const invoiceParams = { ...params, registrationNumber: registrationNumber2 } as CreateInvoiceRequest & { registrationNumber?: string };
         const invoice = await createInvoice(invoiceParams);
 
+        // Extrair URL da fatura - Lytex pode retornar em diferentes campos
+        const extractedInvoiceUrl =
+          invoice?.linkCheckout ||
+          invoice?.linkBoleto ||
+          invoice?.invoiceUrl ||
+          invoice?.checkoutUrl ||
+          invoice?.url ||
+          null;
+
+        console.log(`[Lytex] create_invoice: id=${invoice?._id} url=${extractedInvoiceUrl}`);
+
         // Atualizar contribuição no banco com os dados da Lytex
         const { error: updateError } = await supabase
           .from("employer_contributions")
           .update({
             lytex_invoice_id: invoice._id,
-            lytex_invoice_url: invoice.invoiceUrl,
+            lytex_invoice_url: extractedInvoiceUrl,
             lytex_boleto_barcode: invoice.boleto?.barCode || null,
             lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
             lytex_pix_code: invoice.pix?.code || null,
@@ -558,7 +569,7 @@ Deno.serve(async (req) => {
           throw new Error("Erro ao salvar dados da cobrança");
         }
 
-        result = { success: true, invoice };
+        result = { success: true, invoice, invoiceUrl: extractedInvoiceUrl };
         break;
       }
 
