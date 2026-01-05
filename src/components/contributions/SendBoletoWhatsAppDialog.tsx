@@ -14,10 +14,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Send, MessageCircle } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 interface Contribution {
   id: string;
@@ -138,17 +138,14 @@ export function SendBoletoWhatsAppDialog({
       message += `━━━━━━━━━━━━━━━━\n`;
       message += `_Enviado via sistema de contribuições_`;
 
-      const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-        body: {
-          phone: cleanPhone,
-          message,
-          clinicId,
-          type: "custom",
-        },
+      const result = await sendWhatsAppMessage({
+        phone: cleanPhone,
+        message,
+        clinicId,
+        type: "custom",
       });
 
-      if (error) throw error;
-      if (!data?.success) throw new Error(data?.error || "Erro ao enviar");
+      if (!result.success) throw new Error(result.error || "Erro ao enviar");
 
       toast.success(`${selected.length} boleto(s) enviado(s) com sucesso!`);
       onOpenChange(false);
