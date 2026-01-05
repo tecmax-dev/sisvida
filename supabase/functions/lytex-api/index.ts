@@ -1227,59 +1227,40 @@ Deno.serve(async (req) => {
                 // Já temos um número para esse CNPJ?
                 if (registrationMap.has(clientCnpj)) continue;
 
-                // Coletar todos os textos possíveis onde pode estar a matrícula
-                const textsToSearch: string[] = [];
+                // PRIORIDADE 1: Nome do cliente - formato "129 - NOME DA EMPRESA"
+                // Este é o local principal onde a matrícula aparece na Lytex
+                const clientName = invoice.client?.name || "";
                 
-                // 1. Descrição dos itens
+                // Regex para capturar o número no início do nome do cliente
+                // Exemplo: "129 - FOX COMERCIO DE PAPEIS E LIVROS LTDA"
+                const clientNameMatch = clientName.match(/^(\d{1,6})\s*[-–]\s*/);
+                
+                if (clientNameMatch && clientNameMatch[1]) {
+                  const clientNumber = clientNameMatch[1];
+                  const formattedNumber = clientNumber.padStart(6, "0");
+                  registrationMap.set(clientCnpj, formattedNumber);
+                  
+                  const employer = employerByCnpj.get(clientCnpj);
+                  console.log(`[Lytex] Extraído do nome do cliente: CNPJ ${clientCnpj} -> Matrícula ${formattedNumber} (${employer?.name || "não encontrado"}) de: "${clientName.substring(0, 60)}"`);
+                  continue; // Próxima fatura
+                }
+
+                // PRIORIDADE 2: Buscar na descrição do item (backup)
                 const items = invoice.items || [];
                 for (const item of items) {
-                  if (item?.name) textsToSearch.push(item.name);
-                  if (item?.description) textsToSearch.push(item.description);
-                }
-                
-                // 2. Campos da fatura
-                if (invoice.description) textsToSearch.push(invoice.description);
-                if (invoice.referenceId) textsToSearch.push(invoice.referenceId);
-                if (invoice.externalReference) textsToSearch.push(invoice.externalReference);
-                if (invoice.notes) textsToSearch.push(invoice.notes);
-                if (invoice.observation) textsToSearch.push(invoice.observation);
-                
-                // 3. Nome do cliente (às vezes contém o código)
-                if (invoice.client?.name) textsToSearch.push(invoice.client.name);
-
-                // Log para debug (primeiras faturas)
-                if (seenInvoiceIds.size <= 3) {
-                  console.log(`[Lytex] Fatura ${invoice._id} textos a buscar:`, textsToSearch);
-                }
-
-                // Buscar padrão em todos os textos
-                for (const text of textsToSearch) {
-                  // Padrões possíveis:
-                  // "CLIENTE 129 - NOME"
-                  // "129 - NOME" 
-                  // "CLIENTE Nº 129"
-                  // "CLIENTE N° 129"
-                  const patterns = [
-                    /CLIENTE\s+(\d+)\s*[-–]/i,
-                    /CLIENTE\s+N[ºo°]?\s*(\d+)/i,
-                    /^(\d{1,6})\s*[-–]\s*[A-Z]/,
-                  ];
+                  const itemText = item?.name || item?.description || "";
+                  // Formato: "126 - TAXA NEGOCIAL (COM VEREJ) REFERENTE: DEZEMBRO/2025"
+                  const itemMatch = itemText.match(/^(\d{1,6})\s*[-–]\s*[A-Z]/);
                   
-                  for (const pattern of patterns) {
-                    const match = text.match(pattern);
-                    if (match && match[1]) {
-                      const clientNumber = match[1];
-                      // Formatar para 6 dígitos
-                      const formattedNumber = clientNumber.padStart(6, "0");
-                      registrationMap.set(clientCnpj, formattedNumber);
-                      
-                      const employer = employerByCnpj.get(clientCnpj);
-                      console.log(`[Lytex] Extraído: CNPJ ${clientCnpj} -> Matrícula ${formattedNumber} (${employer?.name || "não encontrado"}) de: "${text.substring(0, 50)}..."`);
-                      break;
-                    }
+                  if (itemMatch && itemMatch[1]) {
+                    const clientNumber = itemMatch[1];
+                    const formattedNumber = clientNumber.padStart(6, "0");
+                    registrationMap.set(clientCnpj, formattedNumber);
+                    
+                    const employer = employerByCnpj.get(clientCnpj);
+                    console.log(`[Lytex] Extraído do item: CNPJ ${clientCnpj} -> Matrícula ${formattedNumber} (${employer?.name || "não encontrado"}) de: "${itemText.substring(0, 60)}"`);
+                    break;
                   }
-                  
-                  if (registrationMap.has(clientCnpj)) break;
                 }
               }
 
