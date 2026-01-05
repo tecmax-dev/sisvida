@@ -1227,8 +1227,8 @@ Deno.serve(async (req) => {
                 // Já temos um número para esse CNPJ?
                 if (registrationMap.has(clientCnpj)) continue;
 
-                // PRIORIDADE 1: Nome do cliente - formato "129 - NOME DA EMPRESA"
-                // Este é o local principal onde a matrícula aparece na Lytex
+                // APENAS extrair do nome do cliente - formato "129 - NOME DA EMPRESA"
+                // IMPORTANTE: O número nos itens (126 - TAXA NEGOCIAL) é código de produto, NÃO matrícula!
                 const clientName = invoice.client?.name || "";
                 
                 // Regex para capturar o número no início do nome do cliente
@@ -1242,26 +1242,8 @@ Deno.serve(async (req) => {
                   
                   const employer = employerByCnpj.get(clientCnpj);
                   console.log(`[Lytex] Extraído do nome do cliente: CNPJ ${clientCnpj} -> Matrícula ${formattedNumber} (${employer?.name || "não encontrado"}) de: "${clientName.substring(0, 60)}"`);
-                  continue; // Próxima fatura
                 }
-
-                // PRIORIDADE 2: Buscar na descrição do item (backup)
-                const items = invoice.items || [];
-                for (const item of items) {
-                  const itemText = item?.name || item?.description || "";
-                  // Formato: "126 - TAXA NEGOCIAL (COM VEREJ) REFERENTE: DEZEMBRO/2025"
-                  const itemMatch = itemText.match(/^(\d{1,6})\s*[-–]\s*[A-Z]/);
-                  
-                  if (itemMatch && itemMatch[1]) {
-                    const clientNumber = itemMatch[1];
-                    const formattedNumber = clientNumber.padStart(6, "0");
-                    registrationMap.set(clientCnpj, formattedNumber);
-                    
-                    const employer = employerByCnpj.get(clientCnpj);
-                    console.log(`[Lytex] Extraído do item: CNPJ ${clientCnpj} -> Matrícula ${formattedNumber} (${employer?.name || "não encontrado"}) de: "${itemText.substring(0, 60)}"`);
-                    break;
-                  }
-                }
+                // NÃO extrair dos itens - os números lá são códigos de produto/taxa, não matrículas
               }
 
               page++;
