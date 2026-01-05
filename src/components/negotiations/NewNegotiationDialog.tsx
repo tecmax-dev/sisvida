@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { addMonths, format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -330,17 +331,17 @@ export default function NewNegotiationDialog({
 
       // Create installments
       const installments = [];
-      let dueDate = new Date(firstDueDate);
+      const baseDueDate = new Date(`${firstDueDate.toISOString().split("T")[0]}T12:00:00`);
       
       for (let i = 1; i <= installmentsCount; i++) {
+        const dueDate = addMonths(baseDueDate, i - 1);
         installments.push({
           negotiation_id: negotiation.id,
           installment_number: i,
           value: totals.installmentValue,
-          due_date: dueDate.toISOString().split("T")[0],
+          due_date: format(dueDate, "yyyy-MM-dd"),
           status: "pending",
         });
-        dueDate.setMonth(dueDate.getMonth() + 1);
       }
 
       const { error: installmentsError } = await supabase
