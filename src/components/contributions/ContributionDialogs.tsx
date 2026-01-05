@@ -255,13 +255,23 @@ export default function ContributionDialogs({
 
     try {
       if (selectedContribution.lytex_invoice_id) {
-        await supabase.functions.invoke("lytex-api", {
+        const { data, error } = await supabase.functions.invoke("lytex-api", {
           body: {
             action: "cancel_invoice",
             invoiceId: selectedContribution.lytex_invoice_id,
             contributionId: selectedContribution.id,
           },
         });
+
+        if (error) {
+          console.error("Edge function error:", error);
+          throw new Error(error.message || "Erro ao cancelar na Lytex");
+        }
+
+        if (data?.error) {
+          console.error("Lytex API error:", data.error);
+          throw new Error(data.error);
+        }
       } else {
         await supabase
           .from("employer_contributions")
@@ -273,9 +283,9 @@ export default function ContributionDialogs({
       setCancelDialogOpen(false);
       onViewDialogChange(false);
       onRefresh();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error cancelling:", error);
-      toast.error("Erro ao cancelar contribuição");
+      toast.error(error.message || "Erro ao cancelar contribuição");
     }
   };
 
