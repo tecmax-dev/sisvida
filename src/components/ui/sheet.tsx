@@ -52,31 +52,46 @@ interface SheetContentProps
     VariantProps<typeof sheetVariants> {}
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
-  ({ side = "right", className, children, ...props }, ref) => (
+  ({ side = "right", className, children, onFocusOutside, onInteractOutside, onPointerDownOutside, onEscapeKeyDown, ...props }, ref) => (
     <SheetPortal>
       <SheetOverlay />
-      <SheetPrimitive.Content 
-        ref={ref} 
+      <SheetPrimitive.Content
+        ref={ref}
         {...props}
-        className={cn(sheetVariants({ side }), className)} 
+        className={cn(sheetVariants({ side }), className)}
         onFocusOutside={(e) => {
-          if (document.hidden || document.visibilityState === 'hidden') {
+          if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
             e.preventDefault();
             return;
           }
           e.preventDefault();
+          onFocusOutside?.(e);
         }}
         onInteractOutside={(e) => {
-          if (document.hidden || document.visibilityState === 'hidden') {
+          if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
             e.preventDefault();
             return;
           }
           const originalEvent = e.detail?.originalEvent;
-          if (originalEvent instanceof FocusEvent || 
-              originalEvent?.type === 'focusout' || 
-              originalEvent?.type === 'blur') {
+          if (originalEvent instanceof FocusEvent || originalEvent?.type === "focusout" || originalEvent?.type === "blur") {
             e.preventDefault();
+            return;
           }
+          onInteractOutside?.(e);
+        }}
+        onPointerDownOutside={(e) => {
+          if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+            e.preventDefault();
+            return;
+          }
+          onPointerDownOutside?.(e);
+        }}
+        onEscapeKeyDown={(e) => {
+          if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+            e.preventDefault();
+            return;
+          }
+          onEscapeKeyDown?.(e);
         }}
       >
         {children}
