@@ -2901,7 +2901,7 @@ export default function CalendarPage() {
         <div className="grid grid-cols-4 gap-1">
           {timeSlots.map((time) => {
             const hasAppointment = dayAppointments.some(
-              apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled'
+              apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled' && apt.status !== 'no_show'
             );
             return (
               <DroppableTimeSlot
@@ -3142,7 +3142,7 @@ export default function CalendarPage() {
               const isTodayDate = isToday(item.date);
               const isSelectedDate = isSelected(item.date);
               const dateStr = toDateKey(item.date);
-              const isOccupied = dayAppointments.filter(a => a.status !== 'cancelled').length >= 10;
+              const isOccupied = dayAppointments.filter(a => a.status !== 'cancelled' && a.status !== 'no_show').length >= 10;
               const holidayName = isHoliday(item.date);
               
               return (
