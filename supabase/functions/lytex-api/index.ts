@@ -1229,20 +1229,39 @@ Deno.serve(async (req) => {
 
                 // APENAS extrair do nome do cliente - formato "129 - NOME DA EMPRESA"
                 // IMPORTANTE: O número nos itens (126 - TAXA NEGOCIAL) é código de produto, NÃO matrícula!
-                const clientName = invoice.client?.name || "";
-                
-                // Regex para capturar o número no início do nome do cliente
-                // Exemplo: "129 - FOX COMERCIO DE PAPEIS E LIVROS LTDA"
-                const clientNameMatch = clientName.match(/^(\d{1,6})\s*[-–]\s*/);
-                
-                if (clientNameMatch && clientNameMatch[1]) {
-                  const clientNumber = clientNameMatch[1];
-                  const formattedNumber = clientNumber.padStart(6, "0");
-                  registrationMap.set(clientCnpj, formattedNumber);
-                  
-                  const employer = employerByCnpj.get(clientCnpj);
-                  console.log(`[Lytex] Extraído do nome do cliente: CNPJ ${clientCnpj} -> Matrícula ${formattedNumber} (${employer?.name || "não encontrado"}) de: "${clientName.substring(0, 60)}"`);
+
+                const nameCandidates = [
+                  invoice.client?.name,
+                  (invoice as any).clientName,
+                  (invoice as any).customerName,
+                  (invoice as any).payer?.name,
+                ].filter(Boolean) as string[];
+
+                // Debug: se não encontrar em nenhuma, logar as primeiras faturas
+                const tryExtractFromName = (raw: string) => raw.match(/^(\d{1,6})\s*[-–]\s*/);
+
+                let extractedFrom: string | null = null;
+                for (const candidate of nameCandidates) {
+                  const m = tryExtractFromName(candidate);
+                  if (m?.[1]) {
+                    const formattedNumber = m[1].padStart(6, "0");
+                    registrationMap.set(clientCnpj, formattedNumber);
+                    extractedFrom = candidate;
+                    const employer = employerByCnpj.get(clientCnpj);
+                    console.log(`[Lytex] Extraído do nome do cliente: CNPJ ${clientCnpj} -> Matrícula ${formattedNumber} (${employer?.name || "não encontrado"}) de: "${candidate.substring(0, 80)}"`);
+                    break;
+                  }
                 }
+
+                if (!extractedFrom && seenInvoiceIds.size <= 10) {
+                  console.log(`[Lytex] Sem matrícula no nome (invoice=${invoice._id}):`, {
+                    client: invoice.client,
+                    clientName: (invoice as any).clientName,
+                    customerName: (invoice as any).customerName,
+                    payerName: (invoice as any).payer?.name,
+                  });
+                }
+
                 // NÃO extrair dos itens - os números lá são códigos de produto/taxa, não matrículas
               }
 
