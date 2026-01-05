@@ -412,7 +412,7 @@ Deno.serve(async (req) => {
         // Formato simplificado (usado por negociações): clientId, clientName, clientDocument, value, dueDate, description
         // Criar cobrança diretamente na Lytex sem vincular a uma contribuição
         const cleanCnpj = (params.clientDocument || "").replace(/\D/g, "");
-        
+
         const invoiceRequest: CreateInvoiceRequest = {
           contributionId: params.installmentId || params.clientId || "",
           clinicId: "",
@@ -429,27 +429,37 @@ Deno.serve(async (req) => {
 
         const invoice = await createInvoice(invoiceRequest);
 
+        const extractedInvoiceId = invoice?._id || invoice?.id || null;
+        const extractedInvoiceUrl =
+          invoice?.invoiceUrl ||
+          invoice?.linkCheckout ||
+          invoice?.linkBoleto ||
+          invoice?.checkoutUrl ||
+          invoice?.url ||
+          invoice?.links?.checkout ||
+          null;
+
+        console.log(
+          `[Lytex] createInvoice retorno: id=${extractedInvoiceId} url=${extractedInvoiceUrl} installmentId=${params.installmentId || "-"}`,
+        );
+
         // Se for uma parcela de negociação, salvar os dados no banco
         if (params.installmentId) {
-          console.log(`[Lytex] Salvando dados do boleto na parcela ${params.installmentId}`);
-          const invoiceUrl = invoice.invoiceUrl || invoice.linkCheckout || invoice.linkBoleto;
-          
           const { error: updateError } = await supabase
             .from("negotiation_installments")
             .update({
-              lytex_invoice_id: invoice._id,
-              lytex_invoice_url: invoiceUrl,
-              lytex_boleto_barcode: invoice.boleto?.barCode || null,
-              lytex_boleto_digitable_line: invoice.boleto?.digitableLine || null,
-              lytex_pix_code: invoice.pix?.code || null,
-              lytex_pix_qrcode: invoice.pix?.qrCode || null,
+              lytex_invoice_id: extractedInvoiceId,
+              lytex_invoice_url: extractedInvoiceUrl,
+              lytex_boleto_barcode: invoice?.boleto?.barCode || null,
+              lytex_boleto_digitable_line: invoice?.boleto?.digitableLine || null,
+              lytex_pix_code: invoice?.pix?.code || null,
+              lytex_pix_qrcode: invoice?.pix?.qrCode || null,
             })
             .eq("id", params.installmentId);
 
           if (updateError) {
-            console.error("[Lytex] Erro ao atualizar parcela:", updateError);
-          } else {
-            console.log(`[Lytex] Parcela atualizada com URL: ${invoiceUrl}`);
+            console.error("[Lytex] Falha ao salvar boleto na parcela:", updateError);
+            throw updateError;
           }
         }
 
