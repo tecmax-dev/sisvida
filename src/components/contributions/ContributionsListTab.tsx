@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -150,6 +151,28 @@ export default function ContributionsListTab({
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+  const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
+
+  // Get eligible contributions for WhatsApp (have boleto URL and are not paid/cancelled)
+  const eligibleForWhatsApp = useMemo(() => {
+    return contributions.filter(
+      (c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled"
+    );
+  }, [contributions]);
+
+  const handleToggleSelection = (id: string) => {
+    const newSet = new Set(selectedContributionIds);
+    if (newSet.has(id)) {
+      newSet.delete(id);
+    } else {
+      newSet.add(id);
+    }
+    setSelectedContributionIds(newSet);
+  };
+
+  const handleOpenWhatsAppDialog = () => {
+    setWhatsappDialogOpen(true);
+  };
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -181,7 +204,32 @@ export default function ContributionsListTab({
     return filteredContributions.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredContributions, currentPage]);
 
-  // Reset page when filters change
+  // Get selected contributions for the dialog
+  const selectedContributions = useMemo(() => {
+    if (selectedContributionIds.size === 0) {
+      return filteredContributions;
+    }
+    return contributions.filter((c) => selectedContributionIds.has(c.id));
+  }, [contributions, filteredContributions, selectedContributionIds]);
+
+  const eligibleOnPage = useMemo(() => {
+    return paginatedContributions.filter(
+      (c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled"
+    );
+  }, [paginatedContributions]);
+
+  const allVisibleSelected = eligibleOnPage.length > 0 && eligibleOnPage.every((c) => selectedContributionIds.has(c.id));
+
+  const handleSelectAllVisible = () => {
+    const newSet = new Set(selectedContributionIds);
+    if (allVisibleSelected) {
+      eligibleOnPage.forEach((c) => newSet.delete(c.id));
+    } else {
+      eligibleOnPage.forEach((c) => newSet.add(c.id));
+    }
+    setSelectedContributionIds(newSet);
+  };
+
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
@@ -282,9 +330,18 @@ export default function ContributionsListTab({
                     >
                       <MessageCircle className="h-4 w-4 mr-2" />
                       Enviar Boletos
+                      {selectedContributionIds.size > 0 && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-emerald-100 text-emerald-700">
+                          {selectedContributionIds.size}
+                        </Badge>
+                      )}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Enviar boletos selecionados via WhatsApp</TooltipContent>
+                  <TooltipContent>
+                    {selectedContributionIds.size > 0 
+                      ? `Enviar ${selectedContributionIds.size} boleto(s) selecionado(s) via WhatsApp`
+                      : "Enviar boletos via WhatsApp"}
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <Button onClick={onOpenCreate}>
@@ -302,6 +359,24 @@ export default function ContributionsListTab({
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
+                <TableHead className="w-[40px]">
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center justify-center">
+                          <Checkbox
+                            checked={allVisibleSelected}
+                            onCheckedChange={handleSelectAllVisible}
+                            disabled={eligibleOnPage.length === 0}
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {allVisibleSelected ? "Desmarcar todos" : "Selecionar todos elegíveis"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableHead>
                 <TableHead className="font-semibold w-[80px]">Matrícula</TableHead>
                 <TableHead className="font-semibold">Empresa</TableHead>
                 <TableHead className="font-semibold">Nº Documento</TableHead>
@@ -317,7 +392,7 @@ export default function ContributionsListTab({
             <TableBody>
               {paginatedContributions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="h-32 text-center">
+                  <TableCell colSpan={11} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Receipt className="h-8 w-8 text-muted-foreground" />
                       <p className="text-muted-foreground">Nenhuma contribuição encontrada</p>
@@ -329,12 +404,27 @@ export default function ContributionsListTab({
                   const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG];
                   const StatusIcon = statusConfig?.icon || Clock;
                   const isCancelled = contrib.status === "cancelled";
+                  const isEligibleForSelection = contrib.lytex_invoice_url && contrib.status !== "paid" && contrib.status !== "cancelled";
 
                   return (
                     <TableRow 
                       key={contrib.id} 
-                      className={`h-12 hover:bg-muted/30 transition-colors ${statusConfig?.rowClass || ""}`}
+                      className={`h-12 hover:bg-muted/30 transition-colors ${statusConfig?.rowClass || ""} ${selectedContributionIds.has(contrib.id) ? "bg-primary/5" : ""}`}
                     >
+                      <TableCell className="py-2">
+                        {isEligibleForSelection ? (
+                          <div className="flex items-center justify-center">
+                            <Checkbox
+                              checked={selectedContributionIds.has(contrib.id)}
+                              onCheckedChange={() => handleToggleSelection(contrib.id)}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center">
+                            <Checkbox disabled className="opacity-30" />
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
                         {contrib.employers?.registration_number ? (
                           <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-semibold">
@@ -493,9 +583,15 @@ export default function ContributionsListTab({
       {/* WhatsApp Dialog */}
       <SendBoletoWhatsAppDialog
         open={whatsappDialogOpen}
-        onOpenChange={setWhatsappDialogOpen}
-        contributions={filteredContributions}
+        onOpenChange={(open) => {
+          setWhatsappDialogOpen(open);
+          if (!open) {
+            setSelectedContributionIds(new Set());
+          }
+        }}
+        contributions={selectedContributions}
         clinicId={clinicId}
+        preSelectedIds={selectedContributionIds}
       />
     </div>
   );

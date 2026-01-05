@@ -42,6 +42,7 @@ interface SendBoletoWhatsAppDialogProps {
   onOpenChange: (open: boolean) => void;
   contributions: Contribution[];
   clinicId: string;
+  preSelectedIds?: Set<string>;
 }
 
 export function SendBoletoWhatsAppDialog({
@@ -49,6 +50,7 @@ export function SendBoletoWhatsAppDialog({
   onOpenChange,
   contributions,
   clinicId,
+  preSelectedIds,
 }: SendBoletoWhatsAppDialogProps) {
   const [phone, setPhone] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -161,7 +163,25 @@ export function SendBoletoWhatsAppDialog({
 
   // Pre-fill phone if only one employer selected
   const handleOpen = () => {
-    if (eligibleContributions.length === 1 && eligibleContributions[0].employers?.phone) {
+    // Use preSelectedIds if provided, otherwise auto-select based on available contributions
+    if (preSelectedIds && preSelectedIds.size > 0) {
+      // Filter to only include eligible contributions from preSelectedIds
+      const validIds = new Set<string>();
+      preSelectedIds.forEach((id) => {
+        if (eligibleContributions.some((c) => c.id === id)) {
+          validIds.add(id);
+        }
+      });
+      setSelectedIds(validIds);
+      
+      // If single employer selected, pre-fill phone
+      if (validIds.size === 1) {
+        const selected = eligibleContributions.find((c) => validIds.has(c.id));
+        if (selected?.employers?.phone) {
+          setPhone(formatPhone(selected.employers.phone));
+        }
+      }
+    } else if (eligibleContributions.length === 1 && eligibleContributions[0].employers?.phone) {
       setPhone(formatPhone(eligibleContributions[0].employers.phone));
       setSelectedIds(new Set([eligibleContributions[0].id]));
     }

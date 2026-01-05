@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -188,6 +189,7 @@ export default function EmployerDetailPage() {
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
   const [filteredContributions, setFilteredContributions] = useState<Contribution[]>([]);
+  const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
 
   const [contribTypeId, setContribTypeId] = useState("");
   const [contribMonth, setContribMonth] = useState(new Date().getMonth() + 1);
@@ -947,6 +949,11 @@ export default function EmployerDetailPage() {
             >
               <MessageCircle className="h-4 w-4" />
               Enviar Boletos
+              {selectedContributionIds.size > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-emerald-100 text-emerald-700">
+                  {selectedContributionIds.size}
+                </Badge>
+              )}
             </Button>
             <Button onClick={() => setCreateContribDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -960,6 +967,40 @@ export default function EmployerDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
+                    <TableHead className="w-[40px]">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center justify-center">
+                              <Checkbox
+                                checked={(() => {
+                                  const contribsToShow = filteredContributions.length > 0 ? filteredContributions : contributions;
+                                  const eligible = contribsToShow.filter((c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled");
+                                  return eligible.length > 0 && eligible.every((c) => selectedContributionIds.has(c.id));
+                                })()}
+                                onCheckedChange={() => {
+                                  const contribsToShow = filteredContributions.length > 0 ? filteredContributions : contributions;
+                                  const eligible = contribsToShow.filter((c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled");
+                                  const allSelected = eligible.every((c) => selectedContributionIds.has(c.id));
+                                  const newSet = new Set(selectedContributionIds);
+                                  if (allSelected) {
+                                    eligible.forEach((c) => newSet.delete(c.id));
+                                  } else {
+                                    eligible.forEach((c) => newSet.add(c.id));
+                                  }
+                                  setSelectedContributionIds(newSet);
+                                }}
+                                disabled={(() => {
+                                  const contribsToShow = filteredContributions.length > 0 ? filteredContributions : contributions;
+                                  return contribsToShow.filter((c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled").length === 0;
+                                })()}
+                              />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>Selecionar todos elegíveis</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Nº Documento</TableHead>
                     <TableHead>Competência</TableHead>
@@ -973,7 +1014,7 @@ export default function EmployerDetailPage() {
                 <TableBody>
                   {(filteredContributions.length > 0 ? filteredContributions : contributions).length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-32 text-center">
+                      <TableCell colSpan={9} className="h-32 text-center">
                         <Receipt className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
                         <p className="text-muted-foreground">Nenhuma contribuição encontrada</p>
                       </TableCell>
@@ -982,9 +1023,32 @@ export default function EmployerDetailPage() {
                     (filteredContributions.length > 0 ? filteredContributions : contributions).map((contrib) => {
                       const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG];
                       const StatusIcon = statusConfig?.icon || Clock;
+                      const isEligibleForSelection = contrib.lytex_invoice_url && contrib.status !== "paid" && contrib.status !== "cancelled";
 
                       return (
-                        <TableRow key={contrib.id} className="hover:bg-muted/30">
+                        <TableRow key={contrib.id} className={`hover:bg-muted/30 ${selectedContributionIds.has(contrib.id) ? "bg-primary/5" : ""}`}>
+                          <TableCell className="py-2">
+                            {isEligibleForSelection ? (
+                              <div className="flex items-center justify-center">
+                                <Checkbox
+                                  checked={selectedContributionIds.has(contrib.id)}
+                                  onCheckedChange={() => {
+                                    const newSet = new Set(selectedContributionIds);
+                                    if (newSet.has(contrib.id)) {
+                                      newSet.delete(contrib.id);
+                                    } else {
+                                      newSet.add(contrib.id);
+                                    }
+                                    setSelectedContributionIds(newSet);
+                                  }}
+                                />
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-center">
+                                <Checkbox disabled className="opacity-30" />
+                              </div>
+                            )}
+                          </TableCell>
                           <TableCell>{contrib.contribution_types?.name}</TableCell>
                           <TableCell>
                             <span className="text-xs font-mono text-muted-foreground">
@@ -1840,16 +1904,27 @@ export default function EmployerDetailPage() {
       {/* WhatsApp Boleto Dialog */}
       <SendBoletoWhatsAppDialog
         open={whatsappDialogOpen}
-        onOpenChange={setWhatsappDialogOpen}
-        contributions={contributions.map((c) => ({
-          ...c,
-          employers: {
-            name: employer?.name || "",
-            cnpj: employer?.cnpj || "",
-            phone: employer?.phone,
-          },
-        }))}
+        onOpenChange={(open) => {
+          setWhatsappDialogOpen(open);
+          if (!open) {
+            setSelectedContributionIds(new Set());
+          }
+        }}
+        contributions={(() => {
+          const contribsToUse = selectedContributionIds.size > 0
+            ? contributions.filter((c) => selectedContributionIds.has(c.id))
+            : contributions;
+          return contribsToUse.map((c) => ({
+            ...c,
+            employers: {
+              name: employer?.name || "",
+              cnpj: employer?.cnpj || "",
+              phone: employer?.phone,
+            },
+          }));
+        })()}
         clinicId={currentClinic?.id || ""}
+        preSelectedIds={selectedContributionIds}
       />
 
       {/* Overdue WhatsApp Dialog */}
