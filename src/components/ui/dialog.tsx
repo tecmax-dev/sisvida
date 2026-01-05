@@ -4,19 +4,31 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-const Dialog = ({ onOpenChange, ...props }: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => {
+const Dialog = ({
+  open: openProp,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof DialogPrimitive.Root>) => {
+  const isControlled = openProp !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState<boolean>(defaultOpen ?? false);
+
+  const open = isControlled ? openProp : uncontrolledOpen;
+
   const handleOpenChange = React.useCallback(
-    (open: boolean) => {
+    (nextOpen: boolean) => {
       // Prevent unintended close events when switching browser tabs / losing focus.
-      if (!open && (document.hidden || document.visibilityState === "hidden" || !document.hasFocus())) {
+      if (!nextOpen && (document.hidden || document.visibilityState === "hidden" || !document.hasFocus())) {
         return;
       }
-      onOpenChange?.(open);
+
+      if (!isControlled) setUncontrolledOpen(nextOpen);
+      onOpenChange?.(nextOpen);
     },
-    [onOpenChange],
+    [isControlled, onOpenChange],
   );
 
-  return <DialogPrimitive.Root {...props} onOpenChange={handleOpenChange} />;
+  return <DialogPrimitive.Root {...props} open={open} onOpenChange={handleOpenChange} />;
 };
 const DialogTrigger = DialogPrimitive.Trigger;
 
