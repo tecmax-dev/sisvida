@@ -65,11 +65,11 @@ export default function EditNegotiationDialog({
   const [downPaymentValue, setDownPaymentValue] = useState(negotiation.down_payment_value || 0);
   const [downPaymentDueDate, setDownPaymentDueDate] = useState(
     negotiation.down_payment_due_date 
-      ? format(new Date(negotiation.down_payment_due_date), "yyyy-MM-dd")
+      ? negotiation.down_payment_due_date.split('T')[0]
       : format(new Date(), "yyyy-MM-dd")
   );
   const [firstDueDate, setFirstDueDate] = useState(
-    format(new Date(negotiation.first_due_date), "yyyy-MM-dd")
+    negotiation.first_due_date.split('T')[0]
   );
   const [appliedInterestRate, setAppliedInterestRate] = useState(negotiation.applied_interest_rate);
   const [appliedCorrectionRate, setAppliedCorrectionRate] = useState(negotiation.applied_correction_rate);
@@ -85,10 +85,10 @@ export default function EditNegotiationDialog({
       setDownPaymentValue(negotiation.down_payment_value || 0);
       setDownPaymentDueDate(
         negotiation.down_payment_due_date 
-          ? format(new Date(negotiation.down_payment_due_date), "yyyy-MM-dd")
+          ? negotiation.down_payment_due_date.split('T')[0]
           : format(new Date(), "yyyy-MM-dd")
       );
-      setFirstDueDate(format(new Date(negotiation.first_due_date), "yyyy-MM-dd"));
+      setFirstDueDate(negotiation.first_due_date.split('T')[0]);
       setAppliedInterestRate(negotiation.applied_interest_rate);
       setAppliedCorrectionRate(negotiation.applied_correction_rate);
       setAppliedLateFeeRate(negotiation.applied_late_fee_rate);
