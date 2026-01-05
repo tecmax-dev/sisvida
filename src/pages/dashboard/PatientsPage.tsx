@@ -209,6 +209,29 @@ export default function PatientsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Persist “Novo Paciente” dialog state across re-mounts (tab switch can trigger auth refresh).
+  const NEW_PATIENT_DIALOG_STORAGE_KEY = "patients:new-patient-dialog-open";
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(NEW_PATIENT_DIALOG_STORAGE_KEY) === "1") {
+        setDialogOpen(true);
+      }
+    } catch {
+      // ignore
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (dialogOpen) sessionStorage.setItem(NEW_PATIENT_DIALOG_STORAGE_KEY, "1");
+      else sessionStorage.removeItem(NEW_PATIENT_DIALOG_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }, [dialogOpen]);
+
   // Selected patient for actions
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   
