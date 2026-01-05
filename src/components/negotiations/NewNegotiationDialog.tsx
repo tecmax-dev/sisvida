@@ -169,17 +169,27 @@ export default function NewNegotiationDialog({
     try {
       const { data, error } = await supabase
         .from("employer_contributions")
-        .select(`
+        .select(
+          `
           *,
           contribution_types (id, name)
-        `)
+        `
+        )
         .eq("employer_id", employerId)
         .in("status", ["pending", "overdue"])
         .is("negotiation_id", null)
         .order("due_date", { ascending: true });
 
       if (error) throw error;
-      setContributions(data || []);
+
+      // IMPORTANT: employer_contributions.value is stored in CENTS in the database.
+      // The negotiation module works with values in REAIS (decimal).
+      const normalized = (data || []).map((c) => ({
+        ...c,
+        value: Number(c.value) / 100,
+      }));
+
+      setContributions(normalized);
     } catch (error) {
       console.error("Error fetching contributions:", error);
       toast.error("Erro ao carregar contribuições");
