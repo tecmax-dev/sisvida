@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake } from "lucide-react";
+import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -14,6 +14,12 @@ import ContributionDialogs from "@/components/contributions/ContributionDialogs"
 import BulkContributionDialog from "@/components/contributions/BulkContributionDialog";
 import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Employer {
   id: string;
@@ -82,6 +88,7 @@ export default function ContributionsPage() {
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [extractingRegistrations, setExtractingRegistrations] = useState(false);
   const [syncResultsOpen, setSyncResultsOpen] = useState(false);
   const [syncResult, setSyncResult] = useState<LytexSyncResult | null>(null);
 
@@ -283,6 +290,38 @@ export default function ContributionsPage() {
     }
   };
 
+  const handleExtractRegistrations = async () => {
+    if (!currentClinic) return;
+    
+    setExtractingRegistrations(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "extract_registration_numbers",
+          clinicId: currentClinic.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.updated > 0) {
+        toast.success(`${data.updated} matrícula(s) atualizada(s) com sucesso!`);
+      } else if (data?.skipped > 0) {
+        toast.info(`Nenhuma nova matrícula encontrada. ${data.skipped} empresa(s) já possuem matrícula.`);
+      } else {
+        toast.info("Nenhuma matrícula encontrada nas faturas da Lytex");
+      }
+
+      console.log("Extração de matrículas:", data);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error("Error extracting registrations:", error);
+      toast.error(`Erro ao extrair matrículas: ${errorMessage}`);
+    } finally {
+      setExtractingRegistrations(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -312,18 +351,32 @@ export default function ContributionsPage() {
             <FileStack className="h-4 w-4 mr-2" />
             Gerar em Lote
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleImportFromLytex}
-            disabled={importing}
-          >
-            {importing ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Download className="h-4 w-4 mr-2" />
-            )}
-            {importing ? "Importando..." : "Importar da Lytex"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="outline" 
+                disabled={importing || extractingRegistrations}
+              >
+                {importing || extractingRegistrations ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                Lytex
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleImportFromLytex} disabled={importing}>
+                <Download className="h-4 w-4 mr-2" />
+                Importar Clientes e Faturas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExtractRegistrations} disabled={extractingRegistrations}>
+                <Hash className="h-4 w-4 mr-2" />
+                Extrair Matrículas das Faturas
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
