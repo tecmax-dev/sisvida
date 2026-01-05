@@ -30,6 +30,7 @@ interface Negotiation {
   total_late_fee: number;
   total_negotiated_value: number;
   down_payment_value: number;
+  down_payment_due_date: string | null;
   installments_count: number;
   installment_value: number;
   first_due_date: string;

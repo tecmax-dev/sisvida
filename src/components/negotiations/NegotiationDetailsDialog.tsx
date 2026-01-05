@@ -80,6 +80,7 @@ interface Negotiation {
   total_late_fee: number;
   total_negotiated_value: number;
   down_payment_value: number;
+  down_payment_due_date: string | null;
   installments_count: number;
   installment_value: number;
   first_due_date: string;
@@ -316,6 +317,11 @@ export default function NegotiationDetailsDialog({
       // Generate boleto for down payment if exists
       if (negotiation.down_payment_value && negotiation.down_payment_value > 0) {
         try {
+          // Use configured due date or today
+          const downPaymentDueDate = negotiation.down_payment_due_date 
+            ? negotiation.down_payment_due_date 
+            : format(new Date(), "yyyy-MM-dd");
+            
           const { error: downPaymentError } = await supabase.functions.invoke("lytex-api", {
             body: {
               action: "createInvoice",
@@ -323,7 +329,7 @@ export default function NegotiationDetailsDialog({
               clientName: negotiation.employers?.name,
               clientDocument: negotiation.employers?.cnpj,
               value: negotiation.down_payment_value,
-              dueDate: format(new Date(), "yyyy-MM-dd"), // Vencimento imediato para entrada
+              dueDate: downPaymentDueDate,
               description: `Negociação ${negotiation.negotiation_code} - ENTRADA`,
             },
           });

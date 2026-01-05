@@ -64,6 +64,7 @@ interface Negotiation {
   total_late_fee: number;
   total_negotiated_value: number;
   down_payment_value: number;
+  down_payment_due_date: string | null;
   installments_count: number;
   installment_value: number;
   first_due_date: string;
@@ -75,7 +76,9 @@ interface Negotiation {
   approval_method: string | null;
   approval_notes: string | null;
   finalized_at: string | null;
+  finalized_by: string | null;
   cancelled_at: string | null;
+  cancelled_by: string | null;
   cancellation_reason: string | null;
   created_at: string;
   employers?: Employer;
