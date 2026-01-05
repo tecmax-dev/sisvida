@@ -2900,9 +2900,13 @@ export default function CalendarPage() {
         </p>
         <div className="grid grid-cols-4 gap-1">
           {timeSlots.map((time) => {
-            const hasAppointment = dayAppointments.some(
-              apt => apt.start_time.slice(0, 5) === time && apt.status !== 'cancelled'
-            );
+            const hasAppointment = dayAppointments.some((apt) => {
+              if (apt.status === "cancelled") return false;
+              const slotMinutes = parseInt(time.slice(0, 2)) * 60 + parseInt(time.slice(3, 5));
+              const aptStartMinutes = parseInt(apt.start_time.slice(0, 2)) * 60 + parseInt(apt.start_time.slice(3, 5));
+              const aptEndMinutes = parseInt(apt.end_time.slice(0, 2)) * 60 + parseInt(apt.end_time.slice(3, 5));
+              return aptStartMinutes <= slotMinutes && slotMinutes < aptEndMinutes;
+            });
             return (
               <DroppableTimeSlot
                 key={time}
