@@ -332,9 +332,12 @@ export default function NegotiationDetailsDialog({
       if (currentNegotiation.down_payment_value && currentNegotiation.down_payment_value > 0) {
         try {
           // Keep date stable (avoid timezone shifts)
-          const downPaymentDueDate = (currentNegotiation.down_payment_due_date
+          const downPaymentDateOnly = (currentNegotiation.down_payment_due_date
             ? currentNegotiation.down_payment_due_date
             : format(new Date(), "yyyy-MM-dd")).split("T")[0];
+
+          // Send as ISO at noon to avoid timezone day-shift in external providers
+          const downPaymentDueDate = `${downPaymentDateOnly}T12:00:00`;
 
           const { error: downPaymentError } = await supabase.functions.invoke("lytex-api", {
             body: {
@@ -359,15 +362,18 @@ export default function NegotiationDetailsDialog({
       // Generate boletos for installments
       for (const installment of installments) {
         try {
+          const installmentDateOnly = `${installment.due_date}`.split("T")[0];
+          const installmentDueDate = `${installmentDateOnly}T12:00:00`;
+
           const { error: boletoError } = await supabase.functions.invoke("lytex-api", {
             body: {
               action: "createInvoice",
-              clientId: negotiation.employers?.id,
-              clientName: negotiation.employers?.name,
-              clientDocument: negotiation.employers?.cnpj,
+              clientId: currentNegotiation.employers?.id,
+              clientName: currentNegotiation.employers?.name,
+              clientDocument: currentNegotiation.employers?.cnpj,
               value: installment.value,
-              dueDate: installment.due_date,
-              description: `Negociação ${negotiation.negotiation_code} - Parcela ${installment.installment_number}/${negotiation.installments_count}`,
+              dueDate: installmentDueDate,
+              description: `Negociação ${currentNegotiation.negotiation_code} - Parcela ${installment.installment_number}/${currentNegotiation.installments_count}`,
             },
           });
 
