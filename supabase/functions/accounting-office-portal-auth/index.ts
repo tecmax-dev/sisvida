@@ -194,13 +194,14 @@ serve(async (req) => {
         );
       }
 
-      // Buscar contribuições de todas as empresas vinculadas
+      // Buscar contribuições de todas as empresas vinculadas com informação de negociação
       const { data: contributions, error } = await supabase
         .from("employer_contributions")
         .select(`
           *,
           employer:employers(id, name, cnpj),
-          contribution_type:contribution_types(name)
+          contribution_type:contribution_types(name),
+          negotiation:debt_negotiations(id, negotiation_code, status, installments_count)
         `)
         .in("employer_id", employerIds)
         .order("competence_year", { ascending: false })
