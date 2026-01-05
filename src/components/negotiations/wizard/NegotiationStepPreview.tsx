@@ -98,6 +98,10 @@ export default function NegotiationStepPreview({
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
+  // Normalize to midday to prevent timezone shifting (e.g. showing 06/01 instead of 07/01)
+  const safeFirstDueDate = new Date(firstDueDate);
+  safeFirstDueDate.setHours(12, 0, 0, 0);
+
   useEffect(() => {
     fetchClinic();
   }, [clinicId]);
@@ -124,13 +128,9 @@ export default function NegotiationStepPreview({
   };
 
   // Generate installments schedule using addMonths for consistency
-  // Normalize base date to avoid timezone issues
-  const baseDateForSchedule = new Date(firstDueDate);
-  baseDateForSchedule.setHours(12, 0, 0, 0);
-  
   const installmentsSchedule = [];
   for (let i = 1; i <= installmentsCount; i++) {
-    const installmentDate = addMonths(baseDateForSchedule, i - 1);
+    const installmentDate = addMonths(safeFirstDueDate, i - 1);
     installmentsSchedule.push({
       number: i,
       date: installmentDate,
@@ -233,7 +233,7 @@ export default function NegotiationStepPreview({
       ["Valor de Entrada", formatCurrency(downPayment)],
       ["Quantidade de Parcelas", `${installmentsCount}x`],
       ["Valor de Cada Parcela", formatCurrency(totals.installmentValue)],
-      ["Primeira Parcela", format(firstDueDate, "dd/MM/yyyy")],
+      ["Primeira Parcela", format(safeFirstDueDate, "dd/MM/yyyy")],
     ];
 
     autoTable(doc, {
@@ -427,7 +427,7 @@ export default function NegotiationStepPreview({
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Primeira Parcela</span>
-                <span className="font-medium">{format(firstDueDate, "dd/MM/yyyy")}</span>
+                <span className="font-medium">{format(safeFirstDueDate, "dd/MM/yyyy")}</span>
               </div>
             </div>
             <div className="space-y-1 max-h-[150px] overflow-y-auto text-xs">
