@@ -10,7 +10,7 @@ const PopoverTrigger = PopoverPrimitive.Trigger;
 const PopoverContent = React.forwardRef<
   React.ElementRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({ className, align = "center", sideOffset = 4, onFocusOutside, ...props }, ref) => (
+>(({ className, align = "center", sideOffset = 4, onFocusOutside, onInteractOutside, ...props }, ref) => (
   <PopoverPrimitive.Portal>
     <PopoverPrimitive.Content
       ref={ref}
@@ -27,6 +27,20 @@ const PopoverContent = React.forwardRef<
           return;
         }
         onFocusOutside?.(e);
+      }}
+      onInteractOutside={(e) => {
+        if (document.hidden || document.visibilityState === 'hidden') {
+          e.preventDefault();
+          return;
+        }
+        const originalEvent = e.detail?.originalEvent;
+        if (originalEvent instanceof FocusEvent || 
+            originalEvent?.type === 'focusout' || 
+            originalEvent?.type === 'blur') {
+          e.preventDefault();
+          return;
+        }
+        onInteractOutside?.(e);
       }}
     />
   </PopoverPrimitive.Portal>
