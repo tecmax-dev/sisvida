@@ -13,10 +13,17 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Send, MessageCircle, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format, addMonths } from "date-fns";
+import { format, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+
+function parseDateOnly(value: string): Date {
+  const d = parseISO(value);
+  // Avoid timezone shift when backend stores date-only strings (YYYY-MM-DD)
+  d.setHours(12, 0, 0, 0);
+  return d;
+}
 
 interface Employer {
   id: string;
@@ -264,7 +271,7 @@ export function SendNegotiationWhatsAppDialog({
     const contributionsData = items.map((item) => [
       item.contribution_type_name || "-",
       `${MONTHS[item.competence_month - 1]}/${item.competence_year}`,
-      format(new Date(item.due_date), "dd/MM/yyyy"),
+      format(parseDateOnly(item.due_date), "dd/MM/yyyy"),
       formatCurrency(item.original_value),
       `${item.days_overdue}`,
       formatCurrency(item.interest_value + item.correction_value + item.late_fee_value),
@@ -352,7 +359,7 @@ export function SendNegotiationWhatsAppDialog({
       { label: "Entrada", value: formatCurrency(negotiation.down_payment_value || 0) },
       { label: "Parcelas", value: `${negotiation.installments_count}x` },
       { label: "Valor Parcela", value: formatCurrency(negotiation.installment_value) },
-      { label: "1º Vencimento", value: format(new Date(negotiation.first_due_date), "dd/MM/yyyy") },
+      { label: "1º Vencimento", value: format(parseDateOnly(negotiation.first_due_date), "dd/MM/yyyy") },
     ];
 
     const colWidth = (pageWidth - 44) / 4;
@@ -380,7 +387,7 @@ export function SendNegotiationWhatsAppDialog({
 
       const scheduleData = installments.map((inst) => [
         `${inst.installment_number}ª Parcela`,
-        format(new Date(inst.due_date), "dd/MM/yyyy"),
+        format(parseDateOnly(inst.due_date), "dd/MM/yyyy"),
         formatCurrency(inst.value),
         inst.status === "paid" ? "Pago" : inst.status === "overdue" ? "Vencido" : "Pendente",
       ]);
@@ -435,7 +442,7 @@ export function SendNegotiationWhatsAppDialog({
       caption += `🔢 *Código:* ${negotiation.negotiation_code}\n\n`;
       caption += `💰 *Valor Negociado:* ${formatCurrency(negotiation.total_negotiated_value)}\n`;
       caption += `📅 *Parcelas:* ${negotiation.installments_count}x de ${formatCurrency(negotiation.installment_value)}\n`;
-      caption += `📆 *1ª Parcela:* ${format(new Date(negotiation.first_due_date), "dd/MM/yyyy")}\n\n`;
+      caption += `📆 *1ª Parcela:* ${format(parseDateOnly(negotiation.first_due_date), "dd/MM/yyyy")}\n\n`;
       caption += `_Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}_`;
 
       // Send document via WhatsApp

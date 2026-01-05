@@ -16,8 +16,15 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Send, MessageCircle, Receipt } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+function parseDateOnly(value: string): Date {
+  const d = parseISO(value);
+  // Avoid timezone shift when backend stores date-only strings (YYYY-MM-DD)
+  d.setHours(12, 0, 0, 0);
+  return d;
+}
 
 interface Employer {
   id: string;
@@ -153,7 +160,7 @@ export function SendBoletosWhatsAppDialog({
 
       selectedItems.forEach((inst) => {
         message += `📌 *Parcela ${inst.installment_number}/${negotiation.installments_count}*\n`;
-        message += `📅 Vencimento: ${format(new Date(inst.due_date), "dd/MM/yyyy")}\n`;
+        message += `📅 Vencimento: ${format(parseDateOnly(inst.due_date), "dd/MM/yyyy")}\n`;
         message += `💵 Valor: ${formatCurrency(inst.value)}\n`;
         message += `🔗 Link: ${inst.lytex_invoice_url}\n\n`;
       });
@@ -243,7 +250,7 @@ export function SendBoletosWhatsAppDialog({
                             Parcela {inst.installment_number}/{negotiation.installments_count}
                           </span>
                           <span className="text-sm text-muted-foreground ml-2">
-                            {format(new Date(inst.due_date), "dd/MM/yyyy")}
+                            {format(parseDateOnly(inst.due_date), "dd/MM/yyyy")}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
