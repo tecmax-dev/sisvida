@@ -56,16 +56,15 @@ export default function NegotiationStepInstallments({
   const isInstallmentValid = installmentValue >= settings.min_installment_value;
   const isDownPaymentValid = !settings.require_down_payment || downPayment >= minDownPayment;
 
-  // Generate installments preview
+  // Generate installments preview using addMonths for consistency
   const installmentsPreview = [];
-  let currentDate = new Date(firstDueDate);
   for (let i = 1; i <= Math.min(installmentsCount, 6); i++) {
+    const installmentDate = addMonths(firstDueDate, i - 1);
     installmentsPreview.push({
       number: i,
-      date: new Date(currentDate),
+      date: installmentDate,
       value: installmentValue,
     });
-    currentDate = addMonths(currentDate, 1);
   }
 
   return (
