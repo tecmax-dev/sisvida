@@ -1212,8 +1212,10 @@ Deno.serve(async (req) => {
 
           while (hasMore) {
             try {
+              console.log(`[Lytex Extract] Buscando faturas: status=${statusFilter ?? "all"}, page=${page}`);
               const invoicesResponse = await listInvoices(page, 100, statusFilter);
               const invoices = extractList(invoicesResponse);
+              console.log(`[Lytex Extract] Faturas retornadas: ${invoices.length}`);
 
               if (invoices.length === 0) {
                 hasMore = false;
@@ -1221,8 +1223,14 @@ Deno.serve(async (req) => {
               }
 
               // Log estrutura da primeira fatura para debug
-              if (page === 1 && invoices.length > 0 && statusFilter === undefined) {
-                console.log("[Lytex] Estrutura da primeira fatura:", JSON.stringify(invoices[0], null, 2));
+              if (page === 1 && invoices.length > 0) {
+                const sample = invoices[0];
+                console.log(`[Lytex Extract] Amostra fatura (status=${statusFilter ?? "all"}):`, JSON.stringify({
+                  _id: sample._id,
+                  clientKeys: sample.client ? Object.keys(sample.client) : null,
+                  client: sample.client,
+                  topLevelKeys: Object.keys(sample).slice(0, 15),
+                }, null, 2));
               }
 
               for (const invoice of invoices) {
