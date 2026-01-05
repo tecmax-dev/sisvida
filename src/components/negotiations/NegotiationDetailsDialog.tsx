@@ -301,6 +301,88 @@ export default function NegotiationDetailsDialog({
     }
   };
 
+  const generateBoletos = async () => {
+    let hadError = false;
+
+    // Down payment
+    if (currentNegotiation.down_payment_value && currentNegotiation.down_payment_value > 0) {
+      try {
+        const downPaymentDateOnly = (currentNegotiation.down_payment_due_date
+          ? currentNegotiation.down_payment_due_date
+          : format(new Date(), "yyyy-MM-dd")).split("T")[0];
+
+        const downPaymentDueDate = `${downPaymentDateOnly}T12:00:00`;
+
+        const { error: downPaymentError } = await supabase.functions.invoke("lytex-api", {
+          body: {
+            action: "createInvoice",
+            clientId: currentNegotiation.employers?.id,
+            clientName: currentNegotiation.employers?.name,
+            clientDocument: currentNegotiation.employers?.cnpj,
+            value: currentNegotiation.down_payment_value,
+            dueDate: downPaymentDueDate,
+            description: `Negociação ${currentNegotiation.negotiation_code} - ENTRADA`,
+          },
+        });
+
+        if (downPaymentError) {
+          hadError = true;
+          console.error("Error generating down payment boleto:", downPaymentError);
+        }
+      } catch (err) {
+        hadError = true;
+        console.error("Error invoking lytex-api for down payment:", err);
+      }
+    }
+
+    // Installments
+    for (const installment of installments) {
+      try {
+        const installmentDateOnly = `${installment.due_date}`.split("T")[0];
+        const installmentDueDate = `${installmentDateOnly}T12:00:00`;
+
+        const { error: boletoError } = await supabase.functions.invoke("lytex-api", {
+          body: {
+            action: "createInvoice",
+            clientId: currentNegotiation.employers?.id,
+            clientName: currentNegotiation.employers?.name,
+            clientDocument: currentNegotiation.employers?.cnpj,
+            value: installment.value,
+            dueDate: installmentDueDate,
+            description: `Negociação ${currentNegotiation.negotiation_code} - Parcela ${installment.installment_number}/${currentNegotiation.installments_count}`,
+          },
+        });
+
+        if (boletoError) {
+          hadError = true;
+          console.error("Error generating boleto:", boletoError);
+        }
+      } catch (err) {
+        hadError = true;
+        console.error("Error invoking lytex-api:", err);
+      }
+    }
+
+    if (hadError) {
+      throw new Error("BOLETO_GENERATION_FAILED");
+    }
+  };
+
+  const handleGenerateBoletos = async () => {
+    setProcessing(true);
+    try {
+      await generateBoletos();
+      toast.success("Boletos estão sendo gerados.");
+      fetchDetails();
+      onRefresh();
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Erro ao gerar boletos");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   const handleFinalize = async () => {
     setProcessing(true);
     try {
@@ -328,62 +410,7 @@ export default function NegotiationDetailsDialog({
 
       if (contribError) throw contribError;
 
-      // Generate boleto for down payment if exists
-      if (currentNegotiation.down_payment_value && currentNegotiation.down_payment_value > 0) {
-        try {
-          // Keep date stable (avoid timezone shifts)
-          const downPaymentDateOnly = (currentNegotiation.down_payment_due_date
-            ? currentNegotiation.down_payment_due_date
-            : format(new Date(), "yyyy-MM-dd")).split("T")[0];
-
-          // Send as ISO at noon to avoid timezone day-shift in external providers
-          const downPaymentDueDate = `${downPaymentDateOnly}T12:00:00`;
-
-          const { error: downPaymentError } = await supabase.functions.invoke("lytex-api", {
-            body: {
-              action: "createInvoice",
-              clientId: currentNegotiation.employers?.id,
-              clientName: currentNegotiation.employers?.name,
-              clientDocument: currentNegotiation.employers?.cnpj,
-              value: currentNegotiation.down_payment_value,
-              dueDate: downPaymentDueDate,
-              description: `Negociação ${currentNegotiation.negotiation_code} - ENTRADA`,
-            },
-          });
-
-          if (downPaymentError) {
-            console.error("Error generating down payment boleto:", downPaymentError);
-          }
-        } catch (err) {
-          console.error("Error invoking lytex-api for down payment:", err);
-        }
-      }
-
-      // Generate boletos for installments
-      for (const installment of installments) {
-        try {
-          const installmentDateOnly = `${installment.due_date}`.split("T")[0];
-          const installmentDueDate = `${installmentDateOnly}T12:00:00`;
-
-          const { error: boletoError } = await supabase.functions.invoke("lytex-api", {
-            body: {
-              action: "createInvoice",
-              clientId: currentNegotiation.employers?.id,
-              clientName: currentNegotiation.employers?.name,
-              clientDocument: currentNegotiation.employers?.cnpj,
-              value: installment.value,
-              dueDate: installmentDueDate,
-              description: `Negociação ${currentNegotiation.negotiation_code} - Parcela ${installment.installment_number}/${currentNegotiation.installments_count}`,
-            },
-          });
-
-          if (boletoError) {
-            console.error("Error generating boleto:", boletoError);
-          }
-        } catch (err) {
-          console.error("Error invoking lytex-api:", err);
-        }
-      }
+      await generateBoletos();
 
       toast.success("Negociação efetivada! Boletos estão sendo gerados.");
       onRefresh();
@@ -1035,6 +1062,13 @@ export default function NegotiationDetailsDialog({
                 <Button onClick={handleFinalize} disabled={processing}>
                   {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Efetivar e Gerar Boletos
+                </Button>
+              )}
+              {currentNegotiation.status === "active" && (
+                <Button onClick={handleGenerateBoletos} disabled={processing}>
+                  {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  <Receipt className="h-4 w-4 mr-2" />
+                  Emitir Boletos
                 </Button>
               )}
             </div>
