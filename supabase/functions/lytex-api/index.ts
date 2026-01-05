@@ -1313,8 +1313,8 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // Verificar se já tem matrícula
-          if (employer.registration_number) {
+          // Verificar se já tem a MESMA matrícula (não precisa atualizar)
+          if (employer.registration_number === registrationNumber) {
             skipped++;
             extractedDetails.push({
               cnpj,
