@@ -50,10 +50,15 @@ import {
   Loader2,
   Download,
   Receipt,
+  Printer,
+  MessageCircle,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { SendNegotiationWhatsAppDialog } from "./SendNegotiationWhatsAppDialog";
 
 interface Employer {
   id: string;
@@ -158,6 +163,12 @@ export default function NegotiationDetailsDialog({
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
 
+  // WhatsApp dialog
+  const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
+
+  // Clinic info for PDF
+  const [clinic, setClinic] = useState<{ id: string; name: string; cnpj: string | null; address: string | null } | null>(null);
+
   useEffect(() => {
     if (open && negotiation.id) {
       fetchDetails();
@@ -167,7 +178,7 @@ export default function NegotiationDetailsDialog({
   const fetchDetails = async () => {
     setLoading(true);
     try {
-      const [itemsRes, installmentsRes] = await Promise.all([
+      const [itemsRes, installmentsRes, clinicRes] = await Promise.all([
         supabase
           .from("negotiation_items")
           .select("*")
@@ -179,6 +190,21 @@ export default function NegotiationDetailsDialog({
           .select("*")
           .eq("negotiation_id", negotiation.id)
           .order("installment_number", { ascending: true }),
+        supabase
+          .from("debt_negotiations")
+          .select("clinic_id")
+          .eq("id", negotiation.id)
+          .single()
+          .then(async (res) => {
+            if (res.data?.clinic_id) {
+              return supabase
+                .from("clinics")
+                .select("id, name, cnpj, address")
+                .eq("id", res.data.clinic_id)
+                .single();
+            }
+            return { data: null, error: null };
+          }),
       ]);
 
       if (itemsRes.error) throw itemsRes.error;
@@ -186,6 +212,7 @@ export default function NegotiationDetailsDialog({
 
       setItems(itemsRes.data || []);
       setInstallments(installmentsRes.data || []);
+      if (clinicRes.data) setClinic(clinicRes.data);
     } catch (error) {
       console.error("Error fetching details:", error);
       toast.error("Erro ao carregar detalhes");
@@ -360,6 +387,147 @@ export default function NegotiationDetailsDialog({
     } finally {
       setProcessing(false);
     }
+  };
+
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    
+    const MONTHS_FULL = [
+      "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+    ];
+
+    // Header
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("ESPELHO DE NEGOCIAÇÃO DE CONTRIBUIÇÕES SINDICAIS", pageWidth / 2, 20, { align: "center" });
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    const statusLabel = STATUS_CONFIG[negotiation.status]?.label || "Simulação";
+    doc.text(`Status: ${statusLabel} | Código: ${negotiation.negotiation_code}`, pageWidth / 2, 28, { align: "center" });
+    doc.text(`Data: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, 34, { align: "center" });
+
+    // Entidade Sindical
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("ENTIDADE SINDICAL", 14, 48);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Nome: ${clinic?.name || "-"}`, 14, 55);
+    doc.text(`CNPJ: ${clinic?.cnpj ? formatCNPJ(clinic.cnpj) : "-"}`, 14, 61);
+    if (clinic?.address) {
+      doc.text(`Endereço: ${clinic.address}`, 14, 67);
+    }
+
+    // Contribuinte
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("CONTRIBUINTE", 14, 80);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.text(`Razão Social: ${negotiation.employers?.name || "-"}`, 14, 87);
+    doc.text(`CNPJ: ${negotiation.employers?.cnpj ? formatCNPJ(negotiation.employers.cnpj) : "-"}`, 14, 93);
+
+    // Contribuições
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("CONTRIBUIÇÕES NEGOCIADAS", 14, 106);
+
+    const contributionsData = items.map((item) => [
+      item.contribution_type_name || "-",
+      `${MONTHS_FULL[item.competence_month - 1]}/${item.competence_year}`,
+      format(new Date(item.due_date), "dd/MM/yyyy"),
+      formatCurrency(item.original_value),
+      `${item.days_overdue} dias`,
+      formatCurrency(item.interest_value + item.correction_value + item.late_fee_value),
+      formatCurrency(item.total_value),
+    ]);
+
+    autoTable(doc, {
+      startY: 110,
+      head: [["Tipo", "Competência", "Vencimento", "Original", "Atraso", "Encargos", "Total"]],
+      body: contributionsData,
+      theme: "striped",
+      headStyles: { fillColor: [59, 130, 246] },
+      styles: { fontSize: 8 },
+    });
+
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+
+    // Resumo financeiro
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("RESUMO FINANCEIRO", 14, finalY);
+    
+    const summaryData = [
+      ["Valor Original Total", formatCurrency(negotiation.total_original_value)],
+      ["Total de Juros", formatCurrency(negotiation.total_interest)],
+      ["Total de Correção Monetária", formatCurrency(negotiation.total_monetary_correction)],
+      ["Total de Multa Moratória", formatCurrency(negotiation.total_late_fee)],
+      ["VALOR TOTAL NEGOCIADO", formatCurrency(negotiation.total_negotiated_value)],
+    ];
+
+    autoTable(doc, {
+      startY: finalY + 4,
+      body: summaryData,
+      theme: "plain",
+      styles: { fontSize: 10 },
+      columnStyles: { 1: { halign: "right" } },
+    });
+
+    // Condições
+    const conditionsY = (doc as any).lastAutoTable.finalY + 10;
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("CONDIÇÕES DO PARCELAMENTO", 14, conditionsY);
+    
+    const conditionsData = [
+      ["Valor de Entrada", formatCurrency(negotiation.down_payment_value || 0)],
+      ["Quantidade de Parcelas", `${negotiation.installments_count}x`],
+      ["Valor de Cada Parcela", formatCurrency(negotiation.installment_value)],
+      ["Primeira Parcela", format(new Date(negotiation.first_due_date), "dd/MM/yyyy")],
+    ];
+
+    autoTable(doc, {
+      startY: conditionsY + 4,
+      body: conditionsData,
+      theme: "plain",
+      styles: { fontSize: 10 },
+      columnStyles: { 1: { halign: "right" } },
+    });
+
+    // Installments schedule if available
+    if (installments.length > 0) {
+      const scheduleY = (doc as any).lastAutoTable.finalY + 10;
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.text("CRONOGRAMA DE PARCELAS", 14, scheduleY);
+
+      const scheduleData = installments.map((inst) => [
+        `Parcela ${inst.installment_number}`,
+        format(new Date(inst.due_date), "dd/MM/yyyy"),
+        formatCurrency(inst.value),
+        inst.status === "paid" ? "Pago" : inst.status === "overdue" ? "Vencido" : "Pendente",
+      ]);
+
+      autoTable(doc, {
+        startY: scheduleY + 4,
+        head: [["Parcela", "Vencimento", "Valor", "Status"]],
+        body: scheduleData,
+        theme: "striped",
+        headStyles: { fillColor: [59, 130, 246] },
+        styles: { fontSize: 8 },
+      });
+    }
+
+    doc.save(`espelho-negociacao-${negotiation.negotiation_code}-${format(new Date(), "yyyyMMdd")}.pdf`);
+    toast.success("PDF exportado com sucesso!");
+  };
+
+  const handlePrint = () => {
+    handleExportPDF();
   };
 
   const statusConfig = STATUS_CONFIG[negotiation.status] || STATUS_CONFIG.simulation;
@@ -588,7 +756,7 @@ export default function NegotiationDetailsDialog({
 
           {/* Actions */}
           <div className="flex justify-between pt-4 border-t">
-            <div>
+            <div className="flex gap-2">
               {negotiation.status !== "cancelled" && negotiation.status !== "completed" && (
                 <Button
                   variant="destructive"
@@ -601,6 +769,20 @@ export default function NegotiationDetailsDialog({
               )}
             </div>
             <div className="flex gap-2">
+              {/* Print and WhatsApp buttons - always available */}
+              <Button variant="outline" onClick={handlePrint}>
+                <Printer className="h-4 w-4 mr-2" />
+                Imprimir
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setShowWhatsAppDialog(true)}
+                className="text-emerald-600 hover:text-emerald-700"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                WhatsApp
+              </Button>
+
               {negotiation.status === "simulation" && (
                 <Button onClick={handleSendForApproval} disabled={processing}>
                   {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -623,6 +805,15 @@ export default function NegotiationDetailsDialog({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* WhatsApp Dialog */}
+      <SendNegotiationWhatsAppDialog
+        open={showWhatsAppDialog}
+        onOpenChange={setShowWhatsAppDialog}
+        negotiation={negotiation}
+        items={items}
+        clinicId={clinic?.id || ""}
+      />
 
       {/* Approval Dialog */}
       <AlertDialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
