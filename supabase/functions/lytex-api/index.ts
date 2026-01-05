@@ -1211,6 +1211,11 @@ Deno.serve(async (req) => {
                 break;
               }
 
+              // Log estrutura da primeira fatura para debug
+              if (page === 1 && invoices.length > 0 && statusFilter === undefined) {
+                console.log("[Lytex] Estrutura da primeira fatura:", JSON.stringify(invoices[0], null, 2));
+              }
+
               for (const invoice of invoices) {
                 if (!invoice?._id || seenInvoiceIds.has(invoice._id)) continue;
                 seenInvoiceIds.add(invoice._id);
@@ -1222,23 +1227,59 @@ Deno.serve(async (req) => {
                 // Já temos um número para esse CNPJ?
                 if (registrationMap.has(clientCnpj)) continue;
 
-                // Buscar na descrição dos itens
+                // Coletar todos os textos possíveis onde pode estar a matrícula
+                const textsToSearch: string[] = [];
+                
+                // 1. Descrição dos itens
                 const items = invoice.items || [];
                 for (const item of items) {
-                  const description = item?.name || "";
+                  if (item?.name) textsToSearch.push(item.name);
+                  if (item?.description) textsToSearch.push(item.description);
+                }
+                
+                // 2. Campos da fatura
+                if (invoice.description) textsToSearch.push(invoice.description);
+                if (invoice.referenceId) textsToSearch.push(invoice.referenceId);
+                if (invoice.externalReference) textsToSearch.push(invoice.externalReference);
+                if (invoice.notes) textsToSearch.push(invoice.notes);
+                if (invoice.observation) textsToSearch.push(invoice.observation);
+                
+                // 3. Nome do cliente (às vezes contém o código)
+                if (invoice.client?.name) textsToSearch.push(invoice.client.name);
+
+                // Log para debug (primeiras faturas)
+                if (seenInvoiceIds.size <= 3) {
+                  console.log(`[Lytex] Fatura ${invoice._id} textos a buscar:`, textsToSearch);
+                }
+
+                // Buscar padrão em todos os textos
+                for (const text of textsToSearch) {
+                  // Padrões possíveis:
+                  // "CLIENTE 129 - NOME"
+                  // "129 - NOME" 
+                  // "CLIENTE Nº 129"
+                  // "CLIENTE N° 129"
+                  const patterns = [
+                    /CLIENTE\s+(\d+)\s*[-–]/i,
+                    /CLIENTE\s+N[ºo°]?\s*(\d+)/i,
+                    /^(\d{1,6})\s*[-–]\s*[A-Z]/,
+                  ];
                   
-                  // Padrão: "CLIENTE 129 - NOME DA EMPRESA"
-                  const match = description.match(/CLIENTE\s+(\d+)\s*[-–]/i);
-                  if (match && match[1]) {
-                    const clientNumber = match[1];
-                    // Formatar para 6 dígitos
-                    const formattedNumber = clientNumber.padStart(6, "0");
-                    registrationMap.set(clientCnpj, formattedNumber);
-                    
-                    const employer = employerByCnpj.get(clientCnpj);
-                    console.log(`[Lytex] Extraído: CNPJ ${clientCnpj} -> Matrícula ${formattedNumber} (${employer?.name || "não encontrado"})`);
-                    break;
+                  for (const pattern of patterns) {
+                    const match = text.match(pattern);
+                    if (match && match[1]) {
+                      const clientNumber = match[1];
+                      // Formatar para 6 dígitos
+                      const formattedNumber = clientNumber.padStart(6, "0");
+                      registrationMap.set(clientCnpj, formattedNumber);
+                      
+                      const employer = employerByCnpj.get(clientCnpj);
+                      console.log(`[Lytex] Extraído: CNPJ ${clientCnpj} -> Matrícula ${formattedNumber} (${employer?.name || "não encontrado"}) de: "${text.substring(0, 50)}..."`);
+                      break;
+                    }
                   }
+                  
+                  if (registrationMap.has(clientCnpj)) break;
                 }
               }
 
