@@ -59,6 +59,8 @@ import { useAuth } from "@/hooks/useAuth";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { SendNegotiationWhatsAppDialog } from "./SendNegotiationWhatsAppDialog";
+import EditNegotiationDialog from "./EditNegotiationDialog";
+import { Pencil } from "lucide-react";
 
 interface Employer {
   id: string;
@@ -165,6 +167,9 @@ export default function NegotiationDetailsDialog({
 
   // WhatsApp dialog
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
+
+  // Edit dialog
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   // Clinic info for PDF
   const [clinic, setClinic] = useState<{ id: string; name: string; cnpj: string | null; address: string | null } | null>(null);
@@ -769,6 +774,14 @@ export default function NegotiationDetailsDialog({
               )}
             </div>
             <div className="flex gap-2">
+              {/* Edit button - only for simulation or pending_approval */}
+              {(negotiation.status === "simulation" || negotiation.status === "pending_approval") && (
+                <Button variant="outline" onClick={() => setShowEditDialog(true)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              )}
+
               {/* Print and WhatsApp buttons - always available */}
               <Button variant="outline" onClick={handlePrint}>
                 <Printer className="h-4 w-4 mr-2" />
@@ -815,6 +828,16 @@ export default function NegotiationDetailsDialog({
         clinicId={clinic?.id || ""}
       />
 
+      {/* Edit Dialog */}
+      <EditNegotiationDialog
+        negotiation={negotiation}
+        open={showEditDialog}
+        onOpenChange={setShowEditDialog}
+        onSuccess={() => {
+          fetchDetails();
+          onRefresh();
+        }}
+      />
       {/* Approval Dialog */}
       <AlertDialog open={showApprovalDialog} onOpenChange={setShowApprovalDialog}>
         <AlertDialogContent>
