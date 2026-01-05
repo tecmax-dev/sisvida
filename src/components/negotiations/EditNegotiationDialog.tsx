@@ -34,6 +34,7 @@ interface Negotiation {
   total_late_fee: number;
   total_negotiated_value: number;
   down_payment_value: number;
+  down_payment_due_date: string | null;
   installments_count: number;
   installment_value: number;
   first_due_date: string;
@@ -62,6 +63,11 @@ export default function EditNegotiationDialog({
   // Editable fields
   const [installmentsCount, setInstallmentsCount] = useState(negotiation.installments_count);
   const [downPaymentValue, setDownPaymentValue] = useState(negotiation.down_payment_value || 0);
+  const [downPaymentDueDate, setDownPaymentDueDate] = useState(
+    negotiation.down_payment_due_date 
+      ? format(new Date(negotiation.down_payment_due_date), "yyyy-MM-dd")
+      : format(new Date(), "yyyy-MM-dd")
+  );
   const [firstDueDate, setFirstDueDate] = useState(
     format(new Date(negotiation.first_due_date), "yyyy-MM-dd")
   );
@@ -77,6 +83,11 @@ export default function EditNegotiationDialog({
       // Reset form when dialog opens
       setInstallmentsCount(negotiation.installments_count);
       setDownPaymentValue(negotiation.down_payment_value || 0);
+      setDownPaymentDueDate(
+        negotiation.down_payment_due_date 
+          ? format(new Date(negotiation.down_payment_due_date), "yyyy-MM-dd")
+          : format(new Date(), "yyyy-MM-dd")
+      );
       setFirstDueDate(format(new Date(negotiation.first_due_date), "yyyy-MM-dd"));
       setAppliedInterestRate(negotiation.applied_interest_rate);
       setAppliedCorrectionRate(negotiation.applied_correction_rate);
@@ -127,6 +138,7 @@ export default function EditNegotiationDialog({
         .update({
           installments_count: installmentsCount,
           down_payment_value: downPaymentValue,
+          down_payment_due_date: downPaymentValue > 0 ? downPaymentDueDate : null,
           installment_value: calculatedInstallmentValue,
           first_due_date: firstDueDate,
           applied_interest_rate: appliedInterestRate,
@@ -208,16 +220,29 @@ export default function EditNegotiationDialog({
           </div>
 
           {/* Down Payment */}
-          <div className="space-y-2">
-            <Label htmlFor="downPayment">Valor de Entrada (R$)</Label>
-            <Input
-              id="downPayment"
-              type="number"
-              min={0}
-              step={0.01}
-              value={downPaymentValue}
-              onChange={(e) => setDownPaymentValue(parseFloat(e.target.value) || 0)}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="downPayment">Valor de Entrada (R$)</Label>
+              <Input
+                id="downPayment"
+                type="number"
+                min={0}
+                step={0.01}
+                value={downPaymentValue}
+                onChange={(e) => setDownPaymentValue(parseFloat(e.target.value) || 0)}
+              />
+            </div>
+            {downPaymentValue > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="downPaymentDueDate">Vencimento da Entrada</Label>
+                <Input
+                  id="downPaymentDueDate"
+                  type="date"
+                  value={downPaymentDueDate}
+                  onChange={(e) => setDownPaymentDueDate(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           {/* First Due Date */}

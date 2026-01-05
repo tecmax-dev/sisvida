@@ -2033,6 +2033,7 @@ export type Database = {
           clinic_id: string
           created_at: string
           created_by: string | null
+          down_payment_due_date: string | null
           down_payment_value: number | null
           employer_id: string
           finalized_at: string | null
@@ -2064,6 +2065,7 @@ export type Database = {
           clinic_id: string
           created_at?: string
           created_by?: string | null
+          down_payment_due_date?: string | null
           down_payment_value?: number | null
           employer_id: string
           finalized_at?: string | null
@@ -2095,6 +2097,7 @@ export type Database = {
           clinic_id?: string
           created_at?: string
           created_by?: string | null
+          down_payment_due_date?: string | null
           down_payment_value?: number | null
           employer_id?: string
           finalized_at?: string | null
