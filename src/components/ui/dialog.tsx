@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { becameVisibleRecently } from "@/lib/visibility-grace";
 
 const Dialog = ({
   open: openProp,
@@ -18,7 +19,11 @@ const Dialog = ({
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
       // Prevent unintended close events when switching browser tabs / losing focus.
-      if (!nextOpen && (document.hidden || document.visibilityState === "hidden" || !document.hasFocus())) {
+      // Note: Radix can fire a dismiss on focus restoration; we guard a short grace window.
+      if (
+        !nextOpen &&
+        (document.hidden || document.visibilityState === "hidden" || !document.hasFocus() || becameVisibleRecently(600))
+      ) {
         return;
       }
 
