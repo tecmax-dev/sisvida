@@ -1158,6 +1158,170 @@ Deno.serve(async (req) => {
         break;
       }
 
+      case "extract_registration_numbers": {
+        // Extrair números de matrícula das descrições das faturas antigas
+        // Padrão: "CLIENTE 129 - FOX COMERCIO DE PAPEIS E LIVROS LTDA"
+        if (!params.clinicId) {
+          throw new Error("clinicId é obrigatório");
+        }
+
+        console.log("[Lytex] Iniciando extração de matrículas para clínica:", params.clinicId);
+
+        // Carregar todas as empresas da clínica
+        const { data: employers, error: employersError } = await supabase
+          .from("employers")
+          .select("id, cnpj, name, registration_number")
+          .eq("clinic_id", params.clinicId);
+
+        if (employersError) {
+          throw new Error(`Erro ao carregar empresas: ${employersError.message}`);
+        }
+
+        // Criar mapa de CNPJ para empresa
+        const employerByCnpj = new Map<string, { id: string; name: string; registration_number: string | null }>();
+        for (const e of employers || []) {
+          if (e?.cnpj) {
+            employerByCnpj.set(String(e.cnpj).replace(/\D/g, ""), {
+              id: e.id,
+              name: e.name,
+              registration_number: e.registration_number,
+            });
+          }
+        }
+
+        // Mapa para armazenar CNPJ -> número de cliente extraído
+        const registrationMap = new Map<string, string>();
+        const seenInvoiceIds = new Set<string>();
+        const extractedDetails: Array<{ cnpj: string; name: string; registrationNumber: string; action: string }> = [];
+
+        // Listar todas as faturas para extrair os números
+        const statusFilters = [undefined, "pending", "paid", "overdue", "cancelled", "canceled"];
+
+        for (const statusFilter of statusFilters) {
+          let page = 1;
+          let hasMore = true;
+
+          while (hasMore) {
+            try {
+              const invoicesResponse = await listInvoices(page, 100, statusFilter);
+              const invoices = extractList(invoicesResponse);
+
+              if (invoices.length === 0) {
+                hasMore = false;
+                break;
+              }
+
+              for (const invoice of invoices) {
+                if (!invoice?._id || seenInvoiceIds.has(invoice._id)) continue;
+                seenInvoiceIds.add(invoice._id);
+
+                // Extrair CNPJ do cliente
+                const clientCnpj = invoice.client?.cpfCnpj?.replace(/\D/g, "");
+                if (!clientCnpj || clientCnpj.length !== 14) continue;
+
+                // Já temos um número para esse CNPJ?
+                if (registrationMap.has(clientCnpj)) continue;
+
+                // Buscar na descrição dos itens
+                const items = invoice.items || [];
+                for (const item of items) {
+                  const description = item?.name || "";
+                  
+                  // Padrão: "CLIENTE 129 - NOME DA EMPRESA"
+                  const match = description.match(/CLIENTE\s+(\d+)\s*[-–]/i);
+                  if (match && match[1]) {
+                    const clientNumber = match[1];
+                    // Formatar para 6 dígitos
+                    const formattedNumber = clientNumber.padStart(6, "0");
+                    registrationMap.set(clientCnpj, formattedNumber);
+                    
+                    const employer = employerByCnpj.get(clientCnpj);
+                    console.log(`[Lytex] Extraído: CNPJ ${clientCnpj} -> Matrícula ${formattedNumber} (${employer?.name || "não encontrado"})`);
+                    break;
+                  }
+                }
+              }
+
+              page++;
+              if (invoices.length < 100) hasMore = false;
+            } catch (e) {
+              console.error(`[Lytex] Erro ao listar faturas (status=${statusFilter}, page=${page}):`, e);
+              hasMore = false;
+            }
+          }
+        }
+
+        console.log(`[Lytex] Total de matrículas extraídas: ${registrationMap.size}`);
+
+        // Atualizar as empresas no banco
+        let updated = 0;
+        let skipped = 0;
+        let notFound = 0;
+
+        for (const [cnpj, registrationNumber] of registrationMap.entries()) {
+          const employer = employerByCnpj.get(cnpj);
+          
+          if (!employer) {
+            notFound++;
+            extractedDetails.push({
+              cnpj,
+              name: "Empresa não encontrada",
+              registrationNumber,
+              action: "not_found",
+            });
+            continue;
+          }
+
+          // Verificar se já tem matrícula
+          if (employer.registration_number) {
+            skipped++;
+            extractedDetails.push({
+              cnpj,
+              name: employer.name,
+              registrationNumber,
+              action: "skipped",
+            });
+            continue;
+          }
+
+          // Atualizar a matrícula
+          const { error: updateError } = await supabase
+            .from("employers")
+            .update({ registration_number: registrationNumber })
+            .eq("id", employer.id);
+
+          if (updateError) {
+            console.error(`[Lytex] Erro ao atualizar matrícula para ${cnpj}:`, updateError);
+            extractedDetails.push({
+              cnpj,
+              name: employer.name,
+              registrationNumber,
+              action: "error",
+            });
+          } else {
+            updated++;
+            extractedDetails.push({
+              cnpj,
+              name: employer.name,
+              registrationNumber,
+              action: "updated",
+            });
+          }
+        }
+
+        console.log(`[Lytex] Matrículas atualizadas: ${updated}, puladas: ${skipped}, não encontradas: ${notFound}`);
+
+        result = {
+          success: true,
+          totalExtracted: registrationMap.size,
+          updated,
+          skipped,
+          notFound,
+          details: extractedDetails,
+        };
+        break;
+      }
+
       case "list_lytex_clients": {
         // Listar clientes diretamente da Lytex
         const page = params.page || 1;
