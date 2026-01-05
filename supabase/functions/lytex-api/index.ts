@@ -522,7 +522,8 @@ Deno.serve(async (req) => {
           .update({
             status: newStatus,
             paid_at: invoice.paidAt || null,
-            paid_value: invoice.payedValue || null,
+            // Lytex returns payedValue in REAIS, convert to CENTS
+            paid_value: invoice.payedValue ? Math.round(invoice.payedValue * 100) : null,
             payment_method: invoice.paymentMethod || null,
           })
           .eq("id", params.contributionId);
@@ -575,7 +576,8 @@ Deno.serve(async (req) => {
                 .update({
                   status: newStatus,
                   paid_at: invoice.paidAt || null,
-                  paid_value: invoice.payedValue || null,
+                  // Lytex returns payedValue in REAIS, convert to CENTS
+                  paid_value: invoice.payedValue ? Math.round(invoice.payedValue * 100) : null,
                   payment_method: invoice.paymentMethod || null,
                 })
                 .eq("id", contrib.id);
@@ -903,7 +905,9 @@ Deno.serve(async (req) => {
                 else if (invoice.status === "overdue") status = "overdue";
                 else if (invoice.status === "processing") status = "processing";
 
-                const value = invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
+                // IMPORTANT: Lytex returns values in REAIS, but our DB stores CENTS
+                const valueInReais = invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
+                const value = Math.round(valueInReais * 100); // Convert to cents
 
                 // A Lytex retorna linkCheckout (página de pagamento) ou linkBoleto (PDF do boleto)
                 const invoiceUrl = invoice.linkCheckout || invoice.linkBoleto || invoice.invoiceUrl || null;
@@ -930,7 +934,8 @@ Deno.serve(async (req) => {
                   lytex_pix_code: invoice.pix?.code || null,
                   lytex_pix_qrcode: invoice.pix?.qrCode || null,
                   paid_at: invoice.paidAt || null,
-                  paid_value: invoice.payedValue || null,
+                  // Lytex returns payedValue in REAIS, convert to CENTS
+                  paid_value: invoice.payedValue ? Math.round(invoice.payedValue * 100) : null,
                   payment_method: invoice.paymentMethod || null,
                 };
 
