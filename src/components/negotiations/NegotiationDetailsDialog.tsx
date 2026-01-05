@@ -303,6 +303,17 @@ export default function NegotiationDetailsDialog({
 
   const generateBoletos = async () => {
     let hadError = false;
+    
+    const formatCurrency = (value: number) => {
+      return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+      }).format(value);
+    };
+
+    const employerName = currentNegotiation.employers?.name || "Empresa";
+    const negotiationCode = currentNegotiation.negotiation_code;
+    const totalValue = formatCurrency(currentNegotiation.total_negotiated_value);
 
     // Down payment
     if (currentNegotiation.down_payment_value && currentNegotiation.down_payment_value > 0) {
@@ -312,6 +323,17 @@ export default function NegotiationDetailsDialog({
           : format(new Date(), "yyyy-MM-dd")).split("T")[0];
 
         const downPaymentDueDate = `${downPaymentDateOnly}T12:00:00`;
+        const downPaymentFormatted = formatCurrency(currentNegotiation.down_payment_value);
+
+        // Descrição detalhada para entrada
+        const downPaymentDescription = [
+          `PARCELAMENTO DE DÉBITOS - ENTRADA`,
+          `Acordo: ${negotiationCode}`,
+          `Contribuinte: ${employerName}`,
+          `Valor da Entrada: ${downPaymentFormatted}`,
+          `Valor Total do Acordo: ${totalValue}`,
+          `Parcelas: ${currentNegotiation.installments_count}x`,
+        ].join(" | ");
 
         const { error: downPaymentError } = await supabase.functions.invoke("lytex-api", {
           body: {
@@ -321,7 +343,7 @@ export default function NegotiationDetailsDialog({
             clientDocument: currentNegotiation.employers?.cnpj,
             value: currentNegotiation.down_payment_value,
             dueDate: downPaymentDueDate,
-            description: `Negociação ${currentNegotiation.negotiation_code} - ENTRADA`,
+            description: downPaymentDescription,
           },
         });
 
@@ -340,6 +362,16 @@ export default function NegotiationDetailsDialog({
       try {
         const installmentDateOnly = `${installment.due_date}`.split("T")[0];
         const installmentDueDate = `${installmentDateOnly}T12:00:00`;
+        const installmentFormatted = formatCurrency(installment.value);
+
+        // Descrição detalhada para parcela
+        const installmentDescription = [
+          `PARCELAMENTO DE DÉBITOS - PARCELA ${installment.installment_number}/${currentNegotiation.installments_count}`,
+          `Acordo: ${negotiationCode}`,
+          `Contribuinte: ${employerName}`,
+          `Valor da Parcela: ${installmentFormatted}`,
+          `Valor Total do Acordo: ${totalValue}`,
+        ].join(" | ");
 
         const { error: boletoError } = await supabase.functions.invoke("lytex-api", {
           body: {
@@ -349,7 +381,7 @@ export default function NegotiationDetailsDialog({
             clientDocument: currentNegotiation.employers?.cnpj,
             value: installment.value,
             dueDate: installmentDueDate,
-            description: `Negociação ${currentNegotiation.negotiation_code} - Parcela ${installment.installment_number}/${currentNegotiation.installments_count}`,
+            description: installmentDescription,
           },
         });
 
