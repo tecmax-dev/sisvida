@@ -998,7 +998,7 @@ export default function NegotiationDetailsDialog({
             </div>
             <div className="flex gap-2">
               {/* Edit button - only for simulation or pending_approval */}
-              {(negotiation.status === "simulation" || negotiation.status === "pending_approval") && (
+              {(currentNegotiation.status === "simulation" || currentNegotiation.status === "pending_approval") && (
                 <Button variant="outline" onClick={() => setShowEditDialog(true)}>
                   <Pencil className="h-4 w-4 mr-2" />
                   Editar
@@ -1019,19 +1019,19 @@ export default function NegotiationDetailsDialog({
                 WhatsApp
               </Button>
 
-              {negotiation.status === "simulation" && (
+              {currentNegotiation.status === "simulation" && (
                 <Button onClick={handleSendForApproval} disabled={processing}>
                   {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Enviar para Aprovação
                 </Button>
               )}
-              {negotiation.status === "pending_approval" && (
+              {currentNegotiation.status === "pending_approval" && (
                 <Button onClick={() => setShowApprovalDialog(true)} disabled={processing}>
                   <CheckCircle2 className="h-4 w-4 mr-2" />
                   Aprovar
                 </Button>
               )}
-              {negotiation.status === "approved" && (
+              {currentNegotiation.status === "approved" && (
                 <Button onClick={handleFinalize} disabled={processing}>
                   {processing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                   Efetivar e Gerar Boletos
