@@ -815,6 +815,98 @@ export default function EmployerDetailPage() {
             </Card>
           </div>
 
+          {/* Overdue Contributions Alert */}
+          {contributions.filter(c => c.status === "overdue").length > 0 && (
+            <Card className="border-rose-200 bg-rose-50/50">
+              <CardHeader className="py-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-rose-600" />
+                  <CardTitle className="text-base text-rose-700">
+                    Contribuições Vencidas ({contributions.filter(c => c.status === "overdue").length})
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-rose-100/50">
+                        <TableHead className="text-rose-700">Tipo</TableHead>
+                        <TableHead className="text-rose-700">Competência</TableHead>
+                        <TableHead className="text-rose-700">Vencimento</TableHead>
+                        <TableHead className="text-right text-rose-700">Valor</TableHead>
+                        <TableHead className="text-center text-rose-700">Boleto</TableHead>
+                        <TableHead className="text-right text-rose-700">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {contributions
+                        .filter(c => c.status === "overdue")
+                        .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime())
+                        .map((contrib) => (
+                          <TableRow key={contrib.id} className="hover:bg-rose-100/30">
+                            <TableCell className="font-medium">{contrib.contribution_types?.name}</TableCell>
+                            <TableCell>
+                              {MONTHS[contrib.competence_month - 1]?.slice(0, 3)}/{contrib.competence_year}
+                            </TableCell>
+                            <TableCell className="text-rose-600 font-medium">
+                              {format(new Date(contrib.due_date + "T12:00:00"), "dd/MM/yyyy")}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency(contrib.value)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {contrib.lytex_invoice_url ? (
+                                <a
+                                  href={contrib.lytex_invoice_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs text-primary hover:underline font-medium"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                  Ver
+                                </a>
+                              ) : (
+                                <span className="text-xs text-muted-foreground">-</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 text-xs"
+                                onClick={() => {
+                                  setSelectedContribution(contrib);
+                                  setViewContribDialogOpen(true);
+                                }}
+                              >
+                                <Eye className="h-3 w-3 mr-1" />
+                                Detalhes
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="mt-3 pt-3 border-t border-rose-200 flex items-center justify-between">
+                  <p className="text-sm text-rose-600 font-medium">
+                    Total em aberto: {formatCurrency(contributions.filter(c => c.status === "overdue").reduce((acc, c) => acc + c.value, 0))}
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-rose-600 border-rose-300 hover:bg-rose-100"
+                    onClick={() => setOverdueDialogOpen(true)}
+                  >
+                    <MessageCircle className="h-4 w-4 mr-2" />
+                    Cobrar via WhatsApp
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Filters */}
           {(() => {
             const logoUrl = currentClinic?.logo_url ?? (currentClinic as any)?.whatsapp_header_image_url ?? null;
