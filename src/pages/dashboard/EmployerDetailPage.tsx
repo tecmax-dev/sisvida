@@ -73,7 +73,9 @@ import {
   KeyRound,
   Globe,
   DollarSign,
+  Handshake,
 } from "lucide-react";
+import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoWhatsAppDialog";
 import { SendOverdueWhatsAppDialog } from "@/components/contributions/SendOverdueWhatsAppDialog";
 import { EmployerContributionFilters } from "@/components/contributions/EmployerContributionFilters";
@@ -755,6 +757,10 @@ export default function EmployerDetailPage() {
             <Users className="h-4 w-4" />
             Colaboradores ({patients.length})
           </TabsTrigger>
+          <TabsTrigger value="negotiations" className="gap-2">
+            <Handshake className="h-4 w-4" />
+            Negociações
+          </TabsTrigger>
           <TabsTrigger value="portal" className="gap-2">
             <Globe className="h-4 w-4" />
             Portal
@@ -994,6 +1000,14 @@ export default function EmployerDetailPage() {
               </Table>
             </div>
           </Card>
+        </TabsContent>
+
+        {/* Negotiations Tab */}
+        <TabsContent value="negotiations">
+          <NegotiationInstallmentsTab
+            clinicId={currentClinic?.id || ""}
+            employerId={id}
+          />
         </TabsContent>
 
         {/* Employees Tab */}
