@@ -527,7 +527,7 @@ export default function CalendarPage() {
   const [filterProfessionals, setFilterProfessionals] = useState<string[]>([]);
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [showCancelledNoShow, setShowCancelledNoShow] = useState(false); // By default hide cancelled/no_show
+  const [showCancelledNoShow, setShowCancelledNoShow] = useState(false); // Por padrão: esconder apenas cancelados
   
   // WhatsApp state
   const [sendingWhatsApp, setSendingWhatsApp] = useState<string | null>(null);
@@ -1111,8 +1111,8 @@ export default function CalendarPage() {
     return appointments.filter(apt => {
       // For professional users, only show their own appointments
       if (isProfessionalOnly && loggedInProfessionalId && apt.professional_id !== loggedInProfessionalId) return false;
-      // Filter cancelled/no_show appointments based on checkbox state
-      if (!showCancelledNoShow && (apt.status === 'cancelled' || apt.status === 'no_show')) return false;
+      // Por padrão escondemos apenas CANCELADOS. Faltou (no_show) continua visível e mantém o slot ocupado.
+      if (!showCancelledNoShow && apt.status === 'cancelled') return false;
       if (filterProfessionals.length > 0 && !filterProfessionals.includes(apt.professional_id)) return false;
       if (filterType !== "all" && apt.type !== filterType) return false;
       if (query) {
@@ -3266,7 +3266,7 @@ export default function CalendarPage() {
             </TabsList>
           </Tabs>
 
-          {/* Show Cancelled/No-Show Toggle */}
+          {/* Mostrar cancelados (faltou/no_show já é exibido sempre) */}
           <label className="flex items-center gap-2 cursor-pointer px-2 py-1.5 rounded-md border border-input hover:bg-accent transition-colors">
             <Checkbox
               id="show-cancelled"
@@ -3274,7 +3274,7 @@ export default function CalendarPage() {
               onCheckedChange={(checked) => setShowCancelledNoShow(checked === true)}
               className="border-destructive data-[state=checked]:bg-destructive data-[state=checked]:border-destructive"
             />
-            <span className="text-sm text-destructive font-medium whitespace-nowrap">Faltas/Cancelados</span>
+            <span className="text-sm text-destructive font-medium whitespace-nowrap">Cancelados</span>
           </label>
 
           {/* Search */}
