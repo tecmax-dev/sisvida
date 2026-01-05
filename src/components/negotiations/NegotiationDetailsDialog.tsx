@@ -313,6 +313,29 @@ export default function NegotiationDetailsDialog({
 
       if (contribError) throw contribError;
 
+      // Generate boleto for down payment if exists
+      if (negotiation.down_payment_value && negotiation.down_payment_value > 0) {
+        try {
+          const { error: downPaymentError } = await supabase.functions.invoke("lytex-api", {
+            body: {
+              action: "createInvoice",
+              clientId: negotiation.employers?.id,
+              clientName: negotiation.employers?.name,
+              clientDocument: negotiation.employers?.cnpj,
+              value: negotiation.down_payment_value,
+              dueDate: format(new Date(), "yyyy-MM-dd"), // Vencimento imediato para entrada
+              description: `Negociação ${negotiation.negotiation_code} - ENTRADA`,
+            },
+          });
+
+          if (downPaymentError) {
+            console.error("Error generating down payment boleto:", downPaymentError);
+          }
+        } catch (err) {
+          console.error("Error invoking lytex-api for down payment:", err);
+        }
+      }
+
       // Generate boletos for installments
       for (const installment of installments) {
         try {
