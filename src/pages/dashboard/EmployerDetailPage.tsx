@@ -973,14 +973,14 @@ export default function EmployerDetailPage() {
                           <TooltipTrigger asChild>
                             <div className="flex items-center justify-center">
                               <Checkbox
-                                checked={(() => {
+                              checked={(() => {
                                   const contribsToShow = filteredContributions.length > 0 ? filteredContributions : contributions;
-                                  const eligible = contribsToShow.filter((c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled");
+                                  const eligible = contribsToShow.filter((c) => c.lytex_invoice_id && c.status !== "paid" && c.status !== "cancelled");
                                   return eligible.length > 0 && eligible.every((c) => selectedContributionIds.has(c.id));
                                 })()}
                                 onCheckedChange={() => {
                                   const contribsToShow = filteredContributions.length > 0 ? filteredContributions : contributions;
-                                  const eligible = contribsToShow.filter((c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled");
+                                  const eligible = contribsToShow.filter((c) => c.lytex_invoice_id && c.status !== "paid" && c.status !== "cancelled");
                                   const allSelected = eligible.every((c) => selectedContributionIds.has(c.id));
                                   const newSet = new Set(selectedContributionIds);
                                   if (allSelected) {
@@ -992,7 +992,7 @@ export default function EmployerDetailPage() {
                                 }}
                                 disabled={(() => {
                                   const contribsToShow = filteredContributions.length > 0 ? filteredContributions : contributions;
-                                  return contribsToShow.filter((c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled").length === 0;
+                                  return contribsToShow.filter((c) => c.lytex_invoice_id && c.status !== "paid" && c.status !== "cancelled").length === 0;
                                 })()}
                               />
                             </div>
@@ -1023,7 +1023,7 @@ export default function EmployerDetailPage() {
                     (filteredContributions.length > 0 ? filteredContributions : contributions).map((contrib) => {
                       const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG];
                       const StatusIcon = statusConfig?.icon || Clock;
-                      const isEligibleForSelection = contrib.lytex_invoice_url && contrib.status !== "paid" && contrib.status !== "cancelled";
+                      const isEligibleForSelection = contrib.lytex_invoice_id && contrib.status !== "paid" && contrib.status !== "cancelled";
 
                       return (
                         <TableRow key={contrib.id} className={`hover:bg-muted/30 ${selectedContributionIds.has(contrib.id) ? "bg-primary/5" : ""}`}>
