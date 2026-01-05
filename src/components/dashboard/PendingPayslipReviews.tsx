@@ -14,7 +14,8 @@ import {
   RefreshCw,
   ImageIcon,
   Calendar,
-  Users
+  Users,
+  ZoomIn
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -26,6 +27,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Input } from "@/components/ui/input";
+import { PayslipImageViewer } from "@/components/patients/PayslipImageViewer";
 
 interface PayslipRequest {
   id: string;
@@ -56,6 +58,7 @@ export default function PendingPayslipReviews() {
   const [processing, setProcessing] = useState(false);
   const [newExpiryDate, setNewExpiryDate] = useState("");
   const [dependentsCount, setDependentsCount] = useState(0);
+  const [imageViewerOpen, setImageViewerOpen] = useState(false);
 
   useEffect(() => {
     if (currentClinic) {
@@ -458,15 +461,36 @@ export default function PendingPayslipReviews() {
               <div className="space-y-2">
                 <Label>Imagem do Contracheque</Label>
                 {previewUrl ? (
-                  <ScrollArea className="h-[300px] rounded-lg border bg-muted/20">
-                    <div className="p-2">
+                  <div className="space-y-2">
+                    <div className="relative rounded-lg border bg-muted/20 overflow-hidden h-[200px]">
                       <img 
                         src={previewUrl} 
                         alt="Contracheque" 
-                        className="w-full rounded-lg object-contain"
+                        className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setImageViewerOpen(true)}
                       />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/20">
+                        <Button 
+                          variant="secondary" 
+                          size="sm" 
+                          className="gap-2"
+                          onClick={() => setImageViewerOpen(true)}
+                        >
+                          <ZoomIn className="h-4 w-4" />
+                          Ampliar e Girar
+                        </Button>
+                      </div>
                     </div>
-                  </ScrollArea>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="w-full gap-2"
+                      onClick={() => setImageViewerOpen(true)}
+                    >
+                      <ZoomIn className="h-4 w-4" />
+                      Visualizar com Zoom e Rotação
+                    </Button>
+                  </div>
                 ) : (
                   <div className="h-[200px] rounded-lg border bg-muted/20 flex items-center justify-center">
                     <div className="text-center text-muted-foreground">
@@ -541,6 +565,14 @@ export default function PendingPayslipReviews() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* PayslipImageViewer Modal with Zoom and Rotate */}
+      <PayslipImageViewer
+        open={imageViewerOpen}
+        onOpenChange={setImageViewerOpen}
+        imageUrl={previewUrl}
+        patientName={selectedRequest?.patient.name || "Paciente"}
+      />
     </>
   );
 }
