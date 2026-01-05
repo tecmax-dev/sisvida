@@ -104,6 +104,7 @@ import InactivePatientsPage from "./pages/dashboard/InactivePatientsPage";
 import EmployersPage from "./pages/dashboard/EmployersPage";
 import EmployerDetailPage from "./pages/dashboard/EmployerDetailPage";
 import ContributionsPage from "./pages/dashboard/ContributionsPage";
+import NegotiationsPage from "./pages/dashboard/NegotiationsPage";
 import AccountingOfficesPage from "./pages/dashboard/AccountingOfficesPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
@@ -358,6 +359,7 @@ const App = () => (
                   <Route path="empresas" element={<EmployersPage />} />
                   <Route path="empresas/:id" element={<EmployerDetailPage />} />
                   <Route path="contribuicoes" element={<ContributionsPage />} />
+                  <Route path="negociacoes" element={<NegotiationsPage />} />
                   <Route path="escritorios" element={<AccountingOfficesPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
