@@ -56,6 +56,14 @@ import {
 import { format, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+
+function parseDateOnly(value: string): Date {
+  // Handles both DATE (YYYY-MM-DD) and TIMESTAMP strings safely
+  const dateOnly = value?.slice(0, 10);
+  const d = parseISO(dateOnly);
+  d.setHours(12, 0, 0, 0);
+  return d;
+}
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { SendNegotiationWhatsAppDialog } from "./SendNegotiationWhatsAppDialog";
@@ -742,7 +750,7 @@ export default function NegotiationDetailsDialog({
       { label: "Entrada", value: formatCurrency(negotiation.down_payment_value || 0) },
       { label: "Parcelas", value: `${negotiation.installments_count}x` },
       { label: "Valor Parcela", value: formatCurrency(negotiation.installment_value) },
-      { label: "1º Vencimento", value: format(parseISO(negotiation.first_due_date), "dd/MM/yyyy") },
+      { label: "1º Vencimento", value: format(parseDateOnly(negotiation.first_due_date), "dd/MM/yyyy") },
     ];
 
     const colWidth = (pageWidth - 44) / 4;
@@ -929,7 +937,7 @@ export default function NegotiationDetailsDialog({
                     </div>
                     <div className="flex justify-between">
                       <span>Primeira Parcela</span>
-                      <span>{format(parseISO(negotiation.first_due_date), "dd/MM/yyyy")}</span>
+                      <span>{format(parseDateOnly(negotiation.first_due_date), "dd/MM/yyyy")}</span>
                     </div>
                   </CardContent>
                 </Card>
