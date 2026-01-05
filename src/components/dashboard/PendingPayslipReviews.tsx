@@ -418,7 +418,7 @@ export default function PendingPayslipReviews() {
 
       {/* Review Dialog */}
       <Dialog open={!!selectedRequest} onOpenChange={() => closeReview()}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileCheck className="h-5 w-5 text-warning" />
@@ -538,30 +538,34 @@ export default function PendingPayslipReviews() {
             </div>
           )}
 
-          <DialogFooter className="gap-2 sm:gap-0">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-2 pt-4 border-t mt-4">
             <Button 
               variant="outline" 
               onClick={closeReview}
               disabled={processing}
+              className="w-full sm:w-auto"
             >
               Cancelar
             </Button>
-            <Button 
-              variant="destructive" 
-              onClick={handleReject}
-              disabled={processing}
-            >
-              <XCircle className="h-4 w-4 mr-1" />
-              Rejeitar
-            </Button>
-            <Button 
-              onClick={handleApprove}
-              disabled={processing}
-              className="bg-success hover:bg-success/90"
-            >
-              <CheckCircle className="h-4 w-4 mr-1" />
-              Aprovar
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Button 
+                variant="destructive" 
+                onClick={handleReject}
+                disabled={processing}
+                className="w-full sm:w-auto"
+              >
+                <XCircle className="h-4 w-4 mr-1" />
+                Rejeitar
+              </Button>
+              <Button 
+                onClick={handleApprove}
+                disabled={processing}
+                className="bg-success hover:bg-success/90 w-full sm:w-auto"
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Aprovar e Renovar
+              </Button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
