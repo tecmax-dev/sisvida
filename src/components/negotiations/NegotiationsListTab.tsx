@@ -402,7 +402,7 @@ export default function NegotiationsListTab({
                       <TableCell>
                         <div className="flex items-center gap-1.5 text-sm">
                           <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                          {format(new Date(negotiation.first_due_date), "dd/MM/yyyy")}
+                          {format(new Date(`${negotiation.first_due_date.split("T")[0]}T12:00:00`), "dd/MM/yyyy")}
                         </div>
                       </TableCell>
                       <TableCell>

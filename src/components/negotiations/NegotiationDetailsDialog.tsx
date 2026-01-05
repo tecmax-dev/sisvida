@@ -172,8 +172,15 @@ export default function NegotiationDetailsDialog({
   // Edit dialog
   const [showEditDialog, setShowEditDialog] = useState(false);
 
+  // Local copy (ensures latest DB values after edits)
+  const [currentNegotiation, setCurrentNegotiation] = useState<Negotiation>(negotiation);
+
   // Clinic info for PDF
   const [clinic, setClinic] = useState<{ id: string; name: string; cnpj: string | null; address: string | null; logo_url: string | null; phone: string | null; email: string | null } | null>(null);
+
+  useEffect(() => {
+    setCurrentNegotiation(negotiation);
+  }, [negotiation]);
 
   useEffect(() => {
     if (open && negotiation.id) {
@@ -184,7 +191,7 @@ export default function NegotiationDetailsDialog({
   const fetchDetails = async () => {
     setLoading(true);
     try {
-      const [itemsRes, installmentsRes, clinicRes] = await Promise.all([
+      const [itemsRes, installmentsRes, negotiationRes, clinicRes] = await Promise.all([
         supabase
           .from("negotiation_items")
           .select("*")
@@ -196,6 +203,11 @@ export default function NegotiationDetailsDialog({
           .select("*")
           .eq("negotiation_id", negotiation.id)
           .order("installment_number", { ascending: true }),
+        supabase
+          .from("debt_negotiations")
+          .select(`*, employers (id, name, cnpj, trade_name)`)
+          .eq("id", negotiation.id)
+          .single(),
         supabase
           .from("debt_negotiations")
           .select("clinic_id")
@@ -215,9 +227,11 @@ export default function NegotiationDetailsDialog({
 
       if (itemsRes.error) throw itemsRes.error;
       if (installmentsRes.error) throw installmentsRes.error;
+      if (negotiationRes.error) throw negotiationRes.error;
 
       setItems(itemsRes.data || []);
       setInstallments(installmentsRes.data || []);
+      if (negotiationRes.data) setCurrentNegotiation(negotiationRes.data as unknown as Negotiation);
       if (clinicRes.data) setClinic(clinicRes.data);
     } catch (error) {
       console.error("Error fetching details:", error);
@@ -315,22 +329,22 @@ export default function NegotiationDetailsDialog({
       if (contribError) throw contribError;
 
       // Generate boleto for down payment if exists
-      if (negotiation.down_payment_value && negotiation.down_payment_value > 0) {
+      if (currentNegotiation.down_payment_value && currentNegotiation.down_payment_value > 0) {
         try {
-          // Use configured due date or today
-          const downPaymentDueDate = negotiation.down_payment_due_date 
-            ? negotiation.down_payment_due_date 
-            : format(new Date(), "yyyy-MM-dd");
-            
+          // Keep date stable (avoid timezone shifts)
+          const downPaymentDueDate = (currentNegotiation.down_payment_due_date
+            ? currentNegotiation.down_payment_due_date
+            : format(new Date(), "yyyy-MM-dd")).split("T")[0];
+
           const { error: downPaymentError } = await supabase.functions.invoke("lytex-api", {
             body: {
               action: "createInvoice",
-              clientId: negotiation.employers?.id,
-              clientName: negotiation.employers?.name,
-              clientDocument: negotiation.employers?.cnpj,
-              value: negotiation.down_payment_value,
+              clientId: currentNegotiation.employers?.id,
+              clientName: currentNegotiation.employers?.name,
+              clientDocument: currentNegotiation.employers?.cnpj,
+              value: currentNegotiation.down_payment_value,
               dueDate: downPaymentDueDate,
-              description: `Negociação ${negotiation.negotiation_code} - ENTRADA`,
+              description: `Negociação ${currentNegotiation.negotiation_code} - ENTRADA`,
             },
           });
 
@@ -1034,7 +1048,7 @@ export default function NegotiationDetailsDialog({
 
       {/* Edit Dialog */}
       <EditNegotiationDialog
-        negotiation={negotiation}
+        negotiation={currentNegotiation}
         open={showEditDialog}
         onOpenChange={setShowEditDialog}
         onSuccess={() => {
