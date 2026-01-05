@@ -153,10 +153,10 @@ export default function ContributionsListTab({
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
 
-  // Get eligible contributions for WhatsApp (have boleto URL and are not paid/cancelled)
+  // Get eligible contributions for WhatsApp (have boleto generated and are not paid/cancelled)
   const eligibleForWhatsApp = useMemo(() => {
     return contributions.filter(
-      (c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled"
+      (c) => c.lytex_invoice_id && c.status !== "paid" && c.status !== "cancelled"
     );
   }, [contributions]);
 
@@ -214,7 +214,7 @@ export default function ContributionsListTab({
 
   const eligibleOnPage = useMemo(() => {
     return paginatedContributions.filter(
-      (c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled"
+      (c) => c.lytex_invoice_id && c.status !== "paid" && c.status !== "cancelled"
     );
   }, [paginatedContributions]);
 
@@ -404,7 +404,7 @@ export default function ContributionsListTab({
                   const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG];
                   const StatusIcon = statusConfig?.icon || Clock;
                   const isCancelled = contrib.status === "cancelled";
-                  const isEligibleForSelection = contrib.lytex_invoice_url && contrib.status !== "paid" && contrib.status !== "cancelled";
+                  const isEligibleForSelection = contrib.lytex_invoice_id && contrib.status !== "paid" && contrib.status !== "cancelled";
 
                   return (
                     <TableRow 
