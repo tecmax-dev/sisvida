@@ -2018,6 +2018,117 @@ export type Database = {
           },
         ]
       }
+      debt_negotiations: {
+        Row: {
+          applied_correction_rate: number
+          applied_interest_rate: number
+          applied_late_fee_rate: number
+          approval_method: string | null
+          approval_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          down_payment_value: number | null
+          employer_id: string
+          finalized_at: string | null
+          finalized_by: string | null
+          first_due_date: string
+          id: string
+          installment_value: number
+          installments_count: number
+          negotiation_code: string
+          status: string
+          total_interest: number
+          total_late_fee: number
+          total_monetary_correction: number
+          total_negotiated_value: number
+          total_original_value: number
+          updated_at: string
+        }
+        Insert: {
+          applied_correction_rate: number
+          applied_interest_rate: number
+          applied_late_fee_rate: number
+          approval_method?: string | null
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          down_payment_value?: number | null
+          employer_id: string
+          finalized_at?: string | null
+          finalized_by?: string | null
+          first_due_date: string
+          id?: string
+          installment_value: number
+          installments_count: number
+          negotiation_code: string
+          status?: string
+          total_interest?: number
+          total_late_fee?: number
+          total_monetary_correction?: number
+          total_negotiated_value: number
+          total_original_value: number
+          updated_at?: string
+        }
+        Update: {
+          applied_correction_rate?: number
+          applied_interest_rate?: number
+          applied_late_fee_rate?: number
+          approval_method?: string | null
+          approval_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          cancelled_by?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          down_payment_value?: number | null
+          employer_id?: string
+          finalized_at?: string | null
+          finalized_by?: string | null
+          first_due_date?: string
+          id?: string
+          installment_value?: number
+          installments_count?: number
+          negotiation_code?: string
+          status?: string
+          total_interest?: number
+          total_late_fee?: number
+          total_monetary_correction?: number
+          total_negotiated_value?: number
+          total_original_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debt_negotiations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "debt_negotiations_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_settings: {
         Row: {
           attendance_template: string | null
@@ -2183,6 +2294,7 @@ export type Database = {
           lytex_invoice_url: string | null
           lytex_pix_code: string | null
           lytex_pix_qrcode: string | null
+          negotiation_id: string | null
           notes: string | null
           paid_at: string | null
           paid_value: number | null
@@ -2208,6 +2320,7 @@ export type Database = {
           lytex_invoice_url?: string | null
           lytex_pix_code?: string | null
           lytex_pix_qrcode?: string | null
+          negotiation_id?: string | null
           notes?: string | null
           paid_at?: string | null
           paid_value?: number | null
@@ -2233,6 +2346,7 @@ export type Database = {
           lytex_invoice_url?: string | null
           lytex_pix_code?: string | null
           lytex_pix_qrcode?: string | null
+          negotiation_id?: string | null
           notes?: string | null
           paid_at?: string | null
           paid_value?: number | null
@@ -2262,6 +2376,13 @@ export type Database = {
             columns: ["employer_id"]
             isOneToOne: false
             referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employer_contributions_negotiation_id_fkey"
+            columns: ["negotiation_id"]
+            isOneToOne: false
+            referencedRelation: "debt_negotiations"
             referencedColumns: ["id"]
           },
         ]
@@ -4250,6 +4371,199 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      negotiation_installments: {
+        Row: {
+          created_at: string
+          due_date: string
+          id: string
+          installment_number: number
+          lytex_boleto_barcode: string | null
+          lytex_boleto_digitable_line: string | null
+          lytex_invoice_id: string | null
+          lytex_invoice_url: string | null
+          lytex_pix_code: string | null
+          lytex_pix_qrcode: string | null
+          negotiation_id: string
+          paid_at: string | null
+          paid_value: number | null
+          payment_method: string | null
+          status: string
+          updated_at: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          due_date: string
+          id?: string
+          installment_number: number
+          lytex_boleto_barcode?: string | null
+          lytex_boleto_digitable_line?: string | null
+          lytex_invoice_id?: string | null
+          lytex_invoice_url?: string | null
+          lytex_pix_code?: string | null
+          lytex_pix_qrcode?: string | null
+          negotiation_id: string
+          paid_at?: string | null
+          paid_value?: number | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          due_date?: string
+          id?: string
+          installment_number?: number
+          lytex_boleto_barcode?: string | null
+          lytex_boleto_digitable_line?: string | null
+          lytex_invoice_id?: string | null
+          lytex_invoice_url?: string | null
+          lytex_pix_code?: string | null
+          lytex_pix_qrcode?: string | null
+          negotiation_id?: string
+          paid_at?: string | null
+          paid_value?: number | null
+          payment_method?: string | null
+          status?: string
+          updated_at?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_installments_negotiation_id_fkey"
+            columns: ["negotiation_id"]
+            isOneToOne: false
+            referencedRelation: "debt_negotiations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negotiation_items: {
+        Row: {
+          competence_month: number
+          competence_year: number
+          contribution_id: string
+          contribution_type_name: string
+          correction_value: number
+          created_at: string
+          days_overdue: number
+          due_date: string
+          id: string
+          interest_value: number
+          late_fee_value: number
+          negotiation_id: string
+          original_value: number
+          total_value: number
+        }
+        Insert: {
+          competence_month: number
+          competence_year: number
+          contribution_id: string
+          contribution_type_name: string
+          correction_value?: number
+          created_at?: string
+          days_overdue: number
+          due_date: string
+          id?: string
+          interest_value?: number
+          late_fee_value?: number
+          negotiation_id: string
+          original_value: number
+          total_value: number
+        }
+        Update: {
+          competence_month?: number
+          competence_year?: number
+          contribution_id?: string
+          contribution_type_name?: string
+          correction_value?: number
+          created_at?: string
+          days_overdue?: number
+          due_date?: string
+          id?: string
+          interest_value?: number
+          late_fee_value?: number
+          negotiation_id?: string
+          original_value?: number
+          total_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_items_contribution_id_fkey"
+            columns: ["contribution_id"]
+            isOneToOne: false
+            referencedRelation: "employer_contributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_items_negotiation_id_fkey"
+            columns: ["negotiation_id"]
+            isOneToOne: false
+            referencedRelation: "debt_negotiations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      negotiation_settings: {
+        Row: {
+          allow_partial_negotiation: boolean
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          interest_rate_monthly: number
+          late_fee_percentage: number
+          legal_basis: string | null
+          max_installments: number
+          min_down_payment_percentage: number | null
+          min_installment_value: number
+          monetary_correction_monthly: number
+          require_down_payment: boolean
+          updated_at: string
+        }
+        Insert: {
+          allow_partial_negotiation?: boolean
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          interest_rate_monthly?: number
+          late_fee_percentage?: number
+          legal_basis?: string | null
+          max_installments?: number
+          min_down_payment_percentage?: number | null
+          min_installment_value?: number
+          monetary_correction_monthly?: number
+          require_down_payment?: boolean
+          updated_at?: string
+        }
+        Update: {
+          allow_partial_negotiation?: boolean
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          interest_rate_monthly?: number
+          late_fee_percentage?: number
+          legal_basis?: string | null
+          max_installments?: number
+          min_down_payment_percentage?: number | null
+          min_installment_value?: number
+          monetary_correction_monthly?: number
+          require_down_payment?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       nps_settings: {
         Row: {
@@ -8945,6 +9259,10 @@ export type Database = {
       }
       generate_card_number: { Args: { p_clinic_id: string }; Returns: string }
       generate_employer_access_code: { Args: never; Returns: string }
+      generate_negotiation_code: {
+        Args: { p_clinic_id: string }
+        Returns: string
+      }
       generate_queue_ticket: {
         Args: { p_queue_id: string }
         Returns: {
