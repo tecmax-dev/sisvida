@@ -385,6 +385,30 @@ Deno.serve(async (req) => {
     let result: any;
 
     switch (action) {
+      case "createInvoice": {
+        // Formato simplificado (usado por negociações): clientId, clientName, clientDocument, value, dueDate, description
+        // Criar cobrança diretamente na Lytex sem vincular a uma contribuição
+        const cleanCnpj = (params.clientDocument || "").replace(/\D/g, "");
+        
+        const invoiceRequest: CreateInvoiceRequest = {
+          contributionId: params.clientId || "", // Usar clientId como referência
+          clinicId: "",
+          employer: {
+            cnpj: cleanCnpj,
+            name: params.clientName,
+          },
+          value: params.value,
+          dueDate: params.dueDate?.split("T")[0] || "",
+          description: params.description || "Negociação",
+          enableBoleto: true,
+          enablePix: true,
+        };
+
+        const invoice = await createInvoice(invoiceRequest);
+        result = { success: true, invoice };
+        break;
+      }
+
       case "create_invoice": {
         // Criar cobrança na Lytex
         const invoice = await createInvoice(params as CreateInvoiceRequest);
