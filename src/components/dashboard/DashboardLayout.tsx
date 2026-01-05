@@ -64,6 +64,7 @@ import {
   Youtube,
   BookOpen,
   Sparkles,
+  Handshake,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -137,6 +138,7 @@ const navCategories: NavCategory[] = [
     items: [
       { href: "/dashboard/empresas", icon: Building2, label: "Cadastro de Empresas", permission: "view_patients" },
       { href: "/dashboard/contribuicoes", icon: Receipt, label: "Contribuições", permission: "view_financials" },
+      { href: "/dashboard/negociacoes", icon: Handshake, label: "Negociações", permission: "view_financials" },
       { href: "/dashboard/escritorios", icon: Briefcase, label: "Escritórios Contábeis", permission: "view_patients" },
     ],
   },
