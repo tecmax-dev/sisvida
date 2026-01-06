@@ -14,6 +14,7 @@ import ContributionDialogs from "@/components/contributions/ContributionDialogs"
 import BulkContributionDialog from "@/components/contributions/BulkContributionDialog";
 import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
+import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -379,6 +380,15 @@ export default function ContributionsPage() {
           </DropdownMenu>
         </div>
       </div>
+
+      {/* Lytex Sync Status */}
+      {currentClinic && (
+        <LytexSyncStatusIndicator
+          clinicId={currentClinic.id}
+          onSyncClick={handleSyncAll}
+          syncing={syncing}
+        />
+      )}
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
