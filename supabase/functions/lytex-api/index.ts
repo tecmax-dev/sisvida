@@ -1264,7 +1264,8 @@ Deno.serve(async (req) => {
                   const { error: upsertErr } = await supabase
                     .from("employer_contributions")
                     .upsert(chunk, {
-                      onConflict: "employer_id,contribution_type_id,competence_month,competence_year",
+                      onConflict: "active_competence_key",
+                      ignoreDuplicates: false,
                     });
 
                   if (upsertErr) {
