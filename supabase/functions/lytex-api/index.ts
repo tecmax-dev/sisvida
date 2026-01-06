@@ -815,13 +815,22 @@ Deno.serve(async (req) => {
 
         console.log("[Lytex] Iniciando importação para clínica:", params.clinicId);
 
-        // Criar log de sincronização
+        // Criar log de sincronização com campos de progresso
         const { data: syncLog, error: logError } = await supabase
           .from("lytex_sync_logs")
           .insert({
             clinic_id: params.clinicId,
             sync_type: "full",
             status: "running",
+            details: { 
+              progress: { 
+                phase: "starting", 
+                clientsProcessed: 0, 
+                invoicesProcessed: 0,
+                totalClients: 0,
+                totalInvoices: 0,
+              } 
+            },
           })
           .select()
           .single();
@@ -839,6 +848,31 @@ Deno.serve(async (req) => {
         // Arrays para armazenar detalhes para exibição
         const clientDetails: Array<{ name: string; cnpj: string; action: "imported" | "updated" }> = [];
         const invoiceDetails: Array<{ employerName: string; competence: string; value: number; status: string; action: "imported" | "updated" }> = [];
+
+        // Função helper para atualizar progresso
+        let lastProgressUpdate = 0;
+        const updateProgress = async (phase: string, clientsProcessed: number, invoicesProcessed: number, totalClients?: number, totalInvoices?: number) => {
+          if (!syncLog?.id) return;
+          const now = Date.now();
+          // Atualizar no máximo a cada 500ms para não sobrecarregar
+          if (now - lastProgressUpdate < 500) return;
+          lastProgressUpdate = now;
+          
+          await supabase
+            .from("lytex_sync_logs")
+            .update({
+              details: {
+                progress: {
+                  phase,
+                  clientsProcessed,
+                  invoicesProcessed,
+                  totalClients: totalClients || 0,
+                  totalInvoices: totalInvoices || 0,
+                },
+              },
+            })
+            .eq("id", syncLog.id);
+        };
 
         try {
           // 1. Importar clientes
@@ -914,12 +948,17 @@ Deno.serve(async (req) => {
                   });
                 }
               }
+              
+              // Atualizar progresso a cada cliente processado
+              await updateProgress("clients", clientsImported + clientsUpdated, 0);
             }
 
             page++;
             if (clients.length < 100) hasMore = false;
           }
 
+          // Atualizar fase para faturas
+          await updateProgress("invoices_preparing", clientsImported + clientsUpdated, 0);
           console.log(`[Lytex] Clientes importados: ${clientsImported}, atualizados: ${clientsUpdated}`);
 
           // 2. Importar faturas
@@ -1148,6 +1187,9 @@ Deno.serve(async (req) => {
                       });
                     }
                     invoicesImported += chunk.length;
+                    
+                    // Atualizar progresso a cada lote de faturas
+                    await updateProgress("invoices", clientsImported + clientsUpdated, invoicesImported + invoicesUpdated);
                   }
                 }
               }
@@ -1157,6 +1199,8 @@ Deno.serve(async (req) => {
             }
           }
 
+          // Atualizar progresso para fase de finalização
+          await updateProgress("finishing", clientsImported + clientsUpdated, invoicesImported + invoicesUpdated);
           console.log(`[Lytex] Faturas processadas: ${invoicesImported}, atualizadas: ${invoicesUpdated}`);
 
           // Atualizar log

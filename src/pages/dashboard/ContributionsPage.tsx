@@ -15,6 +15,7 @@ import BulkContributionDialog from "@/components/contributions/BulkContributionD
 import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
+import { LytexSyncProgress } from "@/components/contributions/LytexSyncProgress";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,6 +93,7 @@ export default function ContributionsPage() {
   const [extractingRegistrations, setExtractingRegistrations] = useState(false);
   const [syncResultsOpen, setSyncResultsOpen] = useState(false);
   const [syncResult, setSyncResult] = useState<LytexSyncResult | null>(null);
+  const [currentSyncLogId, setCurrentSyncLogId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentClinic) {
@@ -246,13 +248,38 @@ export default function ContributionsPage() {
     if (!currentClinic) return;
     
     setImporting(true);
+    setCurrentSyncLogId(null);
+    
     try {
-      const { data, error } = await supabase.functions.invoke("lytex-api", {
+      // Fazer a chamada sem await para obter o syncLogId o mais rápido possível
+      const response = supabase.functions.invoke("lytex-api", {
         body: {
           action: "import_from_lytex",
           clinicId: currentClinic.id,
         },
       });
+
+      // Buscar o log mais recente para obter o ID (criado pela edge function)
+      const checkForLog = async () => {
+        const { data: logs } = await supabase
+          .from("lytex_sync_logs")
+          .select("id")
+          .eq("clinic_id", currentClinic.id)
+          .eq("status", "running")
+          .order("created_at", { ascending: false })
+          .limit(1);
+        
+        if (logs && logs.length > 0) {
+          setCurrentSyncLogId(logs[0].id);
+        }
+      };
+      
+      // Verificar imediatamente e depois a cada 500ms
+      await checkForLog();
+      const logCheckInterval = setInterval(checkForLog, 500);
+      
+      const { data, error } = await response;
+      clearInterval(logCheckInterval);
 
       if (error) throw error;
 
@@ -508,6 +535,12 @@ export default function ContributionsPage() {
         open={syncResultsOpen}
         onOpenChange={setSyncResultsOpen}
         result={syncResult}
+      />
+
+      {/* Progress overlay during sync */}
+      <LytexSyncProgress 
+        syncLogId={currentSyncLogId} 
+        isActive={importing} 
       />
     </div>
   );
