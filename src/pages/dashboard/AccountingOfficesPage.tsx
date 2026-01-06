@@ -78,6 +78,7 @@ interface AccountingOffice {
   is_active: boolean;
   notes?: string;
   created_at: string;
+  legacy_id?: string;
 }
 
 interface Employer {
@@ -641,6 +642,7 @@ export default function AccountingOfficesPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead>Matrícula</TableHead>
                     <TableHead>Escritório</TableHead>
                     <TableHead>Contato</TableHead>
                     <TableHead>Código de Acesso</TableHead>
@@ -652,6 +654,15 @@ export default function AccountingOfficesPage() {
                 <TableBody>
                   {filteredOffices.map((office) => (
                     <TableRow key={office.id}>
+                      <TableCell>
+                        {office.legacy_id ? (
+                          <code className="bg-muted px-2 py-1 rounded text-sm font-mono">
+                            {office.legacy_id}
+                          </code>
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div>
                           <p className="font-medium">{office.name}</p>
