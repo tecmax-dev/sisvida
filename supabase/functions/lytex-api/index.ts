@@ -276,7 +276,11 @@ async function createInvoice(params: CreateInvoiceRequest & { registrationNumber
 
 async function getInvoice(invoiceId: string): Promise<any> {
   const token = await getAccessToken();
+  return getInvoiceWithToken(invoiceId, token);
+}
 
+// Versão otimizada que aceita token direto (evita múltiplas autenticações em batch)
+async function getInvoiceWithToken(invoiceId: string, token: string): Promise<any> {
   const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
     method: "GET",
     headers: {
@@ -699,6 +703,7 @@ Deno.serve(async (req) => {
 
       case "sync_all_pending": {
         // Sincronizar status de TODAS as contribuições pendentes da clínica
+        // Usa processamento em lotes paralelos para evitar timeout
         if (!params.clinicId) {
           throw new Error("clinicId é obrigatório");
         }
@@ -714,13 +719,19 @@ Deno.serve(async (req) => {
           throw new Error("Erro ao buscar contribuições pendentes");
         }
 
-        console.log(`[Lytex] Sincronizando ${pendingContributions?.length || 0} contribuições...`);
+        const total = pendingContributions?.length || 0;
+        console.log(`[Lytex] Sincronizando ${total} contribuições em lotes paralelos...`);
+
+        // Obter token UMA VEZ no início para reutilizar em todas as requisições
+        const lytexToken = await getAccessToken();
 
         const results: Array<{ id: string; status: string; synced: boolean; error?: string }> = [];
 
-        for (const contrib of pendingContributions || []) {
+        // Função para sincronizar uma única contribuição
+        const syncSingleContrib = async (contrib: { id: string; lytex_invoice_id: string; status: string }) => {
           try {
-            const invoice = await getInvoice(contrib.lytex_invoice_id);
+            // Usar getInvoiceWithToken para evitar múltiplas autenticações
+            const invoice = await getInvoiceWithToken(contrib.lytex_invoice_id, lytexToken);
 
             let newStatus = "pending";
             if (invoice.status === "paid") {
@@ -737,23 +748,33 @@ Deno.serve(async (req) => {
                 .update({
                   status: newStatus,
                   paid_at: invoice.paidAt || null,
-                  // Lytex returns payedValue in REAIS, convert to CENTS
                   paid_value: invoice.payedValue ? Math.round(invoice.payedValue * 100) : null,
                   payment_method: invoice.paymentMethod || null,
                 })
                 .eq("id", contrib.id);
 
               if (updateErr) {
-                results.push({ id: contrib.id, status: newStatus, synced: false, error: updateErr.message });
-              } else {
-                results.push({ id: contrib.id, status: newStatus, synced: true });
+                return { id: contrib.id, status: newStatus, synced: false, error: updateErr.message };
               }
-            } else {
-              results.push({ id: contrib.id, status: newStatus, synced: true });
+              return { id: contrib.id, status: newStatus, synced: true };
             }
+            return { id: contrib.id, status: newStatus, synced: true };
           } catch (e: any) {
             console.error(`[Lytex] Erro ao sincronizar ${contrib.id}:`, e.message);
-            results.push({ id: contrib.id, status: contrib.status, synced: false, error: e.message });
+            return { id: contrib.id, status: contrib.status, synced: false, error: e.message };
+          }
+        };
+
+        // Processar em lotes paralelos de 10
+        const BATCH_SIZE = 10;
+        for (let i = 0; i < (pendingContributions?.length || 0); i += BATCH_SIZE) {
+          const batch = (pendingContributions || []).slice(i, i + BATCH_SIZE);
+          const batchResults = await Promise.all(batch.map(syncSingleContrib));
+          results.push(...batchResults);
+          
+          // Log de progresso a cada lote
+          if ((i + BATCH_SIZE) % 50 === 0 || i + BATCH_SIZE >= total) {
+            console.log(`[Lytex] Progresso: ${Math.min(i + BATCH_SIZE, total)}/${total}`);
           }
         }
 
