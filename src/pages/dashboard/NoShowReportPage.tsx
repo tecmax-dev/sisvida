@@ -34,8 +34,9 @@ interface NoShowPatient {
 
 export default function NoShowReportPage() {
   const { currentClinic } = useAuth();
-  const { hasPermission } = usePermissions();
-  const canUnblockPatients = hasPermission('unblock_patients');
+  const { isAdmin } = usePermissions();
+  // Apenas admins podem desbloquear pacientes (owner, admin ou super admin)
+  const canUnblockPatients = isAdmin;
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState("current");
   const [stats, setStats] = useState<NoShowStats>({ total: 0, noShows: 0, rate: 0, blockedPatients: 0 });
