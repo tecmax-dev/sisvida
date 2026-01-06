@@ -179,6 +179,7 @@ export default function AccountingOfficeImportPanel({
             .update({
               name: item.office.name,
               phone: item.office.phone || null,
+              legacy_id: item.office.legacyId || null,
               updated_at: new Date().toISOString(),
             })
             .eq("id", item.existingOfficeId);
@@ -198,6 +199,7 @@ export default function AccountingOfficeImportPanel({
               name: item.office.name,
               email: item.office.email.toLowerCase(),
               phone: item.office.phone || null,
+              legacy_id: item.office.legacyId || null,
               access_code: generateAccessCode(),
               is_active: true,
             })

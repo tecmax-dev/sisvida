@@ -174,6 +174,7 @@ export type Database = {
           email: string
           id: string
           is_active: boolean | null
+          legacy_id: string | null
           name: string
           notes: string | null
           phone: string | null
@@ -194,6 +195,7 @@ export type Database = {
           email: string
           id?: string
           is_active?: boolean | null
+          legacy_id?: string | null
           name: string
           notes?: string | null
           phone?: string | null
@@ -214,6 +216,7 @@ export type Database = {
           email?: string
           id?: string
           is_active?: boolean | null
+          legacy_id?: string | null
           name?: string
           notes?: string | null
           phone?: string | null
