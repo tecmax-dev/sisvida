@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => ({
         "favicon-eclini.png",
         "logo.png",
         "pwa-icon.jpg",
-        // Nota: removido pwa-192x192 do manifest por estar causando erro de tamanho
+        "pwa-192x192.png",
         "pwa-512x512.png",
       ],
       manifest: {
@@ -34,6 +34,12 @@ export default defineConfig(({ mode }) => ({
         scope: "/",
         start_url: "/",
         icons: [
+          {
+            src: "/pwa-192x192.png",
+            sizes: "192x192",
+            type: "image/png",
+            purpose: "any",
+          },
           {
             src: "/pwa-512x512.png",
             sizes: "512x512",
