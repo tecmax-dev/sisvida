@@ -114,7 +114,20 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
       const workbook = XLSX.read(buffer, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+      // Tenta primeiro sem pular linhas
+      let rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
+      
+      // Verifica se a primeira linha tem os campos esperados (pode ter linha de título do SindSystem)
+      const firstRow = rows[0];
+      const hasValidHeaders = firstRow && 
+        ('CNPJ' in firstRow || 'cnpj' in firstRow || 'ID' in firstRow || 'id' in firstRow || 
+         'Nome da empresa' in firstRow || 'Nome' in firstRow);
+      
+      // Se não encontrou headers válidos, tenta pulando a primeira linha (título do sistema)
+      if (!hasValidHeaders && rows.length > 0) {
+        console.log('Detectada linha de título, pulando primeira linha...');
+        rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { range: 1 });
+      }
       
       // Fetch existing employers for comparison
       const { data: existingEmployers } = await supabase
