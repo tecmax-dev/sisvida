@@ -48,12 +48,13 @@ export function PatientSearchBox() {
       setLoading(true);
       try {
         const searchTerm = search.trim();
+        const searchTermNumbers = searchTerm.replace(/\D/g, ""); // Remove formatação para CPF/telefone
         
         const { data, error } = await supabase
           .from("patients")
           .select("id, name, cpf, phone, record_code")
           .eq("clinic_id", currentClinic.id)
-          .or(`name.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`)
+          .or(`name.ilike.%${searchTerm}%,cpf.ilike.%${searchTermNumbers}%,phone.ilike.%${searchTermNumbers}%`)
           .order("name")
           .limit(10);
 
