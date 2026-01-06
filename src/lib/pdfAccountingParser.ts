@@ -170,7 +170,9 @@ export function parseExcelAccountingReport(rows: any[][]): ParseResult {
   let currentCnpjs: string[] = [];
   let totalCompanies = 0;
   
-  console.log('[ExcelParser] Iniciando parse de', rows.length, 'linhas');
+  // Versão do parser para debug de cache
+  const PARSER_VERSION = '2.0';
+  console.log(`[ExcelParser] VERSAO ${PARSER_VERSION} - Iniciando parse de ${rows.length} linhas`);
   
   for (const row of rows) {
     if (!row || row.length === 0) continue;
@@ -194,6 +196,14 @@ export function parseExcelAccountingReport(rows: any[][]): ParseResult {
       currentOffice = parseOfficeLine(officeCell);
       console.log('[ExcelParser] Parse do escritório:', currentOffice);
       currentCnpjs = [];
+      
+      // CORREÇÃO: Também procura CNPJ na mesma linha do escritório
+      const cnpjNaLinhaEscritorio = extractCnpjFromExcelRow(row);
+      if (cnpjNaLinhaEscritorio && currentOffice) {
+        console.log('[ExcelParser] CNPJ encontrado NA MESMA LINHA do escritório:', cnpjNaLinhaEscritorio);
+        currentCnpjs.push(cnpjNaLinhaEscritorio);
+        totalCompanies++;
+      }
     } else {
       // Procura CNPJ em qualquer célula da linha
       const cnpj = extractCnpjFromExcelRow(row);
@@ -221,7 +231,7 @@ export function parseExcelAccountingReport(rows: any[][]): ParseResult {
     });
   }
   
-  console.log('[ExcelParser] Resultado final:', offices.length, 'escritórios,', totalCompanies, 'empresas');
+  console.log(`[ExcelParser] VERSAO ${PARSER_VERSION} - Resultado final:`, offices.length, 'escritórios,', totalCompanies, 'empresas');
   
   return {
     offices,
