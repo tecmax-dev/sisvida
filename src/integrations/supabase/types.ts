@@ -3397,6 +3397,7 @@ export type Database = {
           chief_complaint: string | null
           clinic_id: string
           created_at: string
+          dependent_id: string | null
           diagnosis: string | null
           history_present_illness: string | null
           id: string
@@ -3414,6 +3415,7 @@ export type Database = {
           chief_complaint?: string | null
           clinic_id: string
           created_at?: string
+          dependent_id?: string | null
           diagnosis?: string | null
           history_present_illness?: string | null
           id?: string
@@ -3431,6 +3433,7 @@ export type Database = {
           chief_complaint?: string | null
           clinic_id?: string
           created_at?: string
+          dependent_id?: string | null
           diagnosis?: string | null
           history_present_illness?: string | null
           id?: string
@@ -3456,6 +3459,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medical_records_dependent_id_fkey"
+            columns: ["dependent_id"]
+            isOneToOne: false
+            referencedRelation: "patient_dependents"
             referencedColumns: ["id"]
           },
           {
