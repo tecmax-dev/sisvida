@@ -53,10 +53,17 @@ function extractOfficeLines(text: string): Array<{ line: string; position: numbe
 
 /**
  * Parse de uma linha de escritório
+ * Suporta formato markdown: [Escritórios: ID - NOME / EMAIL / TEL](mailto:...)
  */
 function parseOfficeLine(line: string): Omit<ParsedOffice, 'linkedCompanyCnpjs'> | null {
+  // Remove formato markdown de link [texto](url)
+  let cleanLine = line.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+  
+  // Remove tags HTML
+  cleanLine = cleanLine.replace(/<[^>]+>/g, '');
+  
   const pattern = /Escritórios?:\s*(\d+)\s*-\s*([^/]+)\s*\/\s*([^/]+)\s*\/\s*(.+)/i;
-  const match = line.match(pattern);
+  const match = cleanLine.match(pattern);
   
   if (!match) return null;
   
@@ -159,23 +166,29 @@ export function parseExcelAccountingReport(rows: any[][]): ParseResult {
   let currentCnpjs: string[] = [];
   let totalCompanies = 0;
   
+  console.log('[ExcelParser] Iniciando parse de', rows.length, 'linhas');
+  
   for (const row of rows) {
     if (!row || row.length === 0) continue;
     
-    const firstCell = String(row[0] || '').trim();
+    // Verifica se qualquer célula da linha contém dados de escritório
+    const officeCell = isOfficeLineExcel(row);
     
-    // Verifica se é linha de escritório
-    if (firstCell.toLowerCase().includes('escritório') || firstCell.toLowerCase().includes('escritorios:')) {
+    if (officeCell) {
+      console.log('[ExcelParser] Linha de escritório encontrada:', officeCell);
+      
       // Salva escritório anterior com suas empresas
       if (currentOffice) {
+        console.log('[ExcelParser] Salvando escritório anterior:', currentOffice.name, 'com', currentCnpjs.length, 'empresas');
         offices.push({
           ...currentOffice,
-          linkedCompanyCnpjs: [...new Set(currentCnpjs)] // Remove duplicatas
+          linkedCompanyCnpjs: [...new Set(currentCnpjs)]
         });
       }
       
       // Parse do novo escritório
-      currentOffice = parseOfficeLine(firstCell);
+      currentOffice = parseOfficeLine(officeCell);
+      console.log('[ExcelParser] Parse do escritório:', currentOffice);
       currentCnpjs = [];
     } else {
       // Procura CNPJ em qualquer célula da linha
@@ -197,11 +210,14 @@ export function parseExcelAccountingReport(rows: any[][]): ParseResult {
   
   // Salva último escritório
   if (currentOffice) {
+    console.log('[ExcelParser] Salvando último escritório:', currentOffice.name, 'com', currentCnpjs.length, 'empresas');
     offices.push({
       ...currentOffice,
       linkedCompanyCnpjs: [...new Set(currentCnpjs)]
     });
   }
+  
+  console.log('[ExcelParser] Resultado final:', offices.length, 'escritórios,', totalCompanies, 'empresas');
   
   return {
     offices,
@@ -211,9 +227,25 @@ export function parseExcelAccountingReport(rows: any[][]): ParseResult {
 }
 
 /**
+ * Verifica se uma linha do Excel contém dados de escritório
+ */
+function isOfficeLineExcel(row: any[]): string | null {
+  for (const cell of row) {
+    if (cell == null) continue;
+    const cellStr = String(cell).toLowerCase();
+    if (cellStr.includes('escritório') || cellStr.includes('escritorios:')) {
+      return String(cell);
+    }
+  }
+  return null;
+}
+
+/**
  * Extrai CNPJ de uma linha do Excel (procura em todas as células)
+ * Lida com CNPJs quebrados entre células ou com tags HTML
  */
 function extractCnpjFromExcelRow(row: any[]): string | null {
+  // Primeiro tenta célula por célula
   for (const cell of row) {
     if (cell == null) continue;
     
@@ -228,6 +260,15 @@ function extractCnpjFromExcelRow(row: any[]): string | null {
       return match[0].replace(/\D/g, '');
     }
   }
+  
+  // Fallback: junta todas as células para CNPJs quebrados
+  const fullRowText = row.map(c => String(c || '')).join('');
+  const cleanText = fullRowText.replace(/<br\s*\/?>/gi, '').replace(/<[^>]+>/g, '');
+  const match = cleanText.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+  if (match) {
+    return match[0].replace(/\D/g, '');
+  }
+  
   return null;
 }
 
