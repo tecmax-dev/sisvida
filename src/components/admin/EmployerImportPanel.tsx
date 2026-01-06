@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -146,12 +146,57 @@ function findHeaderRowIndex(sheet: XLSX.WorkSheet): number {
 }
 
 export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
-  const [parsedEmployers, setParsedEmployers] = useState<ParsedEmployer[]>([]);
+  const STORAGE_KEY = `employer-import-${clinicId}`;
+
+  const [parsedEmployers, setParsedEmployers] = useState<ParsedEmployer[]>(() => {
+    try {
+      const saved = sessionStorage.getItem(`employer-import-${clinicId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.employers || [];
+      }
+    } catch { /* ignore */ }
+    return [];
+  });
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [dryRun, setDryRun] = useState(true);
+  const [dryRun, setDryRun] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(`employer-import-${clinicId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.dryRun ?? true;
+      }
+    } catch { /* ignore */ }
+    return true;
+  });
   const [progress, setProgress] = useState(0);
-  const [results, setResults] = useState<{ created: number; updated: number; errors: number; errorDetails: string[] } | null>(null);
+  const [results, setResults] = useState<{ created: number; updated: number; errors: number; errorDetails: string[] } | null>(() => {
+    try {
+      const saved = sessionStorage.getItem(`employer-import-${clinicId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.results || null;
+      }
+    } catch { /* ignore */ }
+    return null;
+  });
+
+  // Persist state to sessionStorage
+  useEffect(() => {
+    if (parsedEmployers.length > 0 || results) {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        employers: parsedEmployers,
+        dryRun,
+        results,
+      }));
+    }
+  }, [parsedEmployers, dryRun, results, STORAGE_KEY]);
+
+  // Clear storage helper
+  const clearStorage = useCallback(() => {
+    sessionStorage.removeItem(STORAGE_KEY);
+  }, [STORAGE_KEY]);
 
   const handleFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -456,6 +501,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
       }
       if (errors === 0) {
         setParsedEmployers([]);
+        clearStorage();
       }
     }
   };
