@@ -62,16 +62,20 @@ function parseOfficeLine(line: string): Omit<ParsedOffice, 'linkedCompanyCnpjs'>
   // Remove tags HTML
   cleanLine = cleanLine.replace(/<[^>]+>/g, '');
   
-  const pattern = /Escritórios?:\s*(\d+)\s*-\s*([^/]+)\s*\/\s*([^/]+)\s*\/\s*(.+)/i;
+  // Regex com telefone opcional (\/? e .* para aceitar linhas sem telefone)
+  const pattern = /Escritórios?:\s*(\d+)\s*-\s*([^/]+)\s*\/\s*([^/]+)\s*\/?\s*(.*)/i;
   const match = cleanLine.match(pattern);
   
-  if (!match) return null;
+  if (!match) {
+    console.log('[ExcelParser] Falha no parse da linha:', cleanLine);
+    return null;
+  }
   
   return {
     legacyId: match[1].trim(),
     name: match[2].trim(),
     email: match[3].trim().toLowerCase(),
-    phone: match[4].trim()
+    phone: match[4]?.trim() || ''
   };
 }
 
