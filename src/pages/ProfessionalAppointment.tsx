@@ -27,9 +27,15 @@ interface Patient {
   insurance_plan_id: string | null;
 }
 
+interface Dependent {
+  id: string;
+  name: string;
+}
+
 interface Appointment {
   id: string;
   patient_id: string;
+  dependent_id: string | null;
   professional_id: string;
   clinic_id: string;
   appointment_date: string;
@@ -40,6 +46,7 @@ interface Appointment {
   started_at: string | null;
   completed_at: string | null;
   patient: Patient;
+  dependent?: Dependent | null;
 }
 
 interface MedicalRecord {
@@ -129,14 +136,15 @@ export default function ProfessionalAppointment() {
       clinic: prof.clinic as { name: string; logo_url: string | null }
     });
 
-    // Get appointment with patient
+    // Get appointment with patient and dependent
     const { data: apt } = await supabase
       .from('appointments')
       .select(`
-        id, patient_id, professional_id, clinic_id,
+        id, patient_id, dependent_id, professional_id, clinic_id,
         appointment_date, start_time, end_time, type, status,
         started_at, completed_at,
-        patient:patients (id, name, birth_date, phone, email, created_at, insurance_plan_id)
+        patient:patients (id, name, birth_date, phone, email, created_at, insurance_plan_id),
+        dependent:patient_dependents!appointments_dependent_id_fkey (id, name)
       `)
       .eq('id', appointmentId)
       .eq('professional_id', prof.id)
@@ -153,7 +161,9 @@ export default function ProfessionalAppointment() {
 
     setAppointment({
       ...apt,
-      patient: apt.patient as Patient
+      dependent_id: apt.dependent_id || null,
+      patient: apt.patient as Patient,
+      dependent: apt.dependent as Dependent | null,
     });
 
     // Get medical records
@@ -416,7 +426,26 @@ export default function ProfessionalAppointment() {
               />
 
               <PatientSummaryCard
-                patient={appointment.patient}
+                patient={
+                  appointment.dependent_id && appointment.dependent
+                    ? {
+                        id: appointment.dependent.id,
+                        name: appointment.dependent.name,
+                        birth_date: null,
+                        phone: appointment.patient.phone,
+                        email: appointment.patient.email,
+                        created_at: appointment.patient.created_at,
+                        insurance_plan: null,
+                        is_dependent: true,
+                        holder_name: appointment.patient.name,
+                      }
+                    : {
+                        ...appointment.patient,
+                        insurance_plan: null,
+                        is_dependent: false,
+                        holder_name: null,
+                      }
+                }
                 appointmentsCount={appointmentsCount}
                 noShowCount={noShowCount}
                 onViewProfile={handleViewProfile}

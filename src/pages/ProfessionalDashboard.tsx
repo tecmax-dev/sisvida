@@ -55,6 +55,7 @@ interface Professional {
 interface Appointment {
   id: string;
   patient_id: string;
+  dependent_id: string | null;
   appointment_date: string;
   start_time: string;
   end_time: string;
@@ -73,7 +74,15 @@ interface Appointment {
     email: string | null;
     birth_date: string | null;
   };
+  dependent?: { id: string; name: string } | null;
 }
+
+const getDisplayName = (apt: Appointment) => {
+  if (apt.dependent_id && apt.dependent?.name) {
+    return apt.dependent.name;
+  }
+  return apt.patient.name;
+};
 
 const statusConfig: Record<string, { icon: any; color: string; bgColor: string; label: string }> = {
   scheduled: { icon: AlertCircle, color: "text-amber-600", bgColor: "bg-amber-100", label: "A confirmar" },
@@ -165,6 +174,7 @@ export default function ProfessionalDashboard() {
       .select(`
         id,
         patient_id,
+        dependent_id,
         appointment_date,
         start_time,
         end_time,
@@ -176,20 +186,23 @@ export default function ProfessionalDashboard() {
         duration_minutes,
         procedure_id,
         procedure:procedures (id, name, price),
-        patient:patients (id, name, phone, email, birth_date)
+        patient:patients (id, name, phone, email, birth_date),
+        dependent:patient_dependents!appointments_dependent_id_fkey (id, name)
       `)
       .eq('professional_id', professionalId)
       .eq('clinic_id', clinicId)
       .eq('appointment_date', today)
-      .in('status', ['scheduled', 'confirmed', 'in_progress', 'completed'])
+      .in('status', ['scheduled', 'confirmed', 'in_progress', 'completed', 'arrived'])
       .order('start_time', { ascending: true });
 
     if (!error && data) {
       setAppointments(data.map(apt => ({
         ...apt,
+        dependent_id: apt.dependent_id || null,
         procedure_id: apt.procedure_id || null,
         procedure: apt.procedure as { id: string; name: string; price: number } | null,
-        patient: apt.patient as { id: string; name: string; phone: string; email: string | null; birth_date: string | null }
+        patient: apt.patient as { id: string; name: string; phone: string; email: string | null; birth_date: string | null },
+        dependent: apt.dependent as { id: string; name: string } | null
       })));
     }
   };
@@ -432,7 +445,10 @@ export default function ProfessionalDashboard() {
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                   <p className="text-xl font-semibold text-foreground">
-                    {inProgressAppointment.patient.name}
+                    {getDisplayName(inProgressAppointment)}
+                    {inProgressAppointment.dependent_id && (
+                      <Badge variant="outline" className="ml-2 text-xs">Dependente</Badge>
+                    )}
                   </p>
                   <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
                     <span className="flex items-center gap-1">
@@ -517,9 +533,12 @@ export default function ProfessionalDashboard() {
                           
                           <div className="flex-1 min-w-0">
                             <p className="font-semibold text-foreground truncate">
-                              {appointment.patient.name.toUpperCase()}
+                              {getDisplayName(appointment).toUpperCase()}
                             </p>
                             <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              {appointment.dependent_id && (
+                                <Badge variant="secondary" className="text-xs">Dependente</Badge>
+                              )}
                               <Badge variant="outline" className="text-xs">
                                 {typeLabels[appointment.type] || appointment.type}
                               </Badge>
