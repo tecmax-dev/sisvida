@@ -633,6 +633,47 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                 .single();
 
               if (error) {
+                // FALLBACK: If CNPJ duplicate, try to find and update instead
+                if (error.message.includes('employers_clinic_id_cnpj_key')) {
+                  const { data: existingByCnpj } = await supabase
+                    .from('employers')
+                    .select('id')
+                    .eq('clinic_id', clinicId)
+                    .eq('cnpj', cleanedCnpj)
+                    .single();
+                  
+                  if (existingByCnpj) {
+                    const { error: updateError } = await supabase
+                      .from('employers')
+                      .update({
+                        registration_number: targetRegistration,
+                        name: employer.data.nome,
+                        trade_name: employer.data.fantasia || null,
+                        ...(employer.data.email && { email: employer.data.email }),
+                        ...(employer.data.telefone && { phone: employer.data.telefone }),
+                        ...(employer.data.cep && { cep: employer.data.cep }),
+                        ...(employer.data.cidade && { city: employer.data.cidade }),
+                        ...(employer.data.uf && { state: employer.data.uf }),
+                        ...(employer.data.bairro && { neighborhood: employer.data.bairro }),
+                        ...(employer.data.endereco && { address: employer.data.endereco }),
+                        updated_at: new Date().toISOString(),
+                      })
+                      .eq('id', existingByCnpj.id);
+                    
+                    if (updateError) {
+                      const errorType = categorizeError(updateError.message);
+                      const errorMsg = `Linha ${employer.rowNumber} (${employer.data.nome}): ${updateError.message}`;
+                      if (errorType === 'unique') uniqueErrors.push(errorMsg);
+                      else if (errorType === 'rls') rlsErrors.push(errorMsg);
+                      else errorDetails.push(errorMsg);
+                      throw updateError;
+                    }
+                    workingRegistrationMap.set(targetRegistration, existingByCnpj.id);
+                    updated++;
+                    continue; // Skip to next employer
+                  }
+                }
+                
                 const errorType = categorizeError(error.message);
                 const errorMsg = `Linha ${employer.rowNumber} (${employer.data.nome}): ${error.message}`;
                 if (errorType === 'unique') {
