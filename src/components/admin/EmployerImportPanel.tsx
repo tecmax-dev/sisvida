@@ -151,8 +151,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
   const [importing, setImporting] = useState(false);
   const [dryRun, setDryRun] = useState(true);
   const [progress, setProgress] = useState(0);
-  const [results, setResults] = useState<{ created: number; updated: number; errors: number } | null>(null);
-  const [debugInfo, setDebugInfo] = useState<{ headers: string[]; firstRows: Record<string, unknown>[] } | null>(null);
+  const [results, setResults] = useState<{ created: number; updated: number; errors: number; errorDetails: string[] } | null>(null);
 
   const handleFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -181,13 +180,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
         raw: true, // Get raw values (numbers stay as numbers)
       });
       
-      // Debug: save headers and first rows for display
-      const headers = rows[0] ? Object.keys(rows[0]) : [];
-      const firstRows = rows.slice(0, 3);
-      console.log('Header row index:', headerRowIndex);
-      console.log('Parsed rows:', rows.length, 'Headers:', headers);
-      console.log('First 3 rows raw:', firstRows);
-      setDebugInfo({ headers, firstRows });
+      console.log('Parsed rows:', rows.length);
       
       // Fetch existing employers for comparison
       const { data: existingEmployers } = await supabase
@@ -377,6 +370,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
     let created = 0;
     let updated = 0;
     let errors = 0;
+    const errorDetails: string[] = [];
     
     const BATCH_SIZE = 50;
     
@@ -394,7 +388,6 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                 .from('employers')
                 .update({
                   registration_number: registration,
-                  // Only update if empty in database
                   ...(employer.data.email && { email: employer.data.email }),
                   ...(employer.data.telefone && { phone: employer.data.telefone }),
                   ...(employer.data.cep && { cep: employer.data.cep }),
@@ -406,7 +399,11 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                 })
                 .eq('id', employer.existingId);
               
-              if (error) throw error;
+              if (error) {
+                const errorMsg = `Linha ${employer.rowNumber} (${employer.data.nome}): ${error.message}`;
+                errorDetails.push(errorMsg);
+                throw error;
+              }
             }
             updated++;
           } else if (employer.status === 'to_create') {
@@ -429,12 +426,16 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                   is_active: true,
                 });
               
-              if (error) throw error;
+              if (error) {
+                const errorMsg = `Linha ${employer.rowNumber} (${employer.data.nome}): ${error.message}`;
+                errorDetails.push(errorMsg);
+                throw error;
+              }
             }
             created++;
           }
         } catch (error) {
-          console.error('Error processing employer:', error);
+          console.error('Error processing employer:', employer.data.nome, error);
           errors++;
         }
       }
@@ -442,14 +443,20 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
       setProgress(Math.round(((i + batch.length) / toProcess.length) * 100));
     }
     
-    setResults({ created, updated, errors });
+    setResults({ created, updated, errors, errorDetails });
     setImporting(false);
     
     if (dryRun) {
       toast.success(`Simulação concluída: ${created} seriam criados, ${updated} seriam atualizados`);
     } else {
-      toast.success(`Importação concluída: ${created} criados, ${updated} atualizados, ${errors} erros`);
-      setParsedEmployers([]);
+      if (errors > 0) {
+        toast.error(`Importação com erros: ${created} criados, ${updated} atualizados, ${errors} erros (RLS/permissão)`);
+      } else {
+        toast.success(`Importação concluída: ${created} criados, ${updated} atualizados`);
+      }
+      if (errors === 0) {
+        setParsedEmployers([]);
+      }
     }
   };
 
@@ -505,21 +512,6 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
           </div>
         </div>
         
-        {/* Debug Info */}
-        {debugInfo && (
-          <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-2">
-            <p className="font-medium">Debug - Cabeçalhos detectados:</p>
-            <code className="block bg-background p-2 rounded overflow-x-auto">
-              {debugInfo.headers.join(' | ')}
-            </code>
-            <p className="font-medium mt-2">Primeiras 3 linhas brutas:</p>
-            {debugInfo.firstRows.map((row, idx) => (
-              <code key={idx} className="block bg-background p-2 rounded overflow-x-auto text-[10px]">
-                {JSON.stringify(row, null, 0)}
-              </code>
-            ))}
-          </div>
-        )}
         
         {/* Summary */}
         {parsedEmployers.length > 0 && (
@@ -577,19 +569,46 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
             
             {/* Results */}
             {results && (
-              <div className="bg-muted/50 rounded-lg p-4 grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <p className="text-2xl font-bold text-success">{results.created}</p>
-                  <p className="text-xs text-muted-foreground">{dryRun ? 'Seriam criados' : 'Criados'}</p>
+              <div className="space-y-3">
+                <div className="bg-muted/50 rounded-lg p-4 grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <p className="text-2xl font-bold text-success">{results.created}</p>
+                    <p className="text-xs text-muted-foreground">{dryRun ? 'Seriam criados' : 'Criados'}</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-primary">{results.updated}</p>
+                    <p className="text-xs text-muted-foreground">{dryRun ? 'Seriam atualizados' : 'Atualizados'}</p>
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-destructive">{results.errors}</p>
+                    <p className="text-xs text-muted-foreground">Erros</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-2xl font-bold text-primary">{results.updated}</p>
-                  <p className="text-xs text-muted-foreground">{dryRun ? 'Seriam atualizados' : 'Atualizados'}</p>
-                </div>
-                <div>
-                  <p className="text-2xl font-bold text-destructive">{results.errors}</p>
-                  <p className="text-xs text-muted-foreground">Erros</p>
-                </div>
+                
+                {/* Error Details */}
+                {results.errorDetails && results.errorDetails.length > 0 && (
+                  <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertTriangle className="h-4 w-4 text-destructive" />
+                      <p className="font-medium text-sm text-destructive">
+                        Erros de RLS/Permissão ({results.errorDetails.length})
+                      </p>
+                    </div>
+                    <ScrollArea className="h-[120px]">
+                      <ul className="text-xs space-y-1 text-destructive/80">
+                        {results.errorDetails.slice(0, 50).map((err, idx) => (
+                          <li key={idx}>• {err}</li>
+                        ))}
+                        {results.errorDetails.length > 50 && (
+                          <li className="font-medium">... e mais {results.errorDetails.length - 50} erros</li>
+                        )}
+                      </ul>
+                    </ScrollArea>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Verifique se você tem permissão de admin para esta clínica.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             
