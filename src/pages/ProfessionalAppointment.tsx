@@ -115,16 +115,44 @@ export default function ProfessionalAppointment() {
       return;
     }
 
-    // Get professional
-    const { data: prof } = await supabase
+    // PRIMEIRO: tentar por user_id
+    let { data: prof } = await supabase
       .from('professionals')
       .select(`
-        id, name, clinic_id,
+        id, name, clinic_id, email, user_id,
         clinic:clinics (name, logo_url)
       `)
       .eq('user_id', session.user.id)
       .eq('is_active', true)
       .maybeSingle();
+
+    // FALLBACK: tentar por email
+    if (!prof && session.user.email) {
+      console.warn('[Appointment] Profissional não encontrado por user_id, tentando por email...');
+      const { data: profByEmail } = await supabase
+        .from('professionals')
+        .select(`
+          id, name, clinic_id, email, user_id,
+          clinic:clinics (name, logo_url)
+        `)
+        .eq('email', session.user.email.toLowerCase())
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (profByEmail) {
+        prof = profByEmail;
+        console.warn('[Appointment] Profissional encontrado por email:', prof.name);
+        
+        // Auto-vincular user_id se estiver NULL
+        if (!profByEmail.user_id) {
+          await supabase
+            .from('professionals')
+            .update({ user_id: session.user.id })
+            .eq('id', profByEmail.id)
+            .is('user_id', null);
+        }
+      }
+    }
 
     if (!prof) {
       navigate('/profissional');
