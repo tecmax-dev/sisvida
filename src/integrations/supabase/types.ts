@@ -2285,6 +2285,7 @@ export type Database = {
       }
       employer_contributions: {
         Row: {
+          active_competence_key: string | null
           clinic_id: string
           competence_month: number
           competence_year: number
@@ -2311,6 +2312,7 @@ export type Database = {
           value: number
         }
         Insert: {
+          active_competence_key?: string | null
           clinic_id: string
           competence_month: number
           competence_year: number
@@ -2337,6 +2339,7 @@ export type Database = {
           value: number
         }
         Update: {
+          active_competence_key?: string | null
           clinic_id?: string
           competence_month?: number
           competence_year?: number
