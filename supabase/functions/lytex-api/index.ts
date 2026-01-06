@@ -1182,10 +1182,7 @@ Deno.serve(async (req) => {
             invoicesImported,
             invoicesUpdated,
             errors: errors.length > 0 ? errors : undefined,
-            details: {
-              clients: clientDetails,
-              invoices: invoiceDetails,
-            },
+            syncLogId: syncLog?.id,
           };
 
         } catch (importError: any) {

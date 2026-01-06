@@ -259,6 +259,20 @@ export default function ContributionsPage() {
       const imported = (data?.clientsImported || 0) + (data?.invoicesImported || 0);
       const updated = (data?.clientsUpdated || 0) + (data?.invoicesUpdated || 0);
 
+      // Buscar detalhes do banco usando syncLogId
+      let details = undefined;
+      if (data?.syncLogId) {
+        const { data: logData } = await supabase
+          .from("lytex_sync_logs")
+          .select("details")
+          .eq("id", data.syncLogId)
+          .single();
+        
+        if (logData?.details) {
+          details = logData.details as { clients?: unknown[]; invoices?: unknown[]; errors?: string[] };
+        }
+      }
+
       // Montar resultado para exibição
       const result: LytexSyncResult = {
         syncedAt: new Date(),
@@ -267,7 +281,7 @@ export default function ContributionsPage() {
         invoicesImported: data?.invoicesImported || 0,
         invoicesUpdated: data?.invoicesUpdated || 0,
         errors: data?.errors || [],
-        details: data?.details,
+        details,
       };
       
       setSyncResult(result);
