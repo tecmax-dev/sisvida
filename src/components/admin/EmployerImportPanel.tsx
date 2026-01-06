@@ -618,7 +618,8 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-12">#</TableHead>
-                    <TableHead className="w-20">ID</TableHead>
+                    <TableHead className="w-24">Planilha</TableHead>
+                    <TableHead className="w-24">Banco</TableHead>
                     <TableHead>Empresa</TableHead>
                     <TableHead>CNPJ</TableHead>
                     <TableHead>Status</TableHead>
@@ -637,6 +638,9 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                     >
                       <TableCell className="text-muted-foreground text-xs">{emp.rowNumber}</TableCell>
                       <TableCell className="font-mono text-sm">{formatRegistration(emp.data.id)}</TableCell>
+                      <TableCell className="font-mono text-sm text-muted-foreground">
+                        {emp.existingRegistration || '-'}
+                      </TableCell>
                       <TableCell className="font-medium max-w-[200px] truncate">{emp.data.nome}</TableCell>
                       <TableCell className="font-mono text-xs">{emp.data.cnpj}</TableCell>
                       <TableCell>
