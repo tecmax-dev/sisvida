@@ -1110,11 +1110,45 @@ Deno.serve(async (req) => {
             }
           }
 
-          // Função para extrair código base do campo "Pedido" da Lytex
-          // Ex: "124 - MENSALIDADE SINDICAL REFERENTE AGOSTO DE 2024" -> "124"
-          const extractBaseCode = (orderName: string): string | null => {
-            const match = orderName.match(/^(\d{3})\s*-/);
-            return match ? match[1] : null;
+          // Função para determinar o tipo de contribuição baseado no "Pedido" da Lytex
+          // Mapeia códigos especiais (756) e palavras-chave para os tipos base corretos
+          const resolveContributionType = (orderName: string): string | null => {
+            const upper = orderName.toUpperCase().trim();
+            
+            // Extrair código do início (ex: "124 - ...", "756 - ...")
+            const codeMatch = upper.match(/^(\d{3})\s*-/);
+            const code = codeMatch ? codeMatch[1] : null;
+            
+            // Código 756: mapear pelo conteúdo textual
+            if (code === "756") {
+              if (upper.includes("MENSALIDADE SINDICAL")) {
+                return contribTypeByCode.get("124") || null;
+              }
+              if (upper.includes("TAXA NEGOCIAL") && (upper.includes("MERCADOS") || upper.includes("MERCADO"))) {
+                return contribTypeByCode.get("125") || null;
+              }
+              if (upper.includes("TAXA NEGOCIAL") && (upper.includes("VAREJISTA") || upper.includes("VEREJ"))) {
+                return contribTypeByCode.get("126") || null;
+              }
+              // Se não conseguir mapear, tenta o código diretamente ou fallback
+              return null;
+            }
+            
+            // Códigos padrão (124, 125, 126, 127, 128): buscar diretamente
+            if (code && contribTypeByCode.has(code)) {
+              return contribTypeByCode.get(code) || null;
+            }
+            
+            // Fallback por palavras-chave (tipos sem código numérico)
+            if (upper.includes("DEBITO NEGOCIADO") || upper.includes("NEGOCIAÇÃO DE DÉBITO") || upper.includes("NEGOCIACAO DE DEBITO")) {
+              return contribTypeByCode.get("127") || null;
+            }
+            if (upper.includes("MENSALIDADE INDIVIDUAL") || upper.includes("CONTRIBUIÇÃO INDIVIDUAL") || upper.includes("CONTRIBUICAO INDIVIDUAL")) {
+              return contribTypeByCode.get("128") || null;
+            }
+            
+            // Buscar pelo nome completo no mapa
+            return contribTypeByName.get(upper) || null;
           };
 
           // Tipo padrão (fallback) se não encontrar correspondência
@@ -1239,24 +1273,16 @@ Deno.serve(async (req) => {
                 }
 
                 // Determinar tipo de contribuição pelo campo "Pedido" (items[0].name)
-                // Extrair apenas o código base (124, 125, 126) para vincular ao tipo existente
+                // Usa a função resolveContributionType que lida com mapeamento de códigos 756 e palavras-chave
                 const orderName = invoice.items?.[0]?.name?.trim() || "";
-                const baseCode = extractBaseCode(orderName.toUpperCase());
                 
-                // Primeiro tenta pelo código base (mais preciso)
-                let contributionTypeId = baseCode ? contribTypeByCode.get(baseCode) : null;
-                
-                // Fallback: buscar pelo nome completo (para tipos sem código)
-                if (!contributionTypeId) {
-                  contributionTypeId = contribTypeByName.get(orderName.toUpperCase());
-                }
+                // Usar a nova função que resolve tipos por código e palavras-chave
+                let contributionTypeId = resolveContributionType(orderName);
 
                 // Fallback final para tipo padrão "Mensalidade"
                 if (!contributionTypeId) {
                   contributionTypeId = defaultTypeId;
-                  if (baseCode) {
-                    console.log(`[Lytex] Código ${baseCode} não encontrado, usando tipo padrão`);
-                  }
+                  console.log(`[Lytex] Tipo não mapeado para "${orderName}", usando Mensalidade como padrão`);
                 }
 
                 const patch = {
