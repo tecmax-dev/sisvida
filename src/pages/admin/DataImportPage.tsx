@@ -459,13 +459,22 @@ export default function DataImportPage() {
       .select('id, name, cpf')
       .eq('clinic_id', selectedClinicId);
     
+    // Helper to normalize CPF for comparison (11 digits, left-padded)
+    const normalizeCpfForComparison = (cpf: string | null | undefined): string | null => {
+      if (!cpf) return null;
+      const clean = cpf.replace(/\D/g, '');
+      if (clean.length === 0 || clean.length > 11) return null;
+      return clean.padStart(11, '0');
+    };
+    
     // Build deduplication maps
     const existingCpfToId = new Map<string, string>();
     const existingNameToId = new Map<string, string>();
     
     existingPatientsForDedup?.forEach(p => {
-      if (p.cpf) {
-        existingCpfToId.set(p.cpf.replace(/\D/g, ''), p.id);
+      const normalizedCpf = normalizeCpfForComparison(p.cpf);
+      if (normalizedCpf) {
+        existingCpfToId.set(normalizedCpf, p.id);
       }
       existingNameToId.set(normalizeNameForComparison(p.name), p.id);
     });
@@ -484,7 +493,7 @@ export default function DataImportPage() {
     let skippedDuplicates = 0;
     
     for (const row of validPatients) {
-      const cpfClean = row.data.cpf ? row.data.cpf.replace(/\D/g, '') : null;
+      const cpfClean = normalizeCpfForComparison(row.data.cpf);
       const normalizedName = normalizeNameForComparison(row.data.nome);
       
       // Check if patient already exists by CPF (primary) or name (secondary)
@@ -562,7 +571,11 @@ export default function DataImportPage() {
       const batchData = batch.map(b => b.patientData);
       
       try {
-        const { data, error } = await supabase.from('patients').insert(batchData).select('id, cpf, name');
+        // Use UPSERT with ignoreDuplicates to silently skip existing CPFs
+        const { data, error } = await supabase
+          .from('patients')
+          .upsert(batchData, { onConflict: 'cpf', ignoreDuplicates: true })
+          .select('id, cpf, name');
         
         if (error) {
           console.error('[BATCH ERROR]', error.message);
