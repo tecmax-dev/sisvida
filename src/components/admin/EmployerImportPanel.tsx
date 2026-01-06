@@ -56,9 +56,43 @@ function cleanCnpj(cnpj: string): string {
   return (cnpj || '').replace(/\D/g, '');
 }
 
+// Normalize CNPJ value from Excel (handles numbers, scientific notation, strings)
+function normalizeCnpjValue(val: unknown): string {
+  if (val === null || val === undefined) return '';
+  
+  // If it's a number (Excel stores CNPJs as numbers, losing leading zeros)
+  if (typeof val === 'number') {
+    // Convert to string and pad to 14 digits
+    return Math.floor(val).toString().padStart(14, '0');
+  }
+  
+  let str = String(val).trim();
+  
+  // Handle scientific notation (e.g., 1.23456E+13)
+  if (/[eE]\+?\d+/.test(str)) {
+    try {
+      // Parse as number and convert to integer string
+      const num = parseFloat(str);
+      if (!isNaN(num)) {
+        str = Math.floor(num).toString().padStart(14, '0');
+      }
+    } catch {
+      // Keep original if parsing fails
+    }
+  }
+  
+  // Clean to only digits and pad if needed
+  const digits = str.replace(/\D/g, '');
+  if (digits.length > 0 && digits.length < 14) {
+    return digits.padStart(14, '0');
+  }
+  
+  return digits;
+}
+
 // Format registration number to 6 digits
 function formatRegistration(id: string): string {
-  const numericId = id.replace(/\D/g, '');
+  const numericId = String(id || '').replace(/\D/g, '');
   return numericId.padStart(6, '0');
 }
 
@@ -91,6 +125,26 @@ function validateCnpj(cnpj: string): boolean {
   return true;
 }
 
+// Find header row index by looking for CNPJ or ID columns
+function findHeaderRowIndex(sheet: XLSX.WorkSheet): number {
+  const range = XLSX.utils.decode_range(sheet['!ref'] || 'A1');
+  const maxRowsToCheck = Math.min(10, range.e.r + 1);
+  
+  for (let r = 0; r < maxRowsToCheck; r++) {
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const cellAddress = XLSX.utils.encode_cell({ r, c });
+      const cell = sheet[cellAddress];
+      if (cell && cell.v) {
+        const val = String(cell.v).trim().toUpperCase();
+        if (val === 'CNPJ' || val === 'ID' || val === 'MATRICULA' || val === 'NOME DA EMPRESA') {
+          return r;
+        }
+      }
+    }
+  }
+  return 0; // Default to first row
+}
+
 export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
   const [parsedEmployers, setParsedEmployers] = useState<ParsedEmployer[]>([]);
   const [loading, setLoading] = useState(false);
@@ -114,20 +168,18 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
       const workbook = XLSX.read(buffer, { type: 'array' });
       const sheetName = workbook.SheetNames[0];
       const sheet = workbook.Sheets[sheetName];
-      // Tenta primeiro sem pular linhas
-      let rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
       
-      // Verifica se a primeira linha tem os campos esperados (pode ter linha de título do SindSystem)
-      const firstRow = rows[0];
-      const hasValidHeaders = firstRow && 
-        ('CNPJ' in firstRow || 'cnpj' in firstRow || 'ID' in firstRow || 'id' in firstRow || 
-         'Nome da empresa' in firstRow || 'Nome' in firstRow);
+      // Find the actual header row (skip title rows from SindSystem, etc.)
+      const headerRowIndex = findHeaderRowIndex(sheet);
+      console.log('Header row detected at index:', headerRowIndex);
       
-      // Se não encontrou headers válidos, tenta pulando a primeira linha (título do sistema)
-      if (!hasValidHeaders && rows.length > 0) {
-        console.log('Detectada linha de título, pulando primeira linha...');
-        rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { range: 1 });
-      }
+      // Parse with the correct header row, preserving raw values
+      const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { 
+        range: headerRowIndex,
+        defval: '', // Empty cells become empty strings
+      });
+      
+      console.log('Parsed rows:', rows.length, 'First row keys:', rows[0] ? Object.keys(rows[0]) : []);
       
       // Fetch existing employers for comparison
       const { data: existingEmployers } = await supabase
@@ -156,12 +208,21 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
         
         // Map columns - handle different column name variations
         const getId = (): string => {
-          const val = row['ID'] || row['id'] || row['Id'] || row['MATRICULA'] || row['matricula'] || '';
+          // Find ID column with case-insensitive matching
+          const idKey = Object.keys(row).find(k => 
+            ['ID', 'MATRICULA'].includes(k.trim().toUpperCase())
+          );
+          const val = idKey ? row[idKey] : '';
           return String(val).trim();
         };
         
         const getNome = (): string => {
-          const val = row['Nome da empresa'] || row['NOME DA EMPRESA'] || row['nome'] || row['Nome'] || row['NOME'] || row['razao_social'] || '';
+          // Find Nome column with case-insensitive matching
+          const nomeKey = Object.keys(row).find(k => {
+            const upper = k.trim().toUpperCase();
+            return upper === 'NOME DA EMPRESA' || upper === 'NOME' || upper === 'RAZAO_SOCIAL';
+          });
+          const val = nomeKey ? row[nomeKey] : '';
           return String(val).trim();
         };
         
@@ -171,8 +232,11 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
         };
         
         const getCnpj = (): string => {
-          const val = row['CNPJ'] || row['cnpj'] || row['Cnpj'] || '';
-          return String(val).trim();
+          // Find CNPJ column with case-insensitive matching
+          const cnpjKey = Object.keys(row).find(k => k.trim().toUpperCase() === 'CNPJ');
+          const val = cnpjKey ? row[cnpjKey] : '';
+          // Normalize CNPJ (handles numbers, scientific notation, leading zeros)
+          return normalizeCnpjValue(val);
         };
         
         const getEmail = (): string => {
