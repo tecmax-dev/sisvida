@@ -197,7 +197,8 @@ export default function EmployerPortal() {
   }, [contributions]);
 
   const contributionYears = useMemo(() => {
-    const years = new Set(contributions.map(c => c.competence_year));
+    const currentYear = new Date().getFullYear();
+    const years = new Set([currentYear, ...contributions.map(c => c.competence_year)]);
     return Array.from(years).sort((a, b) => b - a);
   }, [contributions]);
 

@@ -470,7 +470,8 @@ export default function AccountingOfficePortal() {
     toast.success("Relatório gerado com sucesso!");
   };
 
-  const availableYears = [...new Set(contributions.map(c => c.competence_year))].sort((a, b) => b - a);
+  const currentYear = new Date().getFullYear();
+  const availableYears = [...new Set([currentYear, ...contributions.map(c => c.competence_year)])].sort((a, b) => b - a);
 
   const filteredContributions = contributions.filter(contrib => {
     const matchesSearch = searchTerm === "" || 
