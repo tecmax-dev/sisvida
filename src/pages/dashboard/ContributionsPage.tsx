@@ -5,6 +5,7 @@ import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, F
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { extractFunctionsError } from "@/lib/functionsError";
 
 import ContributionsOverviewTab from "@/components/contributions/ContributionsOverviewTab";
 import ContributionsListTab from "@/components/contributions/ContributionsListTab";
@@ -227,7 +228,10 @@ export default function ContributionsPage() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const { message } = extractFunctionsError(error);
+        throw new Error(message);
+      }
 
       if (data?.updated > 0) {
         toast.success(`${data.updated} contribuição(ões) atualizada(s)`);
@@ -236,9 +240,9 @@ export default function ContributionsPage() {
         toast.info("Nenhuma atualização encontrada");
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      const { message } = extractFunctionsError(error);
       console.error("Error syncing:", error);
-      toast.error(`Erro ao sincronizar: ${errorMessage}`);
+      toast.error(`Erro ao sincronizar: ${message}`);
     } finally {
       setSyncing(false);
     }
