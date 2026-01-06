@@ -543,11 +543,18 @@ export default function AccountingOfficesPage() {
     toast.success("Relatório gerado com sucesso!");
   };
 
-  const filteredOffices = offices.filter(office =>
-    office.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    office.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    office.contact_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredOffices = offices.filter(office => {
+    const search = searchTerm.toLowerCase();
+    const searchNumbers = searchTerm.replace(/\D/g, ""); // Remove formatação para CNPJ/telefone
+    return (
+      office.name.toLowerCase().includes(search) ||
+      office.email.toLowerCase().includes(search) ||
+      office.contact_name?.toLowerCase().includes(search) ||
+      office.trade_name?.toLowerCase().includes(search) ||
+      (searchNumbers && office.cnpj?.includes(searchNumbers)) ||
+      (searchNumbers && office.phone?.includes(searchNumbers))
+    );
+  });
 
   const portalUrl = currentClinic?.slug 
     ? `${window.location.origin}/portal-contador/${currentClinic.slug}`
