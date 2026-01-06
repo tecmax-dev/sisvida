@@ -96,16 +96,14 @@ function extractCompaniesFromBlock(text: string): ParsedCompany[] {
 }
 
 /**
- * Parser principal
+ * Parser principal - Escritório vem ANTES das empresas vinculadas
  */
 export function parseAccountingReport(text: string): ParseResult {
   const officeLines = extractOfficeLines(text);
   const allCnpjs = extractCnpjs(text);
   const offices: ParsedOffice[] = [];
-  const orphanCompanies: ParsedCompany[] = [];
   
   if (officeLines.length === 0) {
-    // Sem escritórios encontrados
     return {
       offices: [],
       orphanCompanies: extractCompaniesFromBlock(text),
@@ -116,60 +114,139 @@ export function parseAccountingReport(text: string): ParseResult {
   // Ordena as linhas de escritório por posição
   officeLines.sort((a, b) => a.position - b.position);
   
-  // Para cada bloco antes de um escritório, associa as empresas ao escritório seguinte
+  // Para cada escritório, pega as empresas que estão DEPOIS dele (até o próximo escritório)
   for (let i = 0; i < officeLines.length; i++) {
     const officeLine = officeLines[i];
     const parsed = parseOfficeLine(officeLine.line);
     
     if (!parsed) continue;
     
-    // Encontra o bloco de texto antes deste escritório
-    const startPos = i === 0 ? 0 : officeLines[i - 1].position + officeLines[i - 1].line.length;
-    const endPos = officeLine.position;
-    const blockBefore = text.substring(startPos, endPos);
+    // Bloco de texto DEPOIS deste escritório (até o próximo ou fim do texto)
+    const startPos = officeLine.position + officeLine.line.length;
+    const endPos = i < officeLines.length - 1 
+      ? officeLines[i + 1].position 
+      : text.length;
+    const blockAfter = text.substring(startPos, endPos);
     
     // Extrai CNPJs do bloco
-    const companiesInBlock = extractCompaniesFromBlock(blockBefore);
-    const cnpjsInBlock = companiesInBlock.map(c => c.cnpj);
+    const companiesInBlock = extractCompaniesFromBlock(blockAfter);
     
-    // Se este é o primeiro escritório e não há empresas antes, pega as empresas depois
-    if (i === 0 && cnpjsInBlock.length === 0) {
-      // Verifica se há empresas após o último escritório
-      const afterLastOffice = text.substring(officeLines[officeLines.length - 1].position);
-      const companiesAfter = extractCompaniesFromBlock(afterLastOffice);
+    offices.push({
+      ...parsed,
+      linkedCompanyCnpjs: companiesInBlock.map(c => c.cnpj)
+    });
+  }
+  
+  // Empresas órfãs: aquelas que aparecem ANTES do primeiro escritório
+  const firstOffice = officeLines[0];
+  const beforeFirst = text.substring(0, firstOffice.position);
+  const orphanCompanies = extractCompaniesFromBlock(beforeFirst);
+  
+  return {
+    offices,
+    orphanCompanies,
+    totalCompanies: allCnpjs.length
+  };
+}
+
+/**
+ * Parser para planilhas Excel - Escritório vem ANTES das empresas vinculadas
+ */
+export function parseExcelAccountingReport(rows: any[][]): ParseResult {
+  const offices: ParsedOffice[] = [];
+  const orphanCompanies: ParsedCompany[] = [];
+  let currentOffice: Omit<ParsedOffice, 'linkedCompanyCnpjs'> | null = null;
+  let currentCnpjs: string[] = [];
+  let totalCompanies = 0;
+  
+  for (const row of rows) {
+    if (!row || row.length === 0) continue;
+    
+    const firstCell = String(row[0] || '').trim();
+    
+    // Verifica se é linha de escritório
+    if (firstCell.toLowerCase().includes('escritório') || firstCell.toLowerCase().includes('escritorios:')) {
+      // Salva escritório anterior com suas empresas
+      if (currentOffice) {
+        offices.push({
+          ...currentOffice,
+          linkedCompanyCnpjs: [...new Set(currentCnpjs)] // Remove duplicatas
+        });
+      }
       
-      offices.push({
-        ...parsed,
-        linkedCompanyCnpjs: companiesAfter.map(c => c.cnpj)
-      });
+      // Parse do novo escritório
+      currentOffice = parseOfficeLine(firstCell);
+      currentCnpjs = [];
     } else {
-      offices.push({
-        ...parsed,
-        linkedCompanyCnpjs: cnpjsInBlock
-      });
+      // Procura CNPJ em qualquer célula da linha
+      const cnpj = extractCnpjFromExcelRow(row);
+      if (cnpj) {
+        totalCompanies++;
+        if (currentOffice) {
+          currentCnpjs.push(cnpj);
+        } else {
+          // Empresa antes do primeiro escritório (órfã)
+          const name = extractCompanyNameFromRow(row);
+          if (name) {
+            orphanCompanies.push({ name, cnpj });
+          }
+        }
+      }
     }
   }
   
-  // Verifica empresas órfãs (após o último escritório)
-  const lastOffice = officeLines[officeLines.length - 1];
-  const afterLast = text.substring(lastOffice.position + lastOffice.line.length);
-  const orphans = extractCompaniesFromBlock(afterLast);
-  
-  // Se há escritórios mas nenhum tem empresas associadas, distribui de forma alternativa
-  const totalLinked = offices.reduce((sum, o) => sum + o.linkedCompanyCnpjs.length, 0);
-  if (totalLinked === 0 && allCnpjs.length > 0) {
-    // Tenta uma abordagem diferente: associa todas as empresas ao primeiro escritório
-    const allCompanies = extractCompaniesFromBlock(text);
-    if (offices.length > 0 && allCompanies.length > 0) {
-      offices[0].linkedCompanyCnpjs = allCompanies.map(c => c.cnpj);
-    }
+  // Salva último escritório
+  if (currentOffice) {
+    offices.push({
+      ...currentOffice,
+      linkedCompanyCnpjs: [...new Set(currentCnpjs)]
+    });
   }
   
   return {
     offices,
-    orphanCompanies: orphans,
-    totalCompanies: allCnpjs.length
+    orphanCompanies,
+    totalCompanies
   };
+}
+
+/**
+ * Extrai CNPJ de uma linha do Excel (procura em todas as células)
+ */
+function extractCnpjFromExcelRow(row: any[]): string | null {
+  for (const cell of row) {
+    if (cell == null) continue;
+    
+    let cellStr = String(cell);
+    
+    // Remove <br/> e outras tags HTML
+    cellStr = cellStr.replace(/<br\s*\/?>/gi, '').replace(/<[^>]+>/g, '');
+    
+    // Procura padrão de CNPJ
+    const match = cellStr.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
+    if (match) {
+      return match[0].replace(/\D/g, '');
+    }
+  }
+  return null;
+}
+
+/**
+ * Extrai nome da empresa de uma linha do Excel
+ */
+function extractCompanyNameFromRow(row: any[]): string {
+  // Geralmente o nome está na segunda coluna (índice 1)
+  if (row.length > 1 && row[1]) {
+    return String(row[1]).trim();
+  }
+  // Fallback: primeira coluna que não seja número
+  for (const cell of row) {
+    const str = String(cell || '').trim();
+    if (str && !/^\d+$/.test(str) && !str.includes('/')) {
+      return str;
+    }
+  }
+  return '';
 }
 
 /**

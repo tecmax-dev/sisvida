@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Upload, CheckCircle2, AlertCircle, Building2, Link2 } from "lucide-react";
+import { Loader2, Upload, CheckCircle2, AlertCircle, Building2, Link2, FileSpreadsheet, FileText } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,7 +14,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { parseAccountingReport, ParsedOffice, formatCnpj, normalizeCnpj } from "@/lib/pdfAccountingParser";
+import { parseAccountingReport, parseExcelAccountingReport, ParsedOffice, formatCnpj, normalizeCnpj } from "@/lib/pdfAccountingParser";
+import * as XLSX from "xlsx";
 
 interface Employer {
   id: string;
@@ -59,6 +60,8 @@ export default function AccountingOfficeImportPanel({
   const [isImporting, setIsImporting] = useState(false);
   const [preview, setPreview] = useState<ImportPreview[] | null>(null);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [inputMode, setInputMode] = useState<"select" | "excel" | "text">("select");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const generateAccessCode = () => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -67,6 +70,72 @@ export default function AccountingOfficeImportPanel({
       code += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return code;
+  };
+
+  const processParseResult = (offices: ParsedOffice[]) => {
+    if (offices.length === 0) {
+      toast.error("Nenhum escritório encontrado");
+      return;
+    }
+
+    // Criar preview com matching
+    const previews: ImportPreview[] = offices.map((office) => {
+      // Verifica se o escritório já existe (por email)
+      const existingOffice = existingOffices.find(
+        (o) => o.email.toLowerCase() === office.email.toLowerCase()
+      );
+
+      // Match empresas por CNPJ
+      const matchedEmployers: Employer[] = [];
+      const unmatchedCnpjs: string[] = [];
+
+      for (const cnpj of office.linkedCompanyCnpjs) {
+        const normalizedCnpj = normalizeCnpj(cnpj);
+        const employer = employers.find(
+          (e) => normalizeCnpj(e.cnpj) === normalizedCnpj
+        );
+        if (employer) {
+          matchedEmployers.push(employer);
+        } else {
+          unmatchedCnpjs.push(cnpj);
+        }
+      }
+
+      return {
+        office,
+        existsInSystem: !!existingOffice,
+        existingOfficeId: existingOffice?.id,
+        matchedEmployers,
+        unmatchedCnpjs,
+      };
+    });
+
+    setPreview(previews);
+    toast.success(`${previews.length} escritório(s) encontrado(s)`);
+  };
+
+  const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsParsing(true);
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+
+      const result = parseExcelAccountingReport(rows);
+      processParseResult(result.offices);
+    } catch (error) {
+      console.error("Excel parse error:", error);
+      toast.error("Erro ao processar planilha");
+    } finally {
+      setIsParsing(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
   };
 
   const handleParse = () => {
@@ -78,47 +147,7 @@ export default function AccountingOfficeImportPanel({
     setIsParsing(true);
     try {
       const result = parseAccountingReport(textContent);
-
-      if (result.offices.length === 0) {
-        toast.error("Nenhum escritório encontrado no texto");
-        setIsParsing(false);
-        return;
-      }
-
-      // Criar preview com matching
-      const previews: ImportPreview[] = result.offices.map((office) => {
-        // Verifica se o escritório já existe (por email)
-        const existingOffice = existingOffices.find(
-          (o) => o.email.toLowerCase() === office.email.toLowerCase()
-        );
-
-        // Match empresas por CNPJ
-        const matchedEmployers: Employer[] = [];
-        const unmatchedCnpjs: string[] = [];
-
-        for (const cnpj of office.linkedCompanyCnpjs) {
-          const normalizedCnpj = normalizeCnpj(cnpj);
-          const employer = employers.find(
-            (e) => normalizeCnpj(e.cnpj) === normalizedCnpj
-          );
-          if (employer) {
-            matchedEmployers.push(employer);
-          } else {
-            unmatchedCnpjs.push(cnpj);
-          }
-        }
-
-        return {
-          office,
-          existsInSystem: !!existingOffice,
-          existingOfficeId: existingOffice?.id,
-          matchedEmployers,
-          unmatchedCnpjs,
-        };
-      });
-
-      setPreview(previews);
-      toast.success(`${previews.length} escritório(s) encontrado(s)`);
+      processParseResult(result.offices);
     } catch (error) {
       console.error("Parse error:", error);
       toast.error("Erro ao processar texto");
@@ -254,6 +283,11 @@ export default function AccountingOfficeImportPanel({
     (sum, p) => sum + p.unmatchedCnpjs.length,
     0
   ) || 0;
+
+  const resetToSelectMode = () => {
+    setInputMode("select");
+    setTextContent("");
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -402,12 +436,66 @@ export default function AccountingOfficeImportPanel({
                 </div>
               </ScrollArea>
             </div>
-          ) : (
+          ) : inputMode === "select" ? (
+            // Seleção de modo de importação
+            <div className="space-y-6">
+              <div className="text-sm text-muted-foreground text-center">
+                Escolha como deseja importar os escritórios de contabilidade:
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <Card 
+                  className="cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <CardContent className="p-6 text-center">
+                    <FileSpreadsheet className="h-12 w-12 mx-auto mb-4 text-green-600" />
+                    <div className="font-medium mb-2">Upload de Planilha</div>
+                    <div className="text-sm text-muted-foreground">
+                      Faça upload do arquivo Excel (.xlsx) do relatório
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card 
+                  className="cursor-pointer hover:border-primary transition-colors"
+                  onClick={() => setInputMode("text")}
+                >
+                  <CardContent className="p-6 text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-4 text-blue-600" />
+                    <div className="font-medium mb-2">Colar Texto</div>
+                    <div className="text-sm text-muted-foreground">
+                      Cole o texto copiado do relatório PDF
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleExcelUpload}
+                className="hidden"
+              />
+
+              {isParsing && (
+                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Processando planilha...
+                </div>
+              )}
+            </div>
+          ) : inputMode === "text" ? (
             // Input de texto
             <div className="space-y-4">
-              <div className="text-sm text-muted-foreground">
-                Cole o conteúdo do relatório de contribuição abaixo. O sistema irá identificar
-                automaticamente os escritórios de contabilidade e as empresas vinculadas.
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Cole o conteúdo do relatório de contribuição abaixo.
+                </div>
+                <Button variant="ghost" size="sm" onClick={resetToSelectMode}>
+                  ← Voltar
+                </Button>
               </div>
               
               <div className="bg-muted/50 p-3 rounded-lg text-sm">
@@ -431,7 +519,7 @@ export default function AccountingOfficeImportPanel({
                 </span>
               </div>
             </div>
-          )}
+          ) : null}
         </div>
 
         <DialogFooter>
@@ -439,7 +527,7 @@ export default function AccountingOfficeImportPanel({
             {importResult ? "Fechar" : "Cancelar"}
           </Button>
           
-          {!importResult && !preview && (
+          {!importResult && !preview && inputMode === "text" && (
             <Button onClick={handleParse} disabled={isParsing || !textContent.trim()}>
               {isParsing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Analisar Conteúdo
