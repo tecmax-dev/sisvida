@@ -20,6 +20,7 @@ import {
   FileSpreadsheet,
   ArrowRight,
   RefreshCw,
+  Shuffle,
 } from "lucide-react";
 
 interface EmployerImportRow {
@@ -40,11 +41,17 @@ interface EmployerImportRow {
 interface ParsedEmployer {
   rowNumber: number;
   data: EmployerImportRow;
-  status: 'to_create' | 'to_update' | 'invalid';
+  status: 'to_create' | 'to_update' | 'invalid' | 'conflict';
   existingId?: string;
   existingRegistration?: string;
   errors: string[];
   changes?: string[];
+  conflictInfo?: {
+    occupantId: string;
+    occupantName: string;
+    occupantCnpj: string;
+    targetRegistration: string;
+  };
 }
 
 interface EmployerImportPanelProps {
@@ -145,6 +152,18 @@ function findHeaderRowIndex(sheet: XLSX.WorkSheet): number {
   return 0; // Default to first row
 }
 
+// Categorize error type
+function categorizeError(errorMessage: string): 'unique' | 'rls' | 'other' {
+  const msg = errorMessage.toLowerCase();
+  if (msg.includes('unique constraint') || msg.includes('duplicate key')) {
+    return 'unique';
+  }
+  if (msg.includes('rls') || msg.includes('policy') || msg.includes('permission') || msg.includes('denied')) {
+    return 'rls';
+  }
+  return 'other';
+}
+
 export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
   const STORAGE_KEY = `employer-import-${clinicId}`;
 
@@ -170,8 +189,26 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
     } catch { /* ignore */ }
     return true;
   });
+  const [resolveConflicts, setResolveConflicts] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem(`employer-import-${clinicId}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.resolveConflicts ?? true;
+      }
+    } catch { /* ignore */ }
+    return true;
+  });
   const [progress, setProgress] = useState(0);
-  const [results, setResults] = useState<{ created: number; updated: number; errors: number; errorDetails: string[] } | null>(() => {
+  const [results, setResults] = useState<{ 
+    created: number; 
+    updated: number; 
+    errors: number; 
+    reallocated: number;
+    errorDetails: string[];
+    uniqueErrors: string[];
+    rlsErrors: string[];
+  } | null>(() => {
     try {
       const saved = sessionStorage.getItem(`employer-import-${clinicId}`);
       if (saved) {
@@ -188,10 +225,11 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
         employers: parsedEmployers,
         dryRun,
+        resolveConflicts,
         results,
       }));
     }
-  }, [parsedEmployers, dryRun, results, STORAGE_KEY]);
+  }, [parsedEmployers, dryRun, resolveConflicts, results, STORAGE_KEY]);
 
   // Clear storage helper
   const clearStorage = useCallback(() => {
@@ -233,13 +271,24 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
         .select('id, cnpj, registration_number, name')
         .eq('clinic_id', clinicId);
       
-      const cnpjToEmployer = new Map<string, { id: string; registration_number: string | null; name: string }>();
+      // Build maps for CNPJ and registration_number
+      const cnpjToEmployer = new Map<string, { id: string; registration_number: string | null; name: string; cnpj: string }>();
+      const registrationToEmployer = new Map<string, { id: string; cnpj: string; name: string }>();
+      
       existingEmployers?.forEach(emp => {
         const cleanedCnpj = cleanCnpj(emp.cnpj || '');
         if (cleanedCnpj) {
           cnpjToEmployer.set(cleanedCnpj, {
             id: emp.id,
             registration_number: emp.registration_number,
+            name: emp.name,
+            cnpj: cleanedCnpj,
+          });
+        }
+        if (emp.registration_number) {
+          registrationToEmployer.set(emp.registration_number, {
+            id: emp.id,
+            cnpj: cleanedCnpj,
             name: emp.name,
           });
         }
@@ -350,25 +399,51 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
           segmento: getSegmento() || undefined,
         };
         
-        let status: 'to_create' | 'to_update' | 'invalid' = 'invalid';
+        let status: 'to_create' | 'to_update' | 'invalid' | 'conflict' = 'invalid';
         let existingId: string | undefined;
         let existingRegistration: string | undefined;
+        let conflictInfo: ParsedEmployer['conflictInfo'];
         
         if (errors.length === 0) {
           const cleanedCnpj = cleanCnpj(cnpj);
           const existing = cnpjToEmployer.get(cleanedCnpj);
+          const targetRegistration = formatRegistration(id);
+          const occupant = registrationToEmployer.get(targetRegistration);
           
           if (existing) {
-            status = 'to_update';
             existingId = existing.id;
             existingRegistration = existing.registration_number || undefined;
             
-            const newRegistration = formatRegistration(id);
-            if (existing.registration_number !== newRegistration) {
-              changes.push(`Matrícula: ${existing.registration_number || '(vazio)'} → ${newRegistration}`);
+            // Check if there's a registration conflict (different employer has this registration)
+            if (occupant && occupant.id !== existing.id) {
+              status = 'conflict';
+              conflictInfo = {
+                occupantId: occupant.id,
+                occupantName: occupant.name,
+                occupantCnpj: occupant.cnpj,
+                targetRegistration,
+              };
+              errors.push(`Matrícula ${targetRegistration} já em uso por "${occupant.name}" (CNPJ ${occupant.cnpj})`);
+            } else {
+              status = 'to_update';
+              if (existing.registration_number !== targetRegistration) {
+                changes.push(`Matrícula: ${existing.registration_number || '(vazio)'} → ${targetRegistration}`);
+              }
             }
           } else {
-            status = 'to_create';
+            // New employer - check if registration is already taken
+            if (occupant) {
+              status = 'conflict';
+              conflictInfo = {
+                occupantId: occupant.id,
+                occupantName: occupant.name,
+                occupantCnpj: occupant.cnpj,
+                targetRegistration,
+              };
+              errors.push(`Matrícula ${targetRegistration} já em uso por "${occupant.name}" (CNPJ ${occupant.cnpj})`);
+            } else {
+              status = 'to_create';
+            }
           }
         }
         
@@ -380,6 +455,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
           existingRegistration,
           errors,
           changes,
+          conflictInfo,
         });
       }
       
@@ -388,9 +464,22 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
       
       const toCreate = parsed.filter(p => p.status === 'to_create').length;
       const toUpdate = parsed.filter(p => p.status === 'to_update').length;
+      const conflicts = parsed.filter(p => p.status === 'conflict').length;
       const invalid = parsed.filter(p => p.status === 'invalid').length;
       
-      toast.success(`Planilha processada: ${toCreate} para criar, ${toUpdate} para atualizar, ${invalid} com erros`);
+      let message = `Planilha processada: ${toCreate} para criar, ${toUpdate} para atualizar`;
+      if (conflicts > 0) {
+        message += `, ${conflicts} conflitos de matrícula`;
+      }
+      if (invalid > 0) {
+        message += `, ${invalid} com erros`;
+      }
+      
+      if (conflicts > 0) {
+        toast.warning(message);
+      } else {
+        toast.success(message);
+      }
     } catch (error) {
       toast.dismiss('parsing-employers');
       console.error('Error parsing employer file:', error);
@@ -402,9 +491,15 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
   }, [clinicId]);
 
   const handleImport = async () => {
-    const toProcess = parsedEmployers.filter(p => p.status !== 'invalid');
+    const conflicts = parsedEmployers.filter(p => p.status === 'conflict');
+    const toProcess = parsedEmployers.filter(p => p.status === 'to_create' || p.status === 'to_update' || (p.status === 'conflict' && resolveConflicts));
+    
     if (toProcess.length === 0) {
-      toast.error('Nenhum registro válido para importar');
+      if (conflicts.length > 0 && !resolveConflicts) {
+        toast.error('Existem conflitos de matrícula. Ative "Resolver conflitos automaticamente" para continuar.');
+      } else {
+        toast.error('Nenhum registro válido para importar');
+      }
       return;
     }
     
@@ -415,7 +510,23 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
     let created = 0;
     let updated = 0;
     let errors = 0;
+    let reallocated = 0;
     const errorDetails: string[] = [];
+    const uniqueErrors: string[] = [];
+    const rlsErrors: string[] = [];
+    
+    // Build a working map of registrations (will be updated during import)
+    const workingRegistrationMap = new Map<string, string>(); // registration -> employer_id
+    const { data: existingEmployers } = await supabase
+      .from('employers')
+      .select('id, registration_number')
+      .eq('clinic_id', clinicId);
+    
+    existingEmployers?.forEach(emp => {
+      if (emp.registration_number) {
+        workingRegistrationMap.set(emp.registration_number, emp.id);
+      }
+    });
     
     const BATCH_SIZE = 50;
     
@@ -425,14 +536,47 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
       for (const employer of batch) {
         try {
           const cleanedCnpj = cleanCnpj(employer.data.cnpj);
-          const registration = formatRegistration(employer.data.id);
+          const targetRegistration = formatRegistration(employer.data.id);
+          
+          // Check if we need to free up the registration first
+          const currentOccupant = workingRegistrationMap.get(targetRegistration);
+          const needsReallocation = currentOccupant && 
+            currentOccupant !== employer.existingId && 
+            resolveConflicts;
+          
+          if (needsReallocation && currentOccupant) {
+            if (!dryRun) {
+              // Free up the registration from the occupant
+              const { error: freeError } = await supabase
+                .from('employers')
+                .update({ 
+                  registration_number: null,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', currentOccupant);
+              
+              if (freeError) {
+                const errorType = categorizeError(freeError.message);
+                const errorMsg = `Linha ${employer.rowNumber}: Erro ao liberar matrícula de ocupante - ${freeError.message}`;
+                if (errorType === 'rls') {
+                  rlsErrors.push(errorMsg);
+                } else {
+                  errorDetails.push(errorMsg);
+                }
+                throw freeError;
+              }
+            }
+            // Update working map
+            workingRegistrationMap.delete(targetRegistration);
+            reallocated++;
+          }
           
           if (employer.status === 'to_update' && employer.existingId) {
             if (!dryRun) {
               const { error } = await supabase
                 .from('employers')
                 .update({
-                  registration_number: registration,
+                  registration_number: targetRegistration,
                   ...(employer.data.email && { email: employer.data.email }),
                   ...(employer.data.telefone && { phone: employer.data.telefone }),
                   ...(employer.data.cep && { cep: employer.data.cep }),
@@ -445,22 +589,31 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                 .eq('id', employer.existingId);
               
               if (error) {
+                const errorType = categorizeError(error.message);
                 const errorMsg = `Linha ${employer.rowNumber} (${employer.data.nome}): ${error.message}`;
-                errorDetails.push(errorMsg);
+                if (errorType === 'unique') {
+                  uniqueErrors.push(errorMsg);
+                } else if (errorType === 'rls') {
+                  rlsErrors.push(errorMsg);
+                } else {
+                  errorDetails.push(errorMsg);
+                }
                 throw error;
               }
             }
+            // Update working map
+            workingRegistrationMap.set(targetRegistration, employer.existingId);
             updated++;
-          } else if (employer.status === 'to_create') {
+          } else if (employer.status === 'to_create' || employer.status === 'conflict') {
             if (!dryRun) {
-              const { error } = await supabase
+              const { data: inserted, error } = await supabase
                 .from('employers')
                 .insert({
                   clinic_id: clinicId,
                   name: employer.data.nome,
                   trade_name: employer.data.fantasia || null,
                   cnpj: cleanedCnpj,
-                  registration_number: registration,
+                  registration_number: targetRegistration,
                   email: employer.data.email || null,
                   phone: employer.data.telefone || null,
                   cep: employer.data.cep || null,
@@ -469,12 +622,26 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                   neighborhood: employer.data.bairro || null,
                   address: employer.data.endereco || null,
                   is_active: true,
-                });
+                })
+                .select('id')
+                .single();
               
               if (error) {
+                const errorType = categorizeError(error.message);
                 const errorMsg = `Linha ${employer.rowNumber} (${employer.data.nome}): ${error.message}`;
-                errorDetails.push(errorMsg);
+                if (errorType === 'unique') {
+                  uniqueErrors.push(errorMsg);
+                } else if (errorType === 'rls') {
+                  rlsErrors.push(errorMsg);
+                } else {
+                  errorDetails.push(errorMsg);
+                }
                 throw error;
+              }
+              
+              // Update working map with new employer
+              if (inserted) {
+                workingRegistrationMap.set(targetRegistration, inserted.id);
               }
             }
             created++;
@@ -488,16 +655,29 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
       setProgress(Math.round(((i + batch.length) / toProcess.length) * 100));
     }
     
-    setResults({ created, updated, errors, errorDetails });
+    setResults({ created, updated, errors, reallocated, errorDetails, uniqueErrors, rlsErrors });
     setImporting(false);
     
     if (dryRun) {
-      toast.success(`Simulação concluída: ${created} seriam criados, ${updated} seriam atualizados`);
+      let msg = `Simulação concluída: ${created} seriam criados, ${updated} seriam atualizados`;
+      if (reallocated > 0) {
+        msg += `, ${reallocated} matrículas seriam realocadas`;
+      }
+      toast.success(msg);
     } else {
       if (errors > 0) {
-        toast.error(`Importação com erros: ${created} criados, ${updated} atualizados, ${errors} erros (RLS/permissão)`);
+        const errorTypes: string[] = [];
+        if (uniqueErrors.length > 0) errorTypes.push(`${uniqueErrors.length} conflitos de matrícula`);
+        if (rlsErrors.length > 0) errorTypes.push(`${rlsErrors.length} erros de permissão`);
+        if (errorDetails.length > 0) errorTypes.push(`${errorDetails.length} outros erros`);
+        
+        toast.error(`Importação com erros: ${created} criados, ${updated} atualizados, ${errorTypes.join(', ')}`);
       } else {
-        toast.success(`Importação concluída: ${created} criados, ${updated} atualizados`);
+        let msg = `Importação concluída: ${created} criados, ${updated} atualizados`;
+        if (reallocated > 0) {
+          msg += `, ${reallocated} matrículas realocadas`;
+        }
+        toast.success(msg);
       }
       if (errors === 0) {
         setParsedEmployers([]);
@@ -508,6 +688,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
 
   const toCreate = parsedEmployers.filter(p => p.status === 'to_create');
   const toUpdate = parsedEmployers.filter(p => p.status === 'to_update');
+  const conflicts = parsedEmployers.filter(p => p.status === 'conflict');
   const invalid = parsedEmployers.filter(p => p.status === 'invalid');
 
   return (
@@ -556,6 +737,19 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
               Modo simulação (não altera banco)
             </Label>
           </div>
+          
+          <div className="flex items-center gap-2">
+            <Switch
+              id="resolve-conflicts"
+              checked={resolveConflicts}
+              onCheckedChange={setResolveConflicts}
+              disabled={importing}
+            />
+            <Label htmlFor="resolve-conflicts" className="text-sm flex items-center gap-1">
+              <Shuffle className="h-3 w-3" />
+              Resolver conflitos de matrícula
+            </Label>
+          </div>
         </div>
         
         
@@ -582,6 +776,14 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                 </Badge>
               )}
               
+              {conflicts.length > 0 && (
+                <Badge className="bg-warning text-warning-foreground gap-1">
+                  <Shuffle className="h-3 w-3" />
+                  {conflicts.length} conflitos
+                  {resolveConflicts && <span className="text-xs">(serão realocados)</span>}
+                </Badge>
+              )}
+              
               {invalid.length > 0 && (
                 <Badge variant="destructive" className="gap-1">
                   <AlertCircle className="h-3 w-3" />
@@ -592,7 +794,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
               <div className="ml-auto">
                 <Button
                   onClick={handleImport}
-                  disabled={importing || (toCreate.length + toUpdate.length === 0)}
+                  disabled={importing || (toCreate.length + toUpdate.length + (resolveConflicts ? conflicts.length : 0) === 0)}
                   className="gap-2"
                 >
                   {importing ? (
@@ -605,6 +807,21 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
               </div>
             </div>
             
+            {/* Conflicts warning */}
+            {conflicts.length > 0 && !resolveConflicts && (
+              <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <AlertTriangle className="h-4 w-4 text-warning" />
+                  <p className="font-medium text-sm">
+                    {conflicts.length} conflitos de matrícula detectados
+                  </p>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Ative "Resolver conflitos de matrícula" para liberar automaticamente as matrículas ocupadas por outras empresas.
+                </p>
+              </div>
+            )}
+            
             {/* Progress */}
             {importing && (
               <div className="space-y-2">
@@ -616,7 +833,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
             {/* Results */}
             {results && (
               <div className="space-y-3">
-                <div className="bg-muted/50 rounded-lg p-4 grid grid-cols-3 gap-4 text-center">
+                <div className="bg-muted/50 rounded-lg p-4 grid grid-cols-4 gap-4 text-center">
                   <div>
                     <p className="text-2xl font-bold text-success">{results.created}</p>
                     <p className="text-xs text-muted-foreground">{dryRun ? 'Seriam criados' : 'Criados'}</p>
@@ -626,33 +843,81 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                     <p className="text-xs text-muted-foreground">{dryRun ? 'Seriam atualizados' : 'Atualizados'}</p>
                   </div>
                   <div>
+                    <p className="text-2xl font-bold text-warning">{results.reallocated}</p>
+                    <p className="text-xs text-muted-foreground">{dryRun ? 'Matrículas realocadas' : 'Realocados'}</p>
+                  </div>
+                  <div>
                     <p className="text-2xl font-bold text-destructive">{results.errors}</p>
                     <p className="text-xs text-muted-foreground">Erros</p>
                   </div>
                 </div>
                 
-                {/* Error Details */}
-                {results.errorDetails && results.errorDetails.length > 0 && (
+                {/* Unique Constraint Errors */}
+                {results.uniqueErrors && results.uniqueErrors.length > 0 && (
+                  <div className="bg-warning/10 border border-warning/30 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Shuffle className="h-4 w-4 text-warning" />
+                      <p className="font-medium text-sm text-warning">
+                        Conflitos de Matrícula ({results.uniqueErrors.length})
+                      </p>
+                    </div>
+                    <ScrollArea className="h-[80px]">
+                      <ul className="text-xs space-y-1 text-muted-foreground">
+                        {results.uniqueErrors.slice(0, 20).map((err, idx) => (
+                          <li key={idx}>• {err}</li>
+                        ))}
+                        {results.uniqueErrors.length > 20 && (
+                          <li className="font-medium">... e mais {results.uniqueErrors.length - 20}</li>
+                        )}
+                      </ul>
+                    </ScrollArea>
+                  </div>
+                )}
+                
+                {/* RLS Errors */}
+                {results.rlsErrors && results.rlsErrors.length > 0 && (
                   <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3">
                     <div className="flex items-center gap-2 mb-2">
                       <AlertTriangle className="h-4 w-4 text-destructive" />
                       <p className="font-medium text-sm text-destructive">
-                        Erros de RLS/Permissão ({results.errorDetails.length})
+                        Erros de Permissão/RLS ({results.rlsErrors.length})
                       </p>
                     </div>
-                    <ScrollArea className="h-[120px]">
+                    <ScrollArea className="h-[80px]">
                       <ul className="text-xs space-y-1 text-destructive/80">
-                        {results.errorDetails.slice(0, 50).map((err, idx) => (
+                        {results.rlsErrors.slice(0, 20).map((err, idx) => (
                           <li key={idx}>• {err}</li>
                         ))}
-                        {results.errorDetails.length > 50 && (
-                          <li className="font-medium">... e mais {results.errorDetails.length - 50} erros</li>
+                        {results.rlsErrors.length > 20 && (
+                          <li className="font-medium">... e mais {results.rlsErrors.length - 20}</li>
                         )}
                       </ul>
                     </ScrollArea>
                     <p className="text-xs text-muted-foreground mt-2">
                       Verifique se você tem permissão de admin para esta clínica.
                     </p>
+                  </div>
+                )}
+                
+                {/* Error Details */}
+                {results.errorDetails && results.errorDetails.length > 0 && (
+                  <div className="bg-muted border rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium text-sm">
+                        Outros Erros ({results.errorDetails.length})
+                      </p>
+                    </div>
+                    <ScrollArea className="h-[80px]">
+                      <ul className="text-xs space-y-1 text-muted-foreground">
+                        {results.errorDetails.slice(0, 20).map((err, idx) => (
+                          <li key={idx}>• {err}</li>
+                        ))}
+                        {results.errorDetails.length > 20 && (
+                          <li className="font-medium">... e mais {results.errorDetails.length - 20}</li>
+                        )}
+                      </ul>
+                    </ScrollArea>
                   </div>
                 )}
               </div>
@@ -678,6 +943,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                       key={emp.rowNumber} 
                       className={
                         emp.status === 'invalid' ? 'bg-destructive/5' :
+                        emp.status === 'conflict' ? 'bg-warning/5' :
                         emp.status === 'to_create' ? 'bg-success/5' :
                         'bg-primary/5'
                       }
@@ -698,13 +964,18 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                         {emp.status === 'to_update' && (
                           <Badge className="bg-primary text-xs">Atualizar</Badge>
                         )}
+                        {emp.status === 'conflict' && (
+                          <Badge className="bg-warning text-warning-foreground text-xs">Conflito</Badge>
+                        )}
                         {emp.status === 'invalid' && (
                           <Badge variant="destructive" className="text-xs">Inválido</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-xs max-w-[200px]">
                         {emp.errors.length > 0 && (
-                          <span className="text-destructive">{emp.errors.join(', ')}</span>
+                          <span className={emp.status === 'conflict' ? 'text-warning' : 'text-destructive'}>
+                            {emp.errors.join(', ')}
+                          </span>
                         )}
                         {emp.changes && emp.changes.length > 0 && (
                           <span className="text-primary">{emp.changes.join(', ')}</span>
@@ -735,6 +1006,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
             <li>• Empresas são identificadas pelo <strong>CNPJ</strong></li>
             <li>• Se CNPJ existe: atualiza matrícula e dados vazios</li>
             <li>• Se CNPJ não existe: cria nova empresa com todos os dados</li>
+            <li>• <strong>Resolver conflitos</strong>: libera matrícula de empresa que está ocupando e atribui à correta</li>
             <li>• Use o <strong>modo simulação</strong> para ver as alterações antes de aplicar</li>
           </ul>
         </div>
