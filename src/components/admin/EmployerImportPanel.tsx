@@ -152,6 +152,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
   const [dryRun, setDryRun] = useState(true);
   const [progress, setProgress] = useState(0);
   const [results, setResults] = useState<{ created: number; updated: number; errors: number } | null>(null);
+  const [debugInfo, setDebugInfo] = useState<{ headers: string[]; firstRows: Record<string, unknown>[] } | null>(null);
 
   const handleFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -177,9 +178,16 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
       const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { 
         range: headerRowIndex,
         defval: '', // Empty cells become empty strings
+        raw: true, // Get raw values (numbers stay as numbers)
       });
       
-      console.log('Parsed rows:', rows.length, 'First row keys:', rows[0] ? Object.keys(rows[0]) : []);
+      // Debug: save headers and first rows for display
+      const headers = rows[0] ? Object.keys(rows[0]) : [];
+      const firstRows = rows.slice(0, 3);
+      console.log('Header row index:', headerRowIndex);
+      console.log('Parsed rows:', rows.length, 'Headers:', headers);
+      console.log('First 3 rows raw:', firstRows);
+      setDebugInfo({ headers, firstRows });
       
       // Fetch existing employers for comparison
       const { data: existingEmployers } = await supabase
@@ -496,6 +504,22 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
             </Label>
           </div>
         </div>
+        
+        {/* Debug Info */}
+        {debugInfo && (
+          <div className="bg-muted/50 rounded-lg p-3 text-xs space-y-2">
+            <p className="font-medium">Debug - Cabeçalhos detectados:</p>
+            <code className="block bg-background p-2 rounded overflow-x-auto">
+              {debugInfo.headers.join(' | ')}
+            </code>
+            <p className="font-medium mt-2">Primeiras 3 linhas brutas:</p>
+            {debugInfo.firstRows.map((row, idx) => (
+              <code key={idx} className="block bg-background p-2 rounded overflow-x-auto text-[10px]">
+                {JSON.stringify(row, null, 0)}
+              </code>
+            ))}
+          </div>
+        )}
         
         {/* Summary */}
         {parsedEmployers.length > 0 && (
