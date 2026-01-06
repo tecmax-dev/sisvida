@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown } from "lucide-react";
+import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -92,6 +92,7 @@ export default function ContributionsPage() {
   const [syncing, setSyncing] = useState(false);
   const [importing, setImporting] = useState(false);
   const [extractingRegistrations, setExtractingRegistrations] = useState(false);
+  const [fixingTypes, setFixingTypes] = useState(false);
   const [syncResultsOpen, setSyncResultsOpen] = useState(false);
   const [syncResult, setSyncResult] = useState<LytexSyncResult | null>(null);
   const [currentSyncLogId, setCurrentSyncLogId] = useState<string | null>(null);
@@ -368,6 +369,39 @@ export default function ContributionsPage() {
     }
   };
 
+  const handleFixContributionTypes = async () => {
+    if (!currentClinic) return;
+    
+    setFixingTypes(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "fix_contribution_types",
+          clinicId: currentClinic.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.updated > 0) {
+        toast.success(`${data.updated} contribuição(ões) atualizada(s) com sucesso!`);
+        fetchData();
+      } else if (data?.skipped > 0) {
+        toast.info(`Nenhuma correção necessária. ${data.skipped} contribuição(ões) já estão corretas.`);
+      } else {
+        toast.info("Nenhuma contribuição com boleto Lytex encontrada");
+      }
+
+      console.log("Correção de tipos:", data);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error("Error fixing contribution types:", error);
+      toast.error(`Erro ao corrigir tipos: ${errorMessage}`);
+    } finally {
+      setFixingTypes(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -401,9 +435,9 @@ export default function ContributionsPage() {
             <DropdownMenuTrigger asChild>
               <Button 
                 variant="outline" 
-                disabled={importing || extractingRegistrations}
+                disabled={importing || extractingRegistrations || fixingTypes}
               >
-                {importing || extractingRegistrations ? (
+                {importing || extractingRegistrations || fixingTypes ? (
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                 ) : (
                   <Download className="h-4 w-4 mr-2" />
@@ -420,6 +454,10 @@ export default function ContributionsPage() {
               <DropdownMenuItem onClick={handleExtractRegistrations} disabled={extractingRegistrations}>
                 <Hash className="h-4 w-4 mr-2" />
                 Extrair Matrículas das Faturas
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleFixContributionTypes} disabled={fixingTypes}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Corrigir Tipos de Contribuição
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
