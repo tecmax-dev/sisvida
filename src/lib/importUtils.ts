@@ -61,6 +61,21 @@ export interface DependentImportRow {
   observacoes?: string;
 }
 
+export interface EmployerImportRow {
+  id: string; // matricula
+  nome: string;
+  fantasia?: string;
+  cnpj: string;
+  email?: string;
+  telefone?: string;
+  cep?: string;
+  cidade?: string;
+  uf?: string;
+  bairro?: string;
+  endereco?: string;
+  segmento?: string;
+}
+
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
