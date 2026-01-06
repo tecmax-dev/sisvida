@@ -1170,7 +1170,7 @@ Deno.serve(async (req) => {
                 clients_updated: clientsUpdated,
                 invoices_imported: invoicesImported,
                 invoices_updated: invoicesUpdated,
-                details: { errors },
+                details: { errors, clients: clientDetails, invoices: invoiceDetails },
               })
               .eq("id", syncLog.id);
           }
