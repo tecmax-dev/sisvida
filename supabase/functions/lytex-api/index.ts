@@ -710,7 +710,7 @@ Deno.serve(async (req) => {
 
         const { data: pendingContributions, error: listError } = await supabase
           .from("employer_contributions")
-          .select("id, lytex_invoice_id, status")
+          .select("id, lytex_invoice_id, status, employer:employers(name, cnpj), value, competence_month, competence_year")
           .eq("clinic_id", params.clinicId)
           .not("lytex_invoice_id", "is", null)
           .in("status", ["pending", "overdue", "processing"]);
@@ -722,13 +722,47 @@ Deno.serve(async (req) => {
         const total = pendingContributions?.length || 0;
         console.log(`[Lytex] Sincronizando ${total} contribuições em lotes paralelos...`);
 
+        // Criar log de sincronização no início
+        const { data: syncLog, error: logError } = await supabase
+          .from("lytex_sync_logs")
+          .insert({
+            clinic_id: params.clinicId,
+            sync_type: "sync_all_pending",
+            status: "running",
+            details: { 
+              progress: { phase: "syncing", total, processed: 0 }
+            }
+          })
+          .select("id")
+          .single();
+
+        if (logError) {
+          console.error("[Lytex] Erro ao criar log de sincronização:", logError);
+        }
+
         // Obter token UMA VEZ no início para reutilizar em todas as requisições
         const lytexToken = await getAccessToken();
 
-        const results: Array<{ id: string; status: string; synced: boolean; error?: string }> = [];
+        const results: Array<{ 
+          id: string; 
+          status: string; 
+          previousStatus: string;
+          synced: boolean; 
+          error?: string;
+          employerName?: string;
+          employerCnpj?: string;
+          value?: number;
+          competence?: string;
+        }> = [];
 
         // Função para sincronizar uma única contribuição
-        const syncSingleContrib = async (contrib: { id: string; lytex_invoice_id: string; status: string }) => {
+        const syncSingleContrib = async (contrib: any) => {
+          const previousStatus = contrib.status;
+          const employerName = contrib.employer?.name || "Desconhecido";
+          const employerCnpj = contrib.employer?.cnpj || "";
+          const value = contrib.value;
+          const competence = `${String(contrib.competence_month).padStart(2, "0")}/${contrib.competence_year}`;
+
           try {
             // Usar getInvoiceWithToken para evitar múltiplas autenticações
             const invoice = await getInvoiceWithToken(contrib.lytex_invoice_id, lytexToken);
@@ -742,7 +776,7 @@ Deno.serve(async (req) => {
               newStatus = "overdue";
             }
 
-            if (newStatus !== contrib.status) {
+            if (newStatus !== previousStatus) {
               const { error: updateErr } = await supabase
                 .from("employer_contributions")
                 .update({
@@ -754,14 +788,14 @@ Deno.serve(async (req) => {
                 .eq("id", contrib.id);
 
               if (updateErr) {
-                return { id: contrib.id, status: newStatus, synced: false, error: updateErr.message };
+                return { id: contrib.id, status: newStatus, previousStatus, synced: false, error: updateErr.message, employerName, employerCnpj, value, competence };
               }
-              return { id: contrib.id, status: newStatus, synced: true };
+              return { id: contrib.id, status: newStatus, previousStatus, synced: true, employerName, employerCnpj, value, competence };
             }
-            return { id: contrib.id, status: newStatus, synced: true };
+            return { id: contrib.id, status: newStatus, previousStatus, synced: true, employerName, employerCnpj, value, competence };
           } catch (e: any) {
             console.error(`[Lytex] Erro ao sincronizar ${contrib.id}:`, e.message);
-            return { id: contrib.id, status: contrib.status, synced: false, error: e.message };
+            return { id: contrib.id, status: previousStatus, previousStatus, synced: false, error: e.message, employerName, employerCnpj, value, competence };
           }
         };
 
@@ -772,6 +806,18 @@ Deno.serve(async (req) => {
           const batchResults = await Promise.all(batch.map(syncSingleContrib));
           results.push(...batchResults);
           
+          // Atualizar progresso no log
+          if (syncLog?.id) {
+            await supabase
+              .from("lytex_sync_logs")
+              .update({
+                details: { 
+                  progress: { phase: "syncing", total, processed: results.length }
+                }
+              })
+              .eq("id", syncLog.id);
+          }
+          
           // Log de progresso a cada lote
           if ((i + BATCH_SIZE) % 50 === 0 || i + BATCH_SIZE >= total) {
             console.log(`[Lytex] Progresso: ${Math.min(i + BATCH_SIZE, total)}/${total}`);
@@ -779,10 +825,39 @@ Deno.serve(async (req) => {
         }
 
         const syncedCount = results.filter(r => r.synced).length;
-        const updatedCount = results.filter(r => r.synced && r.status !== "pending").length;
+        const updatedCount = results.filter(r => r.synced && r.status !== r.previousStatus).length;
         console.log(`[Lytex] Sincronização concluída: ${syncedCount}/${results.length} sucesso, ${updatedCount} atualizados`);
 
-        result = { success: true, total: results.length, synced: syncedCount, updated: updatedCount, details: results };
+        // Atualizar log com resultado final
+        if (syncLog?.id) {
+          await supabase
+            .from("lytex_sync_logs")
+            .update({
+              status: "completed",
+              completed_at: new Date().toISOString(),
+              invoices_updated: updatedCount,
+              details: {
+                total: results.length,
+                synced: syncedCount,
+                updated: updatedCount,
+                invoices: results.map(r => ({
+                  id: r.id,
+                  employerName: r.employerName,
+                  employerCnpj: r.employerCnpj,
+                  value: r.value,
+                  competence: r.competence,
+                  previousStatus: r.previousStatus,
+                  newStatus: r.status,
+                  changed: r.status !== r.previousStatus,
+                  synced: r.synced,
+                  error: r.error
+                }))
+              }
+            })
+            .eq("id", syncLog.id);
+        }
+
+        result = { success: true, total: results.length, synced: syncedCount, updated: updatedCount, syncLogId: syncLog?.id };
         break;
       }
 
