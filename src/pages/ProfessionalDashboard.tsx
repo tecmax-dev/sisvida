@@ -127,8 +127,8 @@ export default function ProfessionalDashboard() {
       return;
     }
 
-    // Get professional linked to user
-    const { data: prof, error: profError } = await supabase
+    // PRIMEIRO: tentar por user_id (caminho normal)
+    let { data: prof } = await supabase
       .from('professionals')
       .select(`
         id, 
@@ -137,13 +137,56 @@ export default function ProfessionalDashboard() {
         clinic_id,
         schedule,
         appointment_duration,
+        email,
+        user_id,
         clinic:clinics (name, logo_url)
       `)
       .eq('user_id', session.user.id)
       .eq('is_active', true)
       .maybeSingle();
 
-    if (profError || !prof) {
+    // FALLBACK: se não encontrou por user_id, tentar por email
+    if (!prof && session.user.email) {
+      console.warn('[Dashboard] Profissional não encontrado por user_id, tentando por email...');
+      const { data: profByEmail } = await supabase
+        .from('professionals')
+        .select(`
+          id, 
+          name, 
+          specialty, 
+          clinic_id,
+          schedule,
+          appointment_duration,
+          email,
+          user_id,
+          clinic:clinics (name, logo_url)
+        `)
+        .eq('email', session.user.email.toLowerCase())
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (profByEmail) {
+        prof = profByEmail;
+        console.warn('[Dashboard] Profissional encontrado por email:', prof.name);
+        
+        // Auto-vincular user_id se estiver NULL
+        if (!profByEmail.user_id) {
+          const { error: updateError } = await supabase
+            .from('professionals')
+            .update({ user_id: session.user.id })
+            .eq('id', profByEmail.id)
+            .is('user_id', null);
+          
+          if (!updateError) {
+            console.log('[Dashboard] user_id auto-vinculado com sucesso');
+          } else {
+            console.warn('[Dashboard] Não foi possível auto-vincular user_id:', updateError.message);
+          }
+        }
+      }
+    }
+
+    if (!prof) {
       toast({
         title: "Acesso negado",
         description: "Sua conta não está vinculada a um profissional.",
@@ -405,7 +448,18 @@ export default function ProfessionalDashboard() {
             </div>
             
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={handleRefresh}>
+              <span className="text-xs text-muted-foreground hidden sm:inline">
+                v{new Date().toISOString().slice(0, 10)}
+              </span>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => {
+                  (window as any).forceUpdatePWA?.();
+                  window.location.reload();
+                }}
+                title="Atualizar app"
+              >
                 <RefreshCw className="h-4 w-4" />
               </Button>
               <Button variant="outline" onClick={handleSignOut}>
