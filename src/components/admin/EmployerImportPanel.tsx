@@ -538,37 +538,40 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
           const cleanedCnpj = cleanCnpj(employer.data.cnpj);
           const targetRegistration = formatRegistration(employer.data.id);
           
-          // Check if we need to free up the registration first
-          const currentOccupant = workingRegistrationMap.get(targetRegistration);
-          const needsReallocation = currentOccupant && 
-            currentOccupant !== employer.existingId && 
-            resolveConflicts;
-          
-          if (needsReallocation && currentOccupant) {
-            if (!dryRun) {
-              // Free up the registration from the occupant
-              const { error: freeError } = await supabase
-                .from('employers')
-                .update({ 
-                  registration_number: null,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', currentOccupant);
-              
-              if (freeError) {
-                const errorType = categorizeError(freeError.message);
-                const errorMsg = `Linha ${employer.rowNumber}: Erro ao liberar matrícula de ocupante - ${freeError.message}`;
-                if (errorType === 'rls') {
-                  rlsErrors.push(errorMsg);
-                } else {
-                  errorDetails.push(errorMsg);
-                }
-                throw freeError;
-              }
+          // ROBUST: Always free up the registration directly by key (clinic_id + registration_number)
+          // This ensures we catch ANY occupant, not just those in our in-memory map
+          if (resolveConflicts && !dryRun) {
+            const excludeId = employer.existingId || 'no-match-placeholder';
+            const { data: freedData, error: freeError } = await supabase
+              .from('employers')
+              .update({ 
+                registration_number: null,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('clinic_id', clinicId)
+              .eq('registration_number', targetRegistration)
+              .neq('id', excludeId)
+              .select('id');
+            
+            if (freeError) {
+              const errorMsg = `Linha ${employer.rowNumber}: Não foi possível liberar matrícula ${targetRegistration} - ${freeError.message}`;
+              rlsErrors.push(errorMsg);
+              throw freeError;
             }
-            // Update working map
-            workingRegistrationMap.delete(targetRegistration);
-            reallocated++;
+            
+            // Track how many were freed
+            if (freedData && freedData.length > 0) {
+              reallocated += freedData.length;
+              // Update working map
+              workingRegistrationMap.delete(targetRegistration);
+            }
+          } else if (resolveConflicts && dryRun) {
+            // In dry-run, check if reallocation would happen
+            const currentOccupant = workingRegistrationMap.get(targetRegistration);
+            if (currentOccupant && currentOccupant !== employer.existingId) {
+              reallocated++;
+              workingRegistrationMap.delete(targetRegistration);
+            }
           }
           
           const shouldUpdate = (employer.status === 'to_update') || (employer.status === 'conflict' && !!employer.existingId);
