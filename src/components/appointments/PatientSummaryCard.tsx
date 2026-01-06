@@ -15,6 +15,8 @@ interface PatientSummaryCardProps {
     email: string | null;
     created_at?: string;
     insurance_plan?: string | null;
+    is_dependent?: boolean;
+    holder_name?: string | null;
   };
   appointmentsCount: number;
   noShowCount: number;
@@ -61,7 +63,15 @@ export function PatientSummaryCard({
             </Avatar>
 
             <div>
-              <h2 className="text-xl font-semibold text-foreground">{patient.name}</h2>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold text-foreground">{patient.name}</h2>
+                {patient.is_dependent && (
+                  <Badge variant="secondary" className="text-xs">Dependente</Badge>
+                )}
+              </div>
+              {patient.holder_name && (
+                <p className="text-sm text-muted-foreground">Titular: {patient.holder_name}</p>
+              )}
               
               <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-muted-foreground">
                 {age && (
