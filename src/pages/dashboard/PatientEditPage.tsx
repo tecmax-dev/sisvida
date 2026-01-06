@@ -345,54 +345,61 @@ export default function PatientEditPage() {
   const performAutoSave = useCallback(async (dataToSave: PatientFormData) => {
     if (!currentClinic || !id) return;
 
+    // Build update payload - only admins can change max_appointments_per_month
+    const updatePayload: Record<string, any> = {
+      name: dataToSave.name.trim(),
+      phone: dataToSave.phone.replace(/\D/g, '').trim(),
+      email: dataToSave.email.trim() || null,
+      cpf: dataToSave.cpf.replace(/\D/g, '').trim() || null,
+      birth_date: dataToSave.birthDate || null,
+      notes: dataToSave.notes.trim() || null,
+      insurance_plan_id: dataToSave.insurancePlanId || null,
+      is_company: dataToSave.isCompany,
+      is_foreigner: dataToSave.isForeigner,
+      contact_name: dataToSave.contactName.trim() || null,
+      rg: dataToSave.rg.trim() || null,
+      gender: dataToSave.gender || null,
+      birthplace: dataToSave.birthplace.trim() || null,
+      marital_status: dataToSave.maritalStatus || null,
+      height_cm: dataToSave.heightCm ? parseFloat(dataToSave.heightCm) : null,
+      weight_kg: dataToSave.weightKg ? parseFloat(dataToSave.weightKg) : null,
+      skin_color: dataToSave.skinColor || null,
+      priority: dataToSave.priority || 'none',
+      religion: dataToSave.religion.trim() || null,
+      cep: dataToSave.cep.replace(/\D/g, '').trim() || null,
+      street: dataToSave.street.trim() || null,
+      street_number: dataToSave.streetNumber.trim() || null,
+      neighborhood: dataToSave.neighborhood.trim() || null,
+      city: dataToSave.city.trim() || null,
+      state: dataToSave.state || null,
+      complement: dataToSave.complement.trim() || null,
+      tag: dataToSave.tag.trim() || null,
+      referral: dataToSave.referral.trim() || null,
+      send_notifications: dataToSave.sendNotifications,
+      landline: dataToSave.landline.replace(/\D/g, '').trim() || null,
+      preferred_channel: dataToSave.preferredChannel || 'whatsapp',
+      profession: dataToSave.profession.trim() || null,
+      education: dataToSave.education || null,
+      employer_cnpj: dataToSave.employerCnpj?.replace(/\D/g, '') || null,
+      mother_name: dataToSave.motherName.trim() || null,
+      father_name: dataToSave.fatherName.trim() || null,
+    };
+
+    // Only admins can change appointment limit
+    if (isAdmin) {
+      updatePayload.max_appointments_per_month = dataToSave.maxAppointmentsPerMonth;
+    }
+
     const { error } = await supabase
       .from('patients')
-      .update({
-        name: dataToSave.name.trim(),
-        phone: dataToSave.phone.replace(/\D/g, '').trim(),
-        email: dataToSave.email.trim() || null,
-        cpf: dataToSave.cpf.replace(/\D/g, '').trim() || null,
-        birth_date: dataToSave.birthDate || null,
-        notes: dataToSave.notes.trim() || null,
-        insurance_plan_id: dataToSave.insurancePlanId || null,
-        is_company: dataToSave.isCompany,
-        is_foreigner: dataToSave.isForeigner,
-        contact_name: dataToSave.contactName.trim() || null,
-        rg: dataToSave.rg.trim() || null,
-        gender: dataToSave.gender || null,
-        birthplace: dataToSave.birthplace.trim() || null,
-        marital_status: dataToSave.maritalStatus || null,
-        height_cm: dataToSave.heightCm ? parseFloat(dataToSave.heightCm) : null,
-        weight_kg: dataToSave.weightKg ? parseFloat(dataToSave.weightKg) : null,
-        skin_color: dataToSave.skinColor || null,
-        priority: dataToSave.priority || 'none',
-        religion: dataToSave.religion.trim() || null,
-        cep: dataToSave.cep.replace(/\D/g, '').trim() || null,
-        street: dataToSave.street.trim() || null,
-        street_number: dataToSave.streetNumber.trim() || null,
-        neighborhood: dataToSave.neighborhood.trim() || null,
-        city: dataToSave.city.trim() || null,
-        state: dataToSave.state || null,
-        complement: dataToSave.complement.trim() || null,
-        tag: dataToSave.tag.trim() || null,
-        referral: dataToSave.referral.trim() || null,
-        send_notifications: dataToSave.sendNotifications,
-        landline: dataToSave.landline.replace(/\D/g, '').trim() || null,
-        preferred_channel: dataToSave.preferredChannel || 'whatsapp',
-        profession: dataToSave.profession.trim() || null,
-        education: dataToSave.education || null,
-        employer_cnpj: dataToSave.employerCnpj?.replace(/\D/g, '') || null,
-        mother_name: dataToSave.motherName.trim() || null,
-        father_name: dataToSave.fatherName.trim() || null,
-        max_appointments_per_month: dataToSave.maxAppointmentsPerMonth,
-      })
+      .update(updatePayload)
       .eq('id', id);
 
     if (error) throw error;
     
     // Update initial data after successful save
     setInitialData(dataToSave);
-  }, [currentClinic, id]);
+  }, [currentClinic, id, isAdmin]);
 
   // Validation function for auto-save
   const validateBeforeSave = useCallback((dataToValidate: PatientFormData): boolean => {
@@ -465,49 +472,55 @@ export default function PatientEditPage() {
     setErrors({});
 
     try {
+      // Build update payload - only admins can change max_appointments_per_month
+      const updatePayload: Record<string, any> = {
+        name: formData.name.trim(),
+        phone: formData.phone.replace(/\D/g, '').trim(),
+        email: formData.email.trim() || null,
+        cpf: formData.cpf.replace(/\D/g, '').trim() || null,
+        birth_date: formData.birthDate || null,
+        notes: formData.notes.trim() || null,
+        insurance_plan_id: formData.insurancePlanId || null,
+        is_company: formData.isCompany,
+        is_foreigner: formData.isForeigner,
+        contact_name: formData.contactName.trim() || null,
+        rg: formData.rg.trim() || null,
+        gender: formData.gender || null,
+        birthplace: formData.birthplace.trim() || null,
+        marital_status: formData.maritalStatus || null,
+        height_cm: formData.heightCm ? parseFloat(formData.heightCm) : null,
+        weight_kg: formData.weightKg ? parseFloat(formData.weightKg) : null,
+        skin_color: formData.skinColor || null,
+        priority: formData.priority || 'none',
+        religion: formData.religion.trim() || null,
+        cep: formData.cep.replace(/\D/g, '').trim() || null,
+        street: formData.street.trim() || null,
+        street_number: formData.streetNumber.trim() || null,
+        neighborhood: formData.neighborhood.trim() || null,
+        city: formData.city.trim() || null,
+        state: formData.state || null,
+        complement: formData.complement.trim() || null,
+        tag: formData.tag.trim() || null,
+        referral: formData.referral.trim() || null,
+        send_notifications: formData.sendNotifications,
+        landline: formData.landline.replace(/\D/g, '').trim() || null,
+        preferred_channel: formData.preferredChannel || 'whatsapp',
+        profession: formData.profession.trim() || null,
+        education: formData.education || null,
+        employer_cnpj: formData.employerCnpj?.replace(/\D/g, '') || null,
+        employer_name: formData.employerName?.trim() || null,
+        mother_name: formData.motherName.trim() || null,
+        father_name: formData.fatherName.trim() || null,
+      };
+
+      // Only admins can change appointment limit
+      if (isAdmin) {
+        updatePayload.max_appointments_per_month = formData.maxAppointmentsPerMonth;
+      }
+
       const { error } = await supabase
         .from('patients')
-        .update({
-          name: formData.name.trim(),
-          phone: formData.phone.replace(/\D/g, '').trim(),
-          email: formData.email.trim() || null,
-          cpf: formData.cpf.replace(/\D/g, '').trim() || null,
-          birth_date: formData.birthDate || null,
-          notes: formData.notes.trim() || null,
-          insurance_plan_id: formData.insurancePlanId || null,
-          // New fields
-          is_company: formData.isCompany,
-          is_foreigner: formData.isForeigner,
-          contact_name: formData.contactName.trim() || null,
-          rg: formData.rg.trim() || null,
-          gender: formData.gender || null,
-          birthplace: formData.birthplace.trim() || null,
-          marital_status: formData.maritalStatus || null,
-          height_cm: formData.heightCm ? parseFloat(formData.heightCm) : null,
-          weight_kg: formData.weightKg ? parseFloat(formData.weightKg) : null,
-          skin_color: formData.skinColor || null,
-          priority: formData.priority || 'none',
-          religion: formData.religion.trim() || null,
-          cep: formData.cep.replace(/\D/g, '').trim() || null,
-          street: formData.street.trim() || null,
-          street_number: formData.streetNumber.trim() || null,
-          neighborhood: formData.neighborhood.trim() || null,
-          city: formData.city.trim() || null,
-          state: formData.state || null,
-          complement: formData.complement.trim() || null,
-          tag: formData.tag.trim() || null,
-          referral: formData.referral.trim() || null,
-          send_notifications: formData.sendNotifications,
-          landline: formData.landline.replace(/\D/g, '').trim() || null,
-          preferred_channel: formData.preferredChannel || 'whatsapp',
-          profession: formData.profession.trim() || null,
-          education: formData.education || null,
-          employer_cnpj: formData.employerCnpj?.replace(/\D/g, '') || null,
-          employer_name: formData.employerName?.trim() || null,
-          mother_name: formData.motherName.trim() || null,
-          father_name: formData.fatherName.trim() || null,
-          max_appointments_per_month: formData.maxAppointmentsPerMonth,
-        })
+        .update(updatePayload)
         .eq('id', id);
 
       if (error) throw error;
@@ -549,6 +562,16 @@ export default function PatientEditPage() {
 
   const handleUnblockNoShow = async () => {
     if (!id || !currentClinic) return;
+    
+    // Guard: only admins can unblock
+    if (!isAdmin) {
+      toast({
+        title: "Acesso negado",
+        description: "Apenas administradores podem desbloquear pacientes.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     try {
       const { error } = await supabase
