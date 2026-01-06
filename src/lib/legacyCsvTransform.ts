@@ -217,6 +217,41 @@ export function normalizePhone(phone: string | undefined | null): string {
 /**
  * Parse de CSV com separador ponto-e-vírgula
  */
+/**
+ * Faz o parse de uma linha de CSV respeitando campos entre aspas
+ * Campos que contêm o delimitador (;) devem estar entre aspas duplas
+ */
+function parseCSVLine(line: string, delimiter = ';'): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        // Aspas duplas escapadas ("") dentro de campo com aspas
+        current += '"';
+        i++; // Pula a segunda aspas
+      } else {
+        // Abre ou fecha campo com aspas
+        inQuotes = !inQuotes;
+      }
+    } else if (char === delimiter && !inQuotes) {
+      // Delimitador fora de aspas = fim do campo
+      result.push(current.trim());
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  // Adiciona o último campo
+  result.push(current.trim());
+  
+  return result;
+}
+
 export function parseCSV(content: string): { headers: string[]; rows: Record<string, string>[] } {
   const lines = content.split('\n').filter(line => line.trim());
   if (lines.length === 0) return { headers: [], rows: [] };
@@ -227,19 +262,17 @@ export function parseCSV(content: string): { headers: string[]; rows: Record<str
     headerLine = headerLine.slice(1);
   }
   
+  // Headers são simples, podem usar split
   const headers = headerLine.split(';').map(h => h.trim());
   const rows: Record<string, string>[] = [];
   
   for (let i = 1; i < lines.length; i++) {
-    const values = lines[i].split(';');
+    // Usa parser robusto que respeita campos entre aspas
+    const values = parseCSVLine(lines[i]);
     const row: Record<string, string> = {};
     
     headers.forEach((header, index) => {
       let value = values[index] || '';
-      // Remove aspas do início e fim
-      if (value.startsWith('"') && value.endsWith('"')) {
-        value = value.slice(1, -1);
-      }
       // Substitui NULL por string vazia
       if (value === 'NULL' || value === 'null') {
         value = '';

@@ -242,7 +242,10 @@ export function PatientRecordsModal({
                     {record.notes && (
                       <div>
                         <p className="text-xs font-medium text-muted-foreground">Observações</p>
-                        <p className="text-sm">{record.notes}</p>
+                        <div 
+                          className="text-sm prose prose-sm max-w-none dark:prose-invert"
+                          dangerouslySetInnerHTML={{ __html: record.notes }} 
+                        />
                       </div>
                     )}
                   </AccordionContent>
