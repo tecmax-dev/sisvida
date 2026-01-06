@@ -571,10 +571,10 @@ export default function DataImportPage() {
       const batchData = batch.map(b => b.patientData);
       
       try {
-        // Use UPSERT with ignoreDuplicates to silently skip existing CPFs
+        // Use UPSERT with correct composite unique constraint (clinic_id, cpf)
         const { data, error } = await supabase
           .from('patients')
-          .upsert(batchData, { onConflict: 'cpf', ignoreDuplicates: true })
+          .upsert(batchData, { onConflict: 'clinic_id,cpf', ignoreDuplicates: true })
           .select('id, cpf, name');
         
         if (error) {
