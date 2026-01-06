@@ -161,6 +161,12 @@ export default function NoShowReportPage() {
   };
 
   const handleUnblock = async (patientId: string) => {
+    // Guard: only admins can unblock
+    if (!isAdmin) {
+      toast.error("Apenas administradores podem desbloquear pacientes");
+      return;
+    }
+    
     setUnlocking(patientId);
     try {
       const { error } = await supabase
