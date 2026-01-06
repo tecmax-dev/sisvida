@@ -25,7 +25,8 @@ import {
   ExternalLink,
   Loader2,
   FileSearch,
-  Printer
+  Printer,
+  Upload
 } from "lucide-react";
 import {
   Dialog,
@@ -57,6 +58,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import AccountingOfficeImportPanel from "@/components/admin/AccountingOfficeImportPanel";
 
 interface AccountingOffice {
   id: string;
@@ -103,6 +105,7 @@ export default function AccountingOfficesPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedOffice, setSelectedOffice] = useState<AccountingOffice | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -561,10 +564,16 @@ export default function AccountingOfficesPage() {
             Gerencie escritórios contábeis e seus acessos ao portal
           </p>
         </div>
-        <Button onClick={() => handleOpenDialog()}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Escritório
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Importar
+          </Button>
+          <Button onClick={() => handleOpenDialog()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Escritório
+          </Button>
+        </div>
       </div>
 
       {portalUrl && (
@@ -1117,6 +1126,16 @@ export default function AccountingOfficesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Painel de Importação */}
+      <AccountingOfficeImportPanel
+        clinicId={currentClinic?.id || ""}
+        employers={employers}
+        existingOffices={offices.map(o => ({ id: o.id, email: o.email, name: o.name }))}
+        onImportComplete={loadData}
+        isOpen={isImportDialogOpen}
+        onClose={() => setIsImportDialogOpen(false)}
+      />
     </div>
   );
 }
