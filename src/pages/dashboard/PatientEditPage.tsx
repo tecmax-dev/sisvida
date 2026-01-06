@@ -130,7 +130,7 @@ export default function PatientEditPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { currentClinic } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isAdmin } = usePermissions();
   const { openModal, closeModal, isModalOpen, getModalData } = useModal();
   const { toast } = useToast();
   const { lookupCep, loading: cepLoading } = useCepLookup();
@@ -161,9 +161,9 @@ export default function PatientEditPage() {
   // Permission checks for restricted tabs
   const canViewMedicalRecords = hasPermission('view_medical_records');
   const canViewPrescriptions = hasPermission('view_prescriptions');
-  const isAdmin = hasPermission('manage_patients');
-  // Permissão de desbloquear pacientes - disponível apenas para admins ou usuários com permissão específica
-  const canUnblockPatients = hasPermission('unblock_patients');
+  const canManagePatients = hasPermission('manage_patients');
+  // Apenas admins podem desbloquear pacientes (owner, admin ou super admin)
+  const canUnblockPatients = isAdmin;
   
   // Determine which tabs to hide based on permissions
   const hiddenTabs: PatientTab[] = [];
@@ -174,7 +174,7 @@ export default function PatientEditPage() {
     hiddenTabs.push('prescricoes');
   }
   // Odontograma visible only for admins
-  if (!isAdmin) {
+  if (!canManagePatients) {
     hiddenTabs.push('odontograma');
   }
 
