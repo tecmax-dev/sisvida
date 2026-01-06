@@ -944,7 +944,7 @@ export default function EmployerPortal() {
               {contributionYears.length > 0 && (
                 <Select value={yearFilter} onValueChange={setYearFilter}>
                   <SelectTrigger className="h-9 text-sm border-slate-200">
-                    <SelectValue placeholder="Ano" />
+                    <SelectValue placeholder="Ano Competência" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
                     <SelectItem value="all">Todos os anos</SelectItem>

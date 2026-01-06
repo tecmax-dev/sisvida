@@ -765,7 +765,7 @@ export default function AccountingOfficePortal() {
               
               <Select value={filterYear} onValueChange={setFilterYear}>
                 <SelectTrigger className="h-9 text-sm border-slate-200">
-                  <SelectValue placeholder="Ano" />
+                  <SelectValue placeholder="Ano Competência" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
                   <SelectItem value="all">Todos</SelectItem>
