@@ -958,7 +958,11 @@ export default function DataImportPage() {
         const batch = recordsToInsert.slice(i, i + RECORD_BATCH_SIZE);
         
         try {
-          const { data, error } = await supabase.from('medical_records').insert(batch).select('id');
+          // Use UPSERT with unique constraint (clinic_id, patient_id, record_date) to prevent duplicates
+          const { data, error } = await supabase
+            .from('medical_records')
+            .upsert(batch, { onConflict: 'clinic_id,patient_id,record_date', ignoreDuplicates: true })
+            .select('id');
           
           if (error) {
             console.error('[RECORDS BATCH ERROR]', error.message);
@@ -1659,7 +1663,11 @@ export default function DataImportPage() {
       const batch = recordsToInsert.slice(i, i + BATCH_SIZE);
       
       try {
-        const { data, error } = await supabase.from('medical_records').insert(batch).select('id');
+        // Use UPSERT with unique constraint (clinic_id, patient_id, record_date) to prevent duplicates
+        const { data, error } = await supabase
+          .from('medical_records')
+          .upsert(batch, { onConflict: 'clinic_id,patient_id,record_date', ignoreDuplicates: true })
+          .select('id');
         
         if (error) {
           // Log error but don't fallback to individual inserts (too slow)
