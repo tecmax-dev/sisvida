@@ -39,12 +39,14 @@ import {
   History,
   UserPlus,
   CreditCard,
+  RefreshCw,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import DataExportPanel from "@/components/admin/DataExportPanel";
 import { ImportProgressCard } from "@/components/admin/ImportProgressCard";
 import { ImportHistoryPanel } from "@/components/admin/ImportHistoryPanel";
 import { BulkCardExpiryUpdate } from "@/components/admin/BulkCardExpiryUpdate";
+import { LegacyDataTransform } from "@/components/admin/LegacyDataTransform";
 import {
   PatientImportRow,
   MedicalRecordImportRow,
@@ -81,7 +83,7 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"export" | "combined" | "patients" | "records" | "contacts" | "dependents" | "history" | "cards">("export");
+  const [activeTab, setActiveTab] = useState<"export" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "history" | "cards">("export");
   
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
@@ -2138,7 +2140,7 @@ export default function DataImportPage() {
       </Collapsible>
 
       {/* Import/Export Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "combined" | "patients" | "records" | "contacts" | "dependents" | "history")}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "history" | "cards")}>
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="export" className="gap-2">
             <ArrowDownToLine className="h-4 w-4" />
@@ -2147,6 +2149,10 @@ export default function DataImportPage() {
           <TabsTrigger value="combined" className="gap-2">
             <Sparkles className="h-4 w-4" />
             Importação Inteligente
+          </TabsTrigger>
+          <TabsTrigger value="legacy" className="gap-2">
+            <RefreshCw className="h-4 w-4" />
+            Converter Legado
           </TabsTrigger>
           <TabsTrigger value="patients" className="gap-2">
             <Users className="h-4 w-4" />
@@ -2450,6 +2456,11 @@ export default function DataImportPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Legacy Data Transform Tab */}
+        <TabsContent value="legacy" className="space-y-4">
+          <LegacyDataTransform />
         </TabsContent>
 
         <TabsContent value="patients" className="space-y-4">
