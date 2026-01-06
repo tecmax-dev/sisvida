@@ -84,6 +84,11 @@ interface Patient {
   birth_date: string | null;
 }
 
+interface Dependent {
+  id: string;
+  name: string;
+}
+
 interface Procedure {
   id: string;
   name: string;
@@ -93,6 +98,7 @@ interface Procedure {
 interface Appointment {
   id: string;
   patient_id: string;
+  dependent_id: string | null;
   appointment_date: string;
   start_time: string;
   end_time: string;
@@ -105,6 +111,7 @@ interface Appointment {
   procedure_id: string | null;
   procedure?: Procedure | null;
   patient: Patient;
+  dependent?: Dependent | null;
   professional_id: string;
   clinic_id: string;
 }
@@ -244,6 +251,11 @@ export default function AttendancePageRedesign() {
     "receituario" | "controlado" | "atestado" | "comparecimento" | "exames"
   >("receituario");
 
+  const getDisplayName = (apt: Appointment | null) => {
+    if (!apt) return "";
+    return apt.dependent_id && apt.dependent?.name ? apt.dependent.name : apt.patient.name;
+  };
+
   useEffect(() => {
     if (!printDialogOpen) return;
     if (!clinic || !appointment) return;
@@ -256,7 +268,7 @@ export default function AttendancePageRedesign() {
         cnpj: clinic.cnpj || undefined,
       },
       clinicId: appointment.clinic_id,
-      patient: { name: appointment.patient.name, phone: appointment.patient.phone },
+      patient: { name: getDisplayName(appointment), phone: appointment.patient.phone },
       patientId: appointment.patient_id,
       professional: professional
         ? {
@@ -287,23 +299,24 @@ export default function AttendancePageRedesign() {
   // Load appointment
   useEffect(() => {
     if (!appointmentId || !currentClinic?.id) return;
-    
+
     const loadAppointment = async () => {
       setLoadingAppointment(true);
-      
+
       const { data, error } = await supabase
         .from("appointments")
         .select(`
-          id, patient_id, appointment_date, start_time, end_time,
+          id, patient_id, dependent_id, appointment_date, start_time, end_time,
           type, status, notes, started_at, completed_at, duration_minutes,
           procedure_id, professional_id, clinic_id,
           patient:patients(id, name, phone, email, birth_date),
+          dependent:patient_dependents!appointments_dependent_id_fkey(id, name),
           procedure:procedures(id, name, price)
         `)
         .eq("id", appointmentId)
         .eq("clinic_id", currentClinic.id)
         .maybeSingle();
-      
+
       if (error || !data) {
         toast({
           title: "Agendamento não encontrado",
@@ -312,16 +325,36 @@ export default function AttendancePageRedesign() {
         navigate("/dashboard/calendar");
         return;
       }
-      
-      setAppointment({
-        ...data,
+
+      // Fallback: se dependent_id existe mas o join veio null
+      let dependentData = (data as any).dependent as Dependent | null | undefined;
+      if (data.dependent_id && !dependentData) {
+        const { data: depFallback, error: depError } = await supabase
+          .from("patient_dependents")
+          .select("id, name")
+          .eq("id", data.dependent_id)
+          .maybeSingle();
+
+        if (depError) {
+          console.warn("[AttendancePage] Falha ao buscar dependente (fallback):", depError.message);
+        } else {
+          dependentData = (depFallback as any) || null;
+        }
+      }
+
+      const nextAppointment: Appointment = {
+        ...(data as any),
+        dependent_id: data.dependent_id || null,
         patient: data.patient as Patient,
+        dependent: (dependentData as any) || null,
         procedure: data.procedure as Procedure | null,
-      });
+      };
+
+      setAppointment(nextAppointment);
       setExamWhatsappPhone((data.patient as Patient)?.phone || "");
       setLoadingAppointment(false);
     };
-    
+
     loadAppointment();
   }, [appointmentId, currentClinic?.id, navigate, toast]);
 
@@ -792,7 +825,7 @@ export default function AttendancePageRedesign() {
         await supabase.from("financial_transactions").insert({
           clinic_id: appointment.clinic_id,
           type: "income",
-          description: `${appointment.procedure.name} - ${appointment.patient.name}`,
+          description: `${appointment.procedure.name} - ${getDisplayName(appointment)}`,
           amount: appointment.procedure.price,
           patient_id: appointment.patient_id,
           procedure_id: appointment.procedure_id,
@@ -865,11 +898,13 @@ export default function AttendancePageRedesign() {
     if (!appointment || !recordForm.prescription?.trim() || !appointment.patient.phone) return;
 
     setSendingWhatsApp(true);
-    
+
     try {
+      const displayName = getDisplayName(appointment);
+
       const { base64, fileName } = await generatePrescriptionPDF({
         clinic: { name: clinic?.name || "Clínica", address: clinic?.address, phone: clinic?.phone, cnpj: clinic?.cnpj },
-        patient: { name: appointment.patient.name, birth_date: appointment.patient.birth_date },
+        patient: { name: displayName, birth_date: appointment.patient.birth_date },
         professional: professional ? { name: professional.name, specialty: professional.specialty, registration_number: professional.registration_number } : undefined,
         prescription: { content: recordForm.prescription, created_at: new Date().toISOString(), signature_data: null, is_signed: false },
       });
@@ -879,7 +914,7 @@ export default function AttendancePageRedesign() {
         clinicId: appointment.clinic_id,
         pdfBase64: base64,
         fileName,
-        caption: `📋 *Receituário Médico*\n\nOlá ${appointment.patient.name}!\n\nSegue em anexo seu receituário.\n\n📅 *Data:* ${format(new Date(), "dd/MM/yyyy", { locale: ptBR })}\n👨‍⚕️ *Profissional:* ${professional?.name || 'Profissional'}\n🏥 *Clínica:* ${clinic?.name || 'Clínica'}\n\nAtenciosamente,\nEquipe ${clinic?.name || 'Clínica'}`,
+        caption: `📋 *Receituário Médico*\n\nOlá ${displayName}!\n\nSegue em anexo seu receituário.\n\n📅 *Data:* ${format(new Date(), "dd/MM/yyyy", { locale: ptBR })}\n👨‍⚕️ *Profissional:* ${professional?.name || 'Profissional'}\n🏥 *Clínica:* ${clinic?.name || 'Clínica'}\n\nAtenciosamente,\nEquipe ${clinic?.name || 'Clínica'}`,
       });
 
       if (result.success) {
@@ -922,9 +957,11 @@ export default function AttendancePageRedesign() {
     setSendingExamRequest(true);
     
     try {
+      const displayName = getDisplayName(appointment);
+
       const { base64, fileName } = await generateExamRequestPDF({
         clinic: { name: clinic?.name || "Clínica", address: clinic?.address, phone: clinic?.phone, cnpj: clinic?.cnpj },
-        patient: { name: appointment.patient.name },
+        patient: { name: displayName },
         professional: professional ? { name: professional.name, specialty: professional.specialty, registration_number: professional.registration_number } : undefined,
         examRequest,
         clinicalIndication,
@@ -936,7 +973,7 @@ export default function AttendancePageRedesign() {
         clinicId: appointment.clinic_id,
         pdfBase64: base64,
         fileName,
-        caption: formatExamRequest(appointment.patient.name, clinic?.name || "Clínica", format(new Date(), "dd/MM/yyyy", { locale: ptBR }), professional?.name || "Profissional"),
+        caption: formatExamRequest(displayName, clinic?.name || "Clínica", format(new Date(), "dd/MM/yyyy", { locale: ptBR }), professional?.name || "Profissional"),
       });
 
       if (result.success) {
@@ -999,7 +1036,7 @@ export default function AttendancePageRedesign() {
                 {sidebarItems.find(i => i.id === activeSection)?.label || "Prontuário"}
               </h2>
               <p className="text-xs text-muted-foreground truncate max-w-[150px]">
-                {appointment.patient.name}
+                {getDisplayName(appointment)}
               </p>
             </div>
           </div>
@@ -1231,7 +1268,7 @@ export default function AttendancePageRedesign() {
                         isMobile ? "h-16 w-16 text-xl" : "h-24 w-24 text-3xl"
                       )}>
                         <AvatarFallback className="bg-primary text-primary-foreground font-bold">
-                          {getInitials(appointment.patient.name)}
+                          {getInitials(getDisplayName(appointment))}
                         </AvatarFallback>
                       </Avatar>
                       
@@ -1241,7 +1278,7 @@ export default function AttendancePageRedesign() {
                             "font-bold text-foreground tracking-tight",
                             isMobile ? "text-lg" : "text-2xl"
                           )}>
-                            {appointment.patient.name.toUpperCase()}
+                            {getDisplayName(appointment).toUpperCase()}
                           </h2>
                           <p className="text-muted-foreground text-xs md:text-sm mt-1">
                             Paciente desde {patientStats.firstVisit ? format(new Date(patientStats.firstVisit + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }) : "hoje"}
