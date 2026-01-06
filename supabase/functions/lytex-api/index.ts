@@ -1094,10 +1094,28 @@ Deno.serve(async (req) => {
             .select("id, name")
             .eq("clinic_id", params.clinicId);
 
+          // Mapa por nome completo (para compatibilidade)
           const contribTypeByName = new Map<string, string>();
+          // Mapa por código base (124, 125, 126) para vincular ao tipo base correto
+          const contribTypeByCode = new Map<string, string>();
+          
           for (const ct of allContribTypes || []) {
-            contribTypeByName.set(ct.name.trim().toUpperCase(), ct.id);
+            const nameUpper = ct.name.trim().toUpperCase();
+            contribTypeByName.set(nameUpper, ct.id);
+            
+            // Extrair código base do nome do tipo (ex: "124 - MENSALIDADE SINDICAL" -> "124")
+            const codeMatch = ct.name.match(/^(\d{3})\s*-/);
+            if (codeMatch) {
+              contribTypeByCode.set(codeMatch[1], ct.id);
+            }
           }
+
+          // Função para extrair código base do campo "Pedido" da Lytex
+          // Ex: "124 - MENSALIDADE SINDICAL REFERENTE AGOSTO DE 2024" -> "124"
+          const extractBaseCode = (orderName: string): string | null => {
+            const match = orderName.match(/^(\d{3})\s*-/);
+            return match ? match[1] : null;
+          };
 
           // Tipo padrão (fallback) se não encontrar correspondência
           let defaultTypeId = contribTypeByName.get("MENSALIDADE") || null;
@@ -1221,32 +1239,24 @@ Deno.serve(async (req) => {
                 }
 
                 // Determinar tipo de contribuição pelo campo "Pedido" (items[0].name)
-                const orderName = invoice.items?.[0]?.name?.trim().toUpperCase() || "";
-                let contributionTypeId = contribTypeByName.get(orderName);
-
-                // Se não encontrou, tentar criar automaticamente
-                if (!contributionTypeId && orderName) {
-                  const { data: newType, error: createTypeErr } = await supabase
-                    .from("contribution_types")
-                    .insert({
-                      clinic_id: params.clinicId,
-                      name: invoice.items[0].name.trim(),
-                      default_value: 0,
-                      is_active: true,
-                    })
-                    .select("id")
-                    .maybeSingle();
-
-                  if (!createTypeErr && newType?.id) {
-                    contributionTypeId = newType.id;
-                    contribTypeByName.set(orderName, newType.id);
-                    console.log(`[Lytex] Criado novo tipo de contribuição: ${invoice.items[0].name.trim()}`);
-                  }
+                // Extrair apenas o código base (124, 125, 126) para vincular ao tipo existente
+                const orderName = invoice.items?.[0]?.name?.trim() || "";
+                const baseCode = extractBaseCode(orderName.toUpperCase());
+                
+                // Primeiro tenta pelo código base (mais preciso)
+                let contributionTypeId = baseCode ? contribTypeByCode.get(baseCode) : null;
+                
+                // Fallback: buscar pelo nome completo (para tipos sem código)
+                if (!contributionTypeId) {
+                  contributionTypeId = contribTypeByName.get(orderName.toUpperCase());
                 }
 
-                // Fallback para tipo padrão
+                // Fallback final para tipo padrão "Mensalidade"
                 if (!contributionTypeId) {
                   contributionTypeId = defaultTypeId;
+                  if (baseCode) {
+                    console.log(`[Lytex] Código ${baseCode} não encontrado, usando tipo padrão`);
+                  }
                 }
 
                 const patch = {
@@ -1635,8 +1645,9 @@ Deno.serve(async (req) => {
       }
 
       case "fix_contribution_types": {
-        // Corrigir tipos de contribuição existentes baseado no campo "Pedido" das faturas Lytex
-        console.log("[Lytex] Iniciando correção de tipos de contribuição...");
+        // Corrigir tipos de contribuição existentes baseado no código base do campo "Pedido" das faturas Lytex
+        // Ex: "124 - MENSALIDADE SINDICAL REFERENTE AGOSTO 2024" -> vincula ao tipo "124 - MENSALIDADE SINDICAL"
+        console.log("[Lytex] Iniciando correção de tipos de contribuição (vinculação aos tipos base)...");
 
         // Carregar todos os tipos de contribuição
         const { data: allContribTypes } = await supabase
@@ -1644,10 +1655,29 @@ Deno.serve(async (req) => {
           .select("id, name")
           .eq("clinic_id", params.clinicId);
 
+        // Mapa por código base (124, 125, 126) para vincular ao tipo base correto
+        const contribTypeByCode = new Map<string, string>();
         const contribTypeByName = new Map<string, string>();
+        
         for (const ct of allContribTypes || []) {
-          contribTypeByName.set(ct.name.trim().toUpperCase(), ct.id);
+          const nameUpper = ct.name.trim().toUpperCase();
+          contribTypeByName.set(nameUpper, ct.id);
+          
+          // Extrair código base do nome do tipo (ex: "124 - MENSALIDADE SINDICAL" -> "124")
+          const codeMatch = ct.name.match(/^(\d{3})\s*-/);
+          if (codeMatch) {
+            contribTypeByCode.set(codeMatch[1], ct.id);
+          }
         }
+
+        // Função para extrair código base do campo "Pedido" da Lytex
+        const extractBaseCode = (orderName: string): string | null => {
+          const match = orderName.match(/^(\d{3})\s*-/);
+          return match ? match[1] : null;
+        };
+
+        // Tipo padrão (fallback)
+        const defaultTypeId = contribTypeByName.get("MENSALIDADE") || null;
 
         // Buscar contribuições com lytex_invoice_id
         const { data: contributions, error: contribErr } = await supabase
@@ -1671,7 +1701,7 @@ Deno.serve(async (req) => {
         let updated = 0;
         let skipped = 0;
         let errors = 0;
-        const details: { invoiceId: string; orderName: string; action: string }[] = [];
+        const details: { invoiceId: string; orderName: string; baseCode: string | null; action: string }[] = [];
 
         // Processar em lotes de 10
         const batchSize = 10;
@@ -1681,46 +1711,35 @@ Deno.serve(async (req) => {
           await Promise.all(batch.map(async (contrib) => {
             try {
               const invoice = await getInvoiceWithToken(contrib.lytex_invoice_id!, token);
-              const orderName = invoice?.items?.[0]?.name?.trim().toUpperCase() || "";
+              const orderName = invoice?.items?.[0]?.name?.trim() || "";
 
               if (!orderName) {
                 skipped++;
-                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName: "(vazio)", action: "skipped" });
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName: "(vazio)", baseCode: null, action: "skipped" });
                 return;
               }
 
-              let targetTypeId = contribTypeByName.get(orderName);
-
-              // Se não encontrou, criar novo tipo
+              // Extrair código base (124, 125, 126)
+              const baseCode = extractBaseCode(orderName.toUpperCase());
+              
+              // Primeiro tenta pelo código base (vincula ao tipo existente)
+              let targetTypeId = baseCode ? contribTypeByCode.get(baseCode) : null;
+              
+              // Fallback para tipo padrão (não cria novos tipos)
               if (!targetTypeId) {
-                const { data: newType, error: createErr } = await supabase
-                  .from("contribution_types")
-                  .insert({
-                    clinic_id: params.clinicId,
-                    name: invoice.items[0].name.trim(),
-                    default_value: 0,
-                    is_active: true,
-                  })
-                  .select("id")
-                  .maybeSingle();
-
-                if (!createErr && newType?.id) {
-                  targetTypeId = newType.id;
-                  contribTypeByName.set(orderName, newType.id);
-                  console.log(`[Lytex] Criado tipo: ${invoice.items[0].name.trim()}`);
-                }
+                targetTypeId = defaultTypeId;
               }
 
               if (!targetTypeId) {
                 skipped++;
-                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, action: "no_type" });
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, baseCode, action: "no_type" });
                 return;
               }
 
               // Se já está com o tipo correto, pular
               if (contrib.contribution_type_id === targetTypeId) {
                 skipped++;
-                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, action: "correct" });
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, baseCode, action: "correct" });
                 return;
               }
 
@@ -1733,14 +1752,14 @@ Deno.serve(async (req) => {
               if (updateErr) {
                 errors++;
                 console.error(`[Lytex] Erro ao atualizar contrib ${contrib.id}:`, updateErr);
-                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, action: "error" });
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, baseCode, action: "error" });
               } else {
                 updated++;
-                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, action: "updated" });
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, baseCode, action: "updated" });
               }
             } catch (e) {
               errors++;
-              details.push({ invoiceId: contrib.lytex_invoice_id!, orderName: "(erro)", action: "error" });
+              details.push({ invoiceId: contrib.lytex_invoice_id!, orderName: "(erro)", baseCode: null, action: "error" });
             }
           }));
         }
