@@ -159,11 +159,27 @@ export default function ProfessionalAppointment() {
       return;
     }
 
+    let dependentData = apt.dependent as Dependent | null;
+
+    // Fallback: se dependent_id existe mas dependent veio null, buscar diretamente
+    if (apt.dependent_id && !dependentData) {
+      console.warn('[ProfessionalAppointment] Fallback: buscando dependente', apt.dependent_id);
+      const { data: depFallback } = await supabase
+        .from('patient_dependents')
+        .select('id, name')
+        .eq('id', apt.dependent_id)
+        .maybeSingle();
+
+      if (depFallback) {
+        dependentData = depFallback;
+      }
+    }
+
     setAppointment({
       ...apt,
       dependent_id: apt.dependent_id || null,
       patient: apt.patient as Patient,
-      dependent: apt.dependent as Dependent | null,
+      dependent: dependentData,
     });
 
     // Get medical records
