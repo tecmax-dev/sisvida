@@ -571,7 +571,10 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
             reallocated++;
           }
           
-          if (employer.status === 'to_update' && employer.existingId) {
+          const shouldUpdate = (employer.status === 'to_update') || (employer.status === 'conflict' && !!employer.existingId);
+          const shouldCreate = (employer.status === 'to_create') || (employer.status === 'conflict' && !employer.existingId);
+
+          if (shouldUpdate && employer.existingId) {
             if (!dryRun) {
               const { error } = await supabase
                 .from('employers')
@@ -587,7 +590,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                   updated_at: new Date().toISOString(),
                 })
                 .eq('id', employer.existingId);
-              
+
               if (error) {
                 const errorType = categorizeError(error.message);
                 const errorMsg = `Linha ${employer.rowNumber} (${employer.data.nome}): ${error.message}`;
@@ -604,7 +607,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
             // Update working map
             workingRegistrationMap.set(targetRegistration, employer.existingId);
             updated++;
-          } else if (employer.status === 'to_create' || employer.status === 'conflict') {
+          } else if (shouldCreate) {
             if (!dryRun) {
               const { data: inserted, error } = await supabase
                 .from('employers')
@@ -625,7 +628,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                 })
                 .select('id')
                 .single();
-              
+
               if (error) {
                 const errorType = categorizeError(error.message);
                 const errorMsg = `Linha ${employer.rowNumber} (${employer.data.nome}): ${error.message}`;
@@ -638,7 +641,7 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                 }
                 throw error;
               }
-              
+
               // Update working map with new employer
               if (inserted) {
                 workingRegistrationMap.set(targetRegistration, inserted.id);
