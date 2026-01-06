@@ -1088,15 +1088,20 @@ Deno.serve(async (req) => {
             if (e?.id && e?.name) employerNameById.set(e.id, e.name);
           }
 
-          // Buscar ou criar tipo de contribuição padrão (1 vez)
-          let { data: contribType } = await supabase
+          // Carregar todos os tipos de contribuição para mapeamento dinâmico
+          const { data: allContribTypes } = await supabase
             .from("contribution_types")
-            .select("id")
-            .eq("clinic_id", params.clinicId)
-            .eq("name", "Mensalidade")
-            .maybeSingle();
+            .select("id, name")
+            .eq("clinic_id", params.clinicId);
 
-          if (!contribType) {
+          const contribTypeByName = new Map<string, string>();
+          for (const ct of allContribTypes || []) {
+            contribTypeByName.set(ct.name.trim().toUpperCase(), ct.id);
+          }
+
+          // Tipo padrão (fallback) se não encontrar correspondência
+          let defaultTypeId = contribTypeByName.get("MENSALIDADE") || null;
+          if (!defaultTypeId) {
             const { data: newType, error: newTypeError } = await supabase
               .from("contribution_types")
               .insert({
@@ -1111,13 +1116,15 @@ Deno.serve(async (req) => {
             if (newTypeError) {
               throw new Error(`Erro ao criar tipo 'Mensalidade': ${newTypeError.message}`);
             }
-            contribType = newType;
+            defaultTypeId = newType?.id;
+            if (defaultTypeId) {
+              contribTypeByName.set("MENSALIDADE", defaultTypeId);
+            }
           }
 
-          if (!contribType?.id) {
+          if (!defaultTypeId) {
             throw new Error("Tipo de contribuição padrão (Mensalidade) não disponível");
           }
-          const contributionTypeId = contribType.id;
 
           const seenInvoiceIds = new Set<string>();
 
@@ -1213,6 +1220,35 @@ Deno.serve(async (req) => {
                   console.log(`[Lytex] Invoice ${invoice._id}: linkCheckout=${invoice.linkCheckout}, linkBoleto=${invoice.linkBoleto}`);
                 }
 
+                // Determinar tipo de contribuição pelo campo "Pedido" (items[0].name)
+                const orderName = invoice.items?.[0]?.name?.trim().toUpperCase() || "";
+                let contributionTypeId = contribTypeByName.get(orderName);
+
+                // Se não encontrou, tentar criar automaticamente
+                if (!contributionTypeId && orderName) {
+                  const { data: newType, error: createTypeErr } = await supabase
+                    .from("contribution_types")
+                    .insert({
+                      clinic_id: params.clinicId,
+                      name: invoice.items[0].name.trim(),
+                      default_value: 0,
+                      is_active: true,
+                    })
+                    .select("id")
+                    .maybeSingle();
+
+                  if (!createTypeErr && newType?.id) {
+                    contributionTypeId = newType.id;
+                    contribTypeByName.set(orderName, newType.id);
+                    console.log(`[Lytex] Criado novo tipo de contribuição: ${invoice.items[0].name.trim()}`);
+                  }
+                }
+
+                // Fallback para tipo padrão
+                if (!contributionTypeId) {
+                  contributionTypeId = defaultTypeId;
+                }
+
                 const patch = {
                   clinic_id: params.clinicId,
                   employer_id: employerId,
@@ -1235,7 +1271,7 @@ Deno.serve(async (req) => {
                   payment_method: invoice.paymentMethod || null,
                 };
 
-                const key = `${employerId}|${competenceMonth}|${competenceYear}`;
+                const key = `${employerId}|${contributionTypeId}|${competenceMonth}|${competenceYear}`;
                 const current = rowsByKey.get(key);
 
                 if (!current) {
@@ -1595,6 +1631,130 @@ Deno.serve(async (req) => {
         const page = params.page || 1;
         const limit = params.limit || 100;
         result = await listInvoices(page, limit, params.status);
+        break;
+      }
+
+      case "fix_contribution_types": {
+        // Corrigir tipos de contribuição existentes baseado no campo "Pedido" das faturas Lytex
+        console.log("[Lytex] Iniciando correção de tipos de contribuição...");
+
+        // Carregar todos os tipos de contribuição
+        const { data: allContribTypes } = await supabase
+          .from("contribution_types")
+          .select("id, name")
+          .eq("clinic_id", params.clinicId);
+
+        const contribTypeByName = new Map<string, string>();
+        for (const ct of allContribTypes || []) {
+          contribTypeByName.set(ct.name.trim().toUpperCase(), ct.id);
+        }
+
+        // Buscar contribuições com lytex_invoice_id
+        const { data: contributions, error: contribErr } = await supabase
+          .from("employer_contributions")
+          .select("id, lytex_invoice_id, contribution_type_id")
+          .eq("clinic_id", params.clinicId)
+          .not("lytex_invoice_id", "is", null);
+
+        if (contribErr) {
+          throw new Error(`Erro ao buscar contribuições: ${contribErr.message}`);
+        }
+
+        if (!contributions || contributions.length === 0) {
+          result = { success: true, updated: 0, message: "Nenhuma contribuição com boleto Lytex encontrada" };
+          break;
+        }
+
+        console.log(`[Lytex] ${contributions.length} contribuições a verificar`);
+
+        const token = await getAccessToken();
+        let updated = 0;
+        let skipped = 0;
+        let errors = 0;
+        const details: { invoiceId: string; orderName: string; action: string }[] = [];
+
+        // Processar em lotes de 10
+        const batchSize = 10;
+        for (let i = 0; i < contributions.length; i += batchSize) {
+          const batch = contributions.slice(i, i + batchSize);
+          
+          await Promise.all(batch.map(async (contrib) => {
+            try {
+              const invoice = await getInvoiceWithToken(contrib.lytex_invoice_id!, token);
+              const orderName = invoice?.items?.[0]?.name?.trim().toUpperCase() || "";
+
+              if (!orderName) {
+                skipped++;
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName: "(vazio)", action: "skipped" });
+                return;
+              }
+
+              let targetTypeId = contribTypeByName.get(orderName);
+
+              // Se não encontrou, criar novo tipo
+              if (!targetTypeId) {
+                const { data: newType, error: createErr } = await supabase
+                  .from("contribution_types")
+                  .insert({
+                    clinic_id: params.clinicId,
+                    name: invoice.items[0].name.trim(),
+                    default_value: 0,
+                    is_active: true,
+                  })
+                  .select("id")
+                  .maybeSingle();
+
+                if (!createErr && newType?.id) {
+                  targetTypeId = newType.id;
+                  contribTypeByName.set(orderName, newType.id);
+                  console.log(`[Lytex] Criado tipo: ${invoice.items[0].name.trim()}`);
+                }
+              }
+
+              if (!targetTypeId) {
+                skipped++;
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, action: "no_type" });
+                return;
+              }
+
+              // Se já está com o tipo correto, pular
+              if (contrib.contribution_type_id === targetTypeId) {
+                skipped++;
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, action: "correct" });
+                return;
+              }
+
+              // Atualizar tipo
+              const { error: updateErr } = await supabase
+                .from("employer_contributions")
+                .update({ contribution_type_id: targetTypeId })
+                .eq("id", contrib.id);
+
+              if (updateErr) {
+                errors++;
+                console.error(`[Lytex] Erro ao atualizar contrib ${contrib.id}:`, updateErr);
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, action: "error" });
+              } else {
+                updated++;
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, action: "updated" });
+              }
+            } catch (e) {
+              errors++;
+              details.push({ invoiceId: contrib.lytex_invoice_id!, orderName: "(erro)", action: "error" });
+            }
+          }));
+        }
+
+        console.log(`[Lytex] Correção concluída: ${updated} atualizadas, ${skipped} puladas, ${errors} erros`);
+
+        result = {
+          success: true,
+          total: contributions.length,
+          updated,
+          skipped,
+          errors,
+          details: details.slice(0, 100), // Limitar detalhes para evitar payload grande
+        };
         break;
       }
 
