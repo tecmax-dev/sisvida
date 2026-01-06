@@ -637,8 +637,10 @@ export function EmployerImportPanel({ clinicId }: EmployerImportPanelProps) {
                       }
                     >
                       <TableCell className="text-muted-foreground text-xs">{emp.rowNumber}</TableCell>
-                      <TableCell className="font-mono text-sm">{formatRegistration(emp.data.id)}</TableCell>
-                      <TableCell className="font-mono text-sm text-muted-foreground">
+                      <TableCell className={`font-mono text-sm ${emp.existingRegistration && formatRegistration(emp.data.id) !== emp.existingRegistration ? 'text-destructive font-bold' : ''}`}>
+                        {formatRegistration(emp.data.id)}
+                      </TableCell>
+                      <TableCell className={`font-mono text-sm ${emp.existingRegistration && formatRegistration(emp.data.id) !== emp.existingRegistration ? 'text-destructive font-bold' : 'text-muted-foreground'}`}>
                         {emp.existingRegistration || '-'}
                       </TableCell>
                       <TableCell className="font-medium max-w-[200px] truncate">{emp.data.nome}</TableCell>
