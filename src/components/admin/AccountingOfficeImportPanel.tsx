@@ -10,6 +10,7 @@ import { Loader2, Upload, CheckCircle2, AlertCircle, Building2, Link2, FileSprea
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -297,6 +298,9 @@ export default function AccountingOfficeImportPanel({
             <Upload className="h-5 w-5" />
             Importar Escritórios do Relatório
           </DialogTitle>
+          <DialogDescription>
+            Importe escritórios de contabilidade a partir de um arquivo Excel ou texto colado.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
