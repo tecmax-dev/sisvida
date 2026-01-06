@@ -196,14 +196,44 @@ export default function ProfessionalDashboard() {
       .order('start_time', { ascending: true });
 
     if (!error && data) {
-      setAppointments(data.map(apt => ({
+      // Map appointments
+      let mappedAppointments = data.map(apt => ({
         ...apt,
         dependent_id: apt.dependent_id || null,
         procedure_id: apt.procedure_id || null,
         procedure: apt.procedure as { id: string; name: string; price: number } | null,
         patient: apt.patient as { id: string; name: string; phone: string; email: string | null; birth_date: string | null },
         dependent: apt.dependent as { id: string; name: string } | null
-      })));
+      }));
+
+      // Fallback: buscar dependentes faltantes se dependent_id existe mas dependent veio null
+      const missingDependentIds = mappedAppointments
+        .filter(apt => apt.dependent_id && !apt.dependent)
+        .map(apt => apt.dependent_id as string);
+
+      if (missingDependentIds.length > 0) {
+        console.warn('[ProfessionalDashboard] Fallback: buscando dependentes faltantes', missingDependentIds);
+        const uniqueIds = [...new Set(missingDependentIds)];
+        const { data: dependents } = await supabase
+          .from('patient_dependents')
+          .select('id, name')
+          .in('id', uniqueIds);
+
+        if (dependents && dependents.length > 0) {
+          const depMap = new Map(dependents.map(d => [d.id, d]));
+          mappedAppointments = mappedAppointments.map(apt => {
+            if (apt.dependent_id && !apt.dependent) {
+              const dep = depMap.get(apt.dependent_id);
+              if (dep) {
+                return { ...apt, dependent: dep };
+              }
+            }
+            return apt;
+          });
+        }
+      }
+
+      setAppointments(mappedAppointments);
     }
   };
 
