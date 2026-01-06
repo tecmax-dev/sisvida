@@ -210,8 +210,8 @@ export default function ProfessionalAppointment() {
       dependent: dependentData,
     });
 
-    // Get medical records
-    await loadMedicalRecords(apt.patient_id, prof.clinic_id);
+    // Get medical records - pass dependent_id if appointment is for dependent
+    await loadMedicalRecords(apt.patient_id, prof.clinic_id, apt.dependent_id || null);
 
     // Get stats
     const { count: completedCount } = await supabase
@@ -233,8 +233,8 @@ export default function ProfessionalAppointment() {
     setLoading(false);
   };
 
-  const loadMedicalRecords = async (patientId: string, clinicId: string) => {
-    const { data } = await supabase
+  const loadMedicalRecords = async (patientId: string, clinicId: string, dependentId?: string | null) => {
+    let query = supabase
       .from('medical_records')
       .select(`
         id, record_date, created_at, chief_complaint, diagnosis,
@@ -242,9 +242,17 @@ export default function ProfessionalAppointment() {
         professional:professionals (name),
         appointment:appointments (type)
       `)
-      .eq('patient_id', patientId)
       .eq('clinic_id', clinicId)
       .order('record_date', { ascending: false });
+
+    // If dependent, show only their records; otherwise show titular (dependent_id is null)
+    if (dependentId) {
+      query = query.eq('dependent_id', dependentId);
+    } else {
+      query = query.eq('patient_id', patientId).is('dependent_id', null);
+    }
+
+    const { data } = await query;
 
     if (data) {
       setMedicalRecords(data.map(r => ({
@@ -351,6 +359,7 @@ export default function ProfessionalAppointment() {
       .from('medical_records')
       .insert({
         patient_id: appointment.patient_id,
+        dependent_id: appointment.dependent_id || null,
         clinic_id: professional.clinic_id,
         professional_id: professional.id,
         appointment_id: appointment.id,
@@ -369,7 +378,7 @@ export default function ProfessionalAppointment() {
       return;
     }
 
-    await loadMedicalRecords(appointment.patient_id, professional.clinic_id);
+    await loadMedicalRecords(appointment.patient_id, professional.clinic_id, appointment.dependent_id || null);
     setShowAddRecord(false);
     setNewRecord({
       chief_complaint: '',

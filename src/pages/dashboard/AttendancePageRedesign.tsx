@@ -470,8 +470,8 @@ export default function AttendancePageRedesign() {
         setAnamnesis(anamnesisData);
       }
 
-      // Load medical history
-      const { data: historyData } = await supabase
+      // Load medical history - filter by dependent_id if applicable
+      let historyQuery = supabase
         .from("medical_records")
         .select(`
           id, record_date, chief_complaint, diagnosis, treatment_plan,
@@ -479,10 +479,19 @@ export default function AttendancePageRedesign() {
           professional:professionals(id, name),
           appointment:appointments(type, appointment_date)
         `)
-        .eq("patient_id", appointment.patient_id)
         .eq("clinic_id", appointment.clinic_id)
         .order("record_date", { ascending: false })
         .order("created_at", { ascending: false });
+
+      // If appointment is for a dependent, show only their records
+      // Otherwise, show titular records (where dependent_id is null)
+      if (appointment.dependent_id) {
+        historyQuery = historyQuery.eq("dependent_id", appointment.dependent_id);
+      } else {
+        historyQuery = historyQuery.eq("patient_id", appointment.patient_id).is("dependent_id", null);
+      }
+
+      const { data: historyData } = await historyQuery;
 
       if (historyData) {
         setMedicalHistory(historyData as MedicalRecord[]);
@@ -549,6 +558,7 @@ export default function AttendancePageRedesign() {
         .upsert({
           clinic_id: appointment.clinic_id,
           patient_id: appointment.patient_id,
+          dependent_id: appointment.dependent_id || null,
           professional_id: appointment.professional_id,
           appointment_id: appointment.id,
           record_date: new Date().toISOString().split("T")[0],
