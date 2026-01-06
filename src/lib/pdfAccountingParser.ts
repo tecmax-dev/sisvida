@@ -241,10 +241,56 @@ function isOfficeLineExcel(row: any[]): string | null {
 }
 
 /**
+ * Valida CNPJ usando algoritmo de dígitos verificadores
+ */
+function isValidCnpj(cnpj: string): boolean {
+  // Remove não-dígitos
+  cnpj = cnpj.replace(/\D/g, '');
+  
+  if (cnpj.length !== 14) return false;
+  
+  // Rejeita CNPJs com todos dígitos iguais
+  if (/^(\d)\1+$/.test(cnpj)) return false;
+  
+  // Validação do primeiro dígito verificador
+  let size = cnpj.length - 2;
+  let numbers = cnpj.substring(0, size);
+  const digits = cnpj.substring(size);
+  
+  let sum = 0;
+  let pos = size - 7;
+  
+  for (let i = size; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(size - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  
+  let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  if (result !== parseInt(digits.charAt(0))) return false;
+  
+  // Validação do segundo dígito verificador
+  size = size + 1;
+  numbers = cnpj.substring(0, size);
+  sum = 0;
+  pos = size - 7;
+  
+  for (let i = size; i >= 1; i--) {
+    sum += parseInt(numbers.charAt(size - i)) * pos--;
+    if (pos < 2) pos = 9;
+  }
+  
+  result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+  return result === parseInt(digits.charAt(1));
+}
+
+/**
  * Extrai CNPJ de uma linha do Excel (procura em todas as células)
  * Lida com CNPJs quebrados entre células ou com tags HTML
+ * Valida o CNPJ antes de retornar
  */
 function extractCnpjFromExcelRow(row: any[]): string | null {
+  console.log('[ExcelParser] Linha raw:', JSON.stringify(row));
+  
   // Primeiro tenta célula por célula
   for (const cell of row) {
     if (cell == null) continue;
@@ -257,7 +303,13 @@ function extractCnpjFromExcelRow(row: any[]): string | null {
     // Procura padrão de CNPJ
     const match = cellStr.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
     if (match) {
-      return match[0].replace(/\D/g, '');
+      const cnpj = match[0].replace(/\D/g, '');
+      if (isValidCnpj(cnpj)) {
+        console.log('[ExcelParser] CNPJ válido:', cnpj);
+        return cnpj;
+      } else {
+        console.log('[ExcelParser] CNPJ inválido ignorado:', match[0], '->', cnpj);
+      }
     }
   }
   
@@ -266,7 +318,13 @@ function extractCnpjFromExcelRow(row: any[]): string | null {
   const cleanText = fullRowText.replace(/<br\s*\/?>/gi, '').replace(/<[^>]+>/g, '');
   const match = cleanText.match(/\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}/);
   if (match) {
-    return match[0].replace(/\D/g, '');
+    const cnpj = match[0].replace(/\D/g, '');
+    if (isValidCnpj(cnpj)) {
+      console.log('[ExcelParser] CNPJ válido (fallback):', cnpj);
+      return cnpj;
+    } else {
+      console.log('[ExcelParser] CNPJ inválido ignorado (fallback):', match[0], '->', cnpj);
+    }
   }
   
   return null;
