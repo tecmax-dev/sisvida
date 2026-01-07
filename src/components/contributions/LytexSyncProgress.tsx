@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, Users, Receipt, CheckCircle } from "lucide-react";
+import { Loader2, Users, Receipt, CheckCircle, RefreshCw, Hash } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface SyncProgress {
@@ -11,14 +11,52 @@ interface SyncProgress {
   totalInvoices?: number;
 }
 
+export type LytexActionType = "import" | "sync" | "fix_types" | "extract_registrations";
+
 interface LytexSyncProgressProps {
   syncLogId: string | null;
   isActive: boolean;
+  actionType?: LytexActionType;
 }
 
-export function LytexSyncProgress({ syncLogId, isActive }: LytexSyncProgressProps) {
+const ACTION_CONFIG = {
+  import: {
+    title: "Importando da Lytex",
+    icon: Receipt,
+  },
+  sync: {
+    title: "Sincronizando Status",
+    icon: RefreshCw,
+  },
+  fix_types: {
+    title: "Corrigindo Tipos",
+    icon: RefreshCw,
+  },
+  extract_registrations: {
+    title: "Extraindo Matrículas",
+    icon: Hash,
+  },
+};
+
+export function LytexSyncProgress({ syncLogId, isActive, actionType = "import" }: LytexSyncProgressProps) {
   const [progress, setProgress] = useState<SyncProgress | null>(null);
   const [status, setStatus] = useState<string>("running");
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!isActive) {
+      setElapsedSeconds(0);
+      setProgress(null);
+      return;
+    }
+
+    // Timer para mostrar tempo decorrido
+    const timer = setInterval(() => {
+      setElapsedSeconds((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isActive]);
 
   useEffect(() => {
     if (!syncLogId || !isActive) return;
@@ -50,10 +88,23 @@ export function LytexSyncProgress({ syncLogId, isActive }: LytexSyncProgressProp
 
   if (!isActive) return null;
 
+  const config = ACTION_CONFIG[actionType];
+  const ActionIcon = config.icon;
+
   const getPhaseInfo = () => {
+    // Se não temos syncLogId, mostrar progresso genérico baseado no tempo
+    if (!syncLogId) {
+      const baseProgress = Math.min(elapsedSeconds * 3, 90);
+      return { 
+        label: `${config.title}...`, 
+        icon: ActionIcon, 
+        progress: baseProgress 
+      };
+    }
+
     switch (progress?.phase) {
       case "starting":
-        return { label: "Iniciando sincronização...", icon: Loader2, progress: 5 };
+        return { label: "Iniciando...", icon: Loader2, progress: 5 };
       case "clients":
         return { 
           label: `Processando empresas: ${progress.clientsProcessed} processadas`, 
@@ -71,12 +122,18 @@ export function LytexSyncProgress({ syncLogId, isActive }: LytexSyncProgressProp
       case "finishing":
         return { label: "Finalizando...", icon: CheckCircle, progress: 95 };
       default:
-        return { label: "Sincronizando...", icon: Loader2, progress: 10 };
+        return { label: `${config.title}...`, icon: Loader2, progress: 10 };
     }
   };
 
   const phaseInfo = getPhaseInfo();
   const PhaseIcon = phaseInfo.icon;
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+  };
 
   return (
     <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -86,7 +143,7 @@ export function LytexSyncProgress({ syncLogId, isActive }: LytexSyncProgressProp
             <PhaseIcon className="h-6 w-6 text-primary animate-spin" />
           </div>
           <div>
-            <h3 className="font-semibold text-lg">Sincronização Lytex</h3>
+            <h3 className="font-semibold text-lg">{config.title}</h3>
             <p className="text-sm text-muted-foreground">{phaseInfo.label}</p>
           </div>
         </div>
@@ -105,7 +162,7 @@ export function LytexSyncProgress({ syncLogId, isActive }: LytexSyncProgressProp
         </div>
         
         <p className="text-xs text-center text-muted-foreground">
-          Por favor, aguarde. Não feche esta página.
+          Por favor, aguarde. Não feche esta página. ({formatTime(elapsedSeconds)})
         </p>
       </div>
     </div>

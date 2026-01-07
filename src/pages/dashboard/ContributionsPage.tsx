@@ -16,7 +16,7 @@ import BulkContributionDialog from "@/components/contributions/BulkContributionD
 import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
-import { LytexSyncProgress } from "@/components/contributions/LytexSyncProgress";
+import { LytexSyncProgress, LytexActionType } from "@/components/contributions/LytexSyncProgress";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -96,6 +96,7 @@ export default function ContributionsPage() {
   const [syncResultsOpen, setSyncResultsOpen] = useState(false);
   const [syncResult, setSyncResult] = useState<LytexSyncResult | null>(null);
   const [currentSyncLogId, setCurrentSyncLogId] = useState<string | null>(null);
+  const [currentActionType, setCurrentActionType] = useState<LytexActionType>("import");
 
   useEffect(() => {
     if (currentClinic) {
@@ -221,6 +222,7 @@ export default function ContributionsPage() {
     if (!currentClinic) return;
     
     setSyncing(true);
+    setCurrentActionType("sync");
     try {
       const { data, error } = await supabase.functions.invoke("lytex-api", {
         body: {
@@ -254,6 +256,7 @@ export default function ContributionsPage() {
     
     setImporting(true);
     setCurrentSyncLogId(null);
+    setCurrentActionType("import");
     
     try {
       // Fazer a chamada sem await para obter o syncLogId o mais rápido possível
@@ -341,6 +344,7 @@ export default function ContributionsPage() {
     if (!currentClinic) return;
     
     setExtractingRegistrations(true);
+    setCurrentActionType("extract_registrations");
     try {
       const { data, error } = await supabase.functions.invoke("lytex-api", {
         body: {
@@ -373,6 +377,7 @@ export default function ContributionsPage() {
     if (!currentClinic) return;
     
     setFixingTypes(true);
+    setCurrentActionType("fix_types");
     try {
       const { data, error } = await supabase.functions.invoke("lytex-api", {
         body: {
@@ -579,10 +584,11 @@ export default function ContributionsPage() {
         result={syncResult}
       />
 
-      {/* Progress overlay during sync */}
+      {/* Progress overlay during any Lytex action */}
       <LytexSyncProgress 
         syncLogId={currentSyncLogId} 
-        isActive={importing} 
+        isActive={importing || syncing || fixingTypes || extractingRegistrations}
+        actionType={currentActionType}
       />
     </div>
   );
