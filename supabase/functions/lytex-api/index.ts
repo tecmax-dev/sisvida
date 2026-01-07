@@ -1114,11 +1114,11 @@ Deno.serve(async (req) => {
           // Mapeia códigos especiais (756) e palavras-chave para os tipos base corretos
           const resolveContributionType = (orderName: string): string | null => {
             const upper = orderName.toUpperCase().trim();
-            
+
             // Extrair código do início (ex: "124 - ...", "756 - ...")
             const codeMatch = upper.match(/^(\d{3})\s*-/);
             const code = codeMatch ? codeMatch[1] : null;
-            
+
             // Código 756: mapear pelo conteúdo textual
             if (code === "756") {
               if (upper.includes("MENSALIDADE SINDICAL")) {
@@ -1130,23 +1130,39 @@ Deno.serve(async (req) => {
               if (upper.includes("TAXA NEGOCIAL") && (upper.includes("VAREJISTA") || upper.includes("VEREJ"))) {
                 return contribTypeByCode.get("126") || null;
               }
-              // Se não conseguir mapear, tenta o código diretamente ou fallback
               return null;
             }
-            
+
             // Códigos padrão (124, 125, 126, 127, 128): buscar diretamente
             if (code && contribTypeByCode.has(code)) {
               return contribTypeByCode.get(code) || null;
             }
-            
+
             // Fallback por palavras-chave (tipos sem código numérico)
-            if (upper.includes("DEBITO NEGOCIADO") || upper.includes("NEGOCIAÇÃO DE DÉBITO") || upper.includes("NEGOCIACAO DE DEBITO")) {
+            if (
+              upper.includes("TAXA NEGOCIAL") &&
+              (upper.includes("MERCADOS") || upper.includes("MERCADO"))
+            ) {
+              return contribTypeByCode.get("125") || null;
+            }
+            if (upper.includes("TAXA NEGOCIAL") && (upper.includes("VAREJISTA") || upper.includes("VEREJ"))) {
+              return contribTypeByCode.get("126") || null;
+            }
+            if (
+              upper.includes("DEBITO NEGOCIADO") ||
+              upper.includes("NEGOCIAÇÃO DE DÉBITO") ||
+              upper.includes("NEGOCIACAO DE DEBITO")
+            ) {
               return contribTypeByCode.get("127") || null;
             }
-            if (upper.includes("MENSALIDADE INDIVIDUAL") || upper.includes("CONTRIBUIÇÃO INDIVIDUAL") || upper.includes("CONTRIBUICAO INDIVIDUAL")) {
+            if (
+              upper.includes("MENSALIDADE INDIVIDUAL") ||
+              upper.includes("CONTRIBUIÇÃO INDIVIDUAL") ||
+              upper.includes("CONTRIBUICAO INDIVIDUAL")
+            ) {
               return contribTypeByCode.get("128") || null;
             }
-            
+
             // Buscar pelo nome completo no mapa
             return contribTypeByName.get(upper) || null;
           };
@@ -1700,10 +1716,32 @@ Deno.serve(async (req) => {
           }
         }
 
-        // Função para extrair código base do campo "Pedido" da Lytex
-        const extractBaseCode = (orderName: string): string | null => {
-          const match = orderName.match(/^(\d{3})\s*-/);
-          return match ? match[1] : null;
+        // Função para resolver o código base (124..128) a partir do campo "Pedido" da Lytex
+        // Aceita tanto prefixo numérico ("125 - ...") quanto nomes sem código.
+        const resolveBaseCode = (orderName: string): string | null => {
+          const upper = orderName.toUpperCase().trim();
+
+          const codeMatch = upper.match(/^(\d{3})\s*-/);
+          const code = codeMatch ? codeMatch[1] : null;
+
+          // Código 756: mapear pelo conteúdo textual
+          if (code === "756") {
+            if (upper.includes("MENSALIDADE SINDICAL")) return "124";
+            if (upper.includes("TAXA NEGOCIAL") && (upper.includes("MERCADOS") || upper.includes("MERCADO"))) return "125";
+            if (upper.includes("TAXA NEGOCIAL") && (upper.includes("VAREJISTA") || upper.includes("VEREJ"))) return "126";
+            return null;
+          }
+
+          if (code) return code;
+
+          // Sem código: resolver por palavras-chave
+          if (upper.includes("TAXA NEGOCIAL") && (upper.includes("MERCADOS") || upper.includes("MERCADO"))) return "125";
+          if (upper.includes("TAXA NEGOCIAL") && (upper.includes("VAREJISTA") || upper.includes("VEREJ"))) return "126";
+          if (upper.includes("DEBITO NEGOCIADO") || upper.includes("NEGOCIACAO DE DEBITO") || upper.includes("NEGOCIAÇÃO DE DÉBITO")) return "127";
+          if (upper.includes("MENSALIDADE INDIVIDUAL") || upper.includes("CONTRIBUICAO INDIVIDUAL") || upper.includes("CONTRIBUIÇÃO INDIVIDUAL")) return "128";
+          if (upper.includes("MENSALIDADE")) return "124";
+
+          return null;
         };
 
         // Tipo padrão (fallback)
@@ -1749,12 +1787,12 @@ Deno.serve(async (req) => {
                 return;
               }
 
-              // Extrair código base (124, 125, 126)
-              const baseCode = extractBaseCode(orderName.toUpperCase());
-              
+              // Resolver código base (124..128)
+              const baseCode = resolveBaseCode(orderName);
+
               // Primeiro tenta pelo código base (vincula ao tipo existente)
               let targetTypeId = baseCode ? contribTypeByCode.get(baseCode) : null;
-              
+
               // Fallback para tipo padrão (não cria novos tipos)
               if (!targetTypeId) {
                 targetTypeId = defaultTypeId;
