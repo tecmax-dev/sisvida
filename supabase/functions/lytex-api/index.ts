@@ -1789,13 +1789,38 @@ Deno.serve(async (req) => {
           throw new Error(`Erro ao buscar contribuições: ${contribErr.message}`);
         }
 
-        if (!contributions || contributions.length === 0) {
-          result = { success: true, updated: 0, message: "Nenhuma contribuição com boleto Lytex encontrada", syncLogId: syncLogFix?.id };
+        // Opcional: rodar correção em um subconjunto específico (útil para diagnosticar um documento)
+        const onlyInvoiceIdsRaw = Array.isArray((params as any).onlyInvoiceIds)
+          ? ((params as any).onlyInvoiceIds as unknown[])
+          : null;
+        const onlyInvoiceIds = new Set(
+          (onlyInvoiceIdsRaw || [])
+            .map((v) => String(v || "").trim())
+            .filter(Boolean)
+            .map((v) => v.toLowerCase()),
+        );
+
+        const contributionsToProcess = (contributions || []).filter((c) => {
+          const inv = String(c.lytex_invoice_id || "").toLowerCase();
+          return onlyInvoiceIds.size ? onlyInvoiceIds.has(inv) : true;
+        });
+
+        if (!contributionsToProcess || contributionsToProcess.length === 0) {
+          result = {
+            success: true,
+            updated: 0,
+            skipped: 0,
+            errors: 0,
+            message: onlyInvoiceIds.size
+              ? "Nenhuma contribuição encontrada para os invoiceIds informados"
+              : "Nenhuma contribuição com boleto Lytex encontrada",
+            syncLogId: syncLogFix?.id,
+          };
           break;
         }
 
-        const totalContribs = contributions.length;
-        console.log(`[Lytex] ${totalContribs} contribuições a verificar`);
+        const totalContribs = contributionsToProcess.length;
+        console.log(`[Lytex] ${totalContribs} contribuições a verificar${onlyInvoiceIds.size ? " (filtro por invoiceId)" : ""}`);
 
         // Atualizar progresso inicial
         if (syncLogFix?.id) {
@@ -1813,9 +1838,9 @@ Deno.serve(async (req) => {
 
         // Processar em lotes de 10
         const batchSize = 10;
-        for (let i = 0; i < contributions.length; i += batchSize) {
-          const batch = contributions.slice(i, i + batchSize);
-          
+        for (let i = 0; i < contributionsToProcess.length; i += batchSize) {
+          const batch = contributionsToProcess.slice(i, i + batchSize);
+
           await Promise.all(batch.map(async (contrib) => {
             try {
               const invoice = await getInvoiceWithToken(contrib.lytex_invoice_id!, token);
@@ -1923,7 +1948,7 @@ Deno.serve(async (req) => {
 
         result = {
           success: true,
-          total: contributions.length,
+          total: contributionsToProcess.length,
           updated,
           skipped,
           errors,
