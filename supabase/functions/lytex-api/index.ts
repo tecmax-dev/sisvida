@@ -1251,8 +1251,12 @@ Deno.serve(async (req) => {
                 const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
                 if (!dueDate || Number.isNaN(dueDate.getTime())) continue;
 
-                const competenceMonth = dueDate.getMonth() + 1;
-                const competenceYear = dueDate.getFullYear();
+                // Competência é sempre o mês ANTERIOR ao vencimento
+                // Ex: vencimento 13/01/2026 -> competência 12/2025
+                const compDate = new Date(dueDate);
+                compDate.setMonth(compDate.getMonth() - 1);
+                const competenceMonth = compDate.getMonth() + 1;
+                const competenceYear = compDate.getFullYear();
 
                 let status = "pending";
                 if (invoice.status === "paid") status = "paid";
