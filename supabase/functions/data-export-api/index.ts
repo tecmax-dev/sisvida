@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, X-API-Key",
 };
 
 function errorResponse(message: string, status = 400) {
@@ -20,13 +20,14 @@ function successResponse(data: any, total: number) {
 }
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Validate API Key
-    const apiKey = req.headers.get("x-api-key");
+    // Validate API Key (case-insensitive header check)
+    const apiKey = req.headers.get("X-API-Key") || req.headers.get("x-api-key");
     const expectedKey = Deno.env.get("SOURCE_API_KEY");
 
     if (!apiKey || apiKey !== expectedKey) {
@@ -34,6 +35,7 @@ Deno.serve(async (req) => {
       return errorResponse("Unauthorized", 401);
     }
 
+    // Create Supabase client with service role for global access
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
@@ -50,7 +52,11 @@ Deno.serve(async (req) => {
 
     switch (pathname) {
       case "health": {
-        return new Response(JSON.stringify({ status: "ok", timestamp: new Date().toISOString() }), {
+        return new Response(JSON.stringify({ 
+          status: "ok", 
+          timestamp: new Date().toISOString(),
+          version: "1.0.0"
+        }), {
           status: 200,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -74,36 +80,9 @@ Deno.serve(async (req) => {
         return successResponse(data, count || 0);
       }
 
-      case "patients": {
+      case "insurance_plans": {
         const { data, error, count } = await supabase
-          .from("patients")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
-      }
-
-      case "professionals": {
-        const { data, error, count } = await supabase
-          .from("professionals")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
-      }
-
-      case "appointments": {
-        const { data, error, count } = await supabase
-          .from("appointments")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
-      }
-
-      case "financial_transactions": {
-        const { data, error, count } = await supabase
-          .from("financial_transactions")
+          .from("insurance_plans")
           .select("*", { count: "exact" })
           .range(offset, offset + limit - 1);
         if (error) throw error;
@@ -119,37 +98,46 @@ Deno.serve(async (req) => {
         return successResponse(data, count || 0);
       }
 
-      case "appointment_procedures": {
+      case "professionals": {
         const { data, error, count } = await supabase
-          .from("appointment_procedures")
+          .from("professionals")
           .select("*", { count: "exact" })
           .range(offset, offset + limit - 1);
         if (error) throw error;
         return successResponse(data, count || 0);
       }
 
-      case "payment_methods": {
+      case "professional_availability": {
         const { data, error, count } = await supabase
-          .from("payment_methods")
+          .from("schedule_exceptions")
           .select("*", { count: "exact" })
           .range(offset, offset + limit - 1);
         if (error) throw error;
         return successResponse(data, count || 0);
       }
 
-      case "anamnesis_templates": {
+      case "patients": {
         const { data, error, count } = await supabase
-          .from("anamnese_templates")
+          .from("patients")
           .select("*", { count: "exact" })
           .range(offset, offset + limit - 1);
         if (error) throw error;
         return successResponse(data, count || 0);
       }
 
-      case "anamnesis_records": {
+      case "patient_dependents": {
         const { data, error, count } = await supabase
-          .from("anamnese_responses")
-          .select("*, anamnese_answers(*)", { count: "exact" })
+          .from("patient_dependents")
+          .select("*", { count: "exact" })
+          .range(offset, offset + limit - 1);
+        if (error) throw error;
+        return successResponse(data, count || 0);
+      }
+
+      case "appointments": {
+        const { data, error, count } = await supabase
+          .from("appointments")
+          .select("*", { count: "exact" })
           .range(offset, offset + limit - 1);
         if (error) throw error;
         return successResponse(data, count || 0);
@@ -164,28 +152,27 @@ Deno.serve(async (req) => {
         return successResponse(data, count || 0);
       }
 
-      case "professional_procedures": {
+      case "financial_categories": {
         const { data, error, count } = await supabase
-          .from("professional_procedures")
+          .from("financial_categories")
           .select("*", { count: "exact" })
           .range(offset, offset + limit - 1);
         if (error) throw error;
         return successResponse(data, count || 0);
       }
 
-      case "professional_schedules": {
+      case "financial_transactions": {
         const { data, error, count } = await supabase
-          .from("professionals")
-          .select("id, clinic_id, name, schedule", { count: "exact" })
-          .not("schedule", "is", null)
+          .from("financial_transactions")
+          .select("*", { count: "exact" })
           .range(offset, offset + limit - 1);
         if (error) throw error;
         return successResponse(data, count || 0);
       }
 
-      case "schedule_exceptions": {
+      case "user_roles": {
         const { data, error, count } = await supabase
-          .from("schedule_exceptions")
+          .from("user_roles")
           .select("*", { count: "exact" })
           .range(offset, offset + limit - 1);
         if (error) throw error;
