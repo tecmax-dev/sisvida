@@ -1695,6 +1695,26 @@ Deno.serve(async (req) => {
         // Ex: "124 - MENSALIDADE SINDICAL REFERENTE AGOSTO 2024" -> vincula ao tipo "124 - MENSALIDADE SINDICAL"
         console.log("[Lytex] Iniciando correção de tipos de contribuição (vinculação aos tipos base)...");
 
+        if (!params.clinicId) {
+          throw new Error("clinicId é obrigatório");
+        }
+
+        // Criar log de sincronização para acompanhamento de progresso
+        const { data: syncLogFix, error: syncLogFixErr } = await supabase
+          .from("lytex_sync_logs")
+          .insert({
+            clinic_id: params.clinicId,
+            sync_type: "fix_contribution_types",
+            status: "running",
+            details: { progress: { phase: "starting", total: 0, processed: 0 } },
+          })
+          .select("id")
+          .single();
+
+        if (syncLogFixErr) {
+          console.error("[Lytex] Erro ao criar log de fix_contribution_types:", syncLogFixErr);
+        }
+
         // Carregar todos os tipos de contribuição
         const { data: allContribTypes } = await supabase
           .from("contribution_types")
@@ -1716,30 +1736,41 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Função para normalizar strings (remove acentos e caracteres especiais)
+        const normalizeStr = (s: string): string =>
+          s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim();
+
         // Função para resolver o código base (124..128) a partir do campo "Pedido" da Lytex
         // Aceita tanto prefixo numérico ("125 - ...") quanto nomes sem código.
+        // Usa regex tolerante para capturar variações (MERCAD -> MERCADO, MERCADOS, MERCADO(S))
         const resolveBaseCode = (orderName: string): string | null => {
-          const upper = orderName.toUpperCase().trim();
+          const upper = normalizeStr(orderName);
 
-          const codeMatch = upper.match(/^(\d{3})\s*-/);
+          const codeMatch = upper.match(/^(\d{3})\s*[-–]/);
           const code = codeMatch ? codeMatch[1] : null;
 
           // Código 756: mapear pelo conteúdo textual
           if (code === "756") {
             if (upper.includes("MENSALIDADE SINDICAL")) return "124";
-            if (upper.includes("TAXA NEGOCIAL") && (upper.includes("MERCADOS") || upper.includes("MERCADO"))) return "125";
-            if (upper.includes("TAXA NEGOCIAL") && (upper.includes("VAREJISTA") || upper.includes("VEREJ"))) return "126";
+            if (/TAXA\s*NEGOC.*MERCAD/i.test(upper)) return "125";
+            if (/TAXA\s*NEGOC.*(VAREJ|VEREJ)/i.test(upper)) return "126";
             return null;
           }
 
-          if (code) return code;
+          // Códigos padrão: retornar diretamente
+          if (code && ["124", "125", "126", "127", "128"].includes(code)) return code;
 
-          // Sem código: resolver por palavras-chave
-          if (upper.includes("TAXA NEGOCIAL") && (upper.includes("MERCADOS") || upper.includes("MERCADO"))) return "125";
-          if (upper.includes("TAXA NEGOCIAL") && (upper.includes("VAREJISTA") || upper.includes("VEREJ"))) return "126";
-          if (upper.includes("DEBITO NEGOCIADO") || upper.includes("NEGOCIACAO DE DEBITO") || upper.includes("NEGOCIAÇÃO DE DÉBITO")) return "127";
-          if (upper.includes("MENSALIDADE INDIVIDUAL") || upper.includes("CONTRIBUICAO INDIVIDUAL") || upper.includes("CONTRIBUIÇÃO INDIVIDUAL")) return "128";
-          if (upper.includes("MENSALIDADE")) return "124";
+          // Sem código: resolver por palavras-chave com regex tolerante
+          // 125 - TAXA NEGOCIAL (MERCADOS/MERCADO/MERCAD)
+          if (/TAXA\s*NEGOC.*MERCAD/i.test(upper)) return "125";
+          // 126 - TAXA NEGOCIAL (VAREJISTA)
+          if (/TAXA\s*NEGOC.*(VAREJ|VEREJ)/i.test(upper)) return "126";
+          // 127 - DÉBITO NEGOCIADO
+          if (/DEBITO\s*NEGOCIAD|NEGOCIACAO\s*DE\s*DEBITO/i.test(upper)) return "127";
+          // 128 - MENSALIDADE INDIVIDUAL
+          if (/MENSALIDADE\s*INDIVIDUAL|CONTRIBUI(C|Ç)AO\s*INDIVIDUAL/i.test(upper)) return "128";
+          // 124 - MENSALIDADE (fallback genérico)
+          if (/MENSALIDADE/i.test(upper)) return "124";
 
           return null;
         };
@@ -1759,17 +1790,26 @@ Deno.serve(async (req) => {
         }
 
         if (!contributions || contributions.length === 0) {
-          result = { success: true, updated: 0, message: "Nenhuma contribuição com boleto Lytex encontrada" };
+          result = { success: true, updated: 0, message: "Nenhuma contribuição com boleto Lytex encontrada", syncLogId: syncLogFix?.id };
           break;
         }
 
-        console.log(`[Lytex] ${contributions.length} contribuições a verificar`);
+        const totalContribs = contributions.length;
+        console.log(`[Lytex] ${totalContribs} contribuições a verificar`);
+
+        // Atualizar progresso inicial
+        if (syncLogFix?.id) {
+          await supabase
+            .from("lytex_sync_logs")
+            .update({ details: { progress: { phase: "processing", total: totalContribs, processed: 0 } } })
+            .eq("id", syncLogFix.id);
+        }
 
         const token = await getAccessToken();
         let updated = 0;
         let skipped = 0;
         let errors = 0;
-        const details: { invoiceId: string; orderName: string; baseCode: string | null; action: string }[] = [];
+        const details: { invoiceId: string; orderNames: string[]; baseCode: string | null; action: string; reason?: string }[] = [];
 
         // Processar em lotes de 10
         const batchSize = 10;
@@ -1779,16 +1819,29 @@ Deno.serve(async (req) => {
           await Promise.all(batch.map(async (contrib) => {
             try {
               const invoice = await getInvoiceWithToken(contrib.lytex_invoice_id!, token);
-              const orderName = invoice?.items?.[0]?.name?.trim() || "";
+              
+              // Coletar TODOS os nomes de itens (não só items[0])
+              const orderNames: string[] = (invoice?.items || [])
+                .map((item: any) => item?.name?.trim())
+                .filter(Boolean);
 
-              if (!orderName) {
+              if (orderNames.length === 0) {
                 skipped++;
-                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName: "(vazio)", baseCode: null, action: "skipped" });
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderNames: [], baseCode: null, action: "skipped", reason: "Nenhum item encontrado" });
                 return;
               }
 
-              // Resolver código base (124..128)
-              const baseCode = resolveBaseCode(orderName);
+              // Tentar resolver baseCode a partir de qualquer item
+              let baseCode: string | null = null;
+              let matchedOrderName = "";
+              for (const on of orderNames) {
+                const resolved = resolveBaseCode(on);
+                if (resolved) {
+                  baseCode = resolved;
+                  matchedOrderName = on;
+                  break;
+                }
+              }
 
               // Primeiro tenta pelo código base (vincula ao tipo existente)
               let targetTypeId = baseCode ? contribTypeByCode.get(baseCode) : null;
@@ -1800,14 +1853,14 @@ Deno.serve(async (req) => {
 
               if (!targetTypeId) {
                 skipped++;
-                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, baseCode, action: "no_type" });
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderNames, baseCode, action: "skipped", reason: "Tipo padrão não encontrado" });
                 return;
               }
 
               // Se já está com o tipo correto, pular
               if (contrib.contribution_type_id === targetTypeId) {
                 skipped++;
-                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, baseCode, action: "correct" });
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderNames, baseCode, action: "skipped", reason: "Tipo já correto" });
                 return;
               }
 
@@ -1820,19 +1873,53 @@ Deno.serve(async (req) => {
               if (updateErr) {
                 errors++;
                 console.error(`[Lytex] Erro ao atualizar contrib ${contrib.id}:`, updateErr);
-                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, baseCode, action: "error" });
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderNames, baseCode, action: "error", reason: updateErr.message });
               } else {
                 updated++;
-                details.push({ invoiceId: contrib.lytex_invoice_id!, orderName, baseCode, action: "updated" });
+                console.log(`[Lytex] Contrib ${contrib.id} atualizada: "${matchedOrderName}" -> código ${baseCode}`);
+                details.push({ invoiceId: contrib.lytex_invoice_id!, orderNames, baseCode, action: "updated", reason: `Atualizado para tipo ${baseCode}` });
               }
-            } catch (e) {
+            } catch (e: any) {
               errors++;
-              details.push({ invoiceId: contrib.lytex_invoice_id!, orderName: "(erro)", baseCode: null, action: "error" });
+              details.push({ invoiceId: contrib.lytex_invoice_id!, orderNames: [], baseCode: null, action: "error", reason: e?.message || "Erro desconhecido" });
             }
           }));
+
+          // Atualizar progresso a cada lote
+          const processed = Math.min(i + batchSize, totalContribs);
+          if (syncLogFix?.id) {
+            await supabase
+              .from("lytex_sync_logs")
+              .update({ details: { progress: { phase: "processing", total: totalContribs, processed } } })
+              .eq("id", syncLogFix.id);
+          }
+
+          // Log a cada 50
+          if (processed % 50 === 0 || processed === totalContribs) {
+            console.log(`[Lytex] Progresso fix_contribution_types: ${processed}/${totalContribs}`);
+          }
         }
 
         console.log(`[Lytex] Correção concluída: ${updated} atualizadas, ${skipped} puladas, ${errors} erros`);
+
+        // Atualizar log com resultado final
+        if (syncLogFix?.id) {
+          await supabase
+            .from("lytex_sync_logs")
+            .update({
+              status: "completed",
+              completed_at: new Date().toISOString(),
+              invoices_updated: updated,
+              details: {
+                total: totalContribs,
+                updated,
+                skipped,
+                errors,
+                items: details.slice(0, 200), // Limitar para evitar payload grande
+              },
+            })
+            .eq("id", syncLogFix.id);
+        }
 
         result = {
           success: true,
@@ -1840,6 +1927,7 @@ Deno.serve(async (req) => {
           updated,
           skipped,
           errors,
+          syncLogId: syncLogFix?.id,
           details: details.slice(0, 100), // Limitar detalhes para evitar payload grande
         };
         break;
