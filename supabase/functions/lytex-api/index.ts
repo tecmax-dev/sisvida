@@ -1280,16 +1280,16 @@ Deno.serve(async (req) => {
                 else if (invoice.status === "overdue") status = "overdue";
                 else if (invoice.status === "processing") status = "processing";
 
-                // IMPORTANT: Lytex returns values in REAIS, but our DB stores CENTS
-                const valueInReais = invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
-                const value = Math.round(valueInReais * 100); // Convert to cents
+                // Lytex returns values in CENTAVOS (same as our DB)
+                const value = invoice.items?.reduce((sum: number, item: any) => sum + (item.value || 0), 0) || 0;
 
                 // A Lytex retorna linkCheckout (página de pagamento) ou linkBoleto (PDF do boleto)
                 const invoiceUrl = invoice.linkCheckout || invoice.linkBoleto || invoice.invoiceUrl || null;
 
                 // Log para debug (apenas primeiras faturas)
-                if (page === 1 && invoices.indexOf(invoice) < 2) {
-                  console.log(`[Lytex] Invoice ${invoice._id}: linkCheckout=${invoice.linkCheckout}, linkBoleto=${invoice.linkBoleto}`);
+                if (page === 1 && invoices.indexOf(invoice) < 3) {
+                  const itemValue = invoice.items?.[0]?.value;
+                  console.log(`[Lytex] Invoice ${invoice._id}: items[0].value=${itemValue}, totalValue=${value}, payedValue=${invoice.payedValue}`);
                 }
 
                 // Determinar tipo de contribuição pelo campo "Pedido" (items[0].name)
