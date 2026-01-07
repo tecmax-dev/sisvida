@@ -168,9 +168,10 @@ export function usePatientCards(clinicId: string | undefined, patientId?: string
         })
         .eq('id', cardId)
         .select()
-        .single();
+        .maybeSingle();
       
       if (error) throw error;
+      if (!data) throw new Error('Carteirinha não encontrada');
       return data;
     },
     onSuccess: () => {
