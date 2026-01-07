@@ -194,6 +194,27 @@ Deno.serve(async (req) => {
         return success(data, count || 0)
       }
 
+      case 'employers': {
+        const { data, error, count } = await supabase
+          .from('employers').select('*', { count: 'exact' }).order('name').range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
+      }
+
+      case 'contribution_types': {
+        const { data, error, count } = await supabase
+          .from('contribution_types').select('*', { count: 'exact' }).order('name').range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
+      }
+
+      case 'employer_contributions': {
+        const { data, error, count } = await supabase
+          .from('employer_contributions').select('*', { count: 'exact' }).order('due_date', { ascending: false }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
+      }
+
       default:
         console.error(`[data-export-api] Unknown endpoint: ${endpoint}`)
         return new Response(
