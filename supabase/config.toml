@@ -179,3 +179,6 @@ verify_jwt = false
 
 [functions.set-contribution-value]
 verify_jwt = false
+
+[functions.data-export-api]
+verify_jwt = false
