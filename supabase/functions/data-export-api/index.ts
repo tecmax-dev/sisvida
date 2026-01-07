@@ -1,225 +1,211 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
+import { createClient } from 'npm:@supabase/supabase-js@2'
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, X-API-Key",
-};
-
-function errorResponse(message: string, status = 400) {
-  return new Response(JSON.stringify({ error: message }), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
-function successResponse(data: any, total: number) {
-  return new Response(JSON.stringify({ data, total }), {
-    status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
 }
 
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    // Validate API Key (case-insensitive header check)
-    const apiKey = req.headers.get("X-API-Key") || req.headers.get("x-api-key");
-    const expectedKey = Deno.env.get("SOURCE_API_KEY");
-
+    // Validate API Key
+    const apiKey = req.headers.get('x-api-key') || req.headers.get('X-API-Key')
+    const expectedKey = Deno.env.get('SOURCE_API_KEY')
+    
+    console.log('[data-export-api] API Key present:', !!apiKey, 'Expected key configured:', !!expectedKey)
+    
     if (!apiKey || apiKey !== expectedKey) {
-      console.error("[data-export-api] Invalid or missing API key");
-      return errorResponse("Unauthorized", 401);
+      console.error('[data-export-api] Unauthorized - invalid API key')
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
-    // Create Supabase client with service role for global access
     const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-    );
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
 
-    const url = new URL(req.url);
-    const pathname = url.pathname.replace(/^\/data-export-api\/?/, "").replace(/\/$/, "");
+    const url = new URL(req.url)
+    const pathParts = url.pathname.split('/').filter(Boolean)
+    const endpoint = pathParts[pathParts.length - 1] || ''
+    
+    // Pagination
+    const page = parseInt(url.searchParams.get('page') || '1')
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '1000'), 10000)
+    const offset = parseInt(url.searchParams.get('offset') || String((page - 1) * limit))
+    
+    // Date filters
+    const startDate = url.searchParams.get('start_date')
+    const endDate = url.searchParams.get('end_date')
 
-    // Pagination params
-    const limit = Math.min(parseInt(url.searchParams.get("limit") || "1000", 10), 10000);
-    const offset = parseInt(url.searchParams.get("offset") || "0", 10);
+    console.log(`[data-export-api] Endpoint: ${endpoint}, Limit: ${limit}, Offset: ${offset}`)
 
-    console.log(`[data-export-api] Request: ${pathname}, limit: ${limit}, offset: ${offset}`);
+    const success = (data: any, total: number) => new Response(
+      JSON.stringify({ data, total }),
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
 
-    switch (pathname) {
-      case "health": {
-        return new Response(JSON.stringify({ 
-          status: "ok", 
-          timestamp: new Date().toISOString(),
-          version: "1.0.0"
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+    switch (endpoint) {
+      case 'health': {
+        return new Response(
+          JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
 
-      case "clinics": {
+      case 'clinics': {
         const { data, error, count } = await supabase
-          .from("clinics")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('clinics').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "procedures": {
+      case 'procedures': {
         const { data, error, count } = await supabase
-          .from("procedures")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('procedures').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "insurance_plans": {
+      case 'insurance_plans': {
         const { data, error, count } = await supabase
-          .from("insurance_plans")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('insurance_plans').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "rooms": {
+      case 'specialties': {
         const { data, error, count } = await supabase
-          .from("rooms")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('specialties').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "queues": {
+      case 'financial_categories': {
         const { data, error, count } = await supabase
-          .from("queues")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('financial_categories').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "professionals": {
+      case 'professionals': {
         const { data, error, count } = await supabase
-          .from("professionals")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('professionals').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "professional_availability": {
+      case 'professional_procedures': {
         const { data, error, count } = await supabase
-          .from("schedule_exceptions")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('professional_procedures').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "patients": {
+      case 'professional_insurance_plans': {
         const { data, error, count } = await supabase
-          .from("patients")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('professional_insurance_plans').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "patient_dependents": {
+      case 'professional_schedules': {
         const { data, error, count } = await supabase
-          .from("patient_dependents")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('professional_schedules').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "appointments": {
+      case 'patients': {
         const { data, error, count } = await supabase
-          .from("appointments")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('patients').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "medical_records": {
+      case 'patient_dependents': {
         const { data, error, count } = await supabase
-          .from("medical_records")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('patient_dependents').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "financial_categories": {
+      case 'patient_cards': {
         const { data, error, count } = await supabase
-          .from("financial_categories")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('patient_cards').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "financial_transactions": {
-        const { data, error, count } = await supabase
-          .from("financial_transactions")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+      case 'appointments': {
+        let query = supabase.from('appointments').select('*', { count: 'exact' })
+        if (startDate) query = query.gte('appointment_date', startDate)
+        if (endDate) query = query.lte('appointment_date', endDate)
+        const { data, error, count } = await query.range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "exam_results": {
+      case 'medical_records': {
         const { data, error, count } = await supabase
-          .from("exam_results")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('medical_records').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "prescriptions": {
+      case 'prescriptions': {
         const { data, error, count } = await supabase
-          .from("prescriptions")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('prescriptions').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "patient_documents": {
-        const { data, error, count } = await supabase
-          .from("patient_attachments")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+      case 'financial_transactions': {
+        let query = supabase.from('financial_transactions').select('*', { count: 'exact' })
+        if (startDate) query = query.gte('transaction_date', startDate)
+        const { data, error, count } = await query.range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
-      case "user_roles": {
+      case 'automation_flows': {
         const { data, error, count } = await supabase
-          .from("user_roles")
-          .select("*", { count: "exact" })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        return successResponse(data, count || 0);
+          .from('automation_flows').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
+      }
+
+      case 'access_groups': {
+        const { data, error, count } = await supabase
+          .from('access_groups').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
+      }
+
+      case 'evolution_configs': {
+        const { data, error, count } = await supabase
+          .from('evolution_configs').select('*', { count: 'exact' }).range(offset, offset + limit - 1)
+        if (error) throw error
+        return success(data, count || 0)
       }
 
       default:
-        return errorResponse(`Unknown endpoint: ${pathname}`, 404);
+        console.error(`[data-export-api] Unknown endpoint: ${endpoint}`)
+        return new Response(
+          JSON.stringify({ error: `Endpoint not found: ${endpoint}` }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
     }
-  } catch (error: any) {
-    console.error("[data-export-api] Error:", error);
-    return errorResponse(error?.message || "Internal server error", 500);
+  } catch (err: any) {
+    console.error('[data-export-api] Error:', err)
+    return new Response(
+      JSON.stringify({ error: err.message || 'Internal server error' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    )
   }
-});
+})
