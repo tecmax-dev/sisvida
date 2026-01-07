@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -98,6 +98,15 @@ Deno.serve(async (req) => {
         return successResponse(data, count || 0);
       }
 
+      case "queues": {
+        const { data, error, count } = await supabase
+          .from("queues")
+          .select("*", { count: "exact" })
+          .range(offset, offset + limit - 1);
+        if (error) throw error;
+        return successResponse(data, count || 0);
+      }
+
       case "professionals": {
         const { data, error, count } = await supabase
           .from("professionals")
@@ -164,6 +173,33 @@ Deno.serve(async (req) => {
       case "financial_transactions": {
         const { data, error, count } = await supabase
           .from("financial_transactions")
+          .select("*", { count: "exact" })
+          .range(offset, offset + limit - 1);
+        if (error) throw error;
+        return successResponse(data, count || 0);
+      }
+
+      case "exam_results": {
+        const { data, error, count } = await supabase
+          .from("exam_results")
+          .select("*", { count: "exact" })
+          .range(offset, offset + limit - 1);
+        if (error) throw error;
+        return successResponse(data, count || 0);
+      }
+
+      case "prescriptions": {
+        const { data, error, count } = await supabase
+          .from("prescriptions")
+          .select("*", { count: "exact" })
+          .range(offset, offset + limit - 1);
+        if (error) throw error;
+        return successResponse(data, count || 0);
+      }
+
+      case "patient_documents": {
+        const { data, error, count } = await supabase
+          .from("patient_attachments")
           .select("*", { count: "exact" })
           .range(offset, offset + limit - 1);
         if (error) throw error;
