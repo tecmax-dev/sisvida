@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PatientSelect } from "@/components/patients/PatientSelect";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -468,22 +469,15 @@ export default function AppointmentEditPage() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="sm:col-span-2">
-                <Label htmlFor="patient" className="flex items-center gap-2">
+                <Label htmlFor="patient" className="flex items-center gap-2 mb-1.5">
                   <User className="h-4 w-4" />
                   Paciente *
                 </Label>
-                <Select value={patientId} onValueChange={setPatientId}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue placeholder="Selecione o paciente" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {patients.map((patient) => (
-                      <SelectItem key={patient.id} value={patient.id}>
-                        {patient.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <PatientSelect
+                  value={patientId}
+                  onValueChange={setPatientId}
+                  placeholder="Buscar paciente por nome ou CPF..."
+                />
               </div>
               
               <div className="sm:col-span-2">
