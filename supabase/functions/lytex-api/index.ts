@@ -1264,15 +1264,19 @@ Deno.serve(async (req) => {
                 const employerId = employerByCnpj.get(clientCnpj);
                 if (!employerId) continue;
 
-                const dueDate = invoice.dueDate ? new Date(invoice.dueDate) : null;
-                if (!dueDate || Number.isNaN(dueDate.getTime())) continue;
+                // Extrair apenas YYYY-MM-DD como string (evita conversão de timezone)
+                const dueDateStr = invoice.dueDate?.split("T")[0] || invoice.dueDate?.slice(0, 10);
+                if (!dueDateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dueDateStr)) continue;
+
+                // Parsing manual para cálculo de competência (sem usar Date - evita desvio de timezone)
+                const [yearStr, monthStr] = dueDateStr.split("-");
+                const dueYear = parseInt(yearStr, 10);
+                const dueMonth = parseInt(monthStr, 10); // 1-12
 
                 // Competência é sempre o mês ANTERIOR ao vencimento
-                // Ex: vencimento 13/01/2026 -> competência 12/2025
-                const compDate = new Date(dueDate);
-                compDate.setMonth(compDate.getMonth() - 1);
-                const competenceMonth = compDate.getMonth() + 1;
-                const competenceYear = compDate.getFullYear();
+                // Ex: vencimento 12/01/2026 -> competência 12/2025
+                const competenceMonth = dueMonth === 1 ? 12 : dueMonth - 1;
+                const competenceYear = dueMonth === 1 ? dueYear - 1 : dueYear;
 
                 let status = "pending";
                 if (invoice.status === "paid") status = "paid";
@@ -1313,7 +1317,7 @@ Deno.serve(async (req) => {
                   competence_year: competenceYear,
 
                   value,
-                  due_date: invoice.dueDate?.split("T")[0],
+                  due_date: dueDateStr,
                   status,
                   lytex_invoice_id: invoice._id,
                   lytex_invoice_url: invoiceUrl,
