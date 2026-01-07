@@ -167,7 +167,8 @@ Deno.serve(async (req) => {
 
       case 'financial_transactions': {
         let query = supabase.from('financial_transactions').select('*', { count: 'exact' })
-        if (startDate) query = query.gte('transaction_date', startDate)
+        if (startDate) query = query.gte('created_at', startDate)
+        if (endDate) query = query.lte('created_at', endDate)
         const { data, error, count } = await query.range(offset, offset + limit - 1)
         if (error) throw error
         return success(data, count || 0)
