@@ -81,6 +81,7 @@ import EmployerCategoryDialog from "@/components/employers/EmployerCategoryDialo
 import { AutoCategorizeDialog } from "@/components/employers/AutoCategorizeDialog";
 import { SyncCnpjDialog } from "@/components/employers/SyncCnpjDialog";
 import { useCepLookup } from "@/hooks/useCepLookup";
+import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 
 interface Category {
   id: string;
@@ -161,6 +162,7 @@ export default function EmployersPage() {
   const [syncCnpjDialogOpen, setSyncCnpjDialogOpen] = useState(false);
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
   const { lookupCep, loading: cepLoading } = useCepLookup();
+  const { lookupCnpj, cnpjLoading } = useCnpjLookup();
   const [formData, setFormData] = useState<EmployerFormData>(initialFormData);
   const [saving, setSaving] = useState(false);
   const [expandedEmployer, setExpandedEmployer] = useState<string | null>(null);
@@ -880,14 +882,46 @@ export default function EmployersPage() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="cnpj">CNPJ *</Label>
-                <Input
-                  id="cnpj"
-                  value={formData.cnpj}
-                  onChange={(e) =>
-                    setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })
-                  }
-                  placeholder="00.000.000/0000-00"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="cnpj"
+                    value={formData.cnpj}
+                    onChange={(e) =>
+                      setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })
+                    }
+                    placeholder="00.000.000/0000-00"
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    disabled={cnpjLoading || formData.cnpj.replace(/\D/g, '').length !== 14}
+                    onClick={async () => {
+                      const data = await lookupCnpj(formData.cnpj);
+                      if (data) {
+                        setFormData(prev => ({
+                          ...prev,
+                          name: data.razao_social || prev.name,
+                          trade_name: data.nome_fantasia || prev.trade_name,
+                          email: data.email || prev.email,
+                          phone: data.telefone ? formatPhone(data.telefone) : prev.phone,
+                          cep: data.cep || prev.cep,
+                          address: data.logradouro ? `${data.logradouro}${data.numero ? `, ${data.numero}` : ''}` : prev.address,
+                          neighborhood: data.bairro || prev.neighborhood,
+                          city: data.municipio || prev.city,
+                          state: data.uf || prev.state,
+                        }));
+                      }
+                    }}
+                  >
+                    {cnpjLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Search className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
               <div>
                 <Label htmlFor="name">Razão Social *</Label>
