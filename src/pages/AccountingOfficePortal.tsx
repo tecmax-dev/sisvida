@@ -155,8 +155,14 @@ export default function AccountingOfficePortal() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("hide_cancelled");
   const [filterEmployer, setFilterEmployer] = useState<string>("all");
-  const [filterMonth, setFilterMonth] = useState<string>("all");
-  const [filterYear, setFilterYear] = useState<string>("all");
+  const [filterMonth, setFilterMonth] = useState<string>(() => {
+    const currentMonth = new Date().getMonth(); // 0-11
+    return currentMonth === 0 ? "12" : String(currentMonth); // Mês anterior (1-12)
+  });
+  const [filterYear, setFilterYear] = useState<string>(() => {
+    const now = new Date();
+    return now.getMonth() === 0 ? String(now.getFullYear() - 1) : String(now.getFullYear());
+  });
   
   // Dialog de segunda via
   const [showReissueDialog, setShowReissueDialog] = useState(false);

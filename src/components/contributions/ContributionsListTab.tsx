@@ -148,7 +148,10 @@ export default function ContributionsListTab({
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
-  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [monthFilter, setMonthFilter] = useState<string>(() => {
+    const currentMonth = new Date().getMonth(); // 0-11
+    return currentMonth === 0 ? "12" : String(currentMonth); // Mês anterior (1-12)
+  });
   const [currentPage, setCurrentPage] = useState(1);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());

@@ -150,7 +150,14 @@ export default function EmployerPortal() {
   // Filters
   const [statusFilter, setStatusFilter] = useState("hide_cancelled");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [yearFilter, setYearFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState(() => {
+    const now = new Date();
+    return now.getMonth() === 0 ? String(now.getFullYear() - 1) : String(now.getFullYear());
+  });
+  const [monthFilter, setMonthFilter] = useState(() => {
+    const currentMonth = new Date().getMonth(); // 0-11
+    return currentMonth === 0 ? "12" : String(currentMonth); // Mês anterior (1-12)
+  });
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
