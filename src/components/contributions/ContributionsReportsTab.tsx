@@ -72,8 +72,14 @@ export default function ContributionsReportsTab({
   contributionTypes,
 }: ContributionsReportsTabProps) {
   const [reportType, setReportType] = useState<string>("by-employer");
-  const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
-  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [yearFilter, setYearFilter] = useState<number>(() => {
+    const now = new Date();
+    return now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  });
+  const [monthFilter, setMonthFilter] = useState<string>(() => {
+    const currentMonth = new Date().getMonth(); // 0-11
+    return currentMonth === 0 ? "12" : String(currentMonth); // Mês anterior (1-12)
+  });
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
 
   const formatCurrency = (cents: number) => {
