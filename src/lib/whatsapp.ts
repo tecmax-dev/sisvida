@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { extractFunctionsError } from "@/lib/functionsError";
 
 // Open WhatsApp chat with a phone number
 export function openWhatsApp(phone: string, message?: string): void {
@@ -64,17 +65,23 @@ export async function sendWhatsAppMessage(params: SendWhatsAppParams): Promise<W
       if (isAuthError(error)) {
         return { success: false, error: SESSION_EXPIRED_MESSAGE };
       }
-      return { success: false, error: error.message };
+      const extracted = extractFunctionsError(error);
+      return { success: false, error: extracted.message };
+    }
+
+    // Check if the response contains an error
+    if (data && !data.success) {
+      return { success: false, error: data.error || 'Erro ao enviar mensagem' };
     }
 
     return data as WhatsAppResponse;
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error('Error sending WhatsApp:', errorMessage);
+    console.error('Error sending WhatsApp:', error);
     if (isAuthError(error)) {
       return { success: false, error: SESSION_EXPIRED_MESSAGE };
     }
-    return { success: false, error: errorMessage };
+    const extracted = extractFunctionsError(error);
+    return { success: false, error: extracted.message };
   }
 }
 
@@ -95,33 +102,32 @@ export async function sendWhatsAppDocument(params: SendWhatsAppDocumentParams): 
         return { success: false, error: SESSION_EXPIRED_MESSAGE };
       }
       
+      const extracted = extractFunctionsError(error);
+      
       // Check for limit exceeded error (429 status)
-      if (error.message?.includes('non-2xx') || error.message?.includes('429')) {
+      if (extracted.status === 429 || extracted.message.includes('Limite')) {
         return { 
           success: false, 
           error: "📊 Limite de mensagens atingido!\n\nSua clínica atingiu o limite mensal de envios do plano atual. Para continuar enviando, faça upgrade do seu plano ou aguarde o próximo mês." 
         };
       }
       
-      return { success: false, error: error.message };
+      return { success: false, error: extracted.message };
     }
 
-    // Check if the response contains a limit error
-    if (data && !data.success && data.error?.includes('Limite de mensagens')) {
-      return { 
-        success: false, 
-        error: "📊 Limite de mensagens atingido!\n\nSua clínica atingiu o limite mensal de envios do plano atual. Para continuar enviando, faça upgrade do seu plano ou aguarde o próximo mês." 
-      };
+    // Check if the response contains an error
+    if (data && !data.success) {
+      return { success: false, error: data.error || 'Erro ao enviar documento' };
     }
 
     return data as WhatsAppResponse;
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-    console.error('Error sending WhatsApp document:', errorMessage);
+    console.error('Error sending WhatsApp document:', error);
     if (isAuthError(error)) {
       return { success: false, error: SESSION_EXPIRED_MESSAGE };
     }
-    return { success: false, error: errorMessage };
+    const extracted = extractFunctionsError(error);
+    return { success: false, error: extracted.message };
   }
 }
 
