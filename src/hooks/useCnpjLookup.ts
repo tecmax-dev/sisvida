@@ -36,6 +36,38 @@ interface CnpjResponse {
   cnae_fiscal_descricao?: string;
 }
 
+// Valida CNPJ usando algoritmo módulo 11
+function isValidCnpj(cnpj: string): boolean {
+  const cleanCnpj = cnpj.replace(/\D/g, '');
+  
+  if (cleanCnpj.length !== 14) return false;
+  
+  // Rejeita CNPJs com todos os dígitos iguais
+  if (/^(\d)\1+$/.test(cleanCnpj)) return false;
+  
+  // Calcula primeiro dígito verificador
+  const weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  let sum = 0;
+  for (let i = 0; i < 12; i++) {
+    sum += parseInt(cleanCnpj[i]) * weights1[i];
+  }
+  let remainder = sum % 11;
+  const digit1 = remainder < 2 ? 0 : 11 - remainder;
+  
+  if (parseInt(cleanCnpj[12]) !== digit1) return false;
+  
+  // Calcula segundo dígito verificador
+  const weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  sum = 0;
+  for (let i = 0; i < 13; i++) {
+    sum += parseInt(cleanCnpj[i]) * weights2[i];
+  }
+  remainder = sum % 11;
+  const digit2 = remainder < 2 ? 0 : 11 - remainder;
+  
+  return parseInt(cleanCnpj[13]) === digit2;
+}
+
 export function useCnpjLookup() {
   const [cnpjLoading, setCnpjLoading] = useState(false);
   const { toast } = useToast();
@@ -47,6 +79,15 @@ export function useCnpjLookup() {
       toast({
         title: "CNPJ inválido",
         description: "O CNPJ deve ter 14 dígitos",
+        variant: "destructive",
+      });
+      return null;
+    }
+
+    if (!isValidCnpj(cleanCnpj)) {
+      toast({
+        title: "CNPJ inválido",
+        description: "Os dígitos verificadores do CNPJ estão incorretos. Verifique se digitou corretamente.",
         variant: "destructive",
       });
       return null;
