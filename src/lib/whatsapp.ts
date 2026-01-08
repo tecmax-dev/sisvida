@@ -49,6 +49,44 @@ async function checkSession(): Promise<boolean> {
   return !error && !!session;
 }
 
+// Extrair mensagem de erro real de FunctionsHttpError (Response object)
+async function extractHttpErrorMessage(error: any): Promise<string> {
+  try {
+    // FunctionsHttpError tem error.context como Response
+    const context = error?.context;
+    
+    // Verificar se context é um Response (tem método text)
+    if (context && typeof context.text === 'function') {
+      const cloned = context.clone();
+      const text = await cloned.text();
+      
+      if (text) {
+        // Tentar parsear como JSON
+        try {
+          const json = JSON.parse(text);
+          if (json.error && typeof json.error === 'string') {
+            return json.error;
+          }
+          if (json.message && typeof json.message === 'string') {
+            return json.message;
+          }
+        } catch {
+          // Não é JSON, retornar texto limitado
+          return text.slice(0, 500);
+        }
+      }
+    }
+    
+    // Fallback para extractFunctionsError
+    const extracted = extractFunctionsError(error);
+    return extracted.message;
+  } catch (e) {
+    console.error('Error extracting HTTP error message:', e);
+    const extracted = extractFunctionsError(error);
+    return extracted.message;
+  }
+}
+
 export async function sendWhatsAppMessage(params: SendWhatsAppParams): Promise<WhatsAppResponse> {
   try {
     // Verificar sessão ativa antes de enviar
@@ -65,8 +103,9 @@ export async function sendWhatsAppMessage(params: SendWhatsAppParams): Promise<W
       if (isAuthError(error)) {
         return { success: false, error: SESSION_EXPIRED_MESSAGE };
       }
-      const extracted = extractFunctionsError(error);
-      return { success: false, error: extracted.message };
+      // Usar extração async para ler o body do Response
+      const errorMessage = await extractHttpErrorMessage(error);
+      return { success: false, error: errorMessage };
     }
 
     // Check if the response contains an error
@@ -80,8 +119,8 @@ export async function sendWhatsAppMessage(params: SendWhatsAppParams): Promise<W
     if (isAuthError(error)) {
       return { success: false, error: SESSION_EXPIRED_MESSAGE };
     }
-    const extracted = extractFunctionsError(error);
-    return { success: false, error: extracted.message };
+    const errorMessage = await extractHttpErrorMessage(error);
+    return { success: false, error: errorMessage };
   }
 }
 
@@ -102,17 +141,18 @@ export async function sendWhatsAppDocument(params: SendWhatsAppDocumentParams): 
         return { success: false, error: SESSION_EXPIRED_MESSAGE };
       }
       
-      const extracted = extractFunctionsError(error);
+      // Usar extração async para ler o body do Response
+      const errorMessage = await extractHttpErrorMessage(error);
       
-      // Check for limit exceeded error (429 status)
-      if (extracted.status === 429 || extracted.message.includes('Limite')) {
+      // Check for limit exceeded error
+      if (errorMessage.includes('Limite') || errorMessage.includes('limite')) {
         return { 
           success: false, 
           error: "📊 Limite de mensagens atingido!\n\nSua clínica atingiu o limite mensal de envios do plano atual. Para continuar enviando, faça upgrade do seu plano ou aguarde o próximo mês." 
         };
       }
       
-      return { success: false, error: extracted.message };
+      return { success: false, error: errorMessage };
     }
 
     // Check if the response contains an error
@@ -126,8 +166,8 @@ export async function sendWhatsAppDocument(params: SendWhatsAppDocumentParams): 
     if (isAuthError(error)) {
       return { success: false, error: SESSION_EXPIRED_MESSAGE };
     }
-    const extracted = extractFunctionsError(error);
-    return { success: false, error: extracted.message };
+    const errorMessage = await extractHttpErrorMessage(error);
+    return { success: false, error: errorMessage };
   }
 }
 
