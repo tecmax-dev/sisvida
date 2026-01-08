@@ -124,6 +124,7 @@ serve(async (req) => {
       "cash_registers",
       "anamnese_templates",
       "anamnese_responses",
+      "accounting_offices",
     ];
 
     // Fetch clinic data
@@ -176,6 +177,50 @@ serve(async (req) => {
       }
     }
 
+    // Fetch accounting office related records
+    if (backup.accounting_offices && Array.isArray(backup.accounting_offices)) {
+      const officeIds = backup.accounting_offices.map((o: any) => o.id);
+      if (officeIds.length > 0) {
+        console.log(`[clinic-backup] Fetching accounting_office_employers for ${officeIds.length} offices...`);
+        const { data: officeEmployers } = await supabase
+          .from("accounting_office_employers")
+          .select("*")
+          .in("accounting_office_id", officeIds);
+        backup.accounting_office_employers = officeEmployers || [];
+        console.log(`[clinic-backup] accounting_office_employers: ${backup.accounting_office_employers.length} records`);
+
+        console.log(`[clinic-backup] Fetching accounting_office_portal_logs...`);
+        const { data: officePortalLogs } = await supabase
+          .from("accounting_office_portal_logs")
+          .select("*")
+          .in("accounting_office_id", officeIds);
+        backup.accounting_office_portal_logs = officePortalLogs || [];
+        console.log(`[clinic-backup] accounting_office_portal_logs: ${backup.accounting_office_portal_logs.length} records`);
+      }
+    }
+
+    // Fetch employer portal logs and reissue requests
+    if (backup.employers && Array.isArray(backup.employers)) {
+      const employerIds = backup.employers.map((e: any) => e.id);
+      if (employerIds.length > 0) {
+        console.log(`[clinic-backup] Fetching employer_portal_logs for ${employerIds.length} employers...`);
+        const { data: employerPortalLogs } = await supabase
+          .from("employer_portal_logs")
+          .select("*")
+          .in("employer_id", employerIds.slice(0, 500));
+        backup.employer_portal_logs = employerPortalLogs || [];
+        console.log(`[clinic-backup] employer_portal_logs: ${backup.employer_portal_logs.length} records`);
+
+        console.log(`[clinic-backup] Fetching contribution_reissue_requests...`);
+        const { data: reissueRequests } = await supabase
+          .from("contribution_reissue_requests")
+          .select("*")
+          .in("employer_id", employerIds.slice(0, 500));
+        backup.contribution_reissue_requests = reissueRequests || [];
+        console.log(`[clinic-backup] contribution_reissue_requests: ${backup.contribution_reissue_requests.length} records`);
+      }
+    }
+
     // Summary
     const summary = {
       clinic_name: clinicData.name,
@@ -194,7 +239,7 @@ serve(async (req) => {
     console.log(`[clinic-backup] Backup complete. Summary:`, summary.record_counts);
 
     const backupData = {
-      version: "1.0",
+      version: "1.1",
       ...summary,
       data: backup,
     };
