@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { DndContext, DragEndEvent, DragOverlay, DragStartEvent, closestCenter, pointerWithin } from "@dnd-kit/core";
-import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite } from "@/lib/whatsapp";
+import { sendWhatsAppMessage, formatAppointmentConfirmation, formatAppointmentReminder, formatTelemedicineInvite, formatProfessionalCancellation } from "@/lib/whatsapp";
 import { ToastAction } from "@/components/ui/toast";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { PreAttendanceDialog } from "@/components/appointments/PreAttendanceDialog";
@@ -51,6 +51,7 @@ import {
   ClipboardCheck,
   UserX,
   CalendarCheck,
+  MessageCircle,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -543,6 +544,8 @@ export default function CalendarPage() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [cancellingAppointment, setCancellingAppointment] = useState<Appointment | null>(null);
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelByProfessional, setCancelByProfessional] = useState(false);
+  const [sendCancelNotification, setSendCancelNotification] = useState(true);
   
   // Reschedule state (for drag-drop simulation)
   const [rescheduleDialogOpen, setRescheduleDialogOpen] = useState(false);
@@ -1524,6 +1527,46 @@ export default function CalendarPage() {
 
       if (error) throw error;
 
+      // Se é cancelamento pelo profissional e deve notificar o paciente
+      if (cancelByProfessional && sendCancelNotification && currentClinic) {
+        const patient = cancellingAppointment.patient;
+        const professional = cancellingAppointment.professional;
+        
+        if (patient?.phone) {
+          const formattedDate = new Date(cancellingAppointment.appointment_date + 'T12:00:00')
+            .toLocaleDateString('pt-BR');
+          
+          const message = formatProfessionalCancellation(
+            patient.name,
+            currentClinic.name,
+            formattedDate,
+            cancellingAppointment.start_time.slice(0, 5),
+            professional?.name || 'o profissional',
+            cancelReason.trim() || undefined
+          );
+          
+          const result = await sendWhatsAppMessage({
+            phone: patient.phone,
+            message,
+            clinicId: currentClinic.id,
+            type: 'custom',
+          });
+          
+          if (result.success) {
+            toast({
+              title: "Paciente notificado",
+              description: `${patient.name} foi informado sobre o cancelamento via WhatsApp.`,
+            });
+          } else {
+            toast({
+              title: "Erro ao notificar",
+              description: result.error || "Não foi possível enviar a notificação.",
+              variant: "destructive",
+            });
+          }
+        }
+      }
+
       // Check waiting list and notify first patient
       if (currentClinic) {
         const { data: waitingPatients } = await supabase
@@ -1581,6 +1624,8 @@ export default function CalendarPage() {
       setCancelDialogOpen(false);
       setCancellingAppointment(null);
       setCancelReason("");
+      setCancelByProfessional(false);
+      setSendCancelNotification(true);
       fetchAppointments();
     } catch (error: any) {
       toast({
@@ -3641,21 +3686,71 @@ export default function CalendarPage() {
               Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="py-4">
-            <Label htmlFor="cancel-reason">Motivo do cancelamento (opcional)</Label>
-            <Textarea
-              id="cancel-reason"
-              value={cancelReason}
-              onChange={(e) => setCancelReason(e.target.value)}
-              placeholder="Informe o motivo do cancelamento..."
-              className="mt-2"
-              rows={3}
-            />
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="cancel-reason">Motivo do cancelamento (opcional)</Label>
+              <Textarea
+                id="cancel-reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                placeholder="Informe o motivo do cancelamento..."
+                className="mt-2"
+                rows={3}
+              />
+            </div>
+            
+            {/* Checkbox: Cancelamento pelo profissional */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="cancel-by-professional"
+                checked={cancelByProfessional}
+                onCheckedChange={(checked) => setCancelByProfessional(!!checked)}
+              />
+              <Label htmlFor="cancel-by-professional" className="text-sm font-normal cursor-pointer">
+                Profissional não poderá atender
+              </Label>
+            </div>
+
+            {/* Checkbox: Enviar notificação WhatsApp */}
+            {cancelByProfessional && (
+              <div className="flex items-center space-x-2 ml-6">
+                <Checkbox
+                  id="send-notification"
+                  checked={sendCancelNotification}
+                  onCheckedChange={(checked) => setSendCancelNotification(!!checked)}
+                />
+                <Label htmlFor="send-notification" className="text-sm font-normal text-muted-foreground cursor-pointer">
+                  Notificar paciente via WhatsApp
+                </Label>
+              </div>
+            )}
+
+            {/* Preview da mensagem */}
+            {cancelByProfessional && sendCancelNotification && cancellingAppointment && currentClinic && (
+              <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 text-green-700 dark:text-green-400 text-sm font-medium mb-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Prévia da mensagem
+                </div>
+                <p className="text-xs text-muted-foreground whitespace-pre-line leading-relaxed">
+                  {formatProfessionalCancellation(
+                    cancellingAppointment.patient?.name || 'Paciente',
+                    currentClinic.name,
+                    new Date(cancellingAppointment.appointment_date + 'T12:00:00').toLocaleDateString('pt-BR'),
+                    cancellingAppointment.start_time.slice(0, 5),
+                    cancellingAppointment.professional?.name || 'o profissional',
+                    cancelReason.trim() || undefined
+                  )}
+                </p>
+              </div>
+            )}
           </div>
           <AlertDialogFooter>
             <AlertDialogCancel onClick={() => {
               setCancellingAppointment(null);
               setCancelReason("");
+              setCancelByProfessional(false);
+              setSendCancelNotification(true);
             }}>
               Voltar
             </AlertDialogCancel>
