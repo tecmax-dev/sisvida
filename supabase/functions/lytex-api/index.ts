@@ -302,6 +302,7 @@ interface UpdateInvoiceRequest {
   value?: number; // em centavos
   dueDate?: string; // YYYY-MM-DD
   status?: string; // ex: 'cancelled'
+  description?: string; // nome do item para atualizar descrição
 }
 
 async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
@@ -316,7 +317,8 @@ async function updateInvoice(params: UpdateInvoiceRequest): Promise<any> {
 
   // Em várias rotas, a API espera items (mesmo quando só atualiza status)
   if (params.value !== undefined) {
-    updatePayload.items = [{ name: "Contribuição", quantity: 1, value: params.value }];
+    const itemName = params.description || "Contribuição";
+    updatePayload.items = [{ name: itemName, quantity: 1, value: params.value }];
   }
 
   if (params.status) {
@@ -631,6 +633,7 @@ Deno.serve(async (req) => {
           invoiceId: params.invoiceId,
           value: params.value,
           dueDate: params.dueDate,
+          description: params.description,
         });
 
         // Atualizar dados no banco
@@ -638,6 +641,9 @@ Deno.serve(async (req) => {
         if (params.value !== undefined) updateData.value = params.value;
         if (params.dueDate) updateData.due_date = params.dueDate;
         if (params.status) updateData.status = params.status;
+        if (params.contributionTypeId) updateData.contribution_type_id = params.contributionTypeId;
+        if (params.competenceMonth) updateData.competence_month = params.competenceMonth;
+        if (params.competenceYear) updateData.competence_year = params.competenceYear;
         
         if (Object.keys(updateData).length > 0) {
           const { error: dbError } = await supabase
