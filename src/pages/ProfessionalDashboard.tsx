@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Logo } from "@/components/layout/Logo";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { AppointmentPanel } from "@/components/appointments/AppointmentPanel";
 import { 
   Loader2, 
@@ -114,6 +115,7 @@ export default function ProfessionalDashboard() {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { signOut } = useAuth();
 
   const today = new Date().toISOString().split('T')[0];
 
@@ -194,7 +196,7 @@ export default function ProfessionalDashboard() {
         description: "Sua conta não está vinculada a um profissional.",
         variant: "destructive",
       });
-      await supabase.auth.signOut();
+      await signOut();
       navigate("/profissional");
       return;
     }
@@ -283,7 +285,7 @@ export default function ProfessionalDashboard() {
   };
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate("/profissional");
   };
 

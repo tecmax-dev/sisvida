@@ -1,6 +1,6 @@
 import { Wrench, Phone, Mail, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
 interface MaintenanceClinicOverlayProps {
@@ -9,9 +9,10 @@ interface MaintenanceClinicOverlayProps {
 
 export function MaintenanceClinicOverlay({ reason }: MaintenanceClinicOverlayProps) {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate("/");
   };
 
