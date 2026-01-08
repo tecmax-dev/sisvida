@@ -334,6 +334,7 @@ const statusConfig = {
   completed: { icon: CheckCircle2, color: "text-gray-500", bgColor: "bg-gray-100", label: "Concluído" },
   cancelled: { icon: XCircle, color: "text-red-600", bgColor: "bg-red-100", label: "Cancelado" },
   no_show: { icon: XCircle, color: "text-orange-600", bgColor: "bg-orange-100", label: "Faltou" },
+  blocked: { icon: Ban, color: "text-slate-600", bgColor: "bg-slate-200", label: "Bloqueado" },
 };
 
 type ViewMode = "day" | "week" | "month";
@@ -1516,10 +1517,13 @@ export default function CalendarPage() {
     setSaving(true);
 
     try {
+      // Determinar o status: blocked se profissional cancelou (mantém slot ocupado), senão cancelled
+      const newStatus = cancelByProfessional ? 'blocked' : 'cancelled';
+      
       const { error } = await supabase
         .from('appointments')
         .update({
-          status: "cancelled" as const,
+          status: newStatus as "cancelled" | "blocked",
           cancellation_reason: cancelReason.trim() || null,
           cancelled_at: new Date().toISOString(),
         })
@@ -1640,8 +1644,8 @@ export default function CalendarPage() {
 
   const handleUpdateStatus = async (appointment: Appointment, newStatus: string) => {
     try {
-      const updateData: Record<string, any> = {
-        status: newStatus as "scheduled" | "confirmed" | "arrived" | "completed" | "cancelled" | "no_show" | "in_progress",
+const updateData: Record<string, any> = {
+        status: newStatus as "scheduled" | "confirmed" | "arrived" | "completed" | "cancelled" | "no_show" | "in_progress" | "blocked",
       };
 
       if (newStatus === "confirmed") {
@@ -3722,6 +3726,19 @@ export default function CalendarPage() {
                 <Label htmlFor="send-notification" className="text-sm font-normal text-muted-foreground cursor-pointer">
                   Notificar paciente via WhatsApp
                 </Label>
+              </div>
+            )}
+
+            {/* Info: Horário permanece bloqueado */}
+            {cancelByProfessional && (
+              <div className="p-3 bg-slate-50 dark:bg-slate-900/30 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 text-sm">
+                  <Ban className="h-4 w-4" />
+                  <span className="font-medium">O horário permanecerá bloqueado</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Outros pacientes não poderão agendar neste horário.
+                </p>
               </div>
             )}
 

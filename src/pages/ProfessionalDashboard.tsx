@@ -22,6 +22,7 @@ import {
   RefreshCw,
   UserCheck,
   CalendarPlus,
+  Ban,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toDateKey } from "@/lib/dateKey";
@@ -92,6 +93,7 @@ const statusConfig: Record<string, { icon: any; color: string; bgColor: string; 
   completed: { icon: CheckCircle2, color: "text-gray-500", bgColor: "bg-gray-100", label: "Concluído" },
   cancelled: { icon: XCircle, color: "text-red-600", bgColor: "bg-red-100", label: "Cancelado" },
   no_show: { icon: XCircle, color: "text-orange-600", bgColor: "bg-orange-100", label: "Faltou" },
+  blocked: { icon: Ban, color: "text-slate-600", bgColor: "bg-slate-200", label: "Bloqueado" },
 };
 
 const typeLabels: Record<string, string> = {
