@@ -1,6 +1,6 @@
 import { AlertTriangle, Phone, Mail } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 
 interface BlockedClinicOverlayProps {
@@ -9,9 +9,10 @@ interface BlockedClinicOverlayProps {
 
 export function BlockedClinicOverlay({ reason }: BlockedClinicOverlayProps) {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate("/");
   };
 

@@ -66,14 +66,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Função de logout
+  // Função de logout robusta - local-first para garantir deslog mesmo offline
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    // 1. Marcar lock de deslogado ANTES de tudo (proteção contra race conditions)
+    localStorage.setItem('eclini_force_signed_out', '1');
+    
+    // 2. Limpar estados React imediatamente
     setProfile(null);
     setUserRoles([]);
     setCurrentClinic(null);
     setIsSuperAdmin(false);
     setRolesLoaded(false);
+    setSession(null);
+    setUser(null);
+    
+    // 3. Logout LOCAL primeiro (funciona offline, remove tokens do localStorage)
+    try {
+      await supabase.auth.signOut({ scope: 'local' });
+    } catch (e) {
+      console.warn('[Auth] Erro ao fazer signOut local:', e);
+    }
+    
+    // 4. Tentar logout global (best-effort, pode falhar se offline)
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch (e) {
+      console.warn('[Auth] Erro ao fazer signOut global (best-effort):', e);
+    }
+    
+    // 5. Remover lock após confirmar que não há sessão
+    const { data: { session: checkSession } } = await supabase.auth.getSession();
+    if (!checkSession) {
+      localStorage.removeItem('eclini_force_signed_out');
+    }
   };
 
   // Hook de timeout de sessão
@@ -276,21 +301,62 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (session?.user) {
-        // Garantir que o tempo de login existe (para sessões restauradas)
-        const loginTime = localStorage.getItem('eclini_session_login_time');
-        if (!loginTime) {
-          saveLoginTime();
-        }
-        loadUserData(session.user.id);
-      } else {
+    // Inicialização: validar sessão no servidor antes de aceitar como "logado"
+    const initSession = async () => {
+      // Verificar se há lock de deslogado forçado
+      const forceSignedOut = localStorage.getItem('eclini_force_signed_out');
+      if (forceSignedOut) {
+        console.warn('[Auth] Lock de logout detectado, forçando signOut local');
+        await supabase.auth.signOut({ scope: 'local' });
+        localStorage.removeItem('eclini_force_signed_out');
         setLoading(false);
+        return;
       }
-    });
+      
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      // Se não há sessão local, está deslogado
+      if (!session) {
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+      
+      // VALIDAÇÃO CRÍTICA: verificar se a sessão é válida no servidor
+      const { data: { user: validatedUser }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !validatedUser) {
+        console.warn('[Auth] Sessão local inválida no servidor:', userError?.message || 'usuário não encontrado');
+        console.warn('[Auth] Forçando logout local para limpar sessão fantasma');
+        
+        // Sessão fantasma detectada - limpar tudo
+        await supabase.auth.signOut({ scope: 'local' });
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setUserRoles([]);
+        setCurrentClinic(null);
+        setIsSuperAdmin(false);
+        setRolesLoaded(false);
+        setLoading(false);
+        return;
+      }
+      
+      // Sessão válida - prosseguir
+      setSession(session);
+      setUser(session.user);
+      
+      // Garantir que o tempo de login existe (para sessões restauradas)
+      const loginTime = localStorage.getItem('eclini_session_login_time');
+      if (!loginTime) {
+        saveLoginTime();
+      }
+      
+      loadUserData(session.user.id);
+    };
+    
+    initSession();
 
     return () => subscription.unsubscribe();
   }, [saveLoginTime, clearSessionData]);
