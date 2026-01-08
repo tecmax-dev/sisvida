@@ -9386,6 +9386,7 @@ export type Database = {
         | "no_show"
         | "in_progress"
         | "arrived"
+        | "blocked"
       appointment_type:
         | "first_visit"
         | "return"
@@ -9540,6 +9541,7 @@ export const Constants = {
         "no_show",
         "in_progress",
         "arrived",
+        "blocked",
       ],
       appointment_type: [
         "first_visit",

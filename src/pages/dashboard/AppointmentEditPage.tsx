@@ -40,6 +40,7 @@ const appointmentStatuses = [
   { value: "completed", label: "Atendido" },
   { value: "cancelled", label: "Cancelado" },
   { value: "no_show", label: "Não Compareceu" },
+  { value: "blocked", label: "Bloqueado" },
 ];
 
 const defaultTimeSlots = [
