@@ -81,9 +81,8 @@ export function SendBoletosWhatsAppDialog({
 
   useEffect(() => {
     if (open) {
-      if (negotiation.employers?.phone) {
-        setPhone(formatPhone(negotiation.employers.phone));
-      }
+      // Always start with empty phone to force user to input the desired number
+      setPhone("");
       // Select all available installments by default
       setSelectedInstallments(availableInstallments.map((inst) => inst.id));
       fetchClinicName();
@@ -217,6 +216,11 @@ export function SendBoletosWhatsAppDialog({
               onChange={handlePhoneChange}
               maxLength={16}
             />
+            {selectedInstallments.length > 1 && (
+              <p className="text-xs text-muted-foreground">
+                Este número receberá todos os {selectedInstallments.length} boletos selecionados.
+              </p>
+            )}
           </div>
 
           {availableInstallments.length === 0 ? (

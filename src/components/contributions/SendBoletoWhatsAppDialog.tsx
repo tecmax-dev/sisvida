@@ -159,8 +159,11 @@ export function SendBoletoWhatsAppDialog({
     }
   };
 
-  // Pre-fill phone if only one employer selected
+  // Initialize state when dialog opens - phone is always empty to force manual input
   const handleOpen = () => {
+    // Always start with empty phone to force user to input the desired number
+    setPhone("");
+    
     // Use preSelectedIds if provided, otherwise auto-select based on available contributions
     if (preSelectedIds && preSelectedIds.size > 0) {
       // Filter to only include eligible contributions from preSelectedIds
@@ -172,7 +175,7 @@ export function SendBoletoWhatsAppDialog({
       });
       setSelectedIds(validIds);
       
-      // If single employer selected, pre-fill phone
+      // Pre-fill phone ONLY if a single contribution is selected (convenience)
       if (validIds.size === 1) {
         const selected = eligibleContributions.find((c) => validIds.has(c.id));
         if (selected?.employers?.phone) {
@@ -208,6 +211,11 @@ export function SendBoletoWhatsAppDialog({
               onChange={handlePhoneChange}
               maxLength={16}
             />
+            {selectedIds.size > 1 && (
+              <p className="text-xs text-muted-foreground">
+                Este número receberá todos os {selectedIds.size} boletos selecionados.
+              </p>
+            )}
           </div>
 
           <div className="space-y-2">
