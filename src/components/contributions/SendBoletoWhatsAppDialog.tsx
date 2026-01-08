@@ -13,6 +13,13 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader2, Send, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -46,6 +53,16 @@ interface SendBoletoWhatsAppDialogProps {
   preSelectedIds?: Set<string>;
 }
 
+const DELAY_OPTIONS = [
+  { value: 5, label: "5 segundos" },
+  { value: 10, label: "10 segundos (recomendado)" },
+  { value: 15, label: "15 segundos" },
+  { value: 20, label: "20 segundos" },
+  { value: 30, label: "30 segundos" },
+];
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export function SendBoletoWhatsAppDialog({
   open,
   onOpenChange,
@@ -56,6 +73,8 @@ export function SendBoletoWhatsAppDialog({
   const [phone, setPhone] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
+  const [sendProgress, setSendProgress] = useState({ current: 0, total: 0 });
+  const [delaySeconds, setDelaySeconds] = useState(10);
 
   // Filter contributions that have boleto generated (ID) and are not paid/cancelled
   const eligibleContributions = contributions.filter(
@@ -114,40 +133,66 @@ export function SendBoletoWhatsAppDialog({
     }
 
     setSending(true);
+    const selected = eligibleContributions.filter((c) => selectedIds.has(c.id));
+    setSendProgress({ current: 0, total: selected.length });
+
+    let successCount = 0;
+    let errorCount = 0;
 
     try {
-      const selected = eligibleContributions.filter((c) => selectedIds.has(c.id));
-      
-      // Build message with all selected boletos
-      let message = `📋 *Boletos em Aberto*\n\n`;
-      
-      for (const contrib of selected) {
-        const monthName = format(new Date(contrib.competence_year, contrib.competence_month - 1), "MMMM/yyyy", { locale: ptBR });
+      for (let i = 0; i < selected.length; i++) {
+        const contrib = selected[i];
+        setSendProgress({ current: i + 1, total: selected.length });
+
+        // Construir mensagem individual para cada boleto
+        const monthName = format(
+          new Date(contrib.competence_year, contrib.competence_month - 1),
+          "MMMM/yyyy",
+          { locale: ptBR }
+        );
         const dueDate = format(new Date(contrib.due_date), "dd/MM/yyyy");
         const statusLabel = contrib.status === "overdue" ? "⚠️ VENCIDO" : "🟢 A vencer";
-        
-        message += `━━━━━━━━━━━━━━━━\n`;
-        message += `*Empresa:* ${contrib.employers?.name || "N/A"}\n`;
-        message += `*Competência:* ${monthName}\n`;
-        message += `*Vencimento:* ${dueDate}\n`;
-        message += `*Valor:* ${formatCurrency(contrib.value)}\n`;
-        message += `*Status:* ${statusLabel}\n`;
-        message += `\n🔗 *Link do Boleto:*\n${contrib.lytex_invoice_url}\n\n`;
+
+        const message = `📋 *Boleto de Contribuição*
+
+━━━━━━━━━━━━━━━━
+*Empresa:* ${contrib.employers?.name || "N/A"}
+*Competência:* ${monthName}
+*Vencimento:* ${dueDate}
+*Valor:* ${formatCurrency(contrib.value)}
+*Status:* ${statusLabel}
+
+🔗 *Link do Boleto:*
+${contrib.lytex_invoice_url}
+━━━━━━━━━━━━━━━━`;
+
+        const result = await sendWhatsAppMessage({
+          phone: cleanPhone,
+          message,
+          clinicId,
+          type: "custom",
+        });
+
+        if (result.success) {
+          successCount++;
+        } else {
+          errorCount++;
+          console.error(`Erro no boleto ${i + 1}:`, result.error);
+        }
+
+        // Aguardar intervalo antes do próximo (exceto no último)
+        if (i < selected.length - 1) {
+          await delay(delaySeconds * 1000);
+        }
       }
 
-      message += `━━━━━━━━━━━━━━━━\n`;
-      message += `_Enviado via sistema de contribuições_`;
+      // Toast de resumo final
+      if (errorCount === 0) {
+        toast.success(`${successCount} boleto(s) enviado(s) com sucesso!`);
+      } else {
+        toast.warning(`${successCount} enviado(s), ${errorCount} falha(s)`);
+      }
 
-      const result = await sendWhatsAppMessage({
-        phone: cleanPhone,
-        message,
-        clinicId,
-        type: "custom",
-      });
-
-      if (!result.success) throw new Error(result.error || "Erro ao enviar");
-
-      toast.success(`${selected.length} boleto(s) enviado(s) com sucesso!`);
       onOpenChange(false);
       setPhone("");
       setSelectedIds(new Set());
@@ -156,6 +201,7 @@ export function SendBoletoWhatsAppDialog({
       toast.error(error.message || "Erro ao enviar boletos via WhatsApp");
     } finally {
       setSending(false);
+      setSendProgress({ current: 0, total: 0 });
     }
   };
 
@@ -188,6 +234,8 @@ export function SendBoletoWhatsAppDialog({
     }
   };
 
+  const estimatedMinutes = Math.ceil((selectedIds.size * delaySeconds) / 60);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg" onOpenAutoFocus={handleOpen}>
@@ -210,13 +258,34 @@ export function SendBoletoWhatsAppDialog({
               value={phone}
               onChange={handlePhoneChange}
               maxLength={16}
+              disabled={sending}
             />
-            {selectedIds.size > 1 && (
-              <p className="text-xs text-muted-foreground">
-                Este número receberá todos os {selectedIds.size} boletos selecionados.
-              </p>
-            )}
           </div>
+
+          {selectedIds.size > 1 && (
+            <div className="space-y-2">
+              <Label>Intervalo entre envios</Label>
+              <Select
+                value={delaySeconds.toString()}
+                onValueChange={(val) => setDelaySeconds(Number(val))}
+                disabled={sending}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {DELAY_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value.toString()}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-amber-600">
+                ⏱️ Tempo estimado: ~{estimatedMinutes} min ({selectedIds.size} boletos)
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
@@ -227,6 +296,7 @@ export function SendBoletoWhatsAppDialog({
                   size="sm"
                   onClick={handleSelectAll}
                   className="text-xs h-7"
+                  disabled={sending}
                 >
                   {selectedIds.size === eligibleContributions.length
                     ? "Desmarcar todos"
@@ -244,7 +314,7 @@ export function SendBoletoWhatsAppDialog({
                 </span>
               </p>
             ) : (
-              <ScrollArea className="h-[240px] border rounded-md">
+              <ScrollArea className="h-[200px] border rounded-md">
                 <div className="p-2 space-y-2">
                   {eligibleContributions.map((contrib) => {
                     const monthName = format(
@@ -259,13 +329,14 @@ export function SendBoletoWhatsAppDialog({
                           selectedIds.has(contrib.id)
                             ? "bg-primary/5 border-primary"
                             : "hover:bg-muted/50"
-                        }`}
-                        onClick={() => handleToggle(contrib.id)}
+                        } ${sending ? "pointer-events-none opacity-60" : ""}`}
+                        onClick={() => !sending && handleToggle(contrib.id)}
                       >
                         <Checkbox
                           checked={selectedIds.has(contrib.id)}
                           onCheckedChange={() => handleToggle(contrib.id)}
                           className="mt-0.5"
+                          disabled={sending}
                         />
                         <div className="flex-1 min-w-0 space-y-1">
                           <p className="text-sm font-medium leading-tight">
@@ -311,11 +382,16 @@ export function SendBoletoWhatsAppDialog({
             className="gap-2"
           >
             {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                {sendProgress.current}/{sendProgress.total}
+              </>
             ) : (
-              <Send className="h-4 w-4" />
+              <>
+                <Send className="h-4 w-4" />
+                Enviar
+              </>
             )}
-            Enviar
           </Button>
         </DialogFooter>
       </DialogContent>
