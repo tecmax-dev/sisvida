@@ -205,6 +205,9 @@ export default function EmployerDetailPage() {
   // Edit contribution form
   const [editValue, setEditValue] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
+  const [editTypeId, setEditTypeId] = useState("");
+  const [editMonth, setEditMonth] = useState(1);
+  const [editYear, setEditYear] = useState(new Date().getFullYear());
   const [updating, setUpdating] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -574,6 +577,9 @@ export default function EmployerDetailPage() {
     if (!selectedContribution) return;
     setEditValue((selectedContribution.value / 100).toFixed(2).replace(".", ","));
     setEditDueDate(selectedContribution.due_date);
+    setEditTypeId(selectedContribution.contribution_type_id);
+    setEditMonth(selectedContribution.competence_month);
+    setEditYear(selectedContribution.competence_year);
     setEditDialogOpen(true);
   };
 
@@ -583,6 +589,10 @@ export default function EmployerDetailPage() {
     setUpdating(true);
     try {
       const newValueCents = Math.round(parseFloat(editValue.replace(",", ".")) * 100);
+      
+      // Gerar nova descrição com tipo e competência
+      const selectedType = contributionTypes.find(t => t.id === editTypeId);
+      const newDescription = `${selectedType?.name || 'Contribuição'} - ${MONTHS[editMonth - 1]}/${editYear}`;
       
       // Check if due date changed and is in the future - auto change status to pending
       const dueDateChanged = editDueDate !== selectedContribution.due_date;
@@ -601,6 +611,10 @@ export default function EmployerDetailPage() {
             contributionId: selectedContribution.id,
             value: newValueCents,
             dueDate: editDueDate,
+            description: newDescription,
+            contributionTypeId: editTypeId,
+            competenceMonth: editMonth,
+            competenceYear: editYear,
             ...(shouldUpdateStatus && { status: "pending" }),
           },
         });
@@ -609,6 +623,9 @@ export default function EmployerDetailPage() {
         const updateData: Record<string, unknown> = {
           value: newValueCents,
           due_date: editDueDate,
+          contribution_type_id: editTypeId,
+          competence_month: editMonth,
+          competence_year: editYear,
         };
         if (shouldUpdateStatus) {
           updateData.status = "pending";
@@ -1836,32 +1853,82 @@ export default function EmployerDetailPage() {
 
       {/* Edit Contribution Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Editar Contribuição</DialogTitle>
             <DialogDescription>
               {selectedContribution?.lytex_invoice_id 
                 ? "A alteração será sincronizada com o boleto na Lytex."
-                : "Altere o valor e/ou vencimento da contribuição."}
+                : "Altere os dados da contribuição."}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div>
-              <Label>Valor (R$)</Label>
-              <Input
-                placeholder="0,00"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-              />
+            {/* Tipo de Contribuição */}
+            <div className="space-y-2">
+              <Label>Tipo de Contribuição</Label>
+              <Select value={editTypeId} onValueChange={setEditTypeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {contributionTypes.filter(t => t.is_active).map((type) => (
+                    <SelectItem key={type.id} value={type.id}>
+                      {type.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <div>
-              <Label>Vencimento</Label>
-              <Input
-                type="date"
-                value={editDueDate}
-                onChange={(e) => setEditDueDate(e.target.value)}
-              />
+
+            {/* Mês e Ano de Competência */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Mês Competência</Label>
+                <Select value={String(editMonth)} onValueChange={(v) => setEditMonth(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTHS.map((month, i) => (
+                      <SelectItem key={i} value={String(i + 1)}>{month}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Ano</Label>
+                <Select value={String(editYear)} onValueChange={(v) => setEditYear(parseInt(v))}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[2024, 2025, 2026, 2027].map(year => (
+                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Valor e Vencimento */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Valor (R$)</Label>
+                <Input
+                  placeholder="0,00"
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Vencimento</Label>
+                <Input
+                  type="date"
+                  value={editDueDate}
+                  onChange={(e) => setEditDueDate(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
