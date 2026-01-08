@@ -16,7 +16,7 @@ const navLinks = [
 export function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -48,6 +48,14 @@ export function Header() {
               {link.label}
             </a>
           ))}
+          {user && isSuperAdmin && (
+            <Link
+              to="/admin"
+              className="text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              Admin
+            </Link>
+          )}
         </nav>
 
         {/* Actions - Always visible */}
@@ -116,6 +124,15 @@ export function Header() {
                   {link.label}
                 </a>
               ))}
+              {user && isSuperAdmin && (
+                <Link
+                  to="/admin"
+                  className="text-sm font-medium text-primary hover:text-primary/80 hover:bg-primary/5 transition-colors py-3 px-4 rounded-lg"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  Admin
+                </Link>
+              )}
             </nav>
             {!user && (
               <div className="flex flex-col gap-3 pt-4 border-t border-border">
