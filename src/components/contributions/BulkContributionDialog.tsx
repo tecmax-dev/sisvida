@@ -24,6 +24,8 @@ import { Loader2, FileStack, Building2, CheckCircle2, Tag } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useSessionValidator } from "@/hooks/useSessionValidator";
+import { extractFunctionsError } from "@/lib/functionsError";
 
 interface Category {
   id: string;
@@ -178,6 +180,8 @@ export default function BulkContributionDialog({
     }
   };
 
+  const { validateSession } = useSessionValidator();
+
   const handleGenerate = async () => {
     if (selectedEmployers.length === 0) {
       toast.error("Selecione pelo menos uma empresa");
@@ -192,6 +196,12 @@ export default function BulkContributionDialog({
       return;
     }
 
+    // Verificar sessão antes de começar
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) {
+      return;
+    }
+
     setStep("processing");
     setProcessing(true);
     setProgress({ current: 0, total: selectedEmployers.length });
@@ -202,7 +212,10 @@ export default function BulkContributionDialog({
 
     let successCount = 0;
     let failedCount = 0;
+    let boletoSuccessCount = 0;
+    let boletoFailedCount = 0;
     const errors: string[] = [];
+    let sessionExpired = false;
 
     // Process in batches to avoid overwhelming the server
     for (let i = 0; i < selectedEmployers.length; i++) {
@@ -234,32 +247,47 @@ export default function BulkContributionDialog({
           throw insertError;
         }
 
+        successCount++;
+
         // Generate boleto only if value > 0
         if (finalValue > 0 && newContribution) {
-          try {
-            await supabase.functions.invoke("lytex-api", {
-              body: {
-                action: "create_invoice",
-                contributionId: newContribution.id,
-                clinicId: clinicId,
-                employer: {
-                  cnpj: employer?.cnpj,
-                  name: employer?.name,
-                },
-                value: finalValue,
-                dueDate: dueDate,
-                description: `${selectedType?.name || "Contribuição"} - ${MONTHS[month - 1]}/${year}`,
-                enableBoleto: true,
-                enablePix: true,
+          const { data, error: invoiceError } = await supabase.functions.invoke("lytex-api", {
+            body: {
+              action: "create_invoice",
+              contributionId: newContribution.id,
+              clinicId: clinicId,
+              employer: {
+                cnpj: employer?.cnpj,
+                name: employer?.name,
               },
-            });
-          } catch (invoiceError) {
-            console.error("Error generating invoice:", invoiceError);
-            // Continue, contribution was created
+              value: finalValue,
+              dueDate: dueDate,
+              description: `${selectedType?.name || "Contribuição"} - ${MONTHS[month - 1]}/${year}`,
+              enableBoleto: true,
+              enablePix: true,
+            },
+          });
+
+          if (invoiceError) {
+            const extracted = extractFunctionsError(invoiceError);
+            console.error("Error generating invoice:", extracted);
+            
+            // Verificar se é erro de sessão expirada
+            if (extracted.status === 401 || 
+                extracted.message?.toLowerCase().includes("token") ||
+                extracted.message?.toLowerCase().includes("unauthorized") ||
+                extracted.message?.toLowerCase().includes("sessão")) {
+              sessionExpired = true;
+              toast.error("Sua sessão expirou. As contribuições foram criadas, mas os boletos não foram gerados. Faça login novamente.");
+              break; // Interromper o processamento
+            }
+            
+            boletoFailedCount++;
+            errors.push(`${employer?.name}: Contribuição criada, mas erro ao gerar boleto - ${extracted.message}`);
+          } else {
+            boletoSuccessCount++;
           }
         }
-
-        successCount++;
       } catch (error: any) {
         failedCount++;
         const errorMsg = error.message?.includes("unique_active_contribution")
@@ -271,12 +299,23 @@ export default function BulkContributionDialog({
 
       setProgress({ current: i + 1, total: selectedEmployers.length });
       setResults({ success: successCount, failed: failedCount, errors });
+
+      // Se a sessão expirou, sair do loop
+      if (sessionExpired) break;
     }
 
     setProcessing(false);
     setStep("result");
     
-    if (successCount > 0) {
+    // Mostrar resumo detalhado
+    if (successCount > 0 && !sessionExpired) {
+      if (boletoFailedCount > 0) {
+        toast.warning(`${successCount} contribuições criadas. ${boletoSuccessCount} boletos gerados, ${boletoFailedCount} falharam.`);
+      } else if (finalValue > 0) {
+        toast.success(`${successCount} contribuições criadas com boletos gerados.`);
+      }
+      onRefresh();
+    } else if (successCount > 0 && sessionExpired) {
       onRefresh();
     }
   };
