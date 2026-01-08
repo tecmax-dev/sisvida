@@ -21,7 +21,8 @@ import {
   TrendingUp,
   Download,
   Loader2,
-  ChevronDown
+  ChevronDown,
+  Settings
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,6 +46,7 @@ export default function SuperAdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [backupLoading, setBackupLoading] = useState(false);
   const [clinicBackupLoading, setClinicBackupLoading] = useState(false);
+  const [configBackupLoading, setConfigBackupLoading] = useState(false);
 
   const handleBackup = async () => {
     setBackupLoading(true);
@@ -137,6 +139,53 @@ export default function SuperAdminDashboard() {
     }
   };
 
+  const handleConfigBackup = async () => {
+    setConfigBackupLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Sessão expirada");
+        return;
+      }
+
+      toast.info("Gerando backup de configurações...");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/super-admin-backup`,
+        {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Erro ao gerar backup de configurações");
+      }
+
+      const json = await response.text();
+      const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `super_admin_config_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("Backup de configurações gerado com sucesso!");
+    } catch (error) {
+      console.error("Config backup error:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao gerar backup de configurações");
+    } finally {
+      setConfigBackupLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchStats();
     fetchRecentClinics();
@@ -194,6 +243,14 @@ export default function SuperAdminDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleConfigBackup} disabled={configBackupLoading}>
+            {configBackupLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Settings className="mr-2 h-4 w-4" />
+            )}
+            Exportar Config
+          </Button>
           <Button variant="outline" onClick={handleBackup} disabled={backupLoading}>
             {backupLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
