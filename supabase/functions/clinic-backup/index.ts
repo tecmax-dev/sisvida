@@ -53,6 +53,7 @@ serve(async (req) => {
 
     const url = new URL(req.url);
     const clinicId = url.searchParams.get("clinic_id");
+    const version = url.searchParams.get("version") || "1.1";
     
     if (!clinicId) {
       return new Response(JSON.stringify({ error: "clinic_id required" }), {
@@ -66,7 +67,7 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    console.log(`[clinic-backup] Starting backup for clinic: ${clinicId}`);
+    console.log(`[clinic-backup] Starting backup v${version} for clinic: ${clinicId}`);
 
     const backup: Record<string, unknown[]> = {};
     const errors: string[] = [];
@@ -101,7 +102,7 @@ serve(async (req) => {
     }
 
     // Tables to backup (with clinic_id filter)
-    const clinicTables = [
+    const baseTables = [
       "patients",
       "patient_dependents",
       "patient_cards",
@@ -124,8 +125,12 @@ serve(async (req) => {
       "cash_registers",
       "anamnese_templates",
       "anamnese_responses",
-      "accounting_offices",
     ];
+    
+    // v1.1 includes additional tables
+    const clinicTables = version === "1.1" 
+      ? [...baseTables, "accounting_offices"]
+      : baseTables;
 
     // Fetch clinic data
     console.log(`[clinic-backup] Fetching clinic data...`);
@@ -177,8 +182,8 @@ serve(async (req) => {
       }
     }
 
-    // Fetch accounting office related records
-    if (backup.accounting_offices && Array.isArray(backup.accounting_offices)) {
+    // v1.1: Fetch accounting office related records
+    if (version === "1.1" && backup.accounting_offices && Array.isArray(backup.accounting_offices)) {
       const officeIds = backup.accounting_offices.map((o: any) => o.id);
       if (officeIds.length > 0) {
         console.log(`[clinic-backup] Fetching accounting_office_employers for ${officeIds.length} offices...`);
@@ -199,8 +204,8 @@ serve(async (req) => {
       }
     }
 
-    // Fetch employer portal logs and reissue requests
-    if (backup.employers && Array.isArray(backup.employers)) {
+    // v1.1: Fetch employer portal logs and reissue requests
+    if (version === "1.1" && backup.employers && Array.isArray(backup.employers)) {
       const employerIds = backup.employers.map((e: any) => e.id);
       if (employerIds.length > 0) {
         console.log(`[clinic-backup] Fetching employer_portal_logs for ${employerIds.length} employers...`);

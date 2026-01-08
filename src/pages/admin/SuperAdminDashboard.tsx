@@ -4,6 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Building2, 
   Users, 
@@ -12,7 +20,8 @@ import {
   ArrowRight,
   TrendingUp,
   Download,
-  Loader2
+  Loader2,
+  ChevronDown
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -82,7 +91,7 @@ export default function SuperAdminDashboard() {
     }
   };
 
-  const handleClinicBackup = async (clinicId: string, clinicSlug: string) => {
+  const handleClinicBackup = async (clinicId: string, clinicSlug: string, version: string = "1.1") => {
     setClinicBackupLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -91,10 +100,10 @@ export default function SuperAdminDashboard() {
         return;
       }
 
-      toast.info("Gerando backup da clínica... Isso pode levar alguns minutos.");
+      toast.info(`Gerando backup v${version} da clínica... Isso pode levar alguns minutos.`);
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clinic-backup?clinic_id=${clinicId}`,
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clinic-backup?clinic_id=${clinicId}&version=${version}`,
         {
           method: "GET",
           headers: {
@@ -113,13 +122,13 @@ export default function SuperAdminDashboard() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `backup_${clinicSlug}_${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `backup_${clinicSlug}_v${version}_${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success("Backup da clínica gerado com sucesso!");
+      toast.success(`Backup v${version} da clínica gerado com sucesso!`);
     } catch (error) {
       console.error("Clinic backup error:", error);
       toast.error(error instanceof Error ? error.message : "Erro ao gerar backup da clínica");
@@ -236,19 +245,41 @@ export default function SuperAdminDashboard() {
             Clínicas Recentes
           </CardTitle>
           <div className="flex gap-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => handleClinicBackup("89e7585e-7bce-4e58-91fa-c37080d1170d", "sindicato")}
-              disabled={clinicBackupLoading}
-            >
-              {clinicBackupLoading ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Download className="mr-2 h-4 w-4" />
-              )}
-              Backup Sindicato
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={clinicBackupLoading}>
+                  {clinicBackupLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-2 h-4 w-4" />
+                  )}
+                  Backup Sindicato
+                  <ChevronDown className="ml-2 h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Versão do Backup</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => handleClinicBackup("89e7585e-7bce-4e58-91fa-c37080d1170d", "sindicato", "1.1")}
+                  className="flex flex-col items-start py-2"
+                >
+                  <span className="font-medium">v1.1 - Completo</span>
+                  <span className="text-xs text-muted-foreground">
+                    30 tabelas (inclui escritórios e portais)
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleClinicBackup("89e7585e-7bce-4e58-91fa-c37080d1170d", "sindicato", "1.0")}
+                  className="flex flex-col items-start py-2"
+                >
+                  <span className="font-medium">v1.0 - Básico</span>
+                  <span className="text-xs text-muted-foreground">
+                    24 tabelas principais
+                  </span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Button variant="outline" size="sm" asChild>
               <Link to="/admin/clinics">Ver todas</Link>
             </Button>
