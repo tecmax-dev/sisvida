@@ -185,3 +185,6 @@ verify_jwt = false
 
 [functions.lookup-cnpj]
 verify_jwt = false
+
+[functions.super-admin-backup]
+verify_jwt = true
