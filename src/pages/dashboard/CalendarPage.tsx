@@ -2650,7 +2650,8 @@ const updateData: Record<string, any> = {
     const isCompleted = appointment.status === "completed";
     const isNoShow = appointment.status === "no_show";
     const isInProgress = appointment.status === "in_progress";
-    const canModify = !isCancelled && !isCompleted && !isNoShow;
+    const isBlocked = appointment.status === "blocked";
+    const canModify = !isCancelled && !isCompleted && !isNoShow && !isBlocked;
     const canAttend = appointment.status === "scheduled" || appointment.status === "confirmed" || appointment.status === "arrived" || isInProgress;
     const hasConflict = conflictingAppointmentIds.has(appointment.id);
     
