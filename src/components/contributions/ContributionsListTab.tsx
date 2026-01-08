@@ -42,9 +42,11 @@ import {
   Plus,
   ExternalLink,
   MessageCircle,
+  Printer,
 } from "lucide-react";
 import { format } from "date-fns";
 import { SendBoletoWhatsAppDialog } from "./SendBoletoWhatsAppDialog";
+import { generateBoletosReport } from "@/lib/boleto-report";
 
 interface Employer {
   id: string;
@@ -320,6 +322,31 @@ export default function ContributionsListTab({
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent>Buscar status atualizado de todos os boletos na Lytex</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => generateBoletosReport(selectedContributions.filter(c => c.lytex_invoice_id))}
+                      disabled={selectedContributionIds.size === 0}
+                    >
+                      <Printer className="h-4 w-4 mr-2" />
+                      Imprimir
+                      {selectedContributionIds.size > 0 && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                          {selectedContributionIds.size}
+                        </Badge>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {selectedContributionIds.size > 0 
+                      ? `Gerar PDF com ${selectedContributionIds.size} boleto(s) selecionado(s)`
+                      : "Selecione boletos para imprimir"}
+                  </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               <TooltipProvider>
