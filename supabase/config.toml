@@ -182,3 +182,6 @@ verify_jwt = false
 
 [functions.data-export-api]
 verify_jwt = false
+
+[functions.lookup-cnpj]
+verify_jwt = false
