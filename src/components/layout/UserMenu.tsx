@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, Shield } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { UserAvatar } from "@/components/users/UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ interface UserMenuProps {
 }
 
 export function UserMenu({ compact = false, showName = true, onAfterAction }: UserMenuProps) {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
 
   if (!user) return null;
@@ -52,6 +52,17 @@ export function UserMenu({ compact = false, showName = true, onAfterAction }: Us
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-48">
+        {isSuperAdmin && (
+          <>
+            <DropdownMenuItem asChild>
+              <Link to="/admin" className="cursor-pointer">
+                <Shield className="mr-2 h-4 w-4" />
+                Painel Admin
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
         <DropdownMenuItem asChild>
           <Link to="/dashboard" className="cursor-pointer">
             Ir para o painel
