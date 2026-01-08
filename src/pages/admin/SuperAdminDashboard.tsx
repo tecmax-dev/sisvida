@@ -35,6 +35,7 @@ export default function SuperAdminDashboard() {
   const [recentClinics, setRecentClinics] = useState<RecentClinic[]>([]);
   const [loading, setLoading] = useState(true);
   const [backupLoading, setBackupLoading] = useState(false);
+  const [clinicBackupLoading, setClinicBackupLoading] = useState(false);
 
   const handleBackup = async () => {
     setBackupLoading(true);
@@ -78,6 +79,52 @@ export default function SuperAdminDashboard() {
       toast.error(error instanceof Error ? error.message : "Erro ao gerar backup");
     } finally {
       setBackupLoading(false);
+    }
+  };
+
+  const handleClinicBackup = async (clinicId: string, clinicSlug: string) => {
+    setClinicBackupLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error("Sessão expirada");
+        return;
+      }
+
+      toast.info("Gerando backup da clínica... Isso pode levar alguns minutos.");
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/clinic-backup?clinic_id=${clinicId}`,
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${session.access_token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Erro ao gerar backup da clínica");
+      }
+
+      const json = await response.text();
+      const blob = new Blob([json], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `backup_${clinicSlug}_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success("Backup da clínica gerado com sucesso!");
+    } catch (error) {
+      console.error("Clinic backup error:", error);
+      toast.error(error instanceof Error ? error.message : "Erro ao gerar backup da clínica");
+    } finally {
+      setClinicBackupLoading(false);
     }
   };
 
@@ -188,9 +235,24 @@ export default function SuperAdminDashboard() {
             <TrendingUp className="h-5 w-5 text-primary" />
             Clínicas Recentes
           </CardTitle>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/admin/clinics">Ver todas</Link>
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleClinicBackup("89e7585e-7bce-4e58-91fa-c37080d1170d", "sindicato")}
+              disabled={clinicBackupLoading}
+            >
+              {clinicBackupLoading ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Backup Sindicato
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/admin/clinics">Ver todas</Link>
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
