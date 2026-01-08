@@ -305,3 +305,37 @@ Agradecemos a preferência!
 Atenciosamente,
 Equipe ${clinicName}`;
 }
+
+export function formatProfessionalCancellation(
+  patientName: string,
+  clinicName: string,
+  date: string,
+  time: string,
+  professionalName: string,
+  reason?: string
+): string {
+  const lines = [
+    `Olá ${patientName}! 😊`,
+    ``,
+    `Entramos em contato para informar que, infelizmente, precisaremos remarcar sua consulta agendada para:`,
+    ``,
+    `📅 *Data:* ${date}`,
+    `🕐 *Horário:* ${time}`,
+    `👨‍⚕️ *Profissional:* ${professionalName}`,
+    ``,
+    reason ? `📝 *Motivo:* ${reason}` : null,
+    reason ? `` : null,
+    `Pedimos sinceras desculpas pelo transtorno. O(a) ${professionalName} não poderá realizar atendimentos neste horário devido a um imprevisto.`,
+    ``,
+    `🔄 *Para reagendar:*`,
+    `• Responda esta mensagem com sua preferência de novo horário`,
+    `• Ou entre em contato conosco pelo telefone da clínica`,
+    ``,
+    `Estamos à disposição para encontrar o melhor horário para você!`,
+    ``,
+    `Atenciosamente,`,
+    `Equipe ${clinicName} 💙`,
+  ].filter(Boolean);
+
+  return lines.join('\n');
+}
