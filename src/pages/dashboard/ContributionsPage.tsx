@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSessionValidator } from "@/hooks/useSessionValidator";
 import { toast } from "sonner";
 import { extractFunctionsError } from "@/lib/functionsError";
 
@@ -75,6 +76,7 @@ const MONTHS = [
 
 export default function ContributionsPage() {
   const { currentClinic, session } = useAuth();
+  const { validateSession } = useSessionValidator();
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [contributionTypes, setContributionTypes] = useState<ContributionType[]>([]);
@@ -176,6 +178,12 @@ export default function ContributionsPage() {
       return;
     }
 
+    // Validar sessão antes de chamar a Edge Function
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) {
+      return;
+    }
+
     setGeneratingInvoice(true);
     try {
       const response = await supabase.functions.invoke("lytex-api", {
@@ -221,6 +229,12 @@ export default function ContributionsPage() {
   const handleSyncAll = async () => {
     if (!currentClinic) return;
     
+    // Validar sessão antes de chamar a Edge Function
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) {
+      return;
+    }
+    
     setSyncing(true);
     setCurrentActionType("sync");
     try {
@@ -253,6 +267,12 @@ export default function ContributionsPage() {
 
   const handleImportFromLytex = async () => {
     if (!currentClinic) return;
+    
+    // Validar sessão antes de chamar a Edge Function
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) {
+      return;
+    }
     
     setImporting(true);
     setCurrentSyncLogId(null);
@@ -343,6 +363,12 @@ export default function ContributionsPage() {
   const handleExtractRegistrations = async () => {
     if (!currentClinic) return;
     
+    // Validar sessão antes de chamar a Edge Function
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) {
+      return;
+    }
+    
     setExtractingRegistrations(true);
     setCurrentActionType("extract_registrations");
     try {
@@ -375,6 +401,12 @@ export default function ContributionsPage() {
 
   const handleFixContributionTypes = async () => {
     if (!currentClinic) return;
+    
+    // Validar sessão antes de chamar a Edge Function
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) {
+      return;
+    }
     
     setFixingTypes(true);
     setCurrentActionType("fix_types");
