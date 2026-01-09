@@ -98,8 +98,15 @@ export default function OfflineContributionDialog({
   const [useDefaultValue, setUseDefaultValue] = useState(true);
   const [customValue, setCustomValue] = useState("");
   const [notes, setNotes] = useState("Débito retroativo - Aguardando negociação");
-  const [useCustomDueDate, setUseCustomDueDate] = useState(false);
+  
+  // Permitir duplicidade
+  const [allowDuplicates, setAllowDuplicates] = useState(false);
+  
+  // Modo de data de vencimento: 'lastDay' | 'fixed' | 'sequential'
+  const [dueDateMode, setDueDateMode] = useState<'lastDay' | 'fixed' | 'sequential'>('lastDay');
   const [customDueDate, setCustomDueDate] = useState<Date | undefined>(undefined);
+  const [sequentialDay, setSequentialDay] = useState(10);
+  const [sequentialStartDate, setSequentialStartDate] = useState<Date | undefined>(undefined);
   
   // Processing state
   const [processing, setProcessing] = useState(false);
@@ -177,8 +184,11 @@ export default function OfflineContributionDialog({
       setUseDefaultValue(true);
       setCustomValue("");
       setNotes("Débito retroativo - Aguardando negociação");
-      setUseCustomDueDate(false);
+      setAllowDuplicates(false);
+      setDueDateMode('lastDay');
       setCustomDueDate(undefined);
+      setSequentialDay(10);
+      setSequentialStartDate(undefined);
       setSearchTerm("");
       setCategoryFilter("all");
       setResults({ success: 0, failed: 0, skipped: 0, errors: [] });
@@ -247,13 +257,25 @@ export default function OfflineContributionDialog({
     for (const employerId of selectedEmployers) {
       const employer = employers.find(e => e.id === employerId);
       
-      for (const competence of competenceList) {
+      for (let compIndex = 0; compIndex < competenceList.length; compIndex++) {
+        const competence = competenceList[compIndex];
         try {
-          // Gerar data de vencimento: customizada ou último dia do mês de competência
+          // Gerar data de vencimento baseado no modo selecionado
           let dueDateStr: string;
-          if (useCustomDueDate && customDueDate) {
+          
+          if (dueDateMode === 'fixed' && customDueDate) {
+            // Data fixa para todos
             dueDateStr = format(customDueDate, "yyyy-MM-dd");
+          } else if (dueDateMode === 'sequential' && sequentialStartDate) {
+            // Data base sequencial: incrementa o mês a partir da data inicial
+            const baseDate = new Date(sequentialStartDate);
+            baseDate.setMonth(baseDate.getMonth() + compIndex);
+            // Garantir que o dia não ultrapasse o último dia do mês
+            const maxDay = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getDate();
+            baseDate.setDate(Math.min(sequentialDay, maxDay));
+            dueDateStr = format(baseDate, "yyyy-MM-dd");
           } else {
+            // Último dia do mês de competência (padrão)
             const dueDate = new Date(competence.year, competence.month, 0);
             dueDateStr = format(dueDate, "yyyy-MM-dd");
           }
@@ -261,17 +283,19 @@ export default function OfflineContributionDialog({
           // Gerar active_competence_key para evitar duplicatas
           const activeCompetenceKey = `${employerId}-${typeId}-${competence.year}-${String(competence.month).padStart(2, "0")}`;
           
-          // Verificar se já existe uma contribuição ativa para esta competência
-          const { data: existing } = await supabase
-            .from("employer_contributions")
-            .select("id")
-            .eq("active_competence_key", activeCompetenceKey)
-            .maybeSingle();
-          
-          if (existing) {
-            skipped++;
-            setProgress(prev => ({ ...prev, current: prev.current + 1 }));
-            continue;
+          // Verificar duplicidade somente se não permitido
+          if (!allowDuplicates) {
+            const { data: existing } = await supabase
+              .from("employer_contributions")
+              .select("id")
+              .eq("active_competence_key", activeCompetenceKey)
+              .maybeSingle();
+            
+            if (existing) {
+              skipped++;
+              setProgress(prev => ({ ...prev, current: prev.current + 1 }));
+              continue;
+            }
           }
           
           // Inserir contribuição offline (sem dados Lytex)
@@ -517,6 +541,25 @@ export default function OfflineContributionDialog({
                 Serão criadas <strong>{competenceList.length}</strong> contribuição(ões) por empresa selecionada.
               </div>
 
+              {/* Permitir Duplicidade */}
+              <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <Checkbox
+                    checked={allowDuplicates}
+                    onCheckedChange={(checked) => setAllowDuplicates(!!checked)}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                      Permitir duplicidade de competência
+                    </span>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
+                      Gerar mesmo se já existir débito para o período (útil para lançar múltiplos débitos)
+                    </p>
+                  </div>
+                </label>
+              </div>
+
               {/* Valor */}
               <div className="space-y-2">
                 <Label>Valor</Label>
@@ -540,44 +583,147 @@ export default function OfflineContributionDialog({
                 </div>
               </div>
 
-              {/* Data de Vencimento Personalizada */}
-              <div className="space-y-2">
+              {/* Data de Vencimento */}
+              <div className="space-y-3">
                 <Label>Data de Vencimento</Label>
-                <div className="flex items-center gap-4">
+                
+                {/* Opção 1: Último dia do mês */}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="dueDateMode"
+                    checked={dueDateMode === 'lastDay'}
+                    onChange={() => setDueDateMode('lastDay')}
+                    className="h-4 w-4 text-primary"
+                  />
+                  <span className="text-sm">Último dia do mês de competência</span>
+                </label>
+                
+                {/* Opção 2: Data fixa */}
+                <div className="space-y-2">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={!useCustomDueDate}
-                      onCheckedChange={(checked) => setUseCustomDueDate(!checked)}
+                    <input
+                      type="radio"
+                      name="dueDateMode"
+                      checked={dueDateMode === 'fixed'}
+                      onChange={() => setDueDateMode('fixed')}
+                      className="h-4 w-4 text-primary"
                     />
-                    <span className="text-sm">Último dia do mês de competência</span>
+                    <span className="text-sm">Data fixa para todos os boletos</span>
                   </label>
+                  {dueDateMode === 'fixed' && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-[240px] justify-start text-left font-normal ml-6",
+                            !customDueDate && "text-muted-foreground"
+                          )}
+                        >
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {customDueDate ? format(customDueDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione a data"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={customDueDate}
+                          onSelect={setCustomDueDate}
+                          initialFocus
+                          className="pointer-events-auto"
+                          locale={ptBR}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  )}
                 </div>
-                {useCustomDueDate && (
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-[240px] justify-start text-left font-normal",
-                          !customDueDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {customDueDate ? format(customDueDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione a data"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={customDueDate}
-                        onSelect={setCustomDueDate}
-                        initialFocus
-                        className="pointer-events-auto"
-                        locale={ptBR}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                )}
+                
+                {/* Opção 3: Data base sequencial */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="dueDateMode"
+                      checked={dueDateMode === 'sequential'}
+                      onChange={() => setDueDateMode('sequential')}
+                      className="h-4 w-4 text-primary"
+                    />
+                    <span className="text-sm">Data base sequencial (vencimentos mensais)</span>
+                  </label>
+                  {dueDateMode === 'sequential' && (
+                    <div className="ml-6 space-y-3">
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Dia:</span>
+                          <Select value={String(sequentialDay)} onValueChange={v => setSequentialDay(Number(v))}>
+                            <SelectTrigger className="w-20">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+                                <SelectItem key={d} value={String(d)}>{d}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">A partir de:</span>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className={cn(
+                                  "w-[160px] justify-start text-left font-normal",
+                                  !sequentialStartDate && "text-muted-foreground"
+                                )}
+                              >
+                                <CalendarIcon className="mr-2 h-4 w-4" />
+                                {sequentialStartDate ? format(sequentialStartDate, "dd/MM/yyyy", { locale: ptBR }) : "Data inicial"}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0" align="start">
+                              <Calendar
+                                mode="single"
+                                selected={sequentialStartDate}
+                                onSelect={setSequentialStartDate}
+                                initialFocus
+                                className="pointer-events-auto"
+                                locale={ptBR}
+                              />
+                            </PopoverContent>
+                          </Popover>
+                        </div>
+                      </div>
+                      
+                      {/* Preview das datas */}
+                      {sequentialStartDate && competenceList.length > 0 && (
+                        <div className="bg-muted/50 rounded-md p-2">
+                          <p className="text-xs text-muted-foreground mb-1">Preview dos vencimentos:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {competenceList.slice(0, 6).map((comp, idx) => {
+                              const baseDate = new Date(sequentialStartDate);
+                              baseDate.setMonth(baseDate.getMonth() + idx);
+                              const maxDay = new Date(baseDate.getFullYear(), baseDate.getMonth() + 1, 0).getDate();
+                              baseDate.setDate(Math.min(sequentialDay, maxDay));
+                              return (
+                                <Badge key={idx} variant="secondary" className="text-xs">
+                                  {format(baseDate, "dd/MM/yy")}
+                                </Badge>
+                              );
+                            })}
+                            {competenceList.length > 6 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{competenceList.length - 6} mais
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Observações */}
