@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   UsersRound,
@@ -6,7 +6,6 @@ import {
   Pencil,
   User,
   Phone,
-  CreditCard,
   Loader2,
   Clock,
   IdCard,
@@ -14,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   UserPlus,
-  Calendar,
+  UserX,
+  Trash2,
 } from "lucide-react";
 import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,8 +35,18 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { format, parseISO, differenceInYears, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -71,13 +81,21 @@ const ITEMS_PER_PAGE = 15;
 
 export default function DependentsPage() {
   const navigate = useNavigate();
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles, isSuperAdmin } = useAuth();
+  const { toast } = useToast();
   const [dependents, setDependents] = useState<DependentWithPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalDependents, setTotalDependents] = useState(0);
+
+  // Delete/Inactivate state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [dependentToDelete, setDependentToDelete] = useState<DependentWithPatient | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const canPermanentDelete = isSuperAdmin || userRoles.some(r => ["owner", "admin"].includes(r.role));
 
   // Stats
   const [stats, setStats] = useState({
@@ -212,6 +230,52 @@ export default function DependentsPage() {
 
   const handleEditPatient = (patientId: string) => {
     navigate(`/dashboard/patients/${patientId}/edit`);
+  };
+
+  const handleInactivate = async () => {
+    if (!dependentToDelete) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("patient_dependents")
+        .update({ is_active: false })
+        .eq("id", dependentToDelete.id);
+
+      if (error) throw error;
+
+      toast({ title: "Dependente inativado com sucesso" });
+      fetchDependents();
+    } catch (error) {
+      console.error("Error inactivating dependent:", error);
+      toast({ title: "Erro ao inativar dependente", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDependentToDelete(null);
+    }
+  };
+
+  const handlePermanentDelete = async () => {
+    if (!dependentToDelete) return;
+    setIsDeleting(true);
+    try {
+      const { error } = await supabase
+        .from("patient_dependents")
+        .delete()
+        .eq("id", dependentToDelete.id);
+
+      if (error) throw error;
+
+      toast({ title: "Dependente excluído permanentemente" });
+      fetchDependents();
+    } catch (error) {
+      console.error("Error deleting dependent:", error);
+      toast({ title: "Erro ao excluir dependente", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+      setDeleteDialogOpen(false);
+      setDependentToDelete(null);
+    }
   };
 
   if (loading && dependents.length === 0) {
@@ -393,19 +457,37 @@ export default function DependentsPage() {
                       </TableCell>
                       <TableCell className="py-2 text-right">
                         <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                                onClick={() => handleEditDependent(dependent)}
-                              >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Editar</TooltipContent>
-                          </Tooltip>
+                          <div className="flex items-center justify-end gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                  onClick={() => handleEditDependent(dependent)}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                                  onClick={() => {
+                                    setDependentToDelete(dependent);
+                                    setDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <UserX className="h-3.5 w-3.5" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Inativar</TooltipContent>
+                            </Tooltip>
+                          </div>
                         </TooltipProvider>
                       </TableCell>
                     </TableRow>
@@ -468,6 +550,58 @@ export default function DependentsPage() {
           )}
         </Card>
       )}
+
+      {/* Dialog de confirmação de inativação/exclusão */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {canPermanentDelete ? "Remover dependente?" : "Inativar dependente?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  O que deseja fazer com <strong>{dependentToDelete?.name}</strong>?
+                </p>
+                <div className="text-sm space-y-1 mt-2">
+                  <p className="flex items-center gap-2">
+                    <UserX className="h-4 w-4 text-amber-500" />
+                    <span><strong>Inativar:</strong> O dependente não aparecerá nas listagens, mas os dados são mantidos.</span>
+                  </p>
+                  {canPermanentDelete && (
+                    <p className="flex items-center gap-2">
+                      <Trash2 className="h-4 w-4 text-rose-500" />
+                      <span><strong>Excluir:</strong> Remove permanentemente todos os dados do dependente.</span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={handleInactivate}
+              disabled={isDeleting}
+              className="border-amber-500 text-amber-600 hover:bg-amber-50"
+            >
+              <UserX className="h-4 w-4 mr-1" />
+              {isDeleting ? "Inativando..." : "Inativar"}
+            </Button>
+            {canPermanentDelete && (
+              <Button
+                variant="destructive"
+                onClick={handlePermanentDelete}
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                {isDeleting ? "Excluindo..." : "Excluir Permanentemente"}
+              </Button>
+            )}
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
