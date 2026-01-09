@@ -312,6 +312,20 @@ serve(async (req) => {
     if (!formattedPhone.startsWith('55')) {
       formattedPhone = '55' + formattedPhone;
     }
+    
+    // Add missing 9 for mobile numbers (Brazilian mobiles have 9 after DDD)
+    // Pattern: 55 + DDD(2) + 9 + number(8) = 13 digits
+    // If we have 12 digits (55 + DDD + 8 digits), add the 9
+    if (formattedPhone.length === 12) {
+      const countryCode = formattedPhone.substring(0, 2); // 55
+      const ddd = formattedPhone.substring(2, 4); // 73, 71, etc.
+      const number = formattedPhone.substring(4); // 88633535
+      // Check if it looks like a mobile (starts with 8 or 9 after adding the 9)
+      if (number.startsWith('8') || number.startsWith('9')) {
+        formattedPhone = `${countryCode}${ddd}9${number}`;
+        console.log(`[Clinic ${clinicId}] Added missing 9 to mobile number: ${formattedPhone}`);
+      }
+    }
 
     console.log(`[Clinic ${clinicId}] User ${user.id} sending WhatsApp message to ${formattedPhone} via instance ${instance_name} with logo`);
 
