@@ -391,6 +391,54 @@ export default function OfflineContributionDialog({
                 </p>
               </div>
 
+              {/* Seleção de Empresas - logo após a busca */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Empresas ({selectedEmployers.length} selecionadas)</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleSelectAll}
+                  >
+                    {selectAll ? "Desmarcar todas" : "Selecionar todas"}
+                  </Button>
+                </div>
+                <ScrollArea className="h-[180px] border rounded-md p-2">
+                  <div className="space-y-1">
+                    {filteredEmployers.map(employer => (
+                      <label
+                        key={employer.id}
+                        className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
+                      >
+                        <Checkbox
+                          checked={selectedEmployers.includes(employer.id)}
+                          onCheckedChange={() => handleToggleEmployer(employer.id)}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="font-medium truncate">{employer.name}</span>
+                            {employer.registration_number && (
+                              <Badge variant="outline" className="shrink-0 text-xs">
+                                {employer.registration_number}
+                              </Badge>
+                            )}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {formatCNPJ(employer.cnpj)}
+                          </span>
+                        </div>
+                      </label>
+                    ))}
+                    {filteredEmployers.length === 0 && (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhuma empresa encontrada
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+
               {/* Tipo de Contribuição */}
               <div className="grid grid-cols-1 gap-4">
                 <div>
@@ -543,53 +591,6 @@ export default function OfflineContributionDialog({
                 />
               </div>
 
-              {/* Seleção de Empresas */}
-              <div className="flex-1 overflow-hidden flex flex-col min-h-0">
-                <div className="flex items-center justify-between mb-2">
-                  <Label>Empresas ({selectedEmployers.length} selecionadas)</Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleSelectAll}
-                  >
-                    {selectAll ? "Desmarcar todas" : "Selecionar todas"}
-                  </Button>
-                </div>
-                <ScrollArea className="flex-1 border rounded-md p-2 min-h-[200px]">
-                  <div className="space-y-1">
-                    {filteredEmployers.map(employer => (
-                      <label
-                        key={employer.id}
-                        className="flex items-center gap-3 p-2 rounded hover:bg-muted cursor-pointer"
-                      >
-                        <Checkbox
-                          checked={selectedEmployers.includes(employer.id)}
-                          onCheckedChange={() => handleToggleEmployer(employer.id)}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-muted-foreground shrink-0" />
-                            <span className="font-medium truncate">{employer.name}</span>
-                            {employer.registration_number && (
-                              <Badge variant="outline" className="shrink-0 text-xs">
-                                {employer.registration_number}
-                              </Badge>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground">
-                            {formatCNPJ(employer.cnpj)}
-                          </span>
-                        </div>
-                      </label>
-                    ))}
-                    {filteredEmployers.length === 0 && (
-                      <p className="text-sm text-muted-foreground text-center py-4">
-                        Nenhuma empresa encontrada
-                      </p>
-                    )}
-                  </div>
-                </ScrollArea>
-              </div>
             </div>
 
             <DialogFooter>
