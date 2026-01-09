@@ -119,7 +119,10 @@ export function PatientCardsModal({
                         <PatientCardView
                           key={card.id}
                           card={card}
-                          patientName={patientName}
+                          patientName={card.patient?.name || patientName}
+                          patientCpf={card.patient?.cpf}
+                          patientPhotoUrl={card.patient?.photo_url}
+                          patientTag={card.patient?.tag}
                           clinicName={currentClinic?.name || ''}
                           clinicLogo={currentClinic?.logo_url}
                           insurancePlanName={card.patient?.insurance_plan?.name}

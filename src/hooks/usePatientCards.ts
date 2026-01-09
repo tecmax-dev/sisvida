@@ -20,6 +20,9 @@ export interface PatientCard {
     name: string;
     phone: string;
     cpf: string | null;
+    registration_number: string | null;
+    tag: string | null;
+    photo_url: string | null;
     insurance_plan_id: string | null;
     insurance_plan?: {
       name: string;
@@ -47,7 +50,7 @@ export function usePatientCards(clinicId: string | undefined, patientId?: string
         .from('patient_cards')
         .select(`
           *,
-          patient:patients(name, phone, cpf, insurance_plan_id)
+          patient:patients(name, phone, cpf, registration_number, tag, photo_url, insurance_plan_id)
         `)
         .eq('clinic_id', clinicId)
         .order('created_at', { ascending: false });
