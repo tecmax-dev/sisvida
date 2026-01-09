@@ -188,3 +188,6 @@ verify_jwt = false
 
 [functions.super-admin-backup]
 verify_jwt = true
+
+[functions.clinic-ai-backup]
+verify_jwt = true
