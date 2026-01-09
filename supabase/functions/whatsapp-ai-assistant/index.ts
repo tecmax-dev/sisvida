@@ -315,7 +315,7 @@ async function executeTool(
         // Find professional by name
         const { data: professionals } = await supabase
           .from('professionals')
-          .select('id, name, schedule, default_duration_minutes')
+          .select('id, name, schedule, appointment_duration')
           .eq('clinic_id', clinicId)
           .eq('is_active', true)
           .ilike('name', `%${nome_profissional}%`);
@@ -358,7 +358,7 @@ async function executeTool(
           .not('status', 'in', '("cancelled","no_show")');
 
         const bookedTimes = new Set(existingAppts?.map((a: any) => a.start_time) || []);
-        const duration = professional.default_duration_minutes || 30;
+        const duration = professional.appointment_duration || 30;
 
         // Generate available slots
         const availableSlots: string[] = [];
@@ -435,7 +435,7 @@ async function executeTool(
         // Find professional by name
         const { data: professionals } = await supabase
           .from('professionals')
-          .select('id, name, default_duration_minutes')
+          .select('id, name, appointment_duration')
           .eq('clinic_id', clinicId)
           .eq('is_active', true)
           .ilike('name', `%${nome_profissional}%`);
@@ -448,7 +448,7 @@ async function executeTool(
         }
 
         const professional = professionals[0];
-        const duration = professional.default_duration_minutes || 30;
+        const duration = professional.appointment_duration || 30;
         const [h, m] = horario.split(':').map(Number);
         const endMinutes = h * 60 + m + duration;
         const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
