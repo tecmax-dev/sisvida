@@ -197,7 +197,7 @@ async function executeTool(
         // Find professional by name
         const { data: professionals, error: profError } = await supabase
           .from('professionals')
-          .select('id, name, specialty, schedule, default_duration_minutes')
+          .select('id, name, specialty, schedule, appointment_duration')
           .eq('clinic_id', clinicId)
           .eq('is_active', true)
           .ilike('name', `%${nome_profissional}%`);
@@ -234,7 +234,7 @@ async function executeTool(
         const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
         const availableDates: { data: string; data_formatada: string; dia_semana: string; vagas: number }[] = [];
         const today = new Date();
-        const duration = professional.default_duration_minutes || 30;
+        const duration = professional.appointment_duration || 30;
 
         for (let i = 0; i < 30 && availableDates.length < 5; i++) {
           const checkDate = new Date(today);
