@@ -371,8 +371,9 @@ export default function OfflineContributionDialog({
 
         {step === "config" && (
           <>
-            <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
-              {/* Aviso */}
+            <ScrollArea className="flex-1 max-h-[calc(90vh-180px)] pr-4">
+              <div className="space-y-4">
+                {/* Aviso */}
               <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 flex items-start gap-2">
                 <AlertTriangle className="h-5 w-5 text-orange-500 shrink-0 mt-0.5" />
                 <p className="text-sm text-orange-700 dark:text-orange-300">
@@ -752,7 +753,8 @@ export default function OfflineContributionDialog({
                 />
               </div>
 
-            </div>
+              </div>
+            </ScrollArea>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
