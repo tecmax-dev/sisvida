@@ -36,6 +36,7 @@ export interface PatientFormData {
   isCompany: boolean;
   isForeigner: boolean;
   recordCode?: number;
+  registrationNumber?: string;
   name: string;
   contactName: string;
   cpf: string;
@@ -204,8 +205,8 @@ export function PatientFormFields({
 
   return (
     <div className="space-y-6">
-      {/* Linha 1: Checkboxes e Código */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      {/* Linha 1: Checkboxes, Matrícula e Código Prontuário */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
         <div className="flex items-center space-x-2">
           <Checkbox
             id="isCompany"
@@ -228,7 +229,24 @@ export function PatientFormFields({
           </Label>
         </div>
         
-        <div className="col-span-2 sm:col-span-1 sm:col-start-4">
+        <div className="col-span-1">
+          <Label className="text-xs text-muted-foreground">Matrícula</Label>
+          <div className="relative">
+            <Input
+              value={formData.registrationNumber || ''}
+              disabled
+              placeholder="Auto"
+              className="mt-1 bg-muted font-mono pr-14"
+            />
+            {!formData.registrationNumber && (
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground bg-muted-foreground/10 px-1.5 py-0.5 rounded">
+                Auto
+              </span>
+            )}
+          </div>
+        </div>
+        
+        <div className="col-span-1">
           <Label className="text-xs text-muted-foreground">Cód. Prontuário</Label>
           <Input
             value={formData.recordCode || 'Auto'}

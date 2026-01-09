@@ -5526,6 +5526,7 @@ export type Database = {
           profession: string | null
           record_code: number
           referral: string | null
+          registration_number: string | null
           religion: string | null
           rg: string | null
           send_notifications: boolean | null
@@ -5580,6 +5581,7 @@ export type Database = {
           profession?: string | null
           record_code?: number
           referral?: string | null
+          registration_number?: string | null
           religion?: string | null
           rg?: string | null
           send_notifications?: boolean | null
@@ -5634,6 +5636,7 @@ export type Database = {
           profession?: string | null
           record_code?: number
           referral?: string | null
+          registration_number?: string | null
           religion?: string | null
           rg?: string | null
           send_notifications?: boolean | null
@@ -9281,7 +9284,15 @@ export type Database = {
       }
       generate_card_number: { Args: { p_clinic_id: string }; Returns: string }
       generate_employer_access_code: { Args: never; Returns: string }
+      generate_employer_registration_number: {
+        Args: { p_clinic_id: string }
+        Returns: string
+      }
       generate_negotiation_code: {
+        Args: { p_clinic_id: string }
+        Returns: string
+      }
+      generate_patient_registration_number: {
         Args: { p_clinic_id: string }
         Returns: string
       }

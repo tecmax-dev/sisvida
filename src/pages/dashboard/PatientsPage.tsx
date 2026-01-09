@@ -531,6 +531,12 @@ export default function PatientsPage() {
     setFormErrors({});
 
     try {
+      // Generate registration number
+      const { data: registrationNumber } = await supabase.rpc(
+        "generate_patient_registration_number",
+        { p_clinic_id: currentClinic.id }
+      );
+
       const { error } = await supabase
         .from('patients')
         .insert({
@@ -543,6 +549,7 @@ export default function PatientsPage() {
           address: formAddress.trim() || null,
           insurance_plan_id: formInsurancePlanId || null,
           notes: formNotes.trim() || null,
+          registration_number: registrationNumber || null,
         });
 
       if (error) throw error;
