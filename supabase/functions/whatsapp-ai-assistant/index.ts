@@ -31,21 +31,38 @@ const tools = [
   {
     type: "function",
     function: {
-      name: "buscar_horarios_disponiveis",
-      description: "Busca horários disponíveis para um profissional em uma data específica",
+      name: "buscar_proximas_datas_disponiveis",
+      description: "Busca as próximas datas com vagas disponíveis para um profissional. Use esta função quando o paciente perguntar sobre disponibilidade de um profissional sem especificar uma data. Retorna as próximas datas do mês com horários livres.",
       parameters: {
         type: "object",
         properties: {
-          professional_id: { 
+          nome_profissional: { 
             type: "string", 
-            description: "ID do profissional" 
+            description: "Nome ou parte do nome do profissional (ex: 'Alcides', 'Juliane', 'Uiara')" 
+          }
+        },
+        required: ["nome_profissional"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "buscar_horarios_disponiveis",
+      description: "Busca horários disponíveis para um profissional em uma data específica. Use apenas quando o paciente já escolheu uma data.",
+      parameters: {
+        type: "object",
+        properties: {
+          nome_profissional: { 
+            type: "string", 
+            description: "Nome ou parte do nome do profissional (ex: 'Alcides', 'Juliane')" 
           },
           data: { 
             type: "string", 
             description: "Data no formato YYYY-MM-DD" 
           }
         },
-        required: ["professional_id", "data"]
+        required: ["nome_profissional", "data"]
       }
     }
   },
@@ -70,17 +87,17 @@ const tools = [
     type: "function",
     function: {
       name: "criar_agendamento",
-      description: "Cria um novo agendamento de consulta",
+      description: "Cria um novo agendamento de consulta. Primeiro busque o paciente por CPF e use o ID retornado. Para o profissional, use o nome.",
       parameters: {
         type: "object",
         properties: {
           patient_id: { 
             type: "string", 
-            description: "ID do paciente" 
+            description: "ID do paciente (obtido via buscar_paciente_por_cpf)" 
           },
-          professional_id: { 
+          nome_profissional: { 
             type: "string", 
-            description: "ID do profissional" 
+            description: "Nome ou parte do nome do profissional (ex: 'Alcides', 'Juliane')" 
           },
           data: { 
             type: "string", 
@@ -89,13 +106,9 @@ const tools = [
           horario: { 
             type: "string", 
             description: "Horário no formato HH:MM" 
-          },
-          procedure_id: { 
-            type: "string", 
-            description: "ID do procedimento (opcional)" 
           }
         },
-        required: ["patient_id", "professional_id", "data", "horario"]
+        required: ["patient_id", "nome_profissional", "data", "horario"]
       }
     }
   },
@@ -176,20 +189,131 @@ async function executeTool(
         });
       }
 
-      case "buscar_horarios_disponiveis": {
-        const { professional_id, data } = args;
+      case "buscar_proximas_datas_disponiveis": {
+        const { nome_profissional } = args;
         
-        // Get professional schedule
-        const { data: professional } = await supabase
+        // Find professional by name
+        const { data: professionals } = await supabase
           .from('professionals')
-          .select('schedule, default_duration_minutes')
-          .eq('id', professional_id)
-          .single();
+          .select('id, name, specialty, schedule, default_duration_minutes')
+          .eq('clinic_id', clinicId)
+          .eq('is_active', true)
+          .ilike('name', `%${nome_profissional}%`);
 
-        if (!professional?.schedule) {
+        if (!professionals || professionals.length === 0) {
           return JSON.stringify({ 
             success: false, 
-            message: "Profissional não possui agenda configurada." 
+            message: `Não encontrei um profissional com o nome "${nome_profissional}". Use a função buscar_profissionais para ver a lista completa.` 
+          });
+        }
+
+        const professional = professionals[0];
+        
+        if (!professional.schedule) {
+          return JSON.stringify({ 
+            success: false, 
+            message: `${professional.name} não possui agenda configurada.` 
+          });
+        }
+
+        // Find next 30 days with available slots
+        const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+        const availableDates: { data: string; dia_semana: string; vagas: number }[] = [];
+        const today = new Date();
+        const duration = professional.default_duration_minutes || 30;
+
+        for (let i = 0; i < 30 && availableDates.length < 5; i++) {
+          const checkDate = new Date(today);
+          checkDate.setDate(today.getDate() + i);
+          const dayKey = dayNames[checkDate.getDay()];
+          const daySchedule = professional.schedule[dayKey];
+          
+          if (!daySchedule?.enabled || !daySchedule?.slots?.length) continue;
+
+          const dateStr = checkDate.toISOString().split('T')[0];
+          
+          // Get existing appointments for this date
+          const { data: existingAppts } = await supabase
+            .from('appointments')
+            .select('start_time')
+            .eq('professional_id', professional.id)
+            .eq('appointment_date', dateStr)
+            .not('status', 'in', '("cancelled","no_show")');
+
+          const bookedTimes = new Set(existingAppts?.map((a: any) => a.start_time) || []);
+          
+          // Count available slots
+          let availableCount = 0;
+          for (const slot of daySchedule.slots) {
+            let current = slot.start;
+            while (current < slot.end) {
+              // Skip past times for today
+              if (i === 0 && current <= new Date().toTimeString().slice(0, 5)) {
+                const [h, m] = current.split(':').map(Number);
+                const totalMinutes = h * 60 + m + duration;
+                current = `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
+                continue;
+              }
+              
+              if (!bookedTimes.has(current)) {
+                availableCount++;
+              }
+              const [h, m] = current.split(':').map(Number);
+              const totalMinutes = h * 60 + m + duration;
+              current = `${String(Math.floor(totalMinutes / 60)).padStart(2, '0')}:${String(totalMinutes % 60).padStart(2, '0')}`;
+            }
+          }
+
+          if (availableCount > 0) {
+            const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+            availableDates.push({
+              data: dateStr,
+              dia_semana: diasSemana[checkDate.getDay()],
+              vagas: availableCount
+            });
+          }
+        }
+
+        if (availableDates.length === 0) {
+          return JSON.stringify({ 
+            success: false, 
+            message: `Não há datas disponíveis para ${professional.name} nos próximos 30 dias.` 
+          });
+        }
+
+        return JSON.stringify({ 
+          success: true, 
+          profissional: professional.name,
+          especialidade: professional.specialty || 'Não informada',
+          proximas_datas: availableDates,
+          instrucao: "Apresente as datas ao paciente de forma amigável, formatando as datas como 'dia/mês (dia da semana)'. Pergunte qual data ele prefere."
+        });
+      }
+
+      case "buscar_horarios_disponiveis": {
+        const { nome_profissional, data } = args;
+        
+        // Find professional by name
+        const { data: professionals } = await supabase
+          .from('professionals')
+          .select('id, name, schedule, default_duration_minutes')
+          .eq('clinic_id', clinicId)
+          .eq('is_active', true)
+          .ilike('name', `%${nome_profissional}%`);
+
+        if (!professionals || professionals.length === 0) {
+          return JSON.stringify({ 
+            success: false, 
+            message: `Não encontrei um profissional com o nome "${nome_profissional}".` 
+          });
+        }
+
+        const professional = professionals[0];
+        
+        if (!professional.schedule) {
+          return JSON.stringify({ 
+            success: false, 
+            message: `${professional.name} não possui agenda configurada.` 
           });
         }
 
@@ -202,7 +326,7 @@ async function executeTool(
         if (!daySchedule?.enabled || !daySchedule?.slots?.length) {
           return JSON.stringify({ 
             success: false, 
-            message: "Profissional não atende neste dia." 
+            message: `${professional.name} não atende neste dia da semana. Use buscar_proximas_datas_disponiveis para ver as datas disponíveis.` 
           });
         }
 
@@ -210,7 +334,7 @@ async function executeTool(
         const { data: existingAppts } = await supabase
           .from('appointments')
           .select('start_time, end_time')
-          .eq('professional_id', professional_id)
+          .eq('professional_id', professional.id)
           .eq('appointment_date', data)
           .not('status', 'in', '("cancelled","no_show")');
 
@@ -244,13 +368,16 @@ async function executeTool(
         if (filteredSlots.length === 0) {
           return JSON.stringify({ 
             success: false, 
-            message: "Não há horários disponíveis nesta data." 
+            message: `Não há horários disponíveis para ${professional.name} nesta data. Use buscar_proximas_datas_disponiveis para ver outras datas.` 
           });
         }
 
         return JSON.stringify({ 
-          success: true, 
-          horarios: filteredSlots.slice(0, 10) // Limit to 10 options
+          success: true,
+          profissional: professional.name,
+          profissional_id: professional.id,
+          data: data,
+          horarios: filteredSlots.slice(0, 10)
         });
       }
 
@@ -284,16 +411,25 @@ async function executeTool(
       }
 
       case "criar_agendamento": {
-        const { patient_id, professional_id, data, horario, procedure_id } = args;
+        const { patient_id, nome_profissional, data, horario } = args;
 
-        // Calculate end time
-        const { data: professional } = await supabase
+        // Find professional by name
+        const { data: professionals } = await supabase
           .from('professionals')
-          .select('default_duration_minutes')
-          .eq('id', professional_id)
-          .single();
+          .select('id, name, default_duration_minutes')
+          .eq('clinic_id', clinicId)
+          .eq('is_active', true)
+          .ilike('name', `%${nome_profissional}%`);
 
-        const duration = professional?.default_duration_minutes || 30;
+        if (!professionals || professionals.length === 0) {
+          return JSON.stringify({ 
+            success: false, 
+            message: `Não encontrei um profissional com o nome "${nome_profissional}".` 
+          });
+        }
+
+        const professional = professionals[0];
+        const duration = professional.default_duration_minutes || 30;
         const [h, m] = horario.split(':').map(Number);
         const endMinutes = h * 60 + m + duration;
         const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, '0')}:${String(endMinutes % 60).padStart(2, '0')}`;
@@ -303,8 +439,7 @@ async function executeTool(
           .insert({
             clinic_id: clinicId,
             patient_id,
-            professional_id,
-            procedure_id: procedure_id || null,
+            professional_id: professional.id,
             appointment_date: data,
             start_time: horario,
             end_time: endTime,
