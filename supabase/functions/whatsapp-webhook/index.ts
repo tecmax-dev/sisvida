@@ -1165,8 +1165,10 @@ async function handleAIBookingFlow(
       
       // Send the booking welcome message
       const bookingWelcome = `📅 *Agendamento de Consultas*\n\n` +
-        `Para iniciar seu agendamento, por favor informe seu *CPF* (apenas números).\n\n` +
-        `💡 Exemplo: 12345678901`;
+        `Para iniciar seu agendamento, por favor informe seu *CPF* ou *número da carteirinha* (apenas números).\n\n` +
+        `💡 Exemplos:\n` +
+        `• CPF: 12345678901 (11 dígitos)\n` +
+        `• Carteirinha: 000001 (5 a 10 dígitos)`;
       
       await sendWhatsAppMessage(config, phone, bookingWelcome);
       return;
