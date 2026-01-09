@@ -61,10 +61,10 @@ serve(async (req) => {
       const cardsToInsert = [];
       
       for (const patient of batch) {
-        // Generate card number using RPC
+        // Generate card number using RPC (uses patient's registration_number)
         const { data: cardNumber, error: genError } = await supabase.rpc(
           "generate_card_number",
-          { p_clinic_id: clinic_id }
+          { p_clinic_id: clinic_id, p_patient_id: patient.id }
         );
 
         if (genError) {

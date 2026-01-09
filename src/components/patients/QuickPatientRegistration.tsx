@@ -156,10 +156,10 @@ export function QuickPatientRegistration({
 
       if (patientError) throw patientError;
 
-      // Generate card number
+      // Generate card number (uses patient's registration_number)
       const { data: cardNumber, error: cardError } = await supabase.rpc(
         "generate_card_number",
-        { p_clinic_id: currentClinic.id }
+        { p_clinic_id: currentClinic.id, p_patient_id: patient.id }
       );
 
       if (cardError) {

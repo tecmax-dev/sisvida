@@ -102,10 +102,11 @@ export function usePatientCards(clinicId: string | undefined, patientId?: string
     return data?.[0] || null;
   };
 
-  const generateCardNumber = async (clinicId: string): Promise<string | null> => {
+  const generateCardNumber = async (clinicId: string, patientId: string): Promise<string | null> => {
     const { data, error } = await supabase
       .rpc('generate_card_number', {
         p_clinic_id: clinicId,
+        p_patient_id: patientId,
       });
     
     if (error) {
@@ -124,7 +125,7 @@ export function usePatientCards(clinicId: string | undefined, patientId?: string
     }) => {
       if (!clinicId) throw new Error('Clinic not selected');
       
-      const cardNumber = await generateCardNumber(clinicId);
+      const cardNumber = await generateCardNumber(clinicId, cardData.patient_id);
       if (!cardNumber) throw new Error('Failed to generate card number');
       
       const { data, error } = await supabase

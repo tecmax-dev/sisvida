@@ -9282,7 +9282,12 @@ export type Database = {
         Args: { _addon_key: string; _clinic_id: string }
         Returns: boolean
       }
-      generate_card_number: { Args: { p_clinic_id: string }; Returns: string }
+      generate_card_number:
+        | { Args: { p_clinic_id: string }; Returns: string }
+        | {
+            Args: { p_clinic_id: string; p_patient_id?: string }
+            Returns: string
+          }
       generate_employer_access_code: { Args: never; Returns: string }
       generate_employer_registration_number: {
         Args: { p_clinic_id: string }

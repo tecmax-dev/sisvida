@@ -3894,10 +3894,10 @@ async function handleConfirmRegistration(
           return { handled: true, newState: 'WAITING_CPF' };
         }
         
-        // Generate card number for dependent
+        // Generate card number for dependent (uses titular's registration_number)
         const { data: dependentCardNumber, error: cardNumberError } = await supabase.rpc(
           'generate_card_number',
-          { p_clinic_id: config.clinic_id }
+          { p_clinic_id: config.clinic_id, p_patient_id: titularPatient.id }
         );
         
         if (cardNumberError) {
@@ -4015,10 +4015,10 @@ async function handleConfirmRegistration(
         
         console.log(`[registration] Patient created: ${patient.id} - ${patient.name}`);
         
-        // Generate card number
+        // Generate card number (uses patient's registration_number)
         const { data: cardNumber, error: cardError } = await supabase.rpc(
           'generate_card_number',
-          { p_clinic_id: config.clinic_id }
+          { p_clinic_id: config.clinic_id, p_patient_id: patient.id }
         );
         
         if (cardError) {
