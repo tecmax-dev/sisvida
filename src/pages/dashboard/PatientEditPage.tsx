@@ -13,6 +13,7 @@ import { z } from "zod";
 import { PatientHeader } from "@/components/patients/PatientHeader";
 import { PatientTabs, PatientTab } from "@/components/patients/PatientTabs";
 import { PatientFormFields, PatientFormData } from "@/components/patients/PatientFormFields";
+import { PatientPhotoUpload } from "@/components/patients/PatientPhotoUpload";
 import { useCepLookup } from "@/hooks/useCepLookup";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 import { PatientRecordsModal } from "@/components/patients/modals/PatientRecordsModal";
@@ -157,6 +158,9 @@ export default function PatientEditPage() {
   const [isPatientActive, setIsPatientActive] = useState(true);
   const [togglingActive, setTogglingActive] = useState(false);
   
+  // Patient photo state
+  const [patientPhotoUrl, setPatientPhotoUrl] = useState<string | null>(null);
+  
   // Modal states managed by ModalContext for persistence across tab switches
 
   // Permission checks for restricted tabs
@@ -279,6 +283,9 @@ export default function PatientEditPage() {
         
         // Set active state
         setIsPatientActive(data.is_active ?? true);
+        
+        // Set photo URL
+        setPatientPhotoUrl(data.photo_url || null);
         
         if (data.insurance_plans) {
           setInsurancePlanName((data.insurance_plans as any).name || '');
@@ -746,6 +753,23 @@ export default function PatientEditPage() {
         <div className="space-y-6">
           <div className="bg-card rounded-lg border p-6">
             <form onSubmit={handleSubmit}>
+              {/* Photo Upload Section */}
+              <div className="flex items-start gap-6 mb-6 pb-6 border-b">
+                <PatientPhotoUpload
+                  patientId={id!}
+                  currentPhotoUrl={patientPhotoUrl}
+                  patientName={formData.name}
+                  onPhotoChange={setPatientPhotoUrl}
+                />
+                <div className="flex-1">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Foto do Associado</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Clique no ícone da câmera para adicionar ou alterar a foto.
+                    A foto será exibida na carteirinha digital.
+                  </p>
+                </div>
+              </div>
+              
               <PatientFormFields
                 formData={formData}
                 setFormData={setFormData}
