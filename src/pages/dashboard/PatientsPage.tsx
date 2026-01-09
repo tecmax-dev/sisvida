@@ -25,6 +25,7 @@ import {
 import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
 import { InlineAppointmentLimitEdit } from "@/components/patients/InlineAppointmentLimitEdit";
 import { PatientAlertsPanel } from "@/components/patients/PatientAlertsPanel";
+import { PatientDependentsDialog } from "@/components/patients/PatientDependentsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -240,6 +241,7 @@ export default function PatientsPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [anamnesisDialogOpen, setAnamnesisDialogOpen] = useState(false);
+  const [dependentsDialogOpen, setDependentsDialogOpen] = useState(false);
   const [anamnesisTemplates, setAnamnesisTemplates] = useState<{ id: string; title: string }[]>([]);
   const [selectedTemplateId, setSelectedTemplateId] = useState("");
   const [sendingAnamnesis, setSendingAnamnesis] = useState(false);
@@ -1194,7 +1196,16 @@ export default function PatientsPage() {
                             </DropdownMenuItem>
                           )}
                           {hasPermission("view_patients") && (
-                            <DropdownMenuItem onClick={() => navigate(`/dashboard/patients/${patient.id}/edit?tab=cadastro&dependentes=true`)}>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                if ((patient.dependents_count || 0) > 0) {
+                                  setSelectedPatient(patient);
+                                  setDependentsDialogOpen(true);
+                                } else {
+                                  navigate(`/dashboard/patients/${patient.id}/edit?tab=cadastro&dependentes=true`);
+                                }
+                              }}
+                            >
                               <Users className="h-4 w-4 mr-2" />
                               {(patient.dependents_count || 0) > 0 
                                 ? `Dependentes (${patient.dependents_count})`
@@ -1610,6 +1621,16 @@ export default function PatientsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Dependents Dialog */}
+      {selectedPatient && (
+        <PatientDependentsDialog
+          open={dependentsDialogOpen}
+          onOpenChange={setDependentsDialogOpen}
+          patientId={selectedPatient.id}
+          patientName={selectedPatient.name}
+        />
+      )}
     </div>
   );
 }
