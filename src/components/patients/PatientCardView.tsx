@@ -70,10 +70,10 @@ export function PatientCardView({
   return (
     <div className="flex flex-col items-center w-full">
       {/* Card Container - Mobile proportional (9:16 aspect ratio) */}
-      <div className="w-full max-w-[360px] bg-card rounded-2xl shadow-xl overflow-hidden border">
+      <div className="w-full max-w-[360px] sm:max-w-sm bg-card rounded-2xl shadow-xl overflow-hidden border mx-auto">
         
         {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-primary to-primary/80 px-5 py-4">
+        <div className="bg-gradient-to-r from-emerald-600 to-emerald-500 px-5 py-4">
           <div className="flex items-center gap-3">
             {clinicLogo ? (
               <img 
@@ -96,14 +96,14 @@ export function PatientCardView({
         </div>
 
         {/* Card Body */}
-        <div className="p-5 space-y-4">
+        <div className="p-4 space-y-3">
           {/* Info Row: CPF, Tag, Card Number + Photo */}
-          <div className="flex gap-4">
+          <div className="flex gap-3">
             {/* Left: CPF, Tag, Card Number */}
-            <div className="flex-1 space-y-3">
+            <div className="flex-1 space-y-2">
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wide">CPF</p>
-                <p className="font-mono text-sm font-medium text-primary">{formatCpf(patientCpf)}</p>
+                <p className="font-mono text-sm font-medium text-emerald-600">{formatCpf(patientCpf)}</p>
               </div>
               
               <div>
@@ -119,7 +119,7 @@ export function PatientCardView({
 
             {/* Right: Photo */}
             <div className="flex-shrink-0">
-              <div className="w-24 h-32 rounded-lg border-2 border-muted overflow-hidden bg-muted/30">
+              <div className="w-20 h-28 sm:w-24 sm:h-32 rounded-lg border-2 border-muted overflow-hidden bg-muted/30">
                 {patientPhotoUrl ? (
                   <img 
                     src={patientPhotoUrl} 
@@ -161,10 +161,10 @@ export function PatientCardView({
 
           {/* QR Code */}
           <div className="flex flex-col items-center pt-2">
-            <div className="bg-white p-3 rounded-xl shadow-sm">
+            <div className="bg-white p-2 rounded-xl shadow-sm">
               <QRCodeSVG
                 value={qrCodeUrl}
-                size={180}
+                size={140}
                 level="H"
                 includeMargin={false}
               />
