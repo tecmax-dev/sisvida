@@ -50,6 +50,7 @@ type BookingState =
   | 'WAITING_REGISTRATION_CNPJ'
   | 'CONFIRM_COMPANY'
   | 'CONFIRM_REGISTRATION'
+  | 'WAITING_DEPENDENT_CPF_PHOTO'
   | 'FINISHED'
   | 'EXPIRED';
 
@@ -1531,6 +1532,9 @@ async function handleBookingFlow(
     
     case 'WAITING_REGISTRATION_RELATIONSHIP':
       return await handleWaitingRegistrationRelationship(supabase, config, phone, messageText, session);
+    
+    case 'WAITING_DEPENDENT_CPF_PHOTO':
+      return await handleWaitingDependentCpfPhoto(supabase, config, phone, messageText, session);
     
     case 'WAITING_REGISTRATION_CNPJ':
       return await handleWaitingRegistrationCnpj(supabase, config, phone, messageText, session);
@@ -3446,14 +3450,10 @@ async function handleWaitingRegistrationBirthdate(
     });
     
     const relationshipMsg = `👨‍👩‍👧 *Qual é o parentesco com o titular?*\n\n` +
-      `1️⃣ Filho(a)\n` +
+      `1️⃣ Filho(a) _(até 21 anos)_\n` +
       `2️⃣ Cônjuge\n` +
       `3️⃣ Pai\n` +
-      `4️⃣ Mãe\n` +
-      `5️⃣ Irmão(ã)\n` +
-      `6️⃣ Neto(a)\n` +
-      `7️⃣ Sobrinho(a)\n` +
-      `8️⃣ Outro\n\n` +
+      `4️⃣ Mãe\n\n` +
       `Responda com o número correspondente:`;
     
     await sendWhatsAppMessage(config, phone, relationshipMsg);
@@ -3471,16 +3471,12 @@ async function handleWaitingRegistrationBirthdate(
   return { handled: true, newState: 'WAITING_REGISTRATION_CNPJ' };
 }
 
-// Relationship options mapping
+// Relationship options mapping - Only allowed: filho (até 21 anos), conjuge, pai, mae
 const RELATIONSHIP_OPTIONS: { [key: string]: string } = {
   '1': 'filho',
   '2': 'conjuge',
   '3': 'pai',
   '4': 'mae',
-  '5': 'irmao',
-  '6': 'neto',
-  '7': 'sobrinho',
-  '8': 'outro',
 };
 
 const RELATIONSHIP_LABELS: { [key: string]: string } = {
@@ -3488,11 +3484,18 @@ const RELATIONSHIP_LABELS: { [key: string]: string } = {
   'conjuge': 'Cônjuge',
   'pai': 'Pai',
   'mae': 'Mãe',
-  'irmao': 'Irmão(ã)',
-  'neto': 'Neto(a)',
-  'sobrinho': 'Sobrinho(a)',
-  'outro': 'Outro',
 };
+
+// Calculate age from birth date
+function calculateAge(birthDate: Date): number {
+  const today = new Date();
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const monthDiff = today.getMonth() - birthDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+  return age;
+}
 
 async function handleWaitingRegistrationRelationship(
   supabase: SupabaseClient,
@@ -3503,27 +3506,50 @@ async function handleWaitingRegistrationRelationship(
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   const input = messageText.trim();
   
-  // Check if valid option (1-8)
+  // Check if valid option (1-4 only - filho, conjuge, pai, mae)
   const relationship = RELATIONSHIP_OPTIONS[input];
   
   if (!relationship) {
     await sendWhatsAppMessage(config, phone, 
-      `❌ Opção inválida. Por favor, escolha um número de 1 a 8:\n\n` +
-      `1️⃣ Filho(a)\n` +
+      `❌ Opção inválida. Por favor, escolha um número de 1 a 4:\n\n` +
+      `1️⃣ Filho(a) _(até 21 anos)_\n` +
       `2️⃣ Cônjuge\n` +
       `3️⃣ Pai\n` +
-      `4️⃣ Mãe\n` +
-      `5️⃣ Irmão(ã)\n` +
-      `6️⃣ Neto(a)\n` +
-      `7️⃣ Sobrinho(a)\n` +
-      `8️⃣ Outro`
+      `4️⃣ Mãe`
     );
     return { handled: true, newState: 'WAITING_REGISTRATION_RELATIONSHIP' };
   }
   
-  // Store relationship and go to confirmation
+  // Validate age for "filho" - must be 21 or younger
+  if (relationship === 'filho' && session.pending_registration_birthdate) {
+    const birthDate = new Date(session.pending_registration_birthdate + 'T12:00:00');
+    const age = calculateAge(birthDate);
+    
+    if (age > 21) {
+      await sendWhatsAppMessage(config, phone, 
+        `❌ *Não é possível cadastrar filho(a) com mais de 21 anos como dependente.*\n\n` +
+        `A idade calculada é ${age} anos.\n\n` +
+        `Se necessário, o familiar pode fazer seu próprio cadastro como *titular* na empresa onde trabalha.`
+      );
+      
+      // Clear registration and restart
+      await updateSession(supabase, session.id, {
+        state: 'WAITING_CPF',
+        pending_registration_cpf: null,
+        pending_registration_name: null,
+        pending_registration_birthdate: null,
+        pending_registration_type: null,
+        pending_registration_titular_cpf: null,
+        pending_registration_relationship: null,
+      });
+      
+      return { handled: true, newState: 'WAITING_CPF' };
+    }
+  }
+  
+  // Store relationship and ask for CPF photo
   await updateSession(supabase, session.id, {
-    state: 'CONFIRM_REGISTRATION',
+    state: 'WAITING_DEPENDENT_CPF_PHOTO',
     pending_registration_relationship: relationship,
     pending_registration_cnpj: null, // Ensure no CNPJ for dependent
   });
@@ -3535,27 +3561,162 @@ async function handleWaitingRegistrationRelationship(
   
   const relationshipLabel = RELATIONSHIP_LABELS[relationship] || relationship;
   
-  // Build confirmation message for dependent
-  const confirmMsg = `📋 *Confirme seus dados:*\n\n` +
+  // Build confirmation message and ask for CPF photo
+  const photoRequestMsg = `📋 *Seus dados:*\n\n` +
     `👤 *Nome:* ${session.pending_registration_name || ''}\n` +
     `📅 *Nascimento:* ${displayDate}\n` +
-    `👨‍👩‍👧 *Parentesco:* ${relationshipLabel}\n` +
-    `📱 *WhatsApp:* _(este número)_\n\n` +
-    `Os dados estão corretos?`;
+    `👨‍👩‍👧 *Parentesco:* ${relationshipLabel}\n\n` +
+    `📸 *Última etapa!*\n\n` +
+    `Por favor, envie uma *foto do CPF* do dependente para validação.\n\n` +
+    `⚠️ A foto deve estar legível e mostrar o número do CPF claramente.\n\n` +
+    `_Seu cadastro será analisado e você receberá uma notificação quando for aprovado._`;
   
-  await sendWhatsAppButtons(
-    config,
-    phone,
-    '📋 Confirmar Cadastro',
-    confirmMsg,
-    [
-      { id: 'confirm_yes', text: '✅ Confirmar' },
-      { id: 'confirm_no', text: '❌ Recomeçar' }
-    ],
-    'Responda 1 ou 2'
-  );
+  await sendWhatsAppMessage(config, phone, photoRequestMsg);
   
-  return { handled: true, newState: 'CONFIRM_REGISTRATION' };
+  return { handled: true, newState: 'WAITING_DEPENDENT_CPF_PHOTO' };
+}
+
+// Handler for receiving CPF photo - creates inactive dependent pending approval
+async function handleWaitingDependentCpfPhoto(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  // For now, since we can't easily detect image messages in this flow,
+  // we'll create the dependent as pending and ask them to contact the clinic
+  // with the CPF photo via regular WhatsApp
+  
+  // Check if user wants to cancel
+  if (/^(cancelar|desistir|sair)$/i.test(messageText.trim())) {
+    await updateSession(supabase, session.id, {
+      state: 'WAITING_CPF',
+      pending_registration_cpf: null,
+      pending_registration_name: null,
+      pending_registration_birthdate: null,
+      pending_registration_type: null,
+      pending_registration_titular_cpf: null,
+      pending_registration_relationship: null,
+    });
+    await sendWhatsAppMessage(config, phone, `❌ Cadastro cancelado.\n\nDigite *MENU* para recomeçar.`);
+    return { handled: true, newState: 'WAITING_CPF' };
+  }
+  
+  // Check for confirmation to proceed without photo (for now)
+  const isConfirm = POSITIVE_REGEX.test(messageText) || messageText === '1';
+  
+  if (!isConfirm) {
+    // Ask user to confirm they want to proceed
+    await sendWhatsAppMessage(config, phone, 
+      `📸 *Envio da foto do CPF*\n\n` +
+      `Por favor, envie a foto do CPF do dependente diretamente para o WhatsApp da clínica ou responda *1* para continuar e enviar depois.\n\n` +
+      `⚠️ Seu cadastro ficará pendente de aprovação até o envio da documentação.`
+    );
+    return { handled: true, newState: 'WAITING_DEPENDENT_CPF_PHOTO' };
+  }
+  
+  try {
+    // Find titular patient
+    const titularCpfClean = session.pending_registration_titular_cpf?.replace(/\D/g, '') || '';
+    const titularCpfFormatted = titularCpfClean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    
+    const { data: titularPatient } = await supabase
+      .from('patients')
+      .select('id, name, insurance_plan_id')
+      .eq('clinic_id', config.clinic_id)
+      .or(`cpf.eq.${titularCpfClean},cpf.eq.${titularCpfFormatted}`)
+      .eq('is_active', true)
+      .maybeSingle();
+    
+    if (!titularPatient) {
+      await sendWhatsAppMessage(config, phone, `❌ Não foi possível localizar o titular. Tente novamente.`);
+      await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
+      return { handled: true, newState: 'WAITING_CPF' };
+    }
+    
+    // Generate card number
+    const { data: cardNumber } = await supabase.rpc('generate_card_number', { 
+      p_clinic_id: config.clinic_id, 
+      p_patient_id: titularPatient.id 
+    });
+    
+    // Get titular's card expiry
+    const { data: titularCard } = await supabase
+      .from('patient_cards')
+      .select('expires_at')
+      .eq('patient_id', titularPatient.id)
+      .eq('is_active', true)
+      .order('expires_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    
+    const expiresDate = titularCard?.expires_at || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString();
+    
+    // Create dependent as INACTIVE with pending_approval = true
+    const { data: dependent, error: dependentError } = await supabase
+      .from('patient_dependents')
+      .insert({
+        clinic_id: config.clinic_id,
+        patient_id: titularPatient.id,
+        name: session.pending_registration_name!.trim(),
+        cpf: session.pending_registration_cpf?.replace(/\D/g, '') || null,
+        birth_date: session.pending_registration_birthdate,
+        phone: phone.replace(/\D/g, ''),
+        relationship: session.pending_registration_relationship || null,
+        card_number: cardNumber || null,
+        card_expires_at: expiresDate,
+        insurance_plan_id: titularPatient.insurance_plan_id || null,
+        is_active: false,
+        pending_approval: true,
+      })
+      .select('id, name')
+      .single();
+    
+    if (dependentError) {
+      console.error('[registration] Error creating pending dependent:', dependentError);
+      await sendWhatsAppMessage(config, phone, `❌ Erro ao processar cadastro. Tente novamente.`);
+      return { handled: true, newState: 'FINISHED' };
+    }
+    
+    // Create approval request
+    await supabase
+      .from('pending_dependent_approvals')
+      .insert({
+        clinic_id: config.clinic_id,
+        patient_id: titularPatient.id,
+        dependent_id: dependent.id,
+        requester_phone: phone.replace(/\D/g, ''),
+        status: 'pending',
+      });
+    
+    // Clear session
+    await updateSession(supabase, session.id, {
+      state: 'FINISHED',
+      pending_registration_cpf: null,
+      pending_registration_name: null,
+      pending_registration_birthdate: null,
+      pending_registration_type: null,
+      pending_registration_titular_cpf: null,
+      pending_registration_relationship: null,
+    });
+    
+    await sendWhatsAppMessage(config, phone, 
+      `✅ *Solicitação de cadastro enviada!*\n\n` +
+      `👤 Dependente: *${dependent.name}*\n` +
+      `👨‍👩‍👧 Titular: *${titularPatient.name}*\n\n` +
+      `📋 Seu cadastro está *aguardando aprovação*.\n\n` +
+      `⚠️ Por favor, envie uma foto do CPF do dependente para este mesmo número para agilizar a análise.\n\n` +
+      `Você será notificado quando o cadastro for aprovado! 🎉`
+    );
+    
+    return { handled: true, newState: 'FINISHED' };
+    
+  } catch (error) {
+    console.error('[registration] Error in photo handler:', error);
+    await sendWhatsAppMessage(config, phone, `❌ Erro ao processar cadastro. Tente novamente.`);
+    return { handled: true, newState: 'FINISHED' };
+  }
 }
 
 // Validate CNPJ checksum

@@ -124,7 +124,7 @@ import CarouselBannersPage from "./pages/admin/CarouselBannersPage";
 import GlobalConfigPage from "./pages/admin/GlobalConfigPage";
 import AddonRequestsPage from "./pages/admin/AddonRequestsPage";
 import AddonsManagementPage from "./pages/admin/AddonsManagementPage";
-
+import PendingDependentApprovals from "./pages/admin/PendingDependentApprovals";
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -305,6 +305,7 @@ const App = () => (
                   <Route path="hero" element={<HeroSettingsPage />} />
                   <Route path="banners" element={<CarouselBannersPage />} />
                   <Route path="config" element={<GlobalConfigPage />} />
+                  <Route path="dependent-approvals" element={<PendingDependentApprovals />} />
                 </Route>
                 {/* Dashboard Routes */}
                 <Route
