@@ -282,9 +282,10 @@ async function executeTool(
             const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
             const day = checkDate.getDate().toString().padStart(2, '0');
             const month = (checkDate.getMonth() + 1).toString().padStart(2, '0');
+            const year = checkDate.getFullYear();
             availableDates.push({
               data: dateStr,
-              data_formatada: `${day}/${month}`,
+              data_formatada: `${day}/${month}/${year}`,
               dia_semana: diasSemana[checkDate.getDay()],
               vagas: availableCount
             });
@@ -305,7 +306,7 @@ async function executeTool(
           profissional: professional.name,
           especialidade: professional.specialty || 'Não informada',
           proximas_datas: availableDates,
-          formato_resposta: `📅 *Próximas datas para ${professional.name}:*\n${availableDates.map((d, i) => `${i + 1}️⃣ ${d.data_formatada} (${d.dia_semana}) - ${d.vagas} vaga${d.vagas > 1 ? 's' : ''}`).join('\n')}\n\n*Qual data você prefere? Digite o número.*`
+          formato_resposta: `📅 *Próximas datas para ${professional.name}:*\n${availableDates.map((d, i) => `${i + 1}️⃣ ${d.data_formatada} (${d.dia_semana}) - ${d.vagas} vaga${d.vagas > 1 ? 's' : ''}`).join('\n')}\n\n*Qual data você prefere? Digite apenas o número.*`
         });
       }
 
@@ -313,21 +314,44 @@ async function executeTool(
         const { nome_profissional, data } = args;
         
         // Find professional by name
-        const { data: professionals } = await supabase
+        const normalizedName = String(nome_profissional || '')
+          .replace(/\bdr\.?\b/gi, '')
+          .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        const fallbackTerm = normalizedName.split(' ').pop() || normalizedName;
+
+        const { data: professionals, error: profError } = await supabase
           .from('professionals')
           .select('id, name, schedule, appointment_duration')
           .eq('clinic_id', clinicId)
           .eq('is_active', true)
-          .ilike('name', `%${nome_profissional}%`);
+          .ilike('name', `%${normalizedName}%`);
 
-        if (!professionals || professionals.length === 0) {
-          return JSON.stringify({ 
-            success: false, 
-            message: `Não encontrei um profissional com o nome "${nome_profissional}".` 
+        let foundProfessionals = professionals;
+
+        if ((!foundProfessionals || foundProfessionals.length === 0) && !profError && fallbackTerm && fallbackTerm.length >= 3 && fallbackTerm !== normalizedName) {
+          const { data: professionalsFallback } = await supabase
+            .from('professionals')
+            .select('id, name, schedule, appointment_duration')
+            .eq('clinic_id', clinicId)
+            .eq('is_active', true)
+            .ilike('name', `%${fallbackTerm}%`);
+          foundProfessionals = professionalsFallback;
+        }
+
+        if (profError) {
+          console.log('[ai-assistant] Erro ao buscar profissional (buscar_horarios_disponiveis):', profError);
+        }
+
+        if (!foundProfessionals || foundProfessionals.length === 0) {
+          return JSON.stringify({
+            success: false,
+            message: `Não encontrei um profissional com o nome "${nome_profissional}".`
           });
         }
 
-        const professional = professionals[0];
+        const professional = foundProfessionals[0];
         
         if (!professional.schedule) {
           return JSON.stringify({ 
@@ -433,21 +457,44 @@ async function executeTool(
         const { patient_id, nome_profissional, data, horario } = args;
 
         // Find professional by name
-        const { data: professionals } = await supabase
+        const normalizedName = String(nome_profissional || '')
+          .replace(/\bdr\.?\b/gi, '')
+          .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        const fallbackTerm = normalizedName.split(' ').pop() || normalizedName;
+
+        const { data: professionals, error: profError } = await supabase
           .from('professionals')
           .select('id, name, appointment_duration')
           .eq('clinic_id', clinicId)
           .eq('is_active', true)
-          .ilike('name', `%${nome_profissional}%`);
+          .ilike('name', `%${normalizedName}%`);
 
-        if (!professionals || professionals.length === 0) {
-          return JSON.stringify({ 
-            success: false, 
-            message: `Não encontrei um profissional com o nome "${nome_profissional}".` 
+        let foundProfessionals = professionals;
+
+        if ((!foundProfessionals || foundProfessionals.length === 0) && !profError && fallbackTerm && fallbackTerm.length >= 3 && fallbackTerm !== normalizedName) {
+          const { data: professionalsFallback } = await supabase
+            .from('professionals')
+            .select('id, name, appointment_duration')
+            .eq('clinic_id', clinicId)
+            .eq('is_active', true)
+            .ilike('name', `%${fallbackTerm}%`);
+          foundProfessionals = professionalsFallback;
+        }
+
+        if (profError) {
+          console.log('[ai-assistant] Erro ao buscar profissional (criar_agendamento):', profError);
+        }
+
+        if (!foundProfessionals || foundProfessionals.length === 0) {
+          return JSON.stringify({
+            success: false,
+            message: `Não encontrei um profissional com o nome "${nome_profissional}".`
           });
         }
 
-        const professional = professionals[0];
+        const professional = foundProfessionals[0];
         const duration = professional.appointment_duration || 30;
         const [h, m] = horario.split(':').map(Number);
         const endMinutes = h * 60 + m + duration;
