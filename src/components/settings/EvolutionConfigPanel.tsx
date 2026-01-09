@@ -18,6 +18,7 @@ import {
   Unplug,
   Plug,
   Webhook,
+  CalendarOff,
 } from "lucide-react";
 
 interface EvolutionConfig {
@@ -32,6 +33,7 @@ interface EvolutionConfig {
   qr_code: string | null;
   direct_reply_enabled: boolean;
   webhook_url: string | null;
+  booking_enabled: boolean;
 }
 
 interface EvolutionConfigPanelProps {
@@ -134,6 +136,7 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
         ...data,
         direct_reply_enabled: data.direct_reply_enabled ?? false,
         webhook_url: data.webhook_url ?? null,
+        booking_enabled: data.booking_enabled ?? true,
       } as EvolutionConfig);
       setForm({
         instance_name: data.instance_name,
@@ -428,6 +431,39 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
     }
   };
 
+  const handleToggleBooking = async () => {
+    if (!config) return;
+
+    const newValue = !config.booking_enabled;
+    
+    try {
+      const { error: updateError } = await supabase
+        .from("evolution_configs")
+        .update({ booking_enabled: newValue })
+        .eq("id", config.id);
+
+      if (updateError) throw updateError;
+
+      setConfig({
+        ...config,
+        booking_enabled: newValue,
+      });
+
+      toast({
+        title: newValue ? "Agendamento ativado" : "Agendamento desativado",
+        description: newValue 
+          ? "Pacientes podem agendar consultas pelo WhatsApp." 
+          : "O agendamento via WhatsApp foi desativado temporariamente.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Erro ao alterar configuração",
+        description: error.message || "Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -636,6 +672,53 @@ export function EvolutionConfigPanel({ clinicId }: EvolutionConfigPanelProps) {
                       <p className="text-xs text-muted-foreground">
                         Quando desativado, os lembretes incluirão um link para confirmação via página web.
                       </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Booking Configuration - Only show when connected */}
+            {config.is_connected && (
+              <div className="border-t pt-4">
+                <h4 className="font-medium mb-3 flex items-center gap-2">
+                  <CalendarOff className="h-4 w-4" />
+                  Agendamento por WhatsApp
+                </h4>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Permitir agendamento via WhatsApp</p>
+                      <p className="text-xs text-muted-foreground">
+                        Pacientes podem agendar consultas diretamente pelo WhatsApp.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={config.booking_enabled}
+                      onCheckedChange={handleToggleBooking}
+                    />
+                  </div>
+
+                  {!config.booking_enabled && (
+                    <div className="p-4 bg-amber-500/10 rounded-lg space-y-2">
+                      <div className="flex items-center gap-2 text-amber-600">
+                        <CalendarOff className="h-4 w-4" />
+                        <span className="text-sm font-medium">Agendamento desativado</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        A opção "Agendar" será removida do menu e tentativas de agendamento 
+                        receberão uma mensagem informando que o serviço está em manutenção.
+                      </p>
+                    </div>
+                  )}
+
+                  {config.booking_enabled && (
+                    <div className="p-4 bg-success/10 rounded-lg">
+                      <div className="flex items-center gap-2 text-success">
+                        <Check className="h-4 w-4" />
+                        <span className="text-sm font-medium">Agendamento ativo</span>
+                      </div>
                     </div>
                   )}
                 </div>
