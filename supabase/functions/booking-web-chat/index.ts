@@ -519,7 +519,15 @@ serve(async (req) => {
 
     // 1) WAITING_CPF
     if (session.state === "WAITING_CPF") {
-      const numbersOnly = msg.replace(/\D/g, "");
+      // Check if input contains card prefix (e.g., SECMI-000001)
+      const cardPrefixMatch = msg.toUpperCase().match(/^([A-Z]+-)?(\d{5,10})$/);
+      let numbersOnly = msg.replace(/\D/g, "");
+      
+      // If card format with prefix, extract just the digits
+      if (cardPrefixMatch) {
+        numbersOnly = cardPrefixMatch[2];
+        console.log(`[booking-web-chat] Card format detected: ${msg} -> digits: ${numbersOnly}`);
+      }
       
       // If 5-10 digits, treat as card number
       if (numbersOnly.length >= 5 && numbersOnly.length <= 10) {
