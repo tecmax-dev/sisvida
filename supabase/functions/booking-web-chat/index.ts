@@ -510,7 +510,7 @@ serve(async (req) => {
     if (!msg) {
       return new Response(
         JSON.stringify({
-          response: "Para agendar sua consulta, informe seu CPF (apenas números):",
+          response: "Para agendar sua consulta, informe seu CPF ou número da carteirinha (apenas números):",
           state: session.state,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -519,22 +519,166 @@ serve(async (req) => {
 
     // 1) WAITING_CPF
     if (session.state === "WAITING_CPF") {
-      const cpf = msg.replace(/\D/g, "");
-      if (!validateCpf(cpf)) {
+      const numbersOnly = msg.replace(/\D/g, "");
+      
+      // If 5-10 digits, treat as card number
+      if (numbersOnly.length >= 5 && numbersOnly.length <= 10) {
+        console.log(`[booking-web-chat] Searching by card number: ${numbersOnly}`);
+        
+        // Search in patient_cards (titulares)
+        const { data: patientCard } = await supabase
+          .from("patient_cards")
+          .select("patient_id, expires_at, is_active, card_number")
+          .eq("clinic_id", clinic_id)
+          .eq("is_active", true)
+          .or(`card_number.ilike.%${numbersOnly},card_number.ilike.%-${numbersOnly}`)
+          .maybeSingle();
+        
+        if (patientCard) {
+          // Check if card is expired
+          if (patientCard.expires_at && new Date(patientCard.expires_at) < new Date()) {
+            const expDate = new Date(patientCard.expires_at).toLocaleDateString("pt-BR");
+            return new Response(
+              JSON.stringify({
+                response: `Sua carteirinha (${patientCard.card_number}) expirou em ${expDate}. Por favor, renove para poder agendar.`,
+                state: session.state,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          // Get patient data
+          const { data: patient } = await supabase
+            .from("patients")
+            .select("id, name, is_active, no_show_blocked_until, no_show_unblocked_at")
+            .eq("id", patientCard.patient_id)
+            .maybeSingle();
+          
+          if (!patient || patient.is_active === false) {
+            return new Response(
+              JSON.stringify({
+                response: "Cadastro inativo. Por favor, procure o atendimento para regularizar.",
+                state: session.state,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          // Check no-show block
+          const today = new Date().toISOString().split("T")[0];
+          if (patient.no_show_blocked_until && patient.no_show_blocked_until >= today && !patient.no_show_unblocked_at) {
+            const blockDate = new Date(patient.no_show_blocked_until + "T00:00:00");
+            const formattedBlockDate = blockDate.toLocaleDateString("pt-BR");
+            return new Response(
+              JSON.stringify({
+                response: `Seu cadastro está bloqueado para novos agendamentos até ${formattedBlockDate} devido a não comparecimento anterior.`,
+                state: session.state,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          await updateSession(supabase, session.id, {
+            state: "CONFIRM_IDENTITY",
+            patient_id: patient.id,
+            patient_name: patient.name,
+          });
+          
+          return new Response(
+            JSON.stringify({
+              response: `Encontrei o cadastro: *${patient.name}*\n\n1 - Confirmar\n2 - Não sou eu`,
+              state: "CONFIRM_IDENTITY",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Search in patient_dependents
+        const { data: dependent } = await supabase
+          .from("patient_dependents")
+          .select("id, name, patient_id, card_number, card_expires_at")
+          .eq("clinic_id", clinic_id)
+          .eq("is_active", true)
+          .or(`card_number.ilike.%${numbersOnly},card_number.ilike.%-${numbersOnly}`)
+          .maybeSingle();
+        
+        if (dependent) {
+          // Check if dependent card is expired
+          if (dependent.card_expires_at && new Date(dependent.card_expires_at) < new Date()) {
+            const expDate = new Date(dependent.card_expires_at).toLocaleDateString("pt-BR");
+            return new Response(
+              JSON.stringify({
+                response: `A carteirinha do dependente (${dependent.card_number}) expirou em ${expDate}. Por favor, renove para poder agendar.`,
+                state: session.state,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          // Get titular patient data
+          const { data: titularPatient } = await supabase
+            .from("patients")
+            .select("id, name, is_active")
+            .eq("id", dependent.patient_id)
+            .maybeSingle();
+          
+          if (!titularPatient || titularPatient.is_active === false) {
+            return new Response(
+              JSON.stringify({
+                response: "Cadastro do titular inativo. Por favor, procure o atendimento para regularizar.",
+                state: session.state,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          
+          await updateSession(supabase, session.id, {
+            state: "CONFIRM_IDENTITY",
+            patient_id: titularPatient.id,
+            patient_name: titularPatient.name,
+            selected_dependent_id: dependent.id,
+            selected_dependent_name: dependent.name,
+            booking_for: "dependent",
+          });
+          
+          return new Response(
+            JSON.stringify({
+              response: `Encontrei o cadastro do dependente: *${dependent.name}*\n\n1 - Confirmar\n2 - Não sou eu`,
+              state: "CONFIRM_IDENTITY",
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        // Card not found
         return new Response(
           JSON.stringify({
-            response: "CPF inválido. Por favor, envie apenas os 11 números do CPF.",
+            response: "Carteirinha não encontrada. Verifique o número ou informe seu CPF (11 números).",
+            state: session.state,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      // If exactly 11 digits, treat as CPF
+      if (numbersOnly.length !== 11 || !validateCpf(numbersOnly)) {
+        return new Response(
+          JSON.stringify({
+            response: "Entrada inválida. Por favor, informe:\n• CPF: 11 números\n• Carteirinha: apenas os números da carteirinha",
             state: session.state,
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
+      const cpf = numbersOnly;
+      const formattedCpf = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      
       const { data: patient } = await supabase
         .from("patients")
         .select("id, name, is_active, no_show_blocked_until, no_show_unblocked_at")
         .eq("clinic_id", clinic_id)
-        .eq("cpf", cpf)
+        .or(`cpf.eq.${cpf},cpf.eq.${formattedCpf}`)
         .maybeSingle();
 
       if (!patient) {
