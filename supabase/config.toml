@@ -1,5 +1,8 @@
 project_id = "eahhszmbyxapxzilfdlo"
 
+[functions.send-boleto-email]
+verify_jwt = true
+
 [functions.send-whatsapp]
 verify_jwt = true
 
