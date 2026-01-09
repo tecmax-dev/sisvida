@@ -1278,6 +1278,14 @@ async function handleBookingFlow(
     return await handleWaitingCpf(supabase, config, phone, maybeCpf, currentSession);
   }
 
+  // Fast-path for card numbers with prefix (e.g., SECMI-000001)
+  const cardPrefixMatch = messageText.toUpperCase().match(/^([A-Z]+-)?(\d{5,10})$/);
+  if (cardPrefixMatch && !shouldSkipFastPath) {
+    console.log(`[booking] Fast-path for prefixed card: ${messageText}`);
+    const currentSession = session ?? await createOrResetSession(supabase, config.clinic_id, phone, 'WAITING_CPF');
+    return await handleWaitingCpf(supabase, config, phone, messageText, currentSession);
+  }
+
   // If session was expired, only interrupt when the message is NOT a CPF
   if (wasExpired) {
     await sendWhatsAppMessage(config, phone, MESSAGES.sessionExpired);
@@ -2027,6 +2035,14 @@ async function handleWaitingCpf(
     }
   }
 
+  // Check if input contains card prefix (e.g., SECMI-000001)
+  const cardPrefixMatch = messageText.toUpperCase().match(/^([A-Z]+-)?(\d{5,10})$/);
+  if (cardPrefixMatch) {
+    const cardDigits = cardPrefixMatch[2];
+    console.log(`[booking] Card format detected: ${messageText} -> digits: ${cardDigits}`);
+    return await handleCardNumberSearch(supabase, config, phone, cardDigits, session);
+  }
+  
   // Extract only numbers from input
   const numbersOnly = messageText.replace(/\D/g, '');
   
