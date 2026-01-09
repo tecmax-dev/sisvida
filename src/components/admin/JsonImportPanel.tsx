@@ -68,6 +68,7 @@ interface BackupPayload {
 export function JsonImportPanel({ clinicId, clinicName }: JsonImportPanelProps) {
   const [payload, setPayload] = useState<BackupPayload | null>(null);
   const [fileName, setFileName] = useState<string>("");
+  const [fileSize, setFileSize] = useState<number>(0);
   const [isValidating, setIsValidating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
@@ -100,6 +101,7 @@ export function JsonImportPanel({ clinicId, clinicName }: JsonImportPanelProps) 
 
       setPayload(parsed);
       setFileName(file.name);
+      setFileSize(file.size);
       setValidationResult(null);
       setImportResult(null);
       
@@ -356,6 +358,14 @@ export function JsonImportPanel({ clinicId, clinicName }: JsonImportPanelProps) 
               <Badge variant="outline" className="gap-1">
                 <FileJson className="h-3 w-3" />
                 {fileName}
+              </Badge>
+              <Badge variant="secondary">
+                {fileSize < 1024 
+                  ? `${fileSize} B`
+                  : fileSize < 1048576
+                  ? `${(fileSize / 1024).toFixed(1)} KB`
+                  : `${(fileSize / 1048576).toFixed(2)} MB`
+                }
               </Badge>
               <Badge variant="secondary">v{payload.version}</Badge>
               {payload.clinic_name && (
