@@ -15,6 +15,7 @@ import {
 import { Building2, FileText, Calendar, DollarSign, Printer, Download } from "lucide-react";
 import { format, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -79,6 +80,7 @@ interface NegotiationStepPreviewProps {
   downPayment: number;
   firstDueDate: Date;
   clinicId: string;
+  customDates?: Record<number, Date>;
 }
 
 const MONTHS = [
@@ -95,6 +97,7 @@ export default function NegotiationStepPreview({
   downPayment,
   firstDueDate,
   clinicId,
+  customDates = {},
 }: NegotiationStepPreviewProps) {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
@@ -128,14 +131,19 @@ export default function NegotiationStepPreview({
     return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
   };
 
-  // Generate installments schedule using addMonths for consistency
+  // Generate installments schedule with custom dates support
   const installmentsSchedule = [];
   for (let i = 1; i <= installmentsCount; i++) {
-    const installmentDate = addMonths(safeFirstDueDate, i - 1);
+    const autoDate = addMonths(safeFirstDueDate, i - 1);
+    const customDate = customDates[i];
+    const isCustom = !!customDate;
+    const installmentDate = customDate || autoDate;
+    
     installmentsSchedule.push({
       number: i,
       date: installmentDate,
       value: totals.installmentValue,
+      isCustom,
     });
   }
 
@@ -433,8 +441,19 @@ export default function NegotiationStepPreview({
             </div>
             <div className="space-y-1 max-h-[150px] overflow-y-auto text-xs">
               {installmentsSchedule.slice(0, 12).map((inst) => (
-                <div key={inst.number} className="flex justify-between p-1 rounded bg-muted">
-                  <span>Parcela {inst.number}</span>
+                <div 
+                  key={inst.number} 
+                  className={cn(
+                    "flex justify-between p-1 rounded",
+                    inst.isCustom 
+                      ? "bg-amber-100 dark:bg-amber-950/30" 
+                      : "bg-muted"
+                  )}
+                >
+                  <span>
+                    Parcela {inst.number}
+                    {inst.isCustom && <span className="text-amber-600 ml-1">*</span>}
+                  </span>
                   <span>{format(inst.date, "dd/MM/yyyy")} - {formatCurrency(inst.value)}</span>
                 </div>
               ))}
@@ -442,6 +461,9 @@ export default function NegotiationStepPreview({
                 <div className="text-center text-muted-foreground">
                   ... e mais {installmentsCount - 12} parcela(s)
                 </div>
+              )}
+              {Object.keys(customDates).length > 0 && (
+                <p className="text-amber-600 text-center mt-2">* Datas personalizadas</p>
               )}
             </div>
           </div>
