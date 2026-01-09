@@ -252,7 +252,7 @@ async function executeTool(
             .select('start_time')
             .eq('professional_id', professional.id)
             .eq('appointment_date', dateStr)
-            .not('status', 'in', '("cancelled","no_show")');
+          .not('status', 'in', '(cancelled,no_show)');
 
           const bookedTimes = new Set(existingAppts?.map((a: any) => a.start_time) || []);
           
@@ -381,7 +381,7 @@ async function executeTool(
           .select('start_time, end_time')
           .eq('professional_id', professional.id)
           .eq('appointment_date', data)
-          .not('status', 'in', '("cancelled","no_show")');
+          .not('status', 'in', '(cancelled,no_show)');
 
         console.log(`[ai-assistant] buscar_horarios: Agendamentos existentes para ${data}: ${existingAppts?.length || 0}`, apptsError ? `Erro: ${apptsError.message}` : '', existingAppts ? JSON.stringify(existingAppts) : '');
 
