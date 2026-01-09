@@ -2534,6 +2534,7 @@ export type Database = {
         Row: {
           api_key: string
           api_url: string
+          booking_enabled: boolean | null
           clinic_id: string
           connected_at: string | null
           created_at: string
@@ -2549,6 +2550,7 @@ export type Database = {
         Insert: {
           api_key: string
           api_url: string
+          booking_enabled?: boolean | null
           clinic_id: string
           connected_at?: string | null
           created_at?: string
@@ -2564,6 +2566,7 @@ export type Database = {
         Update: {
           api_key?: string
           api_url?: string
+          booking_enabled?: boolean | null
           clinic_id?: string
           connected_at?: string | null
           created_at?: string

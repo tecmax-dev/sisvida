@@ -664,10 +664,33 @@ serve(async (req) => {
       });
     }
 
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
     // Check if user selected option 6 (Agendar Consultas) - hand off to booking flow
     const cleanMessage = message.trim();
     if (cleanMessage === '6' || /^(6\b|agendar|agendamento|marcar consulta)/i.test(cleanMessage)) {
-      console.log('[ai-assistant] User selected option 6 - handing off to booking flow');
+      console.log('[ai-assistant] User selected option 6 - checking booking_enabled');
+      
+      // Check if booking is enabled for this clinic
+      const { data: evolutionConfig } = await supabase
+        .from('evolution_configs')
+        .select('booking_enabled')
+        .eq('clinic_id', clinic_id)
+        .maybeSingle();
+      
+      const bookingEnabled = evolutionConfig?.booking_enabled !== false;
+      
+      if (!bookingEnabled) {
+        console.log('[ai-assistant] Booking is disabled, sending maintenance message');
+        return new Response(JSON.stringify({ 
+          response: `⚠️ *Agendamento em Manutenção*\n\nO agendamento de consultas pelo WhatsApp está temporariamente indisponível.\n\nEstamos trabalhando para restabelecer o serviço em breve. Por favor, tente novamente mais tarde.\n\nAgradecemos sua compreensão! 🙏`,
+          handoff_to_booking: false
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      console.log('[ai-assistant] Booking enabled - handing off to booking flow');
       return new Response(JSON.stringify({ 
         response: null,
         handoff_to_booking: true,
@@ -687,8 +710,6 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get clinic info
     const { data: clinic } = await supabase

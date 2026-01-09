@@ -166,6 +166,7 @@ interface EvolutionConfig {
   instance_name: string;
   clinic_id: string;
   direct_reply_enabled?: boolean;
+  booking_enabled?: boolean;
 }
 
 interface PatientRecord {
@@ -821,13 +822,49 @@ Se precisar de ajuda, entre em contato conosco.`,
     return `Ops! A carteirinha de *${firstName}* está vencida desde *${expiryDate}*. 😕\n\nEntre em contato com a clínica para renovar, depois é só voltar aqui! 💪`;
   },
 
-  // Main menu after identity confirmed
+  // Main menu after identity confirmed - dynamic based on booking_enabled
   mainMenu: `O que você deseja fazer?
 
 1️⃣ *Agendar* nova consulta
 2️⃣ *Cancelar* consulta existente
 3️⃣ *Reagendar* consulta
 4️⃣ *Ver* minhas consultas
+
+_Digite o número da opção desejada._`,
+
+  // Menu without booking option
+  mainMenuNoBooking: `O que você deseja fazer?
+
+1️⃣ *Cancelar* consulta existente
+2️⃣ *Reagendar* consulta
+3️⃣ *Ver* minhas consultas
+
+_Digite o número da opção desejada._`,
+
+  // Booking maintenance message
+  bookingMaintenance: `⚠️ *Agendamento em Manutenção*
+
+O agendamento de consultas pelo WhatsApp está temporariamente indisponível.
+
+Estamos trabalhando para restabelecer o serviço em breve. Por favor, tente novamente mais tarde.
+
+Agradecemos sua compreensão! 🙏`,
+
+  // Helper function to get the appropriate menu based on booking_enabled
+  getMainMenu: (bookingEnabled: boolean) => bookingEnabled 
+    ? `O que você deseja fazer?
+
+1️⃣ *Agendar* nova consulta
+2️⃣ *Cancelar* consulta existente
+3️⃣ *Reagendar* consulta
+4️⃣ *Ver* minhas consultas
+
+_Digite o número da opção desejada._`
+    : `O que você deseja fazer?
+
+1️⃣ *Cancelar* consulta existente
+2️⃣ *Reagendar* consulta
+3️⃣ *Ver* minhas consultas
 
 _Digite o número da opção desejada._`,
 
@@ -2534,18 +2571,26 @@ Por favor, entre em contato com a clínica para renovar sua carteirinha.`
 async function sendMainMenuButtons(
   config: EvolutionConfig,
   phone: string,
-  patientName: string
+  patientName: string,
+  bookingEnabled: boolean = true
 ): Promise<boolean> {
+  const buttons = bookingEnabled
+    ? [
+        { id: 'menu_schedule', text: '📅 Agendar' },
+        { id: 'menu_cancel', text: '❌ Cancelar' },
+        { id: 'menu_list', text: '📋 Minhas consultas' }
+      ]
+    : [
+        { id: 'menu_cancel', text: '❌ Cancelar' },
+        { id: 'menu_list', text: '📋 Minhas consultas' }
+      ];
+
   return await sendWhatsAppButtons(
     config,
     phone,
     '📋 Menu Principal',
     `Olá, *${patientName}*! 👋\n\nO que você gostaria de fazer?`,
-    [
-      { id: 'menu_schedule', text: '📅 Agendar' },
-      { id: 'menu_cancel', text: '❌ Cancelar' },
-      { id: 'menu_list', text: '📋 Minhas consultas' }
-    ],
+    buttons,
     'Escolha uma opção'
   );
 }
@@ -2676,6 +2721,7 @@ async function handleMainMenu(
   session: BookingSession
 ): Promise<{ handled: boolean; newState?: BookingState }> {
   const choice = messageText.trim().toLowerCase();
+  const bookingEnabled = config.booking_enabled !== false;
 
   // Try AI intent extraction for natural language
   let intent: 'schedule' | 'cancel' | 'reschedule' | 'list' | null = null;
@@ -2690,17 +2736,22 @@ async function handleMainMenu(
   } else if (choice === 'menu_list' || choice === '📋 minhas consultas' || choice === 'minhas consultas' || choice === 'listar') {
     intent = 'list';
   }
-  // Then check traditional numeric patterns
-  else if (choice === '1') {
-    intent = 'schedule';
-  } else if (choice === '2') {
-    intent = 'cancel';
-  } else if (choice === '3') {
-    intent = 'reschedule';
-  } else if (choice === '4') {
-    intent = 'list';
+  // Then check traditional numeric patterns - adjust based on booking_enabled
+  else if (bookingEnabled) {
+    // With booking: 1=schedule, 2=cancel, 3=reschedule, 4=list
+    if (choice === '1') intent = 'schedule';
+    else if (choice === '2') intent = 'cancel';
+    else if (choice === '3') intent = 'reschedule';
+    else if (choice === '4') intent = 'list';
   } else {
-    // Try AI for natural language
+    // Without booking: 1=cancel, 2=reschedule, 3=list
+    if (choice === '1') intent = 'cancel';
+    else if (choice === '2') intent = 'reschedule';
+    else if (choice === '3') intent = 'list';
+  }
+  
+  // Try AI for natural language if no intent yet
+  if (!intent) {
     const aiResult = await getAIIntent(messageText, 'MAIN_MENU');
     console.log('[menu] AI result:', aiResult);
     
@@ -2711,16 +2762,27 @@ async function handleMainMenu(
       else if (aiResult.intent === 'list') intent = 'list';
       else if (aiResult.intent === 'select_option' && aiResult.entities.option_number) {
         const num = aiResult.entities.option_number;
-        if (num === 1) intent = 'schedule';
-        else if (num === 2) intent = 'cancel';
-        else if (num === 3) intent = 'reschedule';
-        else if (num === 4) intent = 'list';
+        if (bookingEnabled) {
+          if (num === 1) intent = 'schedule';
+          else if (num === 2) intent = 'cancel';
+          else if (num === 3) intent = 'reschedule';
+          else if (num === 4) intent = 'list';
+        } else {
+          if (num === 1) intent = 'cancel';
+          else if (num === 2) intent = 'reschedule';
+          else if (num === 3) intent = 'list';
+        }
       }
     }
   }
 
-  // Handle schedule intent
+  // Handle schedule intent - check if booking is enabled
   if (intent === 'schedule') {
+    if (!bookingEnabled) {
+      await sendWhatsAppMessage(config, phone, MESSAGES.bookingMaintenance);
+      return { handled: true, newState: 'MAIN_MENU' };
+    }
+    
     // Check if patient has dependents - ask who the appointment is for
     if (session.available_dependents && session.available_dependents.length > 0) {
       await updateSession(supabase, session.id, {
@@ -2750,10 +2812,12 @@ async function handleMainMenu(
     return await navigateToList(supabase, config, phone, session);
   }
 
-  // Fallback - didn't understand
-  await sendWhatsAppMessage(config, phone, 
-    `Não entendi. Por favor, escolha uma opção:\n\n1️⃣ Agendar\n2️⃣ Cancelar\n3️⃣ Reagendar\n4️⃣ Ver consultas\n\n_Ou diga o que deseja fazer (ex: "quero marcar consulta")_` + MESSAGES.hintMenu
-  );
+  // Fallback - didn't understand (show appropriate menu)
+  const fallbackMsg = bookingEnabled
+    ? `Não entendi. Por favor, escolha uma opção:\n\n1️⃣ Agendar\n2️⃣ Cancelar\n3️⃣ Reagendar\n4️⃣ Ver consultas\n\n_Ou diga o que deseja fazer (ex: "quero marcar consulta")_`
+    : `Não entendi. Por favor, escolha uma opção:\n\n1️⃣ Cancelar\n2️⃣ Reagendar\n3️⃣ Ver consultas\n\n_Ou diga o que deseja fazer_`;
+  
+  await sendWhatsAppMessage(config, phone, fallbackMsg + MESSAGES.hintMenu);
   return { handled: true, newState: 'MAIN_MENU' };
 }
 
