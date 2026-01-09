@@ -3577,46 +3577,86 @@ async function handleWaitingRegistrationRelationship(
 }
 
 // Handler for receiving CPF photo - creates inactive dependent pending approval
-async function handleWaitingDependentCpfPhoto(
+// Handle CPF photo upload for dependent registration (called from main handler when image is received)
+async function handleDependentCpfPhotoUpload(
   supabase: SupabaseClient,
-  config: EvolutionConfig,
   phone: string,
-  messageText: string,
-  session: BookingSession
-): Promise<{ handled: boolean; newState?: BookingState }> {
-  // For now, since we can't easily detect image messages in this flow,
-  // we'll create the dependent as pending and ask them to contact the clinic
-  // with the CPF photo via regular WhatsApp
-  
-  // Check if user wants to cancel
-  if (/^(cancelar|desistir|sair)$/i.test(messageText.trim())) {
-    await updateSession(supabase, session.id, {
-      state: 'WAITING_CPF',
-      pending_registration_cpf: null,
-      pending_registration_name: null,
-      pending_registration_birthdate: null,
-      pending_registration_type: null,
-      pending_registration_titular_cpf: null,
-      pending_registration_relationship: null,
-    });
-    await sendWhatsAppMessage(config, phone, `❌ Cadastro cancelado.\n\nDigite *MENU* para recomeçar.`);
-    return { handled: true, newState: 'WAITING_CPF' };
-  }
-  
-  // Check for confirmation to proceed without photo (for now)
-  const isConfirm = POSITIVE_REGEX.test(messageText) || messageText === '1';
-  
-  if (!isConfirm) {
-    // Ask user to confirm they want to proceed
-    await sendWhatsAppMessage(config, phone, 
-      `📸 *Envio da foto do CPF*\n\n` +
-      `Por favor, envie a foto do CPF do dependente diretamente para o WhatsApp da clínica ou responda *1* para continuar e enviar depois.\n\n` +
-      `⚠️ Seu cadastro ficará pendente de aprovação até o envio da documentação.`
-    );
-    return { handled: true, newState: 'WAITING_DEPENDENT_CPF_PHOTO' };
-  }
+  instanceName: string,
+  messageId: string,
+  imageData: any,
+  messageType: string,
+  session: any
+): Promise<boolean> {
+  console.log('[dependent-cpf] Processing CPF photo for dependent registration');
   
   try {
+    // Fetch Evolution API config
+    const { data: evolutionConfig } = await supabase
+      .from('whatsapp_config')
+      .select('api_url, api_key, instance_name, clinic_id')
+      .eq('clinic_id', session.clinic_id)
+      .eq('is_active', true)
+      .maybeSingle();
+    
+    if (!evolutionConfig) {
+      console.error('[dependent-cpf] No Evolution config found');
+      return false;
+    }
+    
+    const config: EvolutionConfig = {
+      api_url: evolutionConfig.api_url,
+      api_key: evolutionConfig.api_key,
+      instance_name: evolutionConfig.instance_name,
+      clinic_id: evolutionConfig.clinic_id,
+    };
+    
+    // Download image via Evolution API
+    let photoUrl: string | null = null;
+    
+    try {
+      const downloadUrl = `${config.api_url}/chat/getBase64FromMediaMessage/${config.instance_name}`;
+      const mediaResponse = await fetch(downloadUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': config.api_key,
+        },
+        body: JSON.stringify({
+          message: { key: { id: messageId } },
+          convertToMp4: false,
+        }),
+      });
+      
+      if (mediaResponse.ok) {
+        const mediaData = await mediaResponse.json();
+        const base64 = mediaData?.base64;
+        
+        if (base64) {
+          // Upload to storage
+          const fileName = `${session.clinic_id}/${Date.now()}_${phone.replace(/\D/g, '')}.jpg`;
+          const binaryData = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+          
+          const { error: uploadError } = await supabase.storage
+            .from('dependent-cpf-photos')
+            .upload(fileName, binaryData, {
+              contentType: 'image/jpeg',
+              upsert: true,
+            });
+          
+          if (!uploadError) {
+            photoUrl = fileName;
+            console.log('[dependent-cpf] Photo uploaded successfully:', fileName);
+          } else {
+            console.error('[dependent-cpf] Upload error:', uploadError);
+          }
+        }
+      } else {
+        console.error('[dependent-cpf] Media download failed:', mediaResponse.status);
+      }
+    } catch (mediaError) {
+      console.error('[dependent-cpf] Media processing error:', mediaError);
+    }
+    
     // Find titular patient
     const titularCpfClean = session.pending_registration_titular_cpf?.replace(/\D/g, '') || '';
     const titularCpfFormatted = titularCpfClean.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
@@ -3632,7 +3672,7 @@ async function handleWaitingDependentCpfPhoto(
     if (!titularPatient) {
       await sendWhatsAppMessage(config, phone, `❌ Não foi possível localizar o titular. Tente novamente.`);
       await updateSession(supabase, session.id, { state: 'WAITING_CPF' });
-      return { handled: true, newState: 'WAITING_CPF' };
+      return true;
     }
     
     // Generate card number
@@ -3674,12 +3714,12 @@ async function handleWaitingDependentCpfPhoto(
       .single();
     
     if (dependentError) {
-      console.error('[registration] Error creating pending dependent:', dependentError);
+      console.error('[dependent-cpf] Error creating dependent:', dependentError);
       await sendWhatsAppMessage(config, phone, `❌ Erro ao processar cadastro. Tente novamente.`);
-      return { handled: true, newState: 'FINISHED' };
+      return true;
     }
     
-    // Create approval request
+    // Create approval request WITH photo URL
     await supabase
       .from('pending_dependent_approvals')
       .insert({
@@ -3687,6 +3727,7 @@ async function handleWaitingDependentCpfPhoto(
         patient_id: titularPatient.id,
         dependent_id: dependent.id,
         requester_phone: phone.replace(/\D/g, ''),
+        cpf_photo_url: photoUrl,
         status: 'pending',
       });
     
@@ -3701,22 +3742,55 @@ async function handleWaitingDependentCpfPhoto(
       pending_registration_relationship: null,
     });
     
+    // Send CORRECT confirmation message
     await sendWhatsAppMessage(config, phone, 
-      `✅ *Solicitação de cadastro enviada!*\n\n` +
+      `✅ *Foto do CPF recebida!*\n\n` +
       `👤 Dependente: *${dependent.name}*\n` +
       `👨‍👩‍👧 Titular: *${titularPatient.name}*\n\n` +
-      `📋 Seu cadastro está *aguardando aprovação*.\n\n` +
-      `⚠️ Por favor, envie uma foto do CPF do dependente para este mesmo número para agilizar a análise.\n\n` +
-      `Você será notificado quando o cadastro for aprovado! 🎉`
+      `📋 Seu cadastro está *aguardando aprovação* pela nossa equipe.\n\n` +
+      `Você será notificado assim que a análise for concluída! 🎉`
     );
     
-    return { handled: true, newState: 'FINISHED' };
+    console.log(`[dependent-cpf] Successfully processed CPF photo for ${dependent.name}`);
+    return true;
     
   } catch (error) {
-    console.error('[registration] Error in photo handler:', error);
-    await sendWhatsAppMessage(config, phone, `❌ Erro ao processar cadastro. Tente novamente.`);
-    return { handled: true, newState: 'FINISHED' };
+    console.error('[dependent-cpf] Error:', error);
+    return false;
   }
+}
+
+async function handleWaitingDependentCpfPhoto(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  messageText: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  // Check if user wants to cancel
+  if (/^(cancelar|desistir|sair)$/i.test(messageText.trim())) {
+    await updateSession(supabase, session.id, {
+      state: 'WAITING_CPF',
+      pending_registration_cpf: null,
+      pending_registration_name: null,
+      pending_registration_birthdate: null,
+      pending_registration_type: null,
+      pending_registration_titular_cpf: null,
+      pending_registration_relationship: null,
+    });
+    await sendWhatsAppMessage(config, phone, `❌ Cadastro cancelado.\n\nDigite *MENU* para recomeçar.`);
+    return { handled: true, newState: 'WAITING_CPF' };
+  }
+  
+  // If text message received, guide user to send photo
+  await sendWhatsAppMessage(config, phone, 
+    `📸 *Aguardando foto do CPF*\n\n` +
+    `Por favor, envie uma *foto* do documento CPF do dependente *${session.pending_registration_name || ''}*.\n\n` +
+    `💡 Dica: Tire a foto em local bem iluminado para melhor visualização.\n\n` +
+    `Digite *cancelar* para desistir.`
+  );
+  
+  return { handled: true, newState: 'WAITING_DEPENDENT_CPF_PHOTO' };
 }
 
 // Validate CNPJ checksum
@@ -6035,8 +6109,42 @@ serve(async (req) => {
 
     console.log(`[webhook] Phone: ${phone}, Message: "${messageText}", Type: ${messageType}`);
 
-    // Handle image/document messages for payslip submissions
+    // Handle image/document messages - check session state first
     if (phone && (imageMessage || documentMessage || messageType === 'imageMessage' || messageType === 'documentMessage')) {
+      
+      // PRIORITY: Check if session is waiting for dependent CPF photo
+      const phoneCandidatesForImage = getBrazilPhoneVariants(phone);
+      const { data: dependentPhotoSession } = await supabase
+        .from('whatsapp_booking_sessions')
+        .select('id, state, clinic_id, pending_registration_name, pending_registration_birthdate, pending_registration_relationship, pending_registration_titular_cpf, pending_registration_cpf')
+        .in('phone', phoneCandidatesForImage)
+        .eq('state', 'WAITING_DEPENDENT_CPF_PHOTO')
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      // If waiting for dependent CPF photo, process in that flow
+      if (dependentPhotoSession) {
+        console.log('[webhook] Processing as dependent CPF photo');
+        const cpfPhotoHandled = await handleDependentCpfPhotoUpload(
+          supabase,
+          phone,
+          payload.instance || '',
+          payload.data?.key?.id || '',
+          imageMessage || documentMessage,
+          messageType || '',
+          dependentPhotoSession
+        );
+        
+        if (cpfPhotoHandled) {
+          return new Response(
+            JSON.stringify({ success: true, message: 'Dependent CPF photo processed' }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+      
+      // Otherwise, process as payslip
       const imageHandled = await handlePayslipImageUpload(
         supabase, 
         phone, 
