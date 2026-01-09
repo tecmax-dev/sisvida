@@ -101,6 +101,7 @@ export default function NewNegotiationDialog({
   const [installmentsCount, setInstallmentsCount] = useState(1);
   const [downPayment, setDownPayment] = useState(0);
   const [firstDueDate, setFirstDueDate] = useState<Date>(new Date());
+  const [customInstallmentDates, setCustomInstallmentDates] = useState<Record<number, Date>>({});
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -114,6 +115,7 @@ export default function NewNegotiationDialog({
       setInstallmentsCount(1);
       setDownPayment(0);
       setFirstDueDate(new Date());
+      setCustomInstallmentDates({});
     }
   }, [open]);
 
@@ -335,7 +337,11 @@ export default function NewNegotiationDialog({
       const baseDueDate = new Date(`${firstDueDate.toISOString().split("T")[0]}T12:00:00`);
       
       for (let i = 1; i <= installmentsCount; i++) {
-        const dueDate = addMonths(baseDueDate, i - 1);
+        // Use custom date if available, otherwise calculate automatically
+        const dueDate = customInstallmentDates[i] 
+          ? customInstallmentDates[i] 
+          : addMonths(baseDueDate, i - 1);
+        
         installments.push({
           negotiation_id: negotiation.id,
           installment_number: i,
@@ -446,6 +452,8 @@ export default function NewNegotiationDialog({
               firstDueDate={firstDueDate}
               onFirstDueDateChange={setFirstDueDate}
               installmentValue={totals.installmentValue}
+              customDates={customInstallmentDates}
+              onCustomDatesChange={setCustomInstallmentDates}
             />
           )}
 
@@ -459,6 +467,7 @@ export default function NewNegotiationDialog({
               downPayment={downPayment}
               firstDueDate={firstDueDate}
               clinicId={clinicId}
+              customDates={customInstallmentDates}
             />
           )}
         </div>
