@@ -64,12 +64,12 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`Starting AI backup for clinic: ${clinicId}`);
+    console.log(`Starting simplified AI backup for clinic: ${clinicId}`);
 
     // Fetch clinic info
     const { data: clinicData, error: clinicError } = await supabaseAdmin
       .from("clinics")
-      .select("*")
+      .select("id, name, slug")
       .eq("id", clinicId)
       .single();
 
@@ -81,18 +81,14 @@ Deno.serve(async (req) => {
     }
 
     // Helper function to fetch all data with pagination
-    const fetchAllData = async (table: string, filter: { column: string; value: string } | null, orderBy?: string) => {
+    const fetchAllData = async (table: string, filter: { column: string; value: string }, orderBy?: string) => {
       const allData: any[] = [];
       let from = 0;
       const pageSize = 1000;
       let hasMore = true;
 
       while (hasMore) {
-        let query = supabaseAdmin.from(table).select("*");
-        
-        if (filter) {
-          query = query.eq(filter.column, filter.value);
-        }
+        let query = supabaseAdmin.from(table).select("*").eq(filter.column, filter.value);
         
         if (orderBy) {
           query = query.order(orderBy, { ascending: true });
@@ -102,7 +98,7 @@ Deno.serve(async (req) => {
         
         if (error) {
           console.error(`Error fetching ${table}:`, error);
-          return { data: allData, error: error.message };
+          return [];
         }
         
         if (data && data.length > 0) {
@@ -114,232 +110,316 @@ Deno.serve(async (req) => {
         }
       }
       
-      return { data: allData, error: null };
+      return allData;
     };
 
-    // Define tables in import order (respecting foreign keys)
-    const tablesToExport = [
-      { table: "clinics", filter: { column: "id", value: clinicId }, orderBy: "created_at" },
-      { table: "contribution_types", filter: { column: "clinic_id", value: clinicId }, orderBy: "name" },
-      { table: "employer_categories", filter: { column: "clinic_id", value: clinicId }, orderBy: "name" },
-      { table: "employers", filter: { column: "clinic_id", value: clinicId }, orderBy: "trade_name" },
-      { table: "insurance_plans", filter: { column: "clinic_id", value: clinicId }, orderBy: "name" },
-      { table: "professionals", filter: { column: "clinic_id", value: clinicId }, orderBy: "name" },
-      { table: "procedures", filter: { column: "clinic_id", value: clinicId }, orderBy: "name" },
-      { table: "patients", filter: { column: "clinic_id", value: clinicId }, orderBy: "name" },
-      { table: "patient_dependents", filter: { column: "clinic_id", value: clinicId }, orderBy: "name" },
-      { table: "patient_cards", filter: { column: "clinic_id", value: clinicId }, orderBy: "created_at" },
-      { table: "accounting_offices", filter: { column: "clinic_id", value: clinicId }, orderBy: "name" },
-      { table: "employer_contributions", filter: { column: "clinic_id", value: clinicId }, orderBy: "due_date" },
-      { table: "medical_records", filter: { column: "clinic_id", value: clinicId }, orderBy: "created_at" },
-      { table: "appointments", filter: { column: "clinic_id", value: clinicId }, orderBy: "appointment_date" },
-      { table: "user_roles", filter: { column: "clinic_id", value: clinicId }, orderBy: "created_at" },
-      { table: "access_groups", filter: { column: "clinic_id", value: clinicId }, orderBy: "name" },
-      { table: "clinic_holidays", filter: { column: "clinic_id", value: clinicId }, orderBy: "holiday_date" },
-      { table: "document_settings", filter: { column: "clinic_id", value: clinicId }, orderBy: null },
-    ];
+    // Helper to format date only (YYYY-MM-DD)
+    const formatDate = (d: string | null): string | null => {
+      if (!d) return null;
+      return d.split('T')[0];
+    };
 
-    const data: Record<string, any[]> = {};
-    const metadata: Record<string, number> = {};
-    const errors: string[] = [];
+    // Fetch all data in parallel
+    console.log("Fetching all data...");
+    
+    const [
+      professionalsRaw,
+      proceduresRaw,
+      employersRaw,
+      patientsRaw,
+      patientDependentsRaw,
+      patientCardsRaw,
+      accountingOfficesRaw,
+      contributionTypesRaw,
+      employerContributionsRaw,
+      medicalRecordsRaw,
+      appointmentsRaw,
+      accessGroupsRaw,
+      anamneseTemplatesRaw,
+      professionalSchedulesRaw
+    ] = await Promise.all([
+      fetchAllData("professionals", { column: "clinic_id", value: clinicId }, "name"),
+      fetchAllData("procedures", { column: "clinic_id", value: clinicId }, "name"),
+      fetchAllData("employers", { column: "clinic_id", value: clinicId }, "name"),
+      fetchAllData("patients", { column: "clinic_id", value: clinicId }, "name"),
+      fetchAllData("patient_dependents", { column: "clinic_id", value: clinicId }, "name"),
+      fetchAllData("patient_cards", { column: "clinic_id", value: clinicId }, "created_at"),
+      fetchAllData("accounting_offices", { column: "clinic_id", value: clinicId }, "name"),
+      fetchAllData("contribution_types", { column: "clinic_id", value: clinicId }, "name"),
+      fetchAllData("employer_contributions", { column: "clinic_id", value: clinicId }, "due_date"),
+      fetchAllData("medical_records", { column: "clinic_id", value: clinicId }, "created_at"),
+      fetchAllData("appointments", { column: "clinic_id", value: clinicId }, "appointment_date"),
+      fetchAllData("access_groups", { column: "clinic_id", value: clinicId }, "name"),
+      fetchAllData("anamnese_templates", { column: "clinic_id", value: clinicId }, "title"),
+      fetchAllData("professional_schedules", { column: "clinic_id", value: clinicId }, "created_at")
+    ]);
 
-    // Fetch data for each table
-    for (const config of tablesToExport) {
-      console.log(`Fetching ${config.table}...`);
-      const result = await fetchAllData(config.table, config.filter, config.orderBy || undefined);
-      data[config.table] = result.data;
-      metadata[config.table] = result.data.length;
-      if (result.error) {
-        errors.push(`${config.table}: ${result.error}`);
-      }
-      console.log(`${config.table}: ${result.data.length} records`);
+    console.log(`Fetched: professionals=${professionalsRaw.length}, employers=${employersRaw.length}, patients=${patientsRaw.length}`);
+
+    // Create sets of valid IDs for referential integrity validation
+    const patientIds = new Set(patientsRaw.map((p: any) => p.id));
+    const professionalIds = new Set(professionalsRaw.map((p: any) => p.id));
+    const employerIds = new Set(employersRaw.map((e: any) => e.id));
+    const contributionTypeIds = new Set(contributionTypesRaw.map((ct: any) => ct.id));
+
+    // Transform and validate data according to the simplified structure
+
+    // CLINIC
+    const clinic = {
+      name: clinicData.name,
+      slug: clinicData.slug
+    };
+
+    // PROFESSIONALS - simplified
+    const professionals = professionalsRaw.map((p: any) => ({
+      id: p.id,
+      name: p.name || "Profissional não informado",
+      email: p.email || null,
+      role: p.role || "medico"
+    }));
+
+    // PROCEDURES - keep original structure
+    const procedures = proceduresRaw.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      description: p.description,
+      duration_minutes: p.duration_minutes,
+      price: p.price,
+      is_active: p.is_active
+    }));
+
+    // EMPLOYERS - simplified
+    const employers = employersRaw.map((e: any) => ({
+      id: e.id,
+      name: e.name || "Empresa não informada",
+      cnpj: e.cnpj || null,
+      trade_name: e.trade_name,
+      email: e.email,
+      phone: e.phone,
+      address: e.address,
+      city: e.city,
+      state: e.state,
+      is_active: e.is_active
+    }));
+
+    // PATIENTS - CRITICAL: name and phone NEVER null
+    const patients = patientsRaw.map((p: any) => ({
+      id: p.id,
+      name: p.name || "Nome não informado",  // NEVER null
+      phone: p.phone ?? "",  // NEVER null, use empty string
+      cpf: p.cpf,
+      birth_date: formatDate(p.birth_date),
+      email: p.email,
+      employer_id: employerIds.has(p.employer_id) ? p.employer_id : null,  // Validate FK
+      insurance_plan_id: p.insurance_plan_id,
+      is_active: p.is_active ?? true,
+      gender: p.gender,
+      address: p.address,
+      city: p.city,
+      state: p.state,
+      cep: p.cep,
+      rg: p.rg,
+      registration_number: p.registration_number
+    }));
+
+    // PATIENT_DEPENDENTS - validate patient_id exists
+    const patientDependents = patientDependentsRaw
+      .filter((pd: any) => patientIds.has(pd.patient_id))
+      .map((pd: any) => ({
+        id: pd.id,
+        patient_id: pd.patient_id,
+        name: pd.name || "Dependente não informado",
+        relationship: pd.relationship,
+        birth_date: formatDate(pd.birth_date),
+        cpf: pd.cpf
+      }));
+
+    // PATIENT_CARDS - validate patient_id exists
+    const patientCards = patientCardsRaw
+      .filter((pc: any) => patientIds.has(pc.patient_id))
+      .map((pc: any) => ({
+        id: pc.id,
+        patient_id: pc.patient_id,
+        card_number: pc.card_number,
+        expires_at: pc.expires_at,
+        is_active: pc.is_active
+      }));
+
+    // ACCOUNTING_OFFICES
+    const accountingOffices = accountingOfficesRaw.map((ao: any) => ({
+      id: ao.id,
+      name: ao.name || "Escritório não informado",
+      email: ao.email,
+      cnpj: ao.cnpj,
+      phone: ao.phone,
+      contact_name: ao.contact_name,
+      is_active: ao.is_active
+    }));
+
+    // EMPLOYER_CONTRIBUTIONS - validate employer_id and contribution_type_id exist
+    const employerContributions = employerContributionsRaw
+      .filter((ec: any) => employerIds.has(ec.employer_id) && contributionTypeIds.has(ec.contribution_type_id))
+      .map((ec: any) => ({
+        id: ec.id,
+        employer_id: ec.employer_id,
+        contribution_type_id: ec.contribution_type_id,
+        value: ec.value,
+        competence_month: ec.competence_month,
+        competence_year: ec.competence_year,
+        due_date: formatDate(ec.due_date),
+        status: ec.status,
+        paid_at: ec.paid_at,
+        paid_value: ec.paid_value,
+        notes: ec.notes
+      }));
+
+    // MEDICAL_RECORDS - CRITICAL: validate patient_id exists
+    const medicalRecords = medicalRecordsRaw
+      .filter((mr: any) => patientIds.has(mr.patient_id))
+      .map((mr: any) => ({
+        id: mr.id,
+        patient_id: mr.patient_id,
+        professional_id: professionalIds.has(mr.professional_id) ? mr.professional_id : null,
+        record_date: formatDate(mr.record_date) || formatDate(mr.created_at),
+        notes: mr.notes,
+        diagnosis: mr.diagnosis,
+        prescription: mr.prescription,
+        vital_signs: mr.vital_signs,
+        exams_requested: mr.exams_requested,
+        created_at: mr.created_at
+      }));
+
+    // APPOINTMENTS - CRITICAL: validate patient_id and professional_id exist
+    const appointments = appointmentsRaw
+      .filter((a: any) => patientIds.has(a.patient_id) && professionalIds.has(a.professional_id))
+      .map((a: any) => ({
+        id: a.id,
+        patient_id: a.patient_id,
+        professional_id: a.professional_id,
+        procedure_id: a.procedure_id,
+        appointment_date: formatDate(a.appointment_date),
+        start_time: a.start_time,
+        end_time: a.end_time,
+        status: a.status,
+        type: a.type,
+        notes: a.notes
+      }));
+
+    // ACCESS_GROUPS
+    const accessGroups = accessGroupsRaw.map((ag: any) => ({
+      id: ag.id,
+      name: ag.name,
+      description: ag.description,
+      is_active: ag.is_active,
+      is_system: ag.is_system
+    }));
+
+    // ANAMNESE_TEMPLATES
+    const anamneseTemplates = anamneseTemplatesRaw.map((at: any) => ({
+      id: at.id,
+      title: at.title,
+      description: at.description,
+      is_active: at.is_active
+    }));
+
+    // PROFESSIONAL_SCHEDULES
+    const professionalSchedules = professionalSchedulesRaw
+      .filter((ps: any) => professionalIds.has(ps.professional_id))
+      .map((ps: any) => ({
+        id: ps.id,
+        professional_id: ps.professional_id,
+        day_of_week: ps.day_of_week,
+        start_time: ps.start_time,
+        end_time: ps.end_time,
+        is_active: ps.is_active
+      }));
+
+    // Log validation summary
+    const orphanedMedicalRecords = medicalRecordsRaw.length - medicalRecords.length;
+    const orphanedAppointments = appointmentsRaw.length - appointments.length;
+    const orphanedContributions = employerContributionsRaw.length - employerContributions.length;
+    
+    if (orphanedMedicalRecords > 0) {
+      console.log(`Filtered ${orphanedMedicalRecords} orphaned medical records`);
+    }
+    if (orphanedAppointments > 0) {
+      console.log(`Filtered ${orphanedAppointments} orphaned appointments`);
+    }
+    if (orphanedContributions > 0) {
+      console.log(`Filtered ${orphanedContributions} orphaned contributions`);
     }
 
-    // Fetch accounting_office_employers (via accounting_offices)
-    const accountingOfficeIds = data.accounting_offices?.map((ao: any) => ao.id) || [];
-    if (accountingOfficeIds.length > 0) {
-      const { data: aoeData, error: aoeError } = await supabaseAdmin
-        .from("accounting_office_employers")
-        .select("*")
-        .in("accounting_office_id", accountingOfficeIds);
-      
-      data.accounting_office_employers = aoeData || [];
-      metadata.accounting_office_employers = data.accounting_office_employers.length;
-      if (aoeError) errors.push(`accounting_office_employers: ${aoeError.message}`);
-    } else {
-      data.accounting_office_employers = [];
-      metadata.accounting_office_employers = 0;
-    }
-
-    // Fetch access_group_permissions (via access_groups)
-    const accessGroupIds = data.access_groups?.map((ag: any) => ag.id) || [];
-    if (accessGroupIds.length > 0) {
-      const { data: agpData, error: agpError } = await supabaseAdmin
-        .from("access_group_permissions")
-        .select("*")
-        .in("access_group_id", accessGroupIds);
-      
-      data.access_group_permissions = agpData || [];
-      metadata.access_group_permissions = data.access_group_permissions.length;
-      if (agpError) errors.push(`access_group_permissions: ${agpError.message}`);
-    } else {
-      data.access_group_permissions = [];
-      metadata.access_group_permissions = 0;
-    }
-
-    const totalRecords = Object.values(metadata).reduce((sum, count) => sum + count, 0);
-
-    // Build the AI-optimized backup structure
+    // Build the simplified backup structure
     const backup = {
-      version: "2.0",
-      type: "clinic_full_backup_ai",
-      generated_at: new Date().toISOString(),
+      clinic,
+      professionals,
+      procedures,
+      employers,
+      patients,
+      patient_dependents: patientDependents,
+      patient_cards: patientCards,
+      accounting_offices: accountingOffices,
+      employer_contributions: employerContributions,
+      medical_records: medicalRecords,
+      appointments,
+      access_groups: accessGroups,
+      anamnese_templates: anamneseTemplates,
+      professional_schedules: professionalSchedules,
       
-      ai_import_instructions: {
-        description: "Backup completo da clínica otimizado para importação por IA",
-        language: "pt-BR",
-        important_rules: [
-          "1. SEMPRE importar na ordem especificada em import_order",
-          "2. Usar UPSERT (INSERT ... ON CONFLICT) para preservar UUIDs originais",
-          "3. Substituir clinic_id pelo ID da clínica destino em TODOS os registros",
-          "4. Manter todos os relacionamentos (patient_id, employer_id, etc.) intactos",
-          "5. Para patient_cards, gerar novos card_number se houver conflito",
-          "6. Verificar foreign keys antes de cada inserção",
-          "7. Usar transação única para garantir atomicidade",
-          "8. Campos created_at e updated_at podem ser preservados ou regenerados"
-        ],
+      // Metadata for import validation
+      _metadata: {
+        generated_at: new Date().toISOString(),
+        source_clinic_id: clinicId,
+        record_counts: {
+          professionals: professionals.length,
+          procedures: procedures.length,
+          employers: employers.length,
+          patients: patients.length,
+          patient_dependents: patientDependents.length,
+          patient_cards: patientCards.length,
+          accounting_offices: accountingOffices.length,
+          employer_contributions: employerContributions.length,
+          medical_records: medicalRecords.length,
+          appointments: appointments.length,
+          access_groups: accessGroups.length,
+          anamnese_templates: anamneseTemplates.length,
+          professional_schedules: professionalSchedules.length
+        },
+        validation_notes: {
+          orphaned_records_filtered: {
+            medical_records: orphanedMedicalRecords,
+            appointments: orphanedAppointments,
+            employer_contributions: orphanedContributions
+          }
+        },
         import_order: [
-          { step: 1, table: "clinics", description: "Criar/atualizar a clínica destino primeiro", notes: "Este registro define o novo clinic_id" },
-          { step: 2, table: "contribution_types", description: "Tipos de contribuição", notes: "Referenciado por employer_contributions" },
-          { step: 3, table: "employer_categories", description: "Categorias de empresas", notes: "Referenciado por employers" },
-          { step: 4, table: "employers", description: "Empresas/empregadores", notes: "Referencia employer_categories, referenciado por patients" },
-          { step: 5, table: "insurance_plans", description: "Planos de saúde", notes: "Referenciado por patients" },
-          { step: 6, table: "professionals", description: "Profissionais de saúde", notes: "Referenciado por appointments e medical_records" },
-          { step: 7, table: "procedures", description: "Procedimentos médicos", notes: "Referenciado por appointments" },
-          { step: 8, table: "patients", description: "Pacientes/associados", notes: "Referencia employer_id e insurance_plan_id" },
-          { step: 9, table: "patient_dependents", description: "Dependentes dos pacientes", notes: "Referencia patient_id" },
-          { step: 10, table: "patient_cards", description: "Carteirinhas dos pacientes", notes: "Referencia patient_id, card_number deve ser único por clínica" },
-          { step: 11, table: "accounting_offices", description: "Escritórios de contabilidade", notes: "Referenciado por accounting_office_employers" },
-          { step: 12, table: "accounting_office_employers", description: "Vínculo escritório-empresa", notes: "Referencia accounting_office_id e employer_id" },
-          { step: 13, table: "employer_contributions", description: "Contribuições/boletos mensais", notes: "Referencia employer_id e contribution_type_id" },
-          { step: 14, table: "medical_records", description: "Prontuários médicos", notes: "Referencia patient_id e professional_id" },
-          { step: 15, table: "appointments", description: "Agendamentos", notes: "Referencia patient_id, professional_id e procedure_id" },
-          { step: 16, table: "access_groups", description: "Grupos de acesso/permissões", notes: "Referenciado por access_group_permissions" },
-          { step: 17, table: "access_group_permissions", description: "Permissões dos grupos", notes: "Referencia access_group_id" },
-          { step: 18, table: "user_roles", description: "Papéis de usuários", notes: "Vincula auth.users à clínica" },
-          { step: 19, table: "clinic_holidays", description: "Feriados da clínica", notes: "Feriados personalizados" },
-          { step: 20, table: "document_settings", description: "Configurações de documentos", notes: "Templates de prescrição, atestado, etc." }
-        ],
-        example_import_code: `
--- Exemplo de importação SQL (ajustar clinic_id)
-BEGIN;
-
--- 1. Inserir/atualizar clínica
-INSERT INTO clinics (id, name, slug, ...)
-SELECT id, name, slug, ...
-FROM json_populate_recordset(null::clinics, '[...]')
-ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, ...;
-
--- 2. Inserir tipos de contribuição (substituir clinic_id)
-INSERT INTO contribution_types (id, clinic_id, name, ...)
-SELECT id, 'NEW_CLINIC_ID', name, ...
-FROM json_populate_recordset(null::contribution_types, '[...]')
-ON CONFLICT (id) DO UPDATE SET ...;
-
--- Continuar na ordem especificada...
-
-COMMIT;
-        `.trim()
-      },
-      
-      schema_hints: {
-        clinics: {
-          primary_key: "id",
-          unique_constraints: ["slug"],
-          notes: "Registro principal da clínica"
-        },
-        contribution_types: {
-          primary_key: "id",
-          foreign_keys: { clinic_id: "clinics.id" },
-          unique_constraints: ["clinic_id + name"],
-          notes: "Tipos de contribuição (mensalidade, taxa, etc.)"
-        },
-        employer_categories: {
-          primary_key: "id",
-          foreign_keys: { clinic_id: "clinics.id" },
-          notes: "Categorias para agrupar empresas"
-        },
-        employers: {
-          primary_key: "id",
-          foreign_keys: { clinic_id: "clinics.id", category_id: "employer_categories.id" },
-          unique_constraints: ["clinic_id + cnpj"],
-          notes: "Empresas/empregadores dos associados"
-        },
-        patients: {
-          primary_key: "id",
-          foreign_keys: { clinic_id: "clinics.id", employer_id: "employers.id", insurance_plan_id: "insurance_plans.id" },
-          unique_constraints: ["clinic_id + cpf"],
-          notes: "Pacientes/associados - employer_id pode ser NULL"
-        },
-        patient_dependents: {
-          primary_key: "id",
-          foreign_keys: { clinic_id: "clinics.id", patient_id: "patients.id" },
-          notes: "Dependentes vinculados ao titular"
-        },
-        patient_cards: {
-          primary_key: "id",
-          foreign_keys: { clinic_id: "clinics.id", patient_id: "patients.id" },
-          unique_constraints: ["clinic_id + card_number"],
-          notes: "Carteirinhas - card_number gerado automaticamente"
-        },
-        employer_contributions: {
-          primary_key: "id",
-          foreign_keys: { clinic_id: "clinics.id", employer_id: "employers.id", contribution_type_id: "contribution_types.id" },
-          notes: "Contribuições mensais das empresas"
-        },
-        medical_records: {
-          primary_key: "id",
-          foreign_keys: { clinic_id: "clinics.id", patient_id: "patients.id", professional_id: "professionals.id" },
-          notes: "Prontuários e atendimentos"
-        },
-        appointments: {
-          primary_key: "id",
-          foreign_keys: { clinic_id: "clinics.id", patient_id: "patients.id", professional_id: "professionals.id", procedure_id: "procedures.id" },
-          notes: "Agendamentos de consultas"
-        },
-        accounting_offices: {
-          primary_key: "id",
-          foreign_keys: { clinic_id: "clinics.id" },
-          notes: "Escritórios de contabilidade"
-        },
-        accounting_office_employers: {
-          primary_key: "id",
-          foreign_keys: { accounting_office_id: "accounting_offices.id", employer_id: "employers.id" },
-          notes: "Vínculo muitos-para-muitos entre escritórios e empresas"
-        }
-      },
-      
-      clinic_info: {
-        id: clinicData.id,
-        name: clinicData.name,
-        slug: clinicData.slug,
-        created_at: clinicData.created_at
-      },
-      
-      data: data,
-      
-      metadata: {
-        record_counts: metadata,
-        total_records: totalRecords,
-        export_errors: errors,
-        tables_exported: Object.keys(data).length
+          "1. clinic",
+          "2. professionals",
+          "3. procedures", 
+          "4. employers",
+          "5. patients",
+          "6. patient_dependents",
+          "7. patient_cards",
+          "8. accounting_offices",
+          "9. employer_contributions",
+          "10. medical_records",
+          "11. appointments",
+          "12. access_groups",
+          "13. anamnese_templates",
+          "14. professional_schedules"
+        ]
       }
     };
 
-    console.log(`Backup complete: ${totalRecords} records from ${Object.keys(data).length} tables`);
+    const totalRecords = professionals.length + procedures.length + employers.length + 
+      patients.length + patientDependents.length + patientCards.length + 
+      accountingOffices.length + employerContributions.length + medicalRecords.length + 
+      appointments.length + accessGroups.length + anamneseTemplates.length + professionalSchedules.length;
+
+    console.log(`Backup complete: ${totalRecords} records total`);
 
     const jsonContent = JSON.stringify(backup, null, 2);
-    const filename = `backup_ai_${clinicData.slug}_${new Date().toISOString().split('T')[0]}.json`;
+    const filename = `backup_${clinicData.slug}_${new Date().toISOString().split('T')[0]}.json`;
 
     return new Response(jsonContent, {
       headers: {
