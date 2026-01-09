@@ -106,6 +106,7 @@ import EmployerDetailPage from "./pages/dashboard/EmployerDetailPage";
 import ContributionsPage from "./pages/dashboard/ContributionsPage";
 import NegotiationsPage from "./pages/dashboard/NegotiationsPage";
 import AccountingOfficesPage from "./pages/dashboard/AccountingOfficesPage";
+import DependentApprovalsPage from "./pages/dashboard/DependentApprovalsPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -353,6 +354,7 @@ const App = () => (
                   <Route path="tiss" element={<TissPage />} />
                   <Route path="holidays" element={<HolidaysPage />} />
                   <Route path="dependents" element={<DependentsPage />} />
+                  <Route path="dependent-approvals" element={<DependentApprovalsPage />} />
                   <Route path="atendimento/:appointmentId" element={<AttendancePage />} />
                   <Route path="exams" element={<ExamsPage />} />
                   <Route path="exam-results" element={<ExamResultsPage />} />

@@ -151,6 +151,7 @@ const navCategories: NavCategory[] = [
     items: [
       { href: "/dashboard/patients", icon: Users, label: "Sócios", permission: "view_patients" },
       { href: "/dashboard/dependents", icon: Users, label: "Dependentes", permission: "view_patients" },
+      { href: "/dashboard/dependent-approvals", icon: Users, label: "Aprovação Dependentes", permission: "view_patients" },
     ],
   },
   // CLÍNICA - Cyan/Teal
