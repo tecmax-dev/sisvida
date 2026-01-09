@@ -694,11 +694,13 @@ function findProfessionalByName(
 
 const MESSAGES = {
   welcome: `Olá! 👋
-Para agendar sua consulta, por favor informe seu *CPF* (somente números).
+Para agendar sua consulta, por favor informe seu *CPF* ou *número da carteirinha* (apenas números).
 
 _Digite MENU a qualquer momento para reiniciar._`,
 
-  cpfInvalid: `❌ CPF inválido. Por favor, informe apenas os *11 números* do seu CPF.`,
+  cpfInvalid: `❌ Entrada inválida. Por favor, informe:
+• *CPF*: 11 números
+• *Carteirinha*: apenas os números da carteirinha`,
 
   patientNotFound: `❌ Não localizamos seu cadastro em nosso sistema.
 
@@ -1818,6 +1820,167 @@ async function fetchPatientAndDependentsAppointments(
 }
 
 // ==========================================
+// CARD NUMBER SEARCH HANDLER
+// ==========================================
+
+async function handleCardNumberSearch(
+  supabase: SupabaseClient,
+  config: EvolutionConfig,
+  phone: string,
+  cardNumbers: string,
+  session: BookingSession
+): Promise<{ handled: boolean; newState?: BookingState }> {
+  console.log(`[booking] Searching by card number: ${cardNumbers}`);
+  
+  // Fetch clinic name for messages
+  const { data: clinicInfo } = await supabase
+    .from('clinics')
+    .select('name')
+    .eq('id', config.clinic_id)
+    .single();
+  const clinicName = clinicInfo?.name || 'a clínica';
+
+  // 1. Search in patient_cards (titulares)
+  const { data: patientCard } = await supabase
+    .from('patient_cards')
+    .select('patient_id, expires_at, is_active, card_number')
+    .eq('clinic_id', config.clinic_id)
+    .eq('is_active', true)
+    .or(`card_number.ilike.%${cardNumbers},card_number.ilike.%-${cardNumbers}`)
+    .maybeSingle();
+
+  if (patientCard) {
+    // Check if card is expired
+    if (patientCard.expires_at && new Date(patientCard.expires_at) < new Date()) {
+      const expDate = new Date(patientCard.expires_at).toLocaleDateString('pt-BR');
+      await sendWhatsAppMessage(config, phone, 
+        `❌ Sua carteirinha (${patientCard.card_number}) expirou em ${expDate}.\n\nPor favor, renove para poder agendar.`);
+      return { handled: true, newState: 'WAITING_CPF' };
+    }
+    
+    // Get patient data
+    const { data: patient } = await supabase
+      .from('patients')
+      .select('id, name, cpf, is_active, inactivation_reason')
+      .eq('id', patientCard.patient_id)
+      .maybeSingle();
+    
+    if (!patient) {
+      await sendWhatsAppMessage(config, phone, 
+        `❌ Carteirinha não encontrada.\n\nVerifique o número ou informe seu *CPF*.`);
+      return { handled: true, newState: 'WAITING_CPF' };
+    }
+    
+    if (patient.is_active === false) {
+      console.log(`[booking] Patient ${patient.id} is inactive. Reason: ${patient.inactivation_reason}`);
+      await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(clinicName, patient.inactivation_reason));
+      return { handled: true, newState: 'FINISHED' };
+    }
+
+    // Fetch patient's dependents
+    const { data: dependents } = await supabase
+      .from('patient_dependents')
+      .select('id, name, relationship, card_expires_at')
+      .eq('patient_id', patient.id)
+      .eq('is_active', true)
+      .order('name');
+
+    const dependentsData = (dependents || []) as Array<{ id: string; name: string; relationship: string | null; card_expires_at: string | null }>;
+    console.log(`[booking] Found ${dependentsData.length} dependents for patient ${patient.id}`);
+    
+    await updateSession(supabase, session.id, {
+      state: 'CONFIRM_IDENTITY',
+      patient_id: patient.id,
+      patient_name: patient.name,
+      available_dependents: dependentsData.length > 0 ? dependentsData : null,
+      is_dependent_direct_booking: false,
+    });
+    
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '🔐 Confirmação',
+      `Encontramos o cadastro em nome de *${patient.name}*.\n\nConfirma que é você?`,
+      [
+        { id: 'confirm_yes', text: '✅ Sim, sou eu' },
+        { id: 'confirm_no', text: '❌ Não sou eu' }
+      ],
+      'Responda 1 ou 2'
+    );
+    
+    return { handled: true, newState: 'CONFIRM_IDENTITY' };
+  }
+
+  // 2. Search in patient_dependents
+  const { data: dependent } = await supabase
+    .from('patient_dependents')
+    .select('id, name, patient_id, card_number, card_expires_at, relationship')
+    .eq('clinic_id', config.clinic_id)
+    .eq('is_active', true)
+    .or(`card_number.ilike.%${cardNumbers},card_number.ilike.%-${cardNumbers}`)
+    .maybeSingle();
+
+  if (dependent) {
+    // Check if dependent card is expired
+    if (dependent.card_expires_at && new Date(dependent.card_expires_at) < new Date()) {
+      const formattedExpiry = new Date(dependent.card_expires_at).toLocaleDateString('pt-BR');
+      await sendWhatsAppMessage(config, phone, MESSAGES.dependentCardExpired(dependent.name, formattedExpiry));
+      return { handled: true, newState: 'WAITING_CPF' };
+    }
+    
+    // Get titular patient data
+    const { data: titularPatient } = await supabase
+      .from('patients')
+      .select('id, name, is_active, inactivation_reason')
+      .eq('id', dependent.patient_id)
+      .maybeSingle();
+    
+    if (!titularPatient) {
+      await sendWhatsAppMessage(config, phone, 
+        `❌ Carteirinha não encontrada.\n\nVerifique o número ou informe seu *CPF*.`);
+      return { handled: true, newState: 'WAITING_CPF' };
+    }
+    
+    if (titularPatient.is_active === false) {
+      console.log(`[booking] Titular patient ${titularPatient.id} is inactive. Dependent cannot book.`);
+      await sendWhatsAppMessage(config, phone, MESSAGES.patientInactive(clinicName, titularPatient.inactivation_reason));
+      return { handled: true, newState: 'FINISHED' };
+    }
+
+    // For dependent direct booking
+    await updateSession(supabase, session.id, {
+      state: 'CONFIRM_IDENTITY',
+      patient_id: titularPatient.id,
+      patient_name: titularPatient.name,
+      selected_dependent_id: dependent.id,
+      selected_dependent_name: dependent.name,
+      booking_for: 'dependent',
+      is_dependent_direct_booking: true,
+      available_dependents: null,
+    });
+
+    await sendWhatsAppButtons(
+      config,
+      phone,
+      '🔐 Confirmação',
+      `Encontramos o cadastro em nome de *${dependent.name}*.\n\nConfirma que é você?`,
+      [
+        { id: 'confirm_yes', text: '✅ Sim, sou eu' },
+        { id: 'confirm_no', text: '❌ Não sou eu' }
+      ],
+      'Responda 1 ou 2'
+    );
+
+    return { handled: true, newState: 'CONFIRM_IDENTITY' };
+  }
+
+  // 3. Not found
+  await sendWhatsAppMessage(config, phone, 
+    `❌ Carteirinha não encontrada.\n\nVerifique o número ou informe seu *CPF*.`);
+  return { handled: true, newState: 'WAITING_CPF' };
+}
+
+// ==========================================
 // STATE HANDLERS
 // ==========================================
 
@@ -1851,17 +2014,33 @@ async function handleWaitingCpf(
     // Check if this is truly the first time (not a number being treated as a CPF)
     // Only handle as retry if session was just reset (no patient_id)
     if (!session.patient_id) {
-      await sendWhatsAppMessage(config, phone, `📋 Por favor, informe seu *CPF* (apenas números):`);
+      await sendWhatsAppMessage(config, phone, `📋 Por favor, informe seu *CPF* ou *número da carteirinha* (apenas números):`);
       return { handled: true, newState: 'WAITING_CPF' };
     }
   }
 
-  const cleanCpf = messageText.replace(/\D/g, '');
+  // Extract only numbers from input
+  const numbersOnly = messageText.replace(/\D/g, '');
   
-  if (!CPF_REGEX.test(cleanCpf) || !validateCpf(cleanCpf)) {
+  // If exactly 11 digits, treat as CPF
+  if (numbersOnly.length === 11) {
+    if (!validateCpf(numbersOnly)) {
+      await sendWhatsAppMessage(config, phone, MESSAGES.cpfInvalid + MESSAGES.hintCpf);
+      return { handled: true, newState: 'WAITING_CPF' };
+    }
+    // Continue with CPF flow (existing logic below will handle it)
+  }
+  // If 5-10 digits, treat as card number
+  else if (numbersOnly.length >= 5 && numbersOnly.length <= 10) {
+    return await handleCardNumberSearch(supabase, config, phone, numbersOnly, session);
+  }
+  // Otherwise, invalid input
+  else {
     await sendWhatsAppMessage(config, phone, MESSAGES.cpfInvalid + MESSAGES.hintCpf);
     return { handled: true, newState: 'WAITING_CPF' };
   }
+
+  const cleanCpf = numbersOnly;
 
   const phoneCandidates = getBrazilPhoneVariants(phone);
 
