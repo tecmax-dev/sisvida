@@ -545,7 +545,8 @@ INTERPRETAÇÃO DE INTENÇÕES:
 - Pedir para cancelar/desmarcar = cancel  
 - Pedir para reagendar/remarcar = reschedule
 - Ver consultas/agendamentos = list
-- CPF tem 11 dígitos
+- CPF tem EXATAMENTE 11 dígitos. NÃO classifique números com 5-10 dígitos como CPF!
+- Carteirinha digital tem 5 a 10 dígitos (NÃO tente extrair como CPF)
 
 EXTRAÇÃO DE ENTIDADES:
 - Se mencionar nome de profissional (dr., dra., doutor, doutora, + nome), extrair professional_name
@@ -1003,7 +1004,7 @@ Digite *MENU* para reiniciar.`,
 Por favor, escolha outro horário.`,
 
   // Hints/Tips for each state
-  hintCpf: `\n\n💡 _Dica: Digite apenas os 11 números do CPF, sem pontos ou traços._`,
+  hintCpf: `\n\n💡 _Dica: Digite apenas os números do CPF (11 dígitos) ou da carteirinha (5 a 10 dígitos)._`,
   
   hintSelectOption: `\n\n💡 _Dica: Responda apenas com o número da opção (ex: 1, 2, 3...)_`,
   
@@ -1266,6 +1267,13 @@ async function handleBookingFlow(
   const shouldSkipFastPath = session && skipFastPathStates.includes(session.state as BookingState);
   
   if (CPF_REGEX.test(maybeCpf) && validateCpf(maybeCpf) && !shouldSkipFastPath) {
+    const currentSession = session ?? await createOrResetSession(supabase, config.clinic_id, phone, 'WAITING_CPF');
+    return await handleWaitingCpf(supabase, config, phone, maybeCpf, currentSession);
+  }
+
+  // Fast-path for card numbers (5-10 digits) - bypass AI to avoid misclassification
+  if (maybeCpf.length >= 5 && maybeCpf.length <= 10 && !shouldSkipFastPath) {
+    console.log(`[booking] Fast-path for card number (${maybeCpf.length} digits): ${maybeCpf}`);
     const currentSession = session ?? await createOrResetSession(supabase, config.clinic_id, phone, 'WAITING_CPF');
     return await handleWaitingCpf(supabase, config, phone, maybeCpf, currentSession);
   }
