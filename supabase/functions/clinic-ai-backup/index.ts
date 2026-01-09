@@ -349,65 +349,42 @@ Deno.serve(async (req) => {
       console.log(`Filtered ${orphanedContributions} orphaned contributions`);
     }
 
-    // Build the simplified backup structure
+    // Build the backup structure with correct format
     const backup = {
-      clinic,
-      professionals,
-      procedures,
-      employers,
-      patients,
-      patient_dependents: patientDependents,
-      patient_cards: patientCards,
-      accounting_offices: accountingOffices,
-      employer_contributions: employerContributions,
-      medical_records: medicalRecords,
-      appointments,
-      access_groups: accessGroups,
-      anamnese_templates: anamneseTemplates,
-      professional_schedules: professionalSchedules,
-      
-      // Metadata for import validation
-      _metadata: {
-        generated_at: new Date().toISOString(),
-        source_clinic_id: clinicId,
-        record_counts: {
-          professionals: professionals.length,
-          procedures: procedures.length,
-          employers: employers.length,
-          patients: patients.length,
-          patient_dependents: patientDependents.length,
-          patient_cards: patientCards.length,
-          accounting_offices: accountingOffices.length,
-          employer_contributions: employerContributions.length,
-          medical_records: medicalRecords.length,
-          appointments: appointments.length,
-          access_groups: accessGroups.length,
-          anamnese_templates: anamneseTemplates.length,
-          professional_schedules: professionalSchedules.length
-        },
-        validation_notes: {
-          orphaned_records_filtered: {
-            medical_records: orphanedMedicalRecords,
-            appointments: orphanedAppointments,
-            employer_contributions: orphanedContributions
-          }
-        },
-        import_order: [
-          "1. clinic",
-          "2. professionals",
-          "3. procedures", 
-          "4. employers",
-          "5. patients",
-          "6. patient_dependents",
-          "7. patient_cards",
-          "8. accounting_offices",
-          "9. employer_contributions",
-          "10. medical_records",
-          "11. appointments",
-          "12. access_groups",
-          "13. anamnese_templates",
-          "14. professional_schedules"
-        ]
+      version: "1.0",
+      clinic_name: clinicData.name,
+      clinic_slug: clinicData.slug,
+      backup_date: new Date().toISOString(),
+      record_counts: {
+        clinics: 1,
+        professionals: professionals.length,
+        procedures: procedures.length,
+        employers: employers.length,
+        patients: patients.length,
+        patient_dependents: patientDependents.length,
+        patient_cards: patientCards.length,
+        accounting_offices: accountingOffices.length,
+        employer_contributions: employerContributions.length,
+        medical_records: medicalRecords.length,
+        appointments: appointments.length
+      },
+      errors: [],
+      data: {
+        clinics: [{
+          id: clinicData.id,
+          name: clinicData.name,
+          slug: clinicData.slug
+        }],
+        professionals,
+        procedures,
+        employers,
+        patients,
+        patient_dependents: patientDependents,
+        patient_cards: patientCards,
+        accounting_offices: accountingOffices,
+        employer_contributions: employerContributions,
+        medical_records: medicalRecords,
+        appointments
       }
     };
 
