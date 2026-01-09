@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -222,8 +223,27 @@ export default function PendingDependentApprovals() {
       
       if (approvalError) throw approvalError;
       
-      // 3. TODO: Send WhatsApp notification to requester
-      // This would call an edge function to notify the titular
+      // 3. Send WhatsApp notification to requester
+      if (selectedApproval.requester_phone) {
+        const clinicName = selectedApproval.clinic?.name || 'a clínica';
+        const message = `✅ *Cadastro Aprovado!*\n\nOlá! O cadastro do dependente *${selectedApproval.dependent?.name || 'seu dependente'}* foi *aprovado* com sucesso!\n\nEle(a) já pode realizar agendamentos pelo WhatsApp ou pelo sistema.\n\nAtenciosamente,\n${clinicName}`;
+
+        const result = await sendWhatsAppMessage({
+          phone: selectedApproval.requester_phone,
+          message,
+          clinicId: selectedApproval.clinic_id,
+          type: 'custom',
+        });
+
+        if (!result.success) {
+          console.error('Failed to send approval notification:', result.error);
+          toast({
+            title: "Aprovado (WhatsApp não enviado)",
+            description: result.error || "Falha ao enviar a notificação no WhatsApp.",
+            variant: "destructive",
+          });
+        }
+      }
       
       toast({
         title: "Dependente aprovado!",
@@ -277,7 +297,27 @@ export default function PendingDependentApprovals() {
       
       if (approvalError) throw approvalError;
       
-      // 3. TODO: Send WhatsApp notification to requester with rejection reason
+      // 3. Send WhatsApp notification to requester with rejection reason
+      if (selectedApproval.requester_phone) {
+        const clinicName = selectedApproval.clinic?.name || 'a clínica';
+        const message = `❌ *Cadastro Não Aprovado*\n\nOlá! Infelizmente o cadastro do dependente *${selectedApproval.dependent?.name || 'seu dependente'}* não foi aprovado.\n\n*Motivo:* ${rejectionReason.trim()}\n\nPor favor, entre em contato conosco para mais informações.\n\nAtenciosamente,\n${clinicName}`;
+
+        const result = await sendWhatsAppMessage({
+          phone: selectedApproval.requester_phone,
+          message,
+          clinicId: selectedApproval.clinic_id,
+          type: 'custom',
+        });
+
+        if (!result.success) {
+          console.error('Failed to send rejection notification:', result.error);
+          toast({
+            title: "Rejeitado (WhatsApp não enviado)",
+            description: result.error || "Falha ao enviar a notificação no WhatsApp.",
+            variant: "destructive",
+          });
+        }
+      }
       
       toast({
         title: "Solicitação rejeitada",
