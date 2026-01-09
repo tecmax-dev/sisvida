@@ -192,22 +192,36 @@ async function executeTool(
       case "buscar_proximas_datas_disponiveis": {
         const { nome_profissional } = args;
         
+        console.log(`[ai-assistant] Buscando profissional "${nome_profissional}" na clínica ${clinicId}`);
+        
         // Find professional by name
-        const { data: professionals } = await supabase
+        const { data: professionals, error: profError } = await supabase
           .from('professionals')
           .select('id, name, specialty, schedule, default_duration_minutes')
           .eq('clinic_id', clinicId)
           .eq('is_active', true)
           .ilike('name', `%${nome_profissional}%`);
 
+        console.log(`[ai-assistant] Profissionais encontrados: ${professionals?.length || 0}`, profError ? `Erro: ${profError.message}` : '');
+
         if (!professionals || professionals.length === 0) {
+          // Debug: buscar em todas as clínicas
+          const { data: allProfs } = await supabase
+            .from('professionals')
+            .select('id, name, clinic_id')
+            .eq('is_active', true)
+            .ilike('name', `%${nome_profissional}%`);
+          
+          console.log(`[ai-assistant] Profissionais com nome "${nome_profissional}" em TODAS clínicas:`, JSON.stringify(allProfs));
+          
           return JSON.stringify({ 
             success: false, 
-            message: `Não encontrei um profissional com o nome "${nome_profissional}". Use a função buscar_profissionais para ver a lista completa.` 
+            message: `Não encontrei ${nome_profissional} na agenda desta unidade. Por favor, confirme o nome do profissional.` 
           });
         }
 
         const professional = professionals[0];
+        console.log(`[ai-assistant] Profissional encontrado: ${professional.name} (ID: ${professional.id})`);
         
         if (!professional.schedule) {
           return JSON.stringify({ 
@@ -218,7 +232,7 @@ async function executeTool(
 
         // Find next 30 days with available slots
         const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const availableDates: { data: string; dia_semana: string; vagas: number }[] = [];
+        const availableDates: { data: string; data_formatada: string; dia_semana: string; vagas: number }[] = [];
         const today = new Date();
         const duration = professional.default_duration_minutes || 30;
 
@@ -266,8 +280,11 @@ async function executeTool(
 
           if (availableCount > 0) {
             const diasSemana = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
+            const day = checkDate.getDate().toString().padStart(2, '0');
+            const month = (checkDate.getMonth() + 1).toString().padStart(2, '0');
             availableDates.push({
               data: dateStr,
+              data_formatada: `${day}/${month}`,
               dia_semana: diasSemana[checkDate.getDay()],
               vagas: availableCount
             });
@@ -281,12 +298,14 @@ async function executeTool(
           });
         }
 
+        console.log(`[ai-assistant] Datas disponíveis encontradas: ${availableDates.length}`);
+
         return JSON.stringify({ 
           success: true, 
           profissional: professional.name,
           especialidade: professional.specialty || 'Não informada',
           proximas_datas: availableDates,
-          instrucao: "Apresente as datas ao paciente de forma amigável, formatando as datas como 'dia/mês (dia da semana)'. Pergunte qual data ele prefere."
+          formato_resposta: `📅 *Próximas datas para ${professional.name}:*\n${availableDates.map((d, i) => `${i + 1}️⃣ ${d.data_formatada} (${d.dia_semana}) - ${d.vagas} vaga${d.vagas > 1 ? 's' : ''}`).join('\n')}\n\n*Qual data você prefere? Digite o número.*`
         });
       }
 
@@ -633,6 +652,25 @@ Ao iniciar conversa, envie:
 5️⃣ Outros Assuntos
 6️⃣ Agendar Consultas"
 
+## REGRAS DE AGENDAMENTO INTELIGENTE (MUITO IMPORTANTE!)
+- Quando o paciente perguntar sobre disponibilidade de um profissional SEM especificar uma data específica, use IMEDIATAMENTE a função "buscar_proximas_datas_disponiveis" com o nome do profissional
+- Exemplos de mensagens que DEVEM acionar buscar_proximas_datas_disponiveis:
+  * "quero agendar com Dr. Alcides"
+  * "datas para Dra. Juliane"
+  * "quando o Dr. Alcides atende?"
+  * "tem vaga para o dentista?"
+  * "horários disponíveis do Dr. Alcides"
+- Após receber as datas da função, apresente EXATAMENTE o formato_resposta retornado
+- O formato deve ser NUMERADO para facilitar a escolha do paciente:
+  📅 *Próximas datas para Dr. Alcides:*
+  1️⃣ 15/01 (Quarta-feira) - 3 vagas
+  2️⃣ 16/01 (Quinta-feira) - 5 vagas
+  3️⃣ 22/01 (Quarta-feira) - 4 vagas
+  
+  *Qual data você prefere? Digite o número.*
+- NUNCA peça ao paciente para digitar uma data manualmente
+- Quando o paciente responder com um número (1, 2, 3...), use buscar_horarios_disponiveis com a data correspondente
+
 ## REGRAS DE FLUXO
 - Se digitar 1: mostre opções para associados
 - Se digitar 2: mostre opções para empresas (NÃO solicite CNPJ nem e-mail, siga o fluxo)
@@ -706,7 +744,7 @@ Empresas devem fornecer lanche gratuito para quem trabalhar mais de 1 hora extra
 - Problemas com agendamento no app: peça CPF do titular para verificar
 
 ## QUANDO PEDIREM AGENDAMENTO
-Se pedirem para agendar consulta FORA da opção 6, informe que agendamento é pelo aplicativo do sindicato ou responda "HANDOFF_BOOKING" para o sistema de agendamento assumir.`;
+Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, etc.), use buscar_proximas_datas_disponiveis para mostrar as próximas datas disponíveis de forma NUMERADA.`;
 
     // Build messages array with history
     const messages: any[] = [
