@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, FileX, Building2, CheckCircle2, Tag, AlertTriangle, CalendarIcon } from "lucide-react";
+import { Loader2, FileX, Building2, CheckCircle2, Tag, AlertTriangle, CalendarIcon, Search } from "lucide-react";
 import { format, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -114,6 +114,30 @@ export default function OfflineContributionDialog({
   // Filter employers
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Debounced search handler
+  const handleSearchChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    
+    debounceRef.current = setTimeout(() => {
+      setSearchTerm(value);
+    }, 300);
+  }, []);
+
+  // Cleanup debounce on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
   
   // Gerar lista de competências
   const competenceList = useMemo(() => {
@@ -318,6 +342,55 @@ export default function OfflineContributionDialog({
                 </p>
               </div>
 
+              {/* Busca de Empresa - DESTAQUE */}
+              <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Search className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <Label className="text-blue-700 dark:text-blue-300 font-medium">
+                    Buscar Empresa por Nome ou CNPJ
+                  </Label>
+                </div>
+                
+                <div className="flex gap-3">
+                  <div className="flex-1 relative">
+                    <Input
+                      ref={searchInputRef}
+                      placeholder="Digite nome, razão social ou CNPJ (ex: 12.345.678/0001-90)..."
+                      defaultValue=""
+                      onChange={handleSearchChange}
+                      className="pl-10 bg-white dark:bg-background border-blue-300 dark:border-blue-700 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-blue-400" />
+                  </div>
+                  
+                  {categories.length > 0 && (
+                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                      <SelectTrigger className="w-48 border-blue-300 dark:border-blue-700">
+                        <SelectValue placeholder="Categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as categorias</SelectItem>
+                        {categories.map(cat => (
+                          <SelectItem key={cat.id} value={cat.id}>
+                            <div className="flex items-center gap-2">
+                              <div 
+                                className="w-2 h-2 rounded-full" 
+                                style={{ backgroundColor: cat.color }}
+                              />
+                              {cat.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+                
+                <p className="text-sm text-blue-600 dark:text-blue-400">
+                  {filteredEmployers.length} empresa(s) encontrada(s)
+                </p>
+              </div>
+
               {/* Tipo de Contribuição */}
               <div className="grid grid-cols-1 gap-4">
                 <div>
@@ -468,42 +541,6 @@ export default function OfflineContributionDialog({
                   placeholder="Ex: Débito retroativo - Aguardando negociação"
                   rows={2}
                 />
-              </div>
-
-              {/* Filtros de Empresa */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Buscar empresa</Label>
-                  <Input
-                    placeholder="Nome ou CNPJ..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                {categories.length > 0 && (
-                  <div>
-                    <Label>Filtrar por categoria</Label>
-                    <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todas as categorias</SelectItem>
-                        {categories.map(cat => (
-                          <SelectItem key={cat.id} value={cat.id}>
-                            <div className="flex items-center gap-2">
-                              <div 
-                                className="w-2 h-2 rounded-full" 
-                                style={{ backgroundColor: cat.color }}
-                              />
-                              {cat.name}
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
               </div>
 
               {/* Seleção de Empresas */}
