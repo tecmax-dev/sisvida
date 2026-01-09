@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,7 @@ import {
   Send,
   Loader2,
   Pencil,
+  AlertCircle,
   Trash2,
   Check,
   ChevronsUpDown,
@@ -163,6 +165,12 @@ export default function ContributionDialogs({
   // Delete dialog
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  // Duplicate check for edit dialog
+  const [checkingDuplicate, setCheckingDuplicate] = useState(false);
+  const [hasDuplicate, setHasDuplicate] = useState(false);
+  const [forceDuplicate, setForceDuplicate] = useState(false);
+  const [duplicateId, setDuplicateId] = useState<string | null>(null);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -300,8 +308,54 @@ export default function ContributionDialogs({
     setEditTypeId(selectedContribution.contribution_type_id);
     setEditMonth(selectedContribution.competence_month);
     setEditYear(selectedContribution.competence_year);
+    setHasDuplicate(false);
+    setForceDuplicate(false);
+    setDuplicateId(null);
     setEditDialogOpen(true);
   };
+
+  // Check for duplicate competence when editing
+  const checkDuplicateCompetence = async () => {
+    if (!selectedContribution || !editDialogOpen) return;
+    
+    // If competence hasn't changed, no need to check
+    if (
+      editMonth === selectedContribution.competence_month && 
+      editYear === selectedContribution.competence_year &&
+      editTypeId === selectedContribution.contribution_type_id
+    ) {
+      setHasDuplicate(false);
+      setDuplicateId(null);
+      return;
+    }
+    
+    setCheckingDuplicate(true);
+    try {
+      const { data } = await supabase
+        .from("employer_contributions")
+        .select("id")
+        .eq("employer_id", selectedContribution.employer_id)
+        .eq("contribution_type_id", editTypeId)
+        .eq("competence_month", editMonth)
+        .eq("competence_year", editYear)
+        .neq("id", selectedContribution.id)
+        .neq("status", "cancelled")
+        .maybeSingle();
+      
+      setHasDuplicate(!!data);
+      setDuplicateId(data?.id || null);
+    } catch (error) {
+      console.error("Error checking duplicate:", error);
+    } finally {
+      setCheckingDuplicate(false);
+    }
+  };
+
+  useEffect(() => {
+    if (editDialogOpen) {
+      checkDuplicateCompetence();
+    }
+  }, [editMonth, editYear, editTypeId, editDialogOpen]);
 
   const handleUpdateInvoice = async () => {
     if (!selectedContribution) return;
@@ -313,6 +367,20 @@ export default function ContributionDialogs({
       // Gerar nova descrição com tipo e competência
       const selectedType = contributionTypes.find(t => t.id === editTypeId);
       const newDescription = `${selectedType?.name || 'Contribuição'} - ${MONTHS[editMonth - 1]}/${editYear}`;
+      
+      // If there's a duplicate and user confirmed, cancel the duplicate first
+      if (hasDuplicate && forceDuplicate && duplicateId) {
+        // Cancel the duplicate contribution
+        const { error: cancelError } = await supabase
+          .from("employer_contributions")
+          .update({ status: "cancelled" })
+          .eq("id", duplicateId);
+        
+        if (cancelError) {
+          console.error("Error cancelling duplicate:", cancelError);
+          throw new Error("Erro ao cancelar contribuição duplicada");
+        }
+      }
       
       if (selectedContribution.lytex_invoice_id) {
         // Atualizar na Lytex e no banco
@@ -796,13 +864,47 @@ export default function ContributionDialogs({
                 />
               </div>
             </div>
+
+            {/* Duplicate warning */}
+            {(checkingDuplicate || hasDuplicate) && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg space-y-2">
+                {checkingDuplicate ? (
+                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="text-sm">Verificando duplicidade...</span>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                      <AlertCircle className="h-5 w-5" />
+                      <span className="font-medium text-sm">
+                        Já existe contribuição para esta competência
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <Checkbox 
+                        id="force-duplicate"
+                        checked={forceDuplicate}
+                        onCheckedChange={(checked) => setForceDuplicate(checked as boolean)}
+                      />
+                      <Label htmlFor="force-duplicate" className="text-sm text-amber-600 dark:text-amber-500 cursor-pointer">
+                        Forçar alteração (a duplicada será cancelada)
+                      </Label>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleUpdateInvoice} disabled={updating}>
+            <Button 
+              onClick={handleUpdateInvoice} 
+              disabled={updating || checkingDuplicate || (hasDuplicate && !forceDuplicate)}
+            >
               {updating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Salvar
             </Button>
