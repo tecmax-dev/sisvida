@@ -87,11 +87,14 @@ function mapGender(code: string | undefined): string | null {
 }
 
 // deno-lint-ignore no-explicit-any
-async function generateCardNumber(supabase: any, clinicId: string): Promise<string> {
+async function generateCardNumber(supabase: any, clinicId: string, patientId: string): Promise<string> {
   const currentYear = new Date().getFullYear().toString()
   
   try {
-    const { data, error } = await supabase.rpc('generate_card_number', { p_clinic_id: clinicId })
+    const { data, error } = await supabase.rpc('generate_card_number', { 
+      p_clinic_id: clinicId,
+      p_patient_id: patientId 
+    })
     
     if (error || !data) {
       const timestamp = Date.now().toString().slice(-5)
@@ -270,7 +273,7 @@ async function processSocio(supabase: any, socio: SindSystemSocio): Promise<{ su
 
       // Gera carteirinha para novo paciente
       try {
-        const cardNumber = await generateCardNumber(supabase, SINDICATO_COMERCIARIOS_CLINIC_ID)
+        const cardNumber = await generateCardNumber(supabase, SINDICATO_COMERCIARIOS_CLINIC_ID, patientId!)
         const expiresAt = new Date()
         expiresAt.setDate(expiresAt.getDate() + 15)
 
