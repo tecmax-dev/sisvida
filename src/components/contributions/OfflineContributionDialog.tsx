@@ -6,6 +6,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -21,8 +27,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, FileX, Building2, CheckCircle2, Tag, AlertTriangle } from "lucide-react";
+import { Loader2, FileX, Building2, CheckCircle2, Tag, AlertTriangle, CalendarIcon } from "lucide-react";
 import { format, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -90,6 +98,8 @@ export default function OfflineContributionDialog({
   const [useDefaultValue, setUseDefaultValue] = useState(true);
   const [customValue, setCustomValue] = useState("");
   const [notes, setNotes] = useState("Débito retroativo - Aguardando negociação");
+  const [useCustomDueDate, setUseCustomDueDate] = useState(false);
+  const [customDueDate, setCustomDueDate] = useState<Date | undefined>(undefined);
   
   // Processing state
   const [processing, setProcessing] = useState(false);
@@ -143,6 +153,8 @@ export default function OfflineContributionDialog({
       setUseDefaultValue(true);
       setCustomValue("");
       setNotes("Débito retroativo - Aguardando negociação");
+      setUseCustomDueDate(false);
+      setCustomDueDate(undefined);
       setSearchTerm("");
       setCategoryFilter("all");
       setResults({ success: 0, failed: 0, skipped: 0, errors: [] });
@@ -213,9 +225,14 @@ export default function OfflineContributionDialog({
       
       for (const competence of competenceList) {
         try {
-          // Gerar data de vencimento no último dia do mês de competência
-          const dueDate = new Date(competence.year, competence.month, 0);
-          const dueDateStr = format(dueDate, "yyyy-MM-dd");
+          // Gerar data de vencimento: customizada ou último dia do mês de competência
+          let dueDateStr: string;
+          if (useCustomDueDate && customDueDate) {
+            dueDateStr = format(customDueDate, "yyyy-MM-dd");
+          } else {
+            const dueDate = new Date(competence.year, competence.month, 0);
+            dueDateStr = format(dueDate, "yyyy-MM-dd");
+          }
           
           // Gerar active_competence_key para evitar duplicatas
           const activeCompetenceKey = `${employerId}-${typeId}-${competence.year}-${String(competence.month).padStart(2, "0")}`;
@@ -400,6 +417,46 @@ export default function OfflineContributionDialog({
                     />
                   )}
                 </div>
+              </div>
+
+              {/* Data de Vencimento Personalizada */}
+              <div className="space-y-2">
+                <Label>Data de Vencimento</Label>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={!useCustomDueDate}
+                      onCheckedChange={(checked) => setUseCustomDueDate(!checked)}
+                    />
+                    <span className="text-sm">Último dia do mês de competência</span>
+                  </label>
+                </div>
+                {useCustomDueDate && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-[240px] justify-start text-left font-normal",
+                          !customDueDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {customDueDate ? format(customDueDate, "dd/MM/yyyy", { locale: ptBR }) : "Selecione a data"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={customDueDate}
+                        onSelect={setCustomDueDate}
+                        initialFocus
+                        className="pointer-events-auto"
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                )}
               </div>
 
               {/* Observações */}
