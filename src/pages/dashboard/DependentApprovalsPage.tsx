@@ -118,7 +118,7 @@ export default function DependentApprovalsPage() {
     
     try {
       setLoading(true);
-      let query = supabase
+      const { data, error } = await supabase
         .from('pending_dependent_approvals')
         .select(`
           *,
@@ -127,12 +127,6 @@ export default function DependentApprovalsPage() {
         `)
         .eq('clinic_id', currentClinic.id)
         .order('created_at', { ascending: false });
-      
-      if (statusFilter !== "all") {
-        query = query.eq('status', statusFilter);
-      }
-      
-      const { data, error } = await query;
       
       if (error) throw error;
       setApprovals(data || []);
@@ -173,7 +167,7 @@ export default function DependentApprovalsPage() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentClinic?.id, statusFilter]);
+  }, [currentClinic?.id]);
 
   const viewPhoto = async (photoUrl: string | null) => {
     if (!photoUrl) {
@@ -239,27 +233,32 @@ export default function DependentApprovalsPage() {
       // Send WhatsApp notification to requester
       if (selectedApproval.requester_phone) {
         const message = `✅ *Cadastro Aprovado!*\n\nOlá! O cadastro do dependente *${selectedApproval.dependent?.name || 'seu dependente'}* foi *aprovado* com sucesso!\n\nEle(a) já pode realizar agendamentos pelo WhatsApp ou pelo sistema.\n\nAtenciosamente,\n${currentClinic.name}`;
-        
+
         const result = await sendWhatsAppMessage({
           phone: selectedApproval.requester_phone,
           message,
           clinicId: currentClinic.id,
           type: 'custom',
         });
-        
+
         if (!result.success) {
           console.error('Failed to send approval notification:', result.error);
-          // Don't fail the approval, just log the error
+          toast({
+            title: "Aprovado (WhatsApp não enviado)",
+            description: result.error || "Falha ao enviar a notificação no WhatsApp.",
+            variant: "destructive",
+          });
         }
       }
-      
+
       toast({
         title: "Aprovado!",
         description: `Dependente ${selectedApproval.dependent?.name} foi ativado com sucesso`,
       });
-      
+
       setApprovalDialogOpen(false);
       setSelectedApproval(null);
+      setStatusFilter('approved');
       fetchApprovals();
     } catch (error) {
       console.error('Error approving:', error);
@@ -304,17 +303,21 @@ export default function DependentApprovalsPage() {
       // Send WhatsApp notification to requester
       if (selectedApproval.requester_phone) {
         const message = `❌ *Cadastro Não Aprovado*\n\nOlá! Infelizmente o cadastro do dependente *${selectedApproval.dependent?.name || 'seu dependente'}* não foi aprovado.\n\n*Motivo:* ${rejectionReason.trim()}\n\nPor favor, entre em contato conosco para mais informações.\n\nAtenciosamente,\n${currentClinic.name}`;
-        
+
         const result = await sendWhatsAppMessage({
           phone: selectedApproval.requester_phone,
           message,
           clinicId: currentClinic.id,
           type: 'custom',
         });
-        
+
         if (!result.success) {
           console.error('Failed to send rejection notification:', result.error);
-          // Don't fail the rejection, just log the error
+          toast({
+            title: "Rejeitado (WhatsApp não enviado)",
+            description: result.error || "Falha ao enviar a notificação no WhatsApp.",
+            variant: "destructive",
+          });
         }
       }
       
@@ -326,6 +329,7 @@ export default function DependentApprovalsPage() {
       setRejectionDialogOpen(false);
       setRejectionReason("");
       setSelectedApproval(null);
+      setStatusFilter('rejected');
       fetchApprovals();
     } catch (error) {
       console.error('Error rejecting:', error);
@@ -363,16 +367,21 @@ export default function DependentApprovalsPage() {
     return phone;
   };
 
-  const filteredApprovals = approvals.filter(approval => {
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    return (
-      approval.dependent?.name?.toLowerCase().includes(search) ||
-      approval.patient?.name?.toLowerCase().includes(search) ||
-      approval.dependent?.cpf?.includes(search) ||
-      approval.requester_phone?.includes(search)
-    );
-  });
+  const filteredApprovals = approvals
+    .filter((approval) => {
+      if (statusFilter === 'all') return true;
+      return approval.status === statusFilter;
+    })
+    .filter((approval) => {
+      if (!searchTerm) return true;
+      const search = searchTerm.toLowerCase();
+      return (
+        approval.dependent?.name?.toLowerCase().includes(search) ||
+        approval.patient?.name?.toLowerCase().includes(search) ||
+        approval.dependent?.cpf?.includes(search) ||
+        approval.requester_phone?.includes(search)
+      );
+    });
 
   const pendingCount = approvals.filter(a => a.status === 'pending').length;
   const approvedCount = approvals.filter(a => a.status === 'approved').length;
