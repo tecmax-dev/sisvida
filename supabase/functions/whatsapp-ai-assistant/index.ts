@@ -373,15 +373,20 @@ async function executeTool(
           });
         }
 
+        console.log(`[ai-assistant] buscar_horarios: Profissional encontrado: ${professional.name} (ID: ${professional.id}), data: ${data}`);
+
         // Get existing appointments
-        const { data: existingAppts } = await supabase
+        const { data: existingAppts, error: apptsError } = await supabase
           .from('appointments')
           .select('start_time, end_time')
           .eq('professional_id', professional.id)
           .eq('appointment_date', data)
           .not('status', 'in', '("cancelled","no_show")');
 
+        console.log(`[ai-assistant] buscar_horarios: Agendamentos existentes para ${data}: ${existingAppts?.length || 0}`, apptsError ? `Erro: ${apptsError.message}` : '', existingAppts ? JSON.stringify(existingAppts) : '');
+
         const bookedTimes = new Set(existingAppts?.map((a: any) => a.start_time) || []);
+        console.log(`[ai-assistant] buscar_horarios: Horários ocupados: ${Array.from(bookedTimes).join(', ') || 'nenhum'}`);
         const duration = professional.appointment_duration || 30;
 
         // Generate available slots
