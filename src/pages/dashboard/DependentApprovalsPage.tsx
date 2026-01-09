@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -208,7 +209,7 @@ export default function DependentApprovalsPage() {
   };
 
   const handleApprove = async () => {
-    if (!selectedApproval || !user) return;
+    if (!selectedApproval || !user || !currentClinic) return;
     
     setApproving(true);
     try {
@@ -235,6 +236,23 @@ export default function DependentApprovalsPage() {
       
       if (dependentError) throw dependentError;
       
+      // Send WhatsApp notification to requester
+      if (selectedApproval.requester_phone) {
+        const message = `✅ *Cadastro Aprovado!*\n\nOlá! O cadastro do dependente *${selectedApproval.dependent?.name || 'seu dependente'}* foi *aprovado* com sucesso!\n\nEle(a) já pode realizar agendamentos pelo WhatsApp ou pelo sistema.\n\nAtenciosamente,\n${currentClinic.name}`;
+        
+        const result = await sendWhatsAppMessage({
+          phone: selectedApproval.requester_phone,
+          message,
+          clinicId: currentClinic.id,
+          type: 'custom',
+        });
+        
+        if (!result.success) {
+          console.error('Failed to send approval notification:', result.error);
+          // Don't fail the approval, just log the error
+        }
+      }
+      
       toast({
         title: "Aprovado!",
         description: `Dependente ${selectedApproval.dependent?.name} foi ativado com sucesso`,
@@ -256,7 +274,7 @@ export default function DependentApprovalsPage() {
   };
 
   const handleReject = async () => {
-    if (!selectedApproval || !user || !rejectionReason.trim()) return;
+    if (!selectedApproval || !user || !rejectionReason.trim() || !currentClinic) return;
     
     setRejecting(true);
     try {
@@ -282,6 +300,23 @@ export default function DependentApprovalsPage() {
         .eq('id', selectedApproval.dependent_id);
       
       if (dependentError) throw dependentError;
+      
+      // Send WhatsApp notification to requester
+      if (selectedApproval.requester_phone) {
+        const message = `❌ *Cadastro Não Aprovado*\n\nOlá! Infelizmente o cadastro do dependente *${selectedApproval.dependent?.name || 'seu dependente'}* não foi aprovado.\n\n*Motivo:* ${rejectionReason.trim()}\n\nPor favor, entre em contato conosco para mais informações.\n\nAtenciosamente,\n${currentClinic.name}`;
+        
+        const result = await sendWhatsAppMessage({
+          phone: selectedApproval.requester_phone,
+          message,
+          clinicId: currentClinic.id,
+          type: 'custom',
+        });
+        
+        if (!result.success) {
+          console.error('Failed to send rejection notification:', result.error);
+          // Don't fail the rejection, just log the error
+        }
+      }
       
       toast({
         title: "Rejeitado",
