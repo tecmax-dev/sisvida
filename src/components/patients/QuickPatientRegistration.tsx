@@ -133,6 +133,12 @@ export function QuickPatientRegistration({
         return;
       }
 
+      // Generate registration number
+      const { data: registrationNumber } = await supabase.rpc(
+        "generate_patient_registration_number",
+        { p_clinic_id: currentClinic.id }
+      );
+
       // Create patient
       const { data: patient, error: patientError } = await supabase
         .from("patients")
@@ -143,6 +149,7 @@ export function QuickPatientRegistration({
           birth_date: data.birth_date,
           phone: data.phone.replace(/\D/g, ""),
           employer_cnpj: data.employer_cnpj?.replace(/\D/g, "") || null,
+          registration_number: registrationNumber || null,
         })
         .select("id")
         .single();

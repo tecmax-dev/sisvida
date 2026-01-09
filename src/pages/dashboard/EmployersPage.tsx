@@ -114,6 +114,7 @@ interface Employer {
 }
 
 interface EmployerFormData {
+  registration_number: string;
   cnpj: string;
   name: string;
   trade_name: string;
@@ -130,6 +131,7 @@ interface EmployerFormData {
 }
 
 const initialFormData: EmployerFormData = {
+  registration_number: "",
   cnpj: "",
   name: "",
   trade_name: "",
@@ -288,6 +290,7 @@ export default function EmployersPage() {
     if (employer && !employer.id.startsWith("virtual-")) {
       setSelectedEmployer(employer);
       setFormData({
+        registration_number: employer.registration_number || "",
         cnpj: formatCNPJ(employer.cnpj),
         name: employer.name,
         trade_name: employer.trade_name || "",
@@ -329,8 +332,19 @@ export default function EmployersPage() {
       const cleanedCnpj = formData.cnpj.replace(/\D/g, "");
       const cleanedPhone = formData.phone.replace(/\D/g, "");
 
+      // Generate registration number if not set
+      let registrationNumber = formData.registration_number;
+      if (!registrationNumber) {
+        const { data: newNumber } = await supabase.rpc(
+          "generate_employer_registration_number",
+          { p_clinic_id: currentClinic.id }
+        );
+        registrationNumber = newNumber || "";
+      }
+
       const payload = {
         clinic_id: currentClinic.id,
+        registration_number: registrationNumber,
         cnpj: cleanedCnpj,
         name: formData.name.trim(),
         trade_name: formData.trade_name.trim() || null,
@@ -879,8 +893,25 @@ export default function EmployersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div>
+                <Label htmlFor="registration_number">Matrícula</Label>
+                <div className="relative">
+                  <Input
+                    id="registration_number"
+                    value={formData.registration_number || ""}
+                    disabled
+                    placeholder="Auto"
+                    className="font-mono bg-muted pr-14"
+                  />
+                  {!formData.registration_number && (
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground bg-muted-foreground/10 px-1.5 py-0.5 rounded">
+                      Auto
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="col-span-2">
                 <Label htmlFor="cnpj">CNPJ *</Label>
                 <div className="flex gap-2">
                   <Input
@@ -923,17 +954,17 @@ export default function EmployersPage() {
                   </Button>
                 </div>
               </div>
-              <div>
-                <Label htmlFor="name">Razão Social *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  placeholder="Nome da empresa"
-                />
-              </div>
+            </div>
+            <div>
+              <Label htmlFor="name">Razão Social *</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
+                placeholder="Nome da empresa"
+              />
             </div>
 
             {selectedEmployer?.cnae_code && (
