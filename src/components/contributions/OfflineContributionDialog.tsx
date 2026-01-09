@@ -234,6 +234,7 @@ export default function OfflineContributionDialog({
           }
           
           // Inserir contribuição offline (sem dados Lytex)
+          // Nota: active_competence_key é uma coluna gerada automaticamente pelo banco
           const { error } = await supabase
             .from("employer_contributions")
             .insert({
@@ -247,12 +248,6 @@ export default function OfflineContributionDialog({
               status: "overdue", // Já nasce como vencida pois é retroativa
               notes: notes || null,
               created_by: userId,
-              active_competence_key: activeCompetenceKey,
-              // Campos Lytex ficam null - contribuição offline
-              lytex_invoice_id: null,
-              lytex_invoice_url: null,
-              lytex_boleto_digitable_line: null,
-              lytex_pix_code: null,
             });
 
           if (error) {
