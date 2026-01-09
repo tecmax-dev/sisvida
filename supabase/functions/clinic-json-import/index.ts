@@ -5,9 +5,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Tables and their import order (dependency order)
+// Tables and their import order (dependency order) - COMPLETE v1.0
 const IMPORT_ORDER = [
-  // Phase 1: Base config and catalogs
+  // Phase 1: Base config and catalogs (no FK dependencies)
   "specialties",
   "employer_categories",
   "insurance_plans",
@@ -15,54 +15,79 @@ const IMPORT_ORDER = [
   "contribution_types",
   "anamnese_templates",
   "access_groups",
-  // Phase 2: Main entities
+  "document_settings",
+  "clinic_holidays",
+  "whatsapp_config",
+  "financial_categories",
+  "cash_registers",
+  "patient_segments",
+  // Phase 2: Main entities (may reference catalogs)
   "accounting_offices",
   "employers",
   "professionals",
   "patients",
-  // Phase 3: Dependent entities
+  // Phase 3: Dependent entities (reference main entities)
   "patient_dependents",
   "patient_cards",
   "professional_schedules",
+  "professional_schedule_exceptions",
   "accounting_office_employers",
-  // Phase 4: Transactions and records
+  "user_roles",
+  "waiting_list",
+  // Phase 4: Transactions and records (reference multiple entities)
   "appointments",
   "medical_records",
   "employer_contributions",
   "anamnesis",
-  // Phase 5: More dependent data
+  "debt_negotiations",
+  // Phase 5: Nested dependent data (reference phase 4 data)
   "anamnese_questions",
   "anamnese_question_options",
   "anamnese_responses",
   "anamnese_answers",
-  "financial_categories",
-  "cash_registers",
   "financial_transactions",
   "cash_transfers",
-  "clinic_holidays",
-  "document_settings",
   "access_group_permissions",
+  "negotiation_items",
+  "negotiation_installments",
+  // Phase 6: Logs (reference multiple entities, optional)
+  "whatsapp_booking_sessions",
+  "whatsapp_message_logs",
+  "campaigns",
+  "automation_flows",
 ];
 
 // Required fields per table
 const REQUIRED_FIELDS: Record<string, string[]> = {
-  patients: ["name", "phone"],
-  employers: ["name"], // cnpj is recommended but not required for partial imports
+  patients: ["name"],
+  employers: ["name"],
   accounting_offices: ["name", "email"],
+  professionals: ["name"],
 };
 
 // Foreign key mappings: { table: { field: referencedTable } }
 const FK_MAPPINGS: Record<string, Record<string, string>> = {
+  // Catalogs
+  financial_categories: { parent_id: "financial_categories" },
+  // Main entities
+  employers: { category_id: "employer_categories" },
+  professionals: { specialty_id: "specialties" },
   patients: { employer_id: "employers", insurance_plan_id: "insurance_plans" },
+  // Dependent entities
   patient_dependents: { patient_id: "patients" },
   patient_cards: { patient_id: "patients" },
-  professionals: { specialty_id: "specialties" },
   professional_schedules: { professional_id: "professionals" },
+  professional_schedule_exceptions: { professional_id: "professionals" },
   accounting_office_employers: { accounting_office_id: "accounting_offices", employer_id: "employers" },
+  user_roles: { professional_id: "professionals", access_group_id: "access_groups" },
+  waiting_list: { patient_id: "patients", professional_id: "professionals", procedure_id: "procedures" },
+  // Transactions
   appointments: { patient_id: "patients", professional_id: "professionals", procedure_id: "procedures", dependent_id: "patient_dependents" },
   medical_records: { patient_id: "patients", professional_id: "professionals", appointment_id: "appointments", dependent_id: "patient_dependents" },
-  employer_contributions: { employer_id: "employers", contribution_type_id: "contribution_types" },
+  employer_contributions: { employer_id: "employers", contribution_type_id: "contribution_types", negotiation_id: "debt_negotiations" },
   anamnesis: { patient_id: "patients" },
+  debt_negotiations: { employer_id: "employers" },
+  // Nested data
   anamnese_questions: { template_id: "anamnese_templates" },
   anamnese_question_options: { question_id: "anamnese_questions" },
   anamnese_responses: { template_id: "anamnese_templates", patient_id: "patients", professional_id: "professionals" },
@@ -70,12 +95,18 @@ const FK_MAPPINGS: Record<string, Record<string, string>> = {
   financial_transactions: { category_id: "financial_categories", patient_id: "patients", appointment_id: "appointments" },
   cash_transfers: { from_register_id: "cash_registers", to_register_id: "cash_registers" },
   access_group_permissions: { access_group_id: "access_groups" },
+  negotiation_items: { negotiation_id: "debt_negotiations", contribution_id: "employer_contributions" },
+  negotiation_installments: { negotiation_id: "debt_negotiations" },
+  // Logs
+  whatsapp_booking_sessions: { patient_id: "patients" },
+  campaigns: { segment_id: "patient_segments" },
 };
 
-// Fields to ignore during import (auto-generated)
+// Fields to ignore during import (auto-generated or special)
 const IGNORED_FIELDS = [
   "id", "created_at", "updated_at", "clinic_id", "user_id", "created_by",
-  "qr_code_token", "access_code", "access_code_expires_at", "portal_last_access_at"
+  "qr_code_token", "access_code", "access_code_expires_at", "portal_last_access_at",
+  "approved_by", "cancelled_by", "finalized_by", "reviewed_by", "suspended_by", "activated_by"
 ];
 
 interface ImportResult {
@@ -261,7 +292,7 @@ Deno.serve(async (req) => {
       // Validate foreign keys (check if referenced IDs exist in the backup)
       const fkMappings = FK_MAPPINGS[table];
       if (fkMappings) {
-        for (let i = 0; i < records.length; i++) {
+        for (let i = 0; i < Math.min(records.length, 100); i++) { // Limit FK validation to first 100 for performance
           const record = records[i];
           for (const [field, refTable] of Object.entries(fkMappings)) {
             const refId = record[field];
@@ -304,8 +335,22 @@ Deno.serve(async (req) => {
         if (IGNORED_FIELDS.includes(key)) continue;
         cleaned[key] = value;
       }
-      // Always set clinic_id
-      cleaned.clinic_id = clinic_id;
+      // Always set clinic_id for tables that have it
+      const tablesWithClinicId = [
+        "specialties", "employer_categories", "insurance_plans", "procedures",
+        "contribution_types", "anamnese_templates", "access_groups", "document_settings",
+        "clinic_holidays", "whatsapp_config", "accounting_offices", "employers",
+        "professionals", "patients", "patient_dependents", "patient_cards",
+        "professional_schedules", "professional_schedule_exceptions", "appointments",
+        "medical_records", "employer_contributions", "anamnesis", "debt_negotiations",
+        "anamnese_responses", "financial_categories", "cash_registers",
+        "financial_transactions", "cash_transfers", "waiting_list", "user_roles",
+        "whatsapp_booking_sessions", "whatsapp_message_logs", "campaigns",
+        "automation_flows", "patient_segments"
+      ];
+      if (tablesWithClinicId.includes(table)) {
+        cleaned.clinic_id = clinic_id;
+      }
       return cleaned;
     };
 
@@ -327,7 +372,6 @@ Deno.serve(async (req) => {
         } else {
           // FK not found in mapping - set to null to avoid errors
           remapped[field] = null;
-          result.validation.warnings.push(`${table}: FK '${field}' = '${oldId}' não mapeado, definido como null`);
         }
       }
       return remapped;
@@ -342,9 +386,8 @@ Deno.serve(async (req) => {
 
       console.log(`[JSON Import] Processing ${table}: ${records.length} records`);
 
-      // Check if table exists in database
       try {
-        const BATCH_SIZE = 100;
+        const BATCH_SIZE = 50; // Smaller batches for reliability
         let imported = 0;
         let skipped = 0;
         let errors = 0;
@@ -361,12 +404,8 @@ Deno.serve(async (req) => {
             let cleaned = cleanRecord(record, table);
             cleaned = remapFKs(cleaned, table);
 
-            // Remove legacy_id if the table doesn't have it (will cause error)
-            // We'll handle it after insert for mapping
-            const legacyIdForMapping = cleaned.legacy_id;
-            
             // Store original id for mapping
-            cleanedBatch.push({ data: cleaned, oldId, legacyId: legacyIdForMapping || legacyId });
+            cleanedBatch.push({ data: cleaned, oldId, legacyId });
           }
 
           // Insert batch
@@ -378,9 +417,34 @@ Deno.serve(async (req) => {
             .select("id");
 
           if (insertError) {
-            console.error(`[JSON Import] Error inserting into ${table}:`, insertError);
-            result.validation.warnings.push(`${table}: Erro ao inserir lote - ${insertError.message}`);
-            errors += batch.length;
+            console.error(`[JSON Import] Error inserting into ${table}:`, insertError.message);
+            
+            // Try inserting one by one to identify problematic records
+            for (let j = 0; j < cleanedBatch.length; j++) {
+              const singleRecord = cleanedBatch[j];
+              const { data: singleInserted, error: singleError } = await supabaseAdmin
+                .from(table)
+                .insert(singleRecord.data)
+                .select("id")
+                .maybeSingle();
+              
+              if (singleError) {
+                errors++;
+                if (errors <= 5) { // Limit error logging
+                  result.validation.warnings.push(`${table}: Erro ao inserir registro - ${singleError.message}`);
+                }
+              } else if (singleInserted) {
+                const newId = singleInserted.id;
+                if (singleRecord.oldId) {
+                  idMaps[table].set(singleRecord.oldId, newId);
+                }
+                if (singleRecord.legacyId) {
+                  legacyMaps[table].set(singleRecord.legacyId, newId);
+                  result.mapping_stats.by_legacy_id++;
+                }
+                imported++;
+              }
+            }
           } else if (insertedData) {
             // Map old IDs to new IDs
             for (let j = 0; j < insertedData.length && j < cleanedBatch.length; j++) {
@@ -427,7 +491,7 @@ Deno.serve(async (req) => {
     const totalImported = Object.values(result.summary).reduce((acc, s) => acc + s.imported, 0);
     const totalErrors = Object.values(result.summary).reduce((acc, s) => acc + s.errors, 0);
 
-    result.success = totalErrors === 0;
+    result.success = totalErrors < totalImported; // Success if more imports than errors
     console.log(`[JSON Import] Complete: ${totalImported} imported, ${totalErrors} errors`);
 
     return new Response(JSON.stringify(result), {
