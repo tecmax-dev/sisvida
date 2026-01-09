@@ -43,9 +43,11 @@ import {
   ExternalLink,
   MessageCircle,
   Printer,
+  Mail,
 } from "lucide-react";
 import { format } from "date-fns";
 import { SendBoletoWhatsAppDialog } from "./SendBoletoWhatsAppDialog";
+import { SendBoletoEmailDialog } from "./SendBoletoEmailDialog";
 import { generateBoletosReport } from "@/lib/boleto-report";
 
 interface Employer {
@@ -156,6 +158,7 @@ export default function ContributionsListTab({
   });
   const [currentPage, setCurrentPage] = useState(1);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
 
   // Get eligible contributions for WhatsApp (have boleto generated and are not paid/cancelled)
@@ -359,7 +362,7 @@ export default function ContributionsListTab({
                       className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
                     >
                       <MessageCircle className="h-4 w-4 mr-2" />
-                      Enviar Boletos
+                      WhatsApp
                       {selectedContributionIds.size > 0 && (
                         <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-emerald-100 text-emerald-700">
                           {selectedContributionIds.size}
@@ -371,6 +374,31 @@ export default function ContributionsListTab({
                     {selectedContributionIds.size > 0 
                       ? `Enviar ${selectedContributionIds.size} boleto(s) selecionado(s) via WhatsApp`
                       : "Enviar boletos via WhatsApp"}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEmailDialogOpen(true)}
+                      className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                    >
+                      <Mail className="h-4 w-4 mr-2" />
+                      Email
+                      {selectedContributionIds.size > 0 && (
+                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-blue-100 text-blue-700">
+                          {selectedContributionIds.size}
+                        </Badge>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {selectedContributionIds.size > 0 
+                      ? `Enviar ${selectedContributionIds.size} boleto(s) selecionado(s) por Email`
+                      : "Enviar boletos por Email"}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
@@ -617,6 +645,20 @@ export default function ContributionsListTab({
         open={whatsappDialogOpen}
         onOpenChange={(open) => {
           setWhatsappDialogOpen(open);
+          if (!open) {
+            setSelectedContributionIds(new Set());
+          }
+        }}
+        contributions={selectedContributions}
+        clinicId={clinicId}
+        preSelectedIds={selectedContributionIds}
+      />
+
+      {/* Email Dialog */}
+      <SendBoletoEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={(open) => {
+          setEmailDialogOpen(open);
           if (!open) {
             setSelectedContributionIds(new Set());
           }

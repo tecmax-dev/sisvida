@@ -75,9 +75,11 @@ import {
   Globe,
   DollarSign,
   Handshake,
+  Mail,
 } from "lucide-react";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoWhatsAppDialog";
+import { SendBoletoEmailDialog } from "@/components/contributions/SendBoletoEmailDialog";
 import { SendOverdueWhatsAppDialog } from "@/components/contributions/SendOverdueWhatsAppDialog";
 import { EmployerContributionFilters } from "@/components/contributions/EmployerContributionFilters";
 import { supabase } from "@/integrations/supabase/client";
@@ -187,6 +189,7 @@ export default function EmployerDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+  const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
   const [filteredContributions, setFilteredContributions] = useState<Contribution[]>([]);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
@@ -962,12 +965,25 @@ export default function EmployerDetailPage() {
             <Button
               variant="outline"
               onClick={() => setWhatsappDialogOpen(true)}
-              className="gap-2"
+              className="gap-2 text-emerald-600 border-emerald-300 hover:bg-emerald-50"
             >
               <MessageCircle className="h-4 w-4" />
-              Enviar Boletos
+              WhatsApp
               {selectedContributionIds.size > 0 && (
                 <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-emerald-100 text-emerald-700">
+                  {selectedContributionIds.size}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setEmailDialogOpen(true)}
+              className="gap-2 text-blue-600 border-blue-300 hover:bg-blue-50"
+            >
+              <Mail className="h-4 w-4" />
+              Email
+              {selectedContributionIds.size > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-blue-100 text-blue-700">
                   {selectedContributionIds.size}
                 </Badge>
               )}
@@ -2002,6 +2018,34 @@ export default function EmployerDetailPage() {
         employerName={employer?.name || ""}
         employerPhone={employer?.phone || null}
         clinicId={currentClinic?.id || ""}
+      />
+
+      {/* Email Dialog */}
+      <SendBoletoEmailDialog
+        open={emailDialogOpen}
+        onOpenChange={(open) => {
+          setEmailDialogOpen(open);
+          if (!open) {
+            setSelectedContributionIds(new Set());
+          }
+        }}
+        contributions={(() => {
+          const contribsToUse = selectedContributionIds.size > 0
+            ? contributions.filter((c) => selectedContributionIds.has(c.id))
+            : contributions;
+          return contribsToUse.map((c) => ({
+            ...c,
+            employers: {
+              name: employer?.name || "",
+              cnpj: employer?.cnpj || "",
+              email: employer?.email,
+            },
+          }));
+        })()}
+        clinicId={currentClinic?.id || ""}
+        preSelectedIds={selectedContributionIds}
+        defaultEmail={employer?.email || ""}
+        defaultName={employer?.name || ""}
       />
     </div>
   );
