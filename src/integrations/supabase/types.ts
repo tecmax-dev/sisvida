@@ -5521,6 +5521,7 @@ export type Database = {
           no_show_unblocked_by: string | null
           notes: string | null
           phone: string
+          photo_url: string | null
           preferred_channel: string | null
           priority: string | null
           profession: string | null
@@ -5576,6 +5577,7 @@ export type Database = {
           no_show_unblocked_by?: string | null
           notes?: string | null
           phone: string
+          photo_url?: string | null
           preferred_channel?: string | null
           priority?: string | null
           profession?: string | null
@@ -5631,6 +5633,7 @@ export type Database = {
           no_show_unblocked_by?: string | null
           notes?: string | null
           phone?: string
+          photo_url?: string | null
           preferred_channel?: string | null
           priority?: string | null
           profession?: string | null
