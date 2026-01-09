@@ -254,7 +254,12 @@ async function executeTool(
             .eq('appointment_date', dateStr)
           .not('status', 'in', '(cancelled,no_show)');
 
-          const bookedTimes = new Set(existingAppts?.map((a: any) => a.start_time) || []);
+          const bookedTimes = new Set(
+            existingAppts?.map((a: any) => {
+              const time = a.start_time;
+              return time.length > 5 ? time.slice(0, 5) : time;
+            }) || []
+          );
           
           // Count available slots
           let availableCount = 0;
@@ -385,7 +390,12 @@ async function executeTool(
 
         console.log(`[ai-assistant] buscar_horarios: Agendamentos existentes para ${data}: ${existingAppts?.length || 0}`, apptsError ? `Erro: ${apptsError.message}` : '', existingAppts ? JSON.stringify(existingAppts) : '');
 
-        const bookedTimes = new Set(existingAppts?.map((a: any) => a.start_time) || []);
+        const bookedTimes = new Set(
+          existingAppts?.map((a: any) => {
+            const time = a.start_time;
+            return time.length > 5 ? time.slice(0, 5) : time;
+          }) || []
+        );
         console.log(`[ai-assistant] buscar_horarios: Horários ocupados: ${Array.from(bookedTimes).join(', ') || 'nenhum'}`);
         const duration = professional.appointment_duration || 30;
 
