@@ -3590,16 +3590,15 @@ async function handleDependentCpfPhotoUpload(
   console.log('[dependent-cpf] Processing CPF photo for dependent registration');
   
   try {
-    // Fetch Evolution API config
+    // Fetch Evolution API config from evolution_configs table
     const { data: evolutionConfig } = await supabase
-      .from('whatsapp_config')
+      .from('evolution_configs')
       .select('api_url, api_key, instance_name, clinic_id')
       .eq('clinic_id', session.clinic_id)
-      .eq('is_active', true)
       .maybeSingle();
     
-    if (!evolutionConfig) {
-      console.error('[dependent-cpf] No Evolution config found');
+    if (!evolutionConfig?.api_url || !evolutionConfig?.api_key) {
+      console.error('[dependent-cpf] No Evolution config found for clinic:', session.clinic_id);
       return false;
     }
     
