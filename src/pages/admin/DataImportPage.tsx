@@ -49,6 +49,7 @@ import { ImportHistoryPanel } from "@/components/admin/ImportHistoryPanel";
 import { BulkCardExpiryUpdate } from "@/components/admin/BulkCardExpiryUpdate";
 import { LegacyDataTransform } from "@/components/admin/LegacyDataTransform";
 import { EmployerImportPanel } from "@/components/admin/EmployerImportPanel";
+import { JsonImportPanel } from "@/components/admin/JsonImportPanel";
 import {
   PatientImportRow,
   MedicalRecordImportRow,
@@ -85,7 +86,7 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"export" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards">("export");
+  const [activeTab, setActiveTab] = useState<"export" | "json" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards">("export");
   
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
@@ -2163,11 +2164,15 @@ export default function DataImportPage() {
       </Collapsible>
 
       {/* Import/Export Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards")}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "json" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards")}>
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="export" className="gap-2">
             <ArrowDownToLine className="h-4 w-4" />
             Exportar Dados
+          </TabsTrigger>
+          <TabsTrigger value="json" className="gap-2">
+            <FileText className="h-4 w-4" />
+            Importar JSON
           </TabsTrigger>
           <TabsTrigger value="combined" className="gap-2">
             <Sparkles className="h-4 w-4" />
@@ -2215,6 +2220,19 @@ export default function DataImportPage() {
             <Card>
               <CardContent className="py-8 text-center text-muted-foreground">
                 Selecione uma clínica para exportar os dados
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* JSON Import Tab */}
+        <TabsContent value="json" className="space-y-4">
+          {selectedClinicId && selectedClinic ? (
+            <JsonImportPanel clinicId={selectedClinicId} clinicName={selectedClinic.name} />
+          ) : (
+            <Card>
+              <CardContent className="py-8 text-center text-muted-foreground">
+                Selecione uma clínica para importar dados JSON
               </CardContent>
             </Card>
           )}

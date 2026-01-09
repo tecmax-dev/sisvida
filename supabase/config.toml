@@ -194,3 +194,6 @@ verify_jwt = true
 
 [functions.clinic-ai-backup]
 verify_jwt = true
+
+[functions.clinic-json-import]
+verify_jwt = false
