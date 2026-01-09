@@ -5213,6 +5213,7 @@ export type Database = {
           name: string
           notes: string | null
           patient_id: string
+          pending_approval: boolean | null
           phone: string | null
           relationship: string | null
           updated_at: string
@@ -5232,6 +5233,7 @@ export type Database = {
           name: string
           notes?: string | null
           patient_id: string
+          pending_approval?: boolean | null
           phone?: string | null
           relationship?: string | null
           updated_at?: string
@@ -5251,6 +5253,7 @@ export type Database = {
           name?: string
           notes?: string | null
           patient_id?: string
+          pending_approval?: boolean | null
           phone?: string | null
           relationship?: string | null
           updated_at?: string
@@ -5840,6 +5843,70 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pending_dependent_approvals: {
+        Row: {
+          clinic_id: string
+          cpf_photo_url: string | null
+          created_at: string
+          dependent_id: string
+          id: string
+          patient_id: string
+          rejection_reason: string | null
+          requester_phone: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          clinic_id: string
+          cpf_photo_url?: string | null
+          created_at?: string
+          dependent_id: string
+          id?: string
+          patient_id: string
+          rejection_reason?: string | null
+          requester_phone: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          clinic_id?: string
+          cpf_photo_url?: string | null
+          created_at?: string
+          dependent_id?: string
+          id?: string
+          patient_id?: string
+          rejection_reason?: string | null
+          requester_phone?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_dependent_approvals_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_dependent_approvals_dependent_id_fkey"
+            columns: ["dependent_id"]
+            isOneToOne: false
+            referencedRelation: "patient_dependents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_dependent_approvals_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]

@@ -48,6 +48,7 @@ const adminNavItems = [
   { path: "/admin/chat", label: "Chat Suporte", icon: MessageCircle },
   { path: "/admin/upgrades", label: "Upgrades", icon: ArrowUpCircle, hasBadge: true },
   { path: "/admin/addon-requests", label: "Solicitações Add-ons", icon: Sparkles, hasBadge: true },
+  { path: "/admin/dependent-approvals", label: "Aprovação Dependentes", icon: Users, hasBadge: true },
   { path: "/admin/import", label: "Importar Dados", icon: Upload },
   { path: "/admin/smtp", label: "Email SMTP", icon: Mail },
   { path: "/admin/audit", label: "Auditoria", icon: ScrollText },
