@@ -461,9 +461,9 @@ serve(async (req) => {
       });
     }
 
-    const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
-    if (!OPENAI_API_KEY) {
-      console.error('[ai-assistant] OPENAI_API_KEY not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.error('[ai-assistant] LOVABLE_API_KEY not configured');
       return new Response(JSON.stringify({ 
         response: 'Desculpe, o sistema está temporariamente indisponível.',
         error: 'API key not configured' 
@@ -586,15 +586,15 @@ Se pedirem para agendar consulta FORA da opção 6, informe que agendamento é p
 
     console.log('[ai-assistant] Sending to AI with', messages.length, 'messages');
 
-    // First API call with tools - using OpenAI directly
-    let response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // First API call with tools - using Lovable AI Gateway
+    let response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'google/gemini-2.5-flash',
         messages,
         tools,
         tool_choice: 'auto',
@@ -604,6 +604,23 @@ Se pedirem para agendar consulta FORA da opção 6, informe que agendamento é p
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[ai-assistant] AI gateway error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ 
+          response: 'Estamos com muitas solicitações no momento. Por favor, aguarde alguns segundos e tente novamente.',
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ 
+          response: 'Sistema temporariamente indisponível. Por favor, tente novamente mais tarde.',
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
       return new Response(JSON.stringify({ 
         response: 'Desculpe, não consegui processar sua mensagem. Tente novamente.',
       }), {
@@ -641,15 +658,15 @@ Se pedirem para agendar consulta FORA da opção 6, informe que agendamento é p
       messages.push(assistantMessage);
       messages.push(...toolResults);
 
-      // Call AI again with tool results - using OpenAI directly
-      response = await fetch('https://api.openai.com/v1/chat/completions', {
+      // Call AI again with tool results - using Lovable AI Gateway
+      response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'gpt-4o-mini',
+          model: 'google/gemini-2.5-flash',
           messages,
           tools,
           tool_choice: 'auto',
@@ -657,7 +674,8 @@ Se pedirem para agendar consulta FORA da opção 6, informe que agendamento é p
       });
 
       if (!response.ok) {
-        console.error('[ai-assistant] AI gateway error on tool response');
+        const errorText = await response.text();
+        console.error('[ai-assistant] AI gateway error on tool response:', response.status, errorText);
         break;
       }
 
