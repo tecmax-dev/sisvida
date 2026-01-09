@@ -91,18 +91,37 @@ serve(async (req) => {
     // 6. Create service role client for RPC call
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 7. Verify user has access to this clinic
+    // 7. Verify user has access to this clinic (or is super admin)
     const { data: hasAccess, error: accessError } = await supabase.rpc('has_clinic_access', {
       _user_id: user.id,
       _clinic_id: clinicId
     });
 
-    if (accessError || !hasAccess) {
+    // Super-admin bypass (admin panel can message any clinic)
+    let isSuperAdmin = false;
+    if (!accessError && !hasAccess) {
+      const { data: superAdminRow, error: superAdminError } = await supabase
+        .from('super_admins')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (superAdminError) {
+        console.error('[send-whatsapp] Error checking super admin:', superAdminError);
+      }
+      isSuperAdmin = !!superAdminRow;
+    }
+
+    if (accessError || (!hasAccess && !isSuperAdmin)) {
       console.error(`[send-whatsapp] User ${user.id} denied access to clinic ${clinicId}`);
       return new Response(
         JSON.stringify({ success: false, error: 'Acesso negado a esta clínica' }),
         { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    if (isSuperAdmin) {
+      console.log(`[send-whatsapp] Super admin override for clinic ${clinicId}`);
     }
 
     // 8. Check message limit for the clinic
