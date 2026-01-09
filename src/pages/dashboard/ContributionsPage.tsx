@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown, RefreshCw } from "lucide-react";
+import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown, RefreshCw, FileX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
@@ -14,6 +14,7 @@ import ContributionTypesTab from "@/components/contributions/ContributionTypesTa
 import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
 import ContributionDialogs from "@/components/contributions/ContributionDialogs";
 import BulkContributionDialog from "@/components/contributions/BulkContributionDialog";
+import OfflineContributionDialog from "@/components/contributions/OfflineContributionDialog";
 import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
@@ -88,6 +89,7 @@ export default function ContributionsPage() {
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  const [offlineDialogOpen, setOfflineDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
@@ -468,6 +470,14 @@ export default function ContributionsPage() {
             <FileStack className="h-4 w-4 mr-2" />
             Gerar em Lote
           </Button>
+          <Button 
+            variant="outline" 
+            onClick={() => setOfflineDialogOpen(true)}
+            className="text-orange-600 border-orange-300 hover:bg-orange-50 dark:hover:bg-orange-950"
+          >
+            <FileX className="h-4 w-4 mr-2" />
+            Débitos Retroativos
+          </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button 
@@ -602,6 +612,17 @@ export default function ContributionsPage() {
       <BulkContributionDialog
         open={bulkDialogOpen}
         onOpenChange={setBulkDialogOpen}
+        employers={employers}
+        contributionTypes={contributionTypes}
+        clinicId={currentClinic?.id || ""}
+        userId={session?.user.id || ""}
+        onRefresh={fetchData}
+        categories={categories}
+      />
+
+      <OfflineContributionDialog
+        open={offlineDialogOpen}
+        onOpenChange={setOfflineDialogOpen}
         employers={employers}
         contributionTypes={contributionTypes}
         clinicId={currentClinic?.id || ""}
