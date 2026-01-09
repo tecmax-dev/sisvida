@@ -99,8 +99,8 @@ export default function OfflineContributionDialog({
   const [customValue, setCustomValue] = useState("");
   const [notes, setNotes] = useState("Débito retroativo - Aguardando negociação");
   
-  // Permitir duplicidade
-  const [allowDuplicates, setAllowDuplicates] = useState(false);
+  // Substituir contribuições existentes (cancelar anterior)
+  const [replaceExisting, setReplaceExisting] = useState(false);
   
   // Modo de data de vencimento: 'lastDay' | 'fixed' | 'sequential'
   const [dueDateMode, setDueDateMode] = useState<'lastDay' | 'fixed' | 'sequential'>('lastDay');
@@ -111,10 +111,11 @@ export default function OfflineContributionDialog({
   // Processing state
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
-  const [results, setResults] = useState<{ success: number; failed: number; skipped: number; errors: string[] }>({ 
+  const [results, setResults] = useState<{ success: number; failed: number; skipped: number; replaced: number; errors: string[] }>({ 
     success: 0, 
     failed: 0, 
     skipped: 0,
+    replaced: 0,
     errors: [] 
   });
 
@@ -184,14 +185,14 @@ export default function OfflineContributionDialog({
       setUseDefaultValue(true);
       setCustomValue("");
       setNotes("Débito retroativo - Aguardando negociação");
-      setAllowDuplicates(false);
+      setReplaceExisting(false);
       setDueDateMode('lastDay');
       setCustomDueDate(undefined);
       setSequentialDay(10);
       setSequentialStartDate(undefined);
       setSearchTerm("");
       setCategoryFilter("all");
-      setResults({ success: 0, failed: 0, skipped: 0, errors: [] });
+      setResults({ success: 0, failed: 0, skipped: 0, replaced: 0, errors: [] });
     }
   }, [open]);
 
@@ -252,6 +253,7 @@ export default function OfflineContributionDialog({
     let success = 0;
     let failed = 0;
     let skipped = 0;
+    let replaced = 0;
     const errors: string[] = [];
 
     for (const employerId of selectedEmployers) {
@@ -280,18 +282,31 @@ export default function OfflineContributionDialog({
             dueDateStr = format(dueDate, "yyyy-MM-dd");
           }
           
-          // Gerar active_competence_key para evitar duplicatas
-          const activeCompetenceKey = `${employerId}-${typeId}-${competence.year}-${String(competence.month).padStart(2, "0")}`;
+          // Verificar se existe contribuição ativa para esta competência
+          const { data: existing } = await supabase
+            .from("employer_contributions")
+            .select("id")
+            .eq("employer_id", employerId)
+            .eq("contribution_type_id", typeId)
+            .eq("competence_month", competence.month)
+            .eq("competence_year", competence.year)
+            .neq("status", "cancelled")
+            .maybeSingle();
           
-          // Verificar duplicidade somente se não permitido
-          if (!allowDuplicates) {
-            const { data: existing } = await supabase
-              .from("employer_contributions")
-              .select("id")
-              .eq("active_competence_key", activeCompetenceKey)
-              .maybeSingle();
-            
-            if (existing) {
+          if (existing) {
+            if (replaceExisting) {
+              // Cancelar a contribuição existente para liberar a chave única
+              const { error: cancelError } = await supabase
+                .from("employer_contributions")
+                .update({ status: "cancelled" })
+                .eq("id", existing.id);
+              
+              if (cancelError) {
+                throw new Error(`Erro ao cancelar existente: ${cancelError.message}`);
+              }
+              replaced++;
+            } else {
+              // Pular se não for para substituir
               skipped++;
               setProgress(prev => ({ ...prev, current: prev.current + 1 }));
               continue;
@@ -330,7 +345,7 @@ export default function OfflineContributionDialog({
       }
     }
 
-    setResults({ success, failed, skipped, errors });
+    setResults({ success, failed, skipped, replaced, errors });
     setProcessing(false);
     setStep("result");
     
@@ -541,20 +556,20 @@ export default function OfflineContributionDialog({
                 Serão criadas <strong>{competenceList.length}</strong> contribuição(ões) por empresa selecionada.
               </div>
 
-              {/* Permitir Duplicidade */}
+              {/* Substituir existente */}
               <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg p-3">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <Checkbox
-                    checked={allowDuplicates}
-                    onCheckedChange={(checked) => setAllowDuplicates(!!checked)}
+                    checked={replaceExisting}
+                    onCheckedChange={(checked) => setReplaceExisting(!!checked)}
                     className="mt-0.5"
                   />
                   <div>
                     <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                      Permitir duplicidade de competência
+                      Substituir contribuição existente (cancelar anterior)
                     </span>
                     <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
-                      Gerar mesmo se já existir débito para o período (útil para lançar múltiplos débitos)
+                      Se já existir débito para o período, a anterior será cancelada e substituída pela nova
                     </p>
                   </div>
                 </label>
@@ -777,18 +792,22 @@ export default function OfflineContributionDialog({
               Processo concluído
             </div>
             
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-4 bg-green-500/10 rounded-lg">
-                <p className="text-2xl font-bold text-green-600">{results.success}</p>
-                <p className="text-sm text-muted-foreground">Criados</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+              <div className="p-3 bg-green-500/10 rounded-lg">
+                <p className="text-xl font-bold text-green-600">{results.success}</p>
+                <p className="text-xs text-muted-foreground">Criados</p>
               </div>
-              <div className="p-4 bg-yellow-500/10 rounded-lg">
-                <p className="text-2xl font-bold text-yellow-600">{results.skipped}</p>
-                <p className="text-sm text-muted-foreground">Já existentes</p>
+              <div className="p-3 bg-blue-500/10 rounded-lg">
+                <p className="text-xl font-bold text-blue-600">{results.replaced}</p>
+                <p className="text-xs text-muted-foreground">Substituídos</p>
               </div>
-              <div className="p-4 bg-red-500/10 rounded-lg">
-                <p className="text-2xl font-bold text-red-600">{results.failed}</p>
-                <p className="text-sm text-muted-foreground">Erros</p>
+              <div className="p-3 bg-yellow-500/10 rounded-lg">
+                <p className="text-xl font-bold text-yellow-600">{results.skipped}</p>
+                <p className="text-xs text-muted-foreground">Ignorados</p>
+              </div>
+              <div className="p-3 bg-red-500/10 rounded-lg">
+                <p className="text-xl font-bold text-red-600">{results.failed}</p>
+                <p className="text-xs text-muted-foreground">Erros</p>
               </div>
             </div>
 
