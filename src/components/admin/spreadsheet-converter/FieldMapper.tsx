@@ -1,10 +1,8 @@
 import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { ArrowRight, Wand2, RotateCcw } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowRight, Wand2, RotateCcw, ChevronDown, ChevronRight, Asterisk } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FieldMapping {
@@ -28,10 +26,9 @@ export function FieldMapper({
   onMappingsChange,
   autoDetectedMappings = [],
 }: FieldMapperProps) {
-  const [showOnlyMapped, setShowOnlyMapped] = useState(false);
+  const [optionalOpen, setOptionalOpen] = useState(false);
 
   const handleMapping = (targetField: string, sourceColumn: string) => {
-    // Handle special "no mapping" value
     const actualValue = sourceColumn === '__none__' ? '' : sourceColumn;
     const newMappings = mappings.filter(m => m.targetField !== targetField);
     if (actualValue) {
@@ -52,118 +49,138 @@ export function FieldMapper({
     return mappings.find(m => m.targetField === targetField)?.sourceColumn || '';
   };
 
-  const isAutoDetected = (targetField: string): boolean => {
-    return autoDetectedMappings.some(m => m.targetField === targetField);
-  };
+  const requiredFields = targetFields.filter(f => f.required);
+  const optionalFields = targetFields.filter(f => !f.required);
+  const mappedCount = mappings.length;
 
-  const filteredTargetFields = showOnlyMapped
-    ? targetFields.filter(f => getMappedSource(f.key) || f.required)
-    : targetFields;
+  const renderFieldRow = (target: { key: string; label: string; required?: boolean }) => {
+    const mappedSource = getMappedSource(target.key);
+    
+    return (
+      <div
+        key={target.key}
+        className={cn(
+          "grid grid-cols-[1fr,24px,1fr] gap-3 items-center py-2 px-3 rounded-md transition-colors",
+          mappedSource ? "bg-primary/5" : "hover:bg-muted/50"
+        )}
+      >
+        {/* Target Field */}
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-sm font-medium truncate">{target.label}</span>
+          {target.required && (
+            <Asterisk className="h-3 w-3 text-destructive flex-shrink-0" />
+          )}
+        </div>
+
+        {/* Arrow */}
+        <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0 justify-self-center" />
+
+        {/* Source Column Selector */}
+        <Select
+          value={mappedSource || '__none__'}
+          onValueChange={(value) => handleMapping(target.key, value)}
+        >
+          <SelectTrigger 
+            className={cn(
+              "h-9 text-sm",
+              mappedSource && "border-primary/50 bg-primary/5"
+            )}
+          >
+            <SelectValue placeholder="Selecione..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">
+              <span className="text-muted-foreground">Não mapear</span>
+            </SelectItem>
+            {sourceColumns.map((col) => (
+              <SelectItem key={col} value={col}>
+                {col}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      {/* Compact Toolbar */}
+      <div className="flex items-center justify-between gap-4 pb-3 border-b">
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
             size="sm"
             onClick={applyAutoDetection}
             disabled={autoDetectedMappings.length === 0}
+            className="h-8 text-xs"
           >
-            <Wand2 className="h-4 w-4 mr-2" />
-            Autodetectar ({autoDetectedMappings.length})
+            <Wand2 className="h-3.5 w-3.5 mr-1.5" />
+            Auto ({autoDetectedMappings.length})
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={clearMappings}
             disabled={mappings.length === 0}
+            className="h-8 text-xs"
           >
-            <RotateCcw className="h-4 w-4 mr-2" />
+            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
             Limpar
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            {mappings.length} de {targetFields.length} campos mapeados
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowOnlyMapped(!showOnlyMapped)}
-          >
-            {showOnlyMapped ? 'Mostrar todos' : 'Mostrar mapeados'}
-          </Button>
-        </div>
+        <span className="text-xs text-muted-foreground">
+          {mappedCount}/{targetFields.length} mapeados
+        </span>
       </div>
 
-      <ScrollArea className="h-[400px] pr-4">
-        <div className="space-y-2">
-          {filteredTargetFields.map((target) => {
-            const mappedSource = getMappedSource(target.key);
-            const isAuto = isAutoDetected(target.key);
+      {/* Table Header */}
+      <div className="grid grid-cols-[1fr,24px,1fr] gap-3 px-3 pb-2 border-b">
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Campo do Sistema
+        </span>
+        <span></span>
+        <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          Coluna da Planilha
+        </span>
+      </div>
 
-            return (
-              <Card
-                key={target.key}
-                className={cn(
-                  "transition-colors",
-                  mappedSource && "border-primary/50 bg-primary/5"
-                )}
-              >
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-3">
-                    {/* Target Field */}
-                    <div className="flex-1 min-w-[150px]">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">{target.label}</span>
-                        {target.required && (
-                          <Badge variant="destructive" className="text-xs">
-                            Obrigatório
-                          </Badge>
-                        )}
-                        {isAuto && !mappedSource && (
-                          <Badge variant="secondary" className="text-xs">
-                            Sugestão
-                          </Badge>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground">{target.key}</span>
-                    </div>
-
-                    {/* Arrow */}
-                    <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-
-                    {/* Source Column Selector */}
-                    <div className="flex-1 min-w-[200px]">
-                      <Select
-                        value={mappedSource || '__none__'}
-                        onValueChange={(value) => handleMapping(target.key, value)}
-                      >
-                        <SelectTrigger className={cn(
-                          mappedSource && "border-primary"
-                        )}>
-                          <SelectValue placeholder="Selecione a coluna..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">
-                            <span className="text-muted-foreground">Não mapear</span>
-                          </SelectItem>
-                          {sourceColumns.map((col) => (
-                            <SelectItem key={col} value={col}>
-                              {col}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+      {/* Required Fields */}
+      {requiredFields.length > 0 && (
+        <div className="space-y-1">
+          {requiredFields.map(renderFieldRow)}
         </div>
-      </ScrollArea>
+      )}
+
+      {/* Optional Fields - Collapsible */}
+      {optionalFields.length > 0 && (
+        <Collapsible open={optionalOpen} onOpenChange={setOptionalOpen}>
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start gap-2 h-9 text-muted-foreground hover:text-foreground"
+            >
+              {optionalOpen ? (
+                <ChevronDown className="h-4 w-4" />
+              ) : (
+                <ChevronRight className="h-4 w-4" />
+              )}
+              <span className="text-sm">
+                Campos opcionais ({optionalFields.length})
+              </span>
+              {optionalFields.filter(f => getMappedSource(f.key)).length > 0 && (
+                <span className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded">
+                  {optionalFields.filter(f => getMappedSource(f.key)).length} mapeados
+                </span>
+              )}
+            </Button>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="space-y-1 pt-2">
+            {optionalFields.map(renderFieldRow)}
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>
   );
 }
