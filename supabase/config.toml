@@ -206,3 +206,9 @@ verify_jwt = false
 
 [functions.import-converted-data]
 verify_jwt = false
+
+[functions.send-homologacao-notifications]
+verify_jwt = false
+
+[functions.send-homologacao-reminders]
+verify_jwt = false
