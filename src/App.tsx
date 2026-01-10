@@ -107,7 +107,12 @@ import ContributionsPage from "./pages/dashboard/ContributionsPage";
 import NegotiationsPage from "./pages/dashboard/NegotiationsPage";
 import AccountingOfficesPage from "./pages/dashboard/AccountingOfficesPage";
 import DependentApprovalsPage from "./pages/dashboard/DependentApprovalsPage";
-import HomologacaoPage from "./pages/dashboard/HomologacaoPage";
+// Homologação module pages
+import HomologacaoAgendaPage from "./pages/dashboard/homologacao/HomologacaoAgendaPage";
+import HomologacaoProfissionaisPage from "./pages/dashboard/homologacao/HomologacaoProfissionaisPage";
+import HomologacaoServicosPage from "./pages/dashboard/homologacao/HomologacaoServicosPage";
+import HomologacaoBloqueiosPage from "./pages/dashboard/homologacao/HomologacaoBloqueiosPage";
+import HomologacaoConfigPage from "./pages/dashboard/homologacao/HomologacaoConfigPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -368,7 +373,12 @@ const App = () => (
                   <Route path="contribuicoes" element={<ContributionsPage />} />
                   <Route path="negociacoes" element={<NegotiationsPage />} />
                   <Route path="escritorios" element={<AccountingOfficesPage />} />
-                  <Route path="homologacao" element={<HomologacaoPage />} />
+                  {/* Homologação module routes */}
+                  <Route path="homologacao" element={<HomologacaoAgendaPage />} />
+                  <Route path="homologacao/profissionais" element={<HomologacaoProfissionaisPage />} />
+                  <Route path="homologacao/servicos" element={<HomologacaoServicosPage />} />
+                  <Route path="homologacao/bloqueios" element={<HomologacaoBloqueiosPage />} />
+                  <Route path="homologacao/config" element={<HomologacaoConfigPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

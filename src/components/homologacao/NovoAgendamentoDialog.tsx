@@ -41,9 +41,9 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
   const [formData, setFormData] = useState({
     employee_name: "",
     employee_cpf: "",
-    employee_phone: "",
     company_name: "",
     company_cnpj: "",
+    company_phone: "",
     appointment_date: new Date(),
     start_time: "09:00",
     professional_id: "",
@@ -101,8 +101,10 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
         .from("homologacao_appointments")
         .insert({
           employee_name: data.employee_name,
+          employee_cpf: data.employee_cpf || null,
           company_name: data.company_name,
           company_cnpj: data.company_cnpj || null,
+          company_phone: data.company_phone,
           appointment_date: format(data.appointment_date, "yyyy-MM-dd"),
           start_time: data.start_time,
           end_time,
@@ -128,9 +130,9 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
     setFormData({
       employee_name: "",
       employee_cpf: "",
-      employee_phone: "",
       company_name: "",
       company_cnpj: "",
+      company_phone: "",
       appointment_date: new Date(),
       start_time: "09:00",
       professional_id: "",
@@ -146,6 +148,10 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
     }
     if (!formData.company_name.trim()) {
       toast.error("O nome da empresa é obrigatório");
+      return;
+    }
+    if (!formData.company_phone.trim()) {
+      toast.error("O telefone da empresa é obrigatório");
       return;
     }
     createMutation.mutate(formData);
@@ -193,15 +199,6 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="employee_phone">Telefone</Label>
-              <Input
-                id="employee_phone"
-                value={formData.employee_phone}
-                onChange={(e) => setFormData({ ...formData, employee_phone: e.target.value })}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
           </div>
 
           {/* Company Info */}
@@ -226,6 +223,15 @@ export function NovoAgendamentoDialog({ open, onOpenChange, onSuccess }: NovoAge
                   placeholder="00.000.000/0001-00"
                 />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="company_phone">Telefone da Empresa *</Label>
+              <Input
+                id="company_phone"
+                value={formData.company_phone}
+                onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
+                placeholder="(00) 00000-0000"
+              />
             </div>
           </div>
 
