@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
 
 interface SupplierDialogProps {
   open: boolean;
@@ -167,13 +168,11 @@ export function SupplierDialog({
               />
             </div>
 
-            <div>
-              <Label htmlFor="cnpj">CNPJ</Label>
-              <Input
-                id="cnpj"
+            <div className="col-span-2">
+              <CnpjInputCard
                 value={formData.cnpj}
-                onChange={(e) => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })}
-                placeholder="00.000.000/0000-00"
+                onChange={(value) => setFormData({ ...formData, cnpj: value })}
+                showLookupButton={false}
               />
             </div>
 

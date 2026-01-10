@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { CpfInputCard } from "@/components/ui/cpf-input-card";
 
 interface Dependent {
   id: string;
@@ -345,14 +346,11 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="dep-cpf">CPF</Label>
-                <Input
-                  id="dep-cpf"
-                  placeholder="000.000.000-00"
+              <div className="md:col-span-2">
+                <CpfInputCard
                   value={formData.cpf}
-                  onChange={(e) => setFormData({ ...formData, cpf: formatCPF(e.target.value) })}
-                  maxLength={14}
+                  onChange={(value) => setFormData({ ...formData, cpf: value })}
+                  showValidation
                 />
               </div>
 

@@ -59,6 +59,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import AccountingOfficeImportPanel from "@/components/admin/AccountingOfficeImportPanel";
+import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
 
 interface AccountingOffice {
   id: string;
@@ -786,34 +787,13 @@ export default function AccountingOfficesPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
-            {/* CNPJ com busca automática */}
-            <div className="space-y-2">
-              <Label htmlFor="cnpj">CNPJ</Label>
-              <div className="flex gap-2">
-                <Input
-                  id="cnpj"
-                  value={formData.cnpj}
-                  onChange={(e) => setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })}
-                  placeholder="00.000.000/0000-00"
-                  maxLength={18}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleCnpjLookup}
-                  disabled={cnpjLoading}
-                >
-                  {cnpjLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <FileSearch className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Digite o CNPJ e clique no ícone para buscar automaticamente
-              </p>
-            </div>
+            {/* CNPJ com busca automática - Destacado */}
+            <CnpjInputCard
+              value={formData.cnpj}
+              onChange={(value) => setFormData({ ...formData, cnpj: value })}
+              onLookup={handleCnpjLookup}
+              loading={cnpjLoading}
+            />
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
