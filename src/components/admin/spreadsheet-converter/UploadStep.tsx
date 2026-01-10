@@ -59,27 +59,72 @@ export function UploadStep({ onFileLoaded, currentFile, initialData }: UploadSte
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: 'array' });
       
-      // Get first sheet
       const firstSheetName = workbook.SheetNames[0];
       const worksheet = workbook.Sheets[firstSheetName];
       
-      // Convert to JSON
-      const jsonData = XLSX.utils.sheet_to_json<Record<string, unknown>>(worksheet, {
+      // Ler como array de arrays (sem tratamento automático de header)
+      const rawData = XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
+        header: 1,
         defval: '',
         raw: false,
-      });
+      }) as unknown[][];
 
-      if (jsonData.length === 0) {
+      if (rawData.length === 0) {
         toast.error('Planilha vazia ou sem dados');
         return;
       }
 
-      // Extract headers from first row keys
-      const headers = Object.keys(jsonData[0] || {});
+      // Função para detectar se uma linha parece ser o cabeçalho real
+      const isValidHeader = (row: unknown[]): boolean => {
+        if (!row || row.length === 0) return false;
+        const filledCells = row.filter(cell => 
+          cell !== null && 
+          cell !== undefined && 
+          String(cell).trim() !== ''
+        );
+        return filledCells.length >= 3;
+      };
+
+      // Encontrar a linha de cabeçalho real (primeira linha válida sem __EMPTY)
+      let headerRowIndex = 0;
+      for (let i = 0; i < Math.min(rawData.length, 10); i++) {
+        if (isValidHeader(rawData[i])) {
+          const hasRealContent = rawData[i].some(cell => {
+            const str = String(cell || '').trim();
+            return str !== '' && !str.startsWith('__EMPTY');
+          });
+          if (hasRealContent) {
+            headerRowIndex = i;
+            break;
+          }
+        }
+      }
+
+      // Extrair headers da linha correta
+      const headers = (rawData[headerRowIndex] as unknown[]).map((cell, idx) => {
+        const value = String(cell || '').trim();
+        return value || `Coluna_${idx + 1}`;
+      });
+
+      // Extrair dados (linhas após o header)
+      const dataRows = rawData.slice(headerRowIndex + 1)
+        .filter(row => row && row.some(cell => String(cell || '').trim() !== ''))
+        .map(row => {
+          const obj: Record<string, unknown> = {};
+          headers.forEach((header, idx) => {
+            obj[header] = row[idx] ?? '';
+          });
+          return obj;
+        });
+
+      if (dataRows.length === 0) {
+        toast.error('Nenhum dado encontrado após os cabeçalhos');
+        return;
+      }
 
       const result = {
         headers,
-        rows: jsonData,
+        rows: dataRows,
         fileName: file.name,
         sheetNames: workbook.SheetNames,
       };
@@ -87,7 +132,10 @@ export function UploadStep({ onFileLoaded, currentFile, initialData }: UploadSte
       setPreview(result);
       onFileLoaded(result);
 
-      toast.success(`${jsonData.length} linhas carregadas de "${file.name}"`);
+      toast.success(
+        `${dataRows.length} linhas carregadas de "${file.name}" ` +
+        `(cabeçalho na linha ${headerRowIndex + 1})`
+      );
     } catch (error) {
       console.error('Error processing file:', error);
       toast.error('Erro ao processar arquivo. Verifique o formato.');
