@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
-import HolidayImportSection from "@/components/homologacao/HolidayImportSection";
+import { Suspense, lazy } from "react";
+
+const HolidayImportSection = lazy(() => import("@/components/homologacao/HolidayImportSection"));
 import { 
   Save,
   Link2,
@@ -333,7 +335,9 @@ export default function HomologacaoConfigPage() {
         </Card>
 
         {/* Holiday Import Section */}
-        <HolidayImportSection />
+        <Suspense fallback={<Skeleton className="h-64" />}>
+          <HolidayImportSection />
+        </Suspense>
       </div>
     </div>
   );
