@@ -54,6 +54,7 @@ import {
   Megaphone,
   FileCheck2,
   CalendarOff,
+  CalendarX,
   Image,
   FlaskConical,
   Building2,
@@ -66,6 +67,7 @@ import {
   BookOpen,
   Sparkles,
   Handshake,
+  Scale,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -100,6 +102,7 @@ interface NavCategory {
   icon: React.ComponentType<{ className?: string }>;
   items: NavItem[];
   color?: string; // Tailwind color class for parent category
+  addonKey?: string; // Requires specific addon to show entire category
 }
 
 // Category color mapping for visual distinction
@@ -121,6 +124,12 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
     text: "text-cyan-200",
     border: "border-cyan-400/30",
     accent: "bg-cyan-500/30"
+  },
+  homologacao: {
+    bg: "bg-emerald-500/20",
+    text: "text-emerald-200",
+    border: "border-emerald-400/30",
+    accent: "bg-emerald-500/30"
   },
   admin: {
     bg: "bg-rose-500/20",
@@ -170,9 +179,23 @@ const navCategories: NavCategory[] = [
       { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais", permission: "view_professionals" },
       { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
       { href: "/dashboard/exams", icon: FlaskConical, label: "Exames", permission: "view_procedures" },
-      { href: "/dashboard/homologacao", icon: FileCheck2, label: "Homologação", permission: "view_procedures", addonKey: "homologa_net" },
       { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
       { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
+    ],
+  },
+  // HOMOLOGAÇÃO - Emerald (categoria independente com addon)
+  {
+    id: "homologacao",
+    label: "Homologação",
+    icon: Scale,
+    color: "homologacao",
+    addonKey: "homologa_net",
+    items: [
+      { href: "/dashboard/homologacao", icon: Calendar, label: "Agenda" },
+      { href: "/dashboard/homologacao/profissionais", icon: UserCircle, label: "Profissionais" },
+      { href: "/dashboard/homologacao/servicos", icon: ClipboardList, label: "Serviços" },
+      { href: "/dashboard/homologacao/bloqueios", icon: CalendarX, label: "Bloqueios" },
+      { href: "/dashboard/homologacao/config", icon: Settings, label: "Configurações" },
     ],
   },
   // ADMINISTRATIVO - Rose/Pink
@@ -231,16 +254,23 @@ export function DashboardLayout() {
   }, []);
 
   // Filter categories based on permissions and addons
-  const filteredCategories = navCategories.map(category => ({
-    ...category,
-    items: category.items.filter(item => {
-      // Check permission
-      if (item.permission && !hasPermission(item.permission)) return false;
-      // Check addon requirement
-      if (item.addonKey && !hasAddon(item.addonKey)) return false;
+  const filteredCategories = navCategories
+    .filter(category => {
+      // If category has addonKey requirement, check addon first
+      if (category.addonKey && !hasAddon(category.addonKey)) return false;
       return true;
     })
-  })).filter(category => category.items.length > 0);
+    .map(category => ({
+      ...category,
+      items: category.items.filter(item => {
+        // Check permission
+        if (item.permission && !hasPermission(item.permission)) return false;
+        // Check addon requirement
+        if (item.addonKey && !hasAddon(item.addonKey)) return false;
+        return true;
+      })
+    }))
+    .filter(category => category.items.length > 0);
 
   const filteredAdminNavItems = adminNavItems.filter((item) =>
     !item.permission || hasPermission(item.permission)
