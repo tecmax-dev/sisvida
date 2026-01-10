@@ -91,8 +91,8 @@ interface ResultStepProps {
 }
 
 const CHUNK_SIZE = 1500; // Records per chunk
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 2000;
+const MAX_RETRIES = 5;
+const RETRY_DELAY_MS = 3000;
 
 export function ResultStep({
   validRows,
@@ -169,18 +169,30 @@ export function ResultStep({
 
       return response.data as ImportResult;
     } catch (error) {
-      // Retry logic for transient errors
+      // Retry logic for transient errors (network issues, timeouts, edge function failures)
       if (retryCount < MAX_RETRIES) {
-        const isTransient = error instanceof Error && (
-          error.message.includes('timeout') ||
-          error.message.includes('network') ||
-          error.message.includes('504') ||
-          error.message.includes('503')
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const isTransient = (
+          errorMessage.includes('timeout') ||
+          errorMessage.includes('network') ||
+          errorMessage.includes('504') ||
+          errorMessage.includes('503') ||
+          errorMessage.includes('502') ||
+          errorMessage.includes('Failed to send a request') ||
+          errorMessage.includes('Failed to fetch') ||
+          errorMessage.includes('NetworkError') ||
+          errorMessage.includes('ERR_NETWORK') ||
+          errorMessage.includes('ECONNRESET') ||
+          errorMessage.toLowerCase().includes('connection')
         );
         
+        console.log(`[ResultStep] Error detected: "${errorMessage}", isTransient: ${isTransient}`);
+        
         if (isTransient) {
-          console.log(`[ResultStep] Retrying chunk ${chunkIndex + 1} (attempt ${retryCount + 2}/${MAX_RETRIES + 1})`);
-          await sleep(RETRY_DELAY_MS * (retryCount + 1));
+          const delayMs = RETRY_DELAY_MS * Math.pow(1.5, retryCount);
+          console.log(`[ResultStep] Retrying chunk ${chunkIndex + 1} (attempt ${retryCount + 2}/${MAX_RETRIES + 1}) after ${delayMs}ms`);
+          toast.info(`Reconectando... Tentativa ${retryCount + 2}/${MAX_RETRIES + 1} para lote ${chunkIndex + 1}`);
+          await sleep(delayMs);
           return importChunk(chunk, chunkIndex, totalChunks, retryCount + 1);
         }
       }
