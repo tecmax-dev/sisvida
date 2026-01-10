@@ -583,6 +583,7 @@ async function importContributionsBatch(
       }
 
       // NOTE: active_competence_key is a GENERATED ALWAYS column - DO NOT include it in insert!
+      // The is_negotiated_debt flag is used by the generated column to add -DN suffix
       toInsert.push({
         clinic_id: clinicId,
         employer_id: employerId,
@@ -592,6 +593,7 @@ async function importContributionsBatch(
         status: finalStatus,
         competence_month: competenceMonth,
         competence_year: competenceYear,
+        is_negotiated_debt: isNegotiatedDebt, // Flag para débitos negociados (código 99)
         paid_at: finalStatus === 'paid' ? (paymentDate || dueDate) : null,
         paid_value: finalStatus === 'paid' ? value : null,
         notes: row.notes || row.description ? String(row.notes || row.description).trim() : null,

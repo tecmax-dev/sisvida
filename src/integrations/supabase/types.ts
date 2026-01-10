@@ -2298,6 +2298,7 @@ export type Database = {
           due_date: string
           employer_id: string
           id: string
+          is_negotiated_debt: boolean | null
           lytex_boleto_barcode: string | null
           lytex_boleto_digitable_line: string | null
           lytex_invoice_id: string | null
@@ -2325,6 +2326,7 @@ export type Database = {
           due_date: string
           employer_id: string
           id?: string
+          is_negotiated_debt?: boolean | null
           lytex_boleto_barcode?: string | null
           lytex_boleto_digitable_line?: string | null
           lytex_invoice_id?: string | null
@@ -2352,6 +2354,7 @@ export type Database = {
           due_date?: string
           employer_id?: string
           id?: string
+          is_negotiated_debt?: boolean | null
           lytex_boleto_barcode?: string | null
           lytex_boleto_digitable_line?: string | null
           lytex_invoice_id?: string | null
