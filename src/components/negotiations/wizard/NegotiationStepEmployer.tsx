@@ -5,6 +5,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Search, Building2 } from "lucide-react";
+import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
 
 interface Employer {
   id: string;

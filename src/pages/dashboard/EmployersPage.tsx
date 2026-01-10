@@ -83,6 +83,7 @@ import { SyncCnpjDialog } from "@/components/employers/SyncCnpjDialog";
 import { AccountingOfficeSelector } from "@/components/employers/AccountingOfficeSelector";
 import { useCepLookup } from "@/hooks/useCepLookup";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
+import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
 
 interface Category {
   id: string;
@@ -951,7 +952,32 @@ export default function EmployersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-3 gap-4">
+            {/* CNPJ Destacado */}
+            <CnpjInputCard
+              value={formData.cnpj}
+              onChange={(value) => setFormData({ ...formData, cnpj: value })}
+              onLookup={async () => {
+                const data = await lookupCnpj(formData.cnpj);
+                if (data) {
+                  setFormData(prev => ({
+                    ...prev,
+                    name: data.razao_social || prev.name,
+                    trade_name: data.nome_fantasia || prev.trade_name,
+                    email: data.email || prev.email,
+                    phone: data.telefone ? formatPhone(data.telefone) : prev.phone,
+                    cep: data.cep || prev.cep,
+                    address: data.logradouro ? `${data.logradouro}${data.numero ? `, ${data.numero}` : ''}` : prev.address,
+                    neighborhood: data.bairro || prev.neighborhood,
+                    city: data.municipio || prev.city,
+                    state: data.uf || prev.state,
+                  }));
+                }
+              }}
+              loading={cnpjLoading}
+              required
+            />
+            
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="registration_number">Matrícula</Label>
                 <div className="relative">
@@ -967,49 +993,6 @@ export default function EmployersPage() {
                       Auto
                     </span>
                   )}
-                </div>
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="cnpj">CNPJ *</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="cnpj"
-                    value={formData.cnpj}
-                    onChange={(e) =>
-                      setFormData({ ...formData, cnpj: formatCNPJ(e.target.value) })
-                    }
-                    placeholder="00.000.000/0000-00"
-                    className="flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    disabled={cnpjLoading || formData.cnpj.replace(/\D/g, '').length !== 14}
-                    onClick={async () => {
-                      const data = await lookupCnpj(formData.cnpj);
-                      if (data) {
-                        setFormData(prev => ({
-                          ...prev,
-                          name: data.razao_social || prev.name,
-                          trade_name: data.nome_fantasia || prev.trade_name,
-                          email: data.email || prev.email,
-                          phone: data.telefone ? formatPhone(data.telefone) : prev.phone,
-                          cep: data.cep || prev.cep,
-                          address: data.logradouro ? `${data.logradouro}${data.numero ? `, ${data.numero}` : ''}` : prev.address,
-                          neighborhood: data.bairro || prev.neighborhood,
-                          city: data.municipio || prev.city,
-                          state: data.uf || prev.state,
-                        }));
-                      }
-                    }}
-                  >
-                    {cnpjLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Search className="h-4 w-4" />
-                    )}
-                  </Button>
                 </div>
               </div>
             </div>

@@ -12,6 +12,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { openWhatsApp } from "@/lib/whatsapp";
+import { CpfInputCard } from "@/components/ui/cpf-input-card";
+import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
 
 interface InsurancePlan {
   id: string;
@@ -279,16 +281,13 @@ export function PatientFormFields({
           />
         </div>
         
-        <div>
-          <Label htmlFor="cpf">CPF</Label>
-          <Input
-            id="cpf"
+        <div className="sm:col-span-2">
+          <CpfInputCard
             value={formData.cpf}
-            onChange={(e) => updateField('cpf', formatCPF(e.target.value))}
-            placeholder="000.000.000-00"
-            className={`mt-1 ${errors.cpf ? 'border-destructive' : ''}`}
+            onChange={(value) => updateField('cpf', value)}
+            error={errors.cpf}
+            showValidation
           />
-          {errors.cpf && <p className="mt-1 text-xs text-destructive">{errors.cpf}</p>}
         </div>
         
         <div>
@@ -692,45 +691,27 @@ export function PatientFormFields({
           </Select>
         </div>
         
-        <div>
-          <Label htmlFor="employerCnpj">CNPJ da Empresa</Label>
-          <div className="flex gap-2 mt-1">
-            <Input
-              id="employerCnpj"
-              value={formData.employerCnpj}
-              onChange={(e) => updateField('employerCnpj', formatCNPJ(e.target.value))}
-              placeholder="00.000.000/0000-00"
-              className="flex-1"
-            />
-            {onCnpjLookup && (
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={onCnpjLookup}
-                disabled={cnpjLoading || !formData.employerCnpj || formData.employerCnpj.replace(/\D/g, '').length < 14}
-                title="Buscar dados do CNPJ"
-              >
-                {cnpjLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="h-4 w-4" />
-                )}
-              </Button>
-            )}
-          </div>
-        </div>
-        
-        <div>
-          <Label htmlFor="employerName">Nome da Empresa</Label>
-          <Input
-            id="employerName"
-            value={formData.employerName}
-            onChange={(e) => updateField('employerName', e.target.value)}
-            placeholder="Razão Social ou Nome Fantasia"
-            className="mt-1"
+        <div className="lg:col-span-2">
+          <CnpjInputCard
+            value={formData.employerCnpj}
+            onChange={(value) => updateField('employerCnpj', value)}
+            onLookup={onCnpjLookup}
+            loading={cnpjLoading}
+            label="CNPJ da Empresa"
+            showLookupButton={!!onCnpjLookup}
           />
         </div>
+      </div>
+      
+      <div>
+        <Label htmlFor="employerName">Nome da Empresa</Label>
+        <Input
+          id="employerName"
+          value={formData.employerName}
+          onChange={(e) => updateField('employerName', e.target.value)}
+          placeholder="Razão Social ou Nome Fantasia"
+          className="mt-1"
+        />
       </div>
 
       {/* Linha 10: Nome da Mãe, Nome do Pai */}

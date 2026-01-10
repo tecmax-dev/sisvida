@@ -25,6 +25,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { CpfInputCard } from "@/components/ui/cpf-input-card";
+import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
 
 // Validação de CPF
 function isValidCPF(cpf: string): boolean {
@@ -227,15 +229,15 @@ export function QuickPatientRegistration({
               name="cpf"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>CPF *</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="000.000.000-00"
-                      onChange={(e) => field.onChange(formatCPF(e.target.value))}
+                    <CpfInputCard
+                      value={field.value}
+                      onChange={field.onChange}
+                      error={form.formState.errors.cpf?.message}
+                      required
+                      showValidation
                     />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
@@ -291,15 +293,14 @@ export function QuickPatientRegistration({
               name="employer_cnpj"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>CNPJ da Empresa (opcional)</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="00.000.000/0000-00"
-                      onChange={(e) => field.onChange(formatCNPJ(e.target.value))}
+                    <CnpjInputCard
+                      value={field.value || ""}
+                      onChange={field.onChange}
+                      label="CNPJ da Empresa (opcional)"
+                      showLookupButton={false}
                     />
                   </FormControl>
-                  <FormMessage />
                 </FormItem>
               )}
             />
