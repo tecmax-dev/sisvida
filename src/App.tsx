@@ -107,6 +107,7 @@ import ContributionsPage from "./pages/dashboard/ContributionsPage";
 import NegotiationsPage from "./pages/dashboard/NegotiationsPage";
 import AccountingOfficesPage from "./pages/dashboard/AccountingOfficesPage";
 import DependentApprovalsPage from "./pages/dashboard/DependentApprovalsPage";
+import HomologacaoPage from "./pages/dashboard/HomologacaoPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -367,6 +368,7 @@ const App = () => (
                   <Route path="contribuicoes" element={<ContributionsPage />} />
                   <Route path="negociacoes" element={<NegotiationsPage />} />
                   <Route path="escritorios" element={<AccountingOfficesPage />} />
+                  <Route path="homologacao" element={<HomologacaoPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
