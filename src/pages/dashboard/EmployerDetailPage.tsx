@@ -82,6 +82,7 @@ import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoW
 import { SendBoletoEmailDialog } from "@/components/contributions/SendBoletoEmailDialog";
 import { SendOverdueWhatsAppDialog } from "@/components/contributions/SendOverdueWhatsAppDialog";
 import { EmployerContributionFilters } from "@/components/contributions/EmployerContributionFilters";
+import { AccountingOfficeSelector } from "@/components/employers/AccountingOfficeSelector";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -217,6 +218,9 @@ export default function EmployerDetailPage() {
 
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
 
+  // Accounting office link
+  const [linkedAccountingOfficeId, setLinkedAccountingOfficeId] = useState<string | null>(null);
+
   useEffect(() => {
     if (currentClinic && id) {
       fetchData();
@@ -286,6 +290,15 @@ export default function EmployerDetailPage() {
       // Initialize filtered contributions with all contributions
       setFilteredContributions([]);
 
+      // Load linked accounting office
+      const { data: linkData } = await supabase
+        .from("accounting_office_employers")
+        .select("accounting_office_id")
+        .eq("employer_id", id)
+        .maybeSingle();
+      
+      setLinkedAccountingOfficeId(linkData?.accounting_office_id || null);
+
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Erro ao carregar dados da empresa");
@@ -334,6 +347,25 @@ export default function EmployerDetailPage() {
         .eq("id", employer.id);
 
       if (error) throw error;
+
+      // Manage accounting office link
+      // Remove existing link
+      await supabase
+        .from("accounting_office_employers")
+        .delete()
+        .eq("employer_id", employer.id);
+
+      // Create new link if selected
+      if (linkedAccountingOfficeId) {
+        await supabase
+          .from("accounting_office_employers")
+          .insert({
+            accounting_office_id: linkedAccountingOfficeId,
+            employer_id: employer.id,
+            created_by: session?.user.id,
+          });
+      }
+
       toast.success("Empresa atualizada com sucesso");
       fetchData();
     } catch (error) {
@@ -1531,6 +1563,22 @@ export default function EmployerDetailPage() {
                   onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                 />
                 <Label>Empresa ativa</Label>
+              </div>
+
+              {/* Accounting Office Selector */}
+              <div className="border rounded-lg p-4 bg-muted/20">
+                <Label className="text-sm font-medium flex items-center gap-2 mb-3">
+                  <Building2 className="h-4 w-4" />
+                  Escritório de Contabilidade
+                </Label>
+                {currentClinic && (
+                  <AccountingOfficeSelector
+                    clinicId={currentClinic.id}
+                    employerId={employer.id}
+                    currentOfficeId={linkedAccountingOfficeId}
+                    onOfficeChange={(officeId) => setLinkedAccountingOfficeId(officeId)}
+                  />
+                )}
               </div>
 
               <div className="flex justify-end">
