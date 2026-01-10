@@ -371,14 +371,15 @@ async function importContributionsBatch(
   });
   console.log(`[importContributionsBatch] Loaded ${typeMap.size} contribution types into cache`);
 
-  // 3. Determine status based on conversion type
+  // 3. Determine base status from conversion type
   const statusMap: Record<string, string> = {
     contributions_paid: 'paid',
     contributions_pending: 'pending',
     contributions_cancelled: 'cancelled',
     lytex_invoices: 'pending',
   };
-  const status = statusMap[conversionType] || 'pending';
+  const baseStatus = statusMap[conversionType] || 'pending';
+  const todayStr = new Date().toISOString().split('T')[0];
 
   // 4. Process all rows and build insert array
   const toInsert: Record<string, unknown>[] = [];
@@ -534,6 +535,12 @@ async function importContributionsBatch(
 
       competenceKeysToInsert.add(activeCompetenceKey);
 
+      // Determine final status: if base is not 'paid' and due_date is past, set to 'overdue'
+      let finalStatus = baseStatus;
+      if (baseStatus !== 'paid' && baseStatus !== 'cancelled') {
+        finalStatus = dueDate < todayStr ? 'overdue' : 'pending';
+      }
+
       // NOTE: active_competence_key is a GENERATED ALWAYS column - DO NOT include it in insert!
       toInsert.push({
         clinic_id: clinicId,
@@ -541,11 +548,11 @@ async function importContributionsBatch(
         contribution_type_id: typeId,
         value,
         due_date: dueDate,
-        status,
+        status: finalStatus,
         competence_month: competenceMonth,
         competence_year: competenceYear,
-        paid_at: status === 'paid' ? (paymentDate || dueDate) : null,
-        paid_value: status === 'paid' ? value : null,
+        paid_at: finalStatus === 'paid' ? (paymentDate || dueDate) : null,
+        paid_value: finalStatus === 'paid' ? value : null,
         notes: row.notes || row.description ? String(row.notes || row.description).trim() : null,
       });
     } catch (err) {
