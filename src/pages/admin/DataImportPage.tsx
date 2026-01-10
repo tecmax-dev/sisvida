@@ -34,6 +34,7 @@ import {
   Info,
   Check,
   ArrowDownToLine,
+  Stethoscope,
   StopCircle,
   Phone,
   History,
@@ -48,6 +49,7 @@ import { ImportProgressCard } from "@/components/admin/ImportProgressCard";
 import { ImportHistoryPanel } from "@/components/admin/ImportHistoryPanel";
 import { BulkCardExpiryUpdate } from "@/components/admin/BulkCardExpiryUpdate";
 import { LegacyDataTransform } from "@/components/admin/LegacyDataTransform";
+import { HomologacaoImportPanel } from "@/components/admin/HomologacaoImportPanel";
 import { EmployerImportPanel } from "@/components/admin/EmployerImportPanel";
 import { JsonImportPanel } from "@/components/admin/JsonImportPanel";
 import {
@@ -86,7 +88,7 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"export" | "json" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards">("export");
+  const [activeTab, setActiveTab] = useState<"export" | "json" | "homologacao" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards">("export");
   
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
@@ -2174,6 +2176,10 @@ export default function DataImportPage() {
             <FileText className="h-4 w-4" />
             Importar JSON
           </TabsTrigger>
+          <TabsTrigger value="homologacao" className="gap-2">
+            <Stethoscope className="h-4 w-4" />
+            Homologação
+          </TabsTrigger>
           <TabsTrigger value="combined" className="gap-2">
             <Sparkles className="h-4 w-4" />
             Importação Inteligente
@@ -2236,6 +2242,15 @@ export default function DataImportPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* Homologação Import Tab */}
+        <TabsContent value="homologacao" className="space-y-4">
+          <HomologacaoImportPanel
+            clinics={clinics}
+            selectedClinicId={selectedClinicId}
+            onClinicChange={setSelectedClinicId}
+          />
         </TabsContent>
 
         {/* Combined Import Tab */}

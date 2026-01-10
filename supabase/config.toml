@@ -197,3 +197,6 @@ verify_jwt = true
 
 [functions.clinic-json-import]
 verify_jwt = false
+
+[functions.import-homologacao-module]
+verify_jwt = false
