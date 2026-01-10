@@ -106,14 +106,14 @@ export default function ContributionsPage() {
     if (currentClinic) {
       fetchData();
     }
-  }, [currentClinic]);
+  }, [currentClinic, yearFilter]);
 
   const fetchData = async () => {
     if (!currentClinic) return;
     setLoading(true);
 
     try {
-      // Fetch contributions with relations
+      // Fetch contributions with relations - filtered by year
       const { data: contribData, error: contribError } = await supabase
         .from("employer_contributions")
         .select(`
@@ -122,7 +122,7 @@ export default function ContributionsPage() {
           contribution_types (id, name, description, default_value, is_active)
         `)
         .eq("clinic_id", currentClinic.id)
-        .order("competence_year", { ascending: false })
+        .eq("competence_year", yearFilter)
         .order("competence_month", { ascending: false })
         .order("created_at", { ascending: false });
 
