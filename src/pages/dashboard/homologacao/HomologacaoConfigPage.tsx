@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, lazy } from "react";
+import { useState, useEffect, Suspense, lazy, Component, ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,11 +17,63 @@ import {
   MessageCircle,
   Settings,
   Copy,
-  Check
+  Check,
+  AlertTriangle,
+  RefreshCw
 } from "lucide-react";
 
 // Lazy loading após todos os imports estáticos
 const HolidayImportSection = lazy(() => import("@/components/homologacao/HolidayImportSection"));
+
+// ErrorBoundary local para isolar falhas do HolidayImportSection
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class HolidayErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("[HomologacaoConfigPage] Erro no HolidayImportSection:", error, errorInfo);
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="w-5 h-5" />
+              Erro ao carregar Importação de Feriados
+            </CardTitle>
+            <CardDescription>
+              Ocorreu um erro ao carregar esta seção. {this.state.error?.message}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="outline" onClick={this.handleRetry}>
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Tentar novamente
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface HomologacaoSettings {
   id: string;
@@ -136,6 +188,22 @@ export default function HomologacaoConfigPage() {
       toast.error("Erro ao copiar link");
     }
   };
+
+  // Guarda para clínica não selecionada
+  if (!currentClinic?.id) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>Nenhuma clínica selecionada</CardTitle>
+            <CardDescription>
+              Selecione uma clínica para acessar as configurações de homologação.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -334,10 +402,12 @@ export default function HomologacaoConfigPage() {
           </CardContent>
         </Card>
 
-        {/* Holiday Import Section */}
-        <Suspense fallback={<Skeleton className="h-64" />}>
-          <HolidayImportSection />
-        </Suspense>
+        {/* Holiday Import Section - isolado com ErrorBoundary local */}
+        <HolidayErrorBoundary>
+          <Suspense fallback={<Skeleton className="h-64" />}>
+            <HolidayImportSection />
+          </Suspense>
+        </HolidayErrorBoundary>
       </div>
     </div>
   );
