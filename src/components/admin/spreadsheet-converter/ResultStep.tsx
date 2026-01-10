@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   CheckCircle2, 
   Download, 
@@ -67,6 +68,7 @@ interface ImportResult {
   errors: ImportError[];
   chunk_index?: number;
   chunk_total?: number;
+  employers_created?: number;
 }
 
 interface AggregatedResult {
@@ -76,6 +78,7 @@ interface AggregatedResult {
   errors: ImportError[];
   chunksCompleted: number;
   chunksTotal: number;
+  employersCreated: number;
 }
 
 interface ResultStepProps {
@@ -111,6 +114,7 @@ export function ResultStep({
   const [aggregatedResult, setAggregatedResult] = useState<AggregatedResult | null>(null);
   const [canResume, setCanResume] = useState(false);
   const [failedChunkIndex, setFailedChunkIndex] = useState<number | null>(null);
+  const [autoCreateEmployers, setAutoCreateEmployers] = useState(false);
   
   // Cancel control
   const cancelRequestedRef = useRef(false);
@@ -153,6 +157,7 @@ export function ResultStep({
           chunk_index: chunkIndex,
           chunk_total: totalChunks,
           run_id: runIdRef.current,
+          auto_create_employers: autoCreateEmployers,
         },
       });
 
@@ -212,6 +217,7 @@ export function ResultStep({
           errors: [],
           chunksCompleted: 0,
           chunksTotal: chunks.length,
+          employersCreated: 0,
         };
 
     try {
@@ -233,6 +239,7 @@ export function ResultStep({
           aggregated.inserted += result.inserted;
           aggregated.updated += result.updated;
           aggregated.skipped += result.skipped;
+          aggregated.employersCreated += result.employers_created || 0;
           
           // Adjust row numbers for errors (add offset based on chunk index)
           const offsetErrors = result.errors.map(err => ({
@@ -282,7 +289,7 @@ export function ResultStep({
     } finally {
       setIsImporting(false);
     }
-  }, [selectedClinicId, validRows, conversionType, aggregatedResult]);
+  }, [selectedClinicId, validRows, conversionType, aggregatedResult, autoCreateEmployers]);
 
   const handleCancel = () => {
     cancelRequestedRef.current = true;
@@ -610,6 +617,27 @@ export function ResultStep({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Auto-create employers option - only show for contribution types */}
+          {(conversionType.startsWith('contributions') || conversionType === 'lytex') && (
+            <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50 border">
+              <Checkbox 
+                id="auto-create-employers"
+                checked={autoCreateEmployers}
+                onCheckedChange={(checked) => setAutoCreateEmployers(checked === true)}
+                disabled={isImporting}
+              />
+              <label 
+                htmlFor="auto-create-employers" 
+                className="text-sm text-muted-foreground cursor-pointer flex-1"
+              >
+                <span className="font-medium text-foreground">Auto-cadastrar empresas inexistentes</span>
+                <span className="block text-xs mt-0.5">
+                  Empresas não encontradas serão criadas automaticamente com dados mínimos (CNPJ + nome da planilha)
+                </span>
+              </label>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
             <Select 
               value={selectedClinicId} 
@@ -697,6 +725,12 @@ export function ResultStep({
                     {aggregatedResult.skipped > 0 && (
                       <span className="flex items-center gap-1 text-muted-foreground">
                         ⏭️ {aggregatedResult.skipped.toLocaleString('pt-BR')} ignorados
+                      </span>
+                    )}
+                    {aggregatedResult.employersCreated > 0 && (
+                      <span className="flex items-center gap-1 text-blue-600">
+                        <Building2 className="h-4 w-4" />
+                        {aggregatedResult.employersCreated.toLocaleString('pt-BR')} empresas criadas
                       </span>
                     )}
                     <span className="text-muted-foreground">
