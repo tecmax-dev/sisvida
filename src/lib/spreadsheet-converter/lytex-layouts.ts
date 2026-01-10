@@ -87,8 +87,13 @@ const STATE_COLUMNS = [
 
 const DESCRIPTION_COLUMNS = [
   'descricao', 'DESCRICAO', 'descrição', 'DESCRIÇÃO', 'description', 'DESCRIPTION',
-  'obs', 'OBS', 'observacao', 'OBSERVACAO', 'observações', 'OBSERVAÇÕES',
-  'historico', 'HISTORICO', 'histórico', 'HISTÓRICO', 'ds_item', 'DS_ITEM'
+  'obs', 'OBS', 'observacao', 'OBSERVACAO', 'observações', 'OBSERVAÇÕES', 'observacoes', 'OBSERVACOES',
+  'historico', 'HISTORICO', 'histórico', 'HISTÓRICO', 'ds_item', 'DS_ITEM',
+  'notas', 'NOTAS', 'notes', 'NOTES', 'nota', 'NOTA',
+  'detalhes', 'DETALHES', 'details', 'DETAILS', 'detalhe', 'DETALHE',
+  'comentario', 'COMENTARIO', 'comentário', 'COMENTÁRIO', 'comentarios', 'COMENTARIOS',
+  'informacao', 'INFORMACAO', 'informação', 'INFORMAÇÃO', 'info', 'INFO',
+  'tipo', 'TIPO', // Muitas planilhas usam "Tipo" para descrição
 ];
 
 const TYPE_COLUMNS = [
