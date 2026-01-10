@@ -672,17 +672,21 @@ function parseDate(value: unknown): string | null {
 }
 
 function parseCurrency(value: unknown): number {
-  if (typeof value === 'number') return value;
+  if (typeof value === 'number') {
+    // If already a number, assume it's in reais and convert to cents
+    return Math.round(value * 100);
+  }
   if (!value) return 0;
-  
+
   let str = String(value).trim();
   str = str.replace(/[R$\s]/g, '');
-  
+
   // Check for Brazilian format (1.234,56)
   if (str.includes(',') && str.lastIndexOf(',') > str.lastIndexOf('.')) {
     str = str.replace(/\./g, '').replace(',', '.');
   }
-  
+
   const num = parseFloat(str);
-  return isNaN(num) ? 0 : num;
+  // Convert to cents (integer)
+  return isNaN(num) ? 0 : Math.round(num * 100);
 }
