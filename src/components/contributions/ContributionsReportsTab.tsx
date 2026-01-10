@@ -82,6 +82,8 @@ interface ContributionsReportsTabProps {
   employers: Employer[];
   contributionTypes: ContributionType[];
   clinicName?: string;
+  yearFilter: number;
+  onYearFilterChange: (year: number) => void;
 }
 
 const MONTHS = [
@@ -104,13 +106,11 @@ export default function ContributionsReportsTab({
   employers,
   contributionTypes,
   clinicName,
+  yearFilter,
+  onYearFilterChange,
 }: ContributionsReportsTabProps) {
   const { session } = useAuth();
   const [reportType, setReportType] = useState<ReportType>("general");
-  const [yearFilter, setYearFilter] = useState<number>(() => {
-    const now = new Date();
-    return now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-  });
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
@@ -300,7 +300,7 @@ export default function ContributionsReportsTab({
               </SelectContent>
             </Select>
 
-            <Select value={String(yearFilter)} onValueChange={(v) => setYearFilter(parseInt(v))}>
+            <Select value={String(yearFilter)} onValueChange={(v) => onYearFilterChange(parseInt(v))}>
               <SelectTrigger className="w-[100px]">
                 <SelectValue />
               </SelectTrigger>
