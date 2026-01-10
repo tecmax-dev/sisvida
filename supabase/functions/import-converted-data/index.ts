@@ -517,6 +517,7 @@ async function importContributionsBatch(
       // Parse competence
       let competenceYear = new Date().getFullYear();
       let competenceMonth = new Date().getMonth() + 1;
+      let isNegotiatedDebt = false; // Flag para identificar débito negociado (código 99)
       
       if (row.competence) {
         const competence = String(row.competence);
@@ -527,8 +528,9 @@ async function importContributionsBatch(
           
           // CÓDIGO ESPECIAL: mês 99 = Débito Negociado → usar dezembro
           if (parsedMonth === 99) {
-            console.log(`[importContributionsBatch] Code 99 detected (negotiated debt), converting to month 12`);
+            console.log(`[importContributionsBatch] Code 99 detected (negotiated debt), converting to month 12 with -DN suffix`);
             parsedMonth = 12;
+            isNegotiatedDebt = true;
           }
           
           // VALIDAÇÃO: mês deve estar entre 1-12, ano >= 2020
@@ -545,8 +547,9 @@ async function importContributionsBatch(
         
         // CÓDIGO ESPECIAL: mês 99 = Débito Negociado → usar dezembro
         if (parsedMonth === 99) {
-          console.log(`[importContributionsBatch] Code 99 detected (negotiated debt), converting to month 12`);
+          console.log(`[importContributionsBatch] Code 99 detected (negotiated debt), converting to month 12 with -DN suffix`);
           parsedMonth = 12;
+          isNegotiatedDebt = true;
         }
         
         // VALIDAÇÃO: mês deve estar entre 1-12, ano >= 2020
@@ -558,7 +561,12 @@ async function importContributionsBatch(
         }
       }
 
-      const activeCompetenceKey = `${employerId}-${typeId}-${competenceYear}-${competenceMonth}`;
+      // Gerar chave única - adicionar sufixo -DN para débitos negociados (código 99)
+      // Isso permite que exista uma contribuição normal de dezembro E um débito negociado do mesmo período
+      let activeCompetenceKey = `${employerId}-${typeId}-${competenceYear}-${competenceMonth}`;
+      if (isNegotiatedDebt) {
+        activeCompetenceKey = `${activeCompetenceKey}-DN`;
+      }
 
       // Check for duplicates within this batch
       if (competenceKeysToInsert.has(activeCompetenceKey)) {
