@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { getStaticYearRange } from "@/hooks/useAvailableYears";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -568,7 +569,7 @@ export default function ContributionDialogs({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[2024, 2025, 2026, 2027].map(year => (
+                    {getStaticYearRange().map(year => (
                       <SelectItem key={year} value={String(year)}>{year}</SelectItem>
                     ))}
                   </SelectContent>
@@ -848,7 +849,7 @@ export default function ContributionDialogs({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[2024, 2025, 2026, 2027].map(year => (
+                    {getStaticYearRange().map(year => (
                       <SelectItem key={year} value={String(year)}>{year}</SelectItem>
                     ))}
                   </SelectContent>

@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { getStaticYearRange } from "@/hooks/useAvailableYears";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -271,7 +272,7 @@ export default function ContributionsReportsTab({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[2024, 2025, 2026, 2027].map((year) => (
+                {getStaticYearRange().map((year) => (
                   <SelectItem key={year} value={String(year)}>{year}</SelectItem>
                 ))}
               </SelectContent>

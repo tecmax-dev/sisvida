@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { getStaticYearRange } from "@/hooks/useAvailableYears";
 import { useParams, useNavigate } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -1639,7 +1640,7 @@ export default function EmployerDetailPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[2024, 2025, 2026, 2027].map(year => (
+                    {getStaticYearRange().map(year => (
                       <SelectItem key={year} value={String(year)}>{year}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1967,7 +1968,7 @@ export default function EmployerDetailPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {[2024, 2025, 2026, 2027].map(year => (
+                    {getStaticYearRange().map(year => (
                       <SelectItem key={year} value={String(year)}>{year}</SelectItem>
                     ))}
                   </SelectContent>
