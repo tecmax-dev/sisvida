@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,9 +10,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
-import { Suspense, lazy } from "react";
-
-const HolidayImportSection = lazy(() => import("@/components/homologacao/HolidayImportSection"));
 import { 
   Save,
   Link2,
@@ -22,6 +19,9 @@ import {
   Copy,
   Check
 } from "lucide-react";
+
+// Lazy loading após todos os imports estáticos
+const HolidayImportSection = lazy(() => import("@/components/homologacao/HolidayImportSection"));
 
 interface HomologacaoSettings {
   id: string;
