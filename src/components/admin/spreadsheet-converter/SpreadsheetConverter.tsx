@@ -178,6 +178,7 @@ export function SpreadsheetConverter() {
                   <UploadStep 
                     onFileLoaded={handleFileLoaded}
                     currentFile={fileData?.fileName}
+                    initialData={fileData}
                   />
                 )}
                 

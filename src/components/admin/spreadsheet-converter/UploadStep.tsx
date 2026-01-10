@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,9 +16,15 @@ interface UploadStepProps {
     sheetNames: string[];
   }) => void;
   currentFile?: string;
+  initialData?: {
+    headers: string[];
+    rows: Record<string, unknown>[];
+    fileName: string;
+    sheetNames: string[];
+  } | null;
 }
 
-export function UploadStep({ onFileLoaded, currentFile }: UploadStepProps) {
+export function UploadStep({ onFileLoaded, currentFile, initialData }: UploadStepProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [preview, setPreview] = useState<{
@@ -26,7 +32,14 @@ export function UploadStep({ onFileLoaded, currentFile }: UploadStepProps) {
     rows: Record<string, unknown>[];
     fileName: string;
     sheetNames: string[];
-  } | null>(null);
+  } | null>(initialData || null);
+
+  // Sync preview with initialData when component mounts or initialData changes
+  React.useEffect(() => {
+    if (initialData && !preview) {
+      setPreview(initialData);
+    }
+  }, [initialData]);
 
   const processFile = useCallback(async (file: File) => {
     const validTypes = [
