@@ -589,6 +589,9 @@ export default function ContributionsPage() {
             contributions={contributions}
             employers={employers}
             contributionTypes={contributionTypes}
+            clinicName={currentClinic?.name}
+            yearFilter={yearFilter}
+            onYearFilterChange={setYearFilter}
           />
         </TabsContent>
       </Tabs>
