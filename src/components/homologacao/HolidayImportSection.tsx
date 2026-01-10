@@ -45,6 +45,7 @@ export default function HolidayImportSection() {
   const [states, setStates] = useState<BrazilianState[]>([]);
   const [selectedHolidays, setSelectedHolidays] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Generate year options (current year - 1 to current year + 5)
   const currentYear = new Date().getFullYear();
@@ -59,8 +60,9 @@ export default function HolidayImportSection() {
     if (!currentClinic?.id) return;
     
     setIsLoading(true);
+    setError(null);
     try {
-      const { data, error } = await supabase.functions.invoke("fetch-brazilian-holidays", {
+      const { data, error: invokeError } = await supabase.functions.invoke("fetch-brazilian-holidays", {
         body: {
           clinic_id: currentClinic.id,
           year: selectedYear,
@@ -68,14 +70,14 @@ export default function HolidayImportSection() {
         },
       });
 
-      if (error) throw error;
+      if (invokeError) throw invokeError;
 
-      setHolidays(data.holidays || []);
-      setStates(data.states || []);
+      setHolidays(data?.holidays || []);
+      setStates(data?.states || []);
       setSelectedHolidays(new Set()); // Reset selection on new fetch
-    } catch (error: any) {
-      console.error("Error fetching holidays:", error);
-      toast.error("Erro ao carregar feriados: " + error.message);
+    } catch (err: any) {
+      console.error("Error fetching holidays:", err);
+      setError(err?.message || "Erro ao carregar feriados");
     } finally {
       setIsLoading(false);
     }
@@ -249,6 +251,13 @@ export default function HolidayImportSection() {
             {[1, 2, 3, 4, 5].map((i) => (
               <Skeleton key={i} className="h-14" />
             ))}
+          </div>
+        ) : error ? (
+          <div className="text-center py-8 text-destructive">
+            <p>{error}</p>
+            <Button variant="outline" size="sm" className="mt-2" onClick={fetchHolidays}>
+              Tentar novamente
+            </Button>
           </div>
         ) : (
           <ScrollArea className="h-[400px] pr-4">
