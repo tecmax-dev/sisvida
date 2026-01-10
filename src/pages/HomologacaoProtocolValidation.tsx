@@ -26,6 +26,7 @@ export default function HomologacaoProtocolValidation() {
     queryFn: async () => {
       if (!token) throw new Error("Token não fornecido");
       
+      // Try to find by confirmation_token first, then fallback to id for backward compatibility
       const { data, error } = await supabase
         .from("homologacao_appointments")
         .select(`
@@ -34,8 +35,8 @@ export default function HomologacaoProtocolValidation() {
           service_type:homologacao_service_types(name),
           clinic:clinics(name, phone, address, city, state_code)
         `)
-        .eq("confirmation_token", token)
-        .single();
+        .or(`confirmation_token.eq.${token},id.eq.${token}`)
+        .maybeSingle();
       
       if (error) throw error;
       return data;
