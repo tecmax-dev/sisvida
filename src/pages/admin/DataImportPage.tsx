@@ -52,6 +52,7 @@ import { LegacyDataTransform } from "@/components/admin/LegacyDataTransform";
 import { HomologacaoImportPanel } from "@/components/admin/HomologacaoImportPanel";
 import { EmployerImportPanel } from "@/components/admin/EmployerImportPanel";
 import { JsonImportPanel } from "@/components/admin/JsonImportPanel";
+import { SpreadsheetConverter } from "@/components/admin/spreadsheet-converter";
 import {
   PatientImportRow,
   MedicalRecordImportRow,
@@ -88,7 +89,7 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"export" | "json" | "homologacao" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards">("export");
+  const [activeTab, setActiveTab] = useState<"export" | "json" | "homologacao" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards" | "converter">("export");
   
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
