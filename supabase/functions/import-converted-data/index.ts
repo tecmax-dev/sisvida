@@ -340,8 +340,8 @@ async function importContributions(
       const employerId = (employer as { id: string }).id;
 
       const value = parseCurrency(row.value);
-      if (value <= 0) {
-        result.errors.push({ row: i + 1, message: 'Valor inválido' });
+      if (value < 0) {
+        result.errors.push({ row: i + 1, message: 'Valor negativo não permitido' });
         continue;
       }
 
