@@ -79,6 +79,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
+import { useNomenclature } from "@/hooks/useNomenclature";
 import { usePermissions } from "@/hooks/usePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -185,6 +186,7 @@ const patientSchema = z.object({
 
 export default function PatientsPage() {
   const { currentClinic } = useAuth();
+  const nomenclature = useNomenclature();
   const { hasPermission, isAdmin } = usePermissions();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -772,7 +774,7 @@ export default function PatientsPage() {
         .eq('clinic_id', currentClinic.id);
 
       toast({
-        title: "Paciente inativado",
+        title: `${nomenclature.singular} inativado`,
         description: `${patientToInactivate.name} e seus dependentes foram inativados.`,
       });
 
@@ -781,7 +783,7 @@ export default function PatientsPage() {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível inativar o paciente.",
+        description: error.message || `Não foi possível inativar ${nomenclature.article} ${nomenclature.singularLower}.`,
         variant: "destructive",
       });
     } finally {
@@ -807,7 +809,7 @@ export default function PatientsPage() {
       if (error) throw error;
 
       toast({
-        title: "Paciente reativado",
+        title: `${nomenclature.singular} reativado`,
         description: `${patient.name} foi reativado com sucesso.`,
       });
 
@@ -815,7 +817,7 @@ export default function PatientsPage() {
     } catch (error: any) {
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível reativar o paciente.",
+        description: error.message || `Não foi possível reativar ${nomenclature.article} ${nomenclature.singularLower}.`,
         variant: "destructive",
       });
     } finally {
@@ -839,10 +841,10 @@ export default function PatientsPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <HeartPulse className="h-6 w-6 text-primary" />
-            Pacientes
+            {nomenclature.plural}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Gerencie o cadastro dos seus pacientes
+            Gerencie o cadastro {nomenclature.possessivePlural} seus {nomenclature.pluralLower}
           </p>
           <RealtimeIndicator className="mt-1" />
         </div>
@@ -851,12 +853,12 @@ export default function PatientsPage() {
             <DialogTrigger asChild>
               <Button className="bg-primary hover:bg-primary/90">
                 <Plus className="h-4 w-4 mr-2" />
-                Novo Paciente
+                Novo {nomenclature.singular}
               </Button>
             </DialogTrigger>
           <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Cadastrar Paciente</DialogTitle>
+              <DialogTitle>Cadastrar {nomenclature.singular}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleCreatePatient} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -958,7 +960,7 @@ export default function PatientsPage() {
                     id="patientNotes"
                     value={formNotes}
                     onChange={(e) => setFormNotes(e.target.value)}
-                    placeholder="Informações adicionais sobre o paciente"
+                    placeholder={`Informações adicionais sobre ${nomenclature.article} ${nomenclature.singularLower}`}
                     className={`mt-1.5 ${formErrors.notes ? "border-destructive" : ""}`}
                     rows={3}
                   />
@@ -1064,13 +1066,13 @@ export default function PatientsPage() {
           {loading ? (
             <div className="text-center py-12 text-muted-foreground">
               <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-              Carregando pacientes...
+              Carregando {nomenclature.pluralLower}...
             </div>
           ) : patients.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead className="font-semibold">Paciente</TableHead>
+                  <TableHead className="font-semibold">{nomenclature.singular}</TableHead>
                   <TableHead className="hidden sm:table-cell font-semibold">CPF</TableHead>
                   <TableHead className="font-semibold">Telefone</TableHead>
                   <TableHead className="hidden lg:table-cell font-semibold">Convênio</TableHead>
@@ -1525,10 +1527,10 @@ export default function PatientsPage() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Excluir paciente?</AlertDialogTitle>
+            <AlertDialogTitle>Excluir {nomenclature.singularLower}?</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir <strong>{selectedPatient?.name}</strong>? 
-              Esta ação não pode ser desfeita e todos os dados do paciente serão removidos.
+              Esta ação não pode ser desfeita e todos os dados {nomenclature.possessive} {nomenclature.singularLower} serão removidos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -1551,7 +1553,7 @@ export default function PatientsPage() {
           <DialogHeader>
             <DialogTitle>Enviar Anamnese via WhatsApp</DialogTitle>
             <DialogDescription>
-              Selecione o modelo de anamnese para enviar ao paciente {selectedPatient?.name}
+              Selecione o modelo de anamnese para enviar a{nomenclature.article === 'o' ? 'o' : ''} {nomenclature.singularLower} {selectedPatient?.name}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -1590,7 +1592,7 @@ export default function PatientsPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Motivo da Inativação</AlertDialogTitle>
             <AlertDialogDescription>
-              Selecione o motivo para inativar o paciente <strong>{patientToInactivate?.name}</strong>.
+              Selecione o motivo para inativar {nomenclature.article} {nomenclature.singularLower} <strong>{patientToInactivate?.name}</strong>.
               Os dependentes também serão inativados.
             </AlertDialogDescription>
           </AlertDialogHeader>

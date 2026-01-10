@@ -27,6 +27,7 @@ interface Clinic {
   blocked_reason?: string | null;
   is_maintenance?: boolean;
   maintenance_reason?: string | null;
+  entity_nomenclature?: string | null;
 }
 
 interface UserRole {
@@ -177,7 +178,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           is_blocked,
           blocked_reason,
           is_maintenance,
-          maintenance_reason
+          maintenance_reason,
+          entity_nomenclature
         )
       `)
       .eq('user_id', userId);
@@ -212,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isSa) {
       const { data: clinics, error: clinicsError } = await supabase
         .from('clinics')
-        .select('id, name, slug, address, phone, cnpj, logo_url, whatsapp_header_image_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason')
+        .select('id, name, slug, address, phone, cnpj, logo_url, whatsapp_header_image_url, is_blocked, blocked_reason, is_maintenance, maintenance_reason, entity_nomenclature')
         .order('name');
 
       if (clinicsError) {
