@@ -389,6 +389,19 @@ export default function HomologacaoPublicBooking() {
       setCreatedAppointment(data);
       setStep('confirmation');
       toast.success("Agendamento realizado com sucesso!");
+      
+      // Trigger WhatsApp notifications (fire-and-forget)
+      supabase.functions.invoke("send-homologacao-notifications", {
+        body: { appointment_id: data.id }
+      }).then(result => {
+        if (result.error) {
+          console.error("Notification error:", result.error);
+        } else {
+          console.log("Notifications sent:", result.data);
+        }
+      }).catch(err => {
+        console.error("Failed to send notifications:", err);
+      });
     },
     onError: (error) => {
       console.error("Error creating appointment:", error);
