@@ -522,12 +522,40 @@ async function importContributionsBatch(
         const competence = String(row.competence);
         const match = competence.match(/(\d{1,2})[\/\-](\d{4})/);
         if (match) {
-          competenceMonth = parseInt(match[1]);
-          competenceYear = parseInt(match[2]);
+          let parsedMonth = parseInt(match[1]);
+          const parsedYear = parseInt(match[2]);
+          
+          // CÓDIGO ESPECIAL: mês 99 = Débito Negociado → usar dezembro
+          if (parsedMonth === 99) {
+            console.log(`[importContributionsBatch] Code 99 detected (negotiated debt), converting to month 12`);
+            parsedMonth = 12;
+          }
+          
+          // VALIDAÇÃO: mês deve estar entre 1-12, ano >= 2020
+          if (parsedMonth >= 1 && parsedMonth <= 12 && parsedYear >= 2020) {
+            competenceMonth = parsedMonth;
+            competenceYear = parsedYear;
+          } else {
+            console.warn(`[importContributionsBatch] Invalid competence: ${competence}, using defaults (month=${competenceMonth}, year=${competenceYear})`);
+          }
         }
       } else if (row.competence_month && row.competence_year) {
-        competenceMonth = parseInt(String(row.competence_month));
-        competenceYear = parseInt(String(row.competence_year));
+        let parsedMonth = parseInt(String(row.competence_month));
+        const parsedYear = parseInt(String(row.competence_year));
+        
+        // CÓDIGO ESPECIAL: mês 99 = Débito Negociado → usar dezembro
+        if (parsedMonth === 99) {
+          console.log(`[importContributionsBatch] Code 99 detected (negotiated debt), converting to month 12`);
+          parsedMonth = 12;
+        }
+        
+        // VALIDAÇÃO: mês deve estar entre 1-12, ano >= 2020
+        if (parsedMonth >= 1 && parsedMonth <= 12 && parsedYear >= 2020) {
+          competenceMonth = parsedMonth;
+          competenceYear = parsedYear;
+        } else {
+          console.warn(`[importContributionsBatch] Invalid month/year: ${row.competence_month}/${row.competence_year}, using defaults`);
+        }
       }
 
       const activeCompetenceKey = `${employerId}-${typeId}-${competenceYear}-${competenceMonth}`;
