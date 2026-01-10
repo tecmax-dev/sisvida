@@ -63,7 +63,7 @@ export function CheckLiquidationDialog({
     queryFn: async () => {
       if (!searchedCheckNumber) return [] as any[];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase
         .from("financial_transactions")
         .select(`
           *,
@@ -71,8 +71,8 @@ export function CheckLiquidationDialog({
           cash_registers (name, bank_name)
         `)
         .eq("clinic_id", clinicId)
-        .eq("type", "expense")
-        .eq("check_number" as any, searchedCheckNumber)
+        .eq("type", "expense") as any)
+        .eq("check_number", searchedCheckNumber)
         .in("status", ["pending", "overdue"])
         .order("due_date");
 
