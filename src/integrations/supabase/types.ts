@@ -3023,6 +3023,458 @@ export type Database = {
         }
         Relationships: []
       }
+      homologacao_appointments: {
+        Row: {
+          appointment_date: string
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          clinic_id: string
+          company_cnpj: string | null
+          company_contact_name: string | null
+          company_email: string | null
+          company_name: string
+          company_phone: string
+          confirmation_token: string | null
+          confirmed_at: string | null
+          created_at: string | null
+          created_by: string | null
+          employee_cpf: string | null
+          employee_name: string
+          end_time: string
+          id: string
+          notes: string | null
+          notification_sent_at: string | null
+          notification_status: string | null
+          professional_id: string | null
+          protocol_number: string | null
+          reminder_sent_at: string | null
+          service_type_id: string | null
+          start_time: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          appointment_date: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          clinic_id: string
+          company_cnpj?: string | null
+          company_contact_name?: string | null
+          company_email?: string | null
+          company_name: string
+          company_phone: string
+          confirmation_token?: string | null
+          confirmed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          employee_cpf?: string | null
+          employee_name: string
+          end_time: string
+          id?: string
+          notes?: string | null
+          notification_sent_at?: string | null
+          notification_status?: string | null
+          professional_id?: string | null
+          protocol_number?: string | null
+          reminder_sent_at?: string | null
+          service_type_id?: string | null
+          start_time: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          appointment_date?: string
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          clinic_id?: string
+          company_cnpj?: string | null
+          company_contact_name?: string | null
+          company_email?: string | null
+          company_name?: string
+          company_phone?: string
+          confirmation_token?: string | null
+          confirmed_at?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          employee_cpf?: string | null
+          employee_name?: string
+          end_time?: string
+          id?: string
+          notes?: string | null
+          notification_sent_at?: string | null
+          notification_status?: string | null
+          professional_id?: string | null
+          protocol_number?: string | null
+          reminder_sent_at?: string | null
+          service_type_id?: string | null
+          start_time?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homologacao_appointments_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_appointments_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_appointments_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homologacao_blocks: {
+        Row: {
+          block_date: string
+          block_type: string
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          id: string
+          professional_id: string | null
+          reason: string | null
+        }
+        Insert: {
+          block_date: string
+          block_type?: string
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          professional_id?: string | null
+          reason?: string | null
+        }
+        Update: {
+          block_date?: string
+          block_type?: string
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          professional_id?: string | null
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homologacao_blocks_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_blocks_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homologacao_notifications: {
+        Row: {
+          appointment_id: string
+          clinic_id: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          message: string | null
+          recipient_phone: string
+          recipient_type: string
+          sent_at: string | null
+          status: string | null
+        }
+        Insert: {
+          appointment_id: string
+          clinic_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string | null
+          recipient_phone: string
+          recipient_type: string
+          sent_at?: string | null
+          status?: string | null
+        }
+        Update: {
+          appointment_id?: string
+          clinic_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string | null
+          recipient_phone?: string
+          recipient_type?: string
+          sent_at?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homologacao_notifications_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_notifications_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homologacao_professional_services: {
+        Row: {
+          clinic_id: string | null
+          created_at: string | null
+          id: string
+          professional_id: string
+          service_type_id: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string | null
+          id?: string
+          professional_id: string
+          service_type_id: string
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string | null
+          id?: string
+          professional_id?: string
+          service_type_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homologacao_professional_services_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_professional_services_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_professional_services_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homologacao_professionals: {
+        Row: {
+          avatar_url: string | null
+          clinic_id: string
+          created_at: string | null
+          email: string | null
+          function: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          clinic_id: string
+          created_at?: string | null
+          email?: string | null
+          function?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          email?: string | null
+          function?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homologacao_professionals_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homologacao_schedules: {
+        Row: {
+          capacity: number | null
+          clinic_id: string | null
+          created_at: string | null
+          day_of_week: number
+          end_time: string
+          id: string
+          is_active: boolean | null
+          professional_id: string
+          start_time: string
+        }
+        Insert: {
+          capacity?: number | null
+          clinic_id?: string | null
+          created_at?: string | null
+          day_of_week: number
+          end_time: string
+          id?: string
+          is_active?: boolean | null
+          professional_id: string
+          start_time: string
+        }
+        Update: {
+          capacity?: number | null
+          clinic_id?: string | null
+          created_at?: string | null
+          day_of_week?: number
+          end_time?: string
+          id?: string
+          is_active?: boolean | null
+          professional_id?: string
+          start_time?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homologacao_schedules_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_schedules_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_professionals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homologacao_service_types: {
+        Row: {
+          clinic_id: string
+          created_at: string | null
+          description: string | null
+          duration_minutes: number
+          id: string
+          is_active: boolean | null
+          name: string
+          order_index: number | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          order_index?: number | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string | null
+          description?: string | null
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          order_index?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homologacao_service_types_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      homologacao_settings: {
+        Row: {
+          allow_cancellation: boolean | null
+          cancellation_deadline_hours: number | null
+          clinic_id: string
+          created_at: string | null
+          display_name: string | null
+          id: string
+          institutional_text: string | null
+          logo_url: string | null
+          manager_whatsapp: string | null
+          public_whatsapp: string | null
+          require_confirmation: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          allow_cancellation?: boolean | null
+          cancellation_deadline_hours?: number | null
+          clinic_id: string
+          created_at?: string | null
+          display_name?: string | null
+          id?: string
+          institutional_text?: string | null
+          logo_url?: string | null
+          manager_whatsapp?: string | null
+          public_whatsapp?: string | null
+          require_confirmation?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          allow_cancellation?: boolean | null
+          cancellation_deadline_hours?: number | null
+          clinic_id?: string
+          created_at?: string | null
+          display_name?: string | null
+          id?: string
+          institutional_text?: string | null
+          logo_url?: string | null
+          manager_whatsapp?: string | null
+          public_whatsapp?: string | null
+          require_confirmation?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homologacao_settings_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: true
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       icd10_codes: {
         Row: {
           category: string | null
