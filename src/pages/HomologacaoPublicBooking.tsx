@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend } from "date-fns";
+import { format, addDays, isSameDay, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { 
   Calendar, 
@@ -24,10 +23,15 @@ import {
   ChevronRight,
   Mail,
   Briefcase,
-  AlertCircle
+  Users,
+  CalendarDays,
+  ChevronDown,
+  ChevronUp
 } from "lucide-react";
 import { HomologacaoProtocolReceipt } from "@/components/homologacao/HomologacaoProtocolReceipt";
-import { DocumentSearchCard } from "@/components/ui/document-search-card";
+import { EmployerAutocomplete } from "@/components/homologacao/EmployerAutocomplete";
+import { EmployeeAutocomplete } from "@/components/homologacao/EmployeeAutocomplete";
+import { cn } from "@/lib/utils";
 
 interface Professional {
   id: string;
@@ -79,6 +83,109 @@ interface FormData {
   notes: string;
 }
 
+// Collapsible Section Component
+function CollapsibleSection({ 
+  title, 
+  icon: Icon, 
+  color, 
+  isOpen, 
+  onToggle, 
+  children,
+  badge,
+  completed 
+}: { 
+  title: string; 
+  icon: React.ElementType; 
+  color: 'blue' | 'green' | 'purple' | 'emerald';
+  isOpen: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  badge?: string;
+  completed?: boolean;
+}) {
+  const colorStyles = {
+    blue: {
+      header: "bg-blue-600",
+      border: "border-blue-200",
+      hoverBg: "hover:bg-blue-50",
+      iconBg: "bg-blue-100",
+      iconColor: "text-blue-600",
+      completedBg: "bg-blue-50",
+    },
+    green: {
+      header: "bg-green-600",
+      border: "border-green-200",
+      hoverBg: "hover:bg-green-50",
+      iconBg: "bg-green-100",
+      iconColor: "text-green-600",
+      completedBg: "bg-green-50",
+    },
+    purple: {
+      header: "bg-purple-600",
+      border: "border-purple-200",
+      hoverBg: "hover:bg-purple-50",
+      iconBg: "bg-purple-100",
+      iconColor: "text-purple-600",
+      completedBg: "bg-purple-50",
+    },
+    emerald: {
+      header: "bg-emerald-600",
+      border: "border-emerald-200",
+      hoverBg: "hover:bg-emerald-50",
+      iconBg: "bg-emerald-100",
+      iconColor: "text-emerald-600",
+      completedBg: "bg-emerald-50",
+    },
+  };
+
+  const styles = colorStyles[color];
+
+  return (
+    <Card className={cn(
+      "overflow-hidden transition-all duration-200",
+      styles.border,
+      completed && styles.completedBg
+    )}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={cn(
+          "w-full flex items-center justify-between p-4 text-left transition-colors",
+          styles.hoverBg
+        )}
+      >
+        <div className="flex items-center gap-3">
+          <div className={cn("w-10 h-10 rounded-full flex items-center justify-center", styles.iconBg)}>
+            <Icon className={cn("w-5 h-5", styles.iconColor)} />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground">{title}</h3>
+            {badge && (
+              <p className="text-sm text-muted-foreground">{badge}</p>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {completed && (
+            <CheckCircle className="w-5 h-5 text-green-600" />
+          )}
+          {isOpen ? (
+            <ChevronUp className="w-5 h-5 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          )}
+        </div>
+      </button>
+      
+      {isOpen && (
+        <div className="px-4 pb-4 pt-2 border-t border-border/50">
+          {children}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 export default function HomologacaoPublicBooking() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -86,7 +193,7 @@ export default function HomologacaoPublicBooking() {
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [step, setStep] = useState<'date' | 'time' | 'form' | 'confirmation'>('date');
+  const [step, setStep] = useState<'form' | 'datetime' | 'confirmation'>('form');
   const [createdAppointment, setCreatedAppointment] = useState<any>(null);
   const [formData, setFormData] = useState<FormData>({
     employee_name: '',
@@ -98,11 +205,19 @@ export default function HomologacaoPublicBooking() {
     company_contact_name: '',
     notes: '',
   });
-  const [searchLoading, setSearchLoading] = useState(false);
-  const [searchError, setSearchError] = useState<string | null>(null);
-  const [searchSuccess, setSearchSuccess] = useState(false);
-  const [searchSuccessMessage, setSearchSuccessMessage] = useState<string | null>(null);
+  
+  // Collapsible sections state
+  const [openSections, setOpenSections] = useState({
+    employer: true,
+    employee: false,
+    professional: false,
+    datetime: false,
+  });
 
+  // Track completed sections
+  const isEmployerComplete = formData.company_name && formData.company_cnpj && formData.company_phone;
+  const isEmployeeComplete = formData.employee_name && formData.employee_cpf;
+  
   // Fetch professional by slug
   const { data: professional, isLoading: loadingProfessional } = useQuery({
     queryKey: ["homologacao-professional-public", slug],
@@ -121,91 +236,6 @@ export default function HomologacaoPublicBooking() {
     enabled: !!slug,
   });
 
-  // Handle document search (CPF or CNPJ)
-  const handleDocumentSearch = useCallback(async (document: string, type: 'cpf' | 'cnpj') => {
-    if (!professional?.clinic_id) return;
-    
-    setSearchLoading(true);
-    setSearchError(null);
-    setSearchSuccess(false);
-    setSearchSuccessMessage(null);
-
-    try {
-      const { data, error } = await supabase.functions.invoke('search-homologacao-data', {
-        body: { clinicId: professional.clinic_id, document }
-      });
-
-      if (error) {
-        console.error("Search error:", error);
-        setSearchError("Erro ao buscar dados. Tente novamente.");
-        return;
-      }
-
-      if (!data.success) {
-        setSearchError(data.error || "Erro ao buscar dados");
-        return;
-      }
-
-      if (!data.found) {
-        setSearchError("Cadastro não localizado. Por favor, preencha os dados manualmente.");
-        // Keep the document in the form
-        if (type === 'cpf') {
-          const formattedCpf = document.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-          setFormData(prev => ({ ...prev, employee_cpf: formattedCpf }));
-        } else {
-          const formattedCnpj = document.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-          setFormData(prev => ({ ...prev, company_cnpj: formattedCnpj }));
-        }
-        return;
-      }
-
-      // Auto-fill form data
-      setFormData(prev => {
-        const newFormData = { ...prev };
-        
-        if (data.employee) {
-          newFormData.employee_name = data.employee.name || prev.employee_name;
-          newFormData.employee_cpf = data.employee.cpf || prev.employee_cpf;
-          // If phone is available and company phone is empty, use it
-          if (data.employee.phone && !prev.company_phone) {
-            newFormData.company_phone = data.employee.phone;
-          }
-          // If email is available and company email is empty, use it
-          if (data.employee.email && !prev.company_email) {
-            newFormData.company_email = data.employee.email;
-          }
-        }
-
-        if (data.company) {
-          newFormData.company_name = data.company.name || prev.company_name;
-          newFormData.company_cnpj = data.company.cnpj || prev.company_cnpj;
-          newFormData.company_phone = data.company.phone || newFormData.company_phone;
-          newFormData.company_email = data.company.email || newFormData.company_email;
-          newFormData.company_contact_name = data.company.contactName || prev.company_contact_name;
-        }
-        
-        return newFormData;
-      });
-      
-      setSearchSuccess(true);
-      
-      const foundItems = [];
-      if (data.employee) foundItems.push("funcionário");
-      if (data.company) foundItems.push("empresa");
-      setSearchSuccessMessage(`Dados de ${foundItems.join(" e ")} preenchidos automaticamente!`);
-      
-      toast.success("Dados encontrados e preenchidos!", {
-        description: `${foundItems.join(" e ")} localizado(s) na base de dados.`
-      });
-
-    } catch (err) {
-      console.error("Search exception:", err);
-      setSearchError("Falha de conexão. Verifique sua internet e tente novamente.");
-    } finally {
-      setSearchLoading(false);
-    }
-  }, [professional?.clinic_id]);
-
   // Fetch clinic info
   const { data: clinic } = useQuery({
     queryKey: ["clinic-public", professional?.clinic_id],
@@ -213,7 +243,7 @@ export default function HomologacaoPublicBooking() {
       if (!professional?.clinic_id) return null;
       const { data, error } = await supabase
         .from("clinics")
-        .select("name, phone, address, city, state_code")
+        .select("name, phone, address, city, state_code, logo_url")
         .eq("id", professional.clinic_id)
         .single();
       
@@ -256,6 +286,13 @@ export default function HomologacaoPublicBooking() {
     },
     enabled: !!professional?.clinic_id,
   });
+
+  // Auto-select first service
+  useEffect(() => {
+    if (serviceTypes && serviceTypes.length > 0 && !selectedService) {
+      setSelectedService(serviceTypes[0].id);
+    }
+  }, [serviceTypes, selectedService]);
 
   // Fetch existing appointments for selected date
   const { data: appointments } = useQuery({
@@ -302,13 +339,11 @@ export default function HomologacaoPublicBooking() {
       const service = serviceTypes?.find(s => s.id === selectedService);
       if (!service) throw new Error("Serviço não encontrado");
 
-      // Calculate end time
       const [hours, minutes] = selectedTime.split(':').map(Number);
       const endDate = new Date();
       endDate.setHours(hours, minutes + service.duration_minutes);
       const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
-      // Generate protocol
       const { data: protocolData, error: protocolError } = await supabase.rpc(
         'generate_homologacao_protocol',
         { p_clinic_id: professional.clinic_id }
@@ -383,7 +418,6 @@ export default function HomologacaoPublicBooking() {
     while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
       const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
       
-      // Check if slot is already booked
       const bookedCount = appointments?.filter(apt => 
         apt.start_time?.slice(0, 5) === timeStr
       ).length || 0;
@@ -409,17 +443,14 @@ export default function HomologacaoPublicBooking() {
   const isDateAvailable = (date: Date): boolean => {
     if (!schedules || !professional) return false;
 
-    // Check if weekend
     const dayOfWeek = date.getDay();
     const hasSchedule = schedules.some(s => s.day_of_week === dayOfWeek);
     if (!hasSchedule) return false;
 
-    // Check if date is in the past
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (date < today) return false;
 
-    // Check for blocks
     const dateStr = format(date, "yyyy-MM-dd");
     const isBlocked = blocks?.some(b => 
       b.block_date === dateStr && 
@@ -437,12 +468,55 @@ export default function HomologacaoPublicBooking() {
     return eachDayOfInterval({ start, end });
   };
 
-  // Reset search states when step changes
-  const resetSearchState = useCallback(() => {
-    setSearchError(null);
-    setSearchSuccess(false);
-    setSearchSuccessMessage(null);
-  }, []);
+  // Handle employer selection from autocomplete
+  const handleEmployerSelect = (employer: { 
+    id: string; 
+    name: string; 
+    cnpj: string | null; 
+    trade_name: string | null; 
+    phone: string | null; 
+    email: string | null; 
+  }) => {
+    setFormData(prev => ({
+      ...prev,
+      company_name: employer.name,
+      company_cnpj: employer.cnpj || prev.company_cnpj,
+      company_phone: employer.phone || prev.company_phone,
+      company_email: employer.email || prev.company_email,
+    }));
+    toast.success("Dados da empresa preenchidos!");
+    
+    // Auto-expand employee section
+    setOpenSections(prev => ({
+      ...prev,
+      employer: false,
+      employee: true,
+    }));
+  };
+
+  // Handle employee selection from autocomplete
+  const handleEmployeeSelect = (employee: {
+    id: string;
+    name: string;
+    cpf: string | null;
+    phone: string | null;
+    email: string | null;
+  }) => {
+    setFormData(prev => ({
+      ...prev,
+      employee_name: employee.name,
+      employee_cpf: employee.cpf || prev.employee_cpf,
+    }));
+    
+    toast.success("Dados do funcionário preenchidos!");
+    
+    // Auto-expand professional section
+    setOpenSections(prev => ({
+      ...prev,
+      employee: false,
+      professional: true,
+    }));
+  };
 
   // Handle form submit
   const handleSubmit = (e: React.FormEvent) => {
@@ -450,14 +524,22 @@ export default function HomologacaoPublicBooking() {
     
     if (!formData.employee_name.trim()) {
       toast.error("Nome do funcionário é obrigatório");
+      setOpenSections(prev => ({ ...prev, employee: true }));
       return;
     }
     if (!formData.company_name.trim()) {
       toast.error("Nome da empresa é obrigatório");
+      setOpenSections(prev => ({ ...prev, employer: true }));
       return;
     }
     if (!formData.company_phone.trim()) {
       toast.error("Telefone da empresa é obrigatório");
+      setOpenSections(prev => ({ ...prev, employer: true }));
+      return;
+    }
+    if (!selectedDate || !selectedTime) {
+      toast.error("Selecione data e horário");
+      setOpenSections(prev => ({ ...prev, datetime: true }));
       return;
     }
 
@@ -466,10 +548,12 @@ export default function HomologacaoPublicBooking() {
 
   if (loadingProfessional) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white p-4">
-        <div className="max-w-4xl mx-auto space-y-6">
-          <Skeleton className="h-64 w-full" />
-          <Skeleton className="h-96 w-full" />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <Skeleton className="h-48 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
         </div>
       </div>
     );
@@ -477,11 +561,11 @@ export default function HomologacaoPublicBooking() {
 
   if (!professional || !professional.public_booking_enabled) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white flex items-center justify-center p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
           <CardContent className="pt-6 text-center">
-            <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-              <User className="w-8 h-8 text-red-500" />
+            <div className="w-16 h-16 mx-auto mb-4 bg-destructive/10 rounded-full flex items-center justify-center">
+              <User className="w-8 h-8 text-destructive" />
             </div>
             <h1 className="text-xl font-bold mb-2">Profissional não encontrado</h1>
             <p className="text-muted-foreground">
@@ -496,7 +580,7 @@ export default function HomologacaoPublicBooking() {
   // Confirmation step
   if (step === 'confirmation' && createdAppointment) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white p-4">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-4">
         <div className="max-w-2xl mx-auto">
           <HomologacaoProtocolReceipt
             appointment={createdAppointment}
@@ -511,383 +595,332 @@ export default function HomologacaoPublicBooking() {
   const availableSlots = getAvailableSlots();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-white">
-      {/* Header with professional info */}
-      <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="flex items-start gap-4">
-            {/* Avatar */}
-            <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center overflow-hidden shrink-0">
-              {professional.avatar_url ? (
-                <img 
-                  src={professional.avatar_url} 
-                  alt={professional.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <User className="w-10 h-10 text-white" />
-              )}
-            </div>
-            
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl font-bold truncate">{professional.name}</h1>
-              <p className="text-emerald-100">{professional.function || "Advogado"}</p>
-              {professional.description && (
-                <p className="mt-2 text-sm text-emerald-100 line-clamp-2">{professional.description}</p>
-              )}
-              
-              <div className="flex flex-wrap gap-4 mt-3 text-sm">
-                {professional.phone && (
-                  <a href={`tel:${professional.phone}`} className="flex items-center gap-1 hover:underline">
-                    <Phone className="w-4 h-4" />
-                    {professional.phone}
-                  </a>
-                )}
-                {professional.email && (
-                  <a href={`mailto:${professional.email}`} className="flex items-center gap-1 hover:underline">
-                    <Mail className="w-4 h-4" />
-                    {professional.email}
-                  </a>
-                )}
-              </div>
-            </div>
-          </div>
-          
-          {/* Address */}
-          {(professional.address || clinic?.address) && (
-            <div className="mt-4 flex items-start gap-2 text-sm text-emerald-100">
-              <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>
-                {professional.address || clinic?.address}
-                {(professional.city || clinic?.city) && `, ${professional.city || clinic?.city}`}
-                {(professional.state_code || clinic?.state_code) && ` - ${professional.state_code || clinic?.state_code}`}
-              </span>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white py-8">
+        <div className="max-w-2xl mx-auto px-4 text-center">
+          {clinic?.logo_url ? (
+            <img 
+              src={clinic.logo_url} 
+              alt={clinic.name || "Logo"}
+              className="h-16 mx-auto mb-4 object-contain"
+            />
+          ) : (
+            <div className="w-16 h-16 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center">
+              <Building2 className="w-8 h-8 text-white" />
             </div>
           )}
+          <h1 className="text-2xl font-bold mb-2">Agendar Homologação</h1>
+          <p className="text-blue-100">
+            Realize o agendamento da sua homologação trabalhista de forma rápida e segura
+          </p>
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
-        {/* Step indicator */}
-        <div className="flex items-center justify-center gap-2 py-4">
-          <Badge variant={step === 'date' ? 'default' : 'secondary'} className="px-4">
-            1. Data
-          </Badge>
-          <div className="w-8 h-0.5 bg-muted" />
-          <Badge variant={step === 'time' ? 'default' : 'secondary'} className="px-4">
-            2. Horário
-          </Badge>
-          <div className="w-8 h-0.5 bg-muted" />
-          <Badge variant={step === 'form' ? 'default' : 'secondary'} className="px-4">
-            3. Dados
-          </Badge>
-        </div>
-
-        {/* Service selection */}
-        {!selectedService && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Selecione o Serviço</CardTitle>
-              <CardDescription>Escolha o tipo de atendimento que você precisa</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-3 md:grid-cols-2">
-                {serviceTypes?.map((service) => (
-                  <Card 
-                    key={service.id}
-                    className="cursor-pointer hover:border-emerald-500 hover:shadow-md transition-all"
-                    onClick={() => setSelectedService(service.id)}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
-                          <Briefcase className="w-5 h-5 text-emerald-600" />
-                        </div>
-                        <div>
-                          <h3 className="font-medium">{service.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            Duração: {service.duration_minutes} minutos
-                          </p>
-                          {service.description && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {service.description}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Date selection */}
-        {selectedService && step === 'date' && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Selecione a Data</CardTitle>
-                  <CardDescription>Escolha uma data disponível para o atendimento</CardDescription>
+      <div className="max-w-2xl mx-auto p-4 -mt-4 space-y-4">
+        <form onSubmit={handleSubmit}>
+          {/* Card 1: Dados do Empregador */}
+          <div className="mb-4">
+            <CollapsibleSection
+              title="Dados do Empregador"
+              icon={Building2}
+              color="blue"
+              isOpen={openSections.employer}
+              onToggle={() => setOpenSections(prev => ({ ...prev, employer: !prev.employer }))}
+              completed={!!isEmployerComplete}
+              badge={isEmployerComplete ? formData.company_name : "Preencha os dados da empresa"}
+            >
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Buscar por CNPJ ou Nome</Label>
+                  <EmployerAutocomplete
+                    clinicId={professional.clinic_id}
+                    value={formData.company_cnpj}
+                    onChange={(value) => setFormData(prev => ({ ...prev, company_cnpj: value }))}
+                    onSelect={handleEmployerSelect}
+                    placeholder="Digite o CNPJ ou nome da empresa"
+                  />
                 </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setCurrentMonth(addDays(currentMonth, -30))}
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </Button>
-                  <span className="min-w-[140px] text-center font-medium">
-                    {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setCurrentMonth(addDays(currentMonth, 30))}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-7 gap-1 mb-2">
-                {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
-                  <div key={day} className="text-center text-sm font-medium text-muted-foreground py-2">
-                    {day}
-                  </div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-1">
-                {/* Empty cells for first week offset */}
-                {Array.from({ length: startOfMonth(currentMonth).getDay() }).map((_, i) => (
-                  <div key={`empty-${i}`} className="aspect-square" />
-                ))}
                 
-                {calendarDays().map((day) => {
-                  const available = isDateAvailable(day);
-                  const isSelected = selectedDate && isSameDay(day, selectedDate);
-                  const isToday = isSameDay(day, new Date());
-                  
-                  return (
-                    <button
-                      key={day.toISOString()}
-                      disabled={!available}
-                      onClick={() => {
-                        setSelectedDate(day);
-                        setSelectedTime(null);
-                        setStep('time');
-                      }}
-                      className={`
-                        aspect-square rounded-lg flex items-center justify-center text-sm font-medium
-                        transition-all
-                        ${isSelected 
-                          ? 'bg-emerald-600 text-white ring-2 ring-emerald-600 ring-offset-2' 
-                          : available 
-                            ? 'hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer' 
-                            : 'text-muted-foreground/40 cursor-not-allowed'
-                        }
-                        ${isToday && !isSelected ? 'ring-1 ring-emerald-300' : ''}
-                      `}
-                    >
-                      {format(day, 'd')}
-                    </button>
-                  );
-                })}
-              </div>
-              
-              <div className="flex items-center gap-4 mt-4 text-sm">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-emerald-600" />
-                  <span>Disponível</span>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="company_name">Razão Social *</Label>
+                    <Input
+                      id="company_name"
+                      value={formData.company_name}
+                      onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                      placeholder="Nome da empresa"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company_contact_name">Nome do Preposto</Label>
+                    <Input
+                      id="company_contact_name"
+                      value={formData.company_contact_name}
+                      onChange={(e) => setFormData({ ...formData, company_contact_name: e.target.value })}
+                      placeholder="Nome do responsável"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company_phone">WhatsApp da Empresa *</Label>
+                    <Input
+                      id="company_phone"
+                      value={formData.company_phone}
+                      onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
+                      placeholder="(00) 00000-0000"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="company_email">E-mail</Label>
+                    <Input
+                      id="company_email"
+                      type="email"
+                      value={formData.company_email}
+                      onChange={(e) => setFormData({ ...formData, company_email: e.target.value })}
+                      placeholder="contato@empresa.com"
+                    />
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded bg-muted" />
-                  <span>Indisponível</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Time selection */}
-        {selectedService && step === 'time' && selectedDate && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Selecione o Horário</CardTitle>
-                  <CardDescription>
-                    {format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-                  </CardDescription>
-                </div>
-                <Button variant="outline" onClick={() => setStep('date')}>
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Voltar
+                
+                <Button
+                  type="button"
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  onClick={() => setOpenSections(prev => ({ ...prev, employer: false, employee: true }))}
+                  disabled={!formData.company_name || !formData.company_phone}
+                >
+                  Continuar
+                  <ChevronDown className="w-4 h-4 ml-2" />
                 </Button>
               </div>
-            </CardHeader>
-            <CardContent>
-              {availableSlots.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  Nenhum horário disponível para esta data
+            </CollapsibleSection>
+          </div>
+
+          {/* Card 2: Dados do Trabalhador */}
+          <div className="mb-4">
+            <CollapsibleSection
+              title="Dados do Trabalhador"
+              icon={User}
+              color="green"
+              isOpen={openSections.employee}
+              onToggle={() => setOpenSections(prev => ({ ...prev, employee: !prev.employee }))}
+              completed={!!isEmployeeComplete}
+              badge={isEmployeeComplete ? formData.employee_name : "Preencha os dados do funcionário"}
+            >
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Buscar por CPF ou Nome</Label>
+                  <EmployeeAutocomplete
+                    clinicId={professional.clinic_id}
+                    value={formData.employee_cpf}
+                    onChange={(value) => setFormData(prev => ({ ...prev, employee_cpf: value }))}
+                    onSelect={handleEmployeeSelect}
+                    placeholder="Digite o CPF ou nome do funcionário"
+                  />
                 </div>
-              ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                  {availableSlots.map((slot) => (
+                
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="employee_name">Nome Completo *</Label>
+                    <Input
+                      id="employee_name"
+                      value={formData.employee_name}
+                      onChange={(e) => setFormData({ ...formData, employee_name: e.target.value })}
+                      placeholder="Nome do funcionário"
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <Button
+                  type="button"
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={() => setOpenSections(prev => ({ ...prev, employee: false, professional: true }))}
+                  disabled={!formData.employee_name}
+                >
+                  Continuar
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </CollapsibleSection>
+          </div>
+
+          {/* Card 3: Escolha o Profissional */}
+          <div className="mb-4">
+            <CollapsibleSection
+              title="Escolha o Profissional"
+              icon={Users}
+              color="purple"
+              isOpen={openSections.professional}
+              onToggle={() => setOpenSections(prev => ({ ...prev, professional: !prev.professional }))}
+              completed={true}
+              badge={professional.name}
+            >
+              <div className="space-y-4">
+                <Card className="border-purple-200 bg-purple-50/50">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-full bg-purple-100 flex items-center justify-center overflow-hidden shrink-0">
+                        {professional.avatar_url ? (
+                          <img 
+                            src={professional.avatar_url} 
+                            alt={professional.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <User className="w-7 h-7 text-purple-600" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-foreground">{professional.name}</h4>
+                        <p className="text-sm text-muted-foreground">{professional.function || "Agente Homologador"}</p>
+                        <Badge className="mt-1 bg-green-100 text-green-700 border-0">
+                          <span className="w-2 h-2 rounded-full bg-green-500 mr-1" />
+                          Disponível
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    {(professional.address || clinic?.address) && (
+                      <div className="mt-3 flex items-start gap-2 text-sm text-muted-foreground">
+                        <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-purple-500" />
+                        <span>
+                          {professional.address || clinic?.address}
+                          {(professional.city || clinic?.city) && `, ${professional.city || clinic?.city}`}
+                          {(professional.state_code || clinic?.state_code) && ` - ${professional.state_code || clinic?.state_code}`}
+                        </span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                
+                <Button
+                  type="button"
+                  className="w-full bg-purple-600 hover:bg-purple-700"
+                  onClick={() => setOpenSections(prev => ({ ...prev, professional: false, datetime: true }))}
+                >
+                  Continuar
+                  <ChevronDown className="w-4 h-4 ml-2" />
+                </Button>
+              </div>
+            </CollapsibleSection>
+          </div>
+
+          {/* Card 4: Escolha Data e Horário */}
+          <div className="mb-4">
+            <CollapsibleSection
+              title="Escolha Data e Horário"
+              icon={CalendarDays}
+              color="emerald"
+              isOpen={openSections.datetime}
+              onToggle={() => setOpenSections(prev => ({ ...prev, datetime: !prev.datetime }))}
+              completed={!!(selectedDate && selectedTime)}
+              badge={selectedDate && selectedTime 
+                ? `${format(selectedDate, "dd/MM/yyyy")} às ${selectedTime}`
+                : "Selecione data e horário"
+              }
+            >
+              <div className="space-y-4">
+                {/* Calendar */}
+                <div>
+                  <div className="flex items-center justify-between mb-4">
                     <Button
-                      key={slot.time}
-                      variant={selectedTime === slot.time ? 'default' : 'outline'}
-                      disabled={!slot.available}
-                      onClick={() => {
-                        setSelectedTime(slot.time);
-                        setStep('form');
-                      }}
-                      className={`
-                        ${selectedTime === slot.time ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
-                        ${!slot.available ? 'opacity-50' : ''}
-                      `}
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentMonth(addDays(currentMonth, -30))}
                     >
-                      <Clock className="w-4 h-4 mr-1" />
-                      {slot.time}
+                      <ChevronLeft className="w-4 h-4" />
                     </Button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Form */}
-        {selectedService && step === 'form' && selectedDate && selectedTime && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Dados do Agendamento</CardTitle>
-                  <CardDescription>
-                    {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })} às {selectedTime}
-                  </CardDescription>
-                </div>
-                <Button variant="outline" onClick={() => setStep('time')}>
-                  <ChevronLeft className="w-4 h-4 mr-2" />
-                  Voltar
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Document Search */}
-                <DocumentSearchCard
-                  onSearch={handleDocumentSearch}
-                  loading={searchLoading}
-                  error={searchError || undefined}
-                  success={searchSuccess}
-                  successMessage={searchSuccessMessage || undefined}
-                />
-
-                <Separator />
-
-                {/* Employee data */}
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <User className="w-4 h-4 text-purple-600" />
-                    Dados do Funcionário
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="employee_name">Nome Completo *</Label>
-                      <Input
-                        id="employee_name"
-                        value={formData.employee_name}
-                        onChange={(e) => setFormData({ ...formData, employee_name: e.target.value })}
-                        placeholder="Nome do funcionário"
-                        required
-                        className={formData.employee_name && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="employee_cpf">CPF</Label>
-                      <Input
-                        id="employee_cpf"
-                        value={formData.employee_cpf}
-                        onChange={(e) => setFormData({ ...formData, employee_cpf: e.target.value })}
-                        placeholder="000.000.000-00"
-                        className={formData.employee_cpf && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
-                      />
-                    </div>
+                    <span className="font-medium">
+                      {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+                    </span>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setCurrentMonth(addDays(currentMonth, 30))}
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-7 gap-1 mb-2">
+                    {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(day => (
+                      <div key={day} className="text-center text-xs font-medium text-muted-foreground py-2">
+                        {day}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: startOfMonth(currentMonth).getDay() }).map((_, i) => (
+                      <div key={`empty-${i}`} className="aspect-square" />
+                    ))}
+                    
+                    {calendarDays().map((day) => {
+                      const available = isDateAvailable(day);
+                      const isSelected = selectedDate && isSameDay(day, selectedDate);
+                      const isToday = isSameDay(day, new Date());
+                      
+                      return (
+                        <button
+                          key={day.toISOString()}
+                          type="button"
+                          disabled={!available}
+                          onClick={() => {
+                            setSelectedDate(day);
+                            setSelectedTime(null);
+                          }}
+                          className={cn(
+                            "aspect-square rounded-lg flex items-center justify-center text-sm font-medium transition-all",
+                            isSelected 
+                              ? "bg-emerald-600 text-white ring-2 ring-emerald-600 ring-offset-2" 
+                              : available 
+                                ? "hover:bg-emerald-50 hover:text-emerald-600 cursor-pointer" 
+                                : "text-muted-foreground/40 cursor-not-allowed",
+                            isToday && !isSelected && "ring-1 ring-emerald-300"
+                          )}
+                        >
+                          {format(day, 'd')}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
-                <Separator />
-
-                {/* Company data */}
-                <div className="space-y-4">
-                  <h3 className="font-medium flex items-center gap-2">
-                    <Building2 className="w-4 h-4 text-amber-600" />
-                    Dados da Empresa
-                  </h3>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="company_name">Razão Social *</Label>
-                      <Input
-                        id="company_name"
-                        value={formData.company_name}
-                        onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
-                        placeholder="Nome da empresa"
-                        required
-                        className={formData.company_name && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="company_cnpj">CNPJ</Label>
-                      <Input
-                        id="company_cnpj"
-                        value={formData.company_cnpj}
-                        onChange={(e) => setFormData({ ...formData, company_cnpj: e.target.value })}
-                        placeholder="00.000.000/0001-00"
-                        className={formData.company_cnpj && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="company_phone">Telefone *</Label>
-                      <Input
-                        id="company_phone"
-                        value={formData.company_phone}
-                        onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
-                        placeholder="(00) 00000-0000"
-                        required
-                        className={formData.company_phone && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="company_email">E-mail</Label>
-                      <Input
-                        id="company_email"
-                        type="email"
-                        value={formData.company_email}
-                        onChange={(e) => setFormData({ ...formData, company_email: e.target.value })}
-                        placeholder="contato@empresa.com"
-                        className={formData.company_email && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
-                      />
-                    </div>
-                    <div className="space-y-2 md:col-span-2">
-                      <Label htmlFor="company_contact_name">Nome do Contato</Label>
-                      <Input
-                        id="company_contact_name"
-                        value={formData.company_contact_name}
-                        onChange={(e) => setFormData({ ...formData, company_contact_name: e.target.value })}
-                        placeholder="Nome da pessoa de contato"
-                        className={formData.company_contact_name && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
-                      />
-                    </div>
+                {/* Time slots */}
+                {selectedDate && (
+                  <div>
+                    <Label className="mb-2 block">Horários disponíveis</Label>
+                    {availableSlots.length === 0 ? (
+                      <div className="text-center py-4 text-muted-foreground text-sm">
+                        Nenhum horário disponível para esta data
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                        {availableSlots.map((slot) => (
+                          <Button
+                            key={slot.time}
+                            type="button"
+                            variant={selectedTime === slot.time ? 'default' : 'outline'}
+                            disabled={!slot.available}
+                            onClick={() => setSelectedTime(slot.time)}
+                            size="sm"
+                            className={cn(
+                              selectedTime === slot.time && "bg-emerald-600 hover:bg-emerald-700",
+                              !slot.available && "opacity-50"
+                            )}
+                          >
+                            <Clock className="w-3 h-3 mr-1" />
+                            {slot.time}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                </div>
-
+                )}
+                
                 {/* Notes */}
                 <div className="space-y-2">
                   <Label htmlFor="notes">Observações</Label>
@@ -898,58 +931,42 @@ export default function HomologacaoPublicBooking() {
                     placeholder="Alguma observação adicional?"
                   />
                 </div>
+              </div>
+            </CollapsibleSection>
+          </div>
 
-                {/* Summary */}
-                <div className="bg-emerald-50 rounded-lg p-4 space-y-2">
-                  <h3 className="font-medium text-emerald-800">Resumo do Agendamento</h3>
-                  <div className="grid gap-1 text-sm text-emerald-700">
-                    <p><strong>Profissional:</strong> {professional.name}</p>
-                    <p><strong>Serviço:</strong> {serviceTypes?.find(s => s.id === selectedService)?.name}</p>
-                    <p><strong>Data:</strong> {format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</p>
-                    <p><strong>Horário:</strong> {selectedTime}</p>
+          {/* Summary and Submit */}
+          {selectedDate && selectedTime && (
+            <Card className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white border-0">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-purple-100 text-sm">Agendamento para</p>
+                    <p className="font-semibold">
+                      {format(selectedDate, "dd/MM/yyyy")} às {selectedTime}
+                    </p>
                   </div>
+                  <CalendarDays className="w-8 h-8 text-purple-200" />
                 </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                
+                <Button
+                  type="submit"
                   disabled={createAppointmentMutation.isPending}
+                  className="w-full bg-white text-purple-700 hover:bg-purple-50 font-semibold"
                 >
                   {createAppointmentMutation.isPending ? (
-                    "Confirmando..."
+                    <>Agendando...</>
                   ) : (
                     <>
-                      <CheckCircle className="w-4 h-4 mr-2" />
+                      <CheckCircle className="w-5 h-5 mr-2" />
                       Confirmar Agendamento
                     </>
                   )}
                 </Button>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Map (if coordinates available) */}
-        {(professional.latitude && professional.longitude) && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Localização</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="aspect-video rounded-lg overflow-hidden bg-muted">
-                <iframe
-                  src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${professional.latitude},${professional.longitude}&zoom=15`}
-                  width="100%"
-                  height="100%"
-                  style={{ border: 0 }}
-                  allowFullScreen
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          )}
+        </form>
       </div>
     </div>
   );
