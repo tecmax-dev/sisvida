@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { getStaticYearRange } from "@/hooks/useAvailableYears";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -390,7 +391,7 @@ export default function BulkContributionDialog({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {[2024, 2025, 2026, 2027].map(y => (
+                      {getStaticYearRange().map(y => (
                         <SelectItem key={y} value={String(y)}>{y}</SelectItem>
                       ))}
                     </SelectContent>
