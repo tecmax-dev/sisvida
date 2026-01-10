@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { 
   Calendar, 
@@ -22,9 +23,11 @@ import {
   ChevronLeft,
   ChevronRight,
   Mail,
-  Briefcase
+  Briefcase,
+  AlertCircle
 } from "lucide-react";
 import { HomologacaoProtocolReceipt } from "@/components/homologacao/HomologacaoProtocolReceipt";
+import { DocumentSearchCard } from "@/components/ui/document-search-card";
 
 interface Professional {
   id: string;
@@ -95,6 +98,10 @@ export default function HomologacaoPublicBooking() {
     company_contact_name: '',
     notes: '',
   });
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchSuccess, setSearchSuccess] = useState(false);
+  const [searchSuccessMessage, setSearchSuccessMessage] = useState<string | null>(null);
 
   // Fetch professional by slug
   const { data: professional, isLoading: loadingProfessional } = useQuery({
@@ -113,6 +120,91 @@ export default function HomologacaoPublicBooking() {
     },
     enabled: !!slug,
   });
+
+  // Handle document search (CPF or CNPJ)
+  const handleDocumentSearch = useCallback(async (document: string, type: 'cpf' | 'cnpj') => {
+    if (!professional?.clinic_id) return;
+    
+    setSearchLoading(true);
+    setSearchError(null);
+    setSearchSuccess(false);
+    setSearchSuccessMessage(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('search-homologacao-data', {
+        body: { clinicId: professional.clinic_id, document }
+      });
+
+      if (error) {
+        console.error("Search error:", error);
+        setSearchError("Erro ao buscar dados. Tente novamente.");
+        return;
+      }
+
+      if (!data.success) {
+        setSearchError(data.error || "Erro ao buscar dados");
+        return;
+      }
+
+      if (!data.found) {
+        setSearchError("Cadastro não localizado. Por favor, preencha os dados manualmente.");
+        // Keep the document in the form
+        if (type === 'cpf') {
+          const formattedCpf = document.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+          setFormData(prev => ({ ...prev, employee_cpf: formattedCpf }));
+        } else {
+          const formattedCnpj = document.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+          setFormData(prev => ({ ...prev, company_cnpj: formattedCnpj }));
+        }
+        return;
+      }
+
+      // Auto-fill form data
+      setFormData(prev => {
+        const newFormData = { ...prev };
+        
+        if (data.employee) {
+          newFormData.employee_name = data.employee.name || prev.employee_name;
+          newFormData.employee_cpf = data.employee.cpf || prev.employee_cpf;
+          // If phone is available and company phone is empty, use it
+          if (data.employee.phone && !prev.company_phone) {
+            newFormData.company_phone = data.employee.phone;
+          }
+          // If email is available and company email is empty, use it
+          if (data.employee.email && !prev.company_email) {
+            newFormData.company_email = data.employee.email;
+          }
+        }
+
+        if (data.company) {
+          newFormData.company_name = data.company.name || prev.company_name;
+          newFormData.company_cnpj = data.company.cnpj || prev.company_cnpj;
+          newFormData.company_phone = data.company.phone || newFormData.company_phone;
+          newFormData.company_email = data.company.email || newFormData.company_email;
+          newFormData.company_contact_name = data.company.contactName || prev.company_contact_name;
+        }
+        
+        return newFormData;
+      });
+      
+      setSearchSuccess(true);
+      
+      const foundItems = [];
+      if (data.employee) foundItems.push("funcionário");
+      if (data.company) foundItems.push("empresa");
+      setSearchSuccessMessage(`Dados de ${foundItems.join(" e ")} preenchidos automaticamente!`);
+      
+      toast.success("Dados encontrados e preenchidos!", {
+        description: `${foundItems.join(" e ")} localizado(s) na base de dados.`
+      });
+
+    } catch (err) {
+      console.error("Search exception:", err);
+      setSearchError("Falha de conexão. Verifique sua internet e tente novamente.");
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [professional?.clinic_id]);
 
   // Fetch clinic info
   const { data: clinic } = useQuery({
@@ -344,6 +436,13 @@ export default function HomologacaoPublicBooking() {
     const end = endOfMonth(currentMonth);
     return eachDayOfInterval({ start, end });
   };
+
+  // Reset search states when step changes
+  const resetSearchState = useCallback(() => {
+    setSearchError(null);
+    setSearchSuccess(false);
+    setSearchSuccessMessage(null);
+  }, []);
 
   // Handle form submit
   const handleSubmit = (e: React.FormEvent) => {
@@ -682,10 +781,21 @@ export default function HomologacaoPublicBooking() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Document Search */}
+                <DocumentSearchCard
+                  onSearch={handleDocumentSearch}
+                  loading={searchLoading}
+                  error={searchError || undefined}
+                  success={searchSuccess}
+                  successMessage={searchSuccessMessage || undefined}
+                />
+
+                <Separator />
+
                 {/* Employee data */}
                 <div className="space-y-4">
                   <h3 className="font-medium flex items-center gap-2">
-                    <User className="w-4 h-4" />
+                    <User className="w-4 h-4 text-purple-600" />
                     Dados do Funcionário
                   </h3>
                   <div className="grid gap-4 md:grid-cols-2">
@@ -697,6 +807,7 @@ export default function HomologacaoPublicBooking() {
                         onChange={(e) => setFormData({ ...formData, employee_name: e.target.value })}
                         placeholder="Nome do funcionário"
                         required
+                        className={formData.employee_name && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
                       />
                     </div>
                     <div className="space-y-2">
@@ -706,15 +817,18 @@ export default function HomologacaoPublicBooking() {
                         value={formData.employee_cpf}
                         onChange={(e) => setFormData({ ...formData, employee_cpf: e.target.value })}
                         placeholder="000.000.000-00"
+                        className={formData.employee_cpf && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
                       />
                     </div>
                   </div>
                 </div>
 
+                <Separator />
+
                 {/* Company data */}
                 <div className="space-y-4">
                   <h3 className="font-medium flex items-center gap-2">
-                    <Building2 className="w-4 h-4" />
+                    <Building2 className="w-4 h-4 text-amber-600" />
                     Dados da Empresa
                   </h3>
                   <div className="grid gap-4 md:grid-cols-2">
@@ -726,6 +840,7 @@ export default function HomologacaoPublicBooking() {
                         onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
                         placeholder="Nome da empresa"
                         required
+                        className={formData.company_name && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
                       />
                     </div>
                     <div className="space-y-2">
@@ -735,6 +850,7 @@ export default function HomologacaoPublicBooking() {
                         value={formData.company_cnpj}
                         onChange={(e) => setFormData({ ...formData, company_cnpj: e.target.value })}
                         placeholder="00.000.000/0001-00"
+                        className={formData.company_cnpj && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
                       />
                     </div>
                     <div className="space-y-2">
@@ -745,6 +861,7 @@ export default function HomologacaoPublicBooking() {
                         onChange={(e) => setFormData({ ...formData, company_phone: e.target.value })}
                         placeholder="(00) 00000-0000"
                         required
+                        className={formData.company_phone && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
                       />
                     </div>
                     <div className="space-y-2">
@@ -755,6 +872,7 @@ export default function HomologacaoPublicBooking() {
                         value={formData.company_email}
                         onChange={(e) => setFormData({ ...formData, company_email: e.target.value })}
                         placeholder="contato@empresa.com"
+                        className={formData.company_email && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
                       />
                     </div>
                     <div className="space-y-2 md:col-span-2">
@@ -764,6 +882,7 @@ export default function HomologacaoPublicBooking() {
                         value={formData.company_contact_name}
                         onChange={(e) => setFormData({ ...formData, company_contact_name: e.target.value })}
                         placeholder="Nome da pessoa de contato"
+                        className={formData.company_contact_name && searchSuccess ? "border-emerald-300 bg-emerald-50/30" : ""}
                       />
                     </div>
                   </div>
