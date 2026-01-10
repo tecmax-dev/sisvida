@@ -43,6 +43,15 @@ interface Professional {
   is_active: boolean;
   clinic_id: string;
   avatar_url: string | null;
+  slug: string | null;
+  description: string | null;
+  address: string | null;
+  city: string | null;
+  state_code: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  manager_phone: string | null;
+  public_booking_enabled: boolean | null;
 }
 
 export default function HomologacaoProfissionaisPage() {
