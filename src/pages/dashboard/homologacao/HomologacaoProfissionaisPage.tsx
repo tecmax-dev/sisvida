@@ -26,8 +26,11 @@ import {
   Phone,
   Pencil,
   Trash2,
-  Clock
+  Clock,
+  Link,
+  Share2
 } from "lucide-react";
+import { HomologacaoShareDialog } from "@/components/homologacao/HomologacaoShareDialog";
 import { HomologacaoProfessionalAvatar } from "@/components/homologacao/HomologacaoProfessionalAvatar";
 import { HomologacaoProfessionalScheduleDialog } from "@/components/homologacao/HomologacaoProfessionalScheduleDialog";
 
@@ -52,6 +55,8 @@ export default function HomologacaoProfissionaisPage() {
   // Schedule dialog state
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [sharingProfessional, setSharingProfessional] = useState<Professional | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -160,6 +165,17 @@ export default function HomologacaoProfissionaisPage() {
   const openScheduleDialog = (prof: Professional) => {
     setSelectedProfessional(prof);
     setScheduleDialogOpen(true);
+  };
+
+  const openShareDialog = (prof: Professional) => {
+    setSharingProfessional(prof);
+    setShareDialogOpen(true);
+  };
+
+  const copyBookingLink = (slug: string) => {
+    const url = `${window.location.origin}/agendamento/profissional/${slug}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Link copiado!");
   };
 
   const closeDialog = () => {
@@ -287,6 +303,14 @@ export default function HomologacaoProfissionaisPage() {
                     <Clock className="w-3 h-3 mr-1" />
                     Horários
                   </Button>
+                  <Button variant="outline" size="sm" onClick={() => copyBookingLink(prof.slug || prof.id)}>
+                    <Link className="w-3 h-3 mr-1" />
+                    Copiar Link
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openShareDialog(prof)}>
+                    <Share2 className="w-3 h-3 mr-1" />
+                    WhatsApp
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm" 
@@ -394,6 +418,20 @@ export default function HomologacaoProfissionaisPage() {
           onOpenChange={setScheduleDialogOpen}
           professional={selectedProfessional}
           clinicId={currentClinic.id}
+        />
+      )}
+
+      {/* Share Dialog */}
+      {sharingProfessional && (
+        <HomologacaoShareDialog
+          open={shareDialogOpen}
+          onOpenChange={setShareDialogOpen}
+          professional={{
+            name: sharingProfessional.name,
+            slug: sharingProfessional.slug || sharingProfessional.id,
+            function: sharingProfessional.function,
+          }}
+          clinicName={currentClinic?.name}
         />
       )}
     </div>

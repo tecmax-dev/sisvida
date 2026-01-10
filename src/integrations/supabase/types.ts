@@ -3194,6 +3194,7 @@ export type Database = {
           error_message: string | null
           id: string
           message: string | null
+          protocol_sent: boolean | null
           recipient_phone: string
           recipient_type: string
           sent_at: string | null
@@ -3206,6 +3207,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           message?: string | null
+          protocol_sent?: boolean | null
           recipient_phone: string
           recipient_type: string
           sent_at?: string | null
@@ -3218,6 +3220,7 @@ export type Database = {
           error_message?: string | null
           id?: string
           message?: string | null
+          protocol_sent?: boolean | null
           recipient_phone?: string
           recipient_type?: string
           sent_at?: string | null
@@ -3288,39 +3291,66 @@ export type Database = {
       }
       homologacao_professionals: {
         Row: {
+          address: string | null
           avatar_url: string | null
+          city: string | null
           clinic_id: string
           created_at: string | null
+          description: string | null
           email: string | null
           function: string | null
           id: string
           is_active: boolean | null
+          latitude: number | null
+          longitude: number | null
+          manager_phone: string | null
           name: string
           phone: string | null
+          public_booking_enabled: boolean | null
+          slug: string | null
+          state_code: string | null
           updated_at: string | null
         }
         Insert: {
+          address?: string | null
           avatar_url?: string | null
+          city?: string | null
           clinic_id: string
           created_at?: string | null
+          description?: string | null
           email?: string | null
           function?: string | null
           id?: string
           is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          manager_phone?: string | null
           name: string
           phone?: string | null
+          public_booking_enabled?: boolean | null
+          slug?: string | null
+          state_code?: string | null
           updated_at?: string | null
         }
         Update: {
+          address?: string | null
           avatar_url?: string | null
+          city?: string | null
           clinic_id?: string
           created_at?: string | null
+          description?: string | null
           email?: string | null
           function?: string | null
           id?: string
           is_active?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
+          manager_phone?: string | null
           name?: string
           phone?: string | null
+          public_booking_enabled?: boolean | null
+          slug?: string | null
+          state_code?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -9821,6 +9851,10 @@ export type Database = {
         Args: { p_clinic_id: string }
         Returns: string
       }
+      generate_homologacao_protocol: {
+        Args: { p_clinic_id: string }
+        Returns: string
+      }
       generate_negotiation_code: {
         Args: { p_clinic_id: string }
         Returns: string
@@ -9909,6 +9943,7 @@ export type Database = {
         Args: { p_clinic_id: string }
         Returns: number
       }
+      unaccent: { Args: { "": string }; Returns: string }
       update_overdue_contributions: { Args: never; Returns: undefined }
       user_has_permission: {
         Args: { _clinic_id: string; _permission_key: string; _user_id: string }
