@@ -12,6 +12,7 @@ interface ImportRequest {
   chunk_index?: number;
   chunk_total?: number;
   run_id?: string;
+  auto_create_employers?: boolean;
 }
 
 interface ImportResult {
@@ -22,6 +23,7 @@ interface ImportResult {
   errors: { row: number; message: string; cnpj?: string; competence?: string }[];
   chunk_index?: number;
   chunk_total?: number;
+  employers_created?: number;
 }
 
 const MAX_RECORDS_PER_REQUEST = 2000;
@@ -73,7 +75,7 @@ Deno.serve(async (req) => {
     }
 
     const body: ImportRequest = await req.json();
-    const { clinic_id, conversion_type, data, chunk_index, chunk_total, run_id } = body;
+    const { clinic_id, conversion_type, data, chunk_index, chunk_total, run_id, auto_create_employers } = body;
 
     if (!clinic_id || !conversion_type || !data?.length) {
       return new Response(
@@ -125,7 +127,7 @@ Deno.serve(async (req) => {
       case 'contributions_pending':
       case 'contributions_cancelled':
       case 'lytex_invoices':
-        result = await importContributionsBatch(supabase, clinic_id, data, conversion_type);
+        result = await importContributionsBatch(supabase, clinic_id, data, conversion_type, auto_create_employers ?? false);
         break;
       default:
         return new Response(
@@ -325,9 +327,10 @@ async function importContributionsBatch(
   supabase: SupabaseClient,
   clinicId: string,
   data: Record<string, unknown>[],
-  conversionType: string
+  conversionType: string,
+  autoCreateEmployers: boolean = false
 ): Promise<ImportResult> {
-  const result: ImportResult = { success: true, inserted: 0, updated: 0, skipped: 0, errors: [] };
+  const result: ImportResult = { success: true, inserted: 0, updated: 0, skipped: 0, errors: [], employers_created: 0 };
 
   console.log(`[importContributionsBatch] Starting with ${data.length} records`);
 
@@ -426,10 +429,49 @@ async function importContributionsBatch(
         continue;
       }
 
-      const employerId = employerMap.get(cnpj);
+      let employerId = employerMap.get(cnpj);
       if (!employerId) {
-        result.errors.push({ row: i + 1, message: `Empresa não encontrada: ${formatCnpj(cnpj)}`, cnpj });
-        continue;
+        if (autoCreateEmployers) {
+          // Extract employer name from row or use placeholder
+          const employerName = extractEmployerName(row) || `EMPRESA ${formatCnpj(cnpj)}`;
+          
+          const { data: newEmployer, error: createError } = await supabase
+            .from('employers')
+            .insert({
+              clinic_id: clinicId,
+              cnpj: cnpj,
+              name: employerName.toUpperCase(),
+              is_active: true,
+            })
+            .select('id')
+            .single();
+          
+          if (createError) {
+            // Check if it was created by concurrent request
+            const { data: existingEmployer } = await supabase
+              .from('employers')
+              .select('id')
+              .eq('clinic_id', clinicId)
+              .eq('cnpj', cnpj)
+              .single();
+            
+            if (existingEmployer) {
+              employerId = existingEmployer.id;
+              employerMap.set(cnpj, employerId);
+            } else {
+              result.errors.push({ row: i + 1, message: `Falha ao criar empresa: ${formatCnpj(cnpj)} - ${createError.message}`, cnpj });
+              continue;
+            }
+          } else if (newEmployer) {
+            employerId = newEmployer.id;
+            employerMap.set(cnpj, employerId);
+            result.employers_created = (result.employers_created || 0) + 1;
+            console.log(`[importContributionsBatch] Created employer: ${employerName} (${formatCnpj(cnpj)})`);
+          }
+        } else {
+          result.errors.push({ row: i + 1, message: `Empresa não encontrada: ${formatCnpj(cnpj)}`, cnpj });
+          continue;
+        }
       }
 
       const value = parseCurrency(row.value);
@@ -531,6 +573,25 @@ async function importContributionsBatch(
 }
 
 // ================== UTILITY FUNCTIONS ==================
+
+function extractEmployerName(row: Record<string, unknown>): string | null {
+  // Try to find employer name from common field names
+  const nameFields = [
+    'razao_social', 'razaoSocial', 'name', 'empresa', 'nome_empresa', 
+    'company', 'employer_name', 'nome', 'razão social', 'Razão Social',
+    'Empresa', 'Nome', 'RAZAO SOCIAL', 'EMPRESA', 'NOME'
+  ];
+  
+  for (const field of nameFields) {
+    const value = row[field];
+    if (value && typeof value === 'string') {
+      const name = value.trim();
+      if (name.length > 2) return name;
+    }
+  }
+  
+  return null;
+}
 
 function normalizeCpf(value: unknown): string | null {
   if (!value) return null;
