@@ -3,19 +3,27 @@ import { supabase } from "@/integrations/supabase/client";
 
 /**
  * Hook that returns available years for contribution filters.
- * Fetches distinct years from employer_contributions and ensures
- * at least the current year and next year are included.
+ * Fetches distinct years from employer_contributions for a specific clinic
+ * and ensures at least the current year and next year are included.
  */
-export function useAvailableYears() {
+export function useAvailableYears(clinicId?: string) {
   const [years, setYears] = useState<number[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchYears = async () => {
+      if (!clinicId) {
+        // Fallback to static range if no clinic
+        setYears(getStaticYearRange());
+        setLoading(false);
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from("employer_contributions")
           .select("competence_year")
+          .eq("clinic_id", clinicId)
           .order("competence_year", { ascending: true });
 
         if (error) throw error;
@@ -36,15 +44,14 @@ export function useAvailableYears() {
       } catch (error) {
         console.error("Error fetching available years:", error);
         // Fallback to default range
-        const currentYear = new Date().getFullYear();
-        setYears([currentYear + 1, currentYear, currentYear - 1, currentYear - 2, currentYear - 3]);
+        setYears(getStaticYearRange());
       } finally {
         setLoading(false);
       }
     };
 
     fetchYears();
-  }, []);
+  }, [clinicId]);
 
   return { years, loading };
 }
