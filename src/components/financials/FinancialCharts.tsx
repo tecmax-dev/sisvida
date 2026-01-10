@@ -12,10 +12,12 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { BarChart3, PieChart as PieChartIcon } from "lucide-react";
 
 interface FinancialChartsProps {
   clinicId: string;
@@ -114,20 +116,20 @@ export function FinancialCharts({ clinicId }: FinancialChartsProps) {
   if (isLoadingMonthly || isLoadingCategory) {
     return (
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="border-l-4 border-l-blue-500">
           <CardHeader>
             <Skeleton className="h-5 w-40" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-72 w-full" />
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-purple-500">
           <CardHeader>
             <Skeleton className="h-5 w-40" />
           </CardHeader>
           <CardContent>
-            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-72 w-full" />
           </CardContent>
         </Card>
       </div>
@@ -136,49 +138,64 @@ export function FinancialCharts({ clinicId }: FinancialChartsProps) {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Receitas vs Despesas</CardTitle>
+      <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50/50 to-transparent dark:from-blue-950/20">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base font-medium text-blue-700 dark:text-blue-300">
+            Receitas vs Despesas
+          </CardTitle>
+          <div className="p-2 bg-blue-100 dark:bg-blue-900/50 rounded-lg">
+            <BarChart3 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          </div>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={280}>
+          <ResponsiveContainer width="100%" height={300}>
             <BarChart data={monthlyData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-              <XAxis dataKey="name" className="text-xs" />
-              <YAxis tickFormatter={(v) => `R$${v / 1000}k`} className="text-xs" />
+              <XAxis dataKey="name" className="text-xs" tick={{ fontSize: 12 }} />
+              <YAxis tickFormatter={(v) => `R$${v / 1000}k`} className="text-xs" tick={{ fontSize: 11 }} />
               <Tooltip
                 formatter={(value: number) => formatCurrency(value)}
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
+                  fontSize: "12px",
                 }}
               />
-              <Bar dataKey="receitas" fill="#10b981" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="despesas" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              <Legend 
+                wrapperStyle={{ fontSize: "12px", paddingTop: "12px" }}
+                formatter={(value) => value === "receitas" ? "Receitas" : "Despesas"}
+              />
+              <Bar dataKey="receitas" fill="#10b981" radius={[4, 4, 0, 0]} name="receitas" />
+              <Bar dataKey="despesas" fill="#ef4444" radius={[4, 4, 0, 0]} name="despesas" />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Despesas por Categoria (Mês)</CardTitle>
+      <Card className="border-l-4 border-l-purple-500 bg-gradient-to-r from-purple-50/50 to-transparent dark:from-purple-950/20">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base font-medium text-purple-700 dark:text-purple-300">
+            Despesas por Categoria (Mês)
+          </CardTitle>
+          <div className="p-2 bg-purple-100 dark:bg-purple-900/50 rounded-lg">
+            <PieChartIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          </div>
         </CardHeader>
         <CardContent>
           {categoryData && categoryData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={280}>
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
                   data={categoryData}
                   cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={100}
+                  cy="45%"
+                  innerRadius={55}
+                  outerRadius={90}
                   paddingAngle={2}
                   dataKey="value"
                   label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
+                    `${name.length > 10 ? name.slice(0, 10) + '...' : name} ${(percent * 100).toFixed(0)}%`
                   }
                   labelLine={false}
                 >
@@ -192,13 +209,21 @@ export function FinancialCharts({ clinicId }: FinancialChartsProps) {
                     backgroundColor: "hsl(var(--card))",
                     border: "1px solid hsl(var(--border))",
                     borderRadius: "8px",
+                    fontSize: "12px",
                   }}
+                />
+                <Legend 
+                  wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }}
+                  formatter={(value: string) => value.length > 15 ? value.slice(0, 15) + '...' : value}
                 />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-64 flex items-center justify-center text-muted-foreground">
-              Nenhuma despesa registrada este mês
+            <div className="h-72 flex items-center justify-center text-muted-foreground">
+              <div className="text-center">
+                <PieChartIcon className="h-12 w-12 mx-auto mb-2 opacity-30" />
+                <p>Nenhuma despesa registrada este mês</p>
+              </div>
             </div>
           )}
         </CardContent>

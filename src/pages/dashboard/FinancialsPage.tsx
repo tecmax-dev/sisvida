@@ -19,8 +19,8 @@ import { CostCentersPanel } from "@/components/financials/CostCentersPanel";
 import { ExpensesListPanel } from "@/components/financials/ExpensesListPanel";
 import { SuppliersPanel } from "@/components/financials/SuppliersPanel";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { 
   Plus, 
   Settings2, 
@@ -36,177 +36,221 @@ import {
   FolderTree,
   Building2,
   Truck,
-  ClipboardList
+  ClipboardList,
+  LayoutDashboard
 } from "lucide-react";
+
+type SubTab = 
+  | "cashflow" | "income" | "expense" 
+  | "registers" | "transfers" | "receivables" | "reconciliation"
+  | "recurring" | "commissions"
+  | "accounts" | "costcenters" | "expenses" | "suppliers";
 
 function FinancialsContent() {
   const { currentClinic } = useAuth();
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [subTab, setSubTab] = useState<SubTab>("cashflow");
 
   if (!currentClinic) {
     return null;
   }
 
+  const subNavConfig: Record<string, { label: string; value: SubTab; icon: React.ElementType }[]> = {
+    movements: [
+      { label: "Fluxo de Caixa", value: "cashflow", icon: Wallet },
+      { label: "Receber", value: "income", icon: ArrowDownCircle },
+      { label: "Pagar", value: "expense", icon: ArrowUpCircle },
+    ],
+    management: [
+      { label: "Caixas", value: "registers", icon: Wallet },
+      { label: "Transferências", value: "transfers", icon: ArrowLeftRight },
+      { label: "Recebíveis", value: "receivables", icon: Receipt },
+      { label: "Conciliação", value: "reconciliation", icon: FileCheck },
+    ],
+    recurring: [
+      { label: "Recorrências", value: "recurring", icon: RefreshCw },
+      { label: "Comissões", value: "commissions", icon: Users },
+    ],
+    registry: [
+      { label: "Plano de Contas", value: "accounts", icon: FolderTree },
+      { label: "Centros de Custo", value: "costcenters", icon: Building2 },
+      { label: "Despesas", value: "expenses", icon: ClipboardList },
+      { label: "Fornecedores", value: "suppliers", icon: Truck },
+    ],
+  };
+
+  const renderSubNav = (category: string) => {
+    const items = subNavConfig[category];
+    if (!items) return null;
+
+    return (
+      <div className="flex flex-wrap gap-2 mb-6">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const isActive = subTab === item.value;
+          return (
+            <Button
+              key={item.value}
+              variant={isActive ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSubTab(item.value)}
+              className={`gap-2 ${isActive ? "" : "bg-card hover:bg-muted"}`}
+            >
+              <Icon className="h-4 w-4" />
+              {item.label}
+            </Button>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const renderSubContent = (category: string) => {
+    const contentMap: Record<SubTab, React.ReactNode> = {
+      cashflow: <CashFlowPanel clinicId={currentClinic.id} />,
+      income: <TransactionTable clinicId={currentClinic.id} filterType="income" />,
+      expense: <TransactionTable clinicId={currentClinic.id} filterType="expense" />,
+      registers: <CashRegistersPanel clinicId={currentClinic.id} />,
+      transfers: <TransfersPanel clinicId={currentClinic.id} />,
+      receivables: <ReceivablesPanel clinicId={currentClinic.id} />,
+      reconciliation: <ReconciliationPanel clinicId={currentClinic.id} />,
+      recurring: <RecurringPanel clinicId={currentClinic.id} />,
+      commissions: <CommissionsPanel clinicId={currentClinic.id} />,
+      accounts: <ChartOfAccountsPanel clinicId={currentClinic.id} />,
+      costcenters: <CostCentersPanel clinicId={currentClinic.id} />,
+      expenses: <ExpensesListPanel clinicId={currentClinic.id} />,
+      suppliers: <SuppliersPanel clinicId={currentClinic.id} />,
+    };
+
+    const items = subNavConfig[category];
+    if (!items) return null;
+
+    // Check if current subTab belongs to this category
+    const belongsToCategory = items.some(item => item.value === subTab);
+    const activeSubTab = belongsToCategory ? subTab : items[0].value;
+
+    return contentMap[activeSubTab];
+  };
+
+  // Reset subTab when changing main tab
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const defaultSubTabs: Record<string, SubTab> = {
+      movements: "cashflow",
+      management: "registers",
+      recurring: "recurring",
+      registry: "accounts",
+    };
+    if (defaultSubTabs[value]) {
+      setSubTab(defaultSubTabs[value]);
+    }
+  };
+
   return (
     <RoleGuard permission="view_financials">
       <div className="space-y-6">
+        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground">Financeiro</h1>
-            <p className="text-muted-foreground">
-              Gerencie receitas, despesas e fluxo de caixa da clínica
+            <p className="text-muted-foreground text-sm">
+              Gerencie receitas, despesas e fluxo de caixa
             </p>
           </div>
           <div className="flex gap-2">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => setCategoryDialogOpen(true)}
             >
               <Settings2 className="h-4 w-4 mr-2" />
               Categorias
             </Button>
-            <Button onClick={() => setTransactionDialogOpen(true)}>
+            <Button size="sm" onClick={() => setTransactionDialogOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Transação
             </Button>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <ScrollArea className="w-full">
-            <TabsList className="inline-flex w-auto min-w-full md:min-w-0">
-              <TabsTrigger value="overview" className="gap-2">
-                <TrendingUp className="h-4 w-4" />
-                <span className="hidden sm:inline">Visão Geral</span>
-              </TabsTrigger>
-              <TabsTrigger value="cashflow" className="gap-2">
-                <Wallet className="h-4 w-4" />
-                <span className="hidden sm:inline">Fluxo de Caixa</span>
-              </TabsTrigger>
-              <TabsTrigger value="income" className="gap-2">
-                <ArrowDownCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">Receber</span>
-              </TabsTrigger>
-              <TabsTrigger value="expense" className="gap-2">
-                <ArrowUpCircle className="h-4 w-4" />
-                <span className="hidden sm:inline">Pagar</span>
-              </TabsTrigger>
-              <TabsTrigger value="registers" className="gap-2">
-                <Wallet className="h-4 w-4" />
-                <span className="hidden sm:inline">Caixas</span>
-              </TabsTrigger>
-              <TabsTrigger value="transfers" className="gap-2">
-                <ArrowLeftRight className="h-4 w-4" />
-                <span className="hidden sm:inline">Transferências</span>
-              </TabsTrigger>
-              <TabsTrigger value="receivables" className="gap-2">
-                <Receipt className="h-4 w-4" />
-                <span className="hidden sm:inline">Recebíveis</span>
-              </TabsTrigger>
-              <TabsTrigger value="reconciliation" className="gap-2">
-                <FileCheck className="h-4 w-4" />
-                <span className="hidden sm:inline">Conciliação</span>
-              </TabsTrigger>
-              <TabsTrigger value="recurring" className="gap-2">
-                <RefreshCw className="h-4 w-4" />
-                <span className="hidden sm:inline">Recorrências</span>
-              </TabsTrigger>
-              <TabsTrigger value="commissions" className="gap-2">
-                <Users className="h-4 w-4" />
-                <span className="hidden sm:inline">Comissões</span>
-              </TabsTrigger>
-              <TabsTrigger value="accounts" className="gap-2">
-                <FolderTree className="h-4 w-4" />
-                <span className="hidden sm:inline">Plano de Contas</span>
-              </TabsTrigger>
-              <TabsTrigger value="costcenters" className="gap-2">
-                <Building2 className="h-4 w-4" />
-                <span className="hidden sm:inline">Centros de Custo</span>
-              </TabsTrigger>
-              <TabsTrigger value="expenses" className="gap-2">
-                <ClipboardList className="h-4 w-4" />
-                <span className="hidden sm:inline">Despesas</span>
-              </TabsTrigger>
-              <TabsTrigger value="suppliers" className="gap-2">
-                <Truck className="h-4 w-4" />
-                <span className="hidden sm:inline">Fornecedores</span>
-              </TabsTrigger>
-            </TabsList>
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
+        {/* Main Tabs */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+          <Card className="border-0 shadow-sm bg-muted/30">
+            <CardContent className="p-2">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 h-auto bg-transparent">
+                <TabsTrigger 
+                  value="overview" 
+                  className="gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span className="hidden sm:inline">Visão Geral</span>
+                  <span className="sm:hidden">Geral</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="movements" 
+                  className="gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <TrendingUp className="h-4 w-4" />
+                  <span className="hidden sm:inline">Movimentações</span>
+                  <span className="sm:hidden">Movim.</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="management" 
+                  className="gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <Wallet className="h-4 w-4" />
+                  <span>Gestão</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="recurring" 
+                  className="gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  <span className="hidden sm:inline">Recorrências</span>
+                  <span className="sm:hidden">Recor.</span>
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="registry" 
+                  className="gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <FolderTree className="h-4 w-4" />
+                  <span>Cadastros</span>
+                </TabsTrigger>
+              </TabsList>
+            </CardContent>
+          </Card>
 
           {/* Visão Geral */}
-          <TabsContent value="overview" className="space-y-6">
+          <TabsContent value="overview" className="space-y-6 mt-0">
             <FinancialMetrics clinicId={currentClinic.id} />
             <FinancialCharts clinicId={currentClinic.id} />
             <TransactionTable clinicId={currentClinic.id} />
           </TabsContent>
 
-          {/* Fluxo de Caixa */}
-          <TabsContent value="cashflow">
-            <CashFlowPanel clinicId={currentClinic.id} />
+          {/* Movimentações */}
+          <TabsContent value="movements" className="mt-0">
+            {renderSubNav("movements")}
+            {renderSubContent("movements")}
           </TabsContent>
 
-          {/* Receitas (Receber) */}
-          <TabsContent value="income" className="space-y-6">
-            <TransactionTable clinicId={currentClinic.id} filterType="income" />
-          </TabsContent>
-
-          {/* Despesas (Pagar) */}
-          <TabsContent value="expense" className="space-y-6">
-            <TransactionTable clinicId={currentClinic.id} filterType="expense" />
-          </TabsContent>
-
-          {/* Caixas */}
-          <TabsContent value="registers">
-            <CashRegistersPanel clinicId={currentClinic.id} />
-          </TabsContent>
-
-          {/* Transferências */}
-          <TabsContent value="transfers">
-            <TransfersPanel clinicId={currentClinic.id} />
-          </TabsContent>
-
-          {/* Controle de Recebíveis */}
-          <TabsContent value="receivables">
-            <ReceivablesPanel clinicId={currentClinic.id} />
-          </TabsContent>
-
-          {/* Conciliação Bancária */}
-          <TabsContent value="reconciliation">
-            <ReconciliationPanel clinicId={currentClinic.id} />
+          {/* Gestão */}
+          <TabsContent value="management" className="mt-0">
+            {renderSubNav("management")}
+            {renderSubContent("management")}
           </TabsContent>
 
           {/* Recorrências */}
-          <TabsContent value="recurring">
-            <RecurringPanel clinicId={currentClinic.id} />
+          <TabsContent value="recurring" className="mt-0">
+            {renderSubNav("recurring")}
+            {renderSubContent("recurring")}
           </TabsContent>
 
-          {/* Comissões */}
-          <TabsContent value="commissions">
-            <CommissionsPanel clinicId={currentClinic.id} />
-          </TabsContent>
-
-          {/* Plano de Contas */}
-          <TabsContent value="accounts">
-            <ChartOfAccountsPanel clinicId={currentClinic.id} />
-          </TabsContent>
-
-          {/* Centros de Custo */}
-          <TabsContent value="costcenters">
-            <CostCentersPanel clinicId={currentClinic.id} />
-          </TabsContent>
-
-          {/* Despesas */}
-          <TabsContent value="expenses">
-            <ExpensesListPanel clinicId={currentClinic.id} />
-          </TabsContent>
-
-          {/* Fornecedores */}
-          <TabsContent value="suppliers">
-            <SuppliersPanel clinicId={currentClinic.id} />
+          {/* Cadastros */}
+          <TabsContent value="registry" className="mt-0">
+            {renderSubNav("registry")}
+            {renderSubContent("registry")}
           </TabsContent>
         </Tabs>
 
