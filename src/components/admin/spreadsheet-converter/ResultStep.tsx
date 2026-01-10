@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,11 +20,14 @@ import {
   AlertCircle,
   Building2,
   Loader2,
+  XCircle,
+  RefreshCcw,
+  FileDown,
+  StopCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { ConversionType } from "./ConversionTypeStep";
-import { formatCurrencyBR, formatDateBR } from "@/lib/spreadsheet-converter/normalizers";
 import { supabase } from "@/integrations/supabase/client";
 
 interface FieldMapping {
@@ -49,12 +52,30 @@ interface Clinic {
   name: string;
 }
 
+interface ImportError {
+  row: number;
+  message: string;
+  cnpj?: string;
+  competence?: string;
+}
+
 interface ImportResult {
   success: boolean;
   inserted: number;
   updated: number;
   skipped: number;
-  errors: { row: number; message: string }[];
+  errors: ImportError[];
+  chunk_index?: number;
+  chunk_total?: number;
+}
+
+interface AggregatedResult {
+  inserted: number;
+  updated: number;
+  skipped: number;
+  errors: ImportError[];
+  chunksCompleted: number;
+  chunksTotal: number;
 }
 
 interface ResultStepProps {
@@ -65,6 +86,10 @@ interface ResultStepProps {
   fileName: string;
   onReset: () => void;
 }
+
+const CHUNK_SIZE = 1500; // Records per chunk
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2000;
 
 export function ResultStep({
   validRows,
@@ -77,8 +102,19 @@ export function ResultStep({
   const [isExporting, setIsExporting] = useState(false);
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
+  
+  // Import states
   const [isImporting, setIsImporting] = useState(false);
-  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+  const [importProgress, setImportProgress] = useState(0);
+  const [currentChunk, setCurrentChunk] = useState(0);
+  const [totalChunks, setTotalChunks] = useState(0);
+  const [aggregatedResult, setAggregatedResult] = useState<AggregatedResult | null>(null);
+  const [canResume, setCanResume] = useState(false);
+  const [failedChunkIndex, setFailedChunkIndex] = useState<number | null>(null);
+  
+  // Cancel control
+  const cancelRequestedRef = useRef(false);
+  const runIdRef = useRef<string>("");
 
   // Fetch clinics on mount
   useEffect(() => {
@@ -95,24 +131,28 @@ export function ResultStep({
     fetchClinics();
   }, []);
 
-  const handleImportToClinic = async () => {
-    if (!selectedClinicId || validRows.length === 0) return;
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-    setIsImporting(true);
-    setImportResult(null);
-
+  const importChunk = async (
+    chunk: Record<string, unknown>[],
+    chunkIndex: number,
+    totalChunks: number,
+    retryCount = 0
+  ): Promise<ImportResult> => {
     try {
       const { data: session } = await supabase.auth.getSession();
       if (!session?.session?.access_token) {
-        toast.error('Sessão expirada. Faça login novamente.');
-        return;
+        throw new Error('Sessão expirada. Faça login novamente.');
       }
 
       const response = await supabase.functions.invoke('import-converted-data', {
         body: {
           clinic_id: selectedClinicId,
           conversion_type: conversionType,
-          data: validRows,
+          data: chunk,
+          chunk_index: chunkIndex,
+          chunk_total: totalChunks,
+          run_id: runIdRef.current,
         },
       });
 
@@ -120,39 +160,164 @@ export function ResultStep({
         throw new Error(response.error.message || 'Erro ao importar dados');
       }
 
-      const result = response.data as ImportResult;
-      setImportResult(result);
-
-      if (result.inserted > 0 || result.updated > 0) {
-        toast.success(
-          `Importação concluída: ${result.inserted} inseridos, ${result.updated} atualizados` +
-          (result.skipped > 0 ? `, ${result.skipped} ignorados` : '')
+      return response.data as ImportResult;
+    } catch (error) {
+      // Retry logic for transient errors
+      if (retryCount < MAX_RETRIES) {
+        const isTransient = error instanceof Error && (
+          error.message.includes('timeout') ||
+          error.message.includes('network') ||
+          error.message.includes('504') ||
+          error.message.includes('503')
         );
-        logConversion('import');
-      } else if (result.errors.length > 0) {
-        toast.error(`Importação com erros: ${result.errors.length} registros falharam`);
-      } else {
-        toast.info('Nenhum registro novo foi inserido (todos já existiam)');
+        
+        if (isTransient) {
+          console.log(`[ResultStep] Retrying chunk ${chunkIndex + 1} (attempt ${retryCount + 2}/${MAX_RETRIES + 1})`);
+          await sleep(RETRY_DELAY_MS * (retryCount + 1));
+          return importChunk(chunk, chunkIndex, totalChunks, retryCount + 1);
+        }
+      }
+      throw error;
+    }
+  };
+
+  const handleImportToClinic = useCallback(async (startFromChunk = 0) => {
+    if (!selectedClinicId || validRows.length === 0) return;
+
+    // Generate run ID for this import session
+    if (startFromChunk === 0) {
+      runIdRef.current = `run_${Date.now()}`;
+      setAggregatedResult(null);
+    }
+
+    cancelRequestedRef.current = false;
+    setIsImporting(true);
+    setCanResume(false);
+    setFailedChunkIndex(null);
+
+    const chunks: Record<string, unknown>[][] = [];
+    for (let i = 0; i < validRows.length; i += CHUNK_SIZE) {
+      chunks.push(validRows.slice(i, i + CHUNK_SIZE));
+    }
+    
+    setTotalChunks(chunks.length);
+    
+    // Initialize or continue aggregated result
+    const aggregated: AggregatedResult = aggregatedResult && startFromChunk > 0
+      ? { ...aggregatedResult }
+      : {
+          inserted: 0,
+          updated: 0,
+          skipped: 0,
+          errors: [],
+          chunksCompleted: 0,
+          chunksTotal: chunks.length,
+        };
+
+    try {
+      for (let i = startFromChunk; i < chunks.length; i++) {
+        // Check for cancel
+        if (cancelRequestedRef.current) {
+          toast.info(`Importação cancelada no lote ${i + 1}/${chunks.length}`);
+          setCanResume(true);
+          setFailedChunkIndex(i);
+          break;
+        }
+
+        setCurrentChunk(i + 1);
+        setImportProgress(Math.round((i / chunks.length) * 100));
+
+        try {
+          const result = await importChunk(chunks[i], i, chunks.length);
+          
+          aggregated.inserted += result.inserted;
+          aggregated.updated += result.updated;
+          aggregated.skipped += result.skipped;
+          
+          // Adjust row numbers for errors (add offset based on chunk index)
+          const offsetErrors = result.errors.map(err => ({
+            ...err,
+            row: err.row > 0 ? err.row + (i * CHUNK_SIZE) : err.row,
+          }));
+          aggregated.errors.push(...offsetErrors);
+          aggregated.chunksCompleted = i + 1;
+          
+          setAggregatedResult({ ...aggregated });
+        } catch (error) {
+          console.error(`[ResultStep] Chunk ${i + 1} failed:`, error);
+          
+          aggregated.errors.push({
+            row: 0,
+            message: `Lote ${i + 1}: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+          });
+          
+          setAggregatedResult({ ...aggregated });
+          setFailedChunkIndex(i);
+          setCanResume(true);
+          
+          toast.error(`Falha no lote ${i + 1}/${chunks.length}. Os lotes anteriores foram salvos.`);
+          break;
+        }
+      }
+
+      setImportProgress(100);
+      
+      // Final toast
+      if (!cancelRequestedRef.current && failedChunkIndex === null) {
+        if (aggregated.inserted > 0 || aggregated.updated > 0) {
+          toast.success(
+            `Importação concluída: ${aggregated.inserted} inseridos, ${aggregated.updated} atualizados` +
+            (aggregated.skipped > 0 ? `, ${aggregated.skipped} ignorados` : '')
+          );
+          logConversion('import');
+        } else if (aggregated.errors.length > 0) {
+          toast.error(`Importação com erros: ${aggregated.errors.length} problemas encontrados`);
+        } else {
+          toast.info('Nenhum registro novo foi inserido (todos já existiam)');
+        }
       }
     } catch (error) {
       console.error('Import error:', error);
       toast.error(error instanceof Error ? error.message : 'Erro ao importar dados');
-      setImportResult({
-        success: false,
-        inserted: 0,
-        updated: 0,
-        skipped: 0,
-        errors: [{ row: 0, message: error instanceof Error ? error.message : 'Erro desconhecido' }],
-      });
     } finally {
       setIsImporting(false);
     }
+  }, [selectedClinicId, validRows, conversionType, aggregatedResult]);
+
+  const handleCancel = () => {
+    cancelRequestedRef.current = true;
+    toast.info('Cancelando após o lote atual...');
+  };
+
+  const handleResume = () => {
+    if (failedChunkIndex !== null) {
+      handleImportToClinic(failedChunkIndex);
+    }
+  };
+
+  const downloadErrorReport = () => {
+    if (!aggregatedResult?.errors.length) return;
+
+    const errorData = aggregatedResult.errors.map(err => ({
+      Linha: err.row || 'N/A',
+      CNPJ: err.cnpj || '',
+      Competência: err.competence || '',
+      Mensagem: err.message,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(errorData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Erros');
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `erros_importacao_${timestamp}.xlsx`);
+    
+    toast.success('Relatório de erros exportado!');
   };
 
   const downloadAsExcel = async () => {
     setIsExporting(true);
     try {
-      // Create worksheet from data
       const wsData = validRows.map(row => {
         const exportRow: Record<string, unknown> = {};
         for (const mapping of mappings) {
@@ -165,7 +330,6 @@ export function ResultStep({
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, 'Convertido');
 
-      // Generate file name
       const timestamp = new Date().toISOString().slice(0, 10);
       const typeName = conversionType.replace(/_/g, '-');
       const exportFileName = `convertido_${typeName}_${timestamp}.xlsx`;
@@ -193,7 +357,6 @@ export function ResultStep({
           const val = row[m.targetField];
           if (val === null || val === undefined) return '';
           const str = String(val);
-          // Escape quotes and wrap in quotes if contains separator
           if (str.includes(';') || str.includes('"') || str.includes('\n')) {
             return `"${str.replace(/"/g, '""')}"`;
           }
@@ -275,7 +438,7 @@ export function ResultStep({
 
   const logConversion = (action: 'download' | 'import' | 'copy' | 'cancel') => {
     const log: ConversionLog = {
-      userId: 'current-user', // Would be populated from auth context
+      userId: 'current-user',
       timestamp: new Date(),
       type: conversionType,
       source: fileName,
@@ -285,13 +448,13 @@ export function ResultStep({
       action,
     };
 
-    // Store in localStorage for now
     const existingLogs = JSON.parse(localStorage.getItem('conversion_logs') || '[]');
     existingLogs.push(log);
     localStorage.setItem('conversion_logs', JSON.stringify(existingLogs.slice(-100)));
   };
 
   const successRate = Math.round((validRows.length / (validRows.length + invalidRowsCount)) * 100) || 0;
+  const estimatedChunks = Math.ceil(validRows.length / CHUNK_SIZE);
 
   return (
     <div className="space-y-6">
@@ -311,7 +474,7 @@ export function ResultStep({
             </div>
             <div className="flex-1">
               <h4 className="text-xl font-semibold text-green-600">
-                {validRows.length} registros convertidos
+                {validRows.length.toLocaleString('pt-BR')} registros convertidos
               </h4>
               <p className="text-sm text-muted-foreground">
                 Arquivo: {fileName}
@@ -328,12 +491,17 @@ export function ResultStep({
           <div className="flex gap-4 mt-4 text-sm">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span>{validRows.length} válidos</span>
+              <span>{validRows.length.toLocaleString('pt-BR')} válidos</span>
             </div>
             {invalidRowsCount > 0 && (
               <div className="flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-red-500" />
-                <span>{invalidRowsCount} com erros</span>
+                <span>{invalidRowsCount.toLocaleString('pt-BR')} com erros</span>
+              </div>
+            )}
+            {estimatedChunks > 1 && (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <span>({estimatedChunks} lotes)</span>
               </div>
             )}
           </div>
@@ -434,11 +602,20 @@ export function ResultStep({
           </CardTitle>
           <CardDescription>
             Insira os dados convertidos diretamente no banco de dados
+            {estimatedChunks > 1 && (
+              <span className="ml-1 text-amber-600">
+                (será processado em {estimatedChunks} lotes de {CHUNK_SIZE.toLocaleString('pt-BR')} registros)
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <Select value={selectedClinicId} onValueChange={setSelectedClinicId}>
+            <Select 
+              value={selectedClinicId} 
+              onValueChange={setSelectedClinicId}
+              disabled={isImporting}
+            >
               <SelectTrigger className="w-full sm:w-[300px]">
                 <SelectValue placeholder="Selecione uma clínica..." />
               </SelectTrigger>
@@ -451,54 +628,115 @@ export function ResultStep({
               </SelectContent>
             </Select>
             
-            <Button 
-              onClick={handleImportToClinic}
-              disabled={!selectedClinicId || isImporting || validRows.length === 0}
-              className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto"
-            >
-              {isImporting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Importando...
-                </>
-              ) : (
-                <>
+            {!isImporting ? (
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button 
+                  onClick={() => handleImportToClinic(0)}
+                  disabled={!selectedClinicId || validRows.length === 0}
+                  className="bg-emerald-600 hover:bg-emerald-700 flex-1 sm:flex-none"
+                >
                   <Upload className="h-4 w-4 mr-2" />
-                  Importar {validRows.length} registros
-                </>
-              )}
-            </Button>
+                  Importar {validRows.length.toLocaleString('pt-BR')} registros
+                </Button>
+                
+                {canResume && failedChunkIndex !== null && (
+                  <Button
+                    onClick={handleResume}
+                    variant="outline"
+                    className="border-amber-500 text-amber-600 hover:bg-amber-50"
+                  >
+                    <RefreshCcw className="h-4 w-4 mr-2" />
+                    Retomar do lote {failedChunkIndex + 1}
+                  </Button>
+                )}
+              </div>
+            ) : (
+              <Button
+                onClick={handleCancel}
+                variant="destructive"
+                className="w-full sm:w-auto"
+              >
+                <StopCircle className="h-4 w-4 mr-2" />
+                Cancelar
+              </Button>
+            )}
           </div>
           
-          {importResult && (
-            <Alert variant={importResult.success && importResult.errors.length === 0 ? "default" : "destructive"}>
+          {/* Import Progress */}
+          {isImporting && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Importando lote {currentChunk}/{totalChunks}...
+                </span>
+                <span className="font-medium">{importProgress}%</span>
+              </div>
+              <Progress value={importProgress} className="h-2" />
+            </div>
+          )}
+          
+          {/* Aggregated Result */}
+          {aggregatedResult && (
+            <Alert variant={aggregatedResult.errors.length === 0 ? "default" : "destructive"}>
               <AlertDescription>
-                {importResult.inserted > 0 && (
-                  <span className="block">✅ {importResult.inserted} registros inseridos</span>
-                )}
-                {importResult.updated > 0 && (
-                  <span className="block">🔄 {importResult.updated} registros atualizados</span>
-                )}
-                {importResult.skipped > 0 && (
-                  <span className="block">⏭️ {importResult.skipped} registros ignorados (já existiam)</span>
-                )}
-                {importResult.errors.length > 0 && (
-                  <div className="mt-2">
-                    <span className="font-medium text-destructive">
-                      ❌ {importResult.errors.length} erros:
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-4">
+                    {aggregatedResult.inserted > 0 && (
+                      <span className="flex items-center gap-1">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        {aggregatedResult.inserted.toLocaleString('pt-BR')} inseridos
+                      </span>
+                    )}
+                    {aggregatedResult.updated > 0 && (
+                      <span className="flex items-center gap-1">
+                        <RefreshCcw className="h-4 w-4 text-blue-500" />
+                        {aggregatedResult.updated.toLocaleString('pt-BR')} atualizados
+                      </span>
+                    )}
+                    {aggregatedResult.skipped > 0 && (
+                      <span className="flex items-center gap-1 text-muted-foreground">
+                        ⏭️ {aggregatedResult.skipped.toLocaleString('pt-BR')} ignorados
+                      </span>
+                    )}
+                    <span className="text-muted-foreground">
+                      Lotes: {aggregatedResult.chunksCompleted}/{aggregatedResult.chunksTotal}
                     </span>
-                    <ul className="mt-1 text-sm list-disc list-inside max-h-32 overflow-y-auto">
-                      {importResult.errors.slice(0, 10).map((err, idx) => (
-                        <li key={idx}>
-                          Linha {err.row}: {err.message}
-                        </li>
-                      ))}
-                      {importResult.errors.length > 10 && (
-                        <li>...e mais {importResult.errors.length - 10} erros</li>
-                      )}
-                    </ul>
                   </div>
-                )}
+                  
+                  {aggregatedResult.errors.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-destructive/20">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-destructive flex items-center gap-1">
+                          <XCircle className="h-4 w-4" />
+                          {aggregatedResult.errors.length} erros
+                        </span>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={downloadErrorReport}
+                          className="h-7 text-xs"
+                        >
+                          <FileDown className="h-3 w-3 mr-1" />
+                          Baixar Relatório
+                        </Button>
+                      </div>
+                      <ul className="text-sm list-disc list-inside max-h-32 overflow-y-auto space-y-1">
+                        {aggregatedResult.errors.slice(0, 10).map((err, idx) => (
+                          <li key={idx} className="text-destructive/80">
+                            {err.row > 0 ? `Linha ${err.row}: ` : ''}{err.message}
+                            {err.cnpj && <span className="text-muted-foreground ml-1">({err.cnpj})</span>}
+                          </li>
+                        ))}
+                        {aggregatedResult.errors.length > 10 && (
+                          <li className="text-muted-foreground">
+                            ...e mais {aggregatedResult.errors.length - 10} erros (baixe o relatório)
+                          </li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </AlertDescription>
             </Alert>
           )}
@@ -507,7 +745,7 @@ export function ResultStep({
 
       {/* Actions */}
       <div className="flex justify-between">
-        <Button variant="outline" onClick={onReset}>
+        <Button variant="outline" onClick={onReset} disabled={isImporting}>
           Nova Conversão
         </Button>
       </div>
