@@ -25,8 +25,11 @@ import {
   Mail,
   Phone,
   Pencil,
-  Trash2
+  Trash2,
+  Clock
 } from "lucide-react";
+import { HomologacaoProfessionalAvatar } from "@/components/homologacao/HomologacaoProfessionalAvatar";
+import { HomologacaoProfessionalScheduleDialog } from "@/components/homologacao/HomologacaoProfessionalScheduleDialog";
 
 interface Professional {
   id: string;
@@ -36,6 +39,7 @@ interface Professional {
   function: string | null;
   is_active: boolean;
   clinic_id: string;
+  avatar_url: string | null;
 }
 
 export default function HomologacaoProfissionaisPage() {
@@ -45,6 +49,10 @@ export default function HomologacaoProfissionaisPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProfessional, setEditingProfessional] = useState<Professional | null>(null);
   
+  // Schedule dialog state
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
+  
   // Form state
   const [formData, setFormData] = useState({
     name: "",
@@ -52,6 +60,7 @@ export default function HomologacaoProfissionaisPage() {
     phone: "",
     function: "",
     is_active: true,
+    avatar_url: null as string | null,
   });
 
   // Fetch professionals
@@ -131,7 +140,7 @@ export default function HomologacaoProfissionaisPage() {
 
   const openNewDialog = () => {
     setEditingProfessional(null);
-    setFormData({ name: "", email: "", phone: "", function: "", is_active: true });
+    setFormData({ name: "", email: "", phone: "", function: "", is_active: true, avatar_url: null });
     setIsDialogOpen(true);
   };
 
@@ -143,14 +152,20 @@ export default function HomologacaoProfissionaisPage() {
       phone: prof.phone || "",
       function: prof.function || "",
       is_active: prof.is_active,
+      avatar_url: prof.avatar_url,
     });
     setIsDialogOpen(true);
+  };
+
+  const openScheduleDialog = (prof: Professional) => {
+    setSelectedProfessional(prof);
+    setScheduleDialogOpen(true);
   };
 
   const closeDialog = () => {
     setIsDialogOpen(false);
     setEditingProfessional(null);
-    setFormData({ name: "", email: "", phone: "", function: "", is_active: true });
+    setFormData({ name: "", email: "", phone: "", function: "", is_active: true, avatar_url: null });
   };
 
   const handleSubmit = () => {
@@ -207,7 +222,7 @@ export default function HomologacaoProfissionaisPage() {
       {isLoading ? (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {[1, 2, 3].map(i => (
-            <Skeleton key={i} className="h-40" />
+            <Skeleton key={i} className="h-48" />
           ))}
         </div>
       ) : filteredProfessionals?.length === 0 ? (
@@ -226,35 +241,51 @@ export default function HomologacaoProfissionaisPage() {
           {filteredProfessionals?.map((prof) => (
             <Card key={prof.id} className="hover:shadow-md transition-shadow">
               <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg">{prof.name}</CardTitle>
-                    <CardDescription>{prof.function || "Advogado"}</CardDescription>
+                <div className="flex items-start gap-3">
+                  {/* Avatar */}
+                  <HomologacaoProfessionalAvatar
+                    professionalId={prof.id}
+                    currentAvatarUrl={prof.avatar_url}
+                    professionalName={prof.name}
+                    size="md"
+                    editable={false}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <CardTitle className="text-lg truncate">{prof.name}</CardTitle>
+                        <CardDescription className="truncate">{prof.function || "Advogado"}</CardDescription>
+                      </div>
+                      <Badge variant={prof.is_active ? "default" : "secondary"} className="shrink-0">
+                        {prof.is_active ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </div>
                   </div>
-                  <Badge variant={prof.is_active ? "default" : "secondary"}>
-                    {prof.is_active ? "Ativo" : "Inativo"}
-                  </Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2 text-sm text-muted-foreground">
                   {prof.email && (
-                    <p className="flex items-center gap-2">
-                      <Mail className="w-4 h-4" />
-                      {prof.email}
+                    <p className="flex items-center gap-2 truncate">
+                      <Mail className="w-4 h-4 shrink-0" />
+                      <span className="truncate">{prof.email}</span>
                     </p>
                   )}
                   {prof.phone && (
                     <p className="flex items-center gap-2">
-                      <Phone className="w-4 h-4" />
+                      <Phone className="w-4 h-4 shrink-0" />
                       {prof.phone}
                     </p>
                   )}
                 </div>
-                <div className="flex gap-2 mt-4">
+                <div className="flex flex-wrap gap-2 mt-4">
                   <Button variant="outline" size="sm" onClick={() => openEditDialog(prof)}>
                     <Pencil className="w-3 h-3 mr-1" />
                     Editar
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => openScheduleDialog(prof)}>
+                    <Clock className="w-3 h-3 mr-1" />
+                    Horários
                   </Button>
                   <Button 
                     variant="outline" 
@@ -272,7 +303,7 @@ export default function HomologacaoProfissionaisPage() {
         </div>
       )}
 
-      {/* Dialog */}
+      {/* Edit/Create Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -284,6 +315,20 @@ export default function HomologacaoProfissionaisPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
+            {/* Avatar Upload (only when editing) */}
+            {editingProfessional && (
+              <div className="flex justify-center">
+                <HomologacaoProfessionalAvatar
+                  professionalId={editingProfessional.id}
+                  currentAvatarUrl={formData.avatar_url}
+                  professionalName={formData.name || "P"}
+                  size="lg"
+                  editable={true}
+                  onAvatarChange={(url) => setFormData({ ...formData, avatar_url: url })}
+                />
+              </div>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="name">Nome *</Label>
               <Input
@@ -341,6 +386,16 @@ export default function HomologacaoProfissionaisPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Schedule Dialog */}
+      {currentClinic?.id && (
+        <HomologacaoProfessionalScheduleDialog
+          open={scheduleDialogOpen}
+          onOpenChange={setScheduleDialogOpen}
+          professional={selectedProfessional}
+          clinicId={currentClinic.id}
+        />
+      )}
     </div>
   );
 }
