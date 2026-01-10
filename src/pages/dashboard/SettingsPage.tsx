@@ -5,10 +5,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw, UserCircle } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { TwilioConfigPanel } from "@/components/settings/TwilioConfigPanel";
@@ -24,6 +31,7 @@ import { AutoSaveIndicator } from "@/components/ui/auto-save-indicator";
 import { FeatureGate, FeatureGateInline } from "@/components/features/FeatureGate";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { UserAvatarUpload } from "@/components/users/UserAvatarUpload";
+import { getNomenclatureOptions } from "@/hooks/useNomenclature";
 import { DraggableWidget } from "@/components/settings/DraggableWidget";
 import { DroppableColumn } from "@/components/settings/DroppableColumn";
 import { useSettingsWidgets, WidgetColumn } from "@/hooks/useSettingsWidgets";
@@ -69,6 +77,10 @@ export default function SettingsPage() {
   // CPF appointment limit state
   const [maxCpfAppointments, setMaxCpfAppointments] = useState<number | null>(null);
   const [savingCpfLimit, setSavingCpfLimit] = useState(false);
+
+  // Entity nomenclature state
+  const [entityNomenclature, setEntityNomenclature] = useState("Paciente");
+  const [savingNomenclature, setSavingNomenclature] = useState(false);
 
   // Widget management
   const {
@@ -124,7 +136,7 @@ export default function SettingsPage() {
       
       const { data, error } = await supabase
         .from('clinics')
-        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url, whatsapp_header_image_url, max_appointments_per_cpf_month')
+        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url, whatsapp_header_image_url, max_appointments_per_cpf_month, entity_nomenclature')
         .eq('id', currentClinic.id)
         .single();
       
@@ -137,6 +149,7 @@ export default function SettingsPage() {
         setCustomMapEmbedUrl(data.custom_map_embed_url || "");
         setWhatsappHeaderImage(data.whatsapp_header_image_url || null);
         setMaxCpfAppointments(data.max_appointments_per_cpf_month);
+        setEntityNomenclature(data.entity_nomenclature || "Paciente");
         
         // Set initial data for auto-save
         setInitialSettingsData({
@@ -635,6 +648,82 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      id: "nomenclature",
+      title: "Nomenclatura do Sistema",
+      description: "Defina como o sistema se refere aos cadastros de Pessoa Física",
+      icon: <UserCircle className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      content: (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="entityNomenclature">Nome do cadastro titular (Pessoa Física)</Label>
+            <div className="flex gap-3 items-center">
+              <Select
+                value={entityNomenclature}
+                onValueChange={setEntityNomenclature}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {getNomenclatureOptions().map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={savingNomenclature}
+                onClick={async () => {
+                  if (!currentClinic?.id) return;
+                  setSavingNomenclature(true);
+                  try {
+                    const { error } = await supabase
+                      .from('clinics')
+                      .update({ entity_nomenclature: entityNomenclature })
+                      .eq('id', currentClinic.id);
+                    
+                    if (error) throw error;
+                    
+                    toast({
+                      title: "Nomenclatura salva",
+                      description: `O sistema agora utilizará "${entityNomenclature}" para se referir aos cadastros.`,
+                    });
+                    
+                    // Refresh to apply changes globally
+                    window.location.reload();
+                  } catch (error: any) {
+                    toast({
+                      title: "Erro ao salvar",
+                      description: error.message || "Não foi possível salvar a configuração.",
+                      variant: "destructive",
+                    });
+                  } finally {
+                    setSavingNomenclature(false);
+                  }
+                }}
+              >
+                {savingNomenclature ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Esta configuração define como o sistema irá se referir aos cadastros principais em todas as telas, mensagens, relatórios e comunicações via WhatsApp.
+            </p>
+          </div>
+          
+          <div className="p-3 rounded-lg bg-blue-50 border border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              <strong>Preview:</strong> "Cadastrar {entityNomenclature}" | "Lista de {entityNomenclature === 'Paciente' ? 'Pacientes' : entityNomenclature === 'Associado' ? 'Associados' : entityNomenclature === 'Filiado' ? 'Filiados' : entityNomenclature === 'Cliente' ? 'Clientes' : entityNomenclature === 'Beneficiário' ? 'Beneficiários' : entityNomenclature === 'Contribuinte' ? 'Contribuintes' : entityNomenclature === 'Sócio' ? 'Sócios' : entityNomenclature === 'Membro' ? 'Membros' : entityNomenclature + 's'}"
+            </p>
           </div>
         </div>
       ),
