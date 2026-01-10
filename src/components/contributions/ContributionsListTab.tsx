@@ -45,6 +45,9 @@ import {
   MessageCircle,
   Printer,
   Mail,
+  Building2,
+  FileSearch,
+  Hash,
 } from "lucide-react";
 import { format } from "date-fns";
 import { SendBoletoWhatsAppDialog } from "./SendBoletoWhatsAppDialog";
@@ -261,156 +264,168 @@ export default function ContributionsListTab({
 
   return (
     <div className="space-y-4">
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-3">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar empresa, CNPJ, matrícula ou tipo..."
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-9 h-9"
-              />
+      {/* Enhanced Search Card */}
+      <Card className="border-2 border-amber-200 bg-gradient-to-r from-amber-50/80 to-orange-50/50 dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/20 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search Input with Icon */}
+            <div className="flex items-center gap-3 flex-1">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50 flex items-center justify-center shrink-0 shadow-inner">
+                <FileSearch className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-amber-600/60 dark:text-amber-400/60" />
+                <Input
+                  placeholder="Buscar empresa, CNPJ, matrícula ou tipo..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="pl-10 h-11 text-base border-amber-200 focus:border-amber-400 focus:ring-amber-400/30 dark:border-amber-700 dark:focus:border-amber-500 bg-white/80 dark:bg-amber-950/20"
+                />
+              </div>
             </div>
-            <Select value={statusFilter} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-[140px] h-9">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="hide_cancelled">Ocultar cancelados</SelectItem>
-                <SelectItem value="all">Todos</SelectItem>
-                <SelectItem value="pending">Pendentes</SelectItem>
-                <SelectItem value="paid">Pagos</SelectItem>
-                <SelectItem value="overdue">Vencidos</SelectItem>
-                <SelectItem value="cancelled">Cancelados</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={monthFilter} onValueChange={handleMonthChange}>
-              <SelectTrigger className="w-[140px] h-9">
-                <SelectValue placeholder="Mês" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os meses</SelectItem>
-                {MONTHS.map((month, i) => (
-                  <SelectItem key={i} value={String(i + 1)}>{month}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={String(yearFilter)} onValueChange={handleYearChange}>
-              <SelectTrigger className="w-[100px] h-9">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {getStaticYearRange().map(year => (
-                  <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Badge variant="outline" className="text-xs">
-              {filteredContributions.length} resultado{filteredContributions.length !== 1 ? "s" : ""}
-            </Badge>
-            <div className="flex items-center gap-2 ml-auto">
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={onSyncAll}
-                      disabled={syncing}
-                    >
-                      <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
-                      {syncing ? "Sincronizando..." : "Sincronizar Lytex"}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Buscar status atualizado de todos os boletos na Lytex</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => generateBoletosReport(selectedContributions.filter(c => c.lytex_invoice_id))}
-                      disabled={selectedContributionIds.size === 0}
-                    >
-                      <Printer className="h-4 w-4 mr-2" />
-                      Imprimir
-                      {selectedContributionIds.size > 0 && (
-                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
-                          {selectedContributionIds.size}
-                        </Badge>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {selectedContributionIds.size > 0 
-                      ? `Gerar PDF com ${selectedContributionIds.size} boleto(s) selecionado(s)`
-                      : "Selecione boletos para imprimir"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setWhatsappDialogOpen(true)}
-                      className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
-                    >
-                      <MessageCircle className="h-4 w-4 mr-2" />
-                      WhatsApp
-                      {selectedContributionIds.size > 0 && (
-                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-emerald-100 text-emerald-700">
-                          {selectedContributionIds.size}
-                        </Badge>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {selectedContributionIds.size > 0 
-                      ? `Enviar ${selectedContributionIds.size} boleto(s) selecionado(s) via WhatsApp`
-                      : "Enviar boletos via WhatsApp"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEmailDialogOpen(true)}
-                      className="text-blue-600 border-blue-300 hover:bg-blue-50"
-                    >
-                      <Mail className="h-4 w-4 mr-2" />
-                      Email
-                      {selectedContributionIds.size > 0 && (
-                        <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-blue-100 text-blue-700">
-                          {selectedContributionIds.size}
-                        </Badge>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {selectedContributionIds.size > 0 
-                      ? `Enviar ${selectedContributionIds.size} boleto(s) selecionado(s) por Email`
-                      : "Enviar boletos por Email"}
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <Button onClick={onOpenCreate}>
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Contribuição
-              </Button>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-[130px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="hide_cancelled">Ocultar canc.</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pending">Pendentes</SelectItem>
+                  <SelectItem value="paid">Pagos</SelectItem>
+                  <SelectItem value="overdue">Vencidos</SelectItem>
+                  <SelectItem value="cancelled">Cancelados</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={monthFilter} onValueChange={handleMonthChange}>
+                <SelectTrigger className="w-[130px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
+                  <SelectValue placeholder="Mês" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos meses</SelectItem>
+                  {MONTHS.map((month, i) => (
+                    <SelectItem key={i} value={String(i + 1)}>{month}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={String(yearFilter)} onValueChange={handleYearChange}>
+                <SelectTrigger className="w-[90px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getStaticYearRange().map(year => (
+                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Badge variant="secondary" className="h-8 px-3 text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                {filteredContributions.length} resultado{filteredContributions.length !== 1 ? "s" : ""}
+              </Badge>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Action Buttons */}
+      <div className="flex flex-wrap items-center gap-2 justify-end">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={onSyncAll}
+                disabled={syncing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${syncing ? "animate-spin" : ""}`} />
+                {syncing ? "Sincronizando..." : "Sincronizar Lytex"}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Buscar status atualizado de todos os boletos na Lytex</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => generateBoletosReport(selectedContributions.filter(c => c.lytex_invoice_id))}
+                disabled={selectedContributionIds.size === 0}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Imprimir
+                {selectedContributionIds.size > 0 && (
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                    {selectedContributionIds.size}
+                  </Badge>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {selectedContributionIds.size > 0 
+                ? `Gerar PDF com ${selectedContributionIds.size} boleto(s) selecionado(s)`
+                : "Selecione boletos para imprimir"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setWhatsappDialogOpen(true)}
+                className="text-emerald-600 border-emerald-300 hover:bg-emerald-50"
+              >
+                <MessageCircle className="h-4 w-4 mr-2" />
+                WhatsApp
+                {selectedContributionIds.size > 0 && (
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-emerald-100 text-emerald-700">
+                    {selectedContributionIds.size}
+                  </Badge>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {selectedContributionIds.size > 0 
+                ? `Enviar ${selectedContributionIds.size} boleto(s) selecionado(s) via WhatsApp`
+                : "Enviar boletos via WhatsApp"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setEmailDialogOpen(true)}
+                className="text-blue-600 border-blue-300 hover:bg-blue-50"
+              >
+                <Mail className="h-4 w-4 mr-2" />
+                Email
+                {selectedContributionIds.size > 0 && (
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs bg-blue-100 text-blue-700">
+                    {selectedContributionIds.size}
+                  </Badge>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {selectedContributionIds.size > 0 
+                ? `Enviar ${selectedContributionIds.size} boleto(s) selecionado(s) por Email`
+                : "Enviar boletos por Email"}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+        <Button onClick={onOpenCreate}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova Contribuição
+        </Button>
+      </div>
 
       {/* Table */}
       <Card>
@@ -486,7 +501,7 @@ export default function ContributionsListTab({
                       </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
                         {contrib.employers?.registration_number ? (
-                          <code className="text-xs bg-primary/10 text-primary px-1.5 py-0.5 rounded font-mono font-semibold">
+                          <code className="text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-2 py-1 rounded font-mono font-bold">
                             {contrib.employers.registration_number}
                           </code>
                         ) : (
@@ -501,15 +516,21 @@ export default function ContributionsListTab({
                           >
                             {contrib.employers?.name}
                           </button>
-                          <p className="text-xs text-muted-foreground">
-                            {contrib.employers?.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}
+                          <p className="text-xs font-mono mt-0.5">
+                            <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 px-1.5 py-0.5 rounded">
+                              {contrib.employers?.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}
+                            </span>
                           </p>
                         </div>
                       </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
-                        <span className="text-xs font-mono text-muted-foreground">
-                          {contrib.lytex_invoice_id ? contrib.lytex_invoice_id.slice(-8).toUpperCase() : "-"}
-                        </span>
+                        {contrib.lytex_invoice_id ? (
+                          <code className="text-xs bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300 px-2 py-1 rounded font-mono font-semibold">
+                            {contrib.lytex_invoice_id.slice(-8).toUpperCase()}
+                          </code>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
                         <span className="text-sm">{contrib.contribution_types?.name}</span>
