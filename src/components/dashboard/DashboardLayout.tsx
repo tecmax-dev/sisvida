@@ -5,6 +5,7 @@ import { ChatWidget } from "@/components/chat/ChatWidget";
 import { MaintenanceClinicOverlay } from "@/components/MaintenanceClinicOverlay";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
+import { usePlanFeatures } from "@/hooks/usePlanFeatures";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { UserMenu } from "@/components/layout/UserMenu";
@@ -90,6 +91,7 @@ interface NavItem {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   permission?: Permission;
+  addonKey?: string; // Requires specific addon to be active
 }
 
 interface NavCategory {
@@ -168,7 +170,7 @@ const navCategories: NavCategory[] = [
       { href: "/dashboard/professionals", icon: UserCircle, label: "Profissionais", permission: "view_professionals" },
       { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
       { href: "/dashboard/exams", icon: FlaskConical, label: "Exames", permission: "view_procedures" },
-      { href: "/dashboard/homologacao", icon: FileCheck2, label: "Homologação", permission: "view_procedures" },
+      { href: "/dashboard/homologacao", icon: FileCheck2, label: "Homologação", permission: "view_procedures", addonKey: "homologa_net" },
       { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
       { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
     ],
@@ -211,6 +213,7 @@ export function DashboardLayout() {
   const location = useLocation();
   const { user, profile, currentClinic, userRoles, signOut, setCurrentClinic } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
+  const { hasAddon } = usePlanFeatures();
 
   useEffect(() => {
     localStorage.setItem("sidebar-collapsed", String(sidebarCollapsed));
@@ -227,10 +230,16 @@ export function DashboardLayout() {
     };
   }, []);
 
-  // Filter categories based on permissions
+  // Filter categories based on permissions and addons
   const filteredCategories = navCategories.map(category => ({
     ...category,
-    items: category.items.filter(item => !item.permission || hasPermission(item.permission))
+    items: category.items.filter(item => {
+      // Check permission
+      if (item.permission && !hasPermission(item.permission)) return false;
+      // Check addon requirement
+      if (item.addonKey && !hasAddon(item.addonKey)) return false;
+      return true;
+    })
   })).filter(category => category.items.length > 0);
 
   const filteredAdminNavItems = adminNavItems.filter((item) =>
