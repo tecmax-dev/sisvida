@@ -82,6 +82,7 @@ interface ContributionsReportsTabProps {
   employers: Employer[];
   contributionTypes: ContributionType[];
   clinicName?: string;
+  clinicLogo?: string;
   yearFilter: number;
   onYearFilterChange: (year: number) => void;
 }
@@ -106,6 +107,7 @@ export default function ContributionsReportsTab({
   employers,
   contributionTypes,
   clinicName,
+  clinicLogo,
   yearFilter,
   onYearFilterChange,
 }: ContributionsReportsTabProps) {
@@ -114,6 +116,7 @@ export default function ContributionsReportsTab({
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
+  const [contributionTypeFilter, setContributionTypeFilter] = useState<string>("all");
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -134,9 +137,10 @@ export default function ContributionsReportsTab({
       const matchesMonth = monthFilter === "all" || c.competence_month === parseInt(monthFilter);
       const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
       const matchesEmployer = !selectedEmployer || c.employer_id === selectedEmployer.id;
-      return matchesYear && matchesMonth && matchesStatus && matchesEmployer;
+      const matchesType = contributionTypeFilter === "all" || c.contribution_type_id === contributionTypeFilter;
+      return matchesYear && matchesMonth && matchesStatus && matchesEmployer && matchesType;
     });
-  }, [contributions, yearFilter, monthFilter, statusFilter, selectedEmployer]);
+  }, [contributions, yearFilter, monthFilter, statusFilter, selectedEmployer, contributionTypeFilter]);
 
   // Report by employer
   const byEmployerReport = useMemo(() => {
@@ -217,7 +221,7 @@ export default function ContributionsReportsTab({
     toast.success("CSV exportado com sucesso!");
   };
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (filteredContributions.length === 0) {
       toast.error("Nenhum dado para exportar");
       return;
@@ -229,15 +233,21 @@ export default function ContributionsReportsTab({
       byEmployerReport,
     };
 
+    const selectedTypeName = contributionTypeFilter !== "all" 
+      ? contributionTypes.find(t => t.id === contributionTypeFilter)?.name 
+      : undefined;
+
     const config = {
       clinicName: clinicName || "Sistema de Contribuições",
+      clinicLogo: clinicLogo,
       userName: session?.user?.email || "Usuário",
       period: periodLabel,
       selectedEmployer: selectedEmployer,
+      contributionTypeName: selectedTypeName,
     };
 
     try {
-      generateContributionsReport(reportType, reportData, config);
+      await generateContributionsReport(reportType, reportData, config);
       toast.success("PDF gerado com sucesso!");
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
@@ -334,6 +344,19 @@ export default function ContributionsReportsTab({
                 <SelectItem value="pending">Pendentes</SelectItem>
                 <SelectItem value="overdue">Vencidos</SelectItem>
                 <SelectItem value="cancelled">Cancelados</SelectItem>
+              </SelectContent>
+            </Select>
+
+            {/* Contribution Type Filter */}
+            <Select value={contributionTypeFilter} onValueChange={setContributionTypeFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Tipo de Contribuição" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os tipos</SelectItem>
+                {contributionTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
