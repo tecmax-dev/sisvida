@@ -90,7 +90,17 @@ export function MappingStep({
 }: MappingStepProps) {
   // For Lytex type, detect layout and get appropriate fields
   const { targetFields, autoDetectedMappings, detectedLayout } = useMemo(() => {
-    if (conversionType === 'lytex') {
+    // Protection against invalid headers
+    if (!headers || headers.length === 0) {
+      return {
+        targetFields: TARGET_FIELDS[conversionType] || [],
+        autoDetectedMappings: [],
+        detectedLayout: null,
+      };
+    }
+
+    try {
+      if (conversionType === 'lytex') {
       // Try to detect layout from headers
       const detection = detectLytexLayout(headers);
       
@@ -169,11 +179,19 @@ export function MappingStep({
       }
     }
     
-    return {
-      targetFields: fields,
-      autoDetectedMappings: autoMappings,
-      detectedLayout: null,
-    };
+      return {
+        targetFields: fields,
+        autoDetectedMappings: autoMappings,
+        detectedLayout: null,
+      };
+    } catch (error) {
+      console.error('Error in MappingStep useMemo:', error);
+      return {
+        targetFields: TARGET_FIELDS[conversionType] || [],
+        autoDetectedMappings: [],
+        detectedLayout: null,
+      };
+    }
   }, [conversionType, conversionSubType, headers]);
 
   return (

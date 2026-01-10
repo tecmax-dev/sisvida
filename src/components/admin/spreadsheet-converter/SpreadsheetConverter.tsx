@@ -92,11 +92,16 @@ export function SpreadsheetConverter() {
   
   const canGoNext = () => {
     switch (currentStep) {
-      case 'upload': return fileData !== null;
-      case 'type': return conversionType !== null;
-      case 'mapping': return mappings.length > 0;
-      case 'validation': return validRows.length > 0;
-      default: return false;
+      case 'upload': 
+        return fileData !== null && fileData.headers && fileData.headers.length > 0;
+      case 'type': 
+        return conversionType !== null;
+      case 'mapping': 
+        return mappings.length > 0;
+      case 'validation': 
+        return validRows.length > 0;
+      default: 
+        return false;
     }
   };
 

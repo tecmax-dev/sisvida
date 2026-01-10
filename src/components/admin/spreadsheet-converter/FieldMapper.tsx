@@ -31,9 +31,11 @@ export function FieldMapper({
   const [showOnlyMapped, setShowOnlyMapped] = useState(false);
 
   const handleMapping = (targetField: string, sourceColumn: string) => {
+    // Handle special "no mapping" value
+    const actualValue = sourceColumn === '__none__' ? '' : sourceColumn;
     const newMappings = mappings.filter(m => m.targetField !== targetField);
-    if (sourceColumn) {
-      newMappings.push({ sourceColumn, targetField });
+    if (actualValue) {
+      newMappings.push({ sourceColumn: actualValue, targetField });
     }
     onMappingsChange(newMappings);
   };
@@ -135,7 +137,7 @@ export function FieldMapper({
                     {/* Source Column Selector */}
                     <div className="flex-1 min-w-[200px]">
                       <Select
-                        value={mappedSource}
+                        value={mappedSource || '__none__'}
                         onValueChange={(value) => handleMapping(target.key, value)}
                       >
                         <SelectTrigger className={cn(
@@ -144,7 +146,7 @@ export function FieldMapper({
                           <SelectValue placeholder="Selecione a coluna..." />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">
+                          <SelectItem value="__none__">
                             <span className="text-muted-foreground">Não mapear</span>
                           </SelectItem>
                           {sourceColumns.map((col) => (
