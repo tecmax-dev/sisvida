@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
+import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 
 interface SupplierDialogProps {
   open: boolean;
@@ -43,6 +44,9 @@ export function SupplierDialog({
   onSuccess,
 }: SupplierDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [cnpjError, setCnpjError] = useState<string | null>(null);
+  const { lookupCnpj, cnpjLoading } = useCnpjLookup();
+  
   const [formData, setFormData] = useState({
     name: "",
     cnpj: "",
@@ -84,17 +88,8 @@ export function SupplierDialog({
         is_active: true,
       });
     }
+    setCnpjError(null);
   }, [supplier, open]);
-
-  const formatCNPJ = (value: string) => {
-    return value
-      .replace(/\D/g, "")
-      .replace(/^(\d{2})(\d)/, "$1.$2")
-      .replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3")
-      .replace(/\.(\d{3})(\d)/, ".$1/$2")
-      .replace(/(\d{4})(\d)/, "$1-$2")
-      .slice(0, 18);
-  };
 
   const formatPhone = (value: string) => {
     return value
@@ -104,9 +99,65 @@ export function SupplierDialog({
       .slice(0, 15);
   };
 
+  const checkCnpjDuplicate = async (cnpj: string): Promise<{ id: string; name: string } | null> => {
+    if (!cnpj || cnpj.replace(/\D/g, "").length !== 14) return null;
+    
+    const { data: existing } = await supabase
+      .from("suppliers")
+      .select("id, name")
+      .eq("clinic_id", clinicId)
+      .eq("cnpj", cnpj)
+      .neq("id", supplier?.id || "00000000-0000-0000-0000-000000000000")
+      .maybeSingle();
+    
+    return existing;
+  };
+
+  const handleCnpjLookup = async () => {
+    if (!formData.cnpj || formData.cnpj.replace(/\D/g, "").length !== 14) {
+      toast.error("Digite um CNPJ válido com 14 dígitos");
+      return;
+    }
+
+    // Verificar duplicidade primeiro
+    const existing = await checkCnpjDuplicate(formData.cnpj);
+    if (existing) {
+      setCnpjError(`CNPJ já cadastrado para: ${existing.name}`);
+      return;
+    }
+    
+    setCnpjError(null);
+    
+    // Buscar na Receita Federal
+    const data = await lookupCnpj(formData.cnpj);
+    if (data) {
+      setFormData((prev) => ({
+        ...prev,
+        name: data.razao_social || data.nome_fantasia || prev.name,
+        email: data.email || prev.email,
+        phone: data.telefone ? formatPhone(data.telefone) : prev.phone,
+        address: data.logradouro && data.numero 
+          ? `${data.logradouro}, ${data.numero}${data.bairro ? ` - ${data.bairro}` : ""}` 
+          : prev.address,
+        city: data.municipio || prev.city,
+        state: data.uf || prev.state,
+      }));
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clinicId) return;
+
+    // Verificar duplicidade antes de salvar
+    if (formData.cnpj && formData.cnpj.replace(/\D/g, "").length === 14) {
+      const existing = await checkCnpjDuplicate(formData.cnpj);
+      if (existing) {
+        setCnpjError(`CNPJ já cadastrado para: ${existing.name}`);
+        toast.error(`CNPJ já cadastrado para: ${existing.name}`);
+        return;
+      }
+    }
 
     setLoading(true);
     try {
@@ -133,7 +184,14 @@ export function SupplierDialog({
         toast.success("Fornecedor atualizado com sucesso");
       } else {
         const { error } = await supabase.from("suppliers").insert(data);
-        if (error) throw error;
+        if (error) {
+          if (error.code === "23505" && error.message?.includes("idx_suppliers_cnpj_clinic")) {
+            toast.error("CNPJ já cadastrado para outro fornecedor nesta clínica");
+            setCnpjError("CNPJ já cadastrado nesta clínica");
+            return;
+          }
+          throw error;
+        }
         toast.success("Fornecedor criado com sucesso");
       }
 
@@ -159,20 +217,27 @@ export function SupplierDialog({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
+              <CnpjInputCard
+                value={formData.cnpj}
+                onChange={(value) => {
+                  setFormData({ ...formData, cnpj: value });
+                  setCnpjError(null);
+                }}
+                onLookup={handleCnpjLookup}
+                loading={cnpjLoading}
+                error={cnpjError || undefined}
+                showLookupButton={true}
+                label="CNPJ do Fornecedor"
+              />
+            </div>
+
+            <div className="col-span-2">
               <Label htmlFor="name">Razão Social / Nome *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
-              />
-            </div>
-
-            <div className="col-span-2">
-              <CnpjInputCard
-                value={formData.cnpj}
-                onChange={(value) => setFormData({ ...formData, cnpj: value })}
-                showLookupButton={false}
               />
             </div>
 
@@ -266,7 +331,7 @@ export function SupplierDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || cnpjLoading}>
               {loading ? "Salvando..." : "Salvar"}
             </Button>
           </div>
