@@ -203,3 +203,6 @@ verify_jwt = false
 
 [functions.fetch-brazilian-holidays]
 verify_jwt = false
+
+[functions.import-converted-data]
+verify_jwt = false
