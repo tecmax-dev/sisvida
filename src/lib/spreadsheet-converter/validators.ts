@@ -76,8 +76,12 @@ const FIELD_VALIDATORS: Record<string, (value: unknown) => { valid: boolean; err
       return { valid: false, error: 'Valor é obrigatório' };
     }
     const parsed = parseCurrency(value);
-    if (parsed === 0 && String(value).trim() !== '0') {
+    // Accept R$ 0,00 - only reject if parseCurrency returns NaN or negative
+    if (isNaN(parsed)) {
       return { valid: false, error: 'Valor inválido' };
+    }
+    if (parsed < 0) {
+      return { valid: false, error: 'Valor negativo não permitido' };
     }
     return { valid: true };
   },
