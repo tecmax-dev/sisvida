@@ -1,0 +1,871 @@
+================================================================================
+           ESTRUTURA DAS TABELAS - BACKUP ECLINI v1.0
+================================================================================
+
+                    42 TABELAS DO SISTEMA DE CLÍNICAS
+                    
+================================================================================
+
+Este documento descreve a estrutura completa de todas as tabelas exportadas
+no backup JSON v1.0. Use como referência para validar a estrutura do banco
+de dados de destino.
+
+================================================================================
+FASE 1: CATÁLOGOS BASE
+================================================================================
+
+--------------------------------------------------------------------------------
+TABELA: specialties
+--------------------------------------------------------------------------------
+Descrição: Especialidades médicas da clínica
+
+| Campo       | Tipo      | Nullable | Descrição                    |
+|-------------|-----------|----------|------------------------------|
+| id          | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id   | uuid      | NOT NULL | FK para clinics              |
+| name        | text      | NOT NULL | Nome da especialidade        |
+| description | text      | NULL     | Descrição opcional           |
+| is_active   | boolean   | NULL     | Ativo/Inativo (default true) |
+| created_at  | timestamp | NOT NULL | Data de criação              |
+| updated_at  | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: employer_categories
+--------------------------------------------------------------------------------
+Descrição: Categorias de empresas (ex: Comércio, Indústria)
+
+| Campo       | Tipo      | Nullable | Descrição                    |
+|-------------|-----------|----------|------------------------------|
+| id          | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id   | uuid      | NOT NULL | FK para clinics              |
+| name        | text      | NOT NULL | Nome da categoria            |
+| description | text      | NULL     | Descrição opcional           |
+| is_active   | boolean   | NULL     | Ativo/Inativo (default true) |
+| created_at  | timestamp | NOT NULL | Data de criação              |
+| updated_at  | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: insurance_plans
+--------------------------------------------------------------------------------
+Descrição: Planos de saúde/convênios aceitos
+
+| Campo       | Tipo      | Nullable | Descrição                    |
+|-------------|-----------|----------|------------------------------|
+| id          | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id   | uuid      | NOT NULL | FK para clinics              |
+| name        | text      | NOT NULL | Nome do convênio             |
+| code        | text      | NULL     | Código do convênio           |
+| is_active   | boolean   | NULL     | Ativo/Inativo (default true) |
+| created_at  | timestamp | NOT NULL | Data de criação              |
+| updated_at  | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: contribution_types
+--------------------------------------------------------------------------------
+Descrição: Tipos de contribuição sindical
+
+| Campo         | Tipo      | Nullable | Descrição                    |
+|---------------|-----------|----------|------------------------------|
+| id            | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id     | uuid      | NOT NULL | FK para clinics              |
+| name          | text      | NOT NULL | Nome do tipo                 |
+| description   | text      | NULL     | Descrição opcional           |
+| default_value | decimal   | NOT NULL | Valor padrão (default 0)     |
+| is_active     | boolean   | NULL     | Ativo/Inativo (default true) |
+| created_at    | timestamp | NOT NULL | Data de criação              |
+| updated_at    | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: procedures
+--------------------------------------------------------------------------------
+Descrição: Procedimentos médicos oferecidos
+
+| Campo          | Tipo      | Nullable | Descrição                    |
+|----------------|-----------|----------|------------------------------|
+| id             | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id      | uuid      | NOT NULL | FK para clinics              |
+| name           | text      | NOT NULL | Nome do procedimento         |
+| description    | text      | NULL     | Descrição opcional           |
+| price          | decimal   | NULL     | Preço do procedimento        |
+| duration       | integer   | NULL     | Duração em minutos           |
+| is_active      | boolean   | NULL     | Ativo/Inativo (default true) |
+| specialty_id   | uuid      | NULL     | FK para specialties          |
+| created_at     | timestamp | NOT NULL | Data de criação              |
+| updated_at     | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: patient_segments
+--------------------------------------------------------------------------------
+Descrição: Segmentos de pacientes para campanhas
+
+| Campo       | Tipo      | Nullable | Descrição                    |
+|-------------|-----------|----------|------------------------------|
+| id          | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id   | uuid      | NOT NULL | FK para clinics              |
+| name        | text      | NOT NULL | Nome do segmento             |
+| description | text      | NULL     | Descrição opcional           |
+| filters     | jsonb     | NULL     | Filtros do segmento          |
+| is_active   | boolean   | NULL     | Ativo/Inativo (default true) |
+| created_at  | timestamp | NOT NULL | Data de criação              |
+| updated_at  | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: financial_categories
+--------------------------------------------------------------------------------
+Descrição: Categorias financeiras (receitas/despesas)
+
+| Campo       | Tipo      | Nullable | Descrição                    |
+|-------------|-----------|----------|------------------------------|
+| id          | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id   | uuid      | NOT NULL | FK para clinics              |
+| name        | text      | NOT NULL | Nome da categoria            |
+| type        | text      | NOT NULL | Tipo: income/expense         |
+| parent_id   | uuid      | NULL     | FK para categoria pai        |
+| is_active   | boolean   | NULL     | Ativo/Inativo (default true) |
+| created_at  | timestamp | NOT NULL | Data de criação              |
+| updated_at  | timestamp | NOT NULL | Data de atualização          |
+
+================================================================================
+FASE 2: CONFIGURAÇÕES
+================================================================================
+
+--------------------------------------------------------------------------------
+TABELA: access_groups
+--------------------------------------------------------------------------------
+Descrição: Grupos de acesso com permissões
+
+| Campo       | Tipo      | Nullable | Descrição                    |
+|-------------|-----------|----------|------------------------------|
+| id          | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id   | uuid      | NULL     | FK para clinics              |
+| name        | text      | NOT NULL | Nome do grupo                |
+| description | text      | NULL     | Descrição opcional           |
+| is_active   | boolean   | NULL     | Ativo/Inativo (default true) |
+| is_system   | boolean   | NULL     | Grupo de sistema             |
+| created_at  | timestamp | NULL     | Data de criação              |
+| updated_at  | timestamp | NULL     | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: access_group_permissions
+--------------------------------------------------------------------------------
+Descrição: Permissões associadas a grupos de acesso
+
+| Campo           | Tipo      | Nullable | Descrição                    |
+|-----------------|-----------|----------|------------------------------|
+| id              | uuid      | NOT NULL | Identificador único (PK)     |
+| access_group_id | uuid      | NOT NULL | FK para access_groups        |
+| permission_key  | text      | NOT NULL | Chave da permissão           |
+| created_at      | timestamp | NULL     | Data de criação              |
+
+--------------------------------------------------------------------------------
+TABELA: document_settings
+--------------------------------------------------------------------------------
+Descrição: Configurações de documentos médicos (receitas, atestados)
+
+| Campo                  | Tipo      | Nullable | Descrição                    |
+|------------------------|-----------|----------|------------------------------|
+| id                     | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id              | uuid      | NOT NULL | FK para clinics              |
+| paper_size             | text      | NULL     | Tamanho: A4/A5               |
+| show_logo              | boolean   | NULL     | Exibir logo                  |
+| show_footer            | boolean   | NULL     | Exibir rodapé               |
+| show_address           | boolean   | NULL     | Exibir endereço             |
+| show_phone             | boolean   | NULL     | Exibir telefone             |
+| show_cnpj              | boolean   | NULL     | Exibir CNPJ                 |
+| footer_text            | text      | NULL     | Texto do rodapé            |
+| custom_header_text     | text      | NULL     | Cabeçalho personalizado     |
+| prescription_title     | text      | NULL     | Título receita              |
+| prescription_template  | text      | NULL     | Template receita            |
+| certificate_title      | text      | NULL     | Título atestado             |
+| certificate_template   | text      | NULL     | Template atestado           |
+| attendance_title       | text      | NULL     | Título declaração           |
+| attendance_template    | text      | NULL     | Template declaração         |
+| exam_request_title     | text      | NULL     | Título pedido exame         |
+| exam_request_template  | text      | NULL     | Template pedido exame       |
+| created_at             | timestamp | NOT NULL | Data de criação              |
+| updated_at             | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: anamnese_templates
+--------------------------------------------------------------------------------
+Descrição: Templates de anamnese personalizados
+
+| Campo       | Tipo      | Nullable | Descrição                    |
+|-------------|-----------|----------|------------------------------|
+| id          | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id   | uuid      | NOT NULL | FK para clinics              |
+| title       | text      | NOT NULL | Título do template           |
+| description | text      | NULL     | Descrição opcional           |
+| is_active   | boolean   | NULL     | Ativo/Inativo (default true) |
+| created_by  | uuid      | NULL     | Usuário que criou            |
+| created_at  | timestamp | NOT NULL | Data de criação              |
+| updated_at  | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: clinic_holidays
+--------------------------------------------------------------------------------
+Descrição: Feriados específicos da clínica
+
+| Campo           | Tipo      | Nullable | Descrição                    |
+|-----------------|-----------|----------|------------------------------|
+| id              | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id       | uuid      | NOT NULL | FK para clinics              |
+| name            | text      | NOT NULL | Nome do feriado              |
+| holiday_date    | date      | NOT NULL | Data do feriado              |
+| is_recurring    | boolean   | NULL     | Recorrente anualmente        |
+| recurring_day   | integer   | NULL     | Dia do mês (se recorrente)   |
+| recurring_month | integer   | NULL     | Mês (se recorrente)          |
+| created_by      | uuid      | NULL     | Usuário que criou            |
+| created_at      | timestamp | NOT NULL | Data de criação              |
+
+--------------------------------------------------------------------------------
+TABELA: cash_registers
+--------------------------------------------------------------------------------
+Descrição: Caixas e contas bancárias
+
+| Campo          | Tipo      | Nullable | Descrição                    |
+|----------------|-----------|----------|------------------------------|
+| id             | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id      | uuid      | NOT NULL | FK para clinics              |
+| name           | text      | NOT NULL | Nome do caixa/conta          |
+| type           | text      | NOT NULL | Tipo: cash/bank              |
+| initial_balance| decimal   | NOT NULL | Saldo inicial                |
+| current_balance| decimal   | NOT NULL | Saldo atual                  |
+| bank_name      | text      | NULL     | Nome do banco                |
+| agency         | text      | NULL     | Agência                      |
+| account_number | text      | NULL     | Número da conta              |
+| is_active      | boolean   | NOT NULL | Ativo/Inativo                |
+| created_at     | timestamp | NOT NULL | Data de criação              |
+| updated_at     | timestamp | NOT NULL | Data de atualização          |
+
+================================================================================
+FASE 3: ENTIDADES PRINCIPAIS
+================================================================================
+
+--------------------------------------------------------------------------------
+TABELA: accounting_offices
+--------------------------------------------------------------------------------
+Descrição: Escritórios de contabilidade
+
+| Campo                  | Tipo      | Nullable | Descrição                    |
+|------------------------|-----------|----------|------------------------------|
+| id                     | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id              | uuid      | NOT NULL | FK para clinics              |
+| name                   | text      | NOT NULL | Nome do escritório           |
+| trade_name             | text      | NULL     | Nome fantasia                |
+| cnpj                   | text      | NULL     | CNPJ do escritório           |
+| email                  | text      | NOT NULL | E-mail de contato            |
+| phone                  | text      | NULL     | Telefone                     |
+| address                | text      | NULL     | Endereço                     |
+| city                   | text      | NULL     | Cidade                       |
+| state                  | text      | NULL     | Estado                       |
+| contact_name           | text      | NULL     | Nome do contato              |
+| notes                  | text      | NULL     | Observações                  |
+| legacy_id              | text      | NULL     | ID legado (matrícula)        |
+| access_code            | text      | NULL     | Código de acesso portal      |
+| access_code_expires_at | timestamp | NULL     | Expiração código             |
+| portal_last_access_at  | timestamp | NULL     | Último acesso portal         |
+| is_active              | boolean   | NULL     | Ativo/Inativo                |
+| created_at             | timestamp | NOT NULL | Data de criação              |
+| updated_at             | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: employers
+--------------------------------------------------------------------------------
+Descrição: Empresas/empregadores
+
+| Campo                    | Tipo      | Nullable | Descrição                    |
+|--------------------------|-----------|----------|------------------------------|
+| id                       | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id                | uuid      | NOT NULL | FK para clinics              |
+| name                     | text      | NOT NULL | Razão social                 |
+| trade_name               | text      | NULL     | Nome fantasia                |
+| cnpj                     | text      | NOT NULL | CNPJ da empresa              |
+| email                    | text      | NULL     | E-mail de contato            |
+| phone                    | text      | NULL     | Telefone                     |
+| address                  | text      | NULL     | Endereço                     |
+| city                     | text      | NULL     | Cidade                       |
+| state                    | text      | NULL     | Estado                       |
+| zip_code                 | text      | NULL     | CEP                          |
+| category_id              | uuid      | NULL     | FK para employer_categories  |
+| contact_name             | text      | NULL     | Nome do contato              |
+| employee_count           | integer   | NULL     | Número de funcionários       |
+| notes                    | text      | NULL     | Observações                  |
+| legacy_id                | text      | NULL     | ID legado (matrícula)        |
+| lytex_company_id         | text      | NULL     | ID na Lytex                  |
+| access_code              | text      | NULL     | Código de acesso portal      |
+| access_code_expires_at   | timestamp | NULL     | Expiração código             |
+| portal_last_access_at    | timestamp | NULL     | Último acesso portal         |
+| is_active                | boolean   | NULL     | Ativo/Inativo                |
+| created_at               | timestamp | NOT NULL | Data de criação              |
+| updated_at               | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: professionals
+--------------------------------------------------------------------------------
+Descrição: Profissionais de saúde
+
+| Campo                  | Tipo      | Nullable | Descrição                    |
+|------------------------|-----------|----------|------------------------------|
+| id                     | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id              | uuid      | NOT NULL | FK para clinics              |
+| user_id                | uuid      | NULL     | FK para auth.users           |
+| name                   | text      | NOT NULL | Nome completo                |
+| email                  | text      | NULL     | E-mail                       |
+| phone                  | text      | NULL     | Telefone                     |
+| specialty_id           | uuid      | NULL     | FK para specialties          |
+| crm                    | text      | NULL     | Registro CRM                 |
+| crm_state              | text      | NULL     | Estado do CRM                |
+| bio                    | text      | NULL     | Biografia                    |
+| avatar_url             | text      | NULL     | URL do avatar                |
+| schedule               | jsonb     | NULL     | Agenda semanal (JSON)        |
+| appointment_duration   | integer   | NULL     | Duração consulta (minutos)   |
+| is_active              | boolean   | NULL     | Ativo/Inativo                |
+| receives_whatsapp      | boolean   | NULL     | Recebe agendamento WhatsApp  |
+| created_at             | timestamp | NOT NULL | Data de criação              |
+| updated_at             | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: patients
+--------------------------------------------------------------------------------
+Descrição: Pacientes/sócios
+
+| Campo                      | Tipo      | Nullable | Descrição                    |
+|----------------------------|-----------|----------|------------------------------|
+| id                         | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id                  | uuid      | NOT NULL | FK para clinics              |
+| name                       | text      | NOT NULL | Nome completo                |
+| email                      | text      | NULL     | E-mail                       |
+| phone                      | text      | NULL     | Telefone                     |
+| cpf                        | text      | NOT NULL | CPF (único por clínica)      |
+| birth_date                 | date      | NULL     | Data de nascimento           |
+| gender                     | text      | NULL     | Gênero: M/F/O                |
+| address                    | text      | NULL     | Endereço                     |
+| city                       | text      | NULL     | Cidade                       |
+| state                      | text      | NULL     | Estado                       |
+| zip_code                   | text      | NULL     | CEP                          |
+| insurance_plan_id          | uuid      | NULL     | FK para insurance_plans      |
+| employer_id                | uuid      | NULL     | FK para employers            |
+| specialty_id               | uuid      | NULL     | FK para specialties          |
+| registration_number        | text      | NULL     | Matrícula do sócio           |
+| photo_url                  | text      | NULL     | URL da foto                  |
+| tag                        | text      | NULL     | Situação do sócio            |
+| notes                      | text      | NULL     | Observações                  |
+| is_active                  | boolean   | NULL     | Ativo/Inativo                |
+| is_blocked                 | boolean   | NULL     | Bloqueado (no-show)          |
+| blocked_at                 | timestamp | NULL     | Data do bloqueio             |
+| blocked_reason             | text      | NULL     | Motivo do bloqueio           |
+| max_appointments_per_month | integer   | NULL     | Limite mensal de consultas   |
+| created_at                 | timestamp | NOT NULL | Data de criação              |
+| updated_at                 | timestamp | NOT NULL | Data de atualização          |
+
+================================================================================
+FASE 4: ENTIDADES DEPENDENTES
+================================================================================
+
+--------------------------------------------------------------------------------
+TABELA: patient_dependents
+--------------------------------------------------------------------------------
+Descrição: Dependentes de pacientes
+
+| Campo              | Tipo      | Nullable | Descrição                    |
+|--------------------|-----------|----------|------------------------------|
+| id                 | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id          | uuid      | NOT NULL | FK para clinics              |
+| patient_id         | uuid      | NOT NULL | FK para patients (titular)   |
+| name               | text      | NOT NULL | Nome do dependente           |
+| cpf                | text      | NULL     | CPF do dependente            |
+| birth_date         | date      | NULL     | Data de nascimento           |
+| relationship       | text      | NULL     | Parentesco                   |
+| phone              | text      | NULL     | Telefone                     |
+| is_active          | boolean   | NULL     | Ativo/Inativo                |
+| pending_approval   | boolean   | NULL     | Aguardando aprovação         |
+| cpf_photo_url      | text      | NULL     | URL foto CPF                 |
+| rejection_reason   | text      | NULL     | Motivo rejeição              |
+| created_at         | timestamp | NOT NULL | Data de criação              |
+| updated_at         | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: patient_cards
+--------------------------------------------------------------------------------
+Descrição: Carteirinhas de pacientes
+
+| Campo        | Tipo      | Nullable | Descrição                    |
+|--------------|-----------|----------|------------------------------|
+| id           | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id    | uuid      | NOT NULL | FK para clinics              |
+| patient_id   | uuid      | NOT NULL | FK para patients             |
+| dependent_id | uuid      | NULL     | FK para patient_dependents   |
+| card_number  | text      | NOT NULL | Número da carteirinha        |
+| issue_date   | date      | NOT NULL | Data de emissão              |
+| expiry_date  | date      | NOT NULL | Data de validade             |
+| is_active    | boolean   | NOT NULL | Carteirinha ativa            |
+| created_at   | timestamp | NOT NULL | Data de criação              |
+| updated_at   | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: professional_schedule_exceptions
+--------------------------------------------------------------------------------
+Descrição: Exceções na agenda de profissionais (folgas, horários especiais)
+
+| Campo          | Tipo      | Nullable | Descrição                    |
+|----------------|-----------|----------|------------------------------|
+| id             | uuid      | NOT NULL | Identificador único (PK)     |
+| professional_id| uuid      | NOT NULL | FK para professionals        |
+| exception_date | date      | NOT NULL | Data da exceção              |
+| exception_type | text      | NOT NULL | Tipo: day_off/custom_hours   |
+| start_time     | time      | NULL     | Hora início (custom_hours)   |
+| end_time       | time      | NULL     | Hora fim (custom_hours)      |
+| reason         | text      | NULL     | Motivo                       |
+| created_at     | timestamp | NOT NULL | Data de criação              |
+
+--------------------------------------------------------------------------------
+TABELA: accounting_office_employers
+--------------------------------------------------------------------------------
+Descrição: Vínculo entre escritórios e empresas
+
+| Campo                | Tipo      | Nullable | Descrição                    |
+|----------------------|-----------|----------|------------------------------|
+| id                   | uuid      | NOT NULL | Identificador único (PK)     |
+| accounting_office_id | uuid      | NOT NULL | FK para accounting_offices   |
+| employer_id          | uuid      | NOT NULL | FK para employers            |
+| created_by           | uuid      | NULL     | Usuário que criou            |
+| created_at           | timestamp | NOT NULL | Data de criação              |
+
+--------------------------------------------------------------------------------
+TABELA: user_roles
+--------------------------------------------------------------------------------
+Descrição: Papéis de usuários nas clínicas
+
+| Campo           | Tipo      | Nullable | Descrição                    |
+|-----------------|-----------|----------|------------------------------|
+| id              | uuid      | NOT NULL | Identificador único (PK)     |
+| user_id         | uuid      | NOT NULL | FK para auth.users           |
+| clinic_id       | uuid      | NOT NULL | FK para clinics              |
+| role            | text      | NOT NULL | Papel: owner/admin/staff     |
+| access_group_id | uuid      | NULL     | FK para access_groups        |
+| is_active       | boolean   | NULL     | Ativo/Inativo                |
+| created_at      | timestamp | NULL     | Data de criação              |
+| updated_at      | timestamp | NULL     | Data de atualização          |
+
+NOTA: user_id não é migrado - usuários devem ser recriados manualmente
+
+--------------------------------------------------------------------------------
+TABELA: waiting_list
+--------------------------------------------------------------------------------
+Descrição: Lista de espera para consultas
+
+| Campo          | Tipo      | Nullable | Descrição                    |
+|----------------|-----------|----------|------------------------------|
+| id             | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id      | uuid      | NOT NULL | FK para clinics              |
+| patient_id     | uuid      | NOT NULL | FK para patients             |
+| professional_id| uuid      | NULL     | FK para professionals        |
+| procedure_id   | uuid      | NULL     | FK para procedures           |
+| priority       | text      | NULL     | Prioridade                   |
+| notes          | text      | NULL     | Observações                  |
+| status         | text      | NOT NULL | Status: waiting/contacted    |
+| created_at     | timestamp | NOT NULL | Data de criação              |
+| updated_at     | timestamp | NOT NULL | Data de atualização          |
+
+================================================================================
+FASE 5: TRANSAÇÕES
+================================================================================
+
+--------------------------------------------------------------------------------
+TABELA: appointments
+--------------------------------------------------------------------------------
+Descrição: Agendamentos de consultas
+
+| Campo              | Tipo      | Nullable | Descrição                    |
+|--------------------|-----------|----------|------------------------------|
+| id                 | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id          | uuid      | NOT NULL | FK para clinics              |
+| patient_id         | uuid      | NOT NULL | FK para patients             |
+| professional_id    | uuid      | NOT NULL | FK para professionals        |
+| procedure_id       | uuid      | NULL     | FK para procedures           |
+| dependent_id       | uuid      | NULL     | FK para patient_dependents   |
+| appointment_date   | date      | NOT NULL | Data do agendamento          |
+| start_time         | time      | NOT NULL | Hora início                  |
+| end_time           | time      | NOT NULL | Hora fim                     |
+| duration_minutes   | integer   | NULL     | Duração em minutos           |
+| type               | enum      | NOT NULL | Tipo: first_visit/return/... |
+| status             | enum      | NOT NULL | Status: scheduled/confirmed/.|
+| notes              | text      | NULL     | Observações                  |
+| cancellation_reason| text      | NULL     | Motivo cancelamento          |
+| confirmation_token | text      | NULL     | Token de confirmação         |
+| confirmed_at       | timestamp | NULL     | Data confirmação             |
+| started_at         | timestamp | NULL     | Início atendimento           |
+| completed_at       | timestamp | NULL     | Fim atendimento              |
+| cancelled_at       | timestamp | NULL     | Data cancelamento            |
+| reminder_sent      | boolean   | NULL     | Lembrete enviado             |
+| is_recurring       | boolean   | NULL     | Agendamento recorrente       |
+| recurrence_group_id| uuid      | NULL     | Grupo de recorrência         |
+| created_by         | uuid      | NULL     | Usuário que criou            |
+| created_at         | timestamp | NOT NULL | Data de criação              |
+| updated_at         | timestamp | NOT NULL | Data de atualização          |
+
+TIPOS DE AGENDAMENTO (type):
+- first_visit: Primeira consulta
+- return: Retorno
+- exam: Exame
+- procedure: Procedimento
+
+STATUS DE AGENDAMENTO (status):
+- scheduled: Agendado
+- confirmed: Confirmado
+- arrived: Chegou
+- in_progress: Em atendimento
+- completed: Atendido
+- cancelled: Cancelado
+- no_show: Faltou
+- blocked: Bloqueado pelo profissional
+
+--------------------------------------------------------------------------------
+TABELA: medical_records
+--------------------------------------------------------------------------------
+Descrição: Prontuários médicos
+
+| Campo          | Tipo      | Nullable | Descrição                    |
+|----------------|-----------|----------|------------------------------|
+| id             | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id      | uuid      | NOT NULL | FK para clinics              |
+| patient_id     | uuid      | NOT NULL | FK para patients             |
+| professional_id| uuid      | NOT NULL | FK para professionals        |
+| appointment_id | uuid      | NULL     | FK para appointments         |
+| dependent_id   | uuid      | NULL     | FK para patient_dependents   |
+| record_date    | date      | NOT NULL | Data do atendimento          |
+| chief_complaint| text      | NULL     | Queixa principal             |
+| history        | text      | NULL     | História                     |
+| physical_exam  | text      | NULL     | Exame físico                 |
+| diagnosis      | text      | NULL     | Diagnóstico                  |
+| treatment_plan | text      | NULL     | Plano de tratamento          |
+| notes          | text      | NULL     | Notas (HTML permitido)       |
+| vital_signs    | jsonb     | NULL     | Sinais vitais (JSON)         |
+| created_at     | timestamp | NOT NULL | Data de criação              |
+| updated_at     | timestamp | NOT NULL | Data de atualização          |
+
+ÍNDICE ÚNICO: (clinic_id, patient_id, record_date) para idempotência
+
+--------------------------------------------------------------------------------
+TABELA: anamnesis
+--------------------------------------------------------------------------------
+Descrição: Anamnese básica de pacientes
+
+| Campo                  | Tipo      | Nullable | Descrição                    |
+|------------------------|-----------|----------|------------------------------|
+| id                     | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id              | uuid      | NOT NULL | FK para clinics              |
+| patient_id             | uuid      | NOT NULL | FK para patients             |
+| filled_at              | timestamp | NOT NULL | Data preenchimento           |
+| blood_type             | text      | NULL     | Tipo sanguíneo               |
+| allergies              | text      | NULL     | Alergias                     |
+| chronic_diseases       | text      | NULL     | Doenças crônicas             |
+| current_medications    | text      | NULL     | Medicamentos em uso          |
+| previous_surgeries     | text      | NULL     | Cirurgias anteriores         |
+| family_history         | text      | NULL     | Histórico familiar           |
+| smoking                | boolean   | NULL     | Fumante                      |
+| alcohol                | boolean   | NULL     | Consumo álcool               |
+| physical_activity      | boolean   | NULL     | Atividade física             |
+| emergency_contact_name | text      | NULL     | Contato emergência           |
+| emergency_contact_phone| text      | NULL     | Telefone emergência          |
+| additional_notes       | text      | NULL     | Notas adicionais             |
+| created_at             | timestamp | NOT NULL | Data de criação              |
+| updated_at             | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: employer_contributions
+--------------------------------------------------------------------------------
+Descrição: Contribuições sindicais das empresas
+
+| Campo                | Tipo      | Nullable | Descrição                    |
+|----------------------|-----------|----------|------------------------------|
+| id                   | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id            | uuid      | NOT NULL | FK para clinics              |
+| employer_id          | uuid      | NOT NULL | FK para employers            |
+| contribution_type_id | uuid      | NOT NULL | FK para contribution_types   |
+| reference_month      | integer   | NOT NULL | Mês referência (1-12)        |
+| reference_year       | integer   | NOT NULL | Ano referência               |
+| value                | decimal   | NOT NULL | Valor da contribuição        |
+| due_date             | date      | NOT NULL | Data de vencimento           |
+| payment_date         | date      | NULL     | Data de pagamento            |
+| status               | text      | NOT NULL | Status: pending/paid/overdue |
+| lytex_invoice_id     | text      | NULL     | ID fatura Lytex              |
+| lytex_url            | text      | NULL     | URL boleto Lytex             |
+| notes                | text      | NULL     | Observações                  |
+| active_competence_key| text      | NULL     | Chave única competência      |
+| created_at           | timestamp | NOT NULL | Data de criação              |
+| updated_at           | timestamp | NOT NULL | Data de atualização          |
+
+STATUS DE CONTRIBUIÇÃO:
+- pending: Pendente
+- paid: Pago
+- overdue: Vencido
+- cancelled: Cancelado
+- negotiated: Em negociação
+
+--------------------------------------------------------------------------------
+TABELA: debt_negotiations
+--------------------------------------------------------------------------------
+Descrição: Negociações de débitos
+
+| Campo                    | Tipo      | Nullable | Descrição                    |
+|--------------------------|-----------|----------|------------------------------|
+| id                       | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id                | uuid      | NOT NULL | FK para clinics              |
+| employer_id              | uuid      | NOT NULL | FK para employers            |
+| negotiation_code         | text      | NOT NULL | Código da negociação         |
+| status                   | text      | NOT NULL | Status: draft/pending/active |
+| total_original_value     | decimal   | NOT NULL | Valor original total         |
+| total_negotiated_value   | decimal   | NOT NULL | Valor negociado              |
+| total_interest           | decimal   | NOT NULL | Total de juros               |
+| total_late_fee           | decimal   | NOT NULL | Total de multas              |
+| total_monetary_correction| decimal   | NOT NULL | Correção monetária           |
+| applied_interest_rate    | decimal   | NOT NULL | Taxa de juros aplicada       |
+| applied_late_fee_rate    | decimal   | NOT NULL | Taxa de multa aplicada       |
+| applied_correction_rate  | decimal   | NOT NULL | Taxa de correção aplicada    |
+| installments_count       | integer   | NOT NULL | Número de parcelas           |
+| installment_value        | decimal   | NOT NULL | Valor da parcela             |
+| first_due_date           | date      | NOT NULL | Vencimento primeira parcela  |
+| down_payment_value       | decimal   | NULL     | Valor entrada                |
+| down_payment_due_date    | date      | NULL     | Vencimento entrada           |
+| approved_at              | timestamp | NULL     | Data aprovação               |
+| approved_by              | uuid      | NULL     | Usuário que aprovou          |
+| approval_method          | text      | NULL     | Método de aprovação          |
+| approval_notes           | text      | NULL     | Notas da aprovação           |
+| finalized_at             | timestamp | NULL     | Data finalização             |
+| finalized_by             | uuid      | NULL     | Usuário que finalizou        |
+| cancelled_at             | timestamp | NULL     | Data cancelamento            |
+| cancelled_by             | uuid      | NULL     | Usuário que cancelou         |
+| cancellation_reason      | text      | NULL     | Motivo cancelamento          |
+| created_by               | uuid      | NULL     | Usuário que criou            |
+| created_at               | timestamp | NOT NULL | Data de criação              |
+| updated_at               | timestamp | NOT NULL | Data de atualização          |
+
+================================================================================
+FASE 6: DADOS ANINHADOS
+================================================================================
+
+--------------------------------------------------------------------------------
+TABELA: anamnese_questions
+--------------------------------------------------------------------------------
+Descrição: Perguntas de templates de anamnese
+
+| Campo         | Tipo      | Nullable | Descrição                    |
+|---------------|-----------|----------|------------------------------|
+| id            | uuid      | NOT NULL | Identificador único (PK)     |
+| template_id   | uuid      | NOT NULL | FK para anamnese_templates   |
+| question_text | text      | NOT NULL | Texto da pergunta            |
+| question_type | text      | NOT NULL | Tipo: text/select/checkbox   |
+| order_index   | integer   | NOT NULL | Ordem de exibição            |
+| is_required   | boolean   | NULL     | Pergunta obrigatória         |
+| created_at    | timestamp | NOT NULL | Data de criação              |
+
+--------------------------------------------------------------------------------
+TABELA: anamnese_question_options
+--------------------------------------------------------------------------------
+Descrição: Opções para perguntas de múltipla escolha
+
+| Campo       | Tipo      | Nullable | Descrição                    |
+|-------------|-----------|----------|------------------------------|
+| id          | uuid      | NOT NULL | Identificador único (PK)     |
+| question_id | uuid      | NOT NULL | FK para anamnese_questions   |
+| option_text | text      | NOT NULL | Texto da opção               |
+| order_index | integer   | NOT NULL | Ordem de exibição            |
+
+--------------------------------------------------------------------------------
+TABELA: anamnese_responses
+--------------------------------------------------------------------------------
+Descrição: Respostas de anamnese por paciente
+
+| Campo                  | Tipo      | Nullable | Descrição                    |
+|------------------------|-----------|----------|------------------------------|
+| id                     | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id              | uuid      | NOT NULL | FK para clinics              |
+| patient_id             | uuid      | NOT NULL | FK para patients             |
+| template_id            | uuid      | NOT NULL | FK para anamnese_templates   |
+| professional_id        | uuid      | NULL     | FK para professionals        |
+| filled_by_patient      | boolean   | NULL     | Preenchido pelo paciente     |
+| public_token           | text      | NULL     | Token público                |
+| signature_data         | text      | NULL     | Dados da assinatura          |
+| signed_at              | timestamp | NULL     | Data assinatura              |
+| responsibility_accepted| boolean   | NULL     | Responsabilidade aceita      |
+| created_at             | timestamp | NOT NULL | Data de criação              |
+| updated_at             | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: anamnese_answers
+--------------------------------------------------------------------------------
+Descrição: Respostas individuais de anamnese
+
+| Campo            | Tipo      | Nullable | Descrição                    |
+|------------------|-----------|----------|------------------------------|
+| id               | uuid      | NOT NULL | Identificador único (PK)     |
+| response_id      | uuid      | NOT NULL | FK para anamnese_responses   |
+| question_id      | uuid      | NOT NULL | FK para anamnese_questions   |
+| answer_text      | text      | NULL     | Resposta texto               |
+| answer_option_ids| text[]    | NULL     | IDs das opções selecionadas  |
+| created_at       | timestamp | NOT NULL | Data de criação              |
+
+--------------------------------------------------------------------------------
+TABELA: financial_transactions
+--------------------------------------------------------------------------------
+Descrição: Transações financeiras
+
+| Campo           | Tipo      | Nullable | Descrição                    |
+|-----------------|-----------|----------|------------------------------|
+| id              | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id       | uuid      | NOT NULL | FK para clinics              |
+| type            | text      | NOT NULL | Tipo: income/expense         |
+| category_id     | uuid      | NULL     | FK para financial_categories |
+| patient_id      | uuid      | NULL     | FK para patients             |
+| appointment_id  | uuid      | NULL     | FK para appointments         |
+| cash_register_id| uuid      | NULL     | FK para cash_registers       |
+| description     | text      | NOT NULL | Descrição                    |
+| amount          | decimal   | NOT NULL | Valor                        |
+| payment_method  | text      | NULL     | Forma de pagamento           |
+| payment_date    | date      | NULL     | Data pagamento               |
+| due_date        | date      | NULL     | Data vencimento              |
+| status          | text      | NOT NULL | Status: pending/paid         |
+| notes           | text      | NULL     | Observações                  |
+| created_by      | uuid      | NULL     | Usuário que criou            |
+| created_at      | timestamp | NOT NULL | Data de criação              |
+| updated_at      | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: cash_transfers
+--------------------------------------------------------------------------------
+Descrição: Transferências entre caixas
+
+| Campo           | Tipo      | Nullable | Descrição                    |
+|-----------------|-----------|----------|------------------------------|
+| id              | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id       | uuid      | NOT NULL | FK para clinics              |
+| from_register_id| uuid      | NOT NULL | FK caixa origem              |
+| to_register_id  | uuid      | NOT NULL | FK caixa destino             |
+| amount          | decimal   | NOT NULL | Valor transferido            |
+| description     | text      | NULL     | Descrição                    |
+| transfer_date   | date      | NOT NULL | Data da transferência        |
+| created_by      | uuid      | NULL     | Usuário que criou            |
+| created_at      | timestamp | NOT NULL | Data de criação              |
+
+--------------------------------------------------------------------------------
+TABELA: negotiation_items
+--------------------------------------------------------------------------------
+Descrição: Itens (contribuições) de uma negociação
+
+| Campo          | Tipo      | Nullable | Descrição                    |
+|----------------|-----------|----------|------------------------------|
+| id             | uuid      | NOT NULL | Identificador único (PK)     |
+| negotiation_id | uuid      | NOT NULL | FK para debt_negotiations    |
+| contribution_id| uuid      | NOT NULL | FK employer_contributions    |
+| original_value | decimal   | NOT NULL | Valor original               |
+| days_overdue   | integer   | NOT NULL | Dias de atraso               |
+| interest_value | decimal   | NOT NULL | Valor juros                  |
+| late_fee_value | decimal   | NOT NULL | Valor multa                  |
+| correction_value| decimal  | NOT NULL | Valor correção               |
+| final_value    | decimal   | NOT NULL | Valor final                  |
+| created_at     | timestamp | NOT NULL | Data de criação              |
+
+--------------------------------------------------------------------------------
+TABELA: negotiation_installments
+--------------------------------------------------------------------------------
+Descrição: Parcelas de uma negociação
+
+| Campo          | Type      | Nullable | Descrição                    |
+|----------------|-----------|----------|------------------------------|
+| id             | uuid      | NOT NULL | Identificador único (PK)     |
+| negotiation_id | uuid      | NOT NULL | FK para debt_negotiations    |
+| installment_number| integer| NOT NULL | Número da parcela            |
+| value          | decimal   | NOT NULL | Valor da parcela             |
+| due_date       | date      | NOT NULL | Data de vencimento           |
+| status         | text      | NOT NULL | Status: pending/paid         |
+| payment_date   | date      | NULL     | Data de pagamento            |
+| lytex_invoice_id| text     | NULL     | ID fatura Lytex              |
+| lytex_url      | text      | NULL     | URL boleto Lytex             |
+| created_at     | timestamp | NOT NULL | Data de criação              |
+| updated_at     | timestamp | NOT NULL | Data de atualização          |
+
+================================================================================
+FASE 7: LOGS E AUTOMAÇÃO
+================================================================================
+
+--------------------------------------------------------------------------------
+TABELA: whatsapp_booking_sessions
+--------------------------------------------------------------------------------
+Descrição: Sessões de agendamento via WhatsApp
+
+| Campo                    | Tipo      | Nullable | Descrição                    |
+|--------------------------|-----------|----------|------------------------------|
+| id                       | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id                | uuid      | NOT NULL | FK para clinics              |
+| phone                    | text      | NOT NULL | Telefone do paciente         |
+| state                    | text      | NOT NULL | Estado atual da sessão       |
+| patient_id               | uuid      | NULL     | FK para patients             |
+| professional_id          | uuid      | NULL     | FK para professionals        |
+| selected_date            | date      | NULL     | Data selecionada             |
+| selected_time            | time      | NULL     | Hora selecionada             |
+| procedure_id             | uuid      | NULL     | FK para procedures           |
+| context                  | jsonb     | NULL     | Contexto adicional           |
+| expires_at               | timestamp | NOT NULL | Expiração da sessão          |
+| created_at               | timestamp | NOT NULL | Data de criação              |
+| updated_at               | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: campaigns
+--------------------------------------------------------------------------------
+Descrição: Campanhas de marketing
+
+| Campo           | Tipo      | Nullable | Descrição                    |
+|-----------------|-----------|----------|------------------------------|
+| id              | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id       | uuid      | NOT NULL | FK para clinics              |
+| name            | text      | NOT NULL | Nome da campanha             |
+| description     | text      | NULL     | Descrição                    |
+| channel         | text      | NOT NULL | Canal: whatsapp/email        |
+| message_template| text      | NOT NULL | Template da mensagem         |
+| image_url       | text      | NULL     | URL imagem                   |
+| segment_id      | uuid      | NULL     | FK para patient_segments     |
+| status          | text      | NOT NULL | Status: draft/scheduled/sent |
+| scheduled_at    | timestamp | NULL     | Data agendamento             |
+| sent_count      | integer   | NULL     | Quantidade enviada           |
+| delivered_count | integer   | NULL     | Quantidade entregue          |
+| failed_count    | integer   | NULL     | Quantidade falha             |
+| deleted_at      | timestamp | NULL     | Data exclusão (soft delete)  |
+| created_by      | uuid      | NULL     | Usuário que criou            |
+| created_at      | timestamp | NOT NULL | Data de criação              |
+| updated_at      | timestamp | NOT NULL | Data de atualização          |
+
+--------------------------------------------------------------------------------
+TABELA: automation_flows
+--------------------------------------------------------------------------------
+Descrição: Fluxos de automação
+
+| Campo            | Tipo      | Nullable | Descrição                    |
+|------------------|-----------|----------|------------------------------|
+| id               | uuid      | NOT NULL | Identificador único (PK)     |
+| clinic_id        | uuid      | NOT NULL | FK para clinics              |
+| name             | text      | NOT NULL | Nome do fluxo                |
+| trigger_type     | text      | NOT NULL | Tipo: appointment/birthday   |
+| trigger_config   | jsonb     | NULL     | Configuração do trigger      |
+| channel          | text      | NOT NULL | Canal: whatsapp/email        |
+| message_template | text      | NOT NULL | Template da mensagem         |
+| delay_hours      | integer   | NULL     | Delay em horas               |
+| is_active        | boolean   | NOT NULL | Ativo/Inativo                |
+| execution_count  | integer   | NULL     | Contador de execuções        |
+| last_executed_at | timestamp | NULL     | Última execução              |
+| deleted_at       | timestamp | NULL     | Data exclusão (soft delete)  |
+| created_by       | uuid      | NULL     | Usuário que criou            |
+| created_at       | timestamp | NOT NULL | Data de criação              |
+| updated_at       | timestamp | NOT NULL | Data de atualização          |
+
+================================================================================
+                           FIM DA ESTRUTURA
+================================================================================
+
+Total: 42 tabelas documentadas
+Versão: 1.0
+Data: 2026-01-10
+Sistema: Eclini - Gestão de Clínicas
+
+================================================================================
