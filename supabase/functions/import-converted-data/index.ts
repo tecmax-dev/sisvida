@@ -9,6 +9,9 @@ interface ImportRequest {
   clinic_id: string;
   conversion_type: string;
   data: Record<string, unknown>[];
+  chunk_index?: number;
+  chunk_total?: number;
+  run_id?: string;
 }
 
 interface ImportResult {
@@ -16,13 +19,20 @@ interface ImportResult {
   inserted: number;
   updated: number;
   skipped: number;
-  errors: { row: number; message: string }[];
+  errors: { row: number; message: string; cnpj?: string; competence?: string }[];
+  chunk_index?: number;
+  chunk_total?: number;
 }
+
+const MAX_RECORDS_PER_REQUEST = 2000;
+const BATCH_SIZE = 500;
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
+
+  const startTime = Date.now();
 
   try {
     const authHeader = req.headers.get('Authorization');
@@ -63,11 +73,23 @@ Deno.serve(async (req) => {
     }
 
     const body: ImportRequest = await req.json();
-    const { clinic_id, conversion_type, data } = body;
+    const { clinic_id, conversion_type, data, chunk_index, chunk_total, run_id } = body;
 
     if (!clinic_id || !conversion_type || !data?.length) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields: clinic_id, conversion_type, data' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate request size
+    if (data.length > MAX_RECORDS_PER_REQUEST) {
+      return new Response(
+        JSON.stringify({ 
+          error: `Limite excedido: máximo ${MAX_RECORDS_PER_REQUEST} registros por requisição. Envie ${data.length} registros em lotes menores.`,
+          max_records: MAX_RECORDS_PER_REQUEST,
+          received: data.length
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -86,21 +108,24 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log(`[import-converted-data] Starting import for clinic ${clinic.name} (${clinic_id})`);
+    console.log(`[import-converted-data] Type: ${conversion_type}, Records: ${data.length}, Chunk: ${chunk_index ?? 'N/A'}/${chunk_total ?? 'N/A'}, RunID: ${run_id ?? 'N/A'}`);
+
     let result: ImportResult;
 
     switch (conversion_type) {
       case 'cadastro_pf':
-        result = await importPatients(supabase, clinic_id, data);
+        result = await importPatientsBatch(supabase, clinic_id, data);
         break;
       case 'cadastro_pj':
       case 'lytex_clients':
-        result = await importEmployers(supabase, clinic_id, data);
+        result = await importEmployersBatch(supabase, clinic_id, data);
         break;
       case 'contributions_paid':
       case 'contributions_pending':
       case 'contributions_cancelled':
       case 'lytex_invoices':
-        result = await importContributions(supabase, clinic_id, data, conversion_type);
+        result = await importContributionsBatch(supabase, clinic_id, data, conversion_type);
         break;
       default:
         return new Response(
@@ -109,7 +134,14 @@ Deno.serve(async (req) => {
         );
     }
 
-    console.log(`Import completed for clinic ${clinic.name}: ${JSON.stringify(result)}`);
+    // Add chunk metadata to result
+    if (chunk_index !== undefined) {
+      result.chunk_index = chunk_index;
+      result.chunk_total = chunk_total;
+    }
+
+    const duration = Date.now() - startTime;
+    console.log(`[import-converted-data] Completed in ${duration}ms: inserted=${result.inserted}, updated=${result.updated}, skipped=${result.skipped}, errors=${result.errors.length}`);
 
     return new Response(
       JSON.stringify(result),
@@ -118,140 +150,178 @@ Deno.serve(async (req) => {
 
   } catch (err) {
     const error = err as Error;
-    console.error('Import error:', error);
+    const duration = Date.now() - startTime;
+    console.error(`[import-converted-data] Error after ${duration}ms:`, error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ 
+        error: error.message || 'Internal server error',
+        details: error.stack?.split('\n').slice(0, 3).join('\n')
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });
 
-async function importPatients(
+// ================== BATCH IMPORT FUNCTIONS ==================
+
+async function importPatientsBatch(
+  supabase: SupabaseClient,
+  clinicId: string,
+  data: Record<string, unknown>[]
+): Promise<ImportResult> {
+  const result: ImportResult = { success: true, inserted: 0, updated: 0, skipped: 0, errors: [] };
+  
+  // Load existing patients in one query
+  const cpfsToCheck = data
+    .map(row => normalizeCpf(row.cpf))
+    .filter((cpf): cpf is string => cpf !== null);
+  
+  const { data: existingPatients } = await supabase
+    .from('patients')
+    .select('id, cpf')
+    .eq('clinic_id', clinicId)
+    .in('cpf', cpfsToCheck);
+  
+  const existingCpfMap = new Map((existingPatients || []).map(p => [p.cpf, p.id]));
+  
+  const toInsert: Record<string, unknown>[] = [];
+  const toUpdate: { id: string; data: Record<string, unknown> }[] = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const cpf = normalizeCpf(row.cpf);
+    
+    if (!cpf) {
+      result.errors.push({ row: i + 1, message: 'CPF inválido ou ausente' });
+      continue;
+    }
+
+    const patientData: Record<string, unknown> = {
+      clinic_id: clinicId,
+      cpf,
+      name: String(row.name || '').trim().toUpperCase(),
+      email: row.email ? String(row.email).trim().toLowerCase() : null,
+      phone: row.phone ? normalizePhone(row.phone) : null,
+      birth_date: row.birth_date ? parseDate(row.birth_date) : null,
+      address: row.address ? String(row.address).trim() : null,
+      registration_number: row.registration_number ? String(row.registration_number).trim() : null,
+    };
+
+    const existingId = existingCpfMap.get(cpf);
+    if (existingId) {
+      toUpdate.push({ id: existingId, data: patientData });
+    } else {
+      toInsert.push(patientData);
+    }
+  }
+
+  // Batch insert
+  if (toInsert.length > 0) {
+    for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+      const batch = toInsert.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase.from('patients').insert(batch);
+      if (error) {
+        console.error('[importPatientsBatch] Insert error:', error);
+        result.errors.push({ row: 0, message: `Erro ao inserir lote: ${error.message}` });
+      } else {
+        result.inserted += batch.length;
+      }
+    }
+  }
+
+  // Batch update (one by one for now, but parallelized)
+  const updatePromises = toUpdate.map(async ({ id, data: patientData }) => {
+    const { error } = await supabase.from('patients').update(patientData).eq('id', id);
+    return error ? 'error' : 'success';
+  });
+  
+  const updateResults = await Promise.all(updatePromises);
+  result.updated = updateResults.filter(r => r === 'success').length;
+
+  return result;
+}
+
+async function importEmployersBatch(
   supabase: SupabaseClient,
   clinicId: string,
   data: Record<string, unknown>[]
 ): Promise<ImportResult> {
   const result: ImportResult = { success: true, inserted: 0, updated: 0, skipped: 0, errors: [] };
 
+  // Load existing employers in one query
+  const cnpjsToCheck = data
+    .map(row => normalizeCnpj(row.cnpj))
+    .filter((cnpj): cnpj is string => cnpj !== null);
+  
+  const { data: existingEmployers } = await supabase
+    .from('employers')
+    .select('id, cnpj')
+    .eq('clinic_id', clinicId)
+    .in('cnpj', cnpjsToCheck);
+  
+  const existingCnpjMap = new Map((existingEmployers || []).map(e => [e.cnpj, e.id]));
+  
+  const toInsert: Record<string, unknown>[] = [];
+  const toUpdate: { id: string; data: Record<string, unknown> }[] = [];
+
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
-    try {
-      const cpf = normalizeCpf(row.cpf);
-      if (!cpf) {
-        result.errors.push({ row: i + 1, message: 'CPF inválido ou ausente' });
-        continue;
-      }
+    const cnpj = normalizeCnpj(row.cnpj);
+    
+    if (!cnpj) {
+      result.errors.push({ row: i + 1, message: 'CNPJ inválido ou ausente', cnpj: String(row.cnpj || '') });
+      continue;
+    }
 
-      const patientData: Record<string, unknown> = {
-        clinic_id: clinicId,
-        cpf,
-        name: String(row.name || '').trim().toUpperCase(),
-        email: row.email ? String(row.email).trim().toLowerCase() : null,
-        phone: row.phone ? normalizePhone(row.phone) : null,
-        birth_date: row.birth_date ? parseDate(row.birth_date) : null,
-        address: row.address ? String(row.address).trim() : null,
-        registration_number: row.registration_number ? String(row.registration_number).trim() : null,
-      };
+    const employerData: Record<string, unknown> = {
+      clinic_id: clinicId,
+      cnpj,
+      name: String(row.name || '').trim().toUpperCase(),
+      trade_name: row.trade_name ? String(row.trade_name).trim() : null,
+      email: row.email ? String(row.email).trim().toLowerCase() : null,
+      phone: row.phone ? normalizePhone(row.phone) : null,
+      address: row.address ? String(row.address).trim() : null,
+      city: row.city ? String(row.city).trim() : null,
+      state: row.state ? String(row.state).trim().toUpperCase() : null,
+      registration_number: row.registration_number ? String(row.registration_number).trim() : null,
+      is_active: true,
+    };
 
-      // Check if patient exists
-      const { data: existing } = await supabase
-        .from('patients')
-        .select('id')
-        .eq('clinic_id', clinicId)
-        .eq('cpf', cpf)
-        .single();
-
-      if (existing) {
-        // Update existing
-        const { error } = await supabase
-          .from('patients')
-          .update(patientData)
-          .eq('id', (existing as { id: string }).id);
-
-        if (error) throw error;
-        result.updated++;
-      } else {
-        // Insert new
-        const { error } = await supabase
-          .from('patients')
-          .insert(patientData);
-
-        if (error) throw error;
-        result.inserted++;
-      }
-    } catch (err) {
-      const error = err as Error;
-      result.errors.push({ row: i + 1, message: error.message || 'Erro ao processar registro' });
+    const existingId = existingCnpjMap.get(cnpj);
+    if (existingId) {
+      toUpdate.push({ id: existingId, data: employerData });
+    } else {
+      toInsert.push(employerData);
     }
   }
+
+  // Batch insert
+  if (toInsert.length > 0) {
+    for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+      const batch = toInsert.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase.from('employers').insert(batch);
+      if (error) {
+        console.error('[importEmployersBatch] Insert error:', error);
+        result.errors.push({ row: 0, message: `Erro ao inserir lote: ${error.message}` });
+      } else {
+        result.inserted += batch.length;
+      }
+    }
+  }
+
+  // Batch update
+  const updatePromises = toUpdate.map(async ({ id, data: employerData }) => {
+    const { error } = await supabase.from('employers').update(employerData).eq('id', id);
+    return error ? 'error' : 'success';
+  });
+  
+  const updateResults = await Promise.all(updatePromises);
+  result.updated = updateResults.filter(r => r === 'success').length;
 
   return result;
 }
 
-async function importEmployers(
-  supabase: SupabaseClient,
-  clinicId: string,
-  data: Record<string, unknown>[]
-): Promise<ImportResult> {
-  const result: ImportResult = { success: true, inserted: 0, updated: 0, skipped: 0, errors: [] };
-
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-    try {
-      const cnpj = normalizeCnpj(row.cnpj);
-      if (!cnpj) {
-        result.errors.push({ row: i + 1, message: 'CNPJ inválido ou ausente' });
-        continue;
-      }
-
-      const employerData: Record<string, unknown> = {
-        clinic_id: clinicId,
-        cnpj,
-        name: String(row.name || '').trim().toUpperCase(),
-        trade_name: row.trade_name ? String(row.trade_name).trim() : null,
-        email: row.email ? String(row.email).trim().toLowerCase() : null,
-        phone: row.phone ? normalizePhone(row.phone) : null,
-        address: row.address ? String(row.address).trim() : null,
-        city: row.city ? String(row.city).trim() : null,
-        state: row.state ? String(row.state).trim().toUpperCase() : null,
-        registration_number: row.registration_number ? String(row.registration_number).trim() : null,
-        is_active: true,
-      };
-
-      // Check if employer exists
-      const { data: existing } = await supabase
-        .from('employers')
-        .select('id')
-        .eq('clinic_id', clinicId)
-        .eq('cnpj', cnpj)
-        .single();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('employers')
-          .update(employerData)
-          .eq('id', (existing as { id: string }).id);
-
-        if (error) throw error;
-        result.updated++;
-      } else {
-        const { error } = await supabase
-          .from('employers')
-          .insert(employerData);
-
-        if (error) throw error;
-        result.inserted++;
-      }
-    } catch (err) {
-      const error = err as Error;
-      result.errors.push({ row: i + 1, message: error.message || 'Erro ao processar registro' });
-    }
-  }
-
-  return result;
-}
-
-async function importContributions(
+async function importContributionsBatch(
   supabase: SupabaseClient,
   clinicId: string,
   data: Record<string, unknown>[],
@@ -259,54 +329,30 @@ async function importContributions(
 ): Promise<ImportResult> {
   const result: ImportResult = { success: true, inserted: 0, updated: 0, skipped: 0, errors: [] };
 
-  // Cache for contribution types (name -> id)
-  const typeCache = new Map<string, string>();
+  console.log(`[importContributionsBatch] Starting with ${data.length} records`);
 
-  // Helper function to get or create contribution type
-  async function getOrCreateContributionType(typeName: string): Promise<string> {
-    const normalizedName = typeName.trim().toUpperCase();
-    
-    // Check cache first
-    if (typeCache.has(normalizedName)) {
-      return typeCache.get(normalizedName)!;
-    }
+  // 1. Pre-load all employers for this clinic (CACHE)
+  const { data: allEmployers } = await supabase
+    .from('employers')
+    .select('id, cnpj')
+    .eq('clinic_id', clinicId);
+  
+  const employerMap = new Map((allEmployers || []).map(e => [e.cnpj, e.id]));
+  console.log(`[importContributionsBatch] Loaded ${employerMap.size} employers into cache`);
 
-    // Search for existing type (case-insensitive)
-    const { data: existingType } = await supabase
-      .from('contribution_types')
-      .select('id')
-      .eq('clinic_id', clinicId)
-      .ilike('name', normalizedName)
-      .limit(1)
-      .single();
+  // 2. Pre-load all contribution types for this clinic (CACHE)
+  const { data: allTypes } = await supabase
+    .from('contribution_types')
+    .select('id, name')
+    .eq('clinic_id', clinicId);
+  
+  const typeMap = new Map<string, string>();
+  (allTypes || []).forEach(t => {
+    typeMap.set(t.name.trim().toUpperCase(), t.id);
+  });
+  console.log(`[importContributionsBatch] Loaded ${typeMap.size} contribution types into cache`);
 
-    if (existingType) {
-      typeCache.set(normalizedName, (existingType as { id: string }).id);
-      return (existingType as { id: string }).id;
-    }
-
-    // Create new type
-    const { data: newType, error: createError } = await supabase
-      .from('contribution_types')
-      .insert({
-        clinic_id: clinicId,
-        name: typeName.trim(),
-        is_active: true,
-        default_value: 0,
-      })
-      .select('id')
-      .single();
-
-    if (createError) {
-      throw new Error(`Erro ao criar tipo de contribuição: ${createError.message}`);
-    }
-
-    typeCache.set(normalizedName, (newType as { id: string }).id);
-    console.log(`Created new contribution type: "${typeName}" for clinic ${clinicId}`);
-    return (newType as { id: string }).id;
-  }
-
-  // Determine status based on conversion type
+  // 3. Determine status based on conversion type
   const statusMap: Record<string, string> = {
     contributions_paid: 'paid',
     contributions_pending: 'pending',
@@ -315,46 +361,94 @@ async function importContributions(
   };
   const status = statusMap[conversionType] || 'pending';
 
+  // 4. Process all rows and build insert array
+  const toInsert: Record<string, unknown>[] = [];
+  const competenceKeysToInsert = new Set<string>();
+  const typesToCreate = new Set<string>();
+
+  // First pass: identify types to create
+  for (const row of data) {
+    const typeName = String(row.contribution_type || row.tipo || row.type || 'Contribuição Padrão').trim();
+    const normalizedTypeName = typeName.toUpperCase();
+    if (!typeMap.has(normalizedTypeName)) {
+      typesToCreate.add(typeName);
+    }
+  }
+
+  // Create missing types in batch
+  if (typesToCreate.size > 0) {
+    console.log(`[importContributionsBatch] Creating ${typesToCreate.size} new contribution types`);
+    for (const typeName of typesToCreate) {
+      const normalizedName = typeName.trim().toUpperCase();
+      // Double check it wasn't created by a concurrent request
+      if (!typeMap.has(normalizedName)) {
+        const { data: newType, error: createError } = await supabase
+          .from('contribution_types')
+          .insert({
+            clinic_id: clinicId,
+            name: typeName.trim(),
+            is_active: true,
+            default_value: 0,
+          })
+          .select('id')
+          .single();
+
+        if (createError) {
+          // Try to fetch if already exists (race condition)
+          const { data: existingType } = await supabase
+            .from('contribution_types')
+            .select('id')
+            .eq('clinic_id', clinicId)
+            .ilike('name', normalizedName)
+            .limit(1)
+            .single();
+          
+          if (existingType) {
+            typeMap.set(normalizedName, existingType.id);
+          } else {
+            console.error(`[importContributionsBatch] Failed to create type: ${typeName}`, createError);
+          }
+        } else if (newType) {
+          typeMap.set(normalizedName, newType.id);
+          console.log(`[importContributionsBatch] Created type: ${typeName} -> ${newType.id}`);
+        }
+      }
+    }
+  }
+
+  // Second pass: build contributions to insert
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
     try {
       const cnpj = normalizeCnpj(row.cnpj);
       if (!cnpj) {
-        result.errors.push({ row: i + 1, message: 'CNPJ inválido ou ausente' });
+        result.errors.push({ row: i + 1, message: 'CNPJ inválido ou ausente', cnpj: String(row.cnpj || '') });
         continue;
       }
 
-      // Find employer by CNPJ
-      const { data: employer } = await supabase
-        .from('employers')
-        .select('id')
-        .eq('clinic_id', clinicId)
-        .eq('cnpj', cnpj)
-        .single();
-
-      if (!employer) {
-        result.errors.push({ row: i + 1, message: `Empresa não encontrada: ${cnpj}` });
+      const employerId = employerMap.get(cnpj);
+      if (!employerId) {
+        result.errors.push({ row: i + 1, message: `Empresa não encontrada: ${formatCnpj(cnpj)}`, cnpj });
         continue;
       }
-
-      const employerId = (employer as { id: string }).id;
 
       const value = parseCurrency(row.value);
       if (value < 0) {
-        result.errors.push({ row: i + 1, message: 'Valor negativo não permitido' });
+        result.errors.push({ row: i + 1, message: 'Valor negativo não permitido', cnpj });
         continue;
       }
 
       const dueDate = parseDate(row.due_date) || new Date().toISOString().split('T')[0];
       const paymentDate = row.payment_date ? parseDate(row.payment_date) : null;
 
-      // Extract contribution type from spreadsheet or use default
-      const typeName = String(
-        row.contribution_type || row.tipo || row.type || 'Contribuição Padrão'
-      ).trim();
+      const typeName = String(row.contribution_type || row.tipo || row.type || 'Contribuição Padrão').trim();
+      const normalizedTypeName = typeName.toUpperCase();
+      const typeId = typeMap.get(normalizedTypeName);
 
-      // Get or create the contribution type
-      const typeId = await getOrCreateContributionType(typeName);
+      if (!typeId) {
+        result.errors.push({ row: i + 1, message: `Tipo de contribuição não encontrado: ${typeName}`, cnpj });
+        continue;
+      }
 
       // Parse competence
       let competenceYear = new Date().getFullYear();
@@ -374,7 +468,15 @@ async function importContributions(
 
       const activeCompetenceKey = `${employerId}-${typeId}-${competenceYear}-${competenceMonth}`;
 
-      const contributionData: Record<string, unknown> = {
+      // Check for duplicates within this batch
+      if (competenceKeysToInsert.has(activeCompetenceKey)) {
+        result.skipped++;
+        continue;
+      }
+
+      competenceKeysToInsert.add(activeCompetenceKey);
+
+      toInsert.push({
         clinic_id: clinicId,
         employer_id: employerId,
         contribution_type_id: typeId,
@@ -387,35 +489,49 @@ async function importContributions(
         paid_at: status === 'paid' ? (paymentDate || dueDate) : null,
         paid_value: status === 'paid' ? value : null,
         notes: row.notes || row.description ? String(row.notes || row.description).trim() : null,
-      };
-
-      // Check if contribution exists by active_competence_key
-      const { data: existing } = await supabase
-        .from('employer_contributions')
-        .select('id')
-        .eq('active_competence_key', activeCompetenceKey)
-        .single();
-
-      if (existing) {
-        result.skipped++;
-      } else {
-        const { error } = await supabase
-          .from('employer_contributions')
-          .insert(contributionData);
-
-        if (error) throw error;
-        result.inserted++;
-      }
+      });
     } catch (err) {
       const error = err as Error;
       result.errors.push({ row: i + 1, message: error.message || 'Erro ao processar registro' });
     }
   }
 
+  console.log(`[importContributionsBatch] Prepared ${toInsert.length} contributions for insert`);
+
+  // 5. Batch upsert with onConflict to handle duplicates
+  if (toInsert.length > 0) {
+    for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+      const batch = toInsert.slice(i, i + BATCH_SIZE);
+      const batchStart = Date.now();
+      
+      // Use upsert with ignoreDuplicates to skip existing records
+      const { data: insertedData, error } = await supabase
+        .from('employer_contributions')
+        .upsert(batch, { 
+          onConflict: 'active_competence_key',
+          ignoreDuplicates: true 
+        })
+        .select('id');
+
+      const batchDuration = Date.now() - batchStart;
+      
+      if (error) {
+        console.error(`[importContributionsBatch] Batch ${Math.floor(i / BATCH_SIZE) + 1} error (${batchDuration}ms):`, error);
+        result.errors.push({ row: 0, message: `Erro no lote ${Math.floor(i / BATCH_SIZE) + 1}: ${error.message}` });
+      } else {
+        const insertedCount = insertedData?.length || 0;
+        result.inserted += insertedCount;
+        result.skipped += batch.length - insertedCount;
+        console.log(`[importContributionsBatch] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(toInsert.length / BATCH_SIZE)}: inserted=${insertedCount}, skipped=${batch.length - insertedCount} (${batchDuration}ms)`);
+      }
+    }
+  }
+
   return result;
 }
 
-// Utility functions
+// ================== UTILITY FUNCTIONS ==================
+
 function normalizeCpf(value: unknown): string | null {
   if (!value) return null;
   const digits = String(value).replace(/\D/g, '');
@@ -426,6 +542,10 @@ function normalizeCnpj(value: unknown): string | null {
   if (!value) return null;
   const digits = String(value).replace(/\D/g, '');
   return digits.length === 14 ? digits : null;
+}
+
+function formatCnpj(cnpj: string): string {
+  return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
 }
 
 function normalizePhone(value: unknown): string | null {
