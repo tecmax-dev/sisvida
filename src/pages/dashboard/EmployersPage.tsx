@@ -80,6 +80,7 @@ import {
 import EmployerCategoryDialog from "@/components/employers/EmployerCategoryDialog";
 import { AutoCategorizeDialog } from "@/components/employers/AutoCategorizeDialog";
 import { SyncCnpjDialog } from "@/components/employers/SyncCnpjDialog";
+import { AccountingOfficeSelector } from "@/components/employers/AccountingOfficeSelector";
 import { useCepLookup } from "@/hooks/useCepLookup";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 
@@ -87,6 +88,15 @@ interface Category {
   id: string;
   name: string;
   color: string;
+}
+
+interface AccountingOffice {
+  id: string;
+  name: string;
+  trade_name: string | null;
+  cnpj: string | null;
+  email: string;
+  phone: string | null;
 }
 
 interface Employer {
@@ -111,6 +121,7 @@ interface Employer {
   registration_number?: string | null;
   category?: Category | null;
   patients?: { id: string; name: string }[];
+  linked_accounting_office_id?: string | null;
 }
 
 interface EmployerFormData {
@@ -128,6 +139,7 @@ interface EmployerFormData {
   notes: string;
   is_active: boolean;
   category_id: string;
+  accounting_office_id: string | null;
 }
 
 const initialFormData: EmployerFormData = {
@@ -145,12 +157,13 @@ const initialFormData: EmployerFormData = {
   notes: "",
   is_active: true,
   category_id: "",
+  accounting_office_id: null,
 };
 
 const ITEMS_PER_PAGE = 15;
 
 export default function EmployersPage() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, session } = useAuth();
   const navigate = useNavigate();
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -270,6 +283,23 @@ export default function EmployersPage() {
     }
   };
 
+  const loadLinkedAccountingOffice = async (employerId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("accounting_office_employers")
+        .select("accounting_office_id")
+        .eq("employer_id", employerId)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        setFormData(prev => ({ ...prev, accounting_office_id: data.accounting_office_id }));
+      }
+    } catch (error) {
+      console.error("Error loading linked accounting office:", error);
+    }
+  };
+
   const formatCNPJ = (value: string) => {
     const cleaned = value.replace(/\D/g, "").slice(0, 14);
     return cleaned
@@ -304,7 +334,10 @@ export default function EmployersPage() {
         notes: employer.notes || "",
         is_active: employer.is_active,
         category_id: employer.category_id || "",
+        accounting_office_id: employer.linked_accounting_office_id || null,
       });
+      // Load linked accounting office
+      loadLinkedAccountingOffice(employer.id);
     } else if (employer?.id.startsWith("virtual-")) {
       setSelectedEmployer(null);
       setFormData({
@@ -360,6 +393,8 @@ export default function EmployersPage() {
         category_id: formData.category_id || null,
       };
 
+      let savedEmployerId: string | null = null;
+
       if (selectedEmployer) {
         const { error } = await supabase
           .from("employers")
@@ -367,11 +402,13 @@ export default function EmployersPage() {
           .eq("id", selectedEmployer.id);
         
         if (error) throw error;
-        toast.success("Empresa atualizada com sucesso");
+        savedEmployerId = selectedEmployer.id;
       } else {
-        const { error } = await supabase
+        const { data: newEmployer, error } = await supabase
           .from("employers")
-          .insert(payload);
+          .insert(payload)
+          .select("id")
+          .single();
         
         if (error) {
           if (error.message.includes("unique")) {
@@ -380,9 +417,30 @@ export default function EmployersPage() {
           }
           throw error;
         }
-        toast.success("Empresa cadastrada com sucesso");
+        savedEmployerId = newEmployer?.id || null;
       }
 
+      // Manage accounting office link
+      if (savedEmployerId) {
+        // Remove existing link
+        await supabase
+          .from("accounting_office_employers")
+          .delete()
+          .eq("employer_id", savedEmployerId);
+
+        // Create new link if selected
+        if (formData.accounting_office_id) {
+          await supabase
+            .from("accounting_office_employers")
+            .insert({
+              accounting_office_id: formData.accounting_office_id,
+              employer_id: savedEmployerId,
+              created_by: session?.user.id,
+            });
+        }
+      }
+
+      toast.success(selectedEmployer ? "Empresa atualizada com sucesso" : "Empresa cadastrada com sucesso");
       setDialogOpen(false);
       fetchEmployers();
     } catch (error) {
@@ -1125,6 +1183,24 @@ export default function EmployersPage() {
                 </Select>
               </div>
             )}
+
+            {/* Accounting Office Selector */}
+            <div className="border rounded-lg p-4 bg-muted/20">
+              <Label className="text-sm font-medium flex items-center gap-2 mb-3">
+                <Building2 className="h-4 w-4" />
+                Escritório de Contabilidade
+              </Label>
+              {currentClinic && (
+                <AccountingOfficeSelector
+                  clinicId={currentClinic.id}
+                  employerId={selectedEmployer?.id || null}
+                  currentOfficeId={formData.accounting_office_id}
+                  onOfficeChange={(officeId) => 
+                    setFormData({ ...formData, accounting_office_id: officeId })
+                  }
+                />
+              )}
+            </div>
             
             <div>
               <Label htmlFor="notes">Observações</Label>
