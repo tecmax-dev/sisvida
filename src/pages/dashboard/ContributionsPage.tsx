@@ -590,6 +590,7 @@ export default function ContributionsPage() {
             employers={employers}
             contributionTypes={contributionTypes}
             clinicName={currentClinic?.name}
+            clinicLogo={currentClinic?.logo_url || undefined}
             yearFilter={yearFilter}
             onYearFilterChange={setYearFilter}
           />
