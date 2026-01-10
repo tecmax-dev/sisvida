@@ -77,7 +77,12 @@ Deno.serve(async (req) => {
     const body: ImportRequest = await req.json();
     const { clinic_id, conversion_type, data, chunk_index, chunk_total, run_id, auto_create_employers } = body;
 
-    console.log(`[import-converted-data] auto_create_employers=${auto_create_employers ?? false}`);
+    // For contribution imports, default to auto_create_employers=true if not explicitly set
+    const shouldAutoCreate = auto_create_employers ?? (
+      conversion_type.startsWith('contributions') || conversion_type === 'lytex_invoices'
+    );
+
+    console.log(`[import-converted-data] auto_create_employers=${shouldAutoCreate} (raw: ${auto_create_employers})`);
 
     if (!clinic_id || !conversion_type || !data?.length) {
       return new Response(
@@ -129,7 +134,7 @@ Deno.serve(async (req) => {
       case 'contributions_pending':
       case 'contributions_cancelled':
       case 'lytex_invoices':
-        result = await importContributionsBatch(supabase, clinic_id, data, conversion_type, auto_create_employers ?? false);
+        result = await importContributionsBatch(supabase, clinic_id, data, conversion_type, shouldAutoCreate);
         break;
       default:
         return new Response(

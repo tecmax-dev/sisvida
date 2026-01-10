@@ -114,7 +114,9 @@ export function ResultStep({
   const [aggregatedResult, setAggregatedResult] = useState<AggregatedResult | null>(null);
   const [canResume, setCanResume] = useState(false);
   const [failedChunkIndex, setFailedChunkIndex] = useState<number | null>(null);
-  const [autoCreateEmployers, setAutoCreateEmployers] = useState(false);
+  // Default to true for contribution types to auto-create missing employers
+  const shouldAutoCreate = conversionType.startsWith('contributions');
+  const [autoCreateEmployers, setAutoCreateEmployers] = useState(shouldAutoCreate);
   
   // Cancel control
   const cancelRequestedRef = useRef(false);
