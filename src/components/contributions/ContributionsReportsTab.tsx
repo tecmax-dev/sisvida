@@ -19,20 +19,40 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Download,
   FileSpreadsheet,
+  FileText,
   Building2,
   Calendar,
   TrendingUp,
   Filter,
+  ChevronDown,
+  Eye,
+  Printer,
+  AlertTriangle,
+  BarChart3,
+  List,
+  FileSearch,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { EmployerSearchCombobox } from "./EmployerSearchCombobox";
+import { generateContributionsReport } from "@/lib/contributions-report-pdf";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 
 interface Employer {
   id: string;
   name: string;
   cnpj: string;
+  trade_name?: string | null;
   registration_number?: string | null;
 }
 
@@ -52,6 +72,7 @@ interface Contribution {
   status: string;
   paid_at: string | null;
   paid_value: number | null;
+  payment_method?: string | null;
   employers?: Employer;
   contribution_types?: ContributionType;
 }
@@ -60,6 +81,7 @@ interface ContributionsReportsTabProps {
   contributions: Contribution[];
   employers: Employer[];
   contributionTypes: ContributionType[];
+  clinicName?: string;
 }
 
 const MONTHS = [
@@ -67,21 +89,31 @@ const MONTHS = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
 
+type ReportType = 'general' | 'by-employer' | 'synthetic' | 'analytical' | 'defaulting';
+
+const REPORT_TYPES: { value: ReportType; label: string; icon: React.ReactNode; description: string }[] = [
+  { value: 'general', label: 'Relatório Geral', icon: <BarChart3 className="h-4 w-4" />, description: 'Visão consolidada de todas as empresas' },
+  { value: 'by-employer', label: 'Por Empresa', icon: <Building2 className="h-4 w-4" />, description: 'Detalhado por empresa selecionada' },
+  { value: 'synthetic', label: 'Sintético', icon: <TrendingUp className="h-4 w-4" />, description: 'Apenas totais consolidados' },
+  { value: 'analytical', label: 'Analítico', icon: <List className="h-4 w-4" />, description: 'Listagem completa para auditoria' },
+  { value: 'defaulting', label: 'Inadimplência', icon: <AlertTriangle className="h-4 w-4" />, description: 'Apenas pendentes e vencidos' },
+];
+
 export default function ContributionsReportsTab({
   contributions,
   employers,
   contributionTypes,
+  clinicName,
 }: ContributionsReportsTabProps) {
-  const [reportType, setReportType] = useState<string>("by-employer");
+  const { session } = useAuth();
+  const [reportType, setReportType] = useState<ReportType>("general");
   const [yearFilter, setYearFilter] = useState<number>(() => {
     const now = new Date();
     return now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
   });
-  const [monthFilter, setMonthFilter] = useState<string>(() => {
-    const currentMonth = new Date().getMonth(); // 0-11
-    return currentMonth === 0 ? "12" : String(currentMonth); // Mês anterior (1-12)
-  });
+  const [monthFilter, setMonthFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
+  const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -90,14 +122,21 @@ export default function ContributionsReportsTab({
     }).format(cents / 100);
   };
 
+  const formatCNPJ = (cnpj: string) => {
+    if (!cnpj) return "-";
+    const cleaned = cnpj.replace(/\D/g, "");
+    return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  };
+
   const filteredContributions = useMemo(() => {
     return contributions.filter((c) => {
       const matchesYear = c.competence_year === yearFilter;
       const matchesMonth = monthFilter === "all" || c.competence_month === parseInt(monthFilter);
       const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
-      return matchesYear && matchesMonth && matchesStatus;
+      const matchesEmployer = !selectedEmployer || c.employer_id === selectedEmployer.id;
+      return matchesYear && matchesMonth && matchesStatus && matchesEmployer;
     });
-  }, [contributions, yearFilter, monthFilter, statusFilter]);
+  }, [contributions, yearFilter, monthFilter, statusFilter, selectedEmployer]);
 
   // Report by employer
   const byEmployerReport = useMemo(() => {
@@ -139,64 +178,6 @@ export default function ContributionsReportsTab({
     return Array.from(data.values()).sort((a, b) => b.total - a.total);
   }, [filteredContributions]);
 
-  // Report by month
-  const byMonthReport = useMemo(() => {
-    return MONTHS.map((month, index) => {
-      const monthContribs = filteredContributions.filter(
-        (c) => c.competence_month === index + 1
-      );
-
-      const total = monthContribs.reduce((acc, c) => acc + c.value, 0);
-      const paid = monthContribs
-        .filter((c) => c.status === "paid")
-        .reduce((acc, c) => acc + (c.paid_value || c.value), 0);
-      const pending = monthContribs
-        .filter((c) => c.status === "pending" || c.status === "overdue")
-        .reduce((acc, c) => acc + c.value, 0);
-
-      return {
-        month,
-        monthIndex: index + 1,
-        count: monthContribs.length,
-        total,
-        paid,
-        pending,
-      };
-    }).filter((m) => m.count > 0);
-  }, [filteredContributions]);
-
-  // Report by type
-  const byTypeReport = useMemo(() => {
-    const data = new Map<string, {
-      type: ContributionType;
-      total: number;
-      paid: number;
-      count: number;
-    }>();
-
-    filteredContributions.forEach((c) => {
-      if (!c.contribution_types) return;
-      
-      const existing = data.get(c.contribution_type_id) || {
-        type: c.contribution_types,
-        total: 0,
-        paid: 0,
-        count: 0,
-      };
-
-      existing.total += c.value;
-      existing.count += 1;
-      
-      if (c.status === "paid") {
-        existing.paid += c.paid_value || c.value;
-      }
-
-      data.set(c.contribution_type_id, existing);
-    });
-
-    return Array.from(data.values()).sort((a, b) => b.total - a.total);
-  }, [filteredContributions]);
-
   // Summary totals
   const summary = useMemo(() => {
     const total = filteredContributions.reduce((acc, c) => acc + c.value, 0);
@@ -213,57 +194,109 @@ export default function ContributionsReportsTab({
     return { total, paid, pending, overdue, count: filteredContributions.length };
   }, [filteredContributions]);
 
+  const periodLabel = useMemo(() => {
+    const monthLabel = monthFilter === "all" ? "Todos os meses" : MONTHS[parseInt(monthFilter) - 1];
+    return `${monthLabel} de ${yearFilter}`;
+  }, [yearFilter, monthFilter]);
+
   const handleExportCSV = () => {
     let csvContent = "";
     let filename = "";
 
-    if (reportType === "by-employer") {
-      csvContent = "Empresa,CNPJ,Qtd,Total,Pago,Pendente,Vencido\n";
-      byEmployerReport.forEach((row) => {
-        csvContent += `"${row.employer.name}","${row.employer.cnpj}",${row.count},${row.total / 100},${row.paid / 100},${row.pending / 100},${row.overdue / 100}\n`;
-      });
-      filename = `contribuicoes-por-empresa-${yearFilter}.csv`;
-    } else if (reportType === "by-month") {
-      csvContent = "Mês,Qtd,Total,Pago,Pendente\n";
-      byMonthReport.forEach((row) => {
-        csvContent += `"${row.month}",${row.count},${row.total / 100},${row.paid / 100},${row.pending / 100}\n`;
-      });
-      filename = `contribuicoes-por-mes-${yearFilter}.csv`;
-    } else {
-      csvContent = "Tipo,Qtd,Total,Pago\n";
-      byTypeReport.forEach((row) => {
-        csvContent += `"${row.type.name}",${row.count},${row.total / 100},${row.paid / 100}\n`;
-      });
-      filename = `contribuicoes-por-tipo-${yearFilter}.csv`;
-    }
+    csvContent = "Empresa,CNPJ,Qtd,Total,Pago,Pendente,Vencido\n";
+    byEmployerReport.forEach((row) => {
+      csvContent += `"${row.employer.name}","${row.employer.cnpj}",${row.count},${row.total / 100},${row.paid / 100},${row.pending / 100},${row.overdue / 100}\n`;
+    });
+    filename = `contribuicoes-${yearFilter}${monthFilter !== "all" ? `-${monthFilter.padStart(2, "0")}` : ""}.csv`;
 
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = filename;
     link.click();
+    toast.success("CSV exportado com sucesso!");
   };
+
+  const handleExportPDF = () => {
+    if (filteredContributions.length === 0) {
+      toast.error("Nenhum dado para exportar");
+      return;
+    }
+
+    const reportData = {
+      contributions: filteredContributions,
+      summary,
+      byEmployerReport,
+    };
+
+    const config = {
+      clinicName: clinicName || "Sistema de Contribuições",
+      userName: session?.user?.email || "Usuário",
+      period: periodLabel,
+      selectedEmployer: selectedEmployer,
+    };
+
+    try {
+      generateContributionsReport(reportType, reportData, config);
+      toast.success("PDF gerado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao gerar PDF:", error);
+      toast.error("Erro ao gerar PDF");
+    }
+  };
+
+  const currentReportType = REPORT_TYPES.find(r => r.value === reportType);
 
   return (
     <div className="space-y-6">
-      {/* Filters */}
-      <Card>
+      {/* Search and Filters Card */}
+      <Card className="border-2 border-amber-200 bg-gradient-to-r from-amber-50/50 to-background">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Filter className="h-4 w-4" />
+          <CardTitle className="text-lg flex items-center gap-2">
+            <FileSearch className="h-5 w-5 text-amber-600" />
             Filtros do Relatório
           </CardTitle>
+          <CardDescription>
+            Selecione os filtros para gerar o relatório desejado
+          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Employer Search - Prominent */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <EmployerSearchCombobox
+                employers={employers}
+                value={selectedEmployer?.id || null}
+                onSelect={setSelectedEmployer}
+                placeholder="Buscar empresa (Razão Social, Nome Fantasia, CNPJ)..."
+              />
+            </div>
+          </div>
+
+          {/* Filters Row */}
           <div className="flex flex-wrap items-center gap-3">
-            <Select value={reportType} onValueChange={setReportType}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Tipo de relatório" />
+            {/* Report Type Selector */}
+            <Select value={reportType} onValueChange={(v) => setReportType(v as ReportType)}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue>
+                  <div className="flex items-center gap-2">
+                    {currentReportType?.icon}
+                    <span>{currentReportType?.label}</span>
+                  </div>
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="by-employer">Por Empresa</SelectItem>
-                <SelectItem value="by-month">Por Mês</SelectItem>
-                <SelectItem value="by-type">Por Tipo</SelectItem>
+                {REPORT_TYPES.map((type) => (
+                  <SelectItem key={type.value} value={type.value}>
+                    <div className="flex items-center gap-2">
+                      {type.icon}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{type.label}</span>
+                        <span className="text-xs text-muted-foreground">{type.description}</span>
+                      </div>
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -291,7 +324,7 @@ export default function ContributionsReportsTab({
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-[160px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -304,39 +337,69 @@ export default function ContributionsReportsTab({
               </SelectContent>
             </Select>
 
-            <Button variant="outline" onClick={handleExportCSV} className="ml-auto">
-              <Download className="h-4 w-4 mr-2" />
-              Exportar CSV
-            </Button>
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="default" className="ml-auto gap-2 bg-emerald-600 hover:bg-emerald-700">
+                  <Download className="h-4 w-4" />
+                  Exportar
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={handleExportPDF} className="cursor-pointer">
+                  <FileText className="h-4 w-4 mr-2 text-rose-600" />
+                  Exportar PDF
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleExportCSV} className="cursor-pointer">
+                  <FileSpreadsheet className="h-4 w-4 mr-2 text-emerald-600" />
+                  Exportar CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
+
+          {/* Selected Employer Badge */}
+          {selectedEmployer && (
+            <div className="flex items-center gap-2 p-2 bg-amber-100 rounded-lg">
+              <Building2 className="h-4 w-4 text-amber-700" />
+              <span className="text-sm font-medium text-amber-800">
+                Filtrando por: {selectedEmployer.name}
+              </span>
+              <Badge variant="outline" className="font-mono text-xs bg-white">
+                {formatCNPJ(selectedEmployer.cnpj)}
+              </Badge>
+            </div>
+          )}
         </CardContent>
       </Card>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="border-l-4 border-l-slate-600">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Total Geral</p>
-            <p className="text-xl font-bold">{formatCurrency(summary.total)}</p>
+            <p className="text-2xl font-bold">{formatCurrency(summary.total)}</p>
             <p className="text-xs text-muted-foreground">{summary.count} contribuições</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-emerald-500">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Recebido</p>
-            <p className="text-xl font-bold text-emerald-600">{formatCurrency(summary.paid)}</p>
+            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(summary.paid)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-amber-500">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Pendente</p>
-            <p className="text-xl font-bold text-amber-600">{formatCurrency(summary.pending)}</p>
+            <p className="text-2xl font-bold text-amber-600">{formatCurrency(summary.pending)}</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-l-4 border-l-rose-500">
           <CardContent className="p-4">
             <p className="text-xs text-muted-foreground">Vencido</p>
-            <p className="text-xl font-bold text-rose-600">{formatCurrency(summary.overdue)}</p>
+            <p className="text-2xl font-bold text-rose-600">{formatCurrency(summary.overdue)}</p>
           </CardContent>
         </Card>
       </div>
@@ -346,131 +409,67 @@ export default function ContributionsReportsTab({
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <FileSpreadsheet className="h-4 w-4" />
-            {reportType === "by-employer" && "Relatório por Empresa"}
-            {reportType === "by-month" && "Relatório por Mês"}
-            {reportType === "by-type" && "Relatório por Tipo"}
+            {currentReportType?.label || "Relatório"}
           </CardTitle>
           <CardDescription>
             {filteredContributions.length} contribuições no período selecionado
+            {selectedEmployer && ` • Empresa: ${selectedEmployer.name}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            {reportType === "by-employer" && (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Empresa</TableHead>
-                    <TableHead className="text-center">Qtd</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Pago</TableHead>
-                    <TableHead className="text-right">Pendente</TableHead>
-                    <TableHead className="text-right">Vencido</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {byEmployerReport.length > 0 ? (
-                    byEmployerReport.map((row) => (
-                      <TableRow key={row.employer.id}>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{row.employer.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {row.employer.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}
-                            </p>
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50">
+                  <TableHead>Empresa</TableHead>
+                  <TableHead className="text-center">Qtd</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Pago</TableHead>
+                  <TableHead className="text-right">Pendente</TableHead>
+                  <TableHead className="text-right">Vencido</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {byEmployerReport.length > 0 ? (
+                  byEmployerReport.map((row) => (
+                    <TableRow key={row.employer.id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{row.employer.name}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                              {formatCNPJ(row.employer.cnpj)}
+                            </span>
+                            {row.employer.registration_number && (
+                              <span className="text-xs font-mono px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800">
+                                Mat: {row.employer.registration_number}
+                              </span>
+                            )}
                           </div>
-                        </TableCell>
-                        <TableCell className="text-center">{row.count}</TableCell>
-                        <TableCell className="text-right font-medium">{formatCurrency(row.total)}</TableCell>
-                        <TableCell className="text-right text-emerald-600">{formatCurrency(row.paid)}</TableCell>
-                        <TableCell className="text-right text-amber-600">{formatCurrency(row.pending)}</TableCell>
-                        <TableCell className="text-right text-rose-600">{formatCurrency(row.overdue)}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        Nenhum dado encontrado para o período selecionado
+                        </div>
                       </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary">{row.count}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-medium">{formatCurrency(row.total)}</TableCell>
+                      <TableCell className="text-right text-emerald-600 font-medium">{formatCurrency(row.paid)}</TableCell>
+                      <TableCell className="text-right text-amber-600 font-medium">{formatCurrency(row.pending)}</TableCell>
+                      <TableCell className="text-right text-rose-600 font-medium">{formatCurrency(row.overdue)}</TableCell>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-
-            {reportType === "by-month" && (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Mês</TableHead>
-                    <TableHead className="text-center">Qtd</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Pago</TableHead>
-                    <TableHead className="text-right">Pendente</TableHead>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12">
+                      <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                        <FileSearch className="h-8 w-8" />
+                        <p>Nenhum dado encontrado para o período selecionado</p>
+                        <p className="text-sm">Tente ajustar os filtros acima</p>
+                      </div>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {byMonthReport.length > 0 ? (
-                    byMonthReport.map((row) => (
-                      <TableRow key={row.monthIndex}>
-                        <TableCell className="font-medium">{row.month}/{yearFilter}</TableCell>
-                        <TableCell className="text-center">{row.count}</TableCell>
-                        <TableCell className="text-right font-medium">{formatCurrency(row.total)}</TableCell>
-                        <TableCell className="text-right text-emerald-600">{formatCurrency(row.paid)}</TableCell>
-                        <TableCell className="text-right text-amber-600">{formatCurrency(row.pending)}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        Nenhum dado encontrado para o período selecionado
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-
-            {reportType === "by-type" && (
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Tipo de Contribuição</TableHead>
-                    <TableHead className="text-center">Qtd</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
-                    <TableHead className="text-right">Pago</TableHead>
-                    <TableHead className="text-right">% do Total</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {byTypeReport.length > 0 ? (
-                    byTypeReport.map((row) => {
-                      const percentage = summary.total > 0 
-                        ? Math.round((row.total / summary.total) * 100) 
-                        : 0;
-                      
-                      return (
-                        <TableRow key={row.type.id}>
-                          <TableCell className="font-medium">{row.type.name}</TableCell>
-                          <TableCell className="text-center">{row.count}</TableCell>
-                          <TableCell className="text-right font-medium">{formatCurrency(row.total)}</TableCell>
-                          <TableCell className="text-right text-emerald-600">{formatCurrency(row.paid)}</TableCell>
-                          <TableCell className="text-right">
-                            <Badge variant="secondary">{percentage}%</Badge>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        Nenhum dado encontrado para o período selecionado
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>
