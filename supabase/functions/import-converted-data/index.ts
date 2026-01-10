@@ -259,23 +259,52 @@ async function importContributions(
 ): Promise<ImportResult> {
   const result: ImportResult = { success: true, inserted: 0, updated: 0, skipped: 0, errors: [] };
 
-  // Get default contribution type
-  const { data: defaultType } = await supabase
-    .from('contribution_types')
-    .select('id')
-    .eq('clinic_id', clinicId)
-    .eq('is_active', true)
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .single();
+  // Cache for contribution types (name -> id)
+  const typeCache = new Map<string, string>();
 
-  if (!defaultType) {
-    result.errors.push({ row: 0, message: 'Nenhum tipo de contribuição encontrado para esta clínica' });
-    result.success = false;
-    return result;
+  // Helper function to get or create contribution type
+  async function getOrCreateContributionType(typeName: string): Promise<string> {
+    const normalizedName = typeName.trim().toUpperCase();
+    
+    // Check cache first
+    if (typeCache.has(normalizedName)) {
+      return typeCache.get(normalizedName)!;
+    }
+
+    // Search for existing type (case-insensitive)
+    const { data: existingType } = await supabase
+      .from('contribution_types')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .ilike('name', normalizedName)
+      .limit(1)
+      .single();
+
+    if (existingType) {
+      typeCache.set(normalizedName, (existingType as { id: string }).id);
+      return (existingType as { id: string }).id;
+    }
+
+    // Create new type
+    const { data: newType, error: createError } = await supabase
+      .from('contribution_types')
+      .insert({
+        clinic_id: clinicId,
+        name: typeName.trim(),
+        is_active: true,
+        default_value: 0,
+      })
+      .select('id')
+      .single();
+
+    if (createError) {
+      throw new Error(`Erro ao criar tipo de contribuição: ${createError.message}`);
+    }
+
+    typeCache.set(normalizedName, (newType as { id: string }).id);
+    console.log(`Created new contribution type: "${typeName}" for clinic ${clinicId}`);
+    return (newType as { id: string }).id;
   }
-
-  const typeId = (defaultType as { id: string }).id;
 
   // Determine status based on conversion type
   const statusMap: Record<string, string> = {
@@ -319,6 +348,14 @@ async function importContributions(
       const dueDate = parseDate(row.due_date) || new Date().toISOString().split('T')[0];
       const paymentDate = row.payment_date ? parseDate(row.payment_date) : null;
 
+      // Extract contribution type from spreadsheet or use default
+      const typeName = String(
+        row.contribution_type || row.tipo || row.type || 'Contribuição Padrão'
+      ).trim();
+
+      // Get or create the contribution type
+      const typeId = await getOrCreateContributionType(typeName);
+
       // Parse competence
       let competenceYear = new Date().getFullYear();
       let competenceMonth = new Date().getMonth() + 1;
@@ -349,7 +386,7 @@ async function importContributions(
         active_competence_key: activeCompetenceKey,
         paid_at: status === 'paid' ? (paymentDate || dueDate) : null,
         paid_value: status === 'paid' ? value : null,
-        notes: row.notes ? String(row.notes).trim() : null,
+        notes: row.notes || row.description ? String(row.notes || row.description).trim() : null,
       };
 
       // Check if contribution exists by active_competence_key
