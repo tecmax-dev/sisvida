@@ -1,0 +1,451 @@
+================================================================================
+           DOCUMENTAÇÃO DE IMPORTAÇÃO - BACKUP ECLINI v1.0
+================================================================================
+
+                    SINDICATO COMERCIÁRIOS - BACKUP COMPLETO
+                    
+================================================================================
+
+ÍNDICE
+------
+1. PRÉ-REQUISITOS
+2. ESTRUTURA DO ARQUIVO JSON
+3. ORDEM DE IMPORTAÇÃO (IMPORT_ORDER)
+4. MAPEAMENTO DE FOREIGN KEYS (FK_MAPPINGS)
+5. CAMPOS IGNORADOS NA IMPORTAÇÃO
+6. CAMPOS OBRIGATÓRIOS POR TABELA
+7. PASSO A PASSO DA IMPORTAÇÃO
+8. TROUBLESHOOTING
+
+================================================================================
+1. PRÉ-REQUISITOS
+================================================================================
+
+Antes de iniciar a importação, certifique-se de que:
+
+[x] Projeto Lovable com Cloud habilitado
+[x] Usuário Super Admin configurado na tabela super_admins
+[x] Todas as tabelas do schema público criadas (mesma estrutura)
+[x] Edge Function clinic-json-import disponível
+[x] Arquivo de backup JSON válido (backup_sindicato_comerciarios_v1.0.json)
+
+IMPORTANTE: A clínica de DESTINO deve existir previamente. Você pode:
+- Criar uma nova clínica manualmente antes da importação
+- Ou usar o ID de uma clínica existente vazia
+
+================================================================================
+2. ESTRUTURA DO ARQUIVO JSON
+================================================================================
+
+O arquivo de backup segue a especificação v1.0:
+
+{
+  "version": "1.0",
+  "clinic_name": "Nome da Clínica Original",
+  "clinic_id": "uuid-original",
+  "backup_date": "2026-01-10T00:00:00.000Z",
+  "record_counts": {
+    "patients": 5467,
+    "employers": 729,
+    ...
+  },
+  "errors": [],
+  "data": {
+    "clinics": [...],
+    "specialties": [...],
+    ...42 tabelas...
+  }
+}
+
+CAMPOS DO JSON:
+- version: Versão do formato de backup (1.0)
+- clinic_name: Nome da clínica exportada
+- clinic_id: UUID original da clínica (será substituído na importação)
+- backup_date: Data/hora da geração do backup
+- record_counts: Contagem de registros por tabela
+- errors: Erros ocorridos durante exportação (deve estar vazio)
+- data: Objeto contendo arrays de registros por tabela
+
+================================================================================
+3. ORDEM DE IMPORTAÇÃO (IMPORT_ORDER)
+================================================================================
+
+As tabelas DEVEM ser importadas na ordem abaixo para respeitar as foreign keys:
+
+FASE 1 - CATÁLOGOS BASE (sem dependências)
+------------------------------------------
+01. specialties
+02. employer_categories
+03. insurance_plans
+04. contribution_types
+05. procedures
+06. patient_segments
+07. financial_categories
+
+FASE 2 - CONFIGURAÇÕES
+----------------------
+08. access_groups
+09. document_settings
+10. anamnese_templates
+11. clinic_holidays
+12. cash_registers
+
+FASE 3 - ENTIDADES PRINCIPAIS
+-----------------------------
+13. accounting_offices
+14. employers
+15. professionals
+16. patients
+
+FASE 4 - ENTIDADES DEPENDENTES
+------------------------------
+17. patient_dependents
+18. patient_cards
+19. professional_schedule_exceptions
+20. accounting_office_employers
+21. user_roles
+22. waiting_list
+
+FASE 5 - TRANSAÇÕES
+-------------------
+23. appointments
+24. medical_records
+25. anamnesis
+26. employer_contributions
+27. debt_negotiations
+
+FASE 6 - DADOS ANINHADOS
+------------------------
+28. anamnese_questions
+29. anamnese_question_options
+30. anamnese_responses
+31. anamnese_answers
+32. financial_transactions
+33. cash_transfers
+34. access_group_permissions
+35. negotiation_items
+36. negotiation_installments
+
+FASE 7 - LOGS E AUTOMAÇÃO
+-------------------------
+37. whatsapp_booking_sessions
+38. campaigns
+39. automation_flows
+40. message_logs
+41. birthday_message_logs
+42. card_expiry_notifications
+
+================================================================================
+4. MAPEAMENTO DE FOREIGN KEYS (FK_MAPPINGS)
+================================================================================
+
+Cada tabela possui referências que devem ser remapeadas durante a importação.
+O sistema de importação cria um mapa oldId -> newId para cada entidade.
+
+TABELA: patients
+----------------
+- clinic_id -> ID da clínica de destino (fixo)
+- insurance_plan_id -> insurance_plans.id
+- employer_id -> employers.id
+- specialty_id -> specialties.id
+
+TABELA: patient_dependents
+--------------------------
+- clinic_id -> ID da clínica de destino
+- patient_id -> patients.id (remapeado)
+
+TABELA: patient_cards
+---------------------
+- clinic_id -> ID da clínica de destino
+- patient_id -> patients.id (remapeado)
+- dependent_id -> patient_dependents.id (remapeado, nullable)
+
+TABELA: employers
+-----------------
+- clinic_id -> ID da clínica de destino
+- category_id -> employer_categories.id (remapeado)
+
+TABELA: professionals
+---------------------
+- clinic_id -> ID da clínica de destino
+- specialty_id -> specialties.id (remapeado, nullable)
+- user_id -> NULL (usuários não são migrados)
+
+TABELA: appointments
+--------------------
+- clinic_id -> ID da clínica de destino
+- patient_id -> patients.id (remapeado)
+- professional_id -> professionals.id (remapeado)
+- procedure_id -> procedures.id (remapeado, nullable)
+- dependent_id -> patient_dependents.id (remapeado, nullable)
+
+TABELA: medical_records
+-----------------------
+- clinic_id -> ID da clínica de destino
+- patient_id -> patients.id (remapeado)
+- professional_id -> professionals.id (remapeado)
+- appointment_id -> appointments.id (remapeado, nullable)
+- dependent_id -> patient_dependents.id (remapeado, nullable)
+
+TABELA: employer_contributions
+------------------------------
+- clinic_id -> ID da clínica de destino
+- employer_id -> employers.id (remapeado)
+- contribution_type_id -> contribution_types.id (remapeado)
+
+TABELA: anamnese_templates
+--------------------------
+- clinic_id -> ID da clínica de destino
+
+TABELA: anamnese_questions
+--------------------------
+- template_id -> anamnese_templates.id (remapeado)
+
+TABELA: anamnese_question_options
+---------------------------------
+- question_id -> anamnese_questions.id (remapeado)
+
+TABELA: anamnese_responses
+--------------------------
+- clinic_id -> ID da clínica de destino
+- patient_id -> patients.id (remapeado)
+- template_id -> anamnese_templates.id (remapeado)
+- professional_id -> professionals.id (remapeado, nullable)
+
+TABELA: anamnese_answers
+------------------------
+- response_id -> anamnese_responses.id (remapeado)
+- question_id -> anamnese_questions.id (remapeado)
+
+TABELA: access_groups
+---------------------
+- clinic_id -> ID da clínica de destino
+
+TABELA: access_group_permissions
+--------------------------------
+- access_group_id -> access_groups.id (remapeado)
+
+TABELA: accounting_offices
+--------------------------
+- clinic_id -> ID da clínica de destino
+
+TABELA: accounting_office_employers
+-----------------------------------
+- accounting_office_id -> accounting_offices.id (remapeado)
+- employer_id -> employers.id (remapeado)
+
+TABELA: debt_negotiations
+-------------------------
+- clinic_id -> ID da clínica de destino
+- employer_id -> employers.id (remapeado)
+
+TABELA: negotiation_items
+-------------------------
+- negotiation_id -> debt_negotiations.id (remapeado)
+- contribution_id -> employer_contributions.id (remapeado)
+
+TABELA: negotiation_installments
+--------------------------------
+- negotiation_id -> debt_negotiations.id (remapeado)
+
+TABELA: financial_transactions
+------------------------------
+- clinic_id -> ID da clínica de destino
+- category_id -> financial_categories.id (remapeado, nullable)
+- patient_id -> patients.id (remapeado, nullable)
+- appointment_id -> appointments.id (remapeado, nullable)
+- cash_register_id -> cash_registers.id (remapeado, nullable)
+
+TABELA: cash_transfers
+----------------------
+- clinic_id -> ID da clínica de destino
+- from_register_id -> cash_registers.id (remapeado)
+- to_register_id -> cash_registers.id (remapeado)
+
+TABELA: campaigns
+-----------------
+- clinic_id -> ID da clínica de destino
+- segment_id -> patient_segments.id (remapeado, nullable)
+
+TABELA: automation_flows
+------------------------
+- clinic_id -> ID da clínica de destino
+
+================================================================================
+5. CAMPOS IGNORADOS NA IMPORTAÇÃO
+================================================================================
+
+Os seguintes campos são IGNORADOS durante a importação (gerados automaticamente):
+
+CAMPOS DE TIMESTAMP:
+- created_at
+- updated_at
+
+CAMPOS DE IDENTIDADE:
+- id (novo UUID gerado)
+- clinic_id (substituído pelo destino)
+
+CAMPOS DE USUÁRIO:
+- user_id (não migrado)
+- created_by (não migrado)
+- updated_by (não migrado)
+
+CAMPOS ESPECÍFICOS:
+- legacy_id (mantido para referência)
+- lytex_invoice_id (não migrado - requer re-faturamento)
+- lytex_url (não migrado)
+
+================================================================================
+6. CAMPOS OBRIGATÓRIOS POR TABELA
+================================================================================
+
+TABELA: patients
+----------------
+- name (string, obrigatório)
+- cpf (string, obrigatório, único por clínica)
+
+TABELA: employers
+-----------------
+- name (string, obrigatório)
+- cnpj (string, obrigatório)
+
+TABELA: professionals
+---------------------
+- name (string, obrigatório)
+
+TABELA: appointments
+--------------------
+- patient_id (uuid, obrigatório)
+- professional_id (uuid, obrigatório)
+- appointment_date (date, obrigatório)
+- start_time (time, obrigatório)
+- end_time (time, obrigatório)
+
+TABELA: medical_records
+-----------------------
+- patient_id (uuid, obrigatório)
+- professional_id (uuid, obrigatório)
+- record_date (date, obrigatório)
+
+TABELA: employer_contributions
+------------------------------
+- employer_id (uuid, obrigatório)
+- contribution_type_id (uuid, obrigatório)
+- reference_month (integer, obrigatório)
+- reference_year (integer, obrigatório)
+- value (decimal, obrigatório)
+- due_date (date, obrigatório)
+
+================================================================================
+7. PASSO A PASSO DA IMPORTAÇÃO
+================================================================================
+
+PASSO 1: PREPARAR AMBIENTE
+--------------------------
+1. Acesse o painel Super Admin: /admin
+2. Navegue até: /admin/import
+3. Selecione a aba "Importar JSON"
+
+PASSO 2: CRIAR CLÍNICA DE DESTINO
+---------------------------------
+1. Acesse /admin/clinics
+2. Crie uma nova clínica com os dados básicos:
+   - Nome: (nome desejado)
+   - Slug: (slug único)
+3. Copie o ID da clínica criada
+
+PASSO 3: VALIDAR BACKUP (DRY RUN)
+---------------------------------
+1. Na página /admin/import, selecione o arquivo JSON
+2. Selecione a clínica de destino no dropdown
+3. Clique em "Validar Arquivo"
+4. Aguarde a análise completa
+5. Revise os warnings e erros reportados
+
+VERIFICAÇÕES DO DRY RUN:
+- Campos obrigatórios preenchidos
+- Integridade referencial (FKs válidas)
+- Duplicidades potenciais (CPFs, CNPJs)
+- Formato de dados (datas, números)
+
+PASSO 4: EXECUTAR IMPORTAÇÃO
+----------------------------
+1. Se a validação passou sem erros críticos, clique em "Importar Dados"
+2. Aguarde o processamento (pode levar alguns minutos)
+3. Acompanhe o progresso na tela
+4. Ao finalizar, revise o relatório de importação
+
+RELATÓRIO DE IMPORTAÇÃO:
+- Total de registros por tabela
+- Registros inseridos com sucesso
+- Registros ignorados (duplicatas)
+- Erros encontrados
+
+PASSO 5: VALIDAÇÃO PÓS-IMPORTAÇÃO
+---------------------------------
+1. Acesse a clínica importada
+2. Verifique:
+   - Listagem de pacientes
+   - Listagem de empresas
+   - Prontuários médicos
+   - Agendamentos
+   - Configurações
+
+================================================================================
+8. TROUBLESHOOTING
+================================================================================
+
+ERRO: "Foreign key violation"
+-----------------------------
+CAUSA: Registro referencia uma entidade que não foi importada ainda
+SOLUÇÃO: Verifique se a ordem de importação está correta (IMPORT_ORDER)
+
+ERRO: "Duplicate key violation"
+-------------------------------
+CAUSA: Registro com mesmo CPF/CNPJ já existe na clínica de destino
+SOLUÇÃO: 
+- Use ignoreDuplicates: true (padrão)
+- Ou limpe a clínica de destino antes da importação
+
+ERRO: "Required field is null"
+------------------------------
+CAUSA: Campo obrigatório está vazio no backup
+SOLUÇÃO: Corrija o arquivo JSON antes de reimportar
+
+ERRO: "Invalid UUID format"
+---------------------------
+CAUSA: ID com formato inválido no backup
+SOLUÇÃO: Verifique a integridade do arquivo JSON
+
+ERRO: "Row level security violation"
+------------------------------------
+CAUSA: Usuário não tem permissão de Super Admin
+SOLUÇÃO: Adicione o usuário à tabela super_admins
+
+ERRO: "Timeout during import"
+-----------------------------
+CAUSA: Volume muito grande de dados
+SOLUÇÃO: 
+- Divida o backup em partes menores
+- Importe por fases (catalogs, entities, transactions)
+
+IMPORTAÇÃO PARCIAL:
+-------------------
+Se a importação falhar no meio do processo:
+1. Verifique quais tabelas foram importadas (relatório parcial)
+2. Limpe as tabelas já importadas se necessário
+3. Corrija o erro identificado
+4. Reimporte apenas as tabelas pendentes
+
+================================================================================
+                           FIM DA DOCUMENTAÇÃO
+================================================================================
+
+Versão: 1.0
+Data: 2026-01-10
+Sistema: Eclini - Gestão de Clínicas
+
+Para suporte técnico, consulte a documentação do sistema ou entre em contato
+com a equipe de desenvolvimento.
+
+================================================================================
