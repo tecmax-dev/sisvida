@@ -872,10 +872,10 @@ Deno.serve(async (req) => {
           throw new Error("contributionId é obrigatório");
         }
 
-        // Buscar contribuição para verificar se tem boleto
+        // Buscar contribuição COM due_date e value para o cancelamento
         const { data: contrib, error: fetchErr } = await supabase
           .from("employer_contributions")
-          .select("lytex_invoice_id, status")
+          .select("lytex_invoice_id, status, due_date, value")
           .eq("id", params.contributionId)
           .single();
 
@@ -883,17 +883,47 @@ Deno.serve(async (req) => {
           throw new Error("Contribuição não encontrada");
         }
 
+        // Validações de negócio
+        if (contrib.status === "paid") {
+          throw new Error("Não é possível excluir uma contribuição já paga");
+        }
+
+        if (contrib.status === "processing") {
+          throw new Error("Esta contribuição está sendo processada. Aguarde antes de excluir.");
+        }
+
         // Se tem boleto na Lytex e não está cancelado, cancelar primeiro
         if (contrib.lytex_invoice_id && contrib.status !== "cancelled") {
+          console.log(`[Lytex] Cancelando boleto ${contrib.lytex_invoice_id} antes da exclusão...`);
+          
           try {
-            await cancelInvoice(contrib.lytex_invoice_id);
-            console.log("[Lytex] Boleto cancelado antes da exclusão");
-          } catch (e) {
-            console.warn("[Lytex] Erro ao cancelar boleto (pode já estar cancelado):", e);
+            // *** CORREÇÃO: Passar objeto com todos os parâmetros necessários ***
+            await cancelInvoice({
+              invoiceId: contrib.lytex_invoice_id,
+              dueDate: contrib.due_date,
+              value: typeof contrib.value === "number" ? contrib.value : undefined,
+            });
+            console.log("[Lytex] Boleto cancelado com sucesso antes da exclusão");
+          } catch (cancelError: any) {
+            // Permitir continuar apenas se o boleto já foi cancelado ou não existe
+            const errorMessage = (cancelError?.message || "").toLowerCase();
+            if (
+              errorMessage.includes("already cancelled") ||
+              errorMessage.includes("já cancelado") ||
+              errorMessage.includes("not found") ||
+              errorMessage.includes("não encontrado") ||
+              errorMessage.includes("404")
+            ) {
+              console.warn("[Lytex] Boleto já cancelado ou não encontrado, prosseguindo com exclusão");
+            } else {
+              // Bloquear exclusão se o cancelamento falhou por outro motivo
+              console.error("[Lytex] Falha ao cancelar boleto na Lytex:", cancelError);
+              throw new Error(`Não foi possível excluir: ${cancelError.message || "falha ao cancelar boleto na Lytex"}`);
+            }
           }
         }
 
-        // Excluir do banco
+        // Excluir do banco SOMENTE após sucesso do cancelamento
         const { error: deleteError } = await supabase
           .from("employer_contributions")
           .delete()
@@ -904,7 +934,7 @@ Deno.serve(async (req) => {
           throw new Error("Erro ao excluir contribuição");
         }
 
-        console.log("[Lytex] Contribuição excluída:", params.contributionId);
+        console.log("[Lytex] Contribuição excluída com sucesso:", params.contributionId);
         result = { success: true };
         break;
       }
