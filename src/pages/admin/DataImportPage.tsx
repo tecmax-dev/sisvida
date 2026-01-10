@@ -2167,7 +2167,7 @@ export default function DataImportPage() {
       </Collapsible>
 
       {/* Import/Export Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "json" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards")}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "json" | "homologacao" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards" | "converter")}>
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="export" className="gap-2">
             <ArrowDownToLine className="h-4 w-4" />
@@ -2180,6 +2180,10 @@ export default function DataImportPage() {
           <TabsTrigger value="homologacao" className="gap-2">
             <Stethoscope className="h-4 w-4" />
             Homologação
+          </TabsTrigger>
+          <TabsTrigger value="converter" className="gap-2">
+            <FileSpreadsheet className="h-4 w-4" />
+            Conversor
           </TabsTrigger>
           <TabsTrigger value="combined" className="gap-2">
             <Sparkles className="h-4 w-4" />
@@ -3151,6 +3155,11 @@ export default function DataImportPage() {
         {/* Cards Bulk Update Tab */}
         <TabsContent value="cards" className="space-y-4">
           <BulkCardExpiryUpdate />
+        </TabsContent>
+
+        {/* Spreadsheet Converter Tab */}
+        <TabsContent value="converter" className="space-y-4">
+          <SpreadsheetConverter />
         </TabsContent>
       </Tabs>
 
