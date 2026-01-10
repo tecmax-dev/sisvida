@@ -34,8 +34,7 @@ import {
   Search,
   Calendar as CalendarIcon,
   Trash2,
-  AlertTriangle,
-  Download
+  AlertTriangle
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -58,9 +57,8 @@ export default function HomologacaoBloqueiosPage() {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
-  // Form state - sem start_time e end_time pois não existem na tabela
+  // Form state
   const [formData, setFormData] = useState({
     block_date: new Date(),
     reason: "",
@@ -145,28 +143,6 @@ export default function HomologacaoBloqueiosPage() {
     },
   });
 
-  // Import holidays mutation
-  const importHolidaysMutation = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("fetch-brazilian-holidays", {
-        body: { 
-          clinic_id: currentClinic?.id,
-          year: new Date().getFullYear()
-        },
-      });
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["homologacao-blocks"] });
-      toast.success(`${data?.imported || 0} feriados importados com sucesso!`);
-      setIsImportDialogOpen(false);
-    },
-    onError: (error) => {
-      toast.error("Erro ao importar feriados: " + error.message);
-    },
-  });
-
   const openNewDialog = () => {
     setFormData({
       block_date: new Date(),
@@ -222,16 +198,10 @@ export default function HomologacaoBloqueiosPage() {
           <h1 className="text-2xl font-bold text-foreground">Bloqueios e Feriados</h1>
           <p className="text-muted-foreground">Gestão de bloqueios de agenda e feriados</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
-            <Download className="w-4 h-4 mr-2" />
-            Importar Feriados
-          </Button>
-          <Button onClick={openNewDialog}>
-            <Plus className="w-4 h-4 mr-2" />
-            Novo Bloqueio
-          </Button>
-        </div>
+        <Button onClick={openNewDialog}>
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Bloqueio
+        </Button>
       </div>
 
       {/* Search */}
@@ -397,45 +367,6 @@ export default function HomologacaoBloqueiosPage() {
               disabled={createMutation.isPending}
             >
               {createMutation.isPending ? "Salvando..." : "Salvar"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Import Holidays Dialog */}
-      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Importar Feriados Brasileiros</DialogTitle>
-            <DialogDescription>
-              Importar automaticamente os feriados nacionais brasileiros para o ano atual ({new Date().getFullYear()})
-            </DialogDescription>
-          </DialogHeader>
-          <div className="py-4">
-            <p className="text-sm text-muted-foreground">
-              Serão importados os principais feriados nacionais como:
-            </p>
-            <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside">
-              <li>Ano Novo</li>
-              <li>Carnaval</li>
-              <li>Sexta-feira Santa</li>
-              <li>Tiradentes</li>
-              <li>Dia do Trabalho</li>
-              <li>Corpus Christi</li>
-              <li>Independência</li>
-              <li>Nossa Senhora Aparecida</li>
-              <li>Finados</li>
-              <li>Proclamação da República</li>
-              <li>Natal</li>
-            </ul>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>Cancelar</Button>
-            <Button 
-              onClick={() => importHolidaysMutation.mutate()}
-              disabled={importHolidaysMutation.isPending}
-            >
-              {importHolidaysMutation.isPending ? "Importando..." : "Importar Feriados"}
             </Button>
           </DialogFooter>
         </DialogContent>

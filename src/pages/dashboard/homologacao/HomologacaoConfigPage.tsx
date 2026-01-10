@@ -10,11 +10,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
+import HolidayImportSection from "@/components/homologacao/HolidayImportSection";
 import { 
   Save,
-  Clock,
-  Building2,
-  Phone
+  Link2,
+  Palette,
+  MessageCircle,
+  Settings,
+  Copy,
+  Check
 } from "lucide-react";
 
 interface HomologacaoSettings {
@@ -33,6 +37,7 @@ interface HomologacaoSettings {
 export default function HomologacaoConfigPage() {
   const { currentClinic } = useAuth();
   const queryClient = useQueryClient();
+  const [copied, setCopied] = useState(false);
   
   const [formData, setFormData] = useState<Partial<HomologacaoSettings>>({
     display_name: "",
@@ -41,6 +46,7 @@ export default function HomologacaoConfigPage() {
     allow_cancellation: true,
     require_confirmation: true,
     institutional_text: "",
+    logo_url: "",
     public_whatsapp: "",
   });
 
@@ -71,6 +77,7 @@ export default function HomologacaoConfigPage() {
         allow_cancellation: settings.allow_cancellation ?? true,
         require_confirmation: settings.require_confirmation ?? true,
         institutional_text: settings.institutional_text || "",
+        logo_url: settings.logo_url || "",
         public_whatsapp: settings.public_whatsapp || "",
       });
     }
@@ -111,6 +118,23 @@ export default function HomologacaoConfigPage() {
     saveMutation.mutate(formData);
   };
 
+  // Generate public link
+  const publicLink = currentClinic?.slug 
+    ? `${window.location.origin}/homologacao/${currentClinic.slug}`
+    : "";
+
+  const copyLink = async () => {
+    if (!publicLink) return;
+    try {
+      await navigator.clipboard.writeText(publicLink);
+      setCopied(true);
+      toast.success("Link copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Erro ao copiar link");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="space-y-6">
@@ -123,131 +147,82 @@ export default function HomologacaoConfigPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Configurações</h1>
-        <p className="text-muted-foreground">Configure o módulo de homologação</p>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Configurações de Homologação</h1>
+          <p className="text-muted-foreground">Configure a página pública e notificações do módulo</p>
+        </div>
+        <Button onClick={handleSubmit} disabled={saveMutation.isPending}>
+          <Save className="w-4 h-4 mr-2" />
+          {saveMutation.isPending ? "Salvando..." : "Salvar"}
+        </Button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* General Settings */}
+      <div className="space-y-6">
+        {/* Public Link */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Building2 className="w-5 h-5" />
-              Configurações Gerais
+              <Link2 className="w-5 h-5" />
+              Link Público de Agendamento
             </CardTitle>
             <CardDescription>
-              Informações básicas do módulo de homologação
+              Compartilhe este link para empresas agendarem homologações
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="display_name">Nome de Exibição</Label>
-                <Input
-                  id="display_name"
-                  value={formData.display_name || ""}
-                  onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
-                  placeholder="Ex: Central de Homologações"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Nome exibido na página pública de agendamento
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="manager_whatsapp">WhatsApp do Gestor</Label>
-                <Input
-                  id="manager_whatsapp"
-                  value={formData.manager_whatsapp || ""}
-                  onChange={(e) => setFormData({ ...formData, manager_whatsapp: e.target.value })}
-                  placeholder="(00) 00000-0000"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Recebe notificações de novos agendamentos
-                </p>
-              </div>
+          <CardContent>
+            <div className="flex gap-2">
+              <Input 
+                value={publicLink} 
+                readOnly 
+                className="bg-muted font-mono text-sm"
+              />
+              <Button variant="outline" onClick={copyLink}>
+                {copied ? (
+                  <Check className="w-4 h-4" />
+                ) : (
+                  <Copy className="w-4 h-4" />
+                )}
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Scheduling Settings */}
+        {/* Visual Identity */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Clock className="w-5 h-5" />
-              Prazos e Cancelamento
+              <Palette className="w-5 h-5" />
+              Identidade Visual
             </CardTitle>
             <CardDescription>
-              Configure os prazos de cancelamento
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="cancellation_deadline">Prazo de Cancelamento (horas)</Label>
-                <Input
-                  id="cancellation_deadline"
-                  type="number"
-                  min={1}
-                  value={formData.cancellation_deadline_hours || 24}
-                  onChange={(e) => setFormData({ ...formData, cancellation_deadline_hours: parseInt(e.target.value) || 24 })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Antecedência mínima para cancelar sem penalidade
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Permitir Cancelamento</Label>
-                <p className="text-sm text-muted-foreground">
-                  Permite que empresas cancelem agendamentos
-                </p>
-              </div>
-              <Switch
-                checked={formData.allow_cancellation ?? true}
-                onCheckedChange={(checked) => setFormData({ ...formData, allow_cancellation: checked })}
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label>Exigir Confirmação</Label>
-                <p className="text-sm text-muted-foreground">
-                  Exige que o agendamento seja confirmado antes
-                </p>
-              </div>
-              <Switch
-                checked={formData.require_confirmation ?? true}
-                onCheckedChange={(checked) => setFormData({ ...formData, require_confirmation: checked })}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Contact Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Phone className="w-5 h-5" />
-              Contato Público
-            </CardTitle>
-            <CardDescription>
-              Informações de contato exibidas publicamente
+              Personalize a aparência da página pública
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="public_whatsapp">WhatsApp Público</Label>
+              <Label htmlFor="display_name">Nome de Exibição</Label>
               <Input
-                id="public_whatsapp"
-                value={formData.public_whatsapp || ""}
-                onChange={(e) => setFormData({ ...formData, public_whatsapp: e.target.value })}
-                placeholder="(00) 00000-0000"
+                id="display_name"
+                value={formData.display_name || ""}
+                onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
+                placeholder="Ex: Central de Homologações"
               />
               <p className="text-xs text-muted-foreground">
-                Número exibido na página pública para contato
+                Se vazio, será usado o nome padrão da clínica
               </p>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="logo_url">URL do Logo</Label>
+              <Input
+                id="logo_url"
+                value={formData.logo_url || ""}
+                onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+                placeholder="https://exemplo.com/logo.png"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="institutional_text">Texto Institucional</Label>
               <Textarea
@@ -257,21 +232,109 @@ export default function HomologacaoConfigPage() {
                 placeholder="Texto com instruções ou informações sobre a homologação..."
                 rows={4}
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Contact and Notifications */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              Contato e Notificações
+            </CardTitle>
+            <CardDescription>
+              Configure os números de WhatsApp para notificações
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="manager_whatsapp">WhatsApp do Gestor</Label>
+                <Input
+                  id="manager_whatsapp"
+                  value={formData.manager_whatsapp || ""}
+                  onChange={(e) => setFormData({ ...formData, manager_whatsapp: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Receberá notificações de novos agendamentos
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="public_whatsapp">WhatsApp para Contato</Label>
+                <Input
+                  id="public_whatsapp"
+                  value={formData.public_whatsapp || ""}
+                  onChange={(e) => setFormData({ ...formData, public_whatsapp: e.target.value })}
+                  placeholder="(00) 00000-0000"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Exibido na página pública para contato
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Behavior */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="w-5 h-5" />
+              Comportamento
+            </CardTitle>
+            <CardDescription>
+              Configure o funcionamento dos agendamentos
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Exigir Confirmação</Label>
+                <p className="text-sm text-muted-foreground">
+                  Novos agendamentos precisam ser confirmados
+                </p>
+              </div>
+              <Switch
+                checked={formData.require_confirmation ?? true}
+                onCheckedChange={(checked) => setFormData({ ...formData, require_confirmation: checked })}
+              />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Permitir Cancelamento</Label>
+                <p className="text-sm text-muted-foreground">
+                  Empresas podem cancelar agendamentos
+                </p>
+              </div>
+              <Switch
+                checked={formData.allow_cancellation ?? true}
+                onCheckedChange={(checked) => setFormData({ ...formData, allow_cancellation: checked })}
+              />
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <Label htmlFor="cancellation_deadline">Prazo para Cancelamento (horas)</Label>
+              <Input
+                id="cancellation_deadline"
+                type="number"
+                min={1}
+                className="max-w-[200px]"
+                value={formData.cancellation_deadline_hours || 24}
+                onChange={(e) => setFormData({ ...formData, cancellation_deadline_hours: parseInt(e.target.value) || 24 })}
+              />
               <p className="text-xs text-muted-foreground">
-                Texto exibido na página pública com orientações
+                Cancelamentos devem ser feitos com pelo menos {formData.cancellation_deadline_hours || 24} horas de antecedência
               </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Save Button */}
-        <div className="flex justify-end">
-          <Button type="submit" disabled={saveMutation.isPending}>
-            <Save className="w-4 h-4 mr-2" />
-            {saveMutation.isPending ? "Salvando..." : "Salvar Configurações"}
-          </Button>
-        </div>
-      </form>
+        {/* Holiday Import Section */}
+        <HolidayImportSection />
+      </div>
     </div>
   );
 }
