@@ -2728,6 +2728,60 @@ export type Database = {
           },
         ]
       }
+      expense_liquidation_history: {
+        Row: {
+          cash_register_id: string | null
+          check_number: string
+          clinic_id: string
+          created_at: string
+          id: string
+          liquidated_by: string
+          liquidation_date: string
+          notes: string | null
+          total_value: number
+          transaction_ids: string[]
+        }
+        Insert: {
+          cash_register_id?: string | null
+          check_number: string
+          clinic_id: string
+          created_at?: string
+          id?: string
+          liquidated_by: string
+          liquidation_date: string
+          notes?: string | null
+          total_value: number
+          transaction_ids: string[]
+        }
+        Update: {
+          cash_register_id?: string | null
+          check_number?: string
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          liquidated_by?: string
+          liquidation_date?: string
+          notes?: string | null
+          total_value?: number
+          transaction_ids?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_liquidation_history_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_liquidation_history_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feature_permissions: {
         Row: {
           created_at: string | null
