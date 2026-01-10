@@ -77,6 +77,8 @@ Deno.serve(async (req) => {
     const body: ImportRequest = await req.json();
     const { clinic_id, conversion_type, data, chunk_index, chunk_total, run_id, auto_create_employers } = body;
 
+    console.log(`[import-converted-data] auto_create_employers=${auto_create_employers ?? false}`);
+
     if (!clinic_id || !conversion_type || !data?.length) {
       return new Response(
         JSON.stringify({ error: 'Missing required fields: clinic_id, conversion_type, data' }),
@@ -261,7 +263,14 @@ async function importEmployersBatch(
     .eq('clinic_id', clinicId)
     .in('cnpj', cnpjsToCheck);
   
-  const existingCnpjMap = new Map((existingEmployers || []).map(e => [e.cnpj, e.id]));
+  // Normalize CNPJ keys for consistent lookup
+  const existingCnpjMap = new Map<string, string>();
+  (existingEmployers || []).forEach(e => {
+    const normalized = normalizeCnpj(e.cnpj);
+    if (normalized) {
+      existingCnpjMap.set(normalized, e.id);
+    }
+  });
   
   const toInsert: Record<string, unknown>[] = [];
   const toUpdate: { id: string; data: Record<string, unknown> }[] = [];
@@ -340,7 +349,14 @@ async function importContributionsBatch(
     .select('id, cnpj')
     .eq('clinic_id', clinicId);
   
-  const employerMap = new Map((allEmployers || []).map(e => [e.cnpj, e.id]));
+  // CRITICAL: Normalize CNPJ keys to avoid mismatches between masked/unmasked formats
+  const employerMap = new Map<string, string>();
+  (allEmployers || []).forEach(e => {
+    const normalized = normalizeCnpj(e.cnpj);
+    if (normalized) {
+      employerMap.set(normalized, e.id);
+    }
+  });
   console.log(`[importContributionsBatch] Loaded ${employerMap.size} employers into cache`);
 
   // 2. Pre-load all contribution types for this clinic (CACHE)
@@ -457,14 +473,14 @@ async function importContributionsBatch(
             
             if (existingEmployer) {
               employerId = existingEmployer.id;
-              employerMap.set(cnpj, employerId);
+              employerMap.set(cnpj, employerId!);
             } else {
               result.errors.push({ row: i + 1, message: `Falha ao criar empresa: ${formatCnpj(cnpj)} - ${createError.message}`, cnpj });
               continue;
             }
           } else if (newEmployer) {
             employerId = newEmployer.id;
-            employerMap.set(cnpj, employerId);
+            employerMap.set(cnpj, employerId!);
             result.employers_created = (result.employers_created || 0) + 1;
             console.log(`[importContributionsBatch] Created employer: ${employerName} (${formatCnpj(cnpj)})`);
           }
@@ -518,6 +534,7 @@ async function importContributionsBatch(
 
       competenceKeysToInsert.add(activeCompetenceKey);
 
+      // NOTE: active_competence_key is a GENERATED ALWAYS column - DO NOT include it in insert!
       toInsert.push({
         clinic_id: clinicId,
         employer_id: employerId,
@@ -527,7 +544,6 @@ async function importContributionsBatch(
         status,
         competence_month: competenceMonth,
         competence_year: competenceYear,
-        active_competence_key: activeCompetenceKey,
         paid_at: status === 'paid' ? (paymentDate || dueDate) : null,
         paid_value: status === 'paid' ? value : null,
         notes: row.notes || row.description ? String(row.notes || row.description).trim() : null,
