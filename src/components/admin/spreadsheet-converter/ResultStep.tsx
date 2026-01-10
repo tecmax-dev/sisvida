@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { 
   CheckCircle2, 
   Download, 
@@ -10,11 +18,14 @@ import {
   Upload,
   FileSpreadsheet,
   AlertCircle,
+  Building2,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 import { ConversionType } from "./ConversionTypeStep";
 import { formatCurrencyBR, formatDateBR } from "@/lib/spreadsheet-converter/normalizers";
+import { supabase } from "@/integrations/supabase/client";
 
 interface FieldMapping {
   sourceColumn: string;
@@ -31,6 +42,19 @@ interface ConversionLog {
   validRecords: number;
   errorRecords: number;
   action: 'download' | 'import' | 'copy' | 'cancel';
+}
+
+interface Clinic {
+  id: string;
+  name: string;
+}
+
+interface ImportResult {
+  success: boolean;
+  inserted: number;
+  updated: number;
+  skipped: number;
+  errors: { row: number; message: string }[];
 }
 
 interface ResultStepProps {
@@ -51,6 +75,79 @@ export function ResultStep({
   onReset,
 }: ResultStepProps) {
   const [isExporting, setIsExporting] = useState(false);
+  const [clinics, setClinics] = useState<Clinic[]>([]);
+  const [selectedClinicId, setSelectedClinicId] = useState<string>("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
+
+  // Fetch clinics on mount
+  useEffect(() => {
+    const fetchClinics = async () => {
+      const { data, error } = await supabase
+        .from('clinics')
+        .select('id, name')
+        .order('name');
+      
+      if (!error && data) {
+        setClinics(data);
+      }
+    };
+    fetchClinics();
+  }, []);
+
+  const handleImportToClinic = async () => {
+    if (!selectedClinicId || validRows.length === 0) return;
+
+    setIsImporting(true);
+    setImportResult(null);
+
+    try {
+      const { data: session } = await supabase.auth.getSession();
+      if (!session?.session?.access_token) {
+        toast.error('Sessão expirada. Faça login novamente.');
+        return;
+      }
+
+      const response = await supabase.functions.invoke('import-converted-data', {
+        body: {
+          clinic_id: selectedClinicId,
+          conversion_type: conversionType,
+          data: validRows,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Erro ao importar dados');
+      }
+
+      const result = response.data as ImportResult;
+      setImportResult(result);
+
+      if (result.inserted > 0 || result.updated > 0) {
+        toast.success(
+          `Importação concluída: ${result.inserted} inseridos, ${result.updated} atualizados` +
+          (result.skipped > 0 ? `, ${result.skipped} ignorados` : '')
+        );
+        logConversion('import');
+      } else if (result.errors.length > 0) {
+        toast.error(`Importação com erros: ${result.errors.length} registros falharam`);
+      } else {
+        toast.info('Nenhum registro novo foi inserido (todos já existiam)');
+      }
+    } catch (error) {
+      console.error('Import error:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao importar dados');
+      setImportResult({
+        success: false,
+        inserted: 0,
+        updated: 0,
+        skipped: 0,
+        errors: [{ row: 0, message: error instanceof Error ? error.message : 'Erro desconhecido' }],
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  };
 
   const downloadAsExcel = async () => {
     setIsExporting(true);
@@ -325,6 +422,86 @@ export function ResultStep({
               <span>Copiar JSON</span>
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Import to Clinic */}
+      <Card className="border-emerald-500/30">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Importar para Clínica
+          </CardTitle>
+          <CardDescription>
+            Insira os dados convertidos diretamente no banco de dados
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+            <Select value={selectedClinicId} onValueChange={setSelectedClinicId}>
+              <SelectTrigger className="w-full sm:w-[300px]">
+                <SelectValue placeholder="Selecione uma clínica..." />
+              </SelectTrigger>
+              <SelectContent>
+                {clinics.map((clinic) => (
+                  <SelectItem key={clinic.id} value={clinic.id}>
+                    {clinic.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Button 
+              onClick={handleImportToClinic}
+              disabled={!selectedClinicId || isImporting || validRows.length === 0}
+              className="bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto"
+            >
+              {isImporting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Importando...
+                </>
+              ) : (
+                <>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar {validRows.length} registros
+                </>
+              )}
+            </Button>
+          </div>
+          
+          {importResult && (
+            <Alert variant={importResult.success && importResult.errors.length === 0 ? "default" : "destructive"}>
+              <AlertDescription>
+                {importResult.inserted > 0 && (
+                  <span className="block">✅ {importResult.inserted} registros inseridos</span>
+                )}
+                {importResult.updated > 0 && (
+                  <span className="block">🔄 {importResult.updated} registros atualizados</span>
+                )}
+                {importResult.skipped > 0 && (
+                  <span className="block">⏭️ {importResult.skipped} registros ignorados (já existiam)</span>
+                )}
+                {importResult.errors.length > 0 && (
+                  <div className="mt-2">
+                    <span className="font-medium text-destructive">
+                      ❌ {importResult.errors.length} erros:
+                    </span>
+                    <ul className="mt-1 text-sm list-disc list-inside max-h-32 overflow-y-auto">
+                      {importResult.errors.slice(0, 10).map((err, idx) => (
+                        <li key={idx}>
+                          Linha {err.row}: {err.message}
+                        </li>
+                      ))}
+                      {importResult.errors.length > 10 && (
+                        <li>...e mais {importResult.errors.length - 10} erros</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
         </CardContent>
       </Card>
 
