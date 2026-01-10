@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -13,12 +12,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isWithinInterval } from "date-fns";
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet } from "lucide-react";
+import { ChevronLeft, ChevronRight, TrendingUp, TrendingDown, Wallet, Plus } from "lucide-react";
 import { FinancialExportButton } from "./FinancialExportButton";
 import { exportCashFlow, CashFlowData } from "@/lib/financialExportUtils";
 import { Badge } from "@/components/ui/badge";
+import { NewCashFlowEntryDialog } from "./NewCashFlowEntryDialog";
 
 interface CashFlowPanelProps {
   clinicId: string;
@@ -26,6 +26,7 @@ interface CashFlowPanelProps {
 
 export function CashFlowPanel({ clinicId }: CashFlowPanelProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [newEntryDialogOpen, setNewEntryDialogOpen] = useState(false);
   const startDate = startOfMonth(currentDate);
   const endDate = endOfMonth(currentDate);
 
@@ -133,14 +134,18 @@ export function CashFlowPanel({ clinicId }: CashFlowPanelProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
           <h3 className="text-lg font-semibold">Fluxo de Caixa</h3>
           <p className="text-sm text-muted-foreground">
             Visualize entradas e saídas diárias
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          <Button onClick={() => setNewEntryDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Lançamento
+          </Button>
           <FinancialExportButton
             onExportPDF={() => handleExport('pdf')}
             onExportExcel={() => handleExport('excel')}
@@ -291,6 +296,12 @@ export function CashFlowPanel({ clinicId }: CashFlowPanelProps) {
           </div>
         </CardContent>
       </Card>
+
+      <NewCashFlowEntryDialog
+        open={newEntryDialogOpen}
+        onOpenChange={setNewEntryDialogOpen}
+        clinicId={clinicId}
+      />
     </div>
   );
 }
