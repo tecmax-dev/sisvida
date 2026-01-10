@@ -10,15 +10,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { 
-  Settings, 
   Save,
   Clock,
-  MessageSquare,
-  Globe,
-  Bell,
-  Building2
+  Building2,
+  Phone
 } from "lucide-react";
 
 interface HomologacaoSettings {
@@ -26,9 +22,9 @@ interface HomologacaoSettings {
   clinic_id: string;
   display_name: string | null;
   manager_whatsapp: string | null;
-  cancellation_deadline_hours: number;
-  allow_cancellation: boolean;
-  require_confirmation: boolean;
+  cancellation_deadline_hours: number | null;
+  allow_cancellation: boolean | null;
+  require_confirmation: boolean | null;
   institutional_text: string | null;
   logo_url: string | null;
   public_whatsapp: string | null;
@@ -72,11 +68,10 @@ export default function HomologacaoConfigPage() {
         display_name: settings.display_name || "",
         manager_whatsapp: settings.manager_whatsapp || "",
         cancellation_deadline_hours: settings.cancellation_deadline_hours || 24,
-        reminder_hours: settings.reminder_hours || 24,
-        is_public_booking_enabled: settings.is_public_booking_enabled || false,
-        public_booking_instructions: settings.public_booking_instructions || "",
-        confirmation_message: settings.confirmation_message || "",
-        reminder_message: settings.reminder_message || "",
+        allow_cancellation: settings.allow_cancellation ?? true,
+        require_confirmation: settings.require_confirmation ?? true,
+        institutional_text: settings.institutional_text || "",
+        public_whatsapp: settings.public_whatsapp || "",
       });
     }
   }, [settings]);
@@ -180,10 +175,10 @@ export default function HomologacaoConfigPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Clock className="w-5 h-5" />
-              Prazos e Horários
+              Prazos e Cancelamento
             </CardTitle>
             <CardDescription>
-              Configure os prazos de cancelamento e lembretes
+              Configure os prazos de cancelamento
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -201,105 +196,69 @@ export default function HomologacaoConfigPage() {
                   Antecedência mínima para cancelar sem penalidade
                 </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="reminder_hours">Antecedência do Lembrete (horas)</Label>
-                <Input
-                  id="reminder_hours"
-                  type="number"
-                  min={1}
-                  value={formData.reminder_hours || 24}
-                  onChange={(e) => setFormData({ ...formData, reminder_hours: parseInt(e.target.value) || 24 })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Horas antes do agendamento para enviar lembrete
-                </p>
-              </div>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Public Booking Settings */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Globe className="w-5 h-5" />
-              Agendamento Público
-            </CardTitle>
-            <CardDescription>
-              Configure a página pública de agendamento
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="space-y-0.5">
-                <Label>Habilitar Agendamento Público</Label>
+                <Label>Permitir Cancelamento</Label>
                 <p className="text-sm text-muted-foreground">
-                  Permite que empresas agendem homologações online
+                  Permite que empresas cancelem agendamentos
                 </p>
               </div>
               <Switch
-                checked={formData.is_public_booking_enabled || false}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_public_booking_enabled: checked })}
+                checked={formData.allow_cancellation ?? true}
+                onCheckedChange={(checked) => setFormData({ ...formData, allow_cancellation: checked })}
               />
             </div>
-
-            <Separator />
-
-            <div className="space-y-2">
-              <Label htmlFor="public_instructions">Instruções de Agendamento</Label>
-              <Textarea
-                id="public_instructions"
-                value={formData.public_booking_instructions || ""}
-                onChange={(e) => setFormData({ ...formData, public_booking_instructions: e.target.value })}
-                placeholder="Instruções exibidas na página de agendamento..."
-                rows={4}
+            <div className="flex items-center justify-between">
+              <div className="space-y-0.5">
+                <Label>Exigir Confirmação</Label>
+                <p className="text-sm text-muted-foreground">
+                  Exige que o agendamento seja confirmado antes
+                </p>
+              </div>
+              <Switch
+                checked={formData.require_confirmation ?? true}
+                onCheckedChange={(checked) => setFormData({ ...formData, require_confirmation: checked })}
               />
-              <p className="text-xs text-muted-foreground">
-                Texto exibido na página pública com orientações para o agendamento
-              </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Message Templates */}
+        {/* Contact Settings */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="w-5 h-5" />
-              Mensagens Automáticas
+              <Phone className="w-5 h-5" />
+              Contato Público
             </CardTitle>
             <CardDescription>
-              Configure as mensagens enviadas automaticamente
+              Informações de contato exibidas publicamente
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="confirmation_message">Mensagem de Confirmação</Label>
-              <Textarea
-                id="confirmation_message"
-                value={formData.confirmation_message || ""}
-                onChange={(e) => setFormData({ ...formData, confirmation_message: e.target.value })}
-                placeholder="Olá {nome}, seu agendamento foi confirmado para o dia {data} às {hora}..."
-                rows={4}
+              <Label htmlFor="public_whatsapp">WhatsApp Público</Label>
+              <Input
+                id="public_whatsapp"
+                value={formData.public_whatsapp || ""}
+                onChange={(e) => setFormData({ ...formData, public_whatsapp: e.target.value })}
+                placeholder="(00) 00000-0000"
               />
               <p className="text-xs text-muted-foreground">
-                Variáveis: {"{nome}"}, {"{data}"}, {"{hora}"}, {"{empresa}"}, {"{servico}"}
+                Número exibido na página pública para contato
               </p>
             </div>
-
-            <Separator />
-
             <div className="space-y-2">
-              <Label htmlFor="reminder_message">Mensagem de Lembrete</Label>
+              <Label htmlFor="institutional_text">Texto Institucional</Label>
               <Textarea
-                id="reminder_message"
-                value={formData.reminder_message || ""}
-                onChange={(e) => setFormData({ ...formData, reminder_message: e.target.value })}
-                placeholder="Olá {nome}, lembramos que você tem um agendamento amanhã às {hora}..."
+                id="institutional_text"
+                value={formData.institutional_text || ""}
+                onChange={(e) => setFormData({ ...formData, institutional_text: e.target.value })}
+                placeholder="Texto com instruções ou informações sobre a homologação..."
                 rows={4}
               />
               <p className="text-xs text-muted-foreground">
-                Enviada automaticamente conforme prazo configurado
+                Texto exibido na página pública com orientações
               </p>
             </div>
           </CardContent>

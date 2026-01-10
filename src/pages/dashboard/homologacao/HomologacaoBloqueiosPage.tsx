@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,6 @@ import {
   Search,
   Calendar as CalendarIcon,
   Trash2,
-  Clock,
   AlertTriangle,
   Download
 } from "lucide-react";
@@ -61,11 +60,9 @@ export default function HomologacaoBloqueiosPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   
-  // Form state
+  // Form state - sem start_time e end_time pois não existem na tabela
   const [formData, setFormData] = useState({
     block_date: new Date(),
-    start_time: "",
-    end_time: "",
     reason: "",
     block_type: "full_day",
     professional_id: "",
@@ -113,8 +110,6 @@ export default function HomologacaoBloqueiosPage() {
         .from("homologacao_blocks")
         .insert({
           block_date: format(data.block_date, "yyyy-MM-dd"),
-          start_time: data.start_time || null,
-          end_time: data.end_time || null,
           reason: data.reason || null,
           block_type: data.block_type,
           professional_id: data.professional_id || null,
@@ -175,8 +170,6 @@ export default function HomologacaoBloqueiosPage() {
   const openNewDialog = () => {
     setFormData({
       block_date: new Date(),
-      start_time: "",
-      end_time: "",
       reason: "",
       block_type: "full_day",
       professional_id: "",
@@ -285,12 +278,6 @@ export default function HomologacaoBloqueiosPage() {
                       {getBlockTypeBadge(block.block_type)}
                     </div>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      {block.start_time && block.end_time && (
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {block.start_time.slice(0, 5)} - {block.end_time.slice(0, 5)}
-                        </span>
-                      )}
                       <span>{getProfessionalName(block.professional_id)}</span>
                     </div>
                     {block.reason && (
@@ -322,7 +309,7 @@ export default function HomologacaoBloqueiosPage() {
           <DialogHeader>
             <DialogTitle>Novo Bloqueio</DialogTitle>
             <DialogDescription>
-              Crie um bloqueio de agenda para um dia ou período específico
+              Crie um bloqueio de agenda para um dia específico
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -368,32 +355,11 @@ export default function HomologacaoBloqueiosPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="full_day">Dia Inteiro</SelectItem>
-                  <SelectItem value="partial">Parcial (Horário)</SelectItem>
+                  <SelectItem value="partial">Parcial</SelectItem>
                   <SelectItem value="holiday">Feriado</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-
-            {formData.block_type === "partial" && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Horário Início</Label>
-                  <Input
-                    type="time"
-                    value={formData.start_time}
-                    onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Horário Fim</Label>
-                  <Input
-                    type="time"
-                    value={formData.end_time}
-                    onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
-                  />
-                </div>
-              </div>
-            )}
 
             <div className="space-y-2">
               <Label>Profissional (opcional)</Label>

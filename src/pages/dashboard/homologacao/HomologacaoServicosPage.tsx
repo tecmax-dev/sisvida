@@ -25,8 +25,7 @@ import {
   Search,
   Clock,
   Pencil,
-  Trash2,
-  DollarSign
+  Trash2
 } from "lucide-react";
 
 interface ServiceType {
@@ -34,9 +33,9 @@ interface ServiceType {
   name: string;
   description: string | null;
   duration_minutes: number;
-  is_active: boolean;
+  is_active: boolean | null;
   clinic_id: string;
-  order_index?: number;
+  order_index?: number | null;
 }
 
 export default function HomologacaoServicosPage() {
@@ -141,7 +140,7 @@ export default function HomologacaoServicosPage() {
       name: service.name,
       description: service.description || "",
       duration_minutes: service.duration_minutes,
-      is_active: service.is_active,
+      is_active: service.is_active ?? true,
     });
     setIsDialogOpen(true);
   };
@@ -150,24 +149,6 @@ export default function HomologacaoServicosPage() {
     setIsDialogOpen(false);
     setEditingService(null);
     setFormData({ name: "", description: "", duration_minutes: 30, is_active: true });
-  };
-
-  const openEditDialog = (service: ServiceType) => {
-    setEditingService(service);
-    setFormData({
-      name: service.name,
-      description: service.description || "",
-      duration_minutes: service.duration_minutes,
-      price: service.price || 0,
-      is_active: service.is_active,
-    });
-    setIsDialogOpen(true);
-  };
-
-  const closeDialog = () => {
-    setIsDialogOpen(false);
-    setEditingService(null);
-    setFormData({ name: "", description: "", duration_minutes: 30, price: 0, is_active: true });
   };
 
   const handleSubmit = () => {
@@ -193,13 +174,6 @@ export default function HomologacaoServicosPage() {
     service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     service.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value);
-  };
 
   return (
     <div className="space-y-6">
@@ -267,12 +241,6 @@ export default function HomologacaoServicosPage() {
                     <Clock className="w-4 h-4" />
                     {service.duration_minutes} min
                   </span>
-                  {service.price && service.price > 0 && (
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="w-4 h-4" />
-                      {formatCurrency(service.price)}
-                    </span>
-                  )}
                 </div>
                 <div className="flex gap-2 mt-4">
                   <Button variant="outline" size="sm" onClick={() => openEditDialog(service)}>
@@ -326,29 +294,16 @@ export default function HomologacaoServicosPage() {
                 rows={3}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="duration">Duração (minutos)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  min={5}
-                  step={5}
-                  value={formData.duration_minutes}
-                  onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 30 })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="price">Valor (R$)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  min={0}
-                  step={0.01}
-                  value={formData.price}
-                  onChange={(e) => setFormData({ ...formData, price: parseFloat(e.target.value) || 0 })}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="duration">Duração (minutos)</Label>
+              <Input
+                id="duration"
+                type="number"
+                min={5}
+                step={5}
+                value={formData.duration_minutes}
+                onChange={(e) => setFormData({ ...formData, duration_minutes: parseInt(e.target.value) || 30 })}
+              />
             </div>
             <div className="flex items-center gap-2">
               <Switch
