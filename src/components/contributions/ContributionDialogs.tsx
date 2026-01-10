@@ -432,22 +432,32 @@ export default function ContributionDialogs({
     
     setDeleting(true);
     try {
-      const { error } = await supabase.functions.invoke("lytex-api", {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
         body: {
           action: "delete_contribution",
           contributionId: selectedContribution.id,
         },
       });
 
-      if (error) throw error;
+      // Verificar erro da Edge Function
+      if (error) {
+        console.error("Edge function error:", error);
+        throw new Error(error.message || "Erro ao excluir contribuição");
+      }
 
-      toast.success("Contribuição excluída com sucesso");
+      // Verificar erro retornado no body
+      if (data?.error) {
+        console.error("Lytex API error:", data.error);
+        throw new Error(data.error);
+      }
+
+      toast.success("Contribuição e boleto excluídos com sucesso");
       setDeleteDialogOpen(false);
       onViewDialogChange(false);
       onRefresh();
     } catch (error: any) {
       console.error("Error deleting:", error);
-      toast.error(error.message || "Erro ao excluir contribuição");
+      toast.error(error.message || "Falha ao excluir. O boleto pode ainda estar ativo na Lytex.");
     } finally {
       setDeleting(false);
     }
@@ -917,9 +927,13 @@ export default function ContributionDialogs({
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Contribuição</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir esta contribuição permanentemente?
-              {selectedContribution?.lytex_invoice_id && " O boleto também será cancelado na Lytex."}
+            <AlertDialogDescription className="space-y-2">
+              <span>Tem certeza que deseja excluir esta contribuição permanentemente?</span>
+              {selectedContribution?.lytex_invoice_id && (
+                <span className="block mt-2 text-amber-600 dark:text-amber-500 font-medium">
+                  ⚠️ O boleto correspondente também será cancelado na Lytex.
+                </span>
+              )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
