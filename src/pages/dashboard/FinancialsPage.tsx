@@ -18,6 +18,8 @@ import { ChartOfAccountsPanel } from "@/components/financials/ChartOfAccountsPan
 import { CostCentersPanel } from "@/components/financials/CostCentersPanel";
 import { ExpensesListPanel } from "@/components/financials/ExpensesListPanel";
 import { SuppliersPanel } from "@/components/financials/SuppliersPanel";
+import { SupplierExpensesPanel } from "@/components/financials/SupplierExpensesPanel";
+import { FinancialReportsTab } from "@/components/financials/FinancialReportsTab";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,14 +39,16 @@ import {
   Building2,
   Truck,
   ClipboardList,
-  LayoutDashboard
+  LayoutDashboard,
+  FileText,
+  BarChart3
 } from "lucide-react";
 
 type SubTab = 
   | "cashflow" | "income" | "expense" 
   | "registers" | "transfers" | "receivables" | "reconciliation"
   | "recurring" | "commissions"
-  | "accounts" | "costcenters" | "expenses" | "suppliers";
+  | "accounts" | "costcenters" | "expenses" | "suppliers" | "supplier-expenses";
 
 function FinancialsContent() {
   const { currentClinic } = useAuth();
@@ -77,6 +81,7 @@ function FinancialsContent() {
       { label: "Plano de Contas", value: "accounts", icon: FolderTree },
       { label: "Centros de Custo", value: "costcenters", icon: Building2 },
       { label: "Despesas", value: "expenses", icon: ClipboardList },
+      { label: "Por Fornecedor", value: "supplier-expenses", icon: BarChart3 },
       { label: "Fornecedores", value: "suppliers", icon: Truck },
     ],
   };
@@ -122,6 +127,7 @@ function FinancialsContent() {
       costcenters: <CostCentersPanel clinicId={currentClinic.id} />,
       expenses: <ExpensesListPanel clinicId={currentClinic.id} />,
       suppliers: <SuppliersPanel clinicId={currentClinic.id} />,
+      "supplier-expenses": <SupplierExpensesPanel clinicId={currentClinic.id} />,
     };
 
     const items = subNavConfig[category];
@@ -179,7 +185,7 @@ function FinancialsContent() {
         <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
           <Card className="border-0 shadow-sm bg-muted/30">
             <CardContent className="p-2">
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1 h-auto bg-transparent">
+              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-1 h-auto bg-transparent">
                 <TabsTrigger 
                   value="overview" 
                   className="gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
@@ -218,6 +224,13 @@ function FinancialsContent() {
                   <FolderTree className="h-4 w-4" />
                   <span>Cadastros</span>
                 </TabsTrigger>
+                <TabsTrigger 
+                  value="reports" 
+                  className="gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Relatórios</span>
+                </TabsTrigger>
               </TabsList>
             </CardContent>
           </Card>
@@ -251,6 +264,11 @@ function FinancialsContent() {
           <TabsContent value="registry" className="mt-0">
             {renderSubNav("registry")}
             {renderSubContent("registry")}
+          </TabsContent>
+
+          {/* Relatórios */}
+          <TabsContent value="reports" className="mt-0">
+            <FinancialReportsTab clinicId={currentClinic.id} />
           </TabsContent>
         </Tabs>
 

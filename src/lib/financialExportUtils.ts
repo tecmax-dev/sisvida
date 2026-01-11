@@ -569,3 +569,263 @@ export function exportRecurring(
 function formatDate(date: Date): string {
   return format(date, "dd/MM/yyyy", { locale: ptBR });
 }
+
+// ===== NEW EXPORT FUNCTIONS =====
+
+// Expenses by Supplier export
+export interface SupplierExpenseExportData {
+  supplierName: string;
+  supplierCnpj: string;
+  total: number;
+  paid: number;
+  pending: number;
+  overdue: number;
+  expenseCount: number;
+}
+
+export function exportExpensesBySupplier(
+  clinicName: string,
+  clinicLogo: string | null,
+  period: string,
+  data: SupplierExpenseExportData[],
+  totals: { total: number; paid: number; pending: number; overdue: number; suppliers: number },
+  exportFormat: 'pdf' | 'excel'
+) {
+  const columns = ['Fornecedor', 'CNPJ', 'Total', 'Pago', 'Pendente', 'Vencido', 'Qtd.'];
+  
+  const tableData = data.map(d => [
+    d.supplierName,
+    d.supplierCnpj || '-',
+    formatCurrency(d.total),
+    formatCurrency(d.paid),
+    formatCurrency(d.pending),
+    formatCurrency(d.overdue),
+    String(d.expenseCount),
+  ]);
+
+  const summary = [
+    { label: 'Total Gasto', value: formatCurrency(totals.total) },
+    { label: 'Total Pago', value: formatCurrency(totals.paid) },
+    { label: 'Total Pendente', value: formatCurrency(totals.pending) },
+    { label: 'Total Vencido', value: formatCurrency(totals.overdue) },
+    { label: 'Fornecedores', value: String(totals.suppliers) },
+  ];
+
+  const options = {
+    title: 'Despesas por Fornecedor',
+    clinicName,
+    period,
+    columns,
+    data: tableData,
+    summary,
+  };
+
+  if (exportFormat === 'pdf') {
+    exportFinancialToPDF(options);
+  } else {
+    exportFinancialToExcel(options);
+  }
+}
+
+// Financial Report Data Types
+export interface FinancialReportTransaction {
+  date: string;
+  description: string;
+  category: string;
+  supplier: string;
+  patient: string;
+  amount: number;
+  transactionType: string;
+  status: string;
+}
+
+export interface FinancialReportData {
+  type: string;
+  transactions: FinancialReportTransaction[];
+  groupedData: any[];
+  totals: {
+    income: number;
+    expense: number;
+    balance: number;
+    pending: number;
+    paid: number;
+  };
+}
+
+export function exportFinancialReportToPDF(
+  clinicName: string,
+  clinicLogo: string | null,
+  period: string,
+  reportTitle: string,
+  data: FinancialReportData
+) {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  
+  // Header with gradient effect simulation
+  doc.setFillColor(30, 58, 138); // Dark blue
+  doc.rect(0, 0, pageWidth, 45, 'F');
+  
+  // Title
+  doc.setFontSize(20);
+  doc.setTextColor(255, 255, 255);
+  doc.text(`Relatório: ${reportTitle}`, pageWidth / 2, 18, { align: 'center' });
+  
+  doc.setFontSize(11);
+  doc.text(clinicName, pageWidth / 2, 28, { align: 'center' });
+  doc.text(`Período: ${period}`, pageWidth / 2, 36, { align: 'center' });
+
+  let startY = 55;
+
+  // Summary Cards
+  doc.setFontSize(10);
+  doc.setTextColor(0);
+  
+  const cardWidth = (pageWidth - 30) / 5;
+  const cardHeight = 20;
+  const summaryItems = [
+    { label: 'Receitas', value: formatCurrency(data.totals.income), color: [16, 185, 129] },
+    { label: 'Despesas', value: formatCurrency(data.totals.expense), color: [239, 68, 68] },
+    { label: 'Saldo', value: formatCurrency(data.totals.balance), color: [99, 102, 241] },
+    { label: 'Pendente', value: formatCurrency(data.totals.pending), color: [245, 158, 11] },
+    { label: 'Registros', value: String(data.transactions.length), color: [100, 116, 139] },
+  ];
+
+  summaryItems.forEach((item, idx) => {
+    const x = 10 + (idx * (cardWidth + 2));
+    doc.setFillColor(item.color[0], item.color[1], item.color[2]);
+    doc.roundedRect(x, startY, cardWidth, cardHeight, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.text(item.label, x + cardWidth / 2, startY + 7, { align: 'center' });
+    doc.setFontSize(10);
+    doc.text(item.value, x + cardWidth / 2, startY + 15, { align: 'center' });
+  });
+
+  startY += cardHeight + 15;
+
+  // Grouped data table (if applicable)
+  if (data.groupedData && data.groupedData.length > 0) {
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text('Resumo Agrupado', 14, startY);
+
+    autoTable(doc, {
+      startY: startY + 5,
+      head: [['Nome', 'Total', 'Qtd.', '% do Total']],
+      body: data.groupedData.map((g: any) => {
+        const totalSum = data.groupedData.reduce((sum: number, x: any) => sum + x.total, 0);
+        const pct = totalSum > 0 ? ((g.total / totalSum) * 100).toFixed(1) : '0';
+        return [g.name, formatCurrency(g.total), String(g.count), `${pct}%`];
+      }),
+      theme: 'striped',
+      headStyles: { fillColor: [30, 58, 138] },
+      styles: { fontSize: 9 },
+    });
+
+    startY = (doc as any).lastAutoTable.finalY + 10;
+  }
+
+  // Detailed transactions table
+  if (data.transactions.length > 0) {
+    doc.setFontSize(12);
+    doc.setTextColor(0);
+    doc.text('Detalhamento', 14, startY);
+
+    const columns = ['Data', 'Descrição', 'Categoria', 'Tipo', 'Valor', 'Status'];
+    const tableData = data.transactions.map(t => [
+      t.date,
+      t.description.substring(0, 30) + (t.description.length > 30 ? '...' : ''),
+      t.category,
+      t.transactionType === 'income' ? 'Receita' : 'Despesa',
+      `${t.transactionType === 'income' ? '+' : '-'} ${formatCurrency(t.amount)}`,
+      t.status,
+    ]);
+
+    autoTable(doc, {
+      startY: startY + 5,
+      head: [columns],
+      body: tableData,
+      theme: 'striped',
+      headStyles: { fillColor: [30, 58, 138] },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        1: { cellWidth: 50 },
+        4: { halign: 'right' },
+      },
+    });
+  }
+
+  // Footer
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(9);
+    doc.setTextColor(150);
+    doc.text(
+      `Página ${i} de ${pageCount} • Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} • Eclini by Tecmax Tecnologia`,
+      pageWidth / 2,
+      doc.internal.pageSize.getHeight() - 10,
+      { align: 'center' }
+    );
+  }
+
+  const filename = `relatorio-financeiro-${format(new Date(), 'yyyy-MM-dd')}.pdf`;
+  doc.save(filename);
+}
+
+export function exportFinancialReportToExcel(
+  clinicName: string,
+  period: string,
+  reportTitle: string,
+  data: FinancialReportData
+) {
+  const workbook = XLSX.utils.book_new();
+
+  // Summary sheet data
+  const summaryData = [
+    [`Relatório: ${reportTitle}`],
+    ['Clínica', clinicName],
+    ['Período', period],
+    ['Gerado em', format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })],
+    [],
+    ['Resumo'],
+    ['Receitas', formatCurrency(data.totals.income)],
+    ['Despesas', formatCurrency(data.totals.expense)],
+    ['Saldo', formatCurrency(data.totals.balance)],
+    ['Pendente', formatCurrency(data.totals.pending)],
+    ['Registros', String(data.transactions.length)],
+    [],
+  ];
+
+  // Add grouped data if available
+  if (data.groupedData && data.groupedData.length > 0) {
+    summaryData.push(['Resumo Agrupado']);
+    summaryData.push(['Nome', 'Total', 'Quantidade']);
+    data.groupedData.forEach((g: any) => {
+      summaryData.push([g.name, formatCurrency(g.total), String(g.count)]);
+    });
+    summaryData.push([]);
+  }
+
+  // Add transactions
+  summaryData.push(['Detalhamento']);
+  summaryData.push(['Data', 'Descrição', 'Categoria', 'Fornecedor', 'Tipo', 'Valor', 'Status']);
+  data.transactions.forEach(t => {
+    summaryData.push([
+      t.date,
+      t.description,
+      t.category,
+      t.supplier,
+      t.transactionType === 'income' ? 'Receita' : 'Despesa',
+      formatCurrency(t.amount),
+      t.status,
+    ]);
+  });
+
+  const sheet = XLSX.utils.aoa_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(workbook, sheet, 'Relatório');
+
+  const filename = `relatorio-financeiro-${format(new Date(), 'yyyy-MM-dd')}.xlsx`;
+  XLSX.writeFile(workbook, filename);
+}
