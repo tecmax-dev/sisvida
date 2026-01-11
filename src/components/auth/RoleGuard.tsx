@@ -1,7 +1,5 @@
 import { Navigate } from "react-router-dom";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
-import { AlertCircle } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface RoleGuardProps {
   children: React.ReactNode;
@@ -44,18 +42,7 @@ export function RoleGuard({
       return <>{fallback}</>;
     }
 
-    return (
-      <div className="p-6">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertTitle>Acesso negado</AlertTitle>
-          <AlertDescription>
-            Você não tem permissão para acessar esta página. Entre em contato com o
-            administrador da clínica se precisar de acesso.
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
+    return null;
   }
 
   return <>{children}</>;
