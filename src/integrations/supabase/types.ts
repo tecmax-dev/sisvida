@@ -9100,6 +9100,567 @@ export type Database = {
           },
         ]
       }
+      union_audit_logs: {
+        Row: {
+          action: string
+          clinic_id: string
+          created_at: string | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_values: Json | null
+          old_values: Json | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          clinic_id: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          clinic_id?: string
+          created_at?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_audit_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_cash_flow_history: {
+        Row: {
+          amount: number
+          balance_after: number | null
+          balance_before: number | null
+          cash_register_id: string | null
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          date: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          source: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number | null
+          balance_before?: number | null
+          cash_register_id?: string | null
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          source: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number | null
+          balance_before?: number | null
+          cash_register_id?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          source?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_cash_flow_history_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "union_cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_cash_flow_history_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_cash_registers: {
+        Row: {
+          account_number: string | null
+          agency: string | null
+          bank_name: string | null
+          clinic_id: string
+          created_at: string | null
+          current_balance: number | null
+          id: string
+          initial_balance: number | null
+          is_active: boolean | null
+          name: string
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          agency?: string | null
+          bank_name?: string | null
+          clinic_id: string
+          created_at?: string | null
+          current_balance?: number | null
+          id?: string
+          initial_balance?: number | null
+          is_active?: boolean | null
+          name: string
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          agency?: string | null
+          bank_name?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          current_balance?: number | null
+          id?: string
+          initial_balance?: number | null
+          is_active?: boolean | null
+          name?: string
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_cash_registers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_cash_transfers: {
+        Row: {
+          amount: number
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          from_register_id: string
+          id: string
+          to_register_id: string
+          transfer_date: string
+        }
+        Insert: {
+          amount: number
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          from_register_id: string
+          id?: string
+          to_register_id: string
+          transfer_date: string
+        }
+        Update: {
+          amount?: number
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          from_register_id?: string
+          id?: string
+          to_register_id?: string
+          transfer_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_cash_transfers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_cash_transfers_from_register_id_fkey"
+            columns: ["from_register_id"]
+            isOneToOne: false
+            referencedRelation: "union_cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_cash_transfers_to_register_id_fkey"
+            columns: ["to_register_id"]
+            isOneToOne: false
+            referencedRelation: "union_cash_registers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_cost_centers: {
+        Row: {
+          clinic_id: string
+          code: string | null
+          created_at: string | null
+          description: string | null
+          hierarchy_level: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          code?: string | null
+          created_at?: string | null
+          description?: string | null
+          hierarchy_level?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          code?: string | null
+          created_at?: string | null
+          description?: string | null
+          hierarchy_level?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_cost_centers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_cost_centers_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "union_cost_centers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_financial_categories: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          parent_id: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          parent_id?: string | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          parent_id?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_financial_categories_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_financial_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "union_financial_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_financial_transactions: {
+        Row: {
+          amount: number
+          cash_register_id: string | null
+          category_id: string | null
+          check_number: string | null
+          clinic_id: string
+          conciliated_at: string | null
+          conciliated_by: string | null
+          contribution_id: string | null
+          cost_center_id: string | null
+          created_at: string | null
+          created_by: string | null
+          description: string
+          discount_value: number | null
+          document_number: string | null
+          document_type: string | null
+          due_date: string | null
+          employer_id: string | null
+          fine_value: number | null
+          gross_value: number | null
+          id: string
+          interest_value: number | null
+          is_conciliated: boolean | null
+          net_value: number | null
+          notes: string | null
+          paid_date: string | null
+          payment_method: string | null
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+          status: string | null
+          supplier_id: string | null
+          type: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          cash_register_id?: string | null
+          category_id?: string | null
+          check_number?: string | null
+          clinic_id: string
+          conciliated_at?: string | null
+          conciliated_by?: string | null
+          contribution_id?: string | null
+          cost_center_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description: string
+          discount_value?: number | null
+          document_number?: string | null
+          document_type?: string | null
+          due_date?: string | null
+          employer_id?: string | null
+          fine_value?: number | null
+          gross_value?: number | null
+          id?: string
+          interest_value?: number | null
+          is_conciliated?: boolean | null
+          net_value?: number | null
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          type: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          cash_register_id?: string | null
+          category_id?: string | null
+          check_number?: string | null
+          clinic_id?: string
+          conciliated_at?: string | null
+          conciliated_by?: string | null
+          contribution_id?: string | null
+          cost_center_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          description?: string
+          discount_value?: number | null
+          document_number?: string | null
+          document_type?: string | null
+          due_date?: string | null
+          employer_id?: string | null
+          fine_value?: number | null
+          gross_value?: number | null
+          id?: string
+          interest_value?: number | null
+          is_conciliated?: boolean | null
+          net_value?: number | null
+          notes?: string | null
+          paid_date?: string | null
+          payment_method?: string | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_financial_transactions_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "union_cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_financial_transactions_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "union_financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_financial_transactions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_financial_transactions_contribution_id_fkey"
+            columns: ["contribution_id"]
+            isOneToOne: false
+            referencedRelation: "employer_contributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_financial_transactions_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "union_cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_financial_transactions_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_financial_transactions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "union_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_suppliers: {
+        Row: {
+          address: string | null
+          city: string | null
+          clinic_id: string
+          cnpj: string | null
+          contact_name: string | null
+          cpf: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          phone: string | null
+          state: string | null
+          trade_name: string | null
+          updated_at: string | null
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          clinic_id: string
+          cnpj?: string | null
+          contact_name?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          trade_name?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          clinic_id?: string
+          cnpj?: string | null
+          contact_name?: string | null
+          cpf?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          trade_name?: string | null
+          updated_at?: string | null
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_suppliers_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       upgrade_requests: {
         Row: {
           admin_notes: string | null
@@ -10277,6 +10838,10 @@ export type Database = {
       }
       has_clinic_access: {
         Args: { _clinic_id: string; _user_id: string }
+        Returns: boolean
+      }
+      has_union_module_access: {
+        Args: { p_clinic_id: string; p_user_id: string }
         Returns: boolean
       }
       is_clinic_admin: {
