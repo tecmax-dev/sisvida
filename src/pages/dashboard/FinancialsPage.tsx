@@ -9,6 +9,8 @@ import { TransactionTable } from "@/components/financials/TransactionTable";
 import { CategoryDialog } from "@/components/financials/CategoryDialog";
 import { CashRegistersPanel } from "@/components/financials/CashRegistersPanel";
 import { CashFlowPanel } from "@/components/financials/CashFlowPanel";
+import { CashFlowAnnualView } from "@/components/financials/CashFlowAnnualView";
+import { CashRegisterBalancesPanel } from "@/components/financials/CashRegisterBalancesPanel";
 import { ReceivablesPanel } from "@/components/financials/ReceivablesPanel";
 import { TransfersPanel } from "@/components/financials/TransfersPanel";
 import { RecurringPanel } from "@/components/financials/RecurringPanel";
@@ -49,7 +51,7 @@ import {
 } from "lucide-react";
 
 type SubTab = 
-  | "cashflow" | "income" | "expense" 
+  | "cashflow" | "cashflow-annual" | "balances" | "income" | "expense" 
   | "registers" | "transfers" | "receivables" | "reconciliation"
   | "recurring" | "commissions"
   | "accounts" | "costcenters" | "expenses" | "suppliers" | "supplier-expenses"
@@ -68,7 +70,9 @@ function FinancialsContent() {
 
   const subNavConfig: Record<string, { label: string; value: SubTab; icon: React.ElementType }[]> = {
     movements: [
-      { label: "Fluxo de Caixa", value: "cashflow", icon: Wallet },
+      { label: "Fluxo Mensal", value: "cashflow", icon: Wallet },
+      { label: "Fluxo Anual", value: "cashflow-annual", icon: BarChart3 },
+      { label: "Saldos", value: "balances", icon: TrendingUp },
       { label: "Receber", value: "income", icon: ArrowDownCircle },
       { label: "Pagar", value: "expense", icon: ArrowUpCircle },
     ],
@@ -125,6 +129,8 @@ function FinancialsContent() {
   const renderSubContent = (category: string) => {
     const contentMap: Record<SubTab, React.ReactNode> = {
       cashflow: <CashFlowPanel clinicId={currentClinic.id} />,
+      "cashflow-annual": <CashFlowAnnualView clinicId={currentClinic.id} />,
+      balances: <CashRegisterBalancesPanel clinicId={currentClinic.id} />,
       income: <TransactionTable clinicId={currentClinic.id} filterType="income" />,
       expense: <TransactionTable clinicId={currentClinic.id} filterType="expense" />,
       registers: <CashRegistersPanel clinicId={currentClinic.id} />,

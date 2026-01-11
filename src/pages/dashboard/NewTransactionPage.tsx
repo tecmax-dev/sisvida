@@ -368,7 +368,7 @@ function NewTransactionContent() {
         };
       }
 
-      const { error } = await supabase.from("financial_transactions").insert(payload);
+      const { error } = await supabase.from("financial_transactions").insert([payload] as any);
       if (error) throw error;
     },
     onSuccess: () => {
