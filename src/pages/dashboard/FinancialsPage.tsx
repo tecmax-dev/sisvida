@@ -1,11 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { FeatureGate } from "@/components/features/FeatureGate";
 import { FinancialMetrics } from "@/components/financials/FinancialMetrics";
 import { FinancialCharts } from "@/components/financials/FinancialCharts";
 import { TransactionTable } from "@/components/financials/TransactionTable";
-import { TransactionDialog } from "@/components/financials/TransactionDialog";
 import { CategoryDialog } from "@/components/financials/CategoryDialog";
 import { CashRegistersPanel } from "@/components/financials/CashRegistersPanel";
 import { CashFlowPanel } from "@/components/financials/CashFlowPanel";
@@ -48,7 +48,7 @@ type SubTab =
 
 function FinancialsContent() {
   const { currentClinic } = useAuth();
-  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const navigate = useNavigate();
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
   const [subTab, setSubTab] = useState<SubTab>("cashflow");
@@ -168,7 +168,7 @@ function FinancialsContent() {
               <Settings2 className="h-4 w-4 mr-2" />
               Categorias
             </Button>
-            <Button size="sm" onClick={() => setTransactionDialogOpen(true)}>
+            <Button size="sm" onClick={() => navigate("/dashboard/financials/new")}>
               <Plus className="h-4 w-4 mr-2" />
               Nova Transação
             </Button>
@@ -254,11 +254,6 @@ function FinancialsContent() {
           </TabsContent>
         </Tabs>
 
-        <TransactionDialog
-          open={transactionDialogOpen}
-          onOpenChange={setTransactionDialogOpen}
-          clinicId={currentClinic.id}
-        />
 
         <CategoryDialog
           open={categoryDialogOpen}
