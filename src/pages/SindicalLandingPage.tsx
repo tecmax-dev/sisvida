@@ -496,7 +496,7 @@ function SindicalHeader() {
           {/* CTA */}
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" asChild className="hidden sm:flex">
-              <Link to="/auth">Entrar</Link>
+              <Link to="/entidade-sindical">Área da Entidade</Link>
             </Button>
             <Button size="sm" className="btn-eclini" asChild>
               <a href="#contato">Demonstração</a>

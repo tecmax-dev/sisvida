@@ -155,6 +155,10 @@ import GlobalConfigPage from "./pages/admin/GlobalConfigPage";
 import AddonRequestsPage from "./pages/admin/AddonRequestsPage";
 import AddonsManagementPage from "./pages/admin/AddonsManagementPage";
 import PendingDependentApprovals from "./pages/admin/PendingDependentApprovals";
+import UnionEntitiesPage from "./pages/admin/UnionEntitiesPage";
+
+// Login exclusivo para entidades sindicais
+const UnionEntityLoginPage = lazy(() => import("./pages/UnionEntityLoginPage"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -245,6 +249,8 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/sindical" element={<SindicalLandingPage />} />
                 <Route path="/sistema-sindical" element={<SindicalLandingPage />} />
+                <Route path="/entidade-sindical" element={<UnionEntityLoginPage />} />
+                <Route path="/login-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/instalar" element={<InstallPage />} />
@@ -341,6 +347,7 @@ const App = () => (
                   <Route path="banners" element={<CarouselBannersPage />} />
                   <Route path="config" element={<GlobalConfigPage />} />
                   <Route path="dependent-approvals" element={<PendingDependentApprovals />} />
+                  <Route path="union-entities" element={<UnionEntitiesPage />} />
                 </Route>
                 {/* Dashboard Routes */}
                 <Route
