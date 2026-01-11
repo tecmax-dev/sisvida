@@ -36,6 +36,7 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
+import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
 
 interface UnionEntity {
   id: string;
@@ -608,26 +609,17 @@ export default function UnionEntitiesPage() {
                 Dados da Entidade
               </h3>
               
+              <CnpjInputCard
+                value={formData.cnpj}
+                onChange={(value) => setFormData(prev => ({ ...prev, cnpj: value }))}
+                onLookup={handleCnpjLookup}
+                loading={cnpjLoading}
+                required
+                label="CNPJ da Entidade"
+                showLookupButton
+              />
+
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cnpj">CNPJ *</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      id="cnpj"
-                      value={formData.cnpj}
-                      onChange={(e) => setFormData(prev => ({ ...prev, cnpj: e.target.value }))}
-                      placeholder="00.000.000/0000-00"
-                    />
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      onClick={handleCnpjLookup}
-                      disabled={cnpjLoading}
-                    >
-                      {cnpjLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
-                    </Button>
-                  </div>
-                </div>
                 <div className="space-y-2">
                   <Label htmlFor="entity_type">Tipo de Entidade *</Label>
                   <Select
@@ -643,6 +635,24 @@ export default function UnionEntitiesPage() {
                       <SelectItem value="sindicato">Sindicato</SelectItem>
                       <SelectItem value="federacao">Federação</SelectItem>
                       <SelectItem value="confederacao">Confederação</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="abrangencia">Abrangência *</Label>
+                  <Select
+                    value={formData.abrangencia}
+                    onValueChange={(value: 'municipal' | 'estadual' | 'nacional') => 
+                      setFormData(prev => ({ ...prev, abrangencia: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="municipal">Municipal</SelectItem>
+                      <SelectItem value="estadual">Estadual</SelectItem>
+                      <SelectItem value="nacional">Nacional</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -667,34 +677,14 @@ export default function UnionEntitiesPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="categoria_laboral">Categoria Laboral</Label>
-                  <Input
-                    id="categoria_laboral"
-                    value={formData.categoria_laboral}
-                    onChange={(e) => setFormData(prev => ({ ...prev, categoria_laboral: e.target.value }))}
-                    placeholder="Ex: Metalúrgicos, Comerciários"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="abrangencia">Abrangência</Label>
-                  <Select
-                    value={formData.abrangencia}
-                    onValueChange={(value: 'municipal' | 'estadual' | 'nacional') => 
-                      setFormData(prev => ({ ...prev, abrangencia: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="municipal">Municipal</SelectItem>
-                      <SelectItem value="estadual">Estadual</SelectItem>
-                      <SelectItem value="nacional">Nacional</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="categoria_laboral">Categoria Laboral Representada</Label>
+                <Input
+                  id="categoria_laboral"
+                  value={formData.categoria_laboral}
+                  onChange={(e) => setFormData(prev => ({ ...prev, categoria_laboral: e.target.value }))}
+                  placeholder="Ex: Metalúrgicos, Comerciários, Trabalhadores da Construção Civil"
+                />
               </div>
             </div>
 
