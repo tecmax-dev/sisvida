@@ -8277,8 +8277,12 @@ export type Database = {
       }
       subscription_plans: {
         Row: {
+          annual_price: number | null
+          billing_period: string
+          category: Database["public"]["Enums"]["plan_category"]
           created_at: string
           description: string | null
+          display_order: number | null
           external_plan_id: string | null
           features: Json | null
           id: string
@@ -8287,13 +8291,20 @@ export type Database = {
           is_public: boolean | null
           max_messages_monthly: number | null
           max_professionals: number
+          module_flags: Json | null
           monthly_price: number
           name: string
+          resource_limits: Json | null
+          trial_days: number | null
           updated_at: string
         }
         Insert: {
+          annual_price?: number | null
+          billing_period?: string
+          category?: Database["public"]["Enums"]["plan_category"]
           created_at?: string
           description?: string | null
+          display_order?: number | null
           external_plan_id?: string | null
           features?: Json | null
           id?: string
@@ -8302,13 +8313,20 @@ export type Database = {
           is_public?: boolean | null
           max_messages_monthly?: number | null
           max_professionals?: number
+          module_flags?: Json | null
           monthly_price?: number
           name: string
+          resource_limits?: Json | null
+          trial_days?: number | null
           updated_at?: string
         }
         Update: {
+          annual_price?: number | null
+          billing_period?: string
+          category?: Database["public"]["Enums"]["plan_category"]
           created_at?: string
           description?: string | null
+          display_order?: number | null
           external_plan_id?: string | null
           features?: Json | null
           id?: string
@@ -8317,8 +8335,11 @@ export type Database = {
           is_public?: boolean | null
           max_messages_monthly?: number | null
           max_professionals?: number
+          module_flags?: Json | null
           monthly_price?: number
           name?: string
+          resource_limits?: Json | null
+          trial_days?: number | null
           updated_at?: string
         }
         Relationships: []
@@ -10918,6 +10939,7 @@ export type Database = {
         | "exam"
         | "procedure"
         | "telemedicine"
+      plan_category: "clinica" | "sindicato"
       specialty_category:
         | "medical"
         | "dental"
@@ -11075,6 +11097,7 @@ export const Constants = {
         "procedure",
         "telemedicine",
       ],
+      plan_category: ["clinica", "sindicato"],
       specialty_category: [
         "medical",
         "dental",

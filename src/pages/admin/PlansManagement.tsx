@@ -23,6 +23,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
@@ -37,8 +44,15 @@ import {
   EyeOff,
   Layers,
   MessageSquare,
+  Building2,
+  Scale,
+  ArrowUpDown,
+  Calendar,
+  Settings2,
 } from "lucide-react";
 import { useSystemFeatures, usePlanLinkedFeatures, SystemFeature } from "@/hooks/usePlanFeatures";
+
+type PlanCategory = 'clinica' | 'sindicato';
 
 interface Plan {
   id: string;
@@ -47,6 +61,7 @@ interface Plan {
   max_professionals: number;
   max_messages_monthly: number;
   monthly_price: number;
+  annual_price: number;
   external_plan_id: string | null;
   is_active: boolean;
   is_public: boolean;
@@ -54,6 +69,12 @@ interface Plan {
   features: string[];
   created_at: string;
   subscription_count?: number;
+  category: PlanCategory;
+  billing_period: string;
+  trial_days: number;
+  display_order: number;
+  resource_limits: Record<string, number>;
+  module_flags: Record<string, boolean>;
 }
 
 const CATEGORIES = [
@@ -68,6 +89,33 @@ const CATEGORIES = [
   { value: 'management', label: 'Gestão' },
 ];
 
+const PLAN_CATEGORIES: { value: PlanCategory; label: string; icon: typeof Building2; color: string }[] = [
+  { value: 'clinica', label: 'Clínica', icon: Building2, color: 'bg-blue-100 text-blue-800' },
+  { value: 'sindicato', label: 'Sindicato', icon: Scale, color: 'bg-amber-100 text-amber-800' },
+];
+
+const BILLING_PERIODS = [
+  { value: 'monthly', label: 'Mensal' },
+  { value: 'annual', label: 'Anual' },
+  { value: 'custom', label: 'Personalizado' },
+];
+
+const UNION_MODULE_FLAGS = [
+  { key: 'empresas', label: 'Empresas', description: 'Cadastro e gestão de empresas' },
+  { key: 'socios', label: 'Sócios', description: 'Cadastro e gestão de sócios/associados' },
+  { key: 'contribuicoes', label: 'Contribuições', description: 'Gestão de contribuições sindicais' },
+  { key: 'financeiro', label: 'Financeiro Sindical', description: 'Módulo financeiro completo' },
+  { key: 'negociacoes', label: 'Negociações', description: 'Negociações e parcelamentos de débitos' },
+  { key: 'relatorios_avancados', label: 'Relatórios Avançados', description: 'Relatórios gerenciais e institucionais' },
+];
+
+const UNION_RESOURCE_LIMITS = [
+  { key: 'max_empresas', label: 'Máx. Empresas', description: '0 = ilimitado' },
+  { key: 'max_socios', label: 'Máx. Sócios', description: '0 = ilimitado' },
+  { key: 'max_negociacoes', label: 'Máx. Negociações/Mês', description: '0 = ilimitado' },
+  { key: 'max_usuarios', label: 'Máx. Usuários', description: '0 = ilimitado' },
+];
+
 export default function PlansManagement() {
   const { toast } = useToast();
   const [plans, setPlans] = useState<Plan[]>([]);
@@ -76,6 +124,7 @@ export default function PlansManagement() {
   const [saving, setSaving] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
   const [activeTab, setActiveTab] = useState("details");
+  const [categoryFilter, setCategoryFilter] = useState<PlanCategory | 'all'>('all');
 
   // Form state
   const [formName, setFormName] = useState("");
@@ -83,12 +132,19 @@ export default function PlansManagement() {
   const [formMaxProfessionals, setFormMaxProfessionals] = useState("1");
   const [formMaxMessages, setFormMaxMessages] = useState("100");
   const [formMonthlyPrice, setFormMonthlyPrice] = useState("0");
+  const [formAnnualPrice, setFormAnnualPrice] = useState("0");
   const [formExternalId, setFormExternalId] = useState("");
   const [formIsActive, setFormIsActive] = useState(true);
   const [formIsPublic, setFormIsPublic] = useState(true);
   const [formIsDefaultTrial, setFormIsDefaultTrial] = useState(false);
   const [formFeatures, setFormFeatures] = useState("");
   const [selectedFeatureIds, setSelectedFeatureIds] = useState<string[]>([]);
+  const [formCategory, setFormCategory] = useState<PlanCategory>('clinica');
+  const [formBillingPeriod, setFormBillingPeriod] = useState('monthly');
+  const [formTrialDays, setFormTrialDays] = useState("0");
+  const [formDisplayOrder, setFormDisplayOrder] = useState("0");
+  const [formModuleFlags, setFormModuleFlags] = useState<Record<string, boolean>>({});
+  const [formResourceLimits, setFormResourceLimits] = useState<Record<string, string>>({});
 
   // System features
   const { features: systemFeatures, loading: loadingFeatures } = useSystemFeatures();
@@ -111,6 +167,7 @@ export default function PlansManagement() {
       const { data: plansData, error: plansError } = await supabase
         .from('subscription_plans')
         .select('*')
+        .order('display_order', { ascending: true })
         .order('monthly_price', { ascending: true });
 
       if (plansError) throw plansError;
@@ -128,6 +185,8 @@ export default function PlansManagement() {
               ? (plan.features as unknown[]).map(f => String(f))
               : [],
             subscription_count: count || 0,
+            resource_limits: (plan.resource_limits as Record<string, number>) || {},
+            module_flags: (plan.module_flags as Record<string, boolean>) || {},
           };
         })
       );
@@ -150,6 +209,7 @@ export default function PlansManagement() {
     setFormMaxProfessionals("1");
     setFormMaxMessages("100");
     setFormMonthlyPrice("0");
+    setFormAnnualPrice("0");
     setFormExternalId("");
     setFormIsActive(true);
     setFormIsPublic(true);
@@ -158,6 +218,12 @@ export default function PlansManagement() {
     setSelectedFeatureIds([]);
     setEditingPlan(null);
     setActiveTab("details");
+    setFormCategory('clinica');
+    setFormBillingPeriod('monthly');
+    setFormTrialDays("0");
+    setFormDisplayOrder("0");
+    setFormModuleFlags({});
+    setFormResourceLimits({});
   };
 
   const openEditDialog = (plan: Plan) => {
@@ -167,11 +233,22 @@ export default function PlansManagement() {
     setFormMaxProfessionals(plan.max_professionals.toString());
     setFormMaxMessages((plan.max_messages_monthly ?? 100).toString());
     setFormMonthlyPrice(plan.monthly_price.toString());
+    setFormAnnualPrice((plan.annual_price || 0).toString());
     setFormExternalId(plan.external_plan_id || "");
     setFormIsActive(plan.is_active);
     setFormIsPublic(plan.is_public);
     setFormIsDefaultTrial(plan.is_default_trial);
     setFormFeatures(plan.features.join("\n"));
+    setFormCategory(plan.category || 'clinica');
+    setFormBillingPeriod(plan.billing_period || 'monthly');
+    setFormTrialDays((plan.trial_days || 0).toString());
+    setFormDisplayOrder((plan.display_order || 0).toString());
+    setFormModuleFlags(plan.module_flags || {});
+    setFormResourceLimits(
+      Object.fromEntries(
+        Object.entries(plan.resource_limits || {}).map(([k, v]) => [k, v.toString()])
+      )
+    );
     setDialogOpen(true);
     refetchLinked();
   };
@@ -182,6 +259,13 @@ export default function PlansManagement() {
         ? prev.filter(id => id !== featureId)
         : [...prev, featureId]
     );
+  };
+
+  const handleModuleFlagToggle = (key: string) => {
+    setFormModuleFlags(prev => ({
+      ...prev,
+      [key]: !prev[key]
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -199,17 +283,28 @@ export default function PlansManagement() {
     setSaving(true);
 
     try {
+      const resourceLimitsNumeric = Object.fromEntries(
+        Object.entries(formResourceLimits).map(([k, v]) => [k, parseInt(v) || 0])
+      );
+
       const planData = {
         name: formName.trim(),
         description: formDescription.trim() || null,
         max_professionals: parseInt(formMaxProfessionals) || 1,
         max_messages_monthly: parseInt(formMaxMessages) || 100,
         monthly_price: parseFloat(formMonthlyPrice) || 0,
+        annual_price: parseFloat(formAnnualPrice) || 0,
         external_plan_id: formExternalId.trim() || null,
         is_active: formIsActive,
         is_public: formIsPublic,
         is_default_trial: formIsDefaultTrial,
         features: formFeatures.split("\n").filter(f => f.trim()),
+        category: formCategory,
+        billing_period: formBillingPeriod,
+        trial_days: parseInt(formTrialDays) || 0,
+        display_order: parseInt(formDisplayOrder) || 0,
+        resource_limits: resourceLimitsNumeric,
+        module_flags: formModuleFlags,
       };
 
       let planId = editingPlan?.id;
@@ -234,13 +329,11 @@ export default function PlansManagement() {
 
       // Update linked features
       if (planId) {
-        // Remove all existing links
         await supabase
           .from('plan_features')
           .delete()
           .eq('plan_id', planId);
 
-        // Add new links
         if (selectedFeatureIds.length > 0) {
           const linksToInsert = selectedFeatureIds.map(featureId => ({
             plan_id: planId,
@@ -310,6 +403,10 @@ export default function PlansManagement() {
     return CATEGORIES.find(c => c.value === category)?.label || category;
   };
 
+  const getPlanCategoryInfo = (category: PlanCategory) => {
+    return PLAN_CATEGORIES.find(c => c.value === category) || PLAN_CATEGORIES[0];
+  };
+
   // Group features by category
   const groupedFeatures = systemFeatures.reduce((acc, feature) => {
     if (!acc[feature.category]) {
@@ -319,13 +416,21 @@ export default function PlansManagement() {
     return acc;
   }, {} as Record<string, SystemFeature[]>);
 
+  // Filter plans by category
+  const filteredPlans = categoryFilter === 'all' 
+    ? plans 
+    : plans.filter(p => p.category === categoryFilter);
+
+  const clinicPlansCount = plans.filter(p => p.category === 'clinica').length;
+  const unionPlansCount = plans.filter(p => p.category === 'sindicato').length;
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Gestão de Planos</h1>
           <p className="text-muted-foreground">
-            Configure os planos de assinatura e vincule recursos
+            Configure planos de assinatura para Clínicas e Sindicatos
           </p>
         </div>
 
@@ -339,7 +444,7 @@ export default function PlansManagement() {
               Novo Plano
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
             <DialogHeader className="flex-shrink-0">
               <DialogTitle>
                 {editingPlan ? "Editar Plano" : "Novo Plano"}
@@ -347,8 +452,10 @@ export default function PlansManagement() {
             </DialogHeader>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-              <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
+              <TabsList className="grid w-full grid-cols-4 flex-shrink-0">
                 <TabsTrigger value="details">Detalhes</TabsTrigger>
+                <TabsTrigger value="pricing">Preços</TabsTrigger>
+                <TabsTrigger value="modules">Módulos</TabsTrigger>
                 <TabsTrigger value="features">
                   Recursos ({selectedFeatureIds.length})
                 </TabsTrigger>
@@ -356,15 +463,37 @@ export default function PlansManagement() {
 
               <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 mt-4">
                 <div className="flex-1 overflow-y-auto min-h-0">
+                  {/* Details Tab */}
                   <TabsContent value="details" className="space-y-4 mt-0 data-[state=inactive]:hidden">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Nome do Plano *</Label>
-                      <Input
-                        id="name"
-                        value={formName}
-                        onChange={(e) => setFormName(e.target.value)}
-                        placeholder="Ex: Profissional"
-                      />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Nome do Plano *</Label>
+                        <Input
+                          id="name"
+                          value={formName}
+                          onChange={(e) => setFormName(e.target.value)}
+                          placeholder="Ex: Profissional"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Categoria *</Label>
+                        <Select value={formCategory} onValueChange={(v) => setFormCategory(v as PlanCategory)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {PLAN_CATEGORIES.map((cat) => (
+                              <SelectItem key={cat.value} value={cat.value}>
+                                <div className="flex items-center gap-2">
+                                  <cat.icon className="h-4 w-4" />
+                                  {cat.label}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -378,54 +507,44 @@ export default function PlansManagement() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="maxProfessionals">Máx. Profissionais</Label>
-                        <Input
-                          id="maxProfessionals"
-                          type="number"
-                          min="1"
-                          value={formMaxProfessionals}
-                          onChange={(e) => setFormMaxProfessionals(e.target.value)}
-                        />
+                        <Label>Recorrência</Label>
+                        <Select value={formBillingPeriod} onValueChange={setFormBillingPeriod}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {BILLING_PERIODS.map((bp) => (
+                              <SelectItem key={bp.value} value={bp.value}>
+                                {bp.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="monthlyPrice">Preço Mensal (R$)</Label>
+                        <Label htmlFor="trialDays">Dias de Trial</Label>
                         <Input
-                          id="monthlyPrice"
+                          id="trialDays"
                           type="number"
                           min="0"
-                          step="0.01"
-                          value={formMonthlyPrice}
-                          onChange={(e) => setFormMonthlyPrice(e.target.value)}
+                          value={formTrialDays}
+                          onChange={(e) => setFormTrialDays(e.target.value)}
                         />
                       </div>
-                    </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="maxMessages">Mensagens/Mês (WhatsApp)</Label>
-                      <Input
-                        id="maxMessages"
-                        type="number"
-                        min="0"
-                        value={formMaxMessages}
-                        onChange={(e) => setFormMaxMessages(e.target.value)}
-                        placeholder="100"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        0 = ilimitado. Inclui lembretes automáticos, confirmações e envios manuais.
-                      </p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="externalId">ID Externo (gateway)</Label>
-                      <Input
-                        id="externalId"
-                        value={formExternalId}
-                        onChange={(e) => setFormExternalId(e.target.value)}
-                        placeholder="ID do plano no gateway de pagamento"
-                      />
+                      <div className="space-y-2">
+                        <Label htmlFor="displayOrder">Ordem de Exibição</Label>
+                        <Input
+                          id="displayOrder"
+                          type="number"
+                          min="0"
+                          value={formDisplayOrder}
+                          onChange={(e) => setFormDisplayOrder(e.target.value)}
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -438,57 +557,183 @@ export default function PlansManagement() {
                         rows={3}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Texto descritivo para exibição. Use a aba "Recursos" para vincular funcionalidades reais.
+                        Texto descritivo para exibição comercial.
                       </p>
                     </div>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-4 border-t">
                       <div className="flex items-center justify-between">
                         <div>
                           <Label>Plano Ativo</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Disponível para assinaturas
-                          </p>
+                          <p className="text-sm text-muted-foreground">Disponível para assinaturas</p>
                         </div>
-                        <Switch
-                          checked={formIsActive}
-                          onCheckedChange={setFormIsActive}
-                        />
+                        <Switch checked={formIsActive} onCheckedChange={setFormIsActive} />
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div>
                           <Label>Plano Público</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Visível na landing page
-                          </p>
+                          <p className="text-sm text-muted-foreground">Visível na landing page</p>
                         </div>
-                        <Switch
-                          checked={formIsPublic}
-                          onCheckedChange={setFormIsPublic}
-                        />
+                        <Switch checked={formIsPublic} onCheckedChange={setFormIsPublic} />
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div>
                           <Label>Plano Trial Padrão</Label>
-                          <p className="text-sm text-muted-foreground">
-                            Atribuído automaticamente a novos cadastros
-                          </p>
+                          <p className="text-sm text-muted-foreground">Atribuído automaticamente a novos cadastros</p>
                         </div>
-                        <Switch
-                          checked={formIsDefaultTrial}
-                          onCheckedChange={setFormIsDefaultTrial}
-                        />
+                        <Switch checked={formIsDefaultTrial} onCheckedChange={setFormIsDefaultTrial} />
                       </div>
                     </div>
                   </TabsContent>
 
+                  {/* Pricing Tab */}
+                  <TabsContent value="pricing" className="space-y-4 mt-0 data-[state=inactive]:hidden">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="monthlyPrice">Preço Mensal (R$)</Label>
+                        <Input
+                          id="monthlyPrice"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formMonthlyPrice}
+                          onChange={(e) => setFormMonthlyPrice(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="annualPrice">Preço Anual (R$)</Label>
+                        <Input
+                          id="annualPrice"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={formAnnualPrice}
+                          onChange={(e) => setFormAnnualPrice(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {formCategory === 'clinica' && (
+                      <>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="maxProfessionals">Máx. Profissionais</Label>
+                            <Input
+                              id="maxProfessionals"
+                              type="number"
+                              min="1"
+                              value={formMaxProfessionals}
+                              onChange={(e) => setFormMaxProfessionals(e.target.value)}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label htmlFor="maxMessages">Mensagens/Mês (WhatsApp)</Label>
+                            <Input
+                              id="maxMessages"
+                              type="number"
+                              min="0"
+                              value={formMaxMessages}
+                              onChange={(e) => setFormMaxMessages(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">0 = ilimitado</p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {formCategory === 'sindicato' && (
+                      <div className="space-y-4">
+                        <h4 className="font-medium flex items-center gap-2">
+                          <Settings2 className="h-4 w-4" />
+                          Limites de Recursos
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          {UNION_RESOURCE_LIMITS.map((limit) => (
+                            <div key={limit.key} className="space-y-2">
+                              <Label htmlFor={limit.key}>{limit.label}</Label>
+                              <Input
+                                id={limit.key}
+                                type="number"
+                                min="0"
+                                value={formResourceLimits[limit.key] || "0"}
+                                onChange={(e) => setFormResourceLimits(prev => ({
+                                  ...prev,
+                                  [limit.key]: e.target.value
+                                }))}
+                              />
+                              <p className="text-xs text-muted-foreground">{limit.description}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label htmlFor="externalId">ID Externo (gateway de pagamento)</Label>
+                      <Input
+                        id="externalId"
+                        value={formExternalId}
+                        onChange={(e) => setFormExternalId(e.target.value)}
+                        placeholder="ID do plano no gateway"
+                      />
+                    </div>
+                  </TabsContent>
+
+                  {/* Modules Tab (for Union plans) */}
+                  <TabsContent value="modules" className="space-y-4 mt-0 data-[state=inactive]:hidden">
+                    {formCategory === 'sindicato' ? (
+                      <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                          Selecione os módulos que estarão disponíveis para clientes deste plano sindical.
+                        </p>
+                        
+                        <div className="space-y-3">
+                          {UNION_MODULE_FLAGS.map((flag) => (
+                            <div
+                              key={flag.key}
+                              className="flex items-start gap-3 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                            >
+                              <Checkbox
+                                id={`module-${flag.key}`}
+                                checked={formModuleFlags[flag.key] || false}
+                                onCheckedChange={() => handleModuleFlagToggle(flag.key)}
+                              />
+                              <div className="flex-1">
+                                <label
+                                  htmlFor={`module-${flag.key}`}
+                                  className="text-sm font-medium cursor-pointer"
+                                >
+                                  {flag.label}
+                                </label>
+                                <p className="text-xs text-muted-foreground">
+                                  {flag.description}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h4 className="font-medium">Configuração de Módulos</h4>
+                        <p className="text-sm text-muted-foreground max-w-md mt-2">
+                          A configuração de módulos está disponível apenas para planos da categoria <strong>Sindicato</strong>.
+                          Para planos de clínica, use a aba "Recursos" para vincular funcionalidades.
+                        </p>
+                      </div>
+                    )}
+                  </TabsContent>
+
+                  {/* Features Tab */}
                   <TabsContent value="features" className="mt-0 data-[state=inactive]:hidden">
                     <div className="space-y-2 mb-4">
                       <p className="text-sm text-muted-foreground">
-                        Selecione os recursos que estarão disponíveis para clínicas com este plano.
-                        Recursos não marcados serão bloqueados.
+                        Selecione os recursos do sistema que estarão disponíveis. Recursos não marcados serão bloqueados.
                       </p>
                     </div>
 
@@ -517,16 +762,11 @@ export default function PlansManagement() {
                                       onCheckedChange={() => handleFeatureToggle(feature.id)}
                                     />
                                     <div className="flex-1">
-                                      <label
-                                        htmlFor={feature.id}
-                                        className="text-sm font-medium cursor-pointer"
-                                      >
+                                      <label htmlFor={feature.id} className="text-sm font-medium cursor-pointer">
                                         {feature.name}
                                       </label>
                                       {feature.description && (
-                                        <p className="text-xs text-muted-foreground">
-                                          {feature.description}
-                                        </p>
+                                        <p className="text-xs text-muted-foreground">{feature.description}</p>
                                       )}
                                     </div>
                                   </div>
@@ -541,11 +781,7 @@ export default function PlansManagement() {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-4 border-t mt-4 flex-shrink-0 bg-background">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setDialogOpen(false)}
-                  >
+                  <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
                     Cancelar
                   </Button>
                   <Button type="submit" disabled={saving}>
@@ -560,7 +796,7 @@ export default function PlansManagement() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total de Planos</CardTitle>
@@ -571,27 +807,33 @@ export default function PlansManagement() {
           </CardContent>
         </Card>
 
+        <Card className="border-blue-200 bg-blue-50/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-blue-700">Planos Clínica</CardTitle>
+            <Building2 className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-700">{clinicPlansCount}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-200 bg-amber-50/50">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-amber-700">Planos Sindicato</CardTitle>
+            <Scale className="h-4 w-4 text-amber-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-amber-700">{unionPlansCount}</div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Planos Ativos</CardTitle>
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {plans.filter(p => p.is_active).length}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Planos Públicos</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {plans.filter(p => p.is_public).length}
-            </div>
+            <div className="text-2xl font-bold">{plans.filter(p => p.is_active).length}</div>
           </CardContent>
         </Card>
 
@@ -608,6 +850,38 @@ export default function PlansManagement() {
         </Card>
       </div>
 
+      {/* Category Filter */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm text-muted-foreground">Filtrar por categoria:</span>
+        <div className="flex gap-2">
+          <Button
+            variant={categoryFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCategoryFilter('all')}
+          >
+            Todos
+          </Button>
+          <Button
+            variant={categoryFilter === 'clinica' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCategoryFilter('clinica')}
+            className={categoryFilter === 'clinica' ? '' : 'text-blue-600 border-blue-200 hover:bg-blue-50'}
+          >
+            <Building2 className="h-4 w-4 mr-1" />
+            Clínica
+          </Button>
+          <Button
+            variant={categoryFilter === 'sindicato' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setCategoryFilter('sindicato')}
+            className={categoryFilter === 'sindicato' ? '' : 'text-amber-600 border-amber-200 hover:bg-amber-50'}
+          >
+            <Scale className="h-4 w-4 mr-1" />
+            Sindicato
+          </Button>
+        </div>
+      </div>
+
       {/* Plans Table */}
       <Card>
         <CardContent className="p-0">
@@ -619,9 +893,12 @@ export default function PlansManagement() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-8">
+                    <ArrowUpDown className="h-4 w-4" />
+                  </TableHead>
                   <TableHead>Plano</TableHead>
-                  <TableHead>Profissionais</TableHead>
-                  <TableHead>Mensagens/Mês</TableHead>
+                  <TableHead>Categoria</TableHead>
+                  <TableHead>Recorrência</TableHead>
                   <TableHead>Preço</TableHead>
                   <TableHead>Assinaturas</TableHead>
                   <TableHead>Status</TableHead>
@@ -629,89 +906,82 @@ export default function PlansManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {plans.map((plan) => (
-                  <TableRow key={plan.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
+                {filteredPlans.map((plan) => {
+                  const categoryInfo = getPlanCategoryInfo(plan.category);
+                  return (
+                    <TableRow key={plan.id}>
+                      <TableCell className="text-center text-muted-foreground">
+                        {plan.display_order}
+                      </TableCell>
+                      <TableCell>
                         <div>
                           <div className="font-medium flex items-center gap-2">
                             {plan.name}
                             {plan.is_default_trial && (
-                              <Badge variant="secondary" className="text-xs">
-                                Trial Padrão
-                              </Badge>
+                              <Badge variant="secondary" className="text-xs">Trial</Badge>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-sm text-muted-foreground line-clamp-1">
                             {plan.description || "Sem descrição"}
                           </p>
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        {plan.max_professionals}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                        {plan.max_messages_monthly === 0 ? '∞' : plan.max_messages_monthly ?? 100}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {plan.monthly_price === 0 ? (
-                        <Badge variant="outline">Grátis</Badge>
-                      ) : (
-                        formatPrice(plan.monthly_price)
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">
-                        {plan.subscription_count} clínicas
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {plan.is_active ? (
-                          <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
-                            Ativo
-                          </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={categoryInfo.color}>
+                          <categoryInfo.icon className="h-3 w-3 mr-1" />
+                          {categoryInfo.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4 text-muted-foreground" />
+                          {BILLING_PERIODS.find(b => b.value === plan.billing_period)?.label || 'Mensal'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {plan.monthly_price === 0 ? (
+                          <Badge variant="outline">Grátis</Badge>
                         ) : (
-                          <Badge variant="secondary">Inativo</Badge>
+                          <div>
+                            <div>{formatPrice(plan.monthly_price)}/mês</div>
+                            {plan.annual_price > 0 && (
+                              <div className="text-xs text-muted-foreground">
+                                {formatPrice(plan.annual_price)}/ano
+                              </div>
+                            )}
+                          </div>
                         )}
-                        {plan.is_public ? (
-                          <Eye className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <EyeOff className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditDialog(plan)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => togglePlanActive(plan)}
-                        >
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary">{plan.subscription_count} clínicas</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
                           {plan.is_active ? (
-                            <EyeOff className="h-4 w-4" />
+                            <Badge className="bg-green-100 text-green-800">Ativo</Badge>
                           ) : (
-                            <Eye className="h-4 w-4" />
+                            <Badge variant="secondary">Inativo</Badge>
                           )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          {plan.is_public ? (
+                            <Eye className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <EyeOff className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => openEditDialog(plan)}>
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => togglePlanActive(plan)}>
+                            {plan.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}
