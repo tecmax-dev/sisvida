@@ -20,8 +20,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { MoreHorizontal, Search, Check, X, Trash2, Receipt } from "lucide-react";
+import { MoreHorizontal, Search, Check, X, Trash2, Receipt, RotateCcw } from "lucide-react";
 import { FinancialExportButton } from "./FinancialExportButton";
+import { ReversalDialog } from "./ReversalDialog";
 import { exportTransactions, TransactionData } from "@/lib/financialExportUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -42,6 +43,7 @@ const statusLabels: Record<string, string> = {
   paid: "Pago",
   cancelled: "Cancelado",
   overdue: "Atrasado",
+  reversed: "Estornado",
 };
 
 const statusColors: Record<string, string> = {
@@ -49,6 +51,7 @@ const statusColors: Record<string, string> = {
   paid: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200",
   cancelled: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-200",
   overdue: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  reversed: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
 };
 
 const paymentMethodLabels: Record<string, string> = {
@@ -65,6 +68,7 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [receiptDialogOpen, setReceiptDialogOpen] = useState(false);
+  const [reversalDialogOpen, setReversalDialogOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
 
   const { data: transactions, isLoading } = useQuery({
@@ -344,6 +348,20 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
                             </DropdownMenuItem>
                           </>
                         )}
+                        {transaction.status === "paid" && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setSelectedTransaction(transaction);
+                                setReversalDialogOpen(true);
+                              }}
+                              className="text-purple-600"
+                            >
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Estornar
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-destructive"
@@ -378,6 +396,22 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
           clinicId={clinicId}
         />
       )}
+
+      {/* Reversal Dialog */}
+      <ReversalDialog
+        open={reversalDialogOpen}
+        onOpenChange={(open) => {
+          setReversalDialogOpen(open);
+          if (!open) setSelectedTransaction(null);
+        }}
+        transaction={selectedTransaction ? {
+          id: selectedTransaction.id,
+          description: selectedTransaction.description,
+          amount: Number(selectedTransaction.amount),
+          type: selectedTransaction.type,
+          status: selectedTransaction.status,
+        } : null}
+      />
 
     </Card>
   );
