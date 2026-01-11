@@ -48,6 +48,9 @@ const ProfessionalProfile = lazy(() => import("./pages/ProfessionalProfile"));
 const TelemedicinePatient = lazy(() => import("./pages/TelemedicinePatient"));
 const ConfirmEmail = lazy(() => import("./pages/ConfirmEmail"));
 const AwaitingConfirmation = lazy(() => import("./pages/AwaitingConfirmation"));
+
+// Landing Page - Sistema Sindical (página pública independente)
+const SindicalLandingPage = lazy(() => import("./pages/SindicalLandingPage"));
 const PublicPanel = lazy(() => import("./pages/PublicPanel"));
 const PublicTotem = lazy(() => import("./pages/PublicTotem"));
 const CardValidation = lazy(() => import("./pages/CardValidation"));
@@ -239,6 +242,8 @@ const App = () => (
               <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/sindical" element={<SindicalLandingPage />} />
+                <Route path="/sistema-sindical" element={<SindicalLandingPage />} />
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/instalar" element={<InstallPage />} />
