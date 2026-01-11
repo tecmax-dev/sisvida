@@ -20,6 +20,8 @@ import { ExpensesListPanel } from "@/components/financials/ExpensesListPanel";
 import { SuppliersPanel } from "@/components/financials/SuppliersPanel";
 import { SupplierExpensesPanel } from "@/components/financials/SupplierExpensesPanel";
 import { FinancialReportsTab } from "@/components/financials/FinancialReportsTab";
+import { FinancialAuditPanel } from "@/components/financials/FinancialAuditPanel";
+import { InstitutionalReportsPanel } from "@/components/financials/InstitutionalReportsPanel";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,14 +43,17 @@ import {
   ClipboardList,
   LayoutDashboard,
   FileText,
-  BarChart3
+  BarChart3,
+  Shield,
+  FileStack
 } from "lucide-react";
 
 type SubTab = 
   | "cashflow" | "income" | "expense" 
   | "registers" | "transfers" | "receivables" | "reconciliation"
   | "recurring" | "commissions"
-  | "accounts" | "costcenters" | "expenses" | "suppliers" | "supplier-expenses";
+  | "accounts" | "costcenters" | "expenses" | "suppliers" | "supplier-expenses"
+  | "audit" | "institutional";
 
 function FinancialsContent() {
   const { currentClinic } = useAuth();
@@ -83,6 +88,11 @@ function FinancialsContent() {
       { label: "Despesas", value: "expenses", icon: ClipboardList },
       { label: "Por Fornecedor", value: "supplier-expenses", icon: BarChart3 },
       { label: "Fornecedores", value: "suppliers", icon: Truck },
+    ],
+    reports: [
+      { label: "Operacionais", value: "cashflow", icon: BarChart3 },
+      { label: "Institucionais", value: "institutional", icon: FileStack },
+      { label: "Auditoria", value: "audit", icon: Shield },
     ],
   };
 
@@ -128,6 +138,8 @@ function FinancialsContent() {
       expenses: <ExpensesListPanel clinicId={currentClinic.id} />,
       suppliers: <SuppliersPanel clinicId={currentClinic.id} />,
       "supplier-expenses": <SupplierExpensesPanel clinicId={currentClinic.id} />,
+      audit: <FinancialAuditPanel clinicId={currentClinic.id} />,
+      institutional: <InstitutionalReportsPanel clinicId={currentClinic.id} />,
     };
 
     const items = subNavConfig[category];
@@ -148,6 +160,7 @@ function FinancialsContent() {
       management: "registers",
       recurring: "recurring",
       registry: "accounts",
+      reports: "cashflow",
     };
     if (defaultSubTabs[value]) {
       setSubTab(defaultSubTabs[value]);
@@ -268,7 +281,10 @@ function FinancialsContent() {
 
           {/* Relatórios */}
           <TabsContent value="reports" className="mt-0">
-            <FinancialReportsTab clinicId={currentClinic.id} />
+            {renderSubNav("reports")}
+            {subTab === "cashflow" && <FinancialReportsTab clinicId={currentClinic.id} />}
+            {subTab === "institutional" && <InstitutionalReportsPanel clinicId={currentClinic.id} />}
+            {subTab === "audit" && <FinancialAuditPanel clinicId={currentClinic.id} />}
           </TabsContent>
         </Tabs>
 
