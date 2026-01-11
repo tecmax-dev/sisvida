@@ -2811,6 +2811,68 @@ export type Database = {
           },
         ]
       }
+      financial_audit_logs: {
+        Row: {
+          action: string
+          amount_after: number | null
+          amount_before: number | null
+          clinic_id: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          notes: string | null
+          old_data: Json | null
+          user_agent: string | null
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          action: string
+          amount_after?: number | null
+          amount_before?: number | null
+          clinic_id: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          notes?: string | null
+          old_data?: Json | null
+          user_agent?: string | null
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          action?: string
+          amount_after?: number | null
+          amount_before?: number | null
+          clinic_id?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          notes?: string | null
+          old_data?: Json | null
+          user_agent?: string | null
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_audit_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_categories: {
         Row: {
           clinic_id: string
@@ -2860,14 +2922,29 @@ export type Database = {
           bank_reference: string | null
           cash_register_id: string | null
           category_id: string | null
+          check_number: string | null
           clinic_id: string
+          conciliated_at: string | null
+          conciliated_by: string | null
+          cost_center_id: string | null
           created_at: string | null
           created_by: string | null
           description: string
+          discount_value: number | null
+          document_number: string | null
+          document_type: string | null
           due_date: string | null
+          fine_value: number | null
+          gross_value: number | null
           id: string
+          interest_value: number | null
+          is_conciliated: boolean | null
           is_reconciled: boolean | null
+          liquidated_by: string | null
+          liquidation_date: string | null
+          net_value: number | null
           notes: string | null
+          other_values: number | null
           paid_date: string | null
           patient_id: string | null
           payment_method: string | null
@@ -2875,6 +2952,7 @@ export type Database = {
           professional_id: string | null
           reconciled_at: string | null
           status: string | null
+          supplier_id: string | null
           type: string
           updated_at: string | null
         }
@@ -2885,14 +2963,29 @@ export type Database = {
           bank_reference?: string | null
           cash_register_id?: string | null
           category_id?: string | null
+          check_number?: string | null
           clinic_id: string
+          conciliated_at?: string | null
+          conciliated_by?: string | null
+          cost_center_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description: string
+          discount_value?: number | null
+          document_number?: string | null
+          document_type?: string | null
           due_date?: string | null
+          fine_value?: number | null
+          gross_value?: number | null
           id?: string
+          interest_value?: number | null
+          is_conciliated?: boolean | null
           is_reconciled?: boolean | null
+          liquidated_by?: string | null
+          liquidation_date?: string | null
+          net_value?: number | null
           notes?: string | null
+          other_values?: number | null
           paid_date?: string | null
           patient_id?: string | null
           payment_method?: string | null
@@ -2900,6 +2993,7 @@ export type Database = {
           professional_id?: string | null
           reconciled_at?: string | null
           status?: string | null
+          supplier_id?: string | null
           type: string
           updated_at?: string | null
         }
@@ -2910,14 +3004,29 @@ export type Database = {
           bank_reference?: string | null
           cash_register_id?: string | null
           category_id?: string | null
+          check_number?: string | null
           clinic_id?: string
+          conciliated_at?: string | null
+          conciliated_by?: string | null
+          cost_center_id?: string | null
           created_at?: string | null
           created_by?: string | null
           description?: string
+          discount_value?: number | null
+          document_number?: string | null
+          document_type?: string | null
           due_date?: string | null
+          fine_value?: number | null
+          gross_value?: number | null
           id?: string
+          interest_value?: number | null
+          is_conciliated?: boolean | null
           is_reconciled?: boolean | null
+          liquidated_by?: string | null
+          liquidation_date?: string | null
+          net_value?: number | null
           notes?: string | null
+          other_values?: number | null
           paid_date?: string | null
           patient_id?: string | null
           payment_method?: string | null
@@ -2925,6 +3034,7 @@ export type Database = {
           professional_id?: string | null
           reconciled_at?: string | null
           status?: string | null
+          supplier_id?: string | null
           type?: string
           updated_at?: string | null
         }
@@ -2965,6 +3075,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "financial_transactions_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "financial_transactions_patient_id_fkey"
             columns: ["patient_id"]
             isOneToOne: false
@@ -2983,6 +3100,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "professionals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -9886,7 +10010,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      cash_flow_summary: {
+        Row: {
+          clinic_id: string | null
+          expense_paid: number | null
+          expense_pending: number | null
+          income_paid: number | null
+          income_pending: number | null
+          movement_date: string | null
+          transaction_count: number | null
+          type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       check_whatsapp_multiattendance_access: {
