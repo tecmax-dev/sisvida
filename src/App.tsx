@@ -116,6 +116,21 @@ import HomologacaoProfissionaisPage from "./pages/dashboard/homologacao/Homologa
 import HomologacaoServicosPage from "./pages/dashboard/homologacao/HomologacaoServicosPage";
 import HomologacaoBloqueiosPage from "./pages/dashboard/homologacao/HomologacaoBloqueiosPage";
 import HomologacaoConfigPage from "./pages/dashboard/homologacao/HomologacaoConfigPage";
+// Union Module pages
+import { UnionModuleLayout } from "./components/union/UnionModuleLayout";
+import UnionDashboard from "./pages/union/UnionDashboard";
+import UnionEmployersPage from "./pages/union/UnionEmployersPage";
+import UnionMembersPage from "./pages/union/UnionMembersPage";
+import UnionContributionsPage from "./pages/union/UnionContributionsPage";
+import UnionFinancialsPage from "./pages/union/UnionFinancialsPage";
+import UnionExpensesPage from "./pages/union/UnionExpensesPage";
+import UnionIncomePage from "./pages/union/UnionIncomePage";
+import UnionCashFlowPage from "./pages/union/UnionCashFlowPage";
+import UnionCashRegistersPage from "./pages/union/UnionCashRegistersPage";
+import UnionSuppliersPage from "./pages/union/UnionSuppliersPage";
+import UnionNegotiationsPage from "./pages/union/UnionNegotiationsPage";
+import UnionReportsPage from "./pages/union/UnionReportsPage";
+import UnionCategoriesPage from "./pages/union/UnionCategoriesPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -386,6 +401,32 @@ const App = () => (
                   <Route path="homologacao/servicos" element={<HomologacaoServicosPage />} />
                   <Route path="homologacao/bloqueios" element={<HomologacaoBloqueiosPage />} />
                   <Route path="homologacao/config" element={<HomologacaoConfigPage />} />
+                </Route>
+                {/* Union Module Routes - Módulo Sindical Independente */}
+                <Route
+                  path="/union"
+                  element={
+                    <ProtectedRoute>
+                      <UnionModuleLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<UnionDashboard />} />
+                  <Route path="empresas" element={<UnionEmployersPage />} />
+                  <Route path="socios" element={<UnionMembersPage />} />
+                  <Route path="contribuicoes" element={<UnionContributionsPage />} />
+                  <Route path="contribuicoes/relatorios" element={<UnionReportsPage />} />
+                  <Route path="financeiro" element={<UnionFinancialsPage />} />
+                  <Route path="financeiro/despesas" element={<UnionExpensesPage />} />
+                  <Route path="financeiro/receitas" element={<UnionIncomePage />} />
+                  <Route path="financeiro/fluxo-caixa" element={<UnionCashFlowPage />} />
+                  <Route path="financeiro/contas" element={<UnionCashRegistersPage />} />
+                  <Route path="financeiro/fornecedores" element={<UnionSuppliersPage />} />
+                  <Route path="financeiro/categorias" element={<UnionCategoriesPage />} />
+                  <Route path="financeiro/relatorios" element={<UnionReportsPage />} />
+                  <Route path="negociacoes" element={<UnionNegotiationsPage />} />
+                  <Route path="negociacoes/parcelamentos" element={<UnionNegotiationsPage />} />
+                  <Route path="negociacoes/historico" element={<UnionNegotiationsPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>

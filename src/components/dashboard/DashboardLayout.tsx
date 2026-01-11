@@ -140,29 +140,14 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
 };
 
 const navCategories: NavCategory[] = [
-  // EMPRESAS - Amber/Orange
+  // MÓDULO SINDICAL - Link de acesso rápido
   {
-    id: "empresas",
-    label: "Empresas",
+    id: "modulo-sindical",
+    label: "Módulo Sindical",
     icon: Building2,
     color: "empresas",
     items: [
-      { href: "/dashboard/empresas", icon: Building2, label: "Cadastro de Empresas", permission: "view_patients" },
-      { href: "/dashboard/contribuicoes", icon: Receipt, label: "Contribuições", permission: "view_financials" },
-      { href: "/dashboard/negociacoes", icon: Handshake, label: "Negociações", permission: "view_financials" },
-      { href: "/dashboard/escritorios", icon: Briefcase, label: "Escritórios Contábeis", permission: "view_patients" },
-    ],
-  },
-  // SÓCIOS - Purple
-  {
-    id: "socios",
-    label: "Sócios",
-    icon: Users,
-    color: "socios",
-    items: [
-      { href: "/dashboard/patients", icon: Users, label: "Sócios", permission: "view_patients" },
-      { href: "/dashboard/dependents", icon: Users, label: "Dependentes", permission: "view_patients" },
-      { href: "/dashboard/dependent-approvals", icon: Users, label: "Aprovação Dependentes", permission: "view_patients" },
+      { href: "/union", icon: Building2, label: "Acessar Módulo Sindical", permission: "view_patients" },
     ],
   },
   // CLÍNICA - Cyan/Teal
@@ -181,6 +166,7 @@ const navCategories: NavCategory[] = [
       { href: "/dashboard/exams", icon: FlaskConical, label: "Exames", permission: "view_procedures" },
       { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
       { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
+      { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients" },
     ],
   },
   // HOMOLOGAÇÃO - Emerald (categoria independente com addon)
@@ -205,7 +191,7 @@ const navCategories: NavCategory[] = [
     icon: Settings,
     color: "admin",
     items: [
-      { href: "/dashboard/financials", icon: DollarSign, label: "Financeiro", permission: "view_financials" },
+      { href: "/dashboard/financials", icon: DollarSign, label: "Financeiro Clínica", permission: "view_financials" },
       { href: "/dashboard/repass", icon: Percent, label: "Repasse Médico", permission: "view_repass" },
       { href: "/dashboard/stock", icon: Warehouse, label: "Estoque", permission: "view_stock" },
       { href: "/dashboard/insurance", icon: CreditCard, label: "Convênios", permission: "insurance_plans" },
