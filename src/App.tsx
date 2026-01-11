@@ -79,6 +79,7 @@ import ReportsPage from "./pages/dashboard/ReportsPage";
 import SubscriptionPage from "./pages/dashboard/SubscriptionPage";
 import PrescriptionPage from "./pages/dashboard/PrescriptionPage";
 import FinancialsPage from "./pages/dashboard/FinancialsPage";
+import NewTransactionPage from "./pages/dashboard/NewTransactionPage";
 import ProceduresPage from "./pages/dashboard/ProceduresPage";
 import ProcedureEditPage from "./pages/dashboard/ProcedureEditPage";
 import SettingsPage from "./pages/dashboard/SettingsPage";
@@ -349,6 +350,7 @@ const App = () => (
                   <Route path="subscription" element={<SubscriptionPage />} />
                   <Route path="prescriptions" element={<PrescriptionPage />} />
                   <Route path="financials" element={<FinancialsPage />} />
+                  <Route path="financials/new" element={<NewTransactionPage />} />
                   <Route path="procedures" element={<ProceduresPage />} />
                   <Route path="procedures/new" element={<ProcedureEditPage />} />
                   <Route path="procedures/:id/edit" element={<ProcedureEditPage />} />
