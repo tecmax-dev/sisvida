@@ -9,6 +9,7 @@ import {
   CircleDollarSign,
   XCircle,
   Clock,
+  Truck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -18,6 +19,7 @@ export type ConversionType =
   | 'contributions_cancelled'
   | 'cadastro_pf'
   | 'cadastro_pj'
+  | 'cadastro_fornecedores'
   | 'lytex';
 
 export type ConversionSubType = 
@@ -77,6 +79,13 @@ const TYPE_OPTIONS: TypeOption[] = [
     description: 'Importar dados de empresas (empregadores)',
     icon: Building2,
     color: 'text-purple-500 bg-purple-500/10 border-purple-500/30',
+  },
+  {
+    type: 'cadastro_fornecedores',
+    title: 'Cadastro de Fornecedores',
+    description: 'Importar fornecedores do módulo financeiro',
+    icon: Truck,
+    color: 'text-orange-500 bg-orange-500/10 border-orange-500/30',
   },
   {
     type: 'lytex',

@@ -78,6 +78,17 @@ const TARGET_FIELDS: Record<ConversionType, { key: string; label: string; requir
     { key: 'cep', label: 'CEP' },
     { key: 'segment', label: 'Segmento' },
   ],
+  cadastro_fornecedores: [
+    { key: 'name', label: 'Razão Social', required: true },
+    { key: 'cnpj', label: 'CNPJ' },
+    { key: 'email', label: 'Email' },
+    { key: 'phone', label: 'Telefone' },
+    { key: 'address', label: 'Endereço' },
+    { key: 'city', label: 'Cidade' },
+    { key: 'state', label: 'UF' },
+    { key: 'contact_name', label: 'Nome do Contato' },
+    { key: 'notes', label: 'Observações' },
+  ],
   lytex: [], // Will be populated dynamically based on detected layout
 };
 
@@ -160,13 +171,18 @@ export function MappingStep({
     const commonMappings: Record<string, string[]> = {
       cnpj: ['cnpj', 'CNPJ', 'cnpj_cpf', 'documento'],
       cpf: ['cpf', 'CPF', 'documento'],
-      name: ['nome', 'NOME', 'razao_social', 'Razão Social', 'name', 'empresas', 'EMPRESAS'],
+      name: ['nome', 'NOME', 'razao_social', 'Razão Social', 'name', 'empresas', 'EMPRESAS', 'fornecedor', 'FORNECEDOR'],
       trade_name: ['fantasia', 'FANTASIA', 'nome_fantasia', 'NOME_FANTASIA'],
       value: ['valor', 'VALOR', 'value', 'total', 'montante'],
       due_date: ['vencimento', 'VENCIMENTO', 'dt_vencimento', 'data_vencimento'],
       payment_date: ['data_pagamento', 'DATA_PAGAMENTO', 'pagamento', 'dt_pagamento', 'pago_em', 'PAGO_EM'],
       email: ['email', 'EMAIL', 'e-mail'],
       phone: ['telefone', 'TELEFONE', 'fone', 'celular'],
+      address: ['endereco', 'ENDERECO', 'endereço', 'ENDEREÇO', 'address', 'logradouro'],
+      city: ['cidade', 'CIDADE', 'city', 'municipio', 'MUNICIPIO'],
+      state: ['uf', 'UF', 'estado', 'ESTADO', 'state'],
+      contact_name: ['contato', 'CONTATO', 'responsavel', 'RESPONSAVEL', 'responsável', 'contact'],
+      notes: ['observacao', 'OBSERVACAO', 'observações', 'obs', 'OBS', 'notas', 'notes'],
       competence: ['competencia', 'COMPETENCIA', 'competência', 'COMPETÊNCIA', 'referencia', 'REFERENCIA'],
       contribution_type: ['tipo', 'TIPO', 'tipo_contribuicao', 'TIPO_CONTRIBUICAO'],
       description: [
