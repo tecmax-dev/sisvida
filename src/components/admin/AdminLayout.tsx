@@ -36,6 +36,7 @@ const SYSTEM_VERSION = "2026.01.2";
 const adminNavItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { path: "/admin/clinics", label: "Clínicas", icon: Building2 },
+  { path: "/admin/union-entities", label: "Entidades Sindicais", icon: Shield },
   { path: "/admin/users", label: "Usuários", icon: Users },
   { path: "/admin/plans", label: "Planos", icon: CreditCard },
   { path: "/admin/addons", label: "Add-ons", icon: Sparkles },

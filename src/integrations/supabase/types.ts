@@ -9402,6 +9402,98 @@ export type Database = {
           },
         ]
       }
+      union_entities: {
+        Row: {
+          abrangencia:
+            | Database["public"]["Enums"]["union_entity_coverage"]
+            | null
+          categoria_laboral: string | null
+          cep: string | null
+          cidade: string | null
+          cnpj: string
+          created_at: string
+          created_by: string | null
+          data_ativacao: string | null
+          email_contato: string | null
+          email_institucional: string
+          endereco: string | null
+          entity_type: Database["public"]["Enums"]["union_entity_type"]
+          estado: string | null
+          id: string
+          nome_fantasia: string | null
+          plan_id: string | null
+          razao_social: string
+          responsavel_legal: string | null
+          status: Database["public"]["Enums"]["union_entity_status"]
+          telefone: string | null
+          ultimo_acesso: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          abrangencia?:
+            | Database["public"]["Enums"]["union_entity_coverage"]
+            | null
+          categoria_laboral?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj: string
+          created_at?: string
+          created_by?: string | null
+          data_ativacao?: string | null
+          email_contato?: string | null
+          email_institucional: string
+          endereco?: string | null
+          entity_type?: Database["public"]["Enums"]["union_entity_type"]
+          estado?: string | null
+          id?: string
+          nome_fantasia?: string | null
+          plan_id?: string | null
+          razao_social: string
+          responsavel_legal?: string | null
+          status?: Database["public"]["Enums"]["union_entity_status"]
+          telefone?: string | null
+          ultimo_acesso?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          abrangencia?:
+            | Database["public"]["Enums"]["union_entity_coverage"]
+            | null
+          categoria_laboral?: string | null
+          cep?: string | null
+          cidade?: string | null
+          cnpj?: string
+          created_at?: string
+          created_by?: string | null
+          data_ativacao?: string | null
+          email_contato?: string | null
+          email_institucional?: string
+          endereco?: string | null
+          entity_type?: Database["public"]["Enums"]["union_entity_type"]
+          estado?: string | null
+          id?: string
+          nome_fantasia?: string | null
+          plan_id?: string | null
+          razao_social?: string
+          responsavel_legal?: string | null
+          status?: Database["public"]["Enums"]["union_entity_status"]
+          telefone?: string | null
+          ultimo_acesso?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_entities_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_financial_categories: {
         Row: {
           clinic_id: string
@@ -10924,6 +11016,7 @@ export type Database = {
         | "receptionist"
         | "professional"
         | "administrative"
+        | "entidade_sindical_admin"
       appointment_status:
         | "scheduled"
         | "confirmed"
@@ -10946,6 +11039,9 @@ export type Database = {
         | "aesthetic"
         | "therapy"
         | "massage"
+      union_entity_coverage: "municipal" | "estadual" | "nacional"
+      union_entity_status: "ativa" | "suspensa" | "em_analise" | "inativa"
+      union_entity_type: "sindicato" | "federacao" | "confederacao"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -11079,6 +11175,7 @@ export const Constants = {
         "receptionist",
         "professional",
         "administrative",
+        "entidade_sindical_admin",
       ],
       appointment_status: [
         "scheduled",
@@ -11105,6 +11202,9 @@ export const Constants = {
         "therapy",
         "massage",
       ],
+      union_entity_coverage: ["municipal", "estadual", "nacional"],
+      union_entity_status: ["ativa", "suspensa", "em_analise", "inativa"],
+      union_entity_type: ["sindicato", "federacao", "confederacao"],
     },
   },
 } as const
