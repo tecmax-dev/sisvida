@@ -74,6 +74,14 @@ export type Permission =
   | "receivables"
   | "recurring_transactions"
   | "view_commissions"
+  // Contributions (Union Dues)
+  | "view_contributions"
+  | "manage_contributions"
+  | "generate_boletos"
+  | "send_boleto_whatsapp"
+  | "send_boleto_email"
+  | "view_contribution_reports"
+  | "manage_debt_negotiations"
   // Insurance
   | "insurance"
   | "view_insurance"
