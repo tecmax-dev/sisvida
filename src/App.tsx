@@ -120,6 +120,7 @@ import HomologacaoConfigPage from "./pages/dashboard/homologacao/HomologacaoConf
 import { UnionModuleLayout } from "./components/union/UnionModuleLayout";
 import UnionDashboard from "./pages/union/UnionDashboard";
 import UnionEmployersPage from "./pages/union/UnionEmployersPage";
+import UnionAccountingOfficesPage from "./pages/union/UnionAccountingOfficesPage";
 import UnionMembersPage from "./pages/union/UnionMembersPage";
 import UnionContributionsPage from "./pages/union/UnionContributionsPage";
 import UnionFinancialsPage from "./pages/union/UnionFinancialsPage";
@@ -413,6 +414,7 @@ const App = () => (
                 >
                   <Route index element={<UnionDashboard />} />
                   <Route path="empresas" element={<UnionEmployersPage />} />
+                  <Route path="escritorios" element={<UnionAccountingOfficesPage />} />
                   <Route path="socios" element={<UnionMembersPage />} />
                   <Route path="contribuicoes" element={<UnionContributionsPage />} />
                   <Route path="contribuicoes/relatorios" element={<UnionReportsPage />} />
