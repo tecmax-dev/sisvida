@@ -30,9 +30,23 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "eclini_transaction_draft";
 
@@ -374,26 +388,73 @@ function NewTransactionContent() {
                   <FormField
                     control={form.control}
                     name="category_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Categoria</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {categories?.map((cat) => (
-                              <SelectItem key={cat.id} value={cat.id}>
-                                {cat.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const selectedCategory = categories?.find(c => c.id === field.value);
+                      return (
+                        <FormItem className="flex flex-col">
+                          <FormLabel>Categoria</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  className={cn(
+                                    "w-full justify-between",
+                                    !field.value && "text-muted-foreground"
+                                  )}
+                                >
+                                  {selectedCategory ? (
+                                    <span className="flex items-center gap-2">
+                                      <span
+                                        className="w-3 h-3 rounded-full shrink-0"
+                                        style={{ backgroundColor: selectedCategory.color || '#888' }}
+                                      />
+                                      {selectedCategory.name}
+                                    </span>
+                                  ) : (
+                                    "Buscar categoria..."
+                                  )}
+                                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[300px] p-0" align="start">
+                              <Command>
+                                <CommandInput placeholder="Buscar categoria..." />
+                                <CommandList>
+                                  <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                                  <CommandGroup>
+                                    {categories?.map((cat) => (
+                                      <CommandItem
+                                        key={cat.id}
+                                        value={cat.name}
+                                        onSelect={() => {
+                                          field.onChange(cat.id);
+                                        }}
+                                      >
+                                        <span
+                                          className="w-3 h-3 rounded-full mr-2 shrink-0"
+                                          style={{ backgroundColor: cat.color || '#888' }}
+                                        />
+                                        {cat.name}
+                                        <Check
+                                          className={cn(
+                                            "ml-auto h-4 w-4",
+                                            field.value === cat.id ? "opacity-100" : "opacity-0"
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
 
                   <FormField
