@@ -30,7 +30,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Plus, Wallet, Building2, CreditCard, MoreHorizontal, Trash2, Edit, FileText } from "lucide-react";
+import { Plus, Wallet, Building2, CreditCard, MoreHorizontal, Trash2, Edit, FileText, TrendingUp } from "lucide-react";
 import { FinancialExportButton } from "./FinancialExportButton";
 import { exportCashRegisters, CashRegisterData } from "@/lib/financialExportUtils";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -48,7 +48,7 @@ interface CashRegistersPanelProps {
 
 const registerSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
-  type: z.enum(["cash", "bank", "credit_card", "other"]),
+  type: z.enum(["cash", "bank", "credit_card", "investment", "other"]),
   initial_balance: z.string().optional(),
   bank_name: z.string().optional(),
   agency: z.string().optional(),
@@ -61,6 +61,7 @@ const typeLabels: Record<string, string> = {
   cash: "Dinheiro",
   bank: "Conta Bancária",
   credit_card: "Cartão de Crédito",
+  investment: "Aplicação",
   other: "Outro",
 };
 
@@ -68,6 +69,7 @@ const typeIcons: Record<string, React.ReactNode> = {
   cash: <Wallet className="h-5 w-5" />,
   bank: <Building2 className="h-5 w-5" />,
   credit_card: <CreditCard className="h-5 w-5" />,
+  investment: <TrendingUp className="h-5 w-5" />,
   other: <Wallet className="h-5 w-5" />,
 };
 
@@ -337,6 +339,7 @@ export function CashRegistersPanel({ clinicId }: CashRegistersPanelProps) {
                         <SelectItem value="cash">Dinheiro</SelectItem>
                         <SelectItem value="bank">Conta Bancária</SelectItem>
                         <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                        <SelectItem value="investment">Aplicação</SelectItem>
                         <SelectItem value="other">Outro</SelectItem>
                       </SelectContent>
                     </Select>
