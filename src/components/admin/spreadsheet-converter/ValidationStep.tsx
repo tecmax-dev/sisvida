@@ -52,6 +52,7 @@ function mapConversionType(type: ConversionType): ValidatorConversionType {
     contributions_cancelled: 'contributions_cancelled',
     cadastro_pf: 'cadastro_pf',
     cadastro_pj: 'cadastro_pj',
+    cadastro_fornecedores: 'cadastro_fornecedores',
     lytex: 'lytex_invoices',
   };
   return mapping[type];

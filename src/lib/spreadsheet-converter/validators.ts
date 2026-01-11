@@ -10,6 +10,7 @@ export type ConversionType =
   | 'contributions_cancelled'
   | 'cadastro_pf'
   | 'cadastro_pj'
+  | 'cadastro_fornecedores'
   | 'lytex_invoices'
   | 'lytex_clients'
   | 'lytex_financial';
@@ -40,6 +41,7 @@ const REQUIRED_FIELDS: Record<ConversionType, string[]> = {
   contributions_cancelled: ['cnpj', 'value'],
   cadastro_pf: ['name', 'cpf'],
   cadastro_pj: ['name', 'cnpj'],
+  cadastro_fornecedores: ['name'],
   lytex_invoices: ['cnpj', 'value', 'due_date'],
   lytex_clients: ['cnpj', 'name'],
   lytex_financial: ['date', 'value', 'description'],

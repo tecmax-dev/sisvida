@@ -130,6 +130,9 @@ Deno.serve(async (req) => {
       case 'lytex_clients':
         result = await importEmployersBatch(supabase, clinic_id, data);
         break;
+      case 'cadastro_fornecedores':
+        result = await importSuppliersBatch(supabase, clinic_id, data);
+        break;
       case 'contributions_paid':
       case 'contributions_pending':
       case 'contributions_cancelled':
@@ -634,6 +637,107 @@ async function importContributionsBatch(
       }
     }
   }
+
+  return result;
+}
+
+// ================== SUPPLIER IMPORT FUNCTION ==================
+
+async function importSuppliersBatch(
+  supabase: SupabaseClient,
+  clinicId: string,
+  data: Record<string, unknown>[]
+): Promise<ImportResult> {
+  const result: ImportResult = { success: true, inserted: 0, updated: 0, skipped: 0, errors: [] };
+
+  console.log(`[importSuppliersBatch] Starting with ${data.length} records`);
+
+  // Load existing suppliers by CNPJ
+  const cnpjsToCheck = data
+    .map(row => normalizeCnpj(row.cnpj))
+    .filter((cnpj): cnpj is string => cnpj !== null);
+  
+  const { data: existingSuppliers } = await supabase
+    .from('suppliers')
+    .select('id, cnpj')
+    .eq('clinic_id', clinicId)
+    .in('cnpj', cnpjsToCheck);
+  
+  // Normalize CNPJ keys for consistent lookup
+  const existingCnpjMap = new Map<string, string>();
+  (existingSuppliers || []).forEach(s => {
+    const normalized = normalizeCnpj(s.cnpj);
+    if (normalized) {
+      existingCnpjMap.set(normalized, s.id);
+    }
+  });
+
+  console.log(`[importSuppliersBatch] Found ${existingCnpjMap.size} existing suppliers by CNPJ`);
+
+  const toInsert: Record<string, unknown>[] = [];
+  const toUpdate: { id: string; data: Record<string, unknown> }[] = [];
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    
+    // Name is required
+    const name = String(row.name || '').trim();
+    if (!name || name.length < 2) {
+      result.errors.push({ row: i + 1, message: 'Nome é obrigatório (mínimo 2 caracteres)' });
+      continue;
+    }
+
+    const cnpj = normalizeCnpj(row.cnpj);
+
+    const supplierData: Record<string, unknown> = {
+      clinic_id: clinicId,
+      name: name.toUpperCase(),
+      cnpj: cnpj || null,
+      email: row.email ? String(row.email).trim().toLowerCase() : null,
+      phone: row.phone ? normalizePhone(row.phone) : null,
+      address: row.address ? String(row.address).trim() : null,
+      city: row.city ? String(row.city).trim() : null,
+      state: row.state ? String(row.state).trim().toUpperCase() : null,
+      contact_name: row.contact_name ? String(row.contact_name).trim() : null,
+      notes: row.notes ? String(row.notes).trim() : null,
+      is_active: true,
+    };
+
+    // Check for existing by CNPJ if present
+    const existingId = cnpj ? existingCnpjMap.get(cnpj) : undefined;
+    if (existingId) {
+      toUpdate.push({ id: existingId, data: supplierData });
+    } else {
+      toInsert.push(supplierData);
+    }
+  }
+
+  console.log(`[importSuppliersBatch] To insert: ${toInsert.length}, To update: ${toUpdate.length}`);
+
+  // Batch insert
+  if (toInsert.length > 0) {
+    for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+      const batch = toInsert.slice(i, i + BATCH_SIZE);
+      const { error } = await supabase.from('suppliers').insert(batch);
+      if (error) {
+        console.error('[importSuppliersBatch] Insert error:', error);
+        result.errors.push({ row: 0, message: `Erro ao inserir lote: ${error.message}` });
+      } else {
+        result.inserted += batch.length;
+      }
+    }
+  }
+
+  // Batch update
+  const updatePromises = toUpdate.map(async ({ id, data: supplierData }) => {
+    const { error } = await supabase.from('suppliers').update(supplierData).eq('id', id);
+    return error ? 'error' : 'success';
+  });
+  
+  const updateResults = await Promise.all(updatePromises);
+  result.updated = updateResults.filter(r => r === 'success').length;
+
+  console.log(`[importSuppliersBatch] Complete: inserted=${result.inserted}, updated=${result.updated}`);
 
   return result;
 }
