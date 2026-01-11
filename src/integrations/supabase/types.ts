@@ -1181,6 +1181,79 @@ export type Database = {
         }
         Relationships: []
       }
+      cash_flow_history: {
+        Row: {
+          amount: number
+          balance_after: number | null
+          balance_before: number | null
+          cash_register_id: string | null
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          date: string
+          description: string | null
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          source: string
+          type: string
+        }
+        Insert: {
+          amount: number
+          balance_after?: number | null
+          balance_before?: number | null
+          cash_register_id?: string | null
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          date: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          source: string
+          type: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number | null
+          balance_before?: number | null
+          cash_register_id?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          date?: string
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          source?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_flow_history_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_flow_history_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_flow_history_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_registers: {
         Row: {
           account_number: string | null
@@ -1280,7 +1353,21 @@ export type Database = {
             foreignKeyName: "cash_transfers_from_register_id_fkey"
             columns: ["from_register_id"]
             isOneToOne: false
+            referencedRelation: "cash_register_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_transfers_from_register_id_fkey"
+            columns: ["from_register_id"]
+            isOneToOne: false
             referencedRelation: "cash_registers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_transfers_to_register_id_fkey"
+            columns: ["to_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_balances"
             referencedColumns: ["id"]
           },
           {
@@ -2770,6 +2857,13 @@ export type Database = {
             foreignKeyName: "expense_liquidation_history_cash_register_id_fkey"
             columns: ["cash_register_id"]
             isOneToOne: false
+            referencedRelation: "cash_register_balances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_liquidation_history_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
             referencedRelation: "cash_registers"
             referencedColumns: ["id"]
           },
@@ -2951,6 +3045,9 @@ export type Database = {
           procedure_id: string | null
           professional_id: string | null
           reconciled_at: string | null
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
           status: string | null
           supplier_id: string | null
           type: string
@@ -2992,6 +3089,9 @@ export type Database = {
           procedure_id?: string | null
           professional_id?: string | null
           reconciled_at?: string | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
           status?: string | null
           supplier_id?: string | null
           type: string
@@ -3033,6 +3133,9 @@ export type Database = {
           procedure_id?: string | null
           professional_id?: string | null
           reconciled_at?: string | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
           status?: string | null
           supplier_id?: string | null
           type?: string
@@ -3051,6 +3154,13 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_transactions_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_balances"
             referencedColumns: ["id"]
           },
           {
@@ -4317,6 +4427,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "medical_repass_payments_cash_register_id_fkey"
+            columns: ["cash_register_id"]
+            isOneToOne: false
+            referencedRelation: "cash_register_balances"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "medical_repass_payments_cash_register_id_fkey"
             columns: ["cash_register_id"]
@@ -10010,6 +10127,27 @@ export type Database = {
       }
     }
     Views: {
+      annual_cash_flow: {
+        Row: {
+          balance: number | null
+          clinic_id: string | null
+          expense: number | null
+          income: number | null
+          month: number | null
+          pending_total: number | null
+          transaction_count: number | null
+          year: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_transactions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_flow_summary: {
         Row: {
           clinic_id: string | null
@@ -10024,6 +10162,29 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "financial_transactions_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_register_balances: {
+        Row: {
+          bank_name: string | null
+          calculated_balance: number | null
+          clinic_id: string | null
+          current_balance: number | null
+          id: string | null
+          initial_balance: number | null
+          name: string | null
+          total_expense: number | null
+          total_income: number | null
+          type: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_registers_clinic_id_fkey"
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
@@ -10140,6 +10301,25 @@ export type Database = {
         }[]
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      record_cash_flow_entry: {
+        Args: {
+          p_amount: number
+          p_cash_register_id: string
+          p_clinic_id: string
+          p_created_by?: string
+          p_date: string
+          p_description: string
+          p_reference_id: string
+          p_reference_type: string
+          p_source: string
+          p_type: string
+        }
+        Returns: string
+      }
+      reverse_transaction: {
+        Args: { p_reason: string; p_transaction_id: string; p_user_id?: string }
+        Returns: Json
+      }
       sync_all_dependents_card_expiry: {
         Args: { p_clinic_id: string }
         Returns: number

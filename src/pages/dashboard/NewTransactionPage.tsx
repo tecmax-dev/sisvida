@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Popover,
@@ -43,17 +43,49 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { ArrowLeft, Save, Check, ChevronsUpDown } from "lucide-react";
+import { 
+  ArrowLeft, 
+  Save, 
+  Check, 
+  ChevronsUpDown, 
+  Truck, 
+  Building2,
+  FileText,
+  Calculator
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "eclini_transaction_draft";
 
+const documentTypes = [
+  { value: "nota_fiscal", label: "Nota Fiscal" },
+  { value: "recibo", label: "Recibo" },
+  { value: "boleto", label: "Boleto" },
+  { value: "fatura", label: "Fatura" },
+  { value: "cupom", label: "Cupom Fiscal" },
+  { value: "outros", label: "Outros" },
+];
+
+const paymentMethods = [
+  { value: "cash", label: "Dinheiro" },
+  { value: "pix", label: "PIX" },
+  { value: "bank_transfer", label: "Transferência Bancária" },
+  { value: "check", label: "Cheque" },
+  { value: "credit_card", label: "Cartão de Crédito" },
+  { value: "debit_card", label: "Cartão de Débito" },
+  { value: "boleto", label: "Boleto" },
+  { value: "insurance", label: "Convênio" },
+];
+
+// Schema with conditional validation for expenses
 const transactionSchema = z.object({
   type: z.enum(["income", "expense"]),
   description: z.string().min(1, "Descrição é obrigatória"),
-  amount: z.string().min(1, "Valor é obrigatório"),
+  amount: z.string().optional(),
   category_id: z.string().optional(),
   patient_id: z.string().optional(),
   procedure_id: z.string().optional(),
@@ -61,6 +93,33 @@ const transactionSchema = z.object({
   status: z.enum(["pending", "paid"]),
   due_date: z.string().optional(),
   notes: z.string().optional(),
+  // Expense-specific fields
+  supplier_id: z.string().optional(),
+  cash_register_id: z.string().optional(),
+  document_type: z.string().optional(),
+  document_number: z.string().optional(),
+  check_number: z.string().optional(),
+  gross_value: z.string().optional(),
+  fine_value: z.string().optional(),
+  interest_value: z.string().optional(),
+  discount_value: z.string().optional(),
+  other_values: z.string().optional(),
+}).refine((data) => {
+  // For expenses, validate required fields
+  if (data.type === "expense") {
+    if (!data.supplier_id) return false;
+    if (!data.cash_register_id) return false;
+    if (!data.gross_value || parseFloat(data.gross_value.replace(",", ".")) <= 0) return false;
+    if (!data.payment_method) return false;
+    if (data.payment_method === "check" && !data.check_number) return false;
+  } else {
+    // For income, require amount
+    if (!data.amount) return false;
+  }
+  return true;
+}, {
+  message: "Preencha todos os campos obrigatórios",
+  path: ["type"],
 });
 
 type TransactionFormData = z.infer<typeof transactionSchema>;
@@ -76,6 +135,16 @@ const defaultValues: TransactionFormData = {
   procedure_id: undefined,
   payment_method: undefined,
   notes: undefined,
+  supplier_id: undefined,
+  cash_register_id: undefined,
+  document_type: "outros",
+  document_number: undefined,
+  check_number: undefined,
+  gross_value: "",
+  fine_value: "",
+  interest_value: "",
+  discount_value: "",
+  other_values: "",
 };
 
 function NewTransactionContent() {
@@ -84,6 +153,8 @@ function NewTransactionContent() {
   const { currentClinic } = useAuth();
   const queryClient = useQueryClient();
   const [initialData, setInitialData] = useState<TransactionFormData>(defaultValues);
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [supplierPopoverOpen, setSupplierPopoverOpen] = useState(false);
 
   const defaultType = (searchParams.get("type") as "income" | "expense") || "income";
 
@@ -94,9 +165,27 @@ function NewTransactionContent() {
 
   const type = form.watch("type");
   const procedureId = form.watch("procedure_id");
+  const paymentMethod = form.watch("payment_method");
+  const grossValue = form.watch("gross_value");
+  const fineValue = form.watch("fine_value");
+  const interestValue = form.watch("interest_value");
+  const discountValue = form.watch("discount_value");
+  const otherValues = form.watch("other_values");
   const formData = form.watch();
 
   const clinicId = currentClinic?.id;
+
+  // Calculate net value for expenses
+  const calculateNetValue = () => {
+    const gross = parseFloat(grossValue?.replace(",", ".") || "0");
+    const fine = parseFloat(fineValue?.replace(",", ".") || "0");
+    const interest = parseFloat(interestValue?.replace(",", ".") || "0");
+    const discount = parseFloat(discountValue?.replace(",", ".") || "0");
+    const other = parseFloat(otherValues?.replace(",", ".") || "0");
+    return gross + fine + interest - discount + other;
+  };
+
+  const netValue = calculateNetValue();
 
   // Queries
   const { data: categories } = useQuery({
@@ -129,7 +218,7 @@ function NewTransactionContent() {
       if (error) throw error;
       return data;
     },
-    enabled: !!clinicId,
+    enabled: !!clinicId && type === "income",
   });
 
   const { data: procedures } = useQuery({
@@ -148,6 +237,39 @@ function NewTransactionContent() {
     enabled: !!clinicId && type === "income",
   });
 
+  // Expense-specific queries
+  const { data: suppliers } = useQuery({
+    queryKey: ["suppliers", clinicId],
+    queryFn: async () => {
+      if (!clinicId) return [];
+      const { data, error } = await supabase
+        .from("suppliers")
+        .select("id, name, cnpj")
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clinicId && type === "expense",
+  });
+
+  const { data: cashRegisters } = useQuery({
+    queryKey: ["cash-registers", clinicId],
+    queryFn: async () => {
+      if (!clinicId) return [];
+      const { data, error } = await supabase
+        .from("cash_registers")
+        .select("*")
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clinicId && type === "expense",
+  });
+
   // Auto-fill from procedure
   useEffect(() => {
     if (procedureId && procedures) {
@@ -163,8 +285,6 @@ function NewTransactionContent() {
 
   // Save draft to localStorage (for auto-save)
   const saveDraft = useCallback(async (data: TransactionFormData) => {
-    // Draft is persisted via storageKey in useAutoSave
-    // This is just a no-op async function for the hook
     return Promise.resolve();
   }, []);
 
@@ -193,23 +313,60 @@ function NewTransactionContent() {
     mutationFn: async (data: TransactionFormData) => {
       if (!clinicId) throw new Error("Clínica não encontrada");
 
-      const amount = parseFloat(data.amount.replace(",", "."));
-      if (isNaN(amount)) throw new Error("Valor inválido");
+      let payload: Record<string, any>;
 
-      const payload = {
-        clinic_id: clinicId,
-        type: data.type,
-        description: data.description,
-        amount,
-        category_id: data.category_id || null,
-        patient_id: data.patient_id || null,
-        procedure_id: data.procedure_id || null,
-        payment_method: data.payment_method || null,
-        status: data.status,
-        due_date: data.due_date || null,
-        paid_date: data.status === "paid" ? format(new Date(), "yyyy-MM-dd") : null,
-        notes: data.notes || null,
-      };
+      if (data.type === "expense") {
+        // Expense payload with all advanced fields
+        const gross = parseFloat(data.gross_value?.replace(",", ".") || "0");
+        const fine = parseFloat(data.fine_value?.replace(",", ".") || "0");
+        const interest = parseFloat(data.interest_value?.replace(",", ".") || "0");
+        const discount = parseFloat(data.discount_value?.replace(",", ".") || "0");
+        const other = parseFloat(data.other_values?.replace(",", ".") || "0");
+        const net = gross + fine + interest - discount + other;
+
+        payload = {
+          clinic_id: clinicId,
+          type: "expense",
+          description: data.description,
+          amount: net,
+          supplier_id: data.supplier_id || null,
+          cash_register_id: data.cash_register_id || null,
+          document_type: data.document_type || null,
+          document_number: data.document_number || null,
+          payment_method: data.payment_method || null,
+          check_number: data.check_number || null,
+          due_date: data.due_date || null,
+          gross_value: gross,
+          fine_value: fine,
+          interest_value: interest,
+          discount_value: discount,
+          other_values: other,
+          net_value: net,
+          status: data.status,
+          category_id: data.category_id || null,
+          notes: data.notes || null,
+          paid_date: data.status === "paid" ? format(new Date(), "yyyy-MM-dd") : null,
+        };
+      } else {
+        // Income payload
+        const amount = parseFloat(data.amount?.replace(",", ".") || "0");
+        if (isNaN(amount) || amount <= 0) throw new Error("Valor inválido");
+
+        payload = {
+          clinic_id: clinicId,
+          type: "income",
+          description: data.description,
+          amount,
+          category_id: data.category_id || null,
+          patient_id: data.patient_id || null,
+          procedure_id: data.procedure_id || null,
+          payment_method: data.payment_method || null,
+          status: data.status,
+          due_date: data.due_date || null,
+          paid_date: data.status === "paid" ? format(new Date(), "yyyy-MM-dd") : null,
+          notes: data.notes || null,
+        };
+      }
 
       const { error } = await supabase.from("financial_transactions").insert(payload);
       if (error) throw error;
@@ -218,6 +375,7 @@ function NewTransactionContent() {
       queryClient.invalidateQueries({ queryKey: ["financial-transactions"] });
       queryClient.invalidateQueries({ queryKey: ["financial-metrics"] });
       queryClient.invalidateQueries({ queryKey: ["financial-monthly"] });
+      queryClient.invalidateQueries({ queryKey: ["cash-flow"] });
       
       // Clear draft
       try {
@@ -241,7 +399,6 @@ function NewTransactionContent() {
       const confirm = window.confirm("Você tem alterações não salvas. Deseja realmente sair?");
       if (!confirm) return;
     }
-    // Clear draft on explicit cancel
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {}
@@ -253,6 +410,16 @@ function NewTransactionContent() {
       style: "currency",
       currency: "BRL",
     }).format(value);
+
+  const filteredSuppliers = suppliers?.filter(
+    (s) =>
+      s.name.toLowerCase().includes(supplierSearch.toLowerCase()) ||
+      s.cnpj?.includes(supplierSearch)
+  );
+
+  const selectedSupplier = suppliers?.find(
+    (s) => s.id === form.watch("supplier_id")
+  );
 
   if (!currentClinic) {
     return null;
@@ -290,6 +457,11 @@ function NewTransactionContent() {
         <Card>
           <CardHeader>
             <CardTitle>Dados da Transação</CardTitle>
+            <CardDescription>
+              {type === "expense" 
+                ? "Preencha os dados da despesa. Fornecedor, portador e valor são obrigatórios."
+                : "Preencha os dados da receita."}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -309,91 +481,19 @@ function NewTransactionContent() {
                   </TabsList>
                 </Tabs>
 
-                {/* Procedure (income only) */}
-                {type === "income" && procedures && procedures.length > 0 && (
-                  <FormField
-                    control={form.control}
-                    name="procedure_id"
-                    render={({ field }) => (
-                      <FormItem className="max-w-md">
-                        <FormLabel>Procedimento</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione um procedimento (opcional)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {procedures.map((p) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.name} - {formatCurrency(p.price)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-
-                {/* Description */}
-                <FormField
-                  control={form.control}
-                  name="description"
-                  render={({ field }) => (
-                    <FormItem className="max-w-xl">
-                      <FormLabel>Descrição *</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Consulta particular" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {/* Amount + Date */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
-                  <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Valor *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="0,00" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="due_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Data</FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                {/* Category + Payment Method */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
-                  <FormField
-                    control={form.control}
-                    name="category_id"
-                    render={({ field }) => {
-                      const selectedCategory = categories?.find(c => c.id === field.value);
-                      return (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Categoria</FormLabel>
-                          <Popover>
+                {/* ===== EXPENSE SPECIFIC FIELDS ===== */}
+                {type === "expense" && (
+                  <>
+                    {/* Supplier Selection */}
+                    <FormField
+                      control={form.control}
+                      name="supplier_id"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-col max-w-xl">
+                          <FormLabel className="flex items-center gap-1">
+                            Fornecedor <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <Popover open={supplierPopoverOpen} onOpenChange={setSupplierPopoverOpen}>
                             <PopoverTrigger asChild>
                               <FormControl>
                                 <Button
@@ -404,44 +504,50 @@ function NewTransactionContent() {
                                     !field.value && "text-muted-foreground"
                                   )}
                                 >
-                                  {selectedCategory ? (
+                                  {selectedSupplier ? (
                                     <span className="flex items-center gap-2">
-                                      <span
-                                        className="w-3 h-3 rounded-full shrink-0"
-                                        style={{ backgroundColor: selectedCategory.color || '#888' }}
-                                      />
-                                      {selectedCategory.name}
+                                      <Truck className="h-4 w-4" />
+                                      {selectedSupplier.name}
                                     </span>
                                   ) : (
-                                    "Buscar categoria..."
+                                    "Selecione um fornecedor"
                                   )}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
-                            <PopoverContent className="w-[300px] p-0" align="start">
+                            <PopoverContent className="w-[400px] p-0" align="start">
                               <Command>
-                                <CommandInput placeholder="Buscar categoria..." />
+                                <CommandInput
+                                  placeholder="Buscar fornecedor..."
+                                  value={supplierSearch}
+                                  onValueChange={setSupplierSearch}
+                                />
                                 <CommandList>
-                                  <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                                  <CommandEmpty>Nenhum fornecedor encontrado.</CommandEmpty>
                                   <CommandGroup>
-                                    {categories?.map((cat) => (
+                                    {filteredSuppliers?.map((supplier) => (
                                       <CommandItem
-                                        key={cat.id}
-                                        value={cat.name}
+                                        key={supplier.id}
+                                        value={supplier.name}
                                         onSelect={() => {
-                                          field.onChange(cat.id);
+                                          form.setValue("supplier_id", supplier.id);
+                                          setSupplierPopoverOpen(false);
+                                          setSupplierSearch("");
                                         }}
                                       >
-                                        <span
-                                          className="w-3 h-3 rounded-full mr-2 shrink-0"
-                                          style={{ backgroundColor: cat.color || '#888' }}
-                                        />
-                                        {cat.name}
+                                        <div className="flex flex-col">
+                                          <span className="font-medium">{supplier.name}</span>
+                                          {supplier.cnpj && (
+                                            <span className="text-xs text-muted-foreground">
+                                              CNPJ: {supplier.cnpj}
+                                            </span>
+                                          )}
+                                        </div>
                                         <Check
                                           className={cn(
                                             "ml-auto h-4 w-4",
-                                            field.value === cat.id ? "opacity-100" : "opacity-0"
+                                            field.value === supplier.id ? "opacity-100" : "opacity-0"
                                           )}
                                         />
                                       </CommandItem>
@@ -453,8 +559,270 @@ function NewTransactionContent() {
                           </Popover>
                           <FormMessage />
                         </FormItem>
-                      );
-                    }}
+                      )}
+                    />
+
+                    {/* Cash Register (Portador) */}
+                    <FormField
+                      control={form.control}
+                      name="cash_register_id"
+                      render={({ field }) => (
+                        <FormItem className="max-w-xl">
+                          <FormLabel className="flex items-center gap-1">
+                            Portador / Conta Bancária <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o portador" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {cashRegisters?.map((register) => (
+                                <SelectItem key={register.id} value={register.id}>
+                                  <span className="flex items-center gap-2">
+                                    <Building2 className="h-4 w-4" />
+                                    {register.name}
+                                    {register.bank_name && (
+                                      <Badge variant="outline" className="text-xs ml-2">
+                                        {register.bank_name}
+                                      </Badge>
+                                    )}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {/* Document Type + Number */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
+                      <FormField
+                        control={form.control}
+                        name="document_type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="flex items-center gap-1">
+                              <FileText className="h-4 w-4" />
+                              Tipo de Documento
+                            </FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {documentTypes.map((type) => (
+                                  <SelectItem key={type.value} value={type.value}>
+                                    {type.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="document_number"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nº Documento</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Ex: 12345" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <Separator />
+
+                    {/* Value Decomposition Section */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Calculator className="h-5 w-5 text-primary" />
+                        <h4 className="font-medium">Decomposição de Valores</h4>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-2xl">
+                        <FormField
+                          control={form.control}
+                          name="gross_value"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="flex items-center gap-1">
+                                Valor Bruto <span className="text-red-500">*</span>
+                              </FormLabel>
+                              <FormControl>
+                                <Input placeholder="0,00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="fine_value"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Multa (+)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="0,00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="interest_value"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Juros (+)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="0,00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="discount_value"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Desconto (-)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="0,00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="other_values"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Outros (+/-)</FormLabel>
+                              <FormControl>
+                                <Input placeholder="0,00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Net Value Display */}
+                        <div className="flex flex-col justify-end">
+                          <div className="rounded-lg border-2 border-primary bg-primary/5 p-3 text-center">
+                            <p className="text-xs text-muted-foreground mb-1">Valor Líquido</p>
+                            <p className="text-xl font-bold text-primary">
+                              {formatCurrency(netValue)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+                  </>
+                )}
+
+                {/* ===== INCOME SPECIFIC FIELDS ===== */}
+                {type === "income" && (
+                  <>
+                    {/* Procedure (income only) */}
+                    {procedures && procedures.length > 0 && (
+                      <FormField
+                        control={form.control}
+                        name="procedure_id"
+                        render={({ field }) => (
+                          <FormItem className="max-w-md">
+                            <FormLabel>Procedimento</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione um procedimento (opcional)" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {procedures.map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>
+                                    {p.name} - {formatCurrency(p.price)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {/* Amount for income */}
+                    <FormField
+                      control={form.control}
+                      name="amount"
+                      render={({ field }) => (
+                        <FormItem className="max-w-xs">
+                          <FormLabel className="flex items-center gap-1">
+                            Valor <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="0,00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </>
+                )}
+
+                {/* ===== COMMON FIELDS ===== */}
+                {/* Description */}
+                <FormField
+                  control={form.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem className="max-w-xl">
+                      <FormLabel className="flex items-center gap-1">
+                        Descrição <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input placeholder="Ex: Consulta particular" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Date + Payment Method + Check Number */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
+                  <FormField
+                    control={form.control}
+                    name="due_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data de Vencimento</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
 
                   <FormField
@@ -462,7 +830,10 @@ function NewTransactionContent() {
                     name="payment_method"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Forma de Pagamento</FormLabel>
+                        <FormLabel className="flex items-center gap-1">
+                          Forma de Pagamento
+                          {type === "expense" && <span className="text-red-500">*</span>}
+                        </FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
@@ -470,20 +841,110 @@ function NewTransactionContent() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="cash">Dinheiro</SelectItem>
-                            <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
-                            <SelectItem value="debit_card">Cartão de Débito</SelectItem>
-                            <SelectItem value="pix">PIX</SelectItem>
-                            <SelectItem value="bank_transfer">Transferência</SelectItem>
-                            <SelectItem value="check">Cheque</SelectItem>
-                            <SelectItem value="insurance">Convênio</SelectItem>
+                            {paymentMethods.map((method) => (
+                              <SelectItem key={method.value} value={method.value}>
+                                {method.label}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
+
+                  {/* Check Number (conditional) */}
+                  {paymentMethod === "check" && (
+                    <FormField
+                      control={form.control}
+                      name="check_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Nº do Cheque <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <Input placeholder="Ex: 000123" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
                 </div>
+
+                {/* Category */}
+                <FormField
+                  control={form.control}
+                  name="category_id"
+                  render={({ field }) => {
+                    const selectedCategory = categories?.find(c => c.id === field.value);
+                    return (
+                      <FormItem className="flex flex-col max-w-md">
+                        <FormLabel>Categoria</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant="outline"
+                                role="combobox"
+                                className={cn(
+                                  "w-full justify-between",
+                                  !field.value && "text-muted-foreground"
+                                )}
+                              >
+                                {selectedCategory ? (
+                                  <span className="flex items-center gap-2">
+                                    <span
+                                      className="w-3 h-3 rounded-full shrink-0"
+                                      style={{ backgroundColor: selectedCategory.color || '#888' }}
+                                    />
+                                    {selectedCategory.name}
+                                  </span>
+                                ) : (
+                                  "Buscar categoria..."
+                                )}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-[300px] p-0" align="start">
+                            <Command>
+                              <CommandInput placeholder="Buscar categoria..." />
+                              <CommandList>
+                                <CommandEmpty>Nenhuma categoria encontrada.</CommandEmpty>
+                                <CommandGroup>
+                                  {categories?.map((cat) => (
+                                    <CommandItem
+                                      key={cat.id}
+                                      value={cat.name}
+                                      onSelect={() => {
+                                        field.onChange(cat.id);
+                                      }}
+                                    >
+                                      <span
+                                        className="w-3 h-3 rounded-full mr-2 shrink-0"
+                                        style={{ backgroundColor: cat.color || '#888' }}
+                                      />
+                                      {cat.name}
+                                      <Check
+                                        className={cn(
+                                          "ml-auto h-4 w-4",
+                                          field.value === cat.id ? "opacity-100" : "opacity-0"
+                                        )}
+                                      />
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    );
+                  }}
+                />
 
                 {/* Patient (income only) */}
                 {type === "income" && (
