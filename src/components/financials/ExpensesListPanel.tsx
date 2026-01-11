@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -83,6 +84,7 @@ const paymentMethodLabels: Record<string, string> = {
 };
 
 export function ExpensesListPanel({ clinicId }: ExpensesListPanelProps) {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -339,10 +341,7 @@ export function ExpensesListPanel({ clinicId }: ExpensesListPanelProps) {
             <FileText className="h-4 w-4 mr-2" />
             Liquidar por Cheque
           </Button>
-          <Button onClick={() => {
-            setEditingExpense(null);
-            setExpenseDialogOpen(true);
-          }}>
+          <Button onClick={() => navigate("/dashboard/financials/new?type=expense")}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Despesa
           </Button>
