@@ -124,6 +124,7 @@ export default function ContributionsReportsTab({
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
   const [contributionTypeFilter, setContributionTypeFilter] = useState<string>("all");
   const [originFilter, setOriginFilter] = useState<string>("all");
+  const [dateFilterType, setDateFilterType] = useState<"competence" | "due_date" | "paid_at">("competence");
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -140,15 +141,29 @@ export default function ContributionsReportsTab({
 
   const filteredContributions = useMemo(() => {
     return contributions.filter((c) => {
-      const matchesYear = c.competence_year === yearFilter;
-      const matchesMonth = monthFilter === "all" || c.competence_month === parseInt(monthFilter);
+      // Filtro por período baseado no tipo selecionado
+      let matchesPeriod = false;
+      if (dateFilterType === "competence") {
+        matchesPeriod = c.competence_year === yearFilter && 
+          (monthFilter === "all" || c.competence_month === parseInt(monthFilter));
+      } else if (dateFilterType === "due_date") {
+        const dueDate = new Date(c.due_date + "T12:00:00");
+        matchesPeriod = dueDate.getFullYear() === yearFilter && 
+          (monthFilter === "all" || (dueDate.getMonth() + 1) === parseInt(monthFilter));
+      } else if (dateFilterType === "paid_at") {
+        if (!c.paid_at) return false; // Se filtro é por data de pagamento, excluir não pagos
+        const paidDate = new Date(c.paid_at);
+        matchesPeriod = paidDate.getFullYear() === yearFilter && 
+          (monthFilter === "all" || (paidDate.getMonth() + 1) === parseInt(monthFilter));
+      }
+      
       const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
       const matchesEmployer = !selectedEmployer || c.employer_id === selectedEmployer.id;
       const matchesType = contributionTypeFilter === "all" || c.contribution_type_id === contributionTypeFilter;
       const matchesOrigin = originFilter === "all" || c.origin === originFilter;
-      return matchesYear && matchesMonth && matchesStatus && matchesEmployer && matchesType && matchesOrigin;
+      return matchesPeriod && matchesStatus && matchesEmployer && matchesType && matchesOrigin;
     });
-  }, [contributions, yearFilter, monthFilter, statusFilter, selectedEmployer, contributionTypeFilter, originFilter]);
+  }, [contributions, yearFilter, monthFilter, statusFilter, selectedEmployer, contributionTypeFilter, originFilter, dateFilterType]);
 
   // Report by employer
   const byEmployerReport = useMemo(() => {
@@ -321,6 +336,18 @@ export default function ContributionsReportsTab({
                     </div>
                   </SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            {/* Date Filter Type */}
+            <Select value={dateFilterType} onValueChange={(v) => setDateFilterType(v as "competence" | "due_date" | "paid_at")}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="competence">Por Competência</SelectItem>
+                <SelectItem value="due_date">Por Vencimento</SelectItem>
+                <SelectItem value="paid_at">Por Pagamento</SelectItem>
               </SelectContent>
             </Select>
 

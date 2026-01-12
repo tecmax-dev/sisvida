@@ -469,6 +469,7 @@ export default function ContributionsListTab({
                 <TableHead className="font-semibold">Tipo</TableHead>
                 <TableHead className="font-semibold">Competência</TableHead>
                 <TableHead className="font-semibold">Vencimento</TableHead>
+                <TableHead className="font-semibold">Pagamento</TableHead>
                 <TableHead className="font-semibold text-right">Valor</TableHead>
                 <TableHead className="font-semibold text-center">Status</TableHead>
                 <TableHead className="font-semibold text-center">Boleto</TableHead>
@@ -478,7 +479,7 @@ export default function ContributionsListTab({
             <TableBody>
               {paginatedContributions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={11} className="h-32 text-center">
+                  <TableCell colSpan={12} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <Receipt className="h-8 w-8 text-muted-foreground" />
                       <p className="text-muted-foreground">Nenhuma contribuição encontrada</p>
@@ -556,6 +557,15 @@ export default function ContributionsListTab({
                         <span className="text-sm">
                           {format(new Date(contrib.due_date + "T12:00:00"), "dd/MM/yyyy")}
                         </span>
+                      </TableCell>
+                      <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
+                        {contrib.paid_at ? (
+                          <span className="text-sm text-emerald-600 font-medium">
+                            {format(new Date(contrib.paid_at), "dd/MM/yyyy")}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
                       </TableCell>
                       <TableCell className={`py-2 text-right ${isCancelled ? "opacity-60" : ""}`}>
                         <span className={`font-medium ${isCancelled ? "line-through" : ""}`}>
