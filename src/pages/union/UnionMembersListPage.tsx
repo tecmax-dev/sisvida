@@ -118,6 +118,7 @@ export default function UnionMembersListPage() {
       const from = (page - 1) * ITEMS_PER_PAGE;
       const to = from + ITEMS_PER_PAGE - 1;
 
+      // Lista todos os pacientes ativos da clínica vinculada (associados do sindicato)
       let query = supabase
         .from("patients")
         .select(`
@@ -130,14 +131,15 @@ export default function UnionMembersListPage() {
           union_member_status,
           union_joined_at,
           union_contribution_value,
+          tag,
           patient_cards (card_number, expires_at, is_active)
         `, { count: "exact" })
         .eq("clinic_id", currentClinic.id)
-        .eq("is_union_member", true)
         .eq("is_active", true);
 
+      // Filtra por status usando tag ou union_member_status
       if (statusFilter !== "all") {
-        query = query.eq("union_member_status", statusFilter);
+        query = query.or(`tag.ilike.${statusFilter},union_member_status.eq.${statusFilter}`);
       }
 
       if (debouncedSearch) {
@@ -177,20 +179,28 @@ export default function UnionMembersListPage() {
     if (!currentClinic) return;
 
     try {
+      // Conta todos os pacientes ativos da clínica como associados do sindicato
       const { data, error } = await supabase
         .from("patients")
-        .select("union_member_status")
+        .select("tag, union_member_status")
         .eq("clinic_id", currentClinic.id)
-        .eq("is_union_member", true)
         .eq("is_active", true);
 
       if (error) throw error;
 
+      // Usa o campo 'tag' para classificar status (ou union_member_status se disponível)
       const counts = {
         total: data.length,
-        ativos: data.filter((m) => m.union_member_status === "ativo").length,
-        pendentes: data.filter((m) => m.union_member_status === "pendente").length,
-        inativos: data.filter((m) => m.union_member_status === "inativo" || m.union_member_status === "suspenso").length,
+        ativos: data.filter((m) => 
+          m.tag === "Ativo" || m.tag === "ativo" || m.union_member_status === "ativo"
+        ).length,
+        pendentes: data.filter((m) => 
+          m.tag === "Pendente" || m.tag === "pendente" || m.union_member_status === "pendente"
+        ).length,
+        inativos: data.filter((m) => 
+          m.tag === "Inativo" || m.tag === "inativo" || 
+          m.union_member_status === "inativo" || m.union_member_status === "suspenso"
+        ).length,
       };
       setStats(counts);
     } catch (error) {

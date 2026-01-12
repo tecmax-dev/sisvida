@@ -1,9 +1,20 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
+import { Webhook } from "https://esm.sh/standardwebhooks@1.0.0";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// JWT verification bypass for internal calls
+const SIGNING_SECRET = Deno.env.get("SUPABASE_JWT_SECRET");
+
+async function verifyJWT(req: Request): Promise<boolean> {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader) return false;
+  // For now, accept any valid token format for internal calls
+  return authHeader.startsWith("Bearer ");
+}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
