@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useUnionPermissions, UnionPermission } from "@/hooks/useUnionPermissions";
 import { cn } from "@/lib/utils";
@@ -165,16 +165,6 @@ export function UnionSidebar() {
   const location = useLocation();
   const { hasUnionPermission } = useUnionPermissions();
   const [openCategories, setOpenCategories] = useState<string[]>([]);
-  const autoCloseTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const AUTO_CLOSE_DELAY = 5000;
-
-  useEffect(() => {
-    return () => {
-      if (autoCloseTimeoutRef.current) {
-        clearTimeout(autoCloseTimeoutRef.current);
-      }
-    };
-  }, []);
 
   const filteredCategories = unionNavTree
     .map(category => ({
@@ -196,26 +186,27 @@ export function UnionSidebar() {
     return category.items.some(item => isActive(item.href));
   };
 
-  const toggleCategory = useCallback((categoryId: string) => {
-    if (autoCloseTimeoutRef.current) {
-      clearTimeout(autoCloseTimeoutRef.current);
-      autoCloseTimeoutRef.current = null;
+  // Auto-expand category containing active route on navigation
+  useEffect(() => {
+    const activeCategories = filteredCategories
+      .filter(cat => cat.items.some(item => isActive(item.href)))
+      .map(cat => cat.id);
+    
+    if (activeCategories.length > 0) {
+      setOpenCategories(prev => {
+        const newCategories = [...new Set([...prev, ...activeCategories])];
+        return newCategories;
+      });
     }
+  }, [location.pathname]);
 
+  const toggleCategory = useCallback((categoryId: string) => {
     setOpenCategories(prev => {
-      const isOpening = !prev.includes(categoryId);
-      
-      if (isOpening) {
-        autoCloseTimeoutRef.current = setTimeout(() => {
-          setOpenCategories(current => 
-            current.filter(id => id !== categoryId)
-          );
-        }, AUTO_CLOSE_DELAY);
-        
-        return [categoryId];
+      if (prev.includes(categoryId)) {
+        return prev.filter(id => id !== categoryId);
+      } else {
+        return [...prev, categoryId];
       }
-      
-      return [];
     });
   }, []);
 
