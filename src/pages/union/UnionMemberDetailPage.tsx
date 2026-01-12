@@ -44,6 +44,7 @@ interface UnionMember {
   notes: string | null;
   registration_number: string | null;
   clinic_id: string;
+  tag: string | null;
   // Union specific fields
   is_union_member: boolean;
   union_member_status: string | null;
@@ -100,18 +101,10 @@ export default function UnionMemberDetailPage() {
 
       if (error) throw error;
 
-      if (!data.is_union_member) {
-        toast({
-          title: "Acesso negado",
-          description: "Este paciente não é um associado sindical.",
-          variant: "destructive",
-        });
-        navigate("/union/socios");
-        return;
-      }
-
       setMember(data);
-      setUnionStatus(data.union_member_status || "pendente");
+      // Usa tag como fallback para o status sindical
+      const effectiveStatus = data.union_member_status || data.tag?.toLowerCase() || "pendente";
+      setUnionStatus(effectiveStatus);
       setUnionCategoryId(data.union_category_id || "");
       setUnionContribution(data.union_contribution_value?.toString() || "");
       setUnionPaymentMethod(data.union_payment_method || "");
@@ -127,14 +120,15 @@ export default function UnionMemberDetailPage() {
   const fetchCategories = async () => {
     if (!currentClinic) return;
 
-    const { data } = await supabase
-      .from("sindical_categorias")
+    const query = supabase
+      .from("sindical_categorias" as "anamnese_templates")
       .select("id, nome, valor_contribuicao")
-      .eq("sindicato_id", currentClinic.id)
-      .eq("ativo", true)
-      .order("nome");
+      .eq("sindicato_id" as "clinic_id", currentClinic.id)
+      .eq("ativo" as "is_active", true)
+      .order("nome" as "title");
 
-    setCategories(data || []);
+    const { data } = await query;
+    setCategories((data as unknown as Category[]) || []);
   };
 
   useEffect(() => {
