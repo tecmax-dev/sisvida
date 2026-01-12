@@ -51,6 +51,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_system: boolean | null
+          module_type: string | null
           name: string
           updated_at: string | null
         }
@@ -61,6 +62,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_system?: boolean | null
+          module_type?: string | null
           name: string
           updated_at?: string | null
         }
@@ -71,6 +73,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_system?: boolean | null
+          module_type?: string | null
           name?: string
           updated_at?: string | null
         }
@@ -6705,6 +6708,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           key: string
+          module_type: string | null
           name: string
           order_index: number | null
           parent_key: string | null
@@ -6716,6 +6720,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           key: string
+          module_type?: string | null
           name: string
           order_index?: number | null
           parent_key?: string | null
@@ -6727,6 +6732,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           key?: string
+          module_type?: string | null
           name?: string
           order_index?: number | null
           parent_key?: string | null

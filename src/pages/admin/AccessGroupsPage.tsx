@@ -34,8 +34,18 @@ import {
   Trash,
   Send,
   CheckCircle2,
-  Info
+  Info,
+  Building2,
+  Building,
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -54,6 +64,7 @@ interface PermissionDefinition {
   description: string | null;
   category: string;
   order_index: number;
+  module_type: string;
 }
 
 interface AvailablePermission {
@@ -70,6 +81,7 @@ interface AccessGroup {
   is_system: boolean;
   is_active: boolean;
   clinic_id: string | null;
+  module_type: string;
   created_at: string;
 }
 
@@ -99,6 +111,14 @@ const categoryIcons: Record<string, React.ReactNode> = {
   'Repasse': <CreditCard className="h-5 w-5" />,
   'TISS': <FileText className="h-5 w-5" />,
   'Anamnese': <ClipboardList className="h-5 w-5" />,
+  // Categorias do Módulo Sindical
+  'Sindical - Geral': <Building2 className="h-5 w-5 text-purple-500" />,
+  'Sindical - Empresas': <Building className="h-5 w-5 text-amber-500" />,
+  'Sindical - Sócios': <Users className="h-5 w-5 text-purple-500" />,
+  'Sindical - Contribuições': <CreditCard className="h-5 w-5 text-emerald-500" />,
+  'Sindical - Financeiro': <CreditCard className="h-5 w-5 text-blue-500" />,
+  'Sindical - Negociações': <FileText className="h-5 w-5 text-purple-500" />,
+  'Sindical - Auditoria': <Eye className="h-5 w-5 text-slate-500" />,
 };
 
 // Friendly category descriptions
@@ -123,6 +143,14 @@ const categoryDescriptions: Record<string, string> = {
   'Repasse': 'Repasse de comissões',
   'TISS': 'Guias e faturamento TISS',
   'Anamnese': 'Templates e respostas de anamnese',
+  // Categorias do Módulo Sindical
+  'Sindical - Geral': 'Acesso geral ao módulo sindical',
+  'Sindical - Empresas': 'Cadastro e gestão de empresas associadas',
+  'Sindical - Sócios': 'Gestão de sócios e associados',
+  'Sindical - Contribuições': 'Gestão de contribuições e boletos sindicais',
+  'Sindical - Financeiro': 'Controle financeiro do sindicato',
+  'Sindical - Negociações': 'Negociação de débitos e acordos',
+  'Sindical - Auditoria': 'Logs e auditoria do módulo sindical',
 };
 
 // Permission action icons
@@ -143,6 +171,8 @@ export default function AccessGroupsPage() {
   const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(new Set());
   const [groupName, setGroupName] = useState("");
   const [groupDescription, setGroupDescription] = useState("");
+  const [groupModuleType, setGroupModuleType] = useState<string>("clinic");
+  const [moduleFilter, setModuleFilter] = useState<"all" | "clinic" | "union">("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [permissionSearch, setPermissionSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -210,6 +240,7 @@ export default function AccessGroupsPage() {
     setSelectedGroup(group);
     setGroupName(group.name);
     setGroupDescription(group.description || "");
+    setGroupModuleType(group.module_type || "clinic");
 
     // Fetch group permissions
     const { data, error } = await supabase
@@ -230,6 +261,7 @@ export default function AccessGroupsPage() {
     setSelectedGroup(null);
     setGroupName("");
     setGroupDescription("");
+    setGroupModuleType("clinic");
     setSelectedPermissions(new Set());
   };
 
@@ -284,6 +316,7 @@ export default function AccessGroupsPage() {
           .update({
             name: groupName.trim(),
             description: groupDescription.trim() || null,
+            module_type: groupModuleType,
           })
           .eq('id', selectedGroup.id);
 
@@ -295,6 +328,7 @@ export default function AccessGroupsPage() {
           .insert({
             name: groupName.trim(),
             description: groupDescription.trim() || null,
+            module_type: groupModuleType,
             clinic_id: null,
             is_system: false,
           })
@@ -362,9 +396,12 @@ export default function AccessGroupsPage() {
     }
   };
 
-  const filteredGroups = groups.filter(g => 
-    g.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter groups by module type and search term
+  const filteredGroups = groups.filter(g => {
+    const matchesSearch = g.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesModule = moduleFilter === "all" || g.module_type === moduleFilter || g.module_type === "all";
+    return matchesSearch && matchesModule;
+  });
 
   const categoryPermissionStats = (category: string) => {
     const categoryPerms = groupedPermissions[category] || [];
@@ -375,8 +412,15 @@ export default function AccessGroupsPage() {
     return { selected: selectedCount, total: availableCategoryPerms.length, unavailable: unavailableCount, allSelected };
   };
 
-  // Filter permissions by search
+  // Filter permissions by search AND module type
   const filteredCategories = Object.entries(groupedPermissions).filter(([category, perms]) => {
+    // Filter by module type first
+    const moduleTypeFilter = groupModuleType === "clinic" 
+      ? !category.startsWith("Sindical") 
+      : category.startsWith("Sindical") || category === "Sindical - Geral";
+    
+    if (!moduleTypeFilter) return false;
+    
     if (!permissionSearch) return true;
     const searchLower = permissionSearch.toLowerCase();
     if (category.toLowerCase().includes(searchLower)) return true;
@@ -430,7 +474,21 @@ export default function AccessGroupsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="px-4 pb-3">
+              <div className="px-4 pb-3 space-y-2">
+                {/* Module filter tabs */}
+                <Tabs value={moduleFilter} onValueChange={(v) => setModuleFilter(v as "all" | "clinic" | "union")} className="w-full">
+                  <TabsList className="w-full grid grid-cols-3 h-8">
+                    <TabsTrigger value="all" className="text-xs">Todos</TabsTrigger>
+                    <TabsTrigger value="clinic" className="text-xs gap-1">
+                      <Building className="h-3 w-3" />
+                      Clínica
+                    </TabsTrigger>
+                    <TabsTrigger value="union" className="text-xs gap-1">
+                      <Building2 className="h-3 w-3" />
+                      Sindical
+                    </TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -464,11 +522,23 @@ export default function AccessGroupsPage() {
                             </p>
                           )}
                         </div>
-                        {group.is_system && (
-                          <Badge variant="secondary" className="text-xs shrink-0">
-                            Padrão
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1 shrink-0">
+                          {group.module_type === 'union' && (
+                            <Badge variant="outline" className="text-xs bg-purple-500/10 text-purple-600 border-purple-200">
+                              Sindical
+                            </Badge>
+                          )}
+                          {group.module_type === 'clinic' && (
+                            <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-200">
+                              Clínica
+                            </Badge>
+                          )}
+                          {group.is_system && (
+                            <Badge variant="secondary" className="text-xs">
+                              Padrão
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </button>
                   ))}
@@ -514,6 +584,49 @@ export default function AccessGroupsPage() {
                     value={groupDescription}
                     onChange={(e) => setGroupDescription(e.target.value)}
                   />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Tipo de Módulo *</Label>
+                  <div className="flex gap-4">
+                    <label className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      groupModuleType === 'clinic' 
+                        ? 'border-blue-500 bg-blue-500/10' 
+                        : 'border-muted hover:border-blue-300'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="moduleType"
+                        value="clinic"
+                        checked={groupModuleType === 'clinic'}
+                        onChange={(e) => setGroupModuleType(e.target.value)}
+                        className="sr-only"
+                      />
+                      <Building className="h-5 w-5 text-blue-500" />
+                      <div>
+                        <span className="font-medium text-sm">Clínica</span>
+                        <p className="text-xs text-muted-foreground">Permissões do sistema clínico</p>
+                      </div>
+                    </label>
+                    <label className={`flex items-center gap-2 p-3 rounded-lg border-2 cursor-pointer transition-all ${
+                      groupModuleType === 'union' 
+                        ? 'border-purple-500 bg-purple-500/10' 
+                        : 'border-muted hover:border-purple-300'
+                    }`}>
+                      <input
+                        type="radio"
+                        name="moduleType"
+                        value="union"
+                        checked={groupModuleType === 'union'}
+                        onChange={(e) => setGroupModuleType(e.target.value)}
+                        className="sr-only"
+                      />
+                      <Building2 className="h-5 w-5 text-purple-500" />
+                      <div>
+                        <span className="font-medium text-sm">Módulo Sindical</span>
+                        <p className="text-xs text-muted-foreground">Permissões do módulo sindical</p>
+                      </div>
+                    </label>
+                  </div>
                 </div>
               </div>
             </CardContent>
