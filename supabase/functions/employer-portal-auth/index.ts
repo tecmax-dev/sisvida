@@ -16,7 +16,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, cnpj, access_code, employer_id, contribution_id, reason } = await req.json();
+    const { action, cnpj, access_code, employer_id, contribution_id, reason, union_entity_id } = await req.json();
 
     // Limpar CNPJ (apenas números)
     const cleanCnpj = cnpj?.replace(/\D/g, "");
@@ -30,9 +30,10 @@ serve(async (req) => {
         );
       }
 
+      // Buscar empresa - agora incluindo union_entity_id para isolamento multi-tenant
       const { data: employer, error } = await supabase
         .from("employers")
-        .select("id, name, cnpj, clinic_id, access_code, access_code_expires_at")
+        .select("id, name, cnpj, clinic_id, access_code, access_code_expires_at, union_entity_id")
         .eq("cnpj", cleanCnpj)
         .single();
 
@@ -65,6 +66,17 @@ serve(async (req) => {
         );
       }
 
+      // Buscar dados do sindicato vinculado (se houver)
+      let unionEntity = null;
+      if (employer.union_entity_id) {
+        const { data: entity } = await supabase
+          .from("union_entities")
+          .select("id, razao_social, nome_fantasia, cnpj, entity_type")
+          .eq("id", employer.union_entity_id)
+          .single();
+        unionEntity = entity;
+      }
+
       // Atualizar último acesso
       await supabase
         .from("employers")
@@ -77,6 +89,7 @@ serve(async (req) => {
         action: "login",
         ip_address: req.headers.get("x-forwarded-for") || "unknown",
         user_agent: req.headers.get("user-agent") || "unknown",
+        details: { union_entity_id: employer.union_entity_id },
       });
 
       // Gerar token de sessão simples (base64 do employer_id + timestamp)
@@ -90,7 +103,9 @@ serve(async (req) => {
             name: employer.name,
             cnpj: employer.cnpj,
             clinic_id: employer.clinic_id,
+            union_entity_id: employer.union_entity_id,
           },
+          union_entity: unionEntity,
           session_token: sessionToken,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -103,6 +118,22 @@ serve(async (req) => {
           JSON.stringify({ error: "ID da empresa não informado" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // Verificar que a empresa pertence ao sindicato correto (se especificado)
+      if (union_entity_id) {
+        const { data: employer } = await supabase
+          .from("employers")
+          .select("union_entity_id")
+          .eq("id", employer_id)
+          .single();
+        
+        if (employer && employer.union_entity_id !== union_entity_id) {
+          return new Response(
+            JSON.stringify({ error: "Acesso não autorizado a esta empresa" }),
+            { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
       }
 
       // Buscar contribuições com informação de negociação
