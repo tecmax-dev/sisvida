@@ -129,12 +129,14 @@ const unionNavTree: NavCategory[] = [
       { href: "/union/financeiro", icon: Home, label: "Visão Geral", permission: "union_view_financials" },
       { href: "/union/financeiro/despesas", icon: TrendingUp, label: "Despesas", permission: "union_view_expenses" },
       { href: "/union/financeiro/receitas", icon: TrendingUp, label: "Receitas", permission: "union_view_income" },
+      { href: "/union/financeiro/movimentacao", icon: FileText, label: "Movimentação", permission: "union_view_cash_flow" },
       { href: "/union/financeiro/fluxo-caixa", icon: ArrowLeftRight, label: "Fluxo de Caixa", permission: "union_view_cash_flow" },
       { href: "/union/financeiro/contas", icon: Wallet, label: "Contas Bancárias", permission: "union_manage_cash_registers" },
       { href: "/union/financeiro/fornecedores", icon: Building, label: "Fornecedores", permission: "union_manage_suppliers" },
       { href: "/union/financeiro/categorias", icon: ClipboardList, label: "Categorias", permission: "union_manage_categories" },
       { href: "/union/financeiro/plano-contas", icon: FolderTree, label: "Plano de Contas", permission: "union_manage_categories" },
-      { href: "/union/financeiro/relatorios", icon: FileText, label: "Relatórios", permission: "union_generate_reports" },
+      { href: "/union/financeiro/conciliacao", icon: FileBarChart, label: "Conciliação Lytex", permission: "union_view_financials" },
+      { href: "/union/financeiro/relatorios", icon: FileBarChart, label: "Relatórios", permission: "union_generate_reports" },
     ]
   },
   {
