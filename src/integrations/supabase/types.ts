@@ -9589,6 +9589,7 @@ export type Database = {
           categoria_laboral: string | null
           cep: string | null
           cidade: string | null
+          clinic_id: string | null
           cnpj: string
           created_at: string
           created_by: string | null
@@ -9616,6 +9617,7 @@ export type Database = {
           categoria_laboral?: string | null
           cep?: string | null
           cidade?: string | null
+          clinic_id?: string | null
           cnpj: string
           created_at?: string
           created_by?: string | null
@@ -9643,6 +9645,7 @@ export type Database = {
           categoria_laboral?: string | null
           cep?: string | null
           cidade?: string | null
+          clinic_id?: string | null
           cnpj?: string
           created_at?: string
           created_by?: string | null
@@ -9664,6 +9667,13 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "union_entities_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "union_entities_plan_id_fkey"
             columns: ["plan_id"]

@@ -190,13 +190,66 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Caso padrão: usuário com roles em clínicas
     if (data && data.length > 0) {
-      const roles = data.map((item) => ({
-        clinic_id: item.clinic_id,
-        role: item.role as UserRole['role'],
-        access_group_id: item.access_group_id as string | null,
-        professional_id: item.professional_id as string | null,
-        clinic: item.clinic as unknown as Clinic,
-      }));
+      // Check for entidade_sindical_admin role (no clinic_id)
+      const unionAdminRole = data.find(
+        (item) => item.role === 'entidade_sindical_admin' && !item.clinic_id
+      );
+
+      if (unionAdminRole) {
+        // Fetch union entity to get linked clinic
+        const { data: entityData } = await supabase
+          .from('union_entities')
+          .select(`
+            id,
+            razao_social,
+            nome_fantasia,
+            clinic_id,
+            clinic:clinics (
+              id,
+              name,
+              slug,
+              address,
+              phone,
+              cnpj,
+              logo_url,
+              whatsapp_header_image_url,
+              is_blocked,
+              blocked_reason,
+              is_maintenance,
+              maintenance_reason,
+              entity_nomenclature
+            )
+          `)
+          .eq('user_id', userId)
+          .maybeSingle();
+
+        if (entityData?.clinic) {
+          const entityClinic = entityData.clinic as unknown as Clinic;
+          const roles: UserRole[] = [{
+            clinic_id: entityClinic.id,
+            role: 'admin', // Treat as admin for permissions
+            access_group_id: null,
+            professional_id: null,
+            clinic: entityClinic,
+          }];
+
+          setUserRoles(roles);
+          setCurrentClinic(entityClinic);
+          setRolesLoaded(true);
+          return;
+        }
+      }
+
+      // Regular clinic roles
+      const roles = data
+        .filter((item) => item.clinic) // Only include roles with valid clinics
+        .map((item) => ({
+          clinic_id: item.clinic_id,
+          role: item.role as UserRole['role'],
+          access_group_id: item.access_group_id as string | null,
+          professional_id: item.professional_id as string | null,
+          clinic: item.clinic as unknown as Clinic,
+        }));
 
       setUserRoles(roles);
 
@@ -239,6 +292,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setCurrentClinic(roles[0].clinic);
       }
 
+      setRolesLoaded(true);
+      return;
+    }
+
+    // Check if user is a union entity admin without clinic linked
+    const { data: entityWithoutClinic } = await supabase
+      .from('union_entities')
+      .select('id, razao_social, nome_fantasia')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (entityWithoutClinic) {
+      console.warn('[Auth] Union entity user without linked clinic:', entityWithoutClinic.razao_social);
+      // Allow access but no clinic context
+      setUserRoles([]);
+      setCurrentClinic(null);
       setRolesLoaded(true);
       return;
     }
