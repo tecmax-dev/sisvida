@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
+import { useUnionFinancialData } from "@/hooks/useUnionFinancialData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
 import {
   Plus,
@@ -19,6 +21,8 @@ import {
   TrendingDown,
   ClipboardList,
   Tag,
+  AlertCircle,
+  RefreshCw,
 } from "lucide-react";
 
 const PRESET_COLORS = [
@@ -33,10 +37,21 @@ export default function UnionCategoriesPage() {
   const [activeTab, setActiveTab] = useState<"income" | "expense">("expense");
   const [newCategoryName, setNewCategoryName] = useState("");
   const [selectedColor, setSelectedColor] = useState(PRESET_COLORS[0]);
+  const [isMigrating, setIsMigrating] = useState(false);
 
   const clinicId = currentClinic?.id;
 
-  const { data: categories, isLoading } = useQuery({
+  // Use the unified hook for data with fallback
+  const { 
+    categories, 
+    categoriesSource, 
+    loadingCategories,
+    needsMigration,
+    migrateData 
+  } = useUnionFinancialData(clinicId);
+
+  // Also fetch direct union categories for mutations
+  const { data: unionCategories, isLoading, refetch } = useQuery({
     queryKey: ["union-financial-categories", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -51,6 +66,19 @@ export default function UnionCategoriesPage() {
     },
     enabled: !!clinicId,
   });
+
+  // Handle migration
+  const handleMigrate = async () => {
+    setIsMigrating(true);
+    try {
+      const success = await migrateData();
+      if (success) {
+        refetch();
+      }
+    } finally {
+      setIsMigrating(false);
+    }
+  };
 
   const createMutation = useMutation({
     mutationFn: async ({ name, type, color }: { name: string; type: string; color: string }) => {
@@ -101,12 +129,19 @@ export default function UnionCategoriesPage() {
     });
   };
 
-  const incomeCategories = categories?.filter((c) => c.type === "income") || [];
-  const expenseCategories = categories?.filter((c) => c.type === "expense") || [];
+  // Use either union categories or fallback categories
+  const displayCategories = unionCategories && unionCategories.length > 0 
+    ? unionCategories 
+    : categories;
+
+  const incomeCategories = displayCategories?.filter((c: any) => c.type === "income") || [];
+  const expenseCategories = displayCategories?.filter((c: any) => c.type === "expense") || [];
+
+  const isUsingFallback = categoriesSource === "clinic" && (!unionCategories || unionCategories.length === 0);
 
   if (!clinicId) return null;
 
-  if (isLoading) {
+  if (isLoading && loadingCategories) {
     return (
       <div className="space-y-6">
         <div>
@@ -126,6 +161,36 @@ export default function UnionCategoriesPage() {
           Gerencie as categorias de receitas e despesas sindicais
         </p>
       </div>
+
+      {/* Migration Alert */}
+      {isUsingFallback && displayCategories.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              Exibindo categorias da clínica vinculada. Clique para importar para o módulo sindical.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMigrate}
+              disabled={isMigrating}
+            >
+              {isMigrating ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Importando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Importar Categorias
+                </>
+              )}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
