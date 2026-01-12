@@ -105,14 +105,17 @@ export function UnionMemberLinkDialog({
   const fetchCategories = async () => {
     if (!currentClinic) return;
     
-    const { data } = await supabase
-      .from("sindical_categorias")
+    // Use explicit typing to avoid deep type instantiation error
+    const query = supabase.from("sindical_categorias" as any);
+    const { data, error } = await query
       .select("id, nome, valor_contribuicao")
       .eq("sindicato_id", currentClinic.id)
       .eq("ativo", true)
       .order("nome");
     
-    setCategories(data || []);
+    if (!error && data) {
+      setCategories(data as unknown as Category[]);
+    }
   };
 
   const handleSearch = async () => {
