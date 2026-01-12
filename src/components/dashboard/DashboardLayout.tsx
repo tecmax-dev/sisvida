@@ -6,6 +6,7 @@ import { MaintenanceClinicOverlay } from "@/components/MaintenanceClinicOverlay"
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions, Permission } from "@/hooks/usePermissions";
 import { usePlanFeatures } from "@/hooks/usePlanFeatures";
+import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { Loader2 } from "lucide-react";
 import { Logo } from "@/components/layout/Logo";
 import { UserMenu } from "@/components/layout/UserMenu";
@@ -199,6 +200,7 @@ export function DashboardLayout() {
   const { user, profile, currentClinic, userRoles, signOut, setCurrentClinic } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
   const { hasAddon } = usePlanFeatures();
+  const { hasUnionEntity } = useClinicHasUnionEntity();
 
   useEffect(() => {
     localStorage.setItem("sidebar-collapsed", String(sidebarCollapsed));
@@ -215,9 +217,11 @@ export function DashboardLayout() {
     };
   }, []);
 
-  // Filter categories based on permissions and addons
+  // Filter categories based on permissions, addons, and union entity linkage
   const filteredCategories = navCategories
     .filter(category => {
+      // Módulo Sindical only appears if the clinic has a linked union entity
+      if (category.id === "modulo-sindical" && !hasUnionEntity) return false;
       // If category has addonKey requirement, check addon first
       if (category.addonKey && !hasAddon(category.addonKey)) return false;
       return true;

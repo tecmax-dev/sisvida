@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Link, Outlet, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
+import { useUnionEntity } from "@/hooks/useUnionEntity";
+import { useClinicHasUnionEntity } from "@/hooks/useClinicHasUnionEntity";
 import { UnionSidebar } from "./UnionSidebar";
 import { Logo } from "@/components/layout/Logo";
 import { UserMenu } from "@/components/layout/UserMenu";
@@ -37,13 +39,15 @@ export function UnionModuleLayout() {
   const location = useLocation();
   const { user, profile, currentClinic, signOut } = useAuth();
   const { hasUnionAccess } = useUnionPermissions();
+  const { isUnionEntityAdmin } = useUnionEntity();
+  const { hasUnionEntity, isLoading: isLoadingUnionEntity } = useClinicHasUnionEntity();
 
   useEffect(() => {
     localStorage.setItem("union-sidebar-collapsed", String(sidebarCollapsed));
   }, [sidebarCollapsed]);
 
-  // Redirect if no access
-  if (!hasUnionAccess()) {
+  // Redirect if no access: user must be union entity admin OR clinic must have union entity linked
+  if (!isLoadingUnionEntity && !hasUnionAccess() && !isUnionEntityAdmin && !hasUnionEntity) {
     return <Navigate to="/dashboard" replace />;
   }
 
