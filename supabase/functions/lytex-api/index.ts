@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -104,6 +104,103 @@ function extractList(resp: any): any[] {
 
   return [];
 }
+
+function normalizeLytexStatus(input: unknown): string {
+  return String(input || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\-]+/g, "_");
+}
+
+function mapLytexInvoiceStatus(invoice: any): "paid" | "pending" | "overdue" | "processing" | "cancelled" {
+  const raw =
+    invoice?.paymentStatus ??
+    invoice?.statusPayment ??
+    invoice?.status ??
+    invoice?.data?.status ??
+    "";
+
+  const status = normalizeLytexStatus(raw);
+
+  const paidStatuses = new Set(["paid", "payed", "approved", "confirmed", "settled", "completed"]);
+  if (paidStatuses.has(status) || invoice?.paid === true) return "paid";
+
+  const cancelledStatuses = new Set(["canceled", "cancelled", "voided", "reversed"]);
+  if (cancelledStatuses.has(status)) return "cancelled";
+
+  const processingStatuses = new Set(["processing", "in_process", "scheduled", "pending_payment"]);
+  if (processingStatuses.has(status)) return "processing";
+
+  // Overdue: status explícito ou vencida.
+  const dueDate = invoice?.dueDate || invoice?.due_date;
+  if (status === "overdue" || (dueDate && new Date(dueDate) < new Date())) return "overdue";
+
+  return "pending";
+}
+
+function extractPaidDate(invoice: any): string | null {
+  if (!invoice) return null;
+  if (invoice.paidAt) return invoice.paidAt;
+  if (invoice.paidDate) return invoice.paidDate;
+  if (invoice.paymentDate) return invoice.paymentDate;
+  if (invoice.paid_at) return invoice.paid_at;
+  if (invoice.paid_date) return invoice.paid_date;
+
+  if (invoice.payments && Array.isArray(invoice.payments) && invoice.payments.length > 0) {
+    const p = invoice.payments[0];
+    if (p?.date) return p.date;
+    if (p?.paidAt) return p.paidAt;
+    if (p?.createdAt) return p.createdAt;
+  }
+
+  if (invoice.payment) {
+    if (invoice.payment?.date) return invoice.payment.date;
+    if (invoice.payment?.paidAt) return invoice.payment.paidAt;
+  }
+
+  // fallback controlado: só se está pago
+  const mapped = mapLytexInvoiceStatus(invoice);
+  if (mapped === "paid" && invoice.updatedAt) return invoice.updatedAt;
+
+  return null;
+}
+
+function extractPaidValueCents(invoice: any): number | null {
+  if (!invoice) return null;
+
+  // campos diretos em Reais -> centavos
+  if (typeof invoice.payedValue === "number") return Math.round(invoice.payedValue * 100);
+  if (typeof invoice.paidValue === "number") return Math.round(invoice.paidValue * 100);
+  if (typeof invoice.paid_value === "number") return Math.round(invoice.paid_value * 100);
+
+  // fallback se está pago
+  const mapped = mapLytexInvoiceStatus(invoice);
+  if (mapped === "paid") {
+    if (typeof invoice.totalValue === "number") return Math.round(invoice.totalValue * 100);
+    if (typeof invoice.total === "number") return Math.round(invoice.total * 100);
+    if (typeof invoice.amount === "number") return Math.round(invoice.amount * 100);
+  }
+
+  return null;
+}
+
+function extractPaymentMethod(invoice: any): string | null {
+  if (!invoice) return null;
+  if (invoice.paymentMethod) return String(invoice.paymentMethod);
+  if (invoice.payment_method) return String(invoice.payment_method);
+
+  if (invoice.payments && Array.isArray(invoice.payments) && invoice.payments.length > 0) {
+    const p = invoice.payments[0];
+    if (p?.method) return String(p.method);
+    if (p?.type) return String(p.type);
+  }
+
+  if (invoice.pix?.code || invoice.pix?.qrCode) return "pix";
+  if (invoice.boleto?.barCode) return "boleto";
+
+  return null;
+}
+
 
 // Listar clientes/empresas da Lytex
 async function listClients(page = 1, limit = 100): Promise<any> {
@@ -668,9 +765,9 @@ Deno.serve(async (req) => {
 
         const { data: contribution, error: fetchError } = await supabase
           .from("employer_contributions")
-          .select("lytex_invoice_id")
+          .select("lytex_invoice_id, paid_at, paid_value, payment_method, status")
           .eq("id", params.contributionId)
-          .single();
+          .maybeSingle();
 
         if (fetchError || !contribution?.lytex_invoice_id) {
           throw new Error("Contribuição não encontrada ou sem cobrança Lytex");
@@ -678,39 +775,34 @@ Deno.serve(async (req) => {
 
         const invoice = await getInvoice(contribution.lytex_invoice_id);
 
-        // Mapear status da Lytex para nosso status
-        let newStatus = "pending";
-        if (invoice.status === "paid") {
-          newStatus = "paid";
-        } else if (invoice.status === "canceled") {
-          newStatus = "cancelled";
-        } else if (invoice.status === "overdue" || new Date(invoice.dueDate) < new Date()) {
-          newStatus = "overdue";
-        }
+        const newStatus = mapLytexInvoiceStatus(invoice);
+        const paidAt = extractPaidDate(invoice);
+        const paidValueCents = extractPaidValueCents(invoice);
+        const paymentMethod = extractPaymentMethod(invoice);
 
-        // Extrair data de pagamento de forma robusta
-        const paidAtRaw = invoice.paidAt || invoice.paidDate || invoice.paymentDate || invoice.paid_at || 
-          (invoice.payments?.[0]?.date) || (invoice.payment?.date) ||
-          (invoice.status === "paid" ? invoice.updatedAt : null);
-        
-        // Extrair valor pago (converter de Reais para centavos)
-        const paidValueRaw = invoice.payedValue || invoice.paidValue || invoice.paid_value ||
-          (invoice.status === "paid" ? (invoice.totalValue || invoice.total || invoice.amount) : null);
-        
-        // Extrair método de pagamento
-        const paymentMethodRaw = invoice.paymentMethod || invoice.payment_method ||
-          (invoice.payments?.[0]?.method) || (invoice.pix?.code ? "pix" : (invoice.boleto?.barCode ? "boleto" : null));
+        const updateData: Record<string, unknown> = {
+          status: newStatus,
+          lytex_raw_data: invoice, // Salvar dados brutos para debugging
+        };
+
+        // Regra: status pago deve ter paid_at; mas nunca sobrescrever por null
+        if (newStatus === "paid") {
+          updateData.paid_at = paidAt || contribution.paid_at || new Date().toISOString();
+          if (paidValueCents !== null) updateData.paid_value = paidValueCents;
+          if (paymentMethod) updateData.payment_method = paymentMethod;
+        }
 
         const { error: updateError2 } = await supabase
           .from("employer_contributions")
-          .update({
-            status: newStatus,
-            paid_at: paidAtRaw || null,
-            paid_value: paidValueRaw ? Math.round(paidValueRaw * 100) : null,
-            payment_method: paymentMethodRaw || null,
-            lytex_raw_data: invoice, // Salvar dados brutos para debugging
-          })
+          .update(updateData)
           .eq("id", params.contributionId);
+
+        if (updateError2) {
+          console.error("[Lytex] Erro ao atualizar status:", updateError2);
+        }
+
+        result = { success: true, status: newStatus, invoice };
+        break;
 
         if (updateError2) {
           console.error("[Lytex] Erro ao atualizar status:", updateError2);
@@ -799,8 +891,8 @@ Deno.serve(async (req) => {
             if (invoice.payment.paidAt) return invoice.payment.paidAt;
           }
           
-          // Se status é pago e não tem data, usar updatedAt ou createdAt como fallback
-          if (invoice.status === "paid") {
+          // Se status é pago e não tem data, usar updatedAt como fallback (controlado)
+          if (mapLytexInvoiceStatus(invoice) === "paid") {
             if (invoice.updatedAt) return invoice.updatedAt;
           }
           
@@ -814,8 +906,8 @@ Deno.serve(async (req) => {
           if (invoice.paidValue) return Math.round(invoice.paidValue * 100);
           if (invoice.paid_value) return Math.round(invoice.paid_value * 100);
           
-          // Tentar total se status é pago
-          if (invoice.status === "paid") {
+          // Tentar total se for pago
+          if (mapLytexInvoiceStatus(invoice) === "paid") {
             if (invoice.totalValue) return Math.round(invoice.totalValue * 100);
             if (invoice.total) return Math.round(invoice.total * 100);
             if (invoice.amount) return Math.round(invoice.amount * 100);
@@ -858,14 +950,7 @@ Deno.serve(async (req) => {
             // Usar getInvoiceWithToken para evitar múltiplas autenticações
             const invoice = await getInvoiceWithToken(contrib.lytex_invoice_id, lytexToken);
 
-            let newStatus = "pending";
-            if (invoice.status === "paid") {
-              newStatus = "paid";
-            } else if (invoice.status === "canceled" || invoice.status === "cancelled") {
-              newStatus = "cancelled";
-            } else if (invoice.status === "overdue" || (invoice.dueDate && new Date(invoice.dueDate) < new Date())) {
-              newStatus = "overdue";
-            }
+            const newStatus = mapLytexInvoiceStatus(invoice);
 
             // Extrair dados de pagamento de forma robusta
             const paidAt = extractPaidDate(invoice);
