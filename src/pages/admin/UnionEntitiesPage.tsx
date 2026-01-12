@@ -56,6 +56,7 @@ interface UnionEntity {
   estado: string | null;
   cep: string | null;
   plan_id: string | null;
+  clinic_id: string | null;
   status: 'ativa' | 'suspensa' | 'em_analise' | 'inativa';
   data_ativacao: string | null;
   ultimo_acesso: string | null;
@@ -67,6 +68,12 @@ interface Plan {
   id: string;
   name: string;
   category: string;
+}
+
+interface Clinic {
+  id: string;
+  name: string;
+  slug: string;
 }
 
 const entityTypeLabels = {
@@ -100,6 +107,7 @@ export default function UnionEntitiesPage() {
   const { lookupCnpj, cnpjLoading } = useCnpjLookup();
   const [entities, setEntities] = useState<UnionEntity[]>([]);
   const [plans, setPlans] = useState<Plan[]>([]);
+  const [clinics, setClinics] = useState<Clinic[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -124,12 +132,14 @@ export default function UnionEntitiesPage() {
     estado: '',
     cep: '',
     plan_id: '',
+    clinic_id: '',
     status: 'em_analise' as 'ativa' | 'suspensa' | 'em_analise' | 'inativa'
   });
 
   useEffect(() => {
     fetchEntities();
     fetchPlans();
+    fetchClinics();
   }, []);
 
   const fetchEntities = async () => {
@@ -162,6 +172,20 @@ export default function UnionEntitiesPage() {
       setPlans(data || []);
     } catch (error: any) {
       console.error('Error fetching plans:', error);
+    }
+  };
+
+  const fetchClinics = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('clinics')
+        .select('id, name, slug')
+        .order('name');
+
+      if (error) throw error;
+      setClinics(data || []);
+    } catch (error: any) {
+      console.error('Error fetching clinics:', error);
     }
   };
 
@@ -202,6 +226,7 @@ export default function UnionEntitiesPage() {
       estado: '',
       cep: '',
       plan_id: '',
+      clinic_id: '',
       status: 'em_analise'
     });
     setEditingEntity(null);
@@ -231,6 +256,7 @@ export default function UnionEntitiesPage() {
       estado: entity.estado || '',
       cep: entity.cep || '',
       plan_id: entity.plan_id || '',
+      clinic_id: entity.clinic_id || '',
       status: entity.status
     });
     setIsDialogOpen(true);
@@ -264,6 +290,7 @@ export default function UnionEntitiesPage() {
             estado: formData.estado || null,
             cep: formData.cep || null,
             plan_id: formData.plan_id || null,
+            clinic_id: formData.clinic_id || null,
             status: formData.status,
             data_ativacao: formData.status === 'ativa' && !editingEntity.data_ativacao 
               ? new Date().toISOString() 
@@ -311,6 +338,7 @@ export default function UnionEntitiesPage() {
             estado: formData.estado || null,
             cep: formData.cep || null,
             plan_id: formData.plan_id || null,
+            clinic_id: formData.clinic_id || null,
             status: formData.status,
             data_ativacao: formData.status === 'ativa' ? new Date().toISOString() : null,
             created_by: user?.id
@@ -752,6 +780,29 @@ export default function UnionEntitiesPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                
+                {/* Clinic Link */}
+                <div className="space-y-2 col-span-2">
+                  <Label htmlFor="clinic_id">Clínica Vinculada (Dados de Empresas/Contribuições)</Label>
+                  <Select
+                    value={formData.clinic_id}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, clinic_id: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma clínica para vincular os dados" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clinics.map(clinic => (
+                        <SelectItem key={clinic.id} value={clinic.id}>
+                          {clinic.name} ({clinic.slug})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    A clínica vinculada determina quais empresas, contribuições e dados financeiros a entidade terá acesso.
+                  </p>
                 </div>
               </div>
             </div>
