@@ -7863,6 +7863,185 @@ export type Database = {
           },
         ]
       }
+      sindical_associados: {
+        Row: {
+          aceite_lgpd: boolean
+          aceite_lgpd_at: string | null
+          aprovado_at: string | null
+          aprovado_por: string | null
+          bairro: string | null
+          cargo: string | null
+          categoria_id: string | null
+          cep: string | null
+          cidade: string | null
+          complemento: string | null
+          cpf: string
+          created_at: string
+          data_nascimento: string
+          documento_comprovante_url: string | null
+          documento_foto_url: string | null
+          documento_rg_url: string | null
+          email: string
+          empresa: string | null
+          estado_civil: string | null
+          forma_pagamento: string | null
+          id: string
+          logradouro: string | null
+          motivo_rejeicao: string | null
+          nome: string
+          numero: string | null
+          observacoes: string | null
+          rejeitado_at: string | null
+          rejeitado_por: string | null
+          rg: string | null
+          sexo: string | null
+          sindicato_id: string
+          status: string
+          telefone: string
+          tipo_vinculo: string | null
+          uf: string | null
+          updated_at: string
+          valor_contribuicao: number | null
+        }
+        Insert: {
+          aceite_lgpd?: boolean
+          aceite_lgpd_at?: string | null
+          aprovado_at?: string | null
+          aprovado_por?: string | null
+          bairro?: string | null
+          cargo?: string | null
+          categoria_id?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          cpf: string
+          created_at?: string
+          data_nascimento: string
+          documento_comprovante_url?: string | null
+          documento_foto_url?: string | null
+          documento_rg_url?: string | null
+          email: string
+          empresa?: string | null
+          estado_civil?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          logradouro?: string | null
+          motivo_rejeicao?: string | null
+          nome: string
+          numero?: string | null
+          observacoes?: string | null
+          rejeitado_at?: string | null
+          rejeitado_por?: string | null
+          rg?: string | null
+          sexo?: string | null
+          sindicato_id: string
+          status?: string
+          telefone: string
+          tipo_vinculo?: string | null
+          uf?: string | null
+          updated_at?: string
+          valor_contribuicao?: number | null
+        }
+        Update: {
+          aceite_lgpd?: boolean
+          aceite_lgpd_at?: string | null
+          aprovado_at?: string | null
+          aprovado_por?: string | null
+          bairro?: string | null
+          cargo?: string | null
+          categoria_id?: string | null
+          cep?: string | null
+          cidade?: string | null
+          complemento?: string | null
+          cpf?: string
+          created_at?: string
+          data_nascimento?: string
+          documento_comprovante_url?: string | null
+          documento_foto_url?: string | null
+          documento_rg_url?: string | null
+          email?: string
+          empresa?: string | null
+          estado_civil?: string | null
+          forma_pagamento?: string | null
+          id?: string
+          logradouro?: string | null
+          motivo_rejeicao?: string | null
+          nome?: string
+          numero?: string | null
+          observacoes?: string | null
+          rejeitado_at?: string | null
+          rejeitado_por?: string | null
+          rg?: string | null
+          sexo?: string | null
+          sindicato_id?: string
+          status?: string
+          telefone?: string
+          tipo_vinculo?: string | null
+          uf?: string | null
+          updated_at?: string
+          valor_contribuicao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_sindical_associados_categoria"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "sindical_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sindical_associados_sindicato_id_fkey"
+            columns: ["sindicato_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sindical_categorias: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          is_active: boolean
+          nome: string
+          periodicidade: string | null
+          sindicato_id: string
+          updated_at: string
+          valor_contribuicao: number | null
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          nome: string
+          periodicidade?: string | null
+          sindicato_id: string
+          updated_at?: string
+          valor_contribuicao?: number | null
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          is_active?: boolean
+          nome?: string
+          periodicidade?: string | null
+          sindicato_id?: string
+          updated_at?: string
+          valor_contribuicao?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sindical_categorias_sindicato_id_fkey"
+            columns: ["sindicato_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       smtp_settings: {
         Row: {
           created_at: string | null
