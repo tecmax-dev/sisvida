@@ -20,6 +20,7 @@ import {
   FileBarChart,
   History,
   ScrollText,
+  UserPlus,
 } from "lucide-react";
 import {
   Collapsible,
@@ -79,6 +80,7 @@ const unionNavTree: NavCategory[] = [
       { href: "/union/empresas", icon: Building2, label: "Cadastro", permission: "union_view_employers" },
       { href: "/union/escritorios", icon: Building, label: "Escritórios", permission: "union_view_employers" },
       { href: "/union/socios", icon: Users, label: "Sócios", permission: "union_view_members" },
+      { href: "/union/associados", icon: UserPlus, label: "Filiações", permission: "union_view_members" },
       { href: "/union/planos", icon: ScrollText, label: "Planos", permission: "union_module_access" },
     ]
   },
