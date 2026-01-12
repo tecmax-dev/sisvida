@@ -280,13 +280,12 @@ export default function UnionEntitiesPage() {
           return;
         }
 
-        // First create the auth user via edge function
-        const { data: authData, error: authError } = await supabase.functions.invoke('create-clinic-user', {
+        // Create the auth user via dedicated edge function for union entities
+        const { data: authData, error: authError } = await supabase.functions.invoke('create-union-entity-user', {
           body: {
             email: formData.email_institucional,
             password: formData.password,
-            name: formData.razao_social,
-            autoConfirm: true
+            name: formData.razao_social
           }
         });
 

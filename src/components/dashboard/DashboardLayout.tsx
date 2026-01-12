@@ -140,17 +140,7 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
 };
 
 const navCategories: NavCategory[] = [
-  // MÓDULO SINDICAL - Link de acesso rápido
-  {
-    id: "modulo-sindical",
-    label: "Módulo Sindical",
-    icon: Building2,
-    color: "empresas",
-    items: [
-      { href: "/union", icon: Building2, label: "Acessar Módulo Sindical", permission: "view_patients" },
-    ],
-  },
-  // CLÍNICA - Cyan/Teal
+  // CLÍNICA - Cyan/Teal (moved to top, Módulo Sindical moved to bottom and controlled by union_module_access)
   {
     id: "clinica",
     label: "Clínica",
@@ -201,6 +191,16 @@ const navCategories: NavCategory[] = [
       { href: "/dashboard/holidays", icon: CalendarOff, label: "Feriados", permission: "manage_settings" },
       { href: "/dashboard/subscription", icon: CreditCard, label: "Meu Plano", permission: "manage_subscription" },
       { href: "/dashboard/settings", icon: Settings, label: "Configurações", permission: "change_password" },
+    ],
+  },
+  // MÓDULO SINDICAL - Visível apenas para contas com permissão union_module_access
+  {
+    id: "modulo-sindical",
+    label: "Módulo Sindical",
+    icon: Building2,
+    color: "empresas",
+    items: [
+      { href: "/union", icon: Building2, label: "Acessar Módulo Sindical", permission: "union_module_access" as Permission },
     ],
   },
 ];

@@ -143,6 +143,8 @@ export type Permission =
   | "tags"
   // Consulta
   | "view_audit"
+  // Union Module permissions
+  | "union_module_access"
   // Legacy aliases (for backward compatibility)
   | "manage_cash_registers"
   | "manage_categories"
