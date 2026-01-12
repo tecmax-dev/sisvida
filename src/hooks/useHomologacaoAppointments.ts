@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { generateProtocolNumber } from "@/lib/homologacaoUtils";
+
 
 export interface HomologacaoAppointment {
   id: string;
@@ -114,30 +114,26 @@ export function useHomologacaoAppointments() {
     if (!currentClinic?.id) return false;
     setIsUpdating(true);
     try {
-      // Generate protocol number
       const appointment = appointments?.find(a => a.id === id);
       if (!appointment) throw new Error("Agendamento não encontrado");
 
-      const protocolNumber = await generateProtocolNumber(
-        currentClinic.id, 
-        appointment.appointment_date
-      );
-
-      const { error } = await supabase
+      // Use status 'attended' to trigger automatic protocol generation via database trigger
+      const { data, error } = await supabase
         .from("homologacao_appointments")
         .update({
-          status: "completed",
-          protocol_number: protocolNumber,
+          status: "attended",
           confirmed_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)
-        .eq("clinic_id", currentClinic.id);
+        .eq("clinic_id", currentClinic.id)
+        .select("protocol_number")
+        .single();
       
       if (error) throw error;
       
       invalidate();
-      toast.success(`Atendimento concluído! Protocolo: ${protocolNumber}`);
+      toast.success(`Atendimento concluído! Protocolo: ${data?.protocol_number || "Gerado"}`);
       return true;
     } catch (err: any) {
       console.error("Error completing appointment:", err);
