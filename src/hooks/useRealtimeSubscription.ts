@@ -16,7 +16,8 @@ type TableName =
   | "anamnese_responses"
   | "waiting_list_entries"
   | "birthday_message_logs"
-  | "message_logs";
+  | "message_logs"
+  | "homologacao_appointments";
 
 interface UseRealtimeSubscriptionOptions {
   table: TableName;
@@ -115,6 +116,11 @@ export function useRealtimeSubscription({
       insert: "Nova mensagem enviada",
       update: "Registro atualizado",
       delete: "Registro removido",
+    },
+    homologacao_appointments: {
+      insert: "Novo agendamento de homologação",
+      update: "Agendamento de homologação atualizado",
+      delete: "Agendamento de homologação removido",
     },
   };
 
