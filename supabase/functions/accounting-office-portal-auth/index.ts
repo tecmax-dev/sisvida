@@ -16,7 +16,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { action, email, access_code, accounting_office_id } = await req.json();
+    const { action, email, access_code, accounting_office_id, union_entity_id } = await req.json();
 
     // Limpar email
     const cleanEmail = email?.toLowerCase().trim();
@@ -30,9 +30,10 @@ serve(async (req) => {
         );
       }
 
+      // Buscar escritório - agora incluindo union_entity_id para isolamento multi-tenant
       const { data: office, error } = await supabase
         .from("accounting_offices")
-        .select("id, name, email, clinic_id, access_code, access_code_expires_at, is_active")
+        .select("id, name, email, clinic_id, access_code, access_code_expires_at, is_active, union_entity_id")
         .eq("email", cleanEmail)
         .single();
 
@@ -72,6 +73,17 @@ serve(async (req) => {
         );
       }
 
+      // Buscar dados do sindicato vinculado (se houver)
+      let unionEntity = null;
+      if (office.union_entity_id) {
+        const { data: entity } = await supabase
+          .from("union_entities")
+          .select("id, razao_social, nome_fantasia, cnpj, entity_type")
+          .eq("id", office.union_entity_id)
+          .single();
+        unionEntity = entity;
+      }
+
       // Atualizar último acesso
       await supabase
         .from("accounting_offices")
@@ -84,6 +96,7 @@ serve(async (req) => {
         action: "login",
         ip_address: req.headers.get("x-forwarded-for") || "unknown",
         user_agent: req.headers.get("user-agent") || "unknown",
+        details: { union_entity_id: office.union_entity_id },
       });
 
       // Gerar token de sessão simples (base64 do office_id + timestamp)
@@ -97,7 +110,9 @@ serve(async (req) => {
             name: office.name,
             email: office.email,
             clinic_id: office.clinic_id,
+            union_entity_id: office.union_entity_id,
           },
+          union_entity: unionEntity,
           session_token: sessionToken,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -111,6 +126,13 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Buscar o escritório para obter o union_entity_id
+      const { data: office } = await supabase
+        .from("accounting_offices")
+        .select("union_entity_id")
+        .eq("id", accounting_office_id)
+        .single();
 
       // Buscar empresas vinculadas
       const { data: links, error: linksError } = await supabase
@@ -135,12 +157,19 @@ serve(async (req) => {
         );
       }
 
-      // Buscar dados das empresas
-      const { data: employers, error: employersError } = await supabase
+      // Buscar dados das empresas - filtrar pelo mesmo union_entity_id para isolamento
+      let query = supabase
         .from("employers")
-        .select("id, name, cnpj, trade_name")
+        .select("id, name, cnpj, trade_name, union_entity_id")
         .in("id", employerIds)
         .order("name");
+
+      // Se o escritório tem um sindicato vinculado, filtrar apenas empresas do mesmo sindicato
+      if (office?.union_entity_id) {
+        query = query.eq("union_entity_id", office.union_entity_id);
+      }
+
+      const { data: employers, error: employersError } = await query;
 
       if (employersError) {
         console.error("Error fetching employers:", employersError);
@@ -172,6 +201,13 @@ serve(async (req) => {
         );
       }
 
+      // Buscar o escritório para obter o union_entity_id
+      const { data: office } = await supabase
+        .from("accounting_offices")
+        .select("union_entity_id")
+        .eq("id", accounting_office_id)
+        .single();
+
       // Buscar empresas vinculadas
       const { data: links, error: linksError } = await supabase
         .from("accounting_office_employers")
@@ -194,6 +230,25 @@ serve(async (req) => {
         );
       }
 
+      // Se o escritório tem um sindicato vinculado, filtrar apenas empresas do mesmo sindicato
+      let filteredEmployerIds = employerIds;
+      if (office?.union_entity_id) {
+        const { data: validEmployers } = await supabase
+          .from("employers")
+          .select("id")
+          .in("id", employerIds)
+          .eq("union_entity_id", office.union_entity_id);
+        
+        filteredEmployerIds = validEmployers?.map(e => e.id) || [];
+      }
+
+      if (filteredEmployerIds.length === 0) {
+        return new Response(
+          JSON.stringify({ contributions: [] }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Buscar contribuições de todas as empresas vinculadas com informação de negociação
       const { data: contributions, error } = await supabase
         .from("employer_contributions")
@@ -203,7 +258,7 @@ serve(async (req) => {
           contribution_type:contribution_types(name),
           negotiation:debt_negotiations(id, negotiation_code, status, installments_count)
         `)
-        .in("employer_id", employerIds)
+        .in("employer_id", filteredEmployerIds)
         .order("competence_year", { ascending: false })
         .order("competence_month", { ascending: false });
 

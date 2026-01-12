@@ -27,11 +27,13 @@ import {
   MapPin,
   Building2,
   Loader2,
-  Plus
+  Plus,
+  Share2
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { UnionCreateMemberDialog } from "@/components/union/members/UnionCreateMemberDialog";
+import { UnionShareFiliacaoDialog } from "@/components/union/members/UnionShareFiliacaoDialog";
 
 interface Associado {
   id: string;
@@ -99,6 +101,7 @@ export default function UnionAssociadosPage() {
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [createMemberOpen, setCreateMemberOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const clinicId = currentClinic?.id;
 
@@ -271,12 +274,22 @@ export default function UnionAssociadosPage() {
           </p>
         </div>
 
-        {canManageMembers && (
-          <Button onClick={() => setCreateMemberOpen(true)} disabled={!clinicId}>
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Sócio
+        <div className="flex gap-2">
+          <Button 
+            variant="outline"
+            onClick={() => setShareDialogOpen(true)}
+            className="text-emerald-600 border-emerald-200 hover:bg-emerald-50"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Compartilhar Filiação
           </Button>
-        )}
+          {canManageMembers && (
+            <Button onClick={() => setCreateMemberOpen(true)} disabled={!clinicId}>
+              <Plus className="h-4 w-4 mr-2" />
+              Novo Sócio
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Stats Cards */}
@@ -656,6 +669,11 @@ export default function UnionAssociadosPage() {
           queryClient.invalidateQueries({ queryKey: ["union-members"] });
           navigate(`/union/socios/${patientId}`);
         }}
+      />
+
+      <UnionShareFiliacaoDialog
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
       />
     </div>
   );

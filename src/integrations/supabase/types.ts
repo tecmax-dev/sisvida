@@ -184,6 +184,7 @@ export type Database = {
           portal_last_access_at: string | null
           state: string | null
           trade_name: string | null
+          union_entity_id: string | null
           updated_at: string
         }
         Insert: {
@@ -205,6 +206,7 @@ export type Database = {
           portal_last_access_at?: string | null
           state?: string | null
           trade_name?: string | null
+          union_entity_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -226,6 +228,7 @@ export type Database = {
           portal_last_access_at?: string | null
           state?: string | null
           trade_name?: string | null
+          union_entity_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -234,6 +237,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounting_offices_union_entity_id_fkey"
+            columns: ["union_entity_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
             referencedColumns: ["id"]
           },
         ]
@@ -2555,6 +2565,7 @@ export type Database = {
           registration_number: string | null
           state: string | null
           trade_name: string | null
+          union_entity_id: string | null
           updated_at: string
         }
         Insert: {
@@ -2581,6 +2592,7 @@ export type Database = {
           registration_number?: string | null
           state?: string | null
           trade_name?: string | null
+          union_entity_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -2607,6 +2619,7 @@ export type Database = {
           registration_number?: string | null
           state?: string | null
           trade_name?: string | null
+          union_entity_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -2622,6 +2635,13 @@ export type Database = {
             columns: ["clinic_id"]
             isOneToOne: false
             referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employers_union_entity_id_fkey"
+            columns: ["union_entity_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
             referencedColumns: ["id"]
           },
         ]
@@ -10036,6 +10056,57 @@ export type Database = {
           },
         ]
       }
+      union_share_logs: {
+        Row: {
+          clinic_id: string | null
+          created_at: string
+          id: string
+          message_sent: string | null
+          phone_number: string
+          sent_at: string
+          status: string
+          union_entity_id: string
+          user_id: string
+        }
+        Insert: {
+          clinic_id?: string | null
+          created_at?: string
+          id?: string
+          message_sent?: string | null
+          phone_number: string
+          sent_at?: string
+          status?: string
+          union_entity_id: string
+          user_id: string
+        }
+        Update: {
+          clinic_id?: string | null
+          created_at?: string
+          id?: string
+          message_sent?: string | null
+          phone_number?: string
+          sent_at?: string
+          status?: string
+          union_entity_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_share_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_share_logs_union_entity_id_fkey"
+            columns: ["union_entity_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_suppliers: {
         Row: {
           address: string | null
@@ -11283,7 +11354,12 @@ export type Database = {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean
       }
-      has_union_entity_access: { Args: { _user_id: string }; Returns: boolean }
+      has_union_entity_access:
+        | { Args: { _user_id: string }; Returns: boolean }
+        | {
+            Args: { _union_entity_id: string; _user_id: string }
+            Returns: boolean
+          }
       has_union_module_access: {
         Args: { p_clinic_id: string; p_user_id: string }
         Returns: boolean
