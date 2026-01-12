@@ -212,3 +212,6 @@ verify_jwt = false
 
 [functions.send-homologacao-reminders]
 verify_jwt = false
+
+[functions.migrate-union-suppliers]
+verify_jwt = true

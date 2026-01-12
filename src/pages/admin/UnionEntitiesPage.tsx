@@ -262,6 +262,29 @@ export default function UnionEntitiesPage() {
     setIsDialogOpen(true);
   };
 
+  const migrateSuppliers = async (clinicId: string, entityId: string) => {
+    try {
+      console.log('[UnionEntitiesPage] Migrating suppliers for clinic:', clinicId);
+      const { data, error } = await supabase.functions.invoke('migrate-union-suppliers', {
+        body: { clinic_id: clinicId, entity_id: entityId }
+      });
+
+      if (error) {
+        console.error('[UnionEntitiesPage] Error migrating suppliers:', error);
+        toast.error('Erro ao migrar fornecedores: ' + error.message);
+        return;
+      }
+
+      if (data?.migrated > 0) {
+        toast.success(`${data.migrated} fornecedores migrados com sucesso`);
+      } else if (data?.skipped > 0) {
+        toast.info('Fornecedores já migrados anteriormente');
+      }
+    } catch (err: any) {
+      console.error('[UnionEntitiesPage] Error in migrateSuppliers:', err);
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.razao_social || !formData.cnpj || !formData.email_institucional) {
       toast.error('Preencha os campos obrigatórios');
@@ -271,6 +294,9 @@ export default function UnionEntitiesPage() {
     setSaving(true);
     try {
       if (editingEntity) {
+        const previousClinicId = editingEntity.clinic_id;
+        const newClinicId = formData.clinic_id || null;
+
         // Update existing entity
         const { error } = await supabase
           .from('union_entities')
@@ -290,7 +316,7 @@ export default function UnionEntitiesPage() {
             estado: formData.estado || null,
             cep: formData.cep || null,
             plan_id: formData.plan_id || null,
-            clinic_id: formData.clinic_id || null,
+            clinic_id: newClinicId,
             status: formData.status,
             data_ativacao: formData.status === 'ativa' && !editingEntity.data_ativacao 
               ? new Date().toISOString() 
@@ -299,6 +325,12 @@ export default function UnionEntitiesPage() {
           .eq('id', editingEntity.id);
 
         if (error) throw error;
+
+        // Migrate suppliers if a new clinic was linked (different from previous)
+        if (newClinicId && newClinicId !== previousClinicId) {
+          await migrateSuppliers(newClinicId, editingEntity.id);
+        }
+
         toast.success('Entidade atualizada com sucesso');
       } else {
         // Create new entity with auth user
@@ -319,7 +351,7 @@ export default function UnionEntitiesPage() {
         if (authError) throw authError;
 
         // Then create the entity
-        const { error } = await supabase
+        const { data: newEntity, error } = await supabase
           .from('union_entities')
           .insert({
             razao_social: formData.razao_social,
@@ -342,9 +374,16 @@ export default function UnionEntitiesPage() {
             status: formData.status,
             data_ativacao: formData.status === 'ativa' ? new Date().toISOString() : null,
             created_by: user?.id
-          });
+          })
+          .select('id')
+          .single();
 
         if (error) throw error;
+
+        // Migrate suppliers if a clinic was linked
+        if (formData.clinic_id && newEntity?.id) {
+          await migrateSuppliers(formData.clinic_id, newEntity.id);
+        }
 
         // Note: Role assignment is handled by existing clinic user creation flow
         // The entidade_sindical_admin role is assigned via the union_entities table link
