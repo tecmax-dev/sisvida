@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useUnionFinancialData } from "@/hooks/useUnionFinancialData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,8 +31,9 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Plus, Edit2, Trash2, ChevronRight, FolderTree, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, ChevronRight, FolderTree, Search, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UnionChartOfAccountsPanelProps {
@@ -74,6 +76,7 @@ export function UnionChartOfAccountsPanel({ clinicId }: UnionChartOfAccountsPane
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
+  const [isMigrating, setIsMigrating] = useState(false);
 
   const [formData, setFormData] = useState({
     account_code: "",
@@ -84,8 +87,16 @@ export function UnionChartOfAccountsPanel({ clinicId }: UnionChartOfAccountsPane
     is_active: true,
   });
 
-  // Fetch accounts
-  const { data: accounts = [], isLoading } = useQuery({
+  // Use unified hook with fallback
+  const {
+    chartOfAccounts: fallbackAccounts,
+    chartOfAccountsSource,
+    loadingChartOfAccounts,
+    migrateData,
+  } = useUnionFinancialData(clinicId);
+
+  // Fetch union accounts directly for mutations
+  const { data: unionAccounts = [], isLoading, refetch } = useQuery({
     queryKey: ["union-chart-of-accounts", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -100,6 +111,23 @@ export function UnionChartOfAccountsPanel({ clinicId }: UnionChartOfAccountsPane
     },
     enabled: !!clinicId,
   });
+
+  // Use union accounts if available, otherwise fallback
+  const accounts = unionAccounts.length > 0 ? unionAccounts : (fallbackAccounts as Account[]);
+  const isUsingFallback = chartOfAccountsSource === "clinic" && unionAccounts.length === 0;
+
+  // Handle migration
+  const handleMigrate = async () => {
+    setIsMigrating(true);
+    try {
+      const success = await migrateData();
+      if (success) {
+        refetch();
+      }
+    } finally {
+      setIsMigrating(false);
+    }
+  };
 
   // Create mutation
   const createMutation = useMutation({
@@ -233,6 +261,35 @@ export function UnionChartOfAccountsPanel({ clinicId }: UnionChartOfAccountsPane
         </Button>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Migration Alert */}
+        {isUsingFallback && accounts.length > 0 && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription className="flex items-center justify-between">
+              <span>
+                Exibindo plano de contas da clínica vinculada. Clique para importar para o módulo sindical.
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleMigrate}
+                disabled={isMigrating}
+              >
+                {isMigrating ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Importando...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Importar Plano de Contas
+                  </>
+                )}
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
         {/* Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
