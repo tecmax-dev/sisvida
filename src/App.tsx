@@ -126,7 +126,8 @@ import UnionDashboard from "./pages/union/UnionDashboard";
 import UnionPlansPage from "./pages/union/UnionPlansPage";
 import UnionEmployersPage from "./pages/union/UnionEmployersPage";
 import UnionAccountingOfficesPage from "./pages/union/UnionAccountingOfficesPage";
-import UnionMembersPage from "./pages/union/UnionMembersPage";
+import UnionMembersListPage from "./pages/union/UnionMembersListPage";
+import UnionMemberDetailPage from "./pages/union/UnionMemberDetailPage";
 import UnionContributionsPage from "./pages/union/UnionContributionsPage";
 import UnionFinancialsPage from "./pages/union/UnionFinancialsPage";
 import UnionExpensesPage from "./pages/union/UnionExpensesPage";
@@ -427,7 +428,9 @@ const App = () => (
                   <Route path="planos" element={<UnionPlansPage />} />
                   <Route path="empresas" element={<UnionEmployersPage />} />
                   <Route path="escritorios" element={<UnionAccountingOfficesPage />} />
-                  <Route path="socios" element={<UnionMembersPage />} />
+                  <Route path="socios" element={<UnionMembersListPage />} />
+                  <Route path="socios/:id" element={<UnionMemberDetailPage />} />
+                  <Route path="socios/novo" element={<PatientEditPage />} />
                   <Route path="contribuicoes" element={<UnionContributionsPage />} />
                   <Route path="contribuicoes/relatorios" element={<UnionReportsPage />} />
                   <Route path="financeiro" element={<UnionFinancialsPage />} />
