@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Wallet, Building2, CreditCard, TrendingUp } from "lucide-react";
+import { Wallet, Building2, TrendingUp } from "lucide-react";
 
 interface UnionCashRegisterDialogProps {
   open: boolean;
@@ -30,8 +30,7 @@ interface UnionCashRegisterDialogProps {
 
 const TYPE_OPTIONS = [
   { value: "cash", label: "Dinheiro", icon: Wallet },
-  { value: "bank", label: "Conta Bancária", icon: Building2 },
-  { value: "credit_card", label: "Cartão de Crédito", icon: CreditCard },
+  { value: "bank_account", label: "Conta Bancária", icon: Building2 },
   { value: "investment", label: "Aplicação", icon: TrendingUp },
   { value: "other", label: "Outro", icon: Wallet },
 ];
@@ -46,7 +45,7 @@ export function UnionCashRegisterDialog({
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
-    type: "bank",
+    type: "bank_account",
     initial_balance: "0",
     bank_name: "",
     agency: "",
@@ -57,7 +56,7 @@ export function UnionCashRegisterDialog({
     if (register) {
       setFormData({
         name: register.name || "",
-        type: register.type || "bank",
+        type: register.type || "bank_account",
         initial_balance: register.initial_balance?.toString() || "0",
         bank_name: register.bank_name || "",
         agency: register.agency || "",
@@ -66,7 +65,7 @@ export function UnionCashRegisterDialog({
     } else {
       setFormData({
         name: "",
-        type: "bank",
+        type: "bank_account",
         initial_balance: "0",
         bank_name: "",
         agency: "",
@@ -166,7 +165,7 @@ export function UnionCashRegisterDialog({
               </Select>
             </div>
 
-            {formData.type === "bank" && (
+            {formData.type === "bank_account" && (
               <>
                 <div>
                   <Label htmlFor="bank_name">Nome do Banco</Label>

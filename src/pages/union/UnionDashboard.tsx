@@ -85,8 +85,8 @@ export default function UnionDashboard() {
           .eq("clinic_id", clinicId)
           .eq("type", "expense")
           .eq("status", "paid")
-          .gte("payment_date", startOfMonth)
-          .lte("payment_date", endOfMonth);
+          .gte("paid_date", startOfMonth)
+          .lte("paid_date", endOfMonth);
 
         const monthlyExpenses = (expenses || []).reduce(
           (sum, e) => sum + Math.abs(e.net_value || 0),
