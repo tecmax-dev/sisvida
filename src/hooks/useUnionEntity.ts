@@ -21,6 +21,7 @@ export interface UnionEntity {
   status: "ativa" | "suspensa" | "em_analise" | "inativa";
   data_ativacao: string | null;
   ultimo_acesso: string | null;
+  clinic_id: string | null;
 }
 
 export function useUnionEntity() {
@@ -60,7 +61,7 @@ export function useUnionEntity() {
         return;
       }
 
-      // Fetch union entity data
+      // Fetch union entity data including clinic_id
       const { data, error } = await supabase
         .from("union_entities")
         .select("*")
