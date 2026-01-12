@@ -6300,6 +6300,7 @@ export type Database = {
           is_active: boolean
           is_company: boolean | null
           is_foreigner: boolean | null
+          is_union_member: boolean | null
           landline: string | null
           marital_status: string | null
           max_appointments_per_month: number | null
@@ -6328,6 +6329,12 @@ export type Database = {
           street: string | null
           street_number: string | null
           tag: string | null
+          union_category_id: string | null
+          union_contribution_value: number | null
+          union_joined_at: string | null
+          union_member_status: string | null
+          union_observations: string | null
+          union_payment_method: string | null
           updated_at: string
           weight_kg: number | null
         }
@@ -6356,6 +6363,7 @@ export type Database = {
           is_active?: boolean
           is_company?: boolean | null
           is_foreigner?: boolean | null
+          is_union_member?: boolean | null
           landline?: string | null
           marital_status?: string | null
           max_appointments_per_month?: number | null
@@ -6384,6 +6392,12 @@ export type Database = {
           street?: string | null
           street_number?: string | null
           tag?: string | null
+          union_category_id?: string | null
+          union_contribution_value?: number | null
+          union_joined_at?: string | null
+          union_member_status?: string | null
+          union_observations?: string | null
+          union_payment_method?: string | null
           updated_at?: string
           weight_kg?: number | null
         }
@@ -6412,6 +6426,7 @@ export type Database = {
           is_active?: boolean
           is_company?: boolean | null
           is_foreigner?: boolean | null
+          is_union_member?: boolean | null
           landline?: string | null
           marital_status?: string | null
           max_appointments_per_month?: number | null
@@ -6440,6 +6455,12 @@ export type Database = {
           street?: string | null
           street_number?: string | null
           tag?: string | null
+          union_category_id?: string | null
+          union_contribution_value?: number | null
+          union_joined_at?: string | null
+          union_member_status?: string | null
+          union_observations?: string | null
+          union_payment_method?: string | null
           updated_at?: string
           weight_kg?: number | null
         }
@@ -9901,6 +9922,57 @@ export type Database = {
           },
         ]
       }
+      union_member_audit_logs: {
+        Row: {
+          action: string
+          clinic_id: string
+          id: string
+          module_origin: string | null
+          new_values: Json | null
+          old_values: Json | null
+          patient_id: string
+          performed_at: string | null
+          performed_by: string | null
+        }
+        Insert: {
+          action: string
+          clinic_id: string
+          id?: string
+          module_origin?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          patient_id: string
+          performed_at?: string | null
+          performed_by?: string | null
+        }
+        Update: {
+          action?: string
+          clinic_id?: string
+          id?: string
+          module_origin?: string | null
+          new_values?: Json | null
+          old_values?: Json | null
+          patient_id?: string
+          performed_at?: string | null
+          performed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_member_audit_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_member_audit_logs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_suppliers: {
         Row: {
           address: string | null
@@ -11175,6 +11247,7 @@ export type Database = {
         }[]
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_union_context: { Args: { p_user_id: string }; Returns: boolean }
       record_cash_flow_entry: {
         Args: {
           p_amount: number
