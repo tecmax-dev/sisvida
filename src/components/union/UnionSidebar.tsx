@@ -55,6 +55,12 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
     border: "border-amber-400/30",
     accent: "bg-amber-500/30"
   },
+  socios: {
+    bg: "bg-violet-500/20",
+    text: "text-violet-200",
+    border: "border-violet-400/30",
+    accent: "bg-violet-500/30"
+  },
   contribuicoes: {
     bg: "bg-emerald-500/20",
     text: "text-emerald-200",
@@ -90,9 +96,17 @@ const unionNavTree: NavCategory[] = [
     items: [
       { href: "/union/empresas", icon: Building2, label: "Cadastro", permission: "union_view_employers" },
       { href: "/union/escritorios", icon: Building, label: "Escritórios", permission: "union_view_employers" },
-      { href: "/union/socios", icon: Users, label: "Sócios", permission: "union_view_members" },
-      { href: "/union/associados", icon: UserPlus, label: "Filiações", permission: "union_view_members" },
       { href: "/union/planos", icon: ScrollText, label: "Planos", permission: "union_module_access" },
+    ]
+  },
+  {
+    id: "socios",
+    label: "Sócios",
+    icon: Users,
+    color: "socios",
+    items: [
+      { href: "/union/socios", icon: Users, label: "Gestão de Sócios", permission: "union_view_members" },
+      { href: "/union/associados", icon: UserPlus, label: "Filiações", permission: "union_view_members" },
     ]
   },
   {
