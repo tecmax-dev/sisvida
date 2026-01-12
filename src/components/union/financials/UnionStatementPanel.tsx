@@ -1,0 +1,681 @@
+import { useState, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { format, parseISO, startOfMonth, endOfMonth, subDays } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { FileText, Download, Building2, Calendar as CalendarIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import * as XLSX from "xlsx";
+
+interface Transaction {
+  id: string;
+  date: string;
+  description: string;
+  type: string;
+  amount: number;
+  status: string;
+}
+
+interface DailyGroup {
+  date: Date;
+  dateStr: string;
+  transactions: Transaction[];
+  totalDebit: number;
+  totalCredit: number;
+  endDayBalance: number;
+}
+
+interface StatementSummary {
+  totalRecords: number;
+  initialBalance: number;
+  totalDebits: number;
+  totalCredits: number;
+  finalBalance: number;
+}
+
+export function UnionStatementPanel() {
+  const { currentClinic } = useAuth();
+  const clinicId = currentClinic?.id;
+
+  const [cashRegisterId, setCashRegisterId] = useState<string>("");
+  const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
+  const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
+
+  // Fetch cash registers
+  const { data: cashRegisters, isLoading: loadingRegisters } = useQuery({
+    queryKey: ["union-cash-registers-statement", clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("union_cash_registers")
+        .select("id, name, current_balance, type")
+        .eq("clinic_id", clinicId!)
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clinicId,
+  });
+
+  // Get selected register info
+  const selectedRegister = useMemo(() => {
+    return cashRegisters?.find((r) => r.id === cashRegisterId);
+  }, [cashRegisters, cashRegisterId]);
+
+  // Fetch transactions for the period and cash register
+  const { data: transactions, isLoading: loadingTransactions } = useQuery({
+    queryKey: ["union-statement-transactions", clinicId, cashRegisterId, startDate, endDate],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("union_financial_transactions")
+        .select("id, paid_date, due_date, description, type, amount, status")
+        .eq("clinic_id", clinicId!)
+        .eq("cash_register_id", cashRegisterId)
+        .eq("status", "paid")
+        .gte("paid_date", format(startDate, "yyyy-MM-dd"))
+        .lte("paid_date", format(endDate, "yyyy-MM-dd"))
+        .order("paid_date")
+        .order("created_at");
+
+      if (error) throw error;
+      return data.map((t) => ({
+        id: t.id,
+        date: t.paid_date || t.due_date || "",
+        description: t.description || "Sem descrição",
+        type: t.type,
+        amount: Number(t.amount) || 0,
+        status: t.status,
+      }));
+    },
+    enabled: !!clinicId && !!cashRegisterId,
+  });
+
+  // Calculate initial balance (saldo anterior)
+  const { data: previousBalance } = useQuery({
+    queryKey: ["union-statement-previous-balance", clinicId, cashRegisterId, startDate],
+    queryFn: async () => {
+      // Get all transactions before startDate for this register
+      const { data, error } = await supabase
+        .from("union_financial_transactions")
+        .select("type, amount")
+        .eq("clinic_id", clinicId!)
+        .eq("cash_register_id", cashRegisterId)
+        .eq("status", "paid")
+        .lt("paid_date", format(startDate, "yyyy-MM-dd"));
+
+      if (error) throw error;
+
+      // Calculate the sum (income - expense)
+      let balance = 0;
+      data?.forEach((t) => {
+        const amount = Number(t.amount) || 0;
+        if (t.type === "income") {
+          balance += amount;
+        } else {
+          balance -= amount;
+        }
+      });
+      
+      return balance;
+    },
+    enabled: !!clinicId && !!cashRegisterId && !!cashRegisters,
+  });
+
+  // Group transactions by day and calculate running balance
+  const { dailyGroups, summary } = useMemo(() => {
+    if (!transactions) {
+      return { dailyGroups: [], summary: null };
+    }
+
+    const groups: Map<string, DailyGroup> = new Map();
+    let runningBalance = previousBalance || 0;
+    let totalDebits = 0;
+    let totalCredits = 0;
+
+    transactions.forEach((t) => {
+      const dateStr = t.date;
+      if (!groups.has(dateStr)) {
+        groups.set(dateStr, {
+          date: parseISO(dateStr),
+          dateStr,
+          transactions: [],
+          totalDebit: 0,
+          totalCredit: 0,
+          endDayBalance: 0,
+        });
+      }
+
+      const group = groups.get(dateStr)!;
+      const amount = t.amount;
+
+      if (t.type === "expense") {
+        group.totalDebit += amount;
+        totalDebits += amount;
+        runningBalance -= amount;
+      } else {
+        group.totalCredit += amount;
+        totalCredits += amount;
+        runningBalance += amount;
+      }
+
+      group.transactions.push({
+        ...t,
+        // Store running balance at this point for the line
+      });
+      group.endDayBalance = runningBalance;
+    });
+
+    // Recalculate line-by-line balance
+    let lineBalance = previousBalance || 0;
+    const sortedGroups = Array.from(groups.values()).sort(
+      (a, b) => a.date.getTime() - b.date.getTime()
+    );
+
+    sortedGroups.forEach((group) => {
+      group.transactions.forEach((t) => {
+        if (t.type === "expense") {
+          lineBalance -= t.amount;
+        } else {
+          lineBalance += t.amount;
+        }
+        (t as any).lineBalance = lineBalance;
+      });
+      group.endDayBalance = lineBalance;
+    });
+
+    const summary: StatementSummary = {
+      totalRecords: transactions.length,
+      initialBalance: previousBalance || 0,
+      totalDebits,
+      totalCredits,
+      finalBalance: (previousBalance || 0) + totalCredits - totalDebits,
+    };
+
+    return { dailyGroups: sortedGroups, summary };
+  }, [transactions, previousBalance]);
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(value);
+
+  const handleExportPDF = () => {
+    if (!dailyGroups.length || !summary || !selectedRegister) return;
+
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 15;
+
+    // Header
+    if (currentClinic?.logo_url) {
+      try {
+        doc.addImage(currentClinic.logo_url, "PNG", 14, 10, 30, 30);
+        yPos = 45;
+      } catch (e) {
+        yPos = 15;
+      }
+    }
+
+    // Title and entity info
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text(currentClinic?.name || "Entidade Sindical", pageWidth / 2, yPos, { align: "center" });
+    yPos += 6;
+    
+    if (currentClinic?.cnpj) {
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(currentClinic.cnpj, pageWidth / 2, yPos, { align: "center" });
+      yPos += 8;
+    }
+
+    // Report title
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("MOVIMENTAÇÃO E SALDO", pageWidth / 2, yPos, { align: "center" });
+    yPos += 8;
+
+    // Period and register info
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    const periodText = `Portador: ${selectedRegister.name} - Período: De ${format(startDate, "dd/MM/yyyy")} até ${format(endDate, "dd/MM/yyyy")}`;
+    doc.text(periodText, pageWidth / 2, yPos, { align: "center" });
+    yPos += 10;
+
+    // Previous balance table
+    const prevBalanceDate = subDays(startDate, 1);
+    autoTable(doc, {
+      startY: yPos,
+      head: [["DATA", "SALDO ANTERIOR"]],
+      body: [[format(prevBalanceDate, "dd/MM/yyyy"), formatCurrency(summary.initialBalance)]],
+      theme: "grid",
+      headStyles: { fillColor: [59, 130, 246], fontStyle: "bold" },
+      styles: { fontSize: 9 },
+      columnStyles: { 0: { cellWidth: 40 }, 1: { halign: "right" } },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 5;
+
+    // Transactions table with daily subtotals
+    const tableBody: any[] = [];
+
+    dailyGroups.forEach((group) => {
+      group.transactions.forEach((t) => {
+        tableBody.push([
+          format(group.date, "dd/MM/yyyy"),
+          t.description.toUpperCase(),
+          t.type === "expense" ? formatCurrency(t.amount) : "",
+          t.type === "income" ? formatCurrency(t.amount) : "",
+          formatCurrency((t as any).lineBalance),
+        ]);
+      });
+
+      // Daily subtotal row
+      tableBody.push([
+        {
+          content: `Total do dia ${format(group.date, "dd/MM/yyyy")}: Débito: ${formatCurrency(-group.totalDebit)} - Crédito: ${formatCurrency(group.totalCredit)} - Saldo: ${formatCurrency(group.endDayBalance)}`,
+          colSpan: 5,
+          styles: { fontStyle: "bold", fillColor: [241, 245, 249], fontSize: 8 },
+        },
+      ]);
+    });
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["DATA", "DESCRIÇÃO", "DÉBITO", "CRÉDITO", "SALDO"]],
+      body: tableBody,
+      theme: "grid",
+      headStyles: { fillColor: [59, 130, 246], fontStyle: "bold" },
+      styles: { fontSize: 8 },
+      columnStyles: {
+        0: { cellWidth: 25 },
+        1: { cellWidth: 80 },
+        2: { cellWidth: 25, halign: "right" },
+        3: { cellWidth: 25, halign: "right" },
+        4: { cellWidth: 30, halign: "right" },
+      },
+    });
+
+    yPos = (doc as any).lastAutoTable.finalY + 8;
+
+    // Summary table
+    autoTable(doc, {
+      startY: yPos,
+      head: [["REGISTROS", "TOTAL INICIAL", "TOTAL DÉBITOS", "TOTAL CRÉDITO", "TOTAL FINAL"]],
+      body: [
+        [
+          summary.totalRecords.toString(),
+          formatCurrency(summary.initialBalance),
+          formatCurrency(summary.totalDebits),
+          formatCurrency(summary.totalCredits),
+          formatCurrency(summary.finalBalance),
+        ],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [16, 185, 129], fontStyle: "bold" },
+      styles: { fontSize: 9 },
+      columnStyles: {
+        0: { halign: "center" },
+        1: { halign: "right" },
+        2: { halign: "right" },
+        3: { halign: "right" },
+        4: { halign: "right" },
+      },
+    });
+
+    // Footer
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      doc.text(
+        `Página ${i} de ${pageCount} - Emitido em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")}`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: "center" }
+      );
+    }
+
+    doc.save(`movimentacao-saldo-${format(startDate, "yyyy-MM")}.pdf`);
+  };
+
+  const handleExportExcel = () => {
+    if (!dailyGroups.length || !summary || !selectedRegister) return;
+
+    const wsData: any[] = [];
+
+    // Header info
+    wsData.push([currentClinic?.name || "Entidade Sindical"]);
+    wsData.push([currentClinic?.cnpj || ""]);
+    wsData.push(["MOVIMENTAÇÃO E SALDO"]);
+    wsData.push([`Portador: ${selectedRegister.name} - Período: De ${format(startDate, "dd/MM/yyyy")} até ${format(endDate, "dd/MM/yyyy")}`]);
+    wsData.push([]);
+
+    // Previous balance
+    wsData.push(["DATA", "SALDO ANTERIOR"]);
+    wsData.push([format(subDays(startDate, 1), "dd/MM/yyyy"), summary.initialBalance]);
+    wsData.push([]);
+
+    // Transactions header
+    wsData.push(["DATA", "DESCRIÇÃO", "DÉBITO", "CRÉDITO", "SALDO"]);
+
+    dailyGroups.forEach((group) => {
+      group.transactions.forEach((t) => {
+        wsData.push([
+          format(group.date, "dd/MM/yyyy"),
+          t.description.toUpperCase(),
+          t.type === "expense" ? t.amount : "",
+          t.type === "income" ? t.amount : "",
+          (t as any).lineBalance,
+        ]);
+      });
+
+      // Daily subtotal
+      wsData.push([
+        `Total do dia ${format(group.date, "dd/MM/yyyy")}`,
+        "",
+        -group.totalDebit,
+        group.totalCredit,
+        group.endDayBalance,
+      ]);
+    });
+
+    wsData.push([]);
+
+    // Summary
+    wsData.push(["REGISTROS", "TOTAL INICIAL", "TOTAL DÉBITOS", "TOTAL CRÉDITO", "TOTAL FINAL"]);
+    wsData.push([
+      summary.totalRecords,
+      summary.initialBalance,
+      summary.totalDebits,
+      summary.totalCredits,
+      summary.finalBalance,
+    ]);
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Movimentação e Saldo");
+    XLSX.writeFile(wb, `movimentacao-saldo-${format(startDate, "yyyy-MM")}.xlsx`);
+  };
+
+  if (!clinicId) return null;
+
+  if (loadingRegisters) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-64" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Movimentação e Saldo</h1>
+        <p className="text-muted-foreground">
+          Extrato detalhado de movimentações por portador
+        </p>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            Filtros
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <Label>Portador</Label>
+              <Select value={cashRegisterId} onValueChange={setCashRegisterId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o portador" />
+                </SelectTrigger>
+                <SelectContent>
+                  {cashRegisters?.map((register) => (
+                    <SelectItem key={register.id} value={register.id}>
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        {register.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data Inicial</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !startDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {startDate ? format(startDate, "dd/MM/yyyy") : "Selecione"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={startDate}
+                    onSelect={(d) => d && setStartDate(d)}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data Final</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal",
+                      !endDate && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {endDate ? format(endDate, "dd/MM/yyyy") : "Selecione"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={endDate}
+                    onSelect={(d) => d && setEndDate(d)}
+                    locale={ptBR}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <div className="flex items-end gap-2">
+              <Button
+                variant="outline"
+                onClick={handleExportPDF}
+                disabled={!dailyGroups.length}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                PDF
+              </Button>
+              <Button
+                variant="outline"
+                onClick={handleExportExcel}
+                disabled={!dailyGroups.length}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Excel
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Statement Content */}
+      {!cashRegisterId ? (
+        <Card>
+          <CardContent className="py-12 text-center text-muted-foreground">
+            <Building2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Selecione um portador para visualizar o extrato</p>
+          </CardContent>
+        </Card>
+      ) : loadingTransactions ? (
+        <Skeleton className="h-96" />
+      ) : (
+        <>
+          {/* Previous Balance */}
+          {summary && (
+            <Card>
+              <CardContent className="p-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-blue-500/10">
+                      <TableHead className="font-bold">DATA</TableHead>
+                      <TableHead className="text-right font-bold">SALDO ANTERIOR</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>{format(subDays(startDate, 1), "dd/MM/yyyy")}</TableCell>
+                      <TableCell className="text-right font-bold">
+                        {formatCurrency(summary.initialBalance)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Transactions Table */}
+          <Card>
+            <CardContent className="p-0">
+              <div className="max-h-[600px] overflow-auto">
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background z-10">
+                    <TableRow className="bg-blue-500/10">
+                      <TableHead className="font-bold w-[100px]">DATA</TableHead>
+                      <TableHead className="font-bold">DESCRIÇÃO</TableHead>
+                      <TableHead className="text-right font-bold text-red-600 w-[120px]">DÉBITO</TableHead>
+                      <TableHead className="text-right font-bold text-emerald-600 w-[120px]">CRÉDITO</TableHead>
+                      <TableHead className="text-right font-bold w-[140px]">SALDO</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dailyGroups.map((group) => (
+                      <>
+                        {group.transactions.map((t, idx) => (
+                          <TableRow key={t.id}>
+                            <TableCell className="font-medium">
+                              {idx === 0 ? format(group.date, "dd/MM/yyyy") : ""}
+                            </TableCell>
+                            <TableCell className="uppercase text-sm">{t.description}</TableCell>
+                            <TableCell className="text-right text-red-600">
+                              {t.type === "expense" ? formatCurrency(t.amount) : ""}
+                            </TableCell>
+                            <TableCell className="text-right text-emerald-600">
+                              {t.type === "income" ? formatCurrency(t.amount) : ""}
+                            </TableCell>
+                            <TableCell className="text-right font-medium">
+                              {formatCurrency((t as any).lineBalance)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                        {/* Daily subtotal */}
+                        <TableRow className="bg-muted/50 border-b-2">
+                          <TableCell colSpan={5} className="font-bold text-sm py-2">
+                            Total do dia {format(group.date, "dd/MM/yyyy")}:{" "}
+                            <span className="text-red-600">Débito: {formatCurrency(-group.totalDebit)}</span>
+                            {" - "}
+                            <span className="text-emerald-600">Crédito: {formatCurrency(group.totalCredit)}</span>
+                            {" - "}
+                            Saldo: {formatCurrency(group.endDayBalance)}
+                          </TableCell>
+                        </TableRow>
+                      </>
+                    ))}
+
+                    {dailyGroups.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-12 text-muted-foreground">
+                          Nenhuma movimentação encontrada no período selecionado
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Summary */}
+          {summary && dailyGroups.length > 0 && (
+            <Card>
+              <CardContent className="p-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-emerald-500/10">
+                      <TableHead className="font-bold text-center">REGISTROS</TableHead>
+                      <TableHead className="font-bold text-right">TOTAL INICIAL</TableHead>
+                      <TableHead className="font-bold text-right text-red-600">TOTAL DÉBITOS</TableHead>
+                      <TableHead className="font-bold text-right text-emerald-600">TOTAL CRÉDITO</TableHead>
+                      <TableHead className="font-bold text-right">TOTAL FINAL</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="text-center font-bold">{summary.totalRecords}</TableCell>
+                      <TableCell className="text-right">{formatCurrency(summary.initialBalance)}</TableCell>
+                      <TableCell className="text-right text-red-600">
+                        {formatCurrency(summary.totalDebits)}
+                      </TableCell>
+                      <TableCell className="text-right text-emerald-600">
+                        {formatCurrency(summary.totalCredits)}
+                      </TableCell>
+                      <TableCell className="text-right font-bold">
+                        {formatCurrency(summary.finalBalance)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
