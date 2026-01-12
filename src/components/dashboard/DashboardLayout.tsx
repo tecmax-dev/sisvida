@@ -65,9 +65,6 @@ import {
   MessageSquare,
   Youtube,
   BookOpen,
-  Sparkles,
-  Handshake,
-  Scale,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -125,12 +122,6 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
     border: "border-cyan-400/30",
     accent: "bg-cyan-500/30"
   },
-  homologacao: {
-    bg: "bg-emerald-500/20",
-    text: "text-emerald-200",
-    border: "border-emerald-400/30",
-    accent: "bg-emerald-500/30"
-  },
   admin: {
     bg: "bg-rose-500/20",
     text: "text-rose-200",
@@ -157,21 +148,6 @@ const navCategories: NavCategory[] = [
       { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
       { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
       { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients" },
-    ],
-  },
-  // HOMOLOGAÇÃO - Emerald (categoria independente com addon)
-  {
-    id: "homologacao",
-    label: "Homologação",
-    icon: Scale,
-    color: "homologacao",
-    addonKey: "homologa_net",
-    items: [
-      { href: "/dashboard/homologacao", icon: Calendar, label: "Agenda" },
-      { href: "/dashboard/homologacao/profissionais", icon: UserCircle, label: "Profissionais" },
-      { href: "/dashboard/homologacao/servicos", icon: ClipboardList, label: "Serviços" },
-      { href: "/dashboard/homologacao/bloqueios", icon: CalendarX, label: "Bloqueios" },
-      { href: "/dashboard/homologacao/config", icon: Settings, label: "Configurações" },
     ],
   },
   // ADMINISTRATIVO - Rose/Pink

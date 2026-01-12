@@ -21,6 +21,11 @@ import {
   History,
   ScrollText,
   UserPlus,
+  Scale,
+  Calendar,
+  UserCircle,
+  CalendarX,
+  Settings,
 } from "lucide-react";
 import {
   Collapsible,
@@ -67,6 +72,12 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
     text: "text-purple-200",
     border: "border-purple-400/30",
     accent: "bg-purple-500/30"
+  },
+  homologacao: {
+    bg: "bg-teal-500/20",
+    text: "text-teal-200",
+    border: "border-teal-400/30",
+    accent: "bg-teal-500/30"
   }
 };
 
@@ -119,6 +130,19 @@ const unionNavTree: NavCategory[] = [
       { href: "/union/negociacoes", icon: Handshake, label: "Acordos", permission: "union_view_negotiations" },
       { href: "/union/negociacoes/parcelamentos", icon: ScrollText, label: "Parcelamentos", permission: "union_view_installments" },
       { href: "/union/negociacoes/historico", icon: History, label: "Histórico", permission: "union_view_negotiations" },
+    ]
+  },
+  {
+    id: "homologacao",
+    label: "Homologação",
+    icon: Scale,
+    color: "homologacao",
+    items: [
+      { href: "/union/homologacao", icon: Calendar, label: "Agenda", permission: "union_module_access" },
+      { href: "/union/homologacao/profissionais", icon: UserCircle, label: "Profissionais", permission: "union_module_access" },
+      { href: "/union/homologacao/servicos", icon: ClipboardList, label: "Serviços", permission: "union_module_access" },
+      { href: "/union/homologacao/bloqueios", icon: CalendarX, label: "Bloqueios", permission: "union_module_access" },
+      { href: "/union/homologacao/config", icon: Settings, label: "Configurações", permission: "union_module_access" },
     ]
   }
 ];

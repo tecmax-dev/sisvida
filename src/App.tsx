@@ -114,7 +114,7 @@ import ContributionsPage from "./pages/dashboard/ContributionsPage";
 import NegotiationsPage from "./pages/dashboard/NegotiationsPage";
 import AccountingOfficesPage from "./pages/dashboard/AccountingOfficesPage";
 import DependentApprovalsPage from "./pages/dashboard/DependentApprovalsPage";
-// Homologação module pages
+// Homologação module pages (agora no Módulo Sindical)
 import HomologacaoAgendaPage from "./pages/dashboard/homologacao/HomologacaoAgendaPage";
 import HomologacaoProfissionaisPage from "./pages/dashboard/homologacao/HomologacaoProfissionaisPage";
 import HomologacaoServicosPage from "./pages/dashboard/homologacao/HomologacaoServicosPage";
@@ -413,12 +413,6 @@ const App = () => (
                   <Route path="contribuicoes" element={<ContributionsPage />} />
                   <Route path="negociacoes" element={<NegotiationsPage />} />
                   <Route path="escritorios" element={<AccountingOfficesPage />} />
-                  {/* Homologação module routes */}
-                  <Route path="homologacao" element={<HomologacaoAgendaPage />} />
-                  <Route path="homologacao/profissionais" element={<HomologacaoProfissionaisPage />} />
-                  <Route path="homologacao/servicos" element={<HomologacaoServicosPage />} />
-                  <Route path="homologacao/bloqueios" element={<HomologacaoBloqueiosPage />} />
-                  <Route path="homologacao/config" element={<HomologacaoConfigPage />} />
                 </Route>
                 {/* Union Module Routes - Módulo Sindical Independente */}
                 <Route
@@ -448,6 +442,12 @@ const App = () => (
                   <Route path="negociacoes/parcelamentos" element={<UnionNegotiationsPage />} />
                   <Route path="negociacoes/historico" element={<UnionNegotiationsPage />} />
                   <Route path="associados" element={<UnionAssociadosPage />} />
+                  {/* Homologação module routes - movido do dashboard */}
+                  <Route path="homologacao" element={<HomologacaoAgendaPage />} />
+                  <Route path="homologacao/profissionais" element={<HomologacaoProfissionaisPage />} />
+                  <Route path="homologacao/servicos" element={<HomologacaoServicosPage />} />
+                  <Route path="homologacao/bloqueios" element={<HomologacaoBloqueiosPage />} />
+                  <Route path="homologacao/config" element={<HomologacaoConfigPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
