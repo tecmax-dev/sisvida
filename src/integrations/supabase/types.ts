@@ -11387,6 +11387,10 @@ export type Database = {
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_union_context: { Args: { p_user_id: string }; Returns: boolean }
+      recalculate_union_cash_register_balance: {
+        Args: { register_id: string }
+        Returns: number
+      }
       record_cash_flow_entry: {
         Args: {
           p_amount: number

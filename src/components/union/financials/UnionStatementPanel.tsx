@@ -1,7 +1,8 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useUnionFinancialData } from "@/hooks/useUnionFinancialData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -17,9 +19,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { format, parseISO, startOfMonth, endOfMonth, subDays } from "date-fns";
+import { format, parseISO, startOfMonth, endOfMonth, subDays, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FileText, Download, Building2, Calendar as CalendarIcon } from "lucide-react";
+import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -56,11 +58,20 @@ export function UnionStatementPanel() {
   const clinicId = currentClinic?.id;
 
   const [cashRegisterId, setCashRegisterId] = useState<string>("");
-  const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
-  const [endDate, setEndDate] = useState<Date>(endOfMonth(new Date()));
+  const [startDate, setStartDate] = useState<Date>(() => startOfMonth(new Date()));
+  const [endDate, setEndDate] = useState<Date>(() => endOfMonth(new Date()));
+  const [isMigrating, setIsMigrating] = useState(false);
 
-  // Fetch cash registers
-  const { data: cashRegisters, isLoading: loadingRegisters } = useQuery({
+  // Use unified hook with fallback
+  const {
+    cashRegisters: fallbackRegisters,
+    cashRegistersSource,
+    loadingCashRegisters,
+    migrateData,
+  } = useUnionFinancialData(clinicId);
+
+  // Fetch union cash registers directly
+  const { data: unionRegisters, isLoading: loadingUnionRegisters, refetch } = useQuery({
     queryKey: ["union-cash-registers-statement", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -74,6 +85,36 @@ export function UnionStatementPanel() {
     },
     enabled: !!clinicId,
   });
+
+  // Use union registers if available, otherwise fallback
+  const cashRegisters = unionRegisters && unionRegisters.length > 0 ? unionRegisters : fallbackRegisters;
+  const isUsingFallback = cashRegistersSource === "clinic" && (!unionRegisters || unionRegisters.length === 0);
+
+  // Handle migration
+  const handleMigrate = useCallback(async () => {
+    setIsMigrating(true);
+    try {
+      const success = await migrateData();
+      if (success) {
+        refetch();
+      }
+    } finally {
+      setIsMigrating(false);
+    }
+  }, [migrateData, refetch]);
+
+  // Safe date setters to ensure valid dates
+  const handleStartDateChange = useCallback((date: Date | undefined) => {
+    if (date && isValid(date)) {
+      setStartDate(date);
+    }
+  }, []);
+
+  const handleEndDateChange = useCallback((date: Date | undefined) => {
+    if (date && isValid(date)) {
+      setEndDate(date);
+    }
+  }, []);
 
   // Get selected register info
   const selectedRegister = useMemo(() => {
@@ -420,7 +461,7 @@ export function UnionStatementPanel() {
 
   if (!clinicId) return null;
 
-  if (loadingRegisters) {
+  if (loadingUnionRegisters && loadingCashRegisters) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
@@ -438,6 +479,36 @@ export function UnionStatementPanel() {
           Extrato detalhado de movimentações por portador
         </p>
       </div>
+
+      {/* Migration Alert */}
+      {isUsingFallback && cashRegisters.length > 0 && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              Exibindo contas da clínica vinculada. Clique para importar para o módulo sindical.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleMigrate}
+              disabled={isMigrating}
+            >
+              {isMigrating ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Importando...
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Importar Contas
+                </>
+              )}
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Filters */}
       <Card>
@@ -487,7 +558,7 @@ export function UnionStatementPanel() {
                   <Calendar
                     mode="single"
                     selected={startDate}
-                    onSelect={(d) => d && setStartDate(d)}
+                    onSelect={handleStartDateChange}
                     locale={ptBR}
                     initialFocus
                   />
@@ -514,7 +585,7 @@ export function UnionStatementPanel() {
                   <Calendar
                     mode="single"
                     selected={endDate}
-                    onSelect={(d) => d && setEndDate(d)}
+                    onSelect={handleEndDateChange}
                     locale={ptBR}
                     initialFocus
                   />
