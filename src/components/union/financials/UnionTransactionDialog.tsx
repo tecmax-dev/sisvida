@@ -25,8 +25,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { TrendingUp, TrendingDown, CalendarIcon, ChevronDown, Calculator } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
+import { TrendingUp, TrendingDown, CalendarIcon, ChevronDown, Calculator, AlertTriangle, Loader2 } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -108,63 +109,45 @@ export function UnionTransactionDialog({
     return gross + fine + interest - discount;
   }, [formData.gross_value, formData.fine_value, formData.interest_value, formData.discount_value]);
 
-  // Use unified hook with fallback
+  // Use unified hook with fallback and migration capability
   const {
-    categories: fallbackCategories,
-    cashRegisters: fallbackCashRegisters,
+    categories: allCategories,
+    categoriesSource,
+    cashRegisters: allCashRegisters,
+    cashRegistersSource,
+    needsMigration,
+    migrateData,
+    loadingCategories,
+    loadingCashRegisters,
   } = useUnionFinancialData(clinicId);
 
-  // Fetch union categories directly
-  const { data: unionCategories } = useQuery({
-    queryKey: ["union-financial-categories", clinicId, type],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("union_financial_categories")
-        .select("*")
-        .eq("clinic_id", clinicId)
-        .eq("type", type)
-        .eq("is_active", true)
-        .order("name");
+  const [isMigrating, setIsMigrating] = useState(false);
 
-      if (error) throw error;
-      return data;
-    },
-    enabled: open && !!clinicId,
-  });
-
-  // Use union categories if available, otherwise fallback
+  // Filter categories by type
   const categories = useMemo(() => {
-    if (unionCategories && unionCategories.length > 0) {
-      return unionCategories;
+    return allCategories.filter((c: any) => c.type === type);
+  }, [allCategories, type]);
+
+  // Use cash registers from the hook directly
+  const cashRegisters = allCashRegisters;
+
+  // Check if we're using fallback data (clinic data instead of union data)
+  const usingFallbackCategories = categoriesSource === "clinic";
+  const usingFallbackCashRegisters = cashRegistersSource === "clinic";
+  const requiresMigration = usingFallbackCategories || usingFallbackCashRegisters;
+
+  // Auto-migrate when dialog opens if needed
+  const handleMigration = async () => {
+    setIsMigrating(true);
+    try {
+      const success = await migrateData();
+      if (success) {
+        toast.success("Dados financeiros migrados com sucesso!");
+      }
+    } finally {
+      setIsMigrating(false);
     }
-    // Filter fallback categories by type
-    return fallbackCategories.filter((c: any) => c.type === type);
-  }, [unionCategories, fallbackCategories, type]);
-
-  // Fetch union cash registers directly
-  const { data: unionCashRegisters } = useQuery({
-    queryKey: ["union-cash-registers", clinicId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("union_cash_registers")
-        .select("*")
-        .eq("clinic_id", clinicId)
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: open && !!clinicId,
-  });
-
-  // Use union cash registers if available, otherwise fallback
-  const cashRegisters = useMemo(() => {
-    if (unionCashRegisters && unionCashRegisters.length > 0) {
-      return unionCashRegisters;
-    }
-    return fallbackCashRegisters;
-  }, [unionCashRegisters, fallbackCashRegisters]);
+  };
 
   // Supplier refresh handler
   const handleSupplierCreated = () => {
@@ -233,6 +216,12 @@ export function UnionTransactionDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!clinicId) return;
+
+    // Block if using fallback data - must migrate first
+    if (requiresMigration) {
+      toast.error("É necessário migrar os dados financeiros antes de lançar transações. Clique em 'Migrar Dados'.");
+      return;
+    }
 
     if (!formData.description.trim()) {
       toast.error("Descrição é obrigatória");
@@ -318,8 +307,23 @@ export function UnionTransactionDialog({
       onOpenChange(false);
       onSuccess();
     } catch (error: any) {
-      toast.error("Erro ao salvar transação");
-      console.error(error);
+      console.error("Transaction save error:", error);
+      // Provide more specific error messages
+      if (error?.message?.includes("foreign key constraint")) {
+        if (error.message.includes("category_id")) {
+          toast.error("Categoria inválida. Por favor, migre os dados financeiros primeiro.");
+        } else if (error.message.includes("cash_register_id")) {
+          toast.error("Conta bancária inválida. Por favor, migre os dados financeiros primeiro.");
+        } else if (error.message.includes("supplier_id")) {
+          toast.error("Fornecedor inválido. Por favor, cadastre o fornecedor no módulo sindical.");
+        } else {
+          toast.error("Erro de referência: " + error.message);
+        }
+      } else if (error?.message) {
+        toast.error("Erro: " + error.message);
+      } else {
+        toast.error("Erro ao salvar transação. Verifique os dados e tente novamente.");
+      }
     } finally {
       setLoading(false);
     }
@@ -343,6 +347,35 @@ export function UnionTransactionDialog({
               Lance {type === "income" ? "receitas" : "despesas"} do módulo sindical
             </DialogDescription>
           </DialogHeader>
+
+          {/* Migration Alert */}
+          {requiresMigration && (
+            <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/30">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="flex items-center justify-between gap-4">
+                <span className="text-amber-800 dark:text-amber-200">
+                  Os dados financeiros precisam ser migrados da clínica para o módulo sindical.
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="shrink-0 border-amber-600 text-amber-700 hover:bg-amber-100"
+                  onClick={handleMigration}
+                  disabled={isMigrating}
+                >
+                  {isMigrating ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Migrando...
+                    </>
+                  ) : (
+                    "Migrar Dados"
+                  )}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {!transaction && (
