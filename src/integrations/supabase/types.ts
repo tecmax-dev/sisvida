@@ -10020,7 +10020,7 @@ export type Database = {
       user_roles: {
         Row: {
           access_group_id: string | null
-          clinic_id: string
+          clinic_id: string | null
           created_at: string
           id: string
           professional_id: string | null
@@ -10029,7 +10029,7 @@ export type Database = {
         }
         Insert: {
           access_group_id?: string | null
-          clinic_id: string
+          clinic_id?: string | null
           created_at?: string
           id?: string
           professional_id?: string | null
@@ -10038,7 +10038,7 @@ export type Database = {
         }
         Update: {
           access_group_id?: string | null
-          clinic_id?: string
+          clinic_id?: string | null
           created_at?: string
           id?: string
           professional_id?: string | null
