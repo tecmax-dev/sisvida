@@ -30,7 +30,8 @@ Deno.serve(async (req) => {
 
     const results = {
       cashRegisters: { migrated: 0, skipped: 0, errors: 0 },
-      categories: { migrated: 0, skipped: 0, errors: 0 }
+      categories: { migrated: 0, skipped: 0, errors: 0 },
+      chartOfAccounts: { migrated: 0, skipped: 0, errors: 0 }
     };
 
     // ========== MIGRATE CASH REGISTERS ==========
@@ -80,7 +81,7 @@ Deno.serve(async (req) => {
         .map(register => ({
           clinic_id: clinic_id,
           name: register.name,
-          type: register.type,
+          type: register.type === 'bank' ? 'bank_account' : register.type, // Fix type mapping
           bank_name: register.bank_name,
           agency: register.agency,
           account_number: register.account_number,
@@ -175,6 +176,90 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ========== MIGRATE CHART OF ACCOUNTS ==========
+    console.log('[migrate-union-financial-data] Migrating chart of accounts...');
+
+    // 1. Fetch all active accounts from the clinic
+    const { data: clinicAccounts, error: accountsError } = await supabase
+      .from('chart_of_accounts')
+      .select('*')
+      .eq('clinic_id', clinic_id)
+      .is('deleted_at', null)
+      .eq('is_active', true);
+
+    if (accountsError) {
+      console.error('[migrate-union-financial-data] Error fetching chart of accounts:', accountsError);
+      throw accountsError;
+    }
+
+    console.log(`[migrate-union-financial-data] Found ${clinicAccounts?.length || 0} accounts to migrate`);
+
+    if (clinicAccounts && clinicAccounts.length > 0) {
+      // 2. Get existing union accounts to avoid duplicates (by account_code)
+      const { data: existingAccounts, error: existingAccError } = await supabase
+        .from('union_chart_of_accounts')
+        .select('account_code')
+        .eq('clinic_id', clinic_id);
+
+      if (existingAccError) {
+        console.error('[migrate-union-financial-data] Error fetching existing accounts:', existingAccError);
+        throw existingAccError;
+      }
+
+      const existingAccountCodes = new Set(
+        existingAccounts?.map(a => a.account_code?.toLowerCase()) || []
+      );
+
+      // 3. Create ID mapping for parent references
+      const idMapping: Record<string, string> = {};
+
+      // Sort accounts by hierarchy level to insert parents first
+      const sortedAccounts = [...clinicAccounts].sort((a, b) => 
+        (a.hierarchy_level || 1) - (b.hierarchy_level || 1)
+      );
+
+      // 4. Filter accounts that don't already exist
+      const accountsToInsert = sortedAccounts.filter(account => {
+        if (existingAccountCodes.has(account.account_code?.toLowerCase())) {
+          console.log(`[migrate-union-financial-data] Skipping duplicate account: ${account.account_code}`);
+          results.chartOfAccounts.skipped++;
+          return false;
+        }
+        return true;
+      });
+
+      // 5. Insert accounts in batches, respecting hierarchy
+      for (const account of accountsToInsert) {
+        const newParentId = account.parent_id ? idMapping[account.parent_id] : null;
+
+        const { data: insertedAccount, error: insertAccError } = await supabase
+          .from('union_chart_of_accounts')
+          .insert({
+            clinic_id: clinic_id,
+            account_code: account.account_code,
+            account_name: account.account_name,
+            account_type: account.account_type,
+            hierarchy_level: account.hierarchy_level || 1,
+            full_path: account.full_path,
+            is_synthetic: account.is_synthetic || false,
+            is_active: true,
+            parent_id: newParentId,
+          })
+          .select('id')
+          .single();
+
+        if (insertAccError) {
+          console.error(`[migrate-union-financial-data] Error inserting account ${account.account_code}:`, insertAccError);
+          results.chartOfAccounts.errors++;
+        } else if (insertedAccount) {
+          idMapping[account.id] = insertedAccount.id;
+          results.chartOfAccounts.migrated++;
+        }
+      }
+
+      console.log(`[migrate-union-financial-data] Migrated ${results.chartOfAccounts.migrated} accounts`);
+    }
+
     // Log the migration in union_audit_logs
     await supabase
       .from('union_audit_logs')
@@ -185,12 +270,13 @@ Deno.serve(async (req) => {
         details: {
           entity_id,
           cash_registers: results.cashRegisters,
-          categories: results.categories
+          categories: results.categories,
+          chart_of_accounts: results.chartOfAccounts
         }
       });
 
-    const totalMigrated = results.cashRegisters.migrated + results.categories.migrated;
-    const totalSkipped = results.cashRegisters.skipped + results.categories.skipped;
+    const totalMigrated = results.cashRegisters.migrated + results.categories.migrated + results.chartOfAccounts.migrated;
+    const totalSkipped = results.cashRegisters.skipped + results.categories.skipped + results.chartOfAccounts.skipped;
 
     console.log(`[migrate-union-financial-data] Migration completed. Total migrated: ${totalMigrated}, skipped: ${totalSkipped}`);
 
@@ -199,7 +285,8 @@ Deno.serve(async (req) => {
         success: true,
         message: `Migrated ${totalMigrated} records successfully`,
         cashRegisters: results.cashRegisters,
-        categories: results.categories
+        categories: results.categories,
+        chartOfAccounts: results.chartOfAccounts
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
