@@ -285,6 +285,35 @@ export default function UnionEntitiesPage() {
     }
   };
 
+  const migrateFinancialData = async (clinicId: string, entityId: string) => {
+    try {
+      console.log('[UnionEntitiesPage] Migrating financial data for clinic:', clinicId);
+      const { data, error } = await supabase.functions.invoke('migrate-union-financial-data', {
+        body: { clinic_id: clinicId, entity_id: entityId }
+      });
+
+      if (error) {
+        console.error('[UnionEntitiesPage] Error migrating financial data:', error);
+        toast.error('Erro ao migrar dados financeiros: ' + error.message);
+        return;
+      }
+
+      const cashRegs = data?.cashRegisters;
+      const cats = data?.categories;
+
+      if (cashRegs?.migrated > 0 || cats?.migrated > 0) {
+        const messages = [];
+        if (cashRegs?.migrated > 0) messages.push(`${cashRegs.migrated} contas bancárias`);
+        if (cats?.migrated > 0) messages.push(`${cats.migrated} categorias`);
+        toast.success(`Migrados: ${messages.join(', ')}`);
+      } else if ((cashRegs?.skipped > 0 || cats?.skipped > 0) && cashRegs?.migrated === 0 && cats?.migrated === 0) {
+        toast.info('Dados financeiros já migrados anteriormente');
+      }
+    } catch (err: any) {
+      console.error('[UnionEntitiesPage] Error in migrateFinancialData:', err);
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.razao_social || !formData.cnpj || !formData.email_institucional) {
       toast.error('Preencha os campos obrigatórios');
@@ -326,9 +355,10 @@ export default function UnionEntitiesPage() {
 
         if (error) throw error;
 
-        // Migrate suppliers if a new clinic was linked (different from previous)
+        // Migrate data if a new clinic was linked (different from previous)
         if (newClinicId && newClinicId !== previousClinicId) {
           await migrateSuppliers(newClinicId, editingEntity.id);
+          await migrateFinancialData(newClinicId, editingEntity.id);
         }
 
         toast.success('Entidade atualizada com sucesso');
@@ -380,9 +410,10 @@ export default function UnionEntitiesPage() {
 
         if (error) throw error;
 
-        // Migrate suppliers if a clinic was linked
+        // Migrate data if a clinic was linked
         if (formData.clinic_id && newEntity?.id) {
           await migrateSuppliers(formData.clinic_id, newEntity.id);
+          await migrateFinancialData(formData.clinic_id, newEntity.id);
         }
 
         // Note: Role assignment is handled by existing clinic user creation flow

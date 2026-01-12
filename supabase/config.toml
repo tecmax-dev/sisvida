@@ -215,3 +215,6 @@ verify_jwt = false
 
 [functions.migrate-union-suppliers]
 verify_jwt = true
+
+[functions.migrate-union-financial-data]
+verify_jwt = true
