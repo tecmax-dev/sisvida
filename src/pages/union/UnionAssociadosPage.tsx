@@ -110,21 +110,95 @@ export default function UnionAssociadosPage() {
     },
   });
 
-  // Aprovar associado
+  // Aprovar associado e criar/vincular em patients
   const aprovarMutation = useMutation({
-    mutationFn: async (associadoId: string) => {
+    mutationFn: async (associado: Associado) => {
+      // 1. Primeiro, verificar se já existe um paciente com esse CPF
+      const cpfDigits = associado.cpf.replace(/\D/g, "");
+      const { data: existingPatient } = await supabase
+        .from("patients")
+        .select("id")
+        .or(`cpf.eq.${cpfDigits},cpf.eq.${associado.cpf}`)
+        .eq("clinic_id", associado.sindicato_id)
+        .maybeSingle();
+
+      let patientId = existingPatient?.id;
+
+      // 2. Se não existe, criar novo paciente
+      if (!patientId) {
+        const { data: newPatient, error: patientError } = await supabase
+          .from("patients")
+          .insert({
+            clinic_id: associado.sindicato_id,
+            name: associado.nome,
+            cpf: cpfDigits,
+            email: associado.email,
+            phone: associado.telefone,
+            birth_date: associado.data_nascimento,
+            gender: associado.sexo === "masculino" ? "male" : associado.sexo === "feminino" ? "female" : null,
+            address: associado.logradouro ? `${associado.logradouro}, ${associado.numero || ""}${associado.complemento ? ` - ${associado.complemento}` : ""}` : null,
+            city: associado.cidade,
+            state: associado.uf,
+            cep: associado.cep,
+            is_union_member: true,
+            union_status: "ativo",
+            union_category_id: associado.categoria_id,
+            union_contribution_value: associado.valor_contribuicao,
+            union_join_date: new Date().toISOString(),
+            union_observations: `Aprovado via formulário de filiação em ${new Date().toLocaleDateString("pt-BR")}`,
+          })
+          .select("id")
+          .single();
+
+        if (patientError) throw patientError;
+        patientId = newPatient.id;
+      } else {
+        // 3. Se já existe, atualizar para marcar como membro sindical
+        const { error: updateError } = await supabase
+          .from("patients")
+          .update({
+            is_union_member: true,
+            union_status: "ativo",
+            union_category_id: associado.categoria_id,
+            union_contribution_value: associado.valor_contribuicao,
+            union_join_date: new Date().toISOString(),
+            union_observations: `Aprovado via formulário de filiação em ${new Date().toLocaleDateString("pt-BR")}`,
+          })
+          .eq("id", patientId);
+
+        if (updateError) throw updateError;
+      }
+
+      // 4. Atualizar status na tabela sindical_associados
       const { error } = await supabase
         .from("sindical_associados")
         .update({ 
           status: "ativo",
           aprovado_at: new Date().toISOString(),
         })
-        .eq("id", associadoId);
+        .eq("id", associado.id);
       if (error) throw error;
+
+      // 5. Registrar auditoria
+      await supabase.from("union_member_audit_logs").insert({
+        patient_id: patientId,
+        clinic_id: associado.sindicato_id,
+        action: "approved_membership",
+        changes: {
+          source: "sindical_associados",
+          associado_id: associado.id,
+          approved_at: new Date().toISOString(),
+        },
+      });
+
+      return patientId;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sindical-associados"] });
-      toast({ title: "Associado aprovado com sucesso!" });
+      toast({ 
+        title: "Associado aprovado com sucesso!", 
+        description: "O sócio foi vinculado e já aparece na lista de Sócios." 
+      });
       setShowDetailDialog(false);
     },
     onError: (error: any) => {
@@ -489,7 +563,7 @@ export default function UnionAssociadosPage() {
                       Rejeitar
                     </Button>
                     <Button
-                      onClick={() => aprovarMutation.mutate(selectedAssociado.id)}
+                      onClick={() => aprovarMutation.mutate(selectedAssociado)}
                       disabled={aprovarMutation.isPending}
                       className="bg-emerald-600 hover:bg-emerald-700"
                     >
