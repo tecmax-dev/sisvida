@@ -92,6 +92,7 @@ interface NavItem {
   label: string;
   permission?: Permission;
   addonKey?: string; // Requires specific addon to be active
+  featureKey?: string; // Requires specific plan feature to be active
 }
 
 interface NavCategory {
@@ -147,8 +148,8 @@ const navCategories: NavCategory[] = [
       { href: "/dashboard/procedures", icon: Stethoscope, label: "Procedimentos", permission: "view_procedures" },
       { href: "/dashboard/exams", icon: FlaskConical, label: "Exames", permission: "view_procedures" },
       { href: "/dashboard/anamnesis", icon: ClipboardList, label: "Anamnese", permission: "view_anamnesis" },
-      { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates Anamnese", permission: "view_anamnesis", addonKey: "dynamic_anamnesis" },
-      { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "view_anamnesis", addonKey: "dynamic_anamnesis" },
+      { href: "/dashboard/anamnesis-templates", icon: FileEdit, label: "Templates Anamnese", permission: "view_anamnesis", featureKey: "dynamic_anamnesis" },
+      { href: "/dashboard/anamnesis-dynamic", icon: FilePlus2, label: "Anamnese Dinâmica", permission: "view_anamnesis", featureKey: "dynamic_anamnesis" },
       { href: "/dashboard/medical-records", icon: FileText, label: "Prontuário", permission: "view_medical_records" },
       { href: "/dashboard/patients", icon: Users, label: "Pacientes", permission: "view_patients" },
     ],
@@ -201,7 +202,7 @@ export function DashboardLayout() {
   const location = useLocation();
   const { user, profile, currentClinic, userRoles, signOut, setCurrentClinic } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
-  const { hasAddon } = usePlanFeatures();
+  const { hasAddon, hasFeature } = usePlanFeatures();
   const { hasUnionEntity } = useClinicHasUnionEntity();
 
   useEffect(() => {
@@ -235,6 +236,8 @@ export function DashboardLayout() {
         if (item.permission && !hasPermission(item.permission)) return false;
         // Check addon requirement
         if (item.addonKey && !hasAddon(item.addonKey)) return false;
+        // Check plan feature requirement
+        if (item.featureKey && !hasFeature(item.featureKey)) return false;
         return true;
       })
     }))
