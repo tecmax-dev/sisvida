@@ -138,6 +138,7 @@ import UnionSuppliersPage from "./pages/union/UnionSuppliersPage";
 import UnionNegotiationsPage from "./pages/union/UnionNegotiationsPage";
 import UnionReportsPage from "./pages/union/UnionReportsPage";
 import UnionCategoriesPage from "./pages/union/UnionCategoriesPage";
+import UnionChartOfAccountsPage from "./pages/union/UnionChartOfAccountsPage";
 import UnionAssociadosPage from "./pages/union/UnionAssociadosPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
@@ -440,6 +441,7 @@ const App = () => (
                   <Route path="financeiro/contas" element={<UnionCashRegistersPage />} />
                   <Route path="financeiro/fornecedores" element={<UnionSuppliersPage />} />
                   <Route path="financeiro/categorias" element={<UnionCategoriesPage />} />
+                  <Route path="financeiro/plano-contas" element={<UnionChartOfAccountsPage />} />
                   <Route path="financeiro/relatorios" element={<UnionReportsPage />} />
                   <Route path="negociacoes" element={<UnionNegotiationsPage />} />
                   <Route path="negociacoes/parcelamentos" element={<UnionNegotiationsPage />} />

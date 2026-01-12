@@ -26,6 +26,7 @@ import {
   UserCircle,
   CalendarX,
   Settings,
+  FolderTree,
 } from "lucide-react";
 import {
   Collapsible,
@@ -132,6 +133,7 @@ const unionNavTree: NavCategory[] = [
       { href: "/union/financeiro/contas", icon: Wallet, label: "Contas Bancárias", permission: "union_manage_cash_registers" },
       { href: "/union/financeiro/fornecedores", icon: Building, label: "Fornecedores", permission: "union_manage_suppliers" },
       { href: "/union/financeiro/categorias", icon: ClipboardList, label: "Categorias", permission: "union_manage_categories" },
+      { href: "/union/financeiro/plano-contas", icon: FolderTree, label: "Plano de Contas", permission: "union_manage_categories" },
       { href: "/union/financeiro/relatorios", icon: FileText, label: "Relatórios", permission: "union_generate_reports" },
     ]
   },

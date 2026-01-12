@@ -9554,6 +9554,69 @@ export type Database = {
           },
         ]
       }
+      union_chart_of_accounts: {
+        Row: {
+          account_code: string
+          account_name: string
+          account_type: string
+          clinic_id: string
+          created_at: string | null
+          deleted_at: string | null
+          full_path: string | null
+          hierarchy_level: number | null
+          id: string
+          is_active: boolean | null
+          is_synthetic: boolean | null
+          parent_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          account_code: string
+          account_name: string
+          account_type: string
+          clinic_id: string
+          created_at?: string | null
+          deleted_at?: string | null
+          full_path?: string | null
+          hierarchy_level?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_synthetic?: boolean | null
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          account_code?: string
+          account_name?: string
+          account_type?: string
+          clinic_id?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          full_path?: string | null
+          hierarchy_level?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_synthetic?: boolean | null
+          parent_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_chart_of_accounts_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "union_chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_cost_centers: {
         Row: {
           clinic_id: string
