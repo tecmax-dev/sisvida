@@ -362,7 +362,7 @@ export default function UnionMemberDetailPage() {
               <div className="sm:col-span-2">
                 <Label className="text-muted-foreground text-xs">Endereço</Label>
                 <p className="font-medium">
-                  {[member.address, member.city, member.state, member.zip_code]
+                  {[member.address, member.city, member.state, member.cep]
                     .filter(Boolean)
                     .join(", ") || "-"}
                 </p>
