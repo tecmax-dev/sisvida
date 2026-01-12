@@ -34,6 +34,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { UnionSupplierCombobox } from "./UnionSupplierCombobox";
 import { UnionSupplierDialog } from "./UnionSupplierDialog";
+import { useUnionFinancialData } from "@/hooks/useUnionFinancialData";
 
 interface UnionTransactionDialogProps {
   open: boolean;
@@ -107,8 +108,14 @@ export function UnionTransactionDialog({
     return gross + fine + interest - discount;
   }, [formData.gross_value, formData.fine_value, formData.interest_value, formData.discount_value]);
 
-  // Fetch categories
-  const { data: categories } = useQuery({
+  // Use unified hook with fallback
+  const {
+    categories: fallbackCategories,
+    cashRegisters: fallbackCashRegisters,
+  } = useUnionFinancialData(clinicId);
+
+  // Fetch union categories directly
+  const { data: unionCategories } = useQuery({
     queryKey: ["union-financial-categories", clinicId, type],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -125,8 +132,17 @@ export function UnionTransactionDialog({
     enabled: open && !!clinicId,
   });
 
-  // Fetch cash registers
-  const { data: cashRegisters } = useQuery({
+  // Use union categories if available, otherwise fallback
+  const categories = useMemo(() => {
+    if (unionCategories && unionCategories.length > 0) {
+      return unionCategories;
+    }
+    // Filter fallback categories by type
+    return fallbackCategories.filter((c: any) => c.type === type);
+  }, [unionCategories, fallbackCategories, type]);
+
+  // Fetch union cash registers directly
+  const { data: unionCashRegisters } = useQuery({
     queryKey: ["union-cash-registers", clinicId],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -141,6 +157,14 @@ export function UnionTransactionDialog({
     },
     enabled: open && !!clinicId,
   });
+
+  // Use union cash registers if available, otherwise fallback
+  const cashRegisters = useMemo(() => {
+    if (unionCashRegisters && unionCashRegisters.length > 0) {
+      return unionCashRegisters;
+    }
+    return fallbackCashRegisters;
+  }, [unionCashRegisters, fallbackCashRegisters]);
 
   // Supplier refresh handler
   const handleSupplierCreated = () => {
