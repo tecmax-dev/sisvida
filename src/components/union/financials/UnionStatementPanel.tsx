@@ -511,27 +511,25 @@ export function UnionStatementPanel() {
       )}
 
       {/* Filters */}
-      <Card>
-        <CardHeader className="pb-4">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Filtros
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <Card className="border-border/50 shadow-sm">
+        <CardContent className="pt-6">
+          <div className="flex flex-col gap-6">
+            {/* Row 1: Portador selector - full width */}
             <div className="space-y-2">
-              <Label>Portador</Label>
+              <Label className="text-sm font-medium text-foreground">Portador Bancário</Label>
               <Select value={cashRegisterId} onValueChange={setCashRegisterId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o portador" />
+                <SelectTrigger className="w-full md:max-w-md h-11 bg-background">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-muted-foreground" />
+                    <SelectValue placeholder="Selecione o portador" />
+                  </div>
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-popover border-border z-50">
                   {cashRegisters?.map((register) => (
                     <SelectItem key={register.id} value={register.id}>
                       <div className="flex items-center gap-2">
-                        <Building2 className="h-4 w-4" />
-                        {register.name}
+                        <Building2 className="h-4 w-4 text-primary" />
+                        <span>{register.name}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -539,77 +537,88 @@ export function UnionStatementPanel() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Data Inicial</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !startDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "dd/MM/yyyy") : "Selecione"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={startDate}
-                    onSelect={handleStartDateChange}
-                    locale={ptBR}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+            {/* Row 2: Date filters and export buttons */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+              {/* Date filters group */}
+              <div className="flex flex-col sm:flex-row gap-4 flex-1">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-foreground">Data Inicial</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full sm:w-[180px] justify-start text-left font-normal h-11 bg-background",
+                          !startDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                        {startDate ? format(startDate, "dd/MM/yyyy") : "Selecione"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start" sideOffset={4}>
+                      <Calendar
+                        mode="single"
+                        selected={startDate}
+                        onSelect={handleStartDateChange}
+                        locale={ptBR}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
 
-            <div className="space-y-2">
-              <Label>Data Final</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "w-full justify-start text-left font-normal",
-                      !endDate && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "dd/MM/yyyy") : "Selecione"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={endDate}
-                    onSelect={handleEndDateChange}
-                    locale={ptBR}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium text-foreground">Data Final</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full sm:w-[180px] justify-start text-left font-normal h-11 bg-background",
+                          !endDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                        {endDate ? format(endDate, "dd/MM/yyyy") : "Selecione"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 bg-popover border-border z-50" align="start" sideOffset={4}>
+                      <Calendar
+                        mode="single"
+                        selected={endDate}
+                        onSelect={handleEndDateChange}
+                        locale={ptBR}
+                        initialFocus
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
 
-            <div className="flex items-end gap-2">
-              <Button
-                variant="outline"
-                onClick={handleExportPDF}
-                disabled={!dailyGroups.length}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                PDF
-              </Button>
-              <Button
-                variant="outline"
-                onClick={handleExportExcel}
-                disabled={!dailyGroups.length}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                Excel
-              </Button>
+              {/* Export buttons */}
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={handleExportPDF}
+                  disabled={!dailyGroups.length}
+                  className="flex-1 sm:flex-none h-11"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  PDF
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleExportExcel}
+                  disabled={!dailyGroups.length}
+                  className="flex-1 sm:flex-none h-11"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Excel
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
