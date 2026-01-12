@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useUnionPermissions } from "@/hooks/useUnionPermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -23,10 +26,12 @@ import {
   Mail,
   MapPin,
   Building2,
-  Loader2
+  Loader2,
+  Plus
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { UnionCreateMemberDialog } from "@/components/union/members/UnionCreateMemberDialog";
 
 interface Associado {
   id: string;
@@ -81,7 +86,10 @@ const formatPhone = (phone: string) => {
 };
 
 export default function UnionAssociadosPage() {
+  const navigate = useNavigate();
   const { toast } = useToast();
+  const { currentClinic } = useAuth();
+  const { canManageMembers } = useUnionPermissions();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
@@ -90,6 +98,9 @@ export default function UnionAssociadosPage() {
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
+  const [createMemberOpen, setCreateMemberOpen] = useState(false);
+
+  const clinicId = currentClinic?.id;
 
   // Buscar associados
   const { data: associados = [], isLoading } = useQuery({
@@ -252,11 +263,20 @@ export default function UnionAssociadosPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Gestão de Associados</h1>
-        <p className="text-muted-foreground">
-          Gerencie solicitações de filiação e associados ativos
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Gestão de Associados</h1>
+          <p className="text-muted-foreground">
+            Gerencie solicitações de filiação e associados ativos
+          </p>
+        </div>
+
+        {canManageMembers && (
+          <Button onClick={() => setCreateMemberOpen(true)} disabled={!clinicId}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Sócio
+          </Button>
+        )}
       </div>
 
       {/* Stats Cards */}
@@ -625,6 +645,18 @@ export default function UnionAssociadosPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UnionCreateMemberDialog
+        open={createMemberOpen}
+        onOpenChange={setCreateMemberOpen}
+        clinicId={clinicId || ""}
+        onCreated={(patientId) => {
+          // Atualiza listagens e abre o detalhe do sócio
+          queryClient.invalidateQueries({ queryKey: ["sindical-associados"] });
+          queryClient.invalidateQueries({ queryKey: ["union-members"] });
+          navigate(`/union/socios/${patientId}`);
+        }}
+      />
     </div>
   );
 }
