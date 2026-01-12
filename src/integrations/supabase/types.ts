@@ -10953,6 +10953,7 @@ export type Database = {
         Args: { _clinic_id: string; _user_id: string }
         Returns: boolean
       }
+      has_union_entity_access: { Args: { _user_id: string }; Returns: boolean }
       has_union_module_access: {
         Args: { p_clinic_id: string; p_user_id: string }
         Returns: boolean
