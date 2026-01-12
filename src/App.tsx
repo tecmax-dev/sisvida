@@ -51,6 +51,7 @@ const AwaitingConfirmation = lazy(() => import("./pages/AwaitingConfirmation"));
 
 // Landing Page - Sistema Sindical (página pública independente)
 const SindicalLandingPage = lazy(() => import("./pages/SindicalLandingPage"));
+const SindicalFiliacaoPage = lazy(() => import("./pages/SindicalFiliacaoPage"));
 const PublicPanel = lazy(() => import("./pages/PublicPanel"));
 const PublicTotem = lazy(() => import("./pages/PublicTotem"));
 const CardValidation = lazy(() => import("./pages/CardValidation"));
@@ -136,6 +137,7 @@ import UnionSuppliersPage from "./pages/union/UnionSuppliersPage";
 import UnionNegotiationsPage from "./pages/union/UnionNegotiationsPage";
 import UnionReportsPage from "./pages/union/UnionReportsPage";
 import UnionCategoriesPage from "./pages/union/UnionCategoriesPage";
+import UnionAssociadosPage from "./pages/union/UnionAssociadosPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -249,6 +251,8 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/sindical" element={<SindicalLandingPage />} />
                 <Route path="/sistema-sindical" element={<SindicalLandingPage />} />
+                <Route path="/sindical/filiacao/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
+                <Route path="/sindicato/seja-socio/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
                 <Route path="/entidade-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/login-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/lgpd" element={<LgpdPolicy />} />
