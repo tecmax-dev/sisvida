@@ -688,14 +688,27 @@ Deno.serve(async (req) => {
           newStatus = "overdue";
         }
 
+        // Extrair data de pagamento de forma robusta
+        const paidAtRaw = invoice.paidAt || invoice.paidDate || invoice.paymentDate || invoice.paid_at || 
+          (invoice.payments?.[0]?.date) || (invoice.payment?.date) ||
+          (invoice.status === "paid" ? invoice.updatedAt : null);
+        
+        // Extrair valor pago (converter de Reais para centavos)
+        const paidValueRaw = invoice.payedValue || invoice.paidValue || invoice.paid_value ||
+          (invoice.status === "paid" ? (invoice.totalValue || invoice.total || invoice.amount) : null);
+        
+        // Extrair método de pagamento
+        const paymentMethodRaw = invoice.paymentMethod || invoice.payment_method ||
+          (invoice.payments?.[0]?.method) || (invoice.pix?.code ? "pix" : (invoice.boleto?.barCode ? "boleto" : null));
+
         const { error: updateError2 } = await supabase
           .from("employer_contributions")
           .update({
             status: newStatus,
-            paid_at: invoice.paidAt || null,
-            // Lytex returns payedValue in REAIS, convert to CENTS
-            paid_value: invoice.payedValue ? Math.round(invoice.payedValue * 100) : null,
-            payment_method: invoice.paymentMethod || null,
+            paid_at: paidAtRaw || null,
+            paid_value: paidValueRaw ? Math.round(paidValueRaw * 100) : null,
+            payment_method: paymentMethodRaw || null,
+            lytex_raw_data: invoice, // Salvar dados brutos para debugging
           })
           .eq("id", params.contributionId);
 
@@ -714,12 +727,13 @@ Deno.serve(async (req) => {
           throw new Error("clinicId é obrigatório");
         }
 
+        // Buscar contribuições pendentes OU contribuições pagas sem paid_at preenchido
         const { data: pendingContributions, error: listError } = await supabase
           .from("employer_contributions")
-          .select("id, lytex_invoice_id, status, employer:employers(name, cnpj), value, competence_month, competence_year")
+          .select("id, lytex_invoice_id, status, paid_at, origin, employer:employers(name, cnpj), value, competence_month, competence_year")
           .eq("clinic_id", params.clinicId)
           .not("lytex_invoice_id", "is", null)
-          .in("status", ["pending", "overdue", "processing"]);
+          .or("status.in.(pending,overdue,processing),and(status.eq.paid,paid_at.is.null)");
 
         if (listError) {
           throw new Error("Erro ao buscar contribuições pendentes");
@@ -761,6 +775,77 @@ Deno.serve(async (req) => {
           competence?: string;
         }> = [];
 
+        // Função auxiliar para extrair a data de pagamento de forma robusta
+        // A API Lytex pode retornar em: paidAt, paidDate, paymentDate, payments[0].date
+        const extractPaidDate = (invoice: any): string | null => {
+          // Tentar campos diretos
+          if (invoice.paidAt) return invoice.paidAt;
+          if (invoice.paidDate) return invoice.paidDate;
+          if (invoice.paymentDate) return invoice.paymentDate;
+          if (invoice.paid_at) return invoice.paid_at;
+          if (invoice.paid_date) return invoice.paid_date;
+          
+          // Tentar array de pagamentos
+          if (invoice.payments && Array.isArray(invoice.payments) && invoice.payments.length > 0) {
+            const firstPayment = invoice.payments[0];
+            if (firstPayment.date) return firstPayment.date;
+            if (firstPayment.paidAt) return firstPayment.paidAt;
+            if (firstPayment.createdAt) return firstPayment.createdAt;
+          }
+          
+          // Tentar objeto payment
+          if (invoice.payment) {
+            if (invoice.payment.date) return invoice.payment.date;
+            if (invoice.payment.paidAt) return invoice.payment.paidAt;
+          }
+          
+          // Se status é pago e não tem data, usar updatedAt ou createdAt como fallback
+          if (invoice.status === "paid") {
+            if (invoice.updatedAt) return invoice.updatedAt;
+          }
+          
+          return null;
+        };
+
+        // Função auxiliar para extrair valor pago
+        const extractPaidValue = (invoice: any): number | null => {
+          // Tentar campos diretos (em Reais, converter para centavos)
+          if (invoice.payedValue) return Math.round(invoice.payedValue * 100);
+          if (invoice.paidValue) return Math.round(invoice.paidValue * 100);
+          if (invoice.paid_value) return Math.round(invoice.paid_value * 100);
+          
+          // Tentar total se status é pago
+          if (invoice.status === "paid") {
+            if (invoice.totalValue) return Math.round(invoice.totalValue * 100);
+            if (invoice.total) return Math.round(invoice.total * 100);
+            if (invoice.amount) return Math.round(invoice.amount * 100);
+          }
+          
+          // Tentar soma de pagamentos
+          if (invoice.payments && Array.isArray(invoice.payments)) {
+            const total = invoice.payments.reduce((acc: number, p: any) => acc + (p.value || p.amount || 0), 0);
+            if (total > 0) return Math.round(total * 100);
+          }
+          
+          return null;
+        };
+
+        // Função auxiliar para extrair método de pagamento
+        const extractPaymentMethod = (invoice: any): string | null => {
+          if (invoice.paymentMethod) return invoice.paymentMethod;
+          if (invoice.payment_method) return invoice.payment_method;
+          
+          if (invoice.payments && Array.isArray(invoice.payments) && invoice.payments.length > 0) {
+            return invoice.payments[0].method || invoice.payments[0].type || null;
+          }
+          
+          // Inferir pelo tipo de dados disponíveis
+          if (invoice.pix?.code || invoice.pix?.qrCode) return "pix";
+          if (invoice.boleto?.barCode) return "boleto";
+          
+          return null;
+        };
+
         // Função para sincronizar uma única contribuição
         const syncSingleContrib = async (contrib: any) => {
           const previousStatus = contrib.status;
@@ -782,23 +867,43 @@ Deno.serve(async (req) => {
               newStatus = "overdue";
             }
 
-            if (newStatus !== previousStatus) {
+            // Extrair dados de pagamento de forma robusta
+            const paidAt = extractPaidDate(invoice);
+            const paidValue = extractPaidValue(invoice);
+            const paymentMethod = extractPaymentMethod(invoice);
+
+            // Atualizar sempre que houver mudança de status OU se status é pago e falta data de pagamento
+            const needsUpdate = newStatus !== previousStatus || 
+              (newStatus === "paid" && paidAt) || 
+              (previousStatus === "paid" && !contrib.paid_at && paidAt);
+
+            if (needsUpdate) {
+              const updateData: any = {
+                status: newStatus,
+                lytex_raw_data: invoice, // Salvar dados brutos para debugging
+              };
+              
+              // Só atualizar campos de pagamento se tiver dados
+              if (paidAt) updateData.paid_at = paidAt;
+              if (paidValue) updateData.paid_value = paidValue;
+              if (paymentMethod) updateData.payment_method = paymentMethod;
+              
+              // Se status é pago, garantir origem
+              if (newStatus === "paid") {
+                updateData.origin = contrib.origin || "lytex";
+              }
+
               const { error: updateErr } = await supabase
                 .from("employer_contributions")
-                .update({
-                  status: newStatus,
-                  paid_at: invoice.paidAt || null,
-                  paid_value: invoice.payedValue ? Math.round(invoice.payedValue * 100) : null,
-                  payment_method: invoice.paymentMethod || null,
-                })
+                .update(updateData)
                 .eq("id", contrib.id);
 
               if (updateErr) {
-                return { id: contrib.id, status: newStatus, previousStatus, synced: false, error: updateErr.message, employerName, employerCnpj, value, competence };
+                return { id: contrib.id, status: newStatus, previousStatus, synced: false, error: updateErr.message, employerName, employerCnpj, value, competence, paidAt };
               }
-              return { id: contrib.id, status: newStatus, previousStatus, synced: true, employerName, employerCnpj, value, competence };
+              return { id: contrib.id, status: newStatus, previousStatus, synced: true, employerName, employerCnpj, value, competence, paidAt };
             }
-            return { id: contrib.id, status: newStatus, previousStatus, synced: true, employerName, employerCnpj, value, competence };
+            return { id: contrib.id, status: newStatus, previousStatus, synced: true, employerName, employerCnpj, value, competence, paidAt };
           } catch (e: any) {
             console.error(`[Lytex] Erro ao sincronizar ${contrib.id}:`, e.message);
             return { id: contrib.id, status: previousStatus, previousStatus, synced: false, error: e.message, employerName, employerCnpj, value, competence };
