@@ -1966,6 +1966,75 @@ export type Database = {
         }
         Relationships: []
       }
+      contribution_audit_logs: {
+        Row: {
+          action: string
+          clinic_id: string
+          contribution_id: string
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          new_status: string | null
+          new_value: number | null
+          notes: string | null
+          performed_at: string
+          performed_by: string | null
+          previous_data: Json | null
+          previous_status: string | null
+          previous_value: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          action: string
+          clinic_id: string
+          contribution_id: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          new_status?: string | null
+          new_value?: number | null
+          notes?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          previous_data?: Json | null
+          previous_status?: string | null
+          previous_value?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          action?: string
+          clinic_id?: string
+          contribution_id?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          new_status?: string | null
+          new_value?: number | null
+          notes?: string | null
+          performed_at?: string
+          performed_by?: string | null
+          previous_data?: Json | null
+          previous_status?: string | null
+          previous_value?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contribution_audit_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contribution_audit_logs_contribution_id_fkey"
+            columns: ["contribution_id"]
+            isOneToOne: false
+            referencedRelation: "employer_contributions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contribution_reissue_requests: {
         Row: {
           admin_notes: string | null
@@ -2389,85 +2458,139 @@ export type Database = {
       employer_contributions: {
         Row: {
           active_competence_key: string | null
+          cash_register_id: string | null
           clinic_id: string
           competence_month: number
           competence_year: number
           contribution_type_id: string
           created_at: string
           created_by: string | null
+          divergence_details: Json | null
           due_date: string
           employer_id: string
+          financial_category_id: string | null
+          has_divergence: boolean | null
           id: string
+          imported_at: string | null
+          is_editable: boolean | null
           is_negotiated_debt: boolean | null
+          is_reconciled: boolean | null
           lytex_boleto_barcode: string | null
           lytex_boleto_digitable_line: string | null
+          lytex_fee_amount: number | null
+          lytex_fee_details: Json | null
           lytex_invoice_id: string | null
           lytex_invoice_url: string | null
           lytex_pix_code: string | null
           lytex_pix_qrcode: string | null
+          lytex_raw_data: Json | null
+          lytex_transaction_id: string | null
+          member_id: string | null
           negotiation_id: string | null
+          net_value: number | null
           notes: string | null
+          origin: string | null
           paid_at: string | null
           paid_value: number | null
           payment_method: string | null
           portal_reissue_count: number
+          reconciled_at: string | null
+          reconciled_by: string | null
+          reconciliation_notes: string | null
           status: string
+          union_entity_id: string | null
           updated_at: string
           value: number
         }
         Insert: {
           active_competence_key?: string | null
+          cash_register_id?: string | null
           clinic_id: string
           competence_month: number
           competence_year: number
           contribution_type_id: string
           created_at?: string
           created_by?: string | null
+          divergence_details?: Json | null
           due_date: string
           employer_id: string
+          financial_category_id?: string | null
+          has_divergence?: boolean | null
           id?: string
+          imported_at?: string | null
+          is_editable?: boolean | null
           is_negotiated_debt?: boolean | null
+          is_reconciled?: boolean | null
           lytex_boleto_barcode?: string | null
           lytex_boleto_digitable_line?: string | null
+          lytex_fee_amount?: number | null
+          lytex_fee_details?: Json | null
           lytex_invoice_id?: string | null
           lytex_invoice_url?: string | null
           lytex_pix_code?: string | null
           lytex_pix_qrcode?: string | null
+          lytex_raw_data?: Json | null
+          lytex_transaction_id?: string | null
+          member_id?: string | null
           negotiation_id?: string | null
+          net_value?: number | null
           notes?: string | null
+          origin?: string | null
           paid_at?: string | null
           paid_value?: number | null
           payment_method?: string | null
           portal_reissue_count?: number
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciliation_notes?: string | null
           status?: string
+          union_entity_id?: string | null
           updated_at?: string
           value: number
         }
         Update: {
           active_competence_key?: string | null
+          cash_register_id?: string | null
           clinic_id?: string
           competence_month?: number
           competence_year?: number
           contribution_type_id?: string
           created_at?: string
           created_by?: string | null
+          divergence_details?: Json | null
           due_date?: string
           employer_id?: string
+          financial_category_id?: string | null
+          has_divergence?: boolean | null
           id?: string
+          imported_at?: string | null
+          is_editable?: boolean | null
           is_negotiated_debt?: boolean | null
+          is_reconciled?: boolean | null
           lytex_boleto_barcode?: string | null
           lytex_boleto_digitable_line?: string | null
+          lytex_fee_amount?: number | null
+          lytex_fee_details?: Json | null
           lytex_invoice_id?: string | null
           lytex_invoice_url?: string | null
           lytex_pix_code?: string | null
           lytex_pix_qrcode?: string | null
+          lytex_raw_data?: Json | null
+          lytex_transaction_id?: string | null
+          member_id?: string | null
           negotiation_id?: string | null
+          net_value?: number | null
           notes?: string | null
+          origin?: string | null
           paid_at?: string | null
           paid_value?: number | null
           payment_method?: string | null
           portal_reissue_count?: number
+          reconciled_at?: string | null
+          reconciled_by?: string | null
+          reconciliation_notes?: string | null
           status?: string
+          union_entity_id?: string | null
           updated_at?: string
           value?: number
         }
@@ -2494,10 +2617,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employer_contributions_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "employer_contributions_negotiation_id_fkey"
             columns: ["negotiation_id"]
             isOneToOne: false
             referencedRelation: "debt_negotiations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employer_contributions_union_entity_id_fkey"
+            columns: ["union_entity_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
             referencedColumns: ["id"]
           },
         ]
