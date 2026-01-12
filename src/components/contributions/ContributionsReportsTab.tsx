@@ -73,6 +73,12 @@ interface Contribution {
   paid_at: string | null;
   paid_value: number | null;
   payment_method?: string | null;
+  origin?: string;
+  lytex_fee_amount?: number | null;
+  net_value?: number | null;
+  is_reconciled?: boolean;
+  has_divergence?: boolean;
+  lytex_invoice_id?: string | null;
   employers?: Employer;
   contribution_types?: ContributionType;
 }
@@ -117,6 +123,7 @@ export default function ContributionsReportsTab({
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
   const [contributionTypeFilter, setContributionTypeFilter] = useState<string>("all");
+  const [originFilter, setOriginFilter] = useState<string>("all");
 
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -138,9 +145,10 @@ export default function ContributionsReportsTab({
       const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
       const matchesEmployer = !selectedEmployer || c.employer_id === selectedEmployer.id;
       const matchesType = contributionTypeFilter === "all" || c.contribution_type_id === contributionTypeFilter;
-      return matchesYear && matchesMonth && matchesStatus && matchesEmployer && matchesType;
+      const matchesOrigin = originFilter === "all" || c.origin === originFilter;
+      return matchesYear && matchesMonth && matchesStatus && matchesEmployer && matchesType && matchesOrigin;
     });
-  }, [contributions, yearFilter, monthFilter, statusFilter, selectedEmployer, contributionTypeFilter]);
+  }, [contributions, yearFilter, monthFilter, statusFilter, selectedEmployer, contributionTypeFilter, originFilter]);
 
   // Report by employer
   const byEmployerReport = useMemo(() => {
@@ -182,7 +190,7 @@ export default function ContributionsReportsTab({
     return Array.from(data.values()).sort((a, b) => b.total - a.total);
   }, [filteredContributions]);
 
-  // Summary totals
+  // Summary totals with fees
   const summary = useMemo(() => {
     const total = filteredContributions.reduce((acc, c) => acc + c.value, 0);
     const paid = filteredContributions
@@ -194,8 +202,14 @@ export default function ContributionsReportsTab({
     const overdue = filteredContributions
       .filter((c) => c.status === "overdue")
       .reduce((acc, c) => acc + c.value, 0);
+    
+    // Novos totais: taxas e valor líquido
+    const totalFees = filteredContributions.reduce((acc, c) => acc + (c.lytex_fee_amount || 0), 0);
+    const totalNet = filteredContributions
+      .filter((c) => c.status === "paid")
+      .reduce((acc, c) => acc + (c.net_value || c.paid_value || c.value), 0);
 
-    return { total, paid, pending, overdue, count: filteredContributions.length };
+    return { total, paid, pending, overdue, count: filteredContributions.length, totalFees, totalNet };
   }, [filteredContributions]);
 
   const periodLabel = useMemo(() => {
@@ -360,6 +374,19 @@ export default function ContributionsReportsTab({
               </SelectContent>
             </Select>
 
+            {/* Origin Filter */}
+            <Select value={originFilter} onValueChange={setOriginFilter}>
+              <SelectTrigger className="w-[130px]">
+                <SelectValue placeholder="Origem" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas origens</SelectItem>
+                <SelectItem value="lytex">Lytex</SelectItem>
+                <SelectItem value="manual">Manual</SelectItem>
+                <SelectItem value="import">Importação</SelectItem>
+              </SelectContent>
+            </Select>
+
             {/* Export Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -399,30 +426,42 @@ export default function ContributionsReportsTab({
       </Card>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <Card className="border-l-4 border-l-slate-600">
-          <CardContent className="p-4">
-            <p className="text-xs text-muted-foreground">Total Geral</p>
-            <p className="text-2xl font-bold">{formatCurrency(summary.total)}</p>
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Total Bruto</p>
+            <p className="text-xl font-bold">{formatCurrency(summary.total)}</p>
             <p className="text-xs text-muted-foreground">{summary.count} contribuições</p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-emerald-500">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <p className="text-xs text-muted-foreground">Recebido</p>
-            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(summary.paid)}</p>
+            <p className="text-xl font-bold text-emerald-600">{formatCurrency(summary.paid)}</p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-amber-500">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Taxas Lytex</p>
+            <p className="text-xl font-bold text-amber-600">{formatCurrency(summary.totalFees)}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-3">
+            <p className="text-xs text-muted-foreground">Líquido</p>
+            <p className="text-xl font-bold text-blue-600">{formatCurrency(summary.totalNet)}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-orange-500">
+          <CardContent className="p-3">
             <p className="text-xs text-muted-foreground">Pendente</p>
-            <p className="text-2xl font-bold text-amber-600">{formatCurrency(summary.pending)}</p>
+            <p className="text-xl font-bold text-orange-600">{formatCurrency(summary.pending)}</p>
           </CardContent>
         </Card>
         <Card className="border-l-4 border-l-rose-500">
-          <CardContent className="p-4">
+          <CardContent className="p-3">
             <p className="text-xs text-muted-foreground">Vencido</p>
-            <p className="text-2xl font-bold text-rose-600">{formatCurrency(summary.overdue)}</p>
+            <p className="text-xl font-bold text-rose-600">{formatCurrency(summary.overdue)}</p>
           </CardContent>
         </Card>
       </div>

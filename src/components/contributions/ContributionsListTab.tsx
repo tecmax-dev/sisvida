@@ -78,6 +78,18 @@ interface Contribution {
   status: string;
   lytex_invoice_id: string | null;
   lytex_invoice_url: string | null;
+  paid_at?: string | null;
+  paid_value?: number | null;
+  payment_method?: string | null;
+  origin?: string;
+  lytex_fee_amount?: number | null;
+  net_value?: number | null;
+  is_reconciled?: boolean;
+  has_divergence?: boolean;
+  is_editable?: boolean;
+  imported_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
   employers?: Employer;
   contribution_types?: ContributionType;
 }

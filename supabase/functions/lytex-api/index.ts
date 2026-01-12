@@ -1345,6 +1345,16 @@ Deno.serve(async (req) => {
                   console.log(`[Lytex] Tipo não mapeado para "${orderName}", usando Mensalidade como padrão`);
                 }
 
+                // Calcular taxas e valor líquido
+                // Lytex pode retornar fee, fees, ou taxas em campos específicos
+                const lytexFeeAmount = Math.round(
+                  (invoice.fee || invoice.fees?.total || invoice.taxas?.total || 0) * 100
+                );
+                const lytexFeeDetails = invoice.fees || invoice.taxas || null;
+                // Valor líquido = valor pago - taxas (ou valor bruto se não pago)
+                const paidValueCents = invoice.payedValue ? Math.round(invoice.payedValue * 100) : null;
+                const netValue = paidValueCents ? paidValueCents - lytexFeeAmount : null;
+
                 const patch = {
                   clinic_id: params.clinicId,
                   employer_id: employerId,
@@ -1363,8 +1373,27 @@ Deno.serve(async (req) => {
                   lytex_pix_qrcode: invoice.pix?.qrCode || null,
                   paid_at: invoice.paidAt || null,
                   // Lytex returns payedValue in REAIS, convert to CENTS
-                  paid_value: invoice.payedValue ? Math.round(invoice.payedValue * 100) : null,
+                  paid_value: paidValueCents,
                   payment_method: invoice.paymentMethod || null,
+                  // Novos campos para rastreabilidade financeira
+                  origin: "lytex" as const,
+                  lytex_transaction_id: invoice.transactionId || invoice._id,
+                  lytex_fee_amount: lytexFeeAmount,
+                  lytex_fee_details: lytexFeeDetails,
+                  net_value: netValue,
+                  imported_at: new Date().toISOString(),
+                  lytex_raw_data: {
+                    _id: invoice._id,
+                    status: invoice.status,
+                    dueDate: invoice.dueDate,
+                    paidAt: invoice.paidAt,
+                    payedValue: invoice.payedValue,
+                    paymentMethod: invoice.paymentMethod,
+                    client: invoice.client ? { cpfCnpj: invoice.client.cpfCnpj, name: invoice.client.name } : null,
+                    items: invoice.items,
+                    fees: invoice.fees || invoice.taxas,
+                  },
+                  is_editable: false, // Bloquear edição de dados críticos da Lytex
                 };
 
                 const key = `${employerId}|${contributionTypeId}|${competenceMonth}|${competenceYear}`;
