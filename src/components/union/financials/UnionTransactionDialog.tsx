@@ -27,6 +27,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { UnionSupplierCombobox } from "./UnionSupplierCombobox";
+import { UnionSupplierDialog } from "./UnionSupplierDialog";
 
 interface UnionTransactionDialogProps {
   open: boolean;
@@ -60,6 +62,7 @@ export function UnionTransactionDialog({
   const [type, setType] = useState<"income" | "expense">(defaultType);
   const [dueDate, setDueDate] = useState<Date | undefined>(new Date());
   const [paidDate, setPaidDate] = useState<Date | undefined>();
+  const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
 
   const [formData, setFormData] = useState({
     description: "",
@@ -108,22 +111,11 @@ export function UnionTransactionDialog({
     enabled: open && !!clinicId,
   });
 
-  // Fetch suppliers (only for expenses)
-  const { data: suppliers } = useQuery({
-    queryKey: ["union-suppliers", clinicId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("union_suppliers")
-        .select("*")
-        .eq("clinic_id", clinicId)
-        .eq("is_active", true)
-        .order("name");
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: open && !!clinicId && type === "expense",
-  });
+  // Supplier refresh handler
+  const handleSupplierCreated = () => {
+    queryClient.invalidateQueries({ queryKey: ["union-suppliers", clinicId] });
+    setSupplierDialogOpen(false);
+  };
 
   useEffect(() => {
     if (transaction) {
@@ -218,6 +210,7 @@ export function UnionTransactionDialog({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -342,21 +335,13 @@ export function UnionTransactionDialog({
             {type === "expense" && (
               <div>
                 <Label>Fornecedor</Label>
-                <Select
+                <UnionSupplierCombobox
                   value={formData.supplier_id}
-                  onValueChange={(value) => setFormData({ ...formData, supplier_id: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {suppliers?.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(value) => setFormData({ ...formData, supplier_id: value })}
+                  clinicId={clinicId}
+                  placeholder="Buscar fornecedor..."
+                  onAddNew={() => setSupplierDialogOpen(true)}
+                />
               </div>
             )}
 
@@ -457,5 +442,15 @@ export function UnionTransactionDialog({
         </form>
       </DialogContent>
     </Dialog>
+
+    {/* Dialog para novo fornecedor */}
+    <UnionSupplierDialog
+      open={supplierDialogOpen}
+      onOpenChange={setSupplierDialogOpen}
+      supplier={null}
+      clinicId={clinicId}
+      onSuccess={handleSupplierCreated}
+    />
+  </>
   );
 }
