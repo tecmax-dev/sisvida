@@ -85,6 +85,8 @@ export default function ContributionsPage() {
   const [loading, setLoading] = useState(true);
   const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
   const [activeTab, setActiveTab] = useState("overview");
+  const [detectedYear, setDetectedYear] = useState<number | null>(null);
+  const [yearDetectionDone, setYearDetectionDone] = useState(false);
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -102,11 +104,50 @@ export default function ContributionsPage() {
   const [currentSyncLogId, setCurrentSyncLogId] = useState<string | null>(null);
   const [currentActionType, setCurrentActionType] = useState<LytexActionType>("import");
 
+  // Detectar o ano com mais dados quando não há dados no ano atual
   useEffect(() => {
-    if (currentClinic) {
+    if (currentClinic && !yearDetectionDone) {
+      detectBestYear();
+    }
+  }, [currentClinic]);
+
+  const detectBestYear = async () => {
+    if (!currentClinic?.id) return;
+
+    // Verificar se há dados no ano atual
+    const { count } = await supabase
+      .from("employer_contributions")
+      .select("*", { count: "exact", head: true })
+      .eq("clinic_id", currentClinic.id)
+      .eq("competence_year", new Date().getFullYear());
+
+    if (count && count > 0) {
+      setYearFilter(new Date().getFullYear());
+      setYearDetectionDone(true);
+      return;
+    }
+
+    // Se não há dados no ano atual, buscar o ano mais recente com dados
+    const { data } = await supabase
+      .from("employer_contributions")
+      .select("competence_year")
+      .eq("clinic_id", currentClinic.id)
+      .order("competence_year", { ascending: false })
+      .limit(1);
+
+    if (data && data.length > 0) {
+      const bestYear = data[0].competence_year;
+      setYearFilter(bestYear);
+      setDetectedYear(bestYear);
+    }
+    setYearDetectionDone(true);
+  };
+
+  useEffect(() => {
+    if (currentClinic && yearDetectionDone) {
       fetchData();
     }
-  }, [currentClinic, yearFilter]);
+  }, [currentClinic, yearFilter, yearDetectionDone]);
 
   const fetchData = async () => {
     if (!currentClinic) return;
