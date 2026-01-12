@@ -88,27 +88,33 @@ export function openWhatsAppChat(phone: string, message: string): void {
   window.open(`https://wa.me/${formattedPhone}?text=${encodedMessage}`, "_blank");
 }
 
-// Log notification
+// Log notification to the new homologacao_notification_logs table
 export async function logHomologacaoNotification(
   appointmentId: string,
   clinicId: string,
   channel: "whatsapp" | "email",
-  status: "sent" | "failed",
-  recipientPhone: string,
-  message: string,
-  errorMessage?: string
+  status: "sent" | "pending" | "failed",
+  recipientPhone?: string,
+  recipientEmail?: string,
+  message?: string,
+  errorMessage?: string,
+  protocolSent?: boolean
 ): Promise<void> {
   try {
-    await supabase.from("homologacao_notifications").insert({
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    await supabase.from("homologacao_notification_logs").insert({
       appointment_id: appointmentId,
       clinic_id: clinicId,
-      recipient_type: channel === "whatsapp" ? "company" : "email",
-      recipient_phone: recipientPhone,
-      message,
+      channel,
+      recipient_phone: recipientPhone || null,
+      recipient_email: recipientEmail || null,
+      message: message || null,
       status,
-      sent_at: new Date().toISOString(),
+      sent_at: status === "sent" ? new Date().toISOString() : null,
       error_message: errorMessage || null,
-      protocol_sent: channel === "email",
+      protocol_sent: protocolSent || false,
+      created_by: user?.id || null,
     });
   } catch (err) {
     console.error("Failed to log homologacao notification:", err);

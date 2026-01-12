@@ -60,8 +60,10 @@ interface HomologacaoAppointmentCardProps {
 const statusConfig: Record<string, { icon: typeof Clock; color: string; bgColor: string; label: string }> = {
   scheduled: { icon: AlertCircle, color: "text-amber-600", bgColor: "bg-amber-100", label: "Agendado" },
   confirmed: { icon: CheckCircle2, color: "text-blue-600", bgColor: "bg-blue-100", label: "Confirmado" },
+  attended: { icon: CheckCircle2, color: "text-green-600", bgColor: "bg-green-100", label: "Atendido" },
   completed: { icon: CheckCircle2, color: "text-green-600", bgColor: "bg-green-100", label: "Realizado" },
   cancelled: { icon: XCircle, color: "text-red-600", bgColor: "bg-red-100", label: "Cancelado" },
+  deleted: { icon: Trash2, color: "text-gray-600", bgColor: "bg-gray-100", label: "Excluído" },
   no_show: { icon: XCircle, color: "text-orange-600", bgColor: "bg-orange-100", label: "Faltou" },
 };
 
@@ -76,7 +78,7 @@ export function HomologacaoAppointmentCard({
 }: HomologacaoAppointmentCardProps) {
   const config = statusConfig[appointment.status] || statusConfig.scheduled;
   const StatusIcon = config.icon;
-  const isActive = appointment.status !== "cancelled" && appointment.status !== "completed";
+  const isActive = !["cancelled", "completed", "attended", "deleted"].includes(appointment.status);
 
   return (
     <div className="flex items-start justify-between gap-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors">

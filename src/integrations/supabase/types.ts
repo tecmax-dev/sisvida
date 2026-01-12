@@ -3500,6 +3500,69 @@ export type Database = {
           },
         ]
       }
+      homologacao_notification_logs: {
+        Row: {
+          appointment_id: string | null
+          channel: string
+          clinic_id: string
+          created_at: string | null
+          created_by: string | null
+          error_message: string | null
+          id: string
+          message: string | null
+          protocol_sent: boolean | null
+          recipient_email: string | null
+          recipient_phone: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          channel: string
+          clinic_id: string
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string | null
+          protocol_sent?: boolean | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          channel?: string
+          clinic_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          error_message?: string | null
+          id?: string
+          message?: string | null
+          protocol_sent?: boolean | null
+          recipient_email?: string | null
+          recipient_phone?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homologacao_notification_logs_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "homologacao_appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homologacao_notification_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       homologacao_notifications: {
         Row: {
           appointment_id: string
@@ -11360,6 +11423,10 @@ export type Database = {
             Args: { _union_entity_id: string; _user_id: string }
             Returns: boolean
           }
+      has_union_homologacao_access: {
+        Args: { _clinic_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_union_module_access: {
         Args: { p_clinic_id: string; p_user_id: string }
         Returns: boolean
