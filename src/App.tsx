@@ -133,6 +133,8 @@ import UnionFinancialsPage from "./pages/union/UnionFinancialsPage";
 import UnionExpensesPage from "./pages/union/UnionExpensesPage";
 import UnionIncomePage from "./pages/union/UnionIncomePage";
 import UnionCashFlowPage from "./pages/union/UnionCashFlowPage";
+import UnionStatementPage from "./pages/union/UnionStatementPage";
+import UnionReconciliationPage from "./pages/union/UnionReconciliationPage";
 import UnionCashRegistersPage from "./pages/union/UnionCashRegistersPage";
 import UnionSuppliersPage from "./pages/union/UnionSuppliersPage";
 import UnionNegotiationsPage from "./pages/union/UnionNegotiationsPage";
@@ -437,11 +439,13 @@ const App = () => (
                   <Route path="financeiro" element={<UnionFinancialsPage />} />
                   <Route path="financeiro/despesas" element={<UnionExpensesPage />} />
                   <Route path="financeiro/receitas" element={<UnionIncomePage />} />
+                  <Route path="financeiro/movimentacao" element={<UnionStatementPage />} />
                   <Route path="financeiro/fluxo-caixa" element={<UnionCashFlowPage />} />
                   <Route path="financeiro/contas" element={<UnionCashRegistersPage />} />
                   <Route path="financeiro/fornecedores" element={<UnionSuppliersPage />} />
                   <Route path="financeiro/categorias" element={<UnionCategoriesPage />} />
                   <Route path="financeiro/plano-contas" element={<UnionChartOfAccountsPage />} />
+                  <Route path="financeiro/conciliacao" element={<UnionReconciliationPage />} />
                   <Route path="financeiro/relatorios" element={<UnionReportsPage />} />
                   <Route path="negociacoes" element={<UnionNegotiationsPage />} />
                   <Route path="negociacoes/parcelamentos" element={<UnionNegotiationsPage />} />
