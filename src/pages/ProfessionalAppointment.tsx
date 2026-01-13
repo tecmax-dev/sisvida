@@ -30,6 +30,7 @@ interface Patient {
 interface Dependent {
   id: string;
   name: string;
+  birth_date: string | null;
 }
 
 interface Appointment {
@@ -172,7 +173,7 @@ export default function ProfessionalAppointment() {
         appointment_date, start_time, end_time, type, status,
         started_at, completed_at,
         patient:patients (id, name, birth_date, phone, email, created_at, insurance_plan_id),
-        dependent:patient_dependents!appointments_dependent_id_fkey (id, name)
+        dependent:patient_dependents!appointments_dependent_id_fkey (id, name, birth_date)
       `)
       .eq('id', appointmentId)
       .eq('professional_id', prof.id)
@@ -194,7 +195,7 @@ export default function ProfessionalAppointment() {
       console.warn('[ProfessionalAppointment] Fallback: buscando dependente', apt.dependent_id);
       const { data: depFallback } = await supabase
         .from('patient_dependents')
-        .select('id, name')
+        .select('id, name, birth_date')
         .eq('id', apt.dependent_id)
         .maybeSingle();
 
@@ -490,7 +491,7 @@ export default function ProfessionalAppointment() {
                     ? {
                         id: appointment.dependent.id,
                         name: appointment.dependent.name,
-                        birth_date: null,
+                        birth_date: appointment.dependent.birth_date,
                         phone: appointment.patient.phone,
                         email: appointment.patient.email,
                         created_at: appointment.patient.created_at,
