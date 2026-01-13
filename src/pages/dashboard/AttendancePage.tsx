@@ -77,6 +77,7 @@ interface Patient {
 interface Dependent {
   id: string;
   name: string;
+  birth_date: string | null;
 }
 
 interface Procedure {
@@ -288,7 +289,7 @@ export default function AttendancePage() {
           type, status, notes, started_at, completed_at, duration_minutes,
           procedure_id, professional_id, clinic_id,
           patient:patients(id, name, phone, email, birth_date),
-          dependent:patient_dependents!appointments_dependent_id_fkey(id, name),
+          dependent:patient_dependents!appointments_dependent_id_fkey(id, name, birth_date),
           procedure:procedures(id, name, price)
         `)
         .eq("id", appointmentId)
@@ -309,7 +310,7 @@ export default function AttendancePage() {
       if (data.dependent_id && !dependentData) {
         const { data: depFallback, error: depError } = await supabase
           .from("patient_dependents")
-          .select("id, name")
+          .select("id, name, birth_date")
           .eq("id", data.dependent_id)
           .maybeSingle();
 
@@ -967,10 +968,17 @@ export default function AttendancePage() {
     );
   }
 
-  // Calculate patient age
+  // Calculate patient age (titular vs dependente)
+  const getDisplayBirthDate = (): string | null => {
+    if (!appointment) return null;
+    if (appointment.dependent_id) return appointment.dependent?.birth_date ?? null;
+    return appointment.patient.birth_date;
+  };
+
   const getPatientAge = () => {
-    if (!appointment?.patient?.birth_date) return null;
-    const birthDate = new Date(appointment.patient.birth_date + "T12:00:00");
+    const birth = getDisplayBirthDate();
+    if (!birth) return null;
+    const birthDate = new Date(birth + "T12:00:00");
     const today = new Date();
     const years = today.getFullYear() - birthDate.getFullYear();
     const months = today.getMonth() - birthDate.getMonth();

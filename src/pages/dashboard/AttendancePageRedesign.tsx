@@ -87,6 +87,7 @@ interface Patient {
 interface Dependent {
   id: string;
   name: string;
+  birth_date: string | null;
 }
 
 interface Procedure {
@@ -256,6 +257,12 @@ export default function AttendancePageRedesign() {
     return apt.dependent_id && apt.dependent?.name ? apt.dependent.name : apt.patient.name;
   };
 
+  const getDisplayBirthDate = (apt: Appointment | null): string | null => {
+    if (!apt) return null;
+    if (apt.dependent_id) return apt.dependent?.birth_date ?? null;
+    return apt.patient.birth_date;
+  };
+
   useEffect(() => {
     if (!printDialogOpen) return;
     if (!clinic || !appointment) return;
@@ -310,7 +317,7 @@ export default function AttendancePageRedesign() {
           type, status, notes, started_at, completed_at, duration_minutes,
           procedure_id, professional_id, clinic_id,
           patient:patients(id, name, phone, email, birth_date),
-          dependent:patient_dependents!appointments_dependent_id_fkey(id, name),
+          dependent:patient_dependents!appointments_dependent_id_fkey(id, name, birth_date),
           procedure:procedures(id, name, price)
         `)
         .eq("id", appointmentId)
@@ -331,7 +338,7 @@ export default function AttendancePageRedesign() {
       if (data.dependent_id && !dependentData) {
         const { data: depFallback, error: depError } = await supabase
           .from("patient_dependents")
-          .select("id, name")
+          .select("id, name, birth_date")
           .eq("id", data.dependent_id)
           .maybeSingle();
 
@@ -1316,9 +1323,13 @@ export default function AttendancePageRedesign() {
                               <span className="text-[10px] md:text-xs font-medium uppercase tracking-wide">Idade</span>
                             </div>
                             <p className={cn("font-bold text-foreground", isMobile ? "text-sm" : "text-lg")}>
-                              {isMobile && appointment.patient.birth_date 
-                                ? `${differenceInYears(new Date(), new Date(appointment.patient.birth_date))} anos`
-                                : getPatientAge(appointment.patient.birth_date) || "N/I"}
+                              {(() => {
+                                const birth = getDisplayBirthDate(appointment);
+                                if (!birth) return "N/I";
+                                return isMobile
+                                  ? `${differenceInYears(new Date(), new Date(birth))} anos`
+                                  : getPatientAge(birth) || "N/I";
+                              })()}
                             </p>
                           </div>
 
