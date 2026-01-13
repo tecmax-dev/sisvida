@@ -1263,7 +1263,19 @@ export default function AttendancePageRedesign() {
                     </Button>
                     <h1 className={cn("font-semibold", isMobile ? "text-lg" : "text-xl")}>Resumo do Paciente</h1>
                   </div>
-                  <Button variant="outline" size={isMobile ? "sm" : "default"} onClick={() => navigate(`/dashboard/patients/${appointment.patient_id}`)}>
+                  <Button 
+                    variant="outline" 
+                    size={isMobile ? "sm" : "default"} 
+                    onClick={() => {
+                      // For dependents, navigate with dependent context
+                      // For titulars, navigate directly
+                      if (appointment?.dependent_id) {
+                        navigate(`/dashboard/patients/${appointment.patient_id}/edit?tab=cadastro&dependentes=true&editDependent=${appointment.dependent_id}`);
+                      } else {
+                        navigate(`/dashboard/patients/${appointment?.patient_id}`);
+                      }
+                    }}
+                  >
                     <Eye className="h-4 w-4 mr-1.5" />
                     Visualizar Cadastro
                   </Button>
