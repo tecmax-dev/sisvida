@@ -74,6 +74,11 @@ interface Patient {
   birth_date: string | null;
 }
 
+interface Dependent {
+  id: string;
+  name: string;
+}
+
 interface Procedure {
   id: string;
   name: string;
@@ -83,6 +88,7 @@ interface Procedure {
 interface Appointment {
   id: string;
   patient_id: string;
+  dependent_id: string | null;
   appointment_date: string;
   start_time: string;
   end_time: string;
@@ -95,6 +101,7 @@ interface Appointment {
   procedure_id: string | null;
   procedure?: Procedure | null;
   patient: Patient;
+  dependent?: Dependent | null;
   professional_id: string;
   clinic_id: string;
 }
@@ -158,6 +165,12 @@ export default function AttendancePage() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { currentClinic } = useAuth();
+
+  // Helper to get the correct display name (dependent or titular)
+  const getDisplayName = (apt: Appointment | null) => {
+    if (!apt) return "";
+    return apt.dependent_id && apt.dependent?.name ? apt.dependent.name : apt.patient.name;
+  };
   
   const [appointment, setAppointment] = useState<Appointment | null>(null);
   const [loadingAppointment, setLoadingAppointment] = useState(true);
@@ -234,7 +247,7 @@ export default function AttendancePage() {
         cnpj: clinic.cnpj || undefined,
       },
       clinicId: appointment.clinic_id,
-      patient: { name: appointment.patient.name, phone: appointment.patient.phone },
+      patient: { name: getDisplayName(appointment), phone: appointment.patient.phone },
       patientId: appointment.patient_id,
       professional: professional
         ? {
@@ -271,10 +284,11 @@ export default function AttendancePage() {
       const { data, error } = await supabase
         .from("appointments")
         .select(`
-          id, patient_id, appointment_date, start_time, end_time,
+          id, patient_id, dependent_id, appointment_date, start_time, end_time,
           type, status, notes, started_at, completed_at, duration_minutes,
           procedure_id, professional_id, clinic_id,
           patient:patients(id, name, phone, email, birth_date),
+          dependent:patient_dependents!appointments_dependent_id_fkey(id, name),
           procedure:procedures(id, name, price)
         `)
         .eq("id", appointmentId)
@@ -289,10 +303,28 @@ export default function AttendancePage() {
         navigate("/dashboard/calendar");
         return;
       }
+
+      // Fallback: se dependent_id existe mas o join veio null
+      let dependentData = (data as any).dependent as Dependent | null | undefined;
+      if (data.dependent_id && !dependentData) {
+        const { data: depFallback, error: depError } = await supabase
+          .from("patient_dependents")
+          .select("id, name")
+          .eq("id", data.dependent_id)
+          .maybeSingle();
+
+        if (depError) {
+          console.warn("[AttendancePage] Falha ao buscar dependente (fallback):", depError.message);
+        } else {
+          dependentData = (depFallback as any) || null;
+        }
+      }
       
       setAppointment({
-        ...data,
+        ...(data as any),
+        dependent_id: data.dependent_id || null,
         patient: data.patient as Patient,
+        dependent: dependentData || null,
         procedure: data.procedure as Procedure | null,
       });
       setExamWhatsappPhone((data.patient as Patient)?.phone || "");
@@ -389,8 +421,8 @@ export default function AttendancePage() {
         setAnamnesis(anamnesisData);
       }
 
-      // Load medical history (all records, most recent first)
-      const { data: historyData } = await supabase
+      // Load medical history - filter by dependent_id if applicable
+      let historyQuery = supabase
         .from("medical_records")
         .select(`
           id, record_date, chief_complaint, diagnosis, treatment_plan,
@@ -398,10 +430,19 @@ export default function AttendancePage() {
           professional:professionals(id, name),
           appointment:appointments(type, appointment_date)
         `)
-        .eq("patient_id", appointment.patient_id)
         .eq("clinic_id", appointment.clinic_id)
         .order("record_date", { ascending: false })
         .order("created_at", { ascending: false });
+
+      // If appointment is for a dependent, show only their records
+      // Otherwise, show titular records (where dependent_id is null)
+      if (appointment.dependent_id) {
+        historyQuery = historyQuery.eq("dependent_id", appointment.dependent_id);
+      } else {
+        historyQuery = historyQuery.eq("patient_id", appointment.patient_id).is("dependent_id", null);
+      }
+
+      const { data: historyData } = await historyQuery;
 
       if (historyData) {
         setMedicalHistory(historyData as MedicalRecord[]);
@@ -471,6 +512,7 @@ export default function AttendancePage() {
         .upsert({
           clinic_id: appointment.clinic_id,
           patient_id: appointment.patient_id,
+          dependent_id: appointment.dependent_id || null,
           professional_id: appointment.professional_id,
           appointment_id: appointment.id,
           record_date: new Date().toISOString().split("T")[0],
@@ -978,7 +1020,15 @@ export default function AttendancePage() {
         <Button 
           variant="outline" 
           size="sm"
-          onClick={() => navigate(`/dashboard/patients/${appointment.patient_id}/edit`)}
+          onClick={() => {
+            // For dependents, navigate with dependent context
+            // For titulars, navigate directly
+            if (appointment?.dependent_id) {
+              navigate(`/dashboard/patients/${appointment.patient_id}/edit?tab=cadastro&dependentes=true&editDependent=${appointment.dependent_id}`);
+            } else {
+              navigate(`/dashboard/patients/${appointment?.patient_id}/edit`);
+            }
+          }}
         >
           Visualizar Cadastro
         </Button>

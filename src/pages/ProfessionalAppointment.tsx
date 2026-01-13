@@ -331,7 +331,7 @@ export default function ProfessionalAppointment() {
     }
 
     if (appointment && professional) {
-      await loadMedicalRecords(appointment.patient_id, professional.clinic_id);
+      await loadMedicalRecords(appointment.patient_id, professional.clinic_id, appointment.dependent_id || null);
     }
     toast({ title: "Registro atualizado!" });
   };
@@ -392,7 +392,13 @@ export default function ProfessionalAppointment() {
 
   const handleViewProfile = () => {
     if (appointment) {
-      window.open(`/dashboard/patients/${appointment.patient_id}/edit`, '_blank');
+      // For dependents, navigate to the dependent's holder page with dependent context
+      // For titulars, navigate directly to their page
+      if (appointment.dependent_id) {
+        window.open(`/dashboard/patients/${appointment.patient_id}/edit?tab=cadastro&dependentes=true&editDependent=${appointment.dependent_id}`, '_blank');
+      } else {
+        window.open(`/dashboard/patients/${appointment.patient_id}/edit`, '_blank');
+      }
     }
   };
 
