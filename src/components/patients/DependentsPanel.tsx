@@ -94,12 +94,18 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
 
   const fetchDependents = async () => {
     try {
-      const { data, error } = await supabase
+      // Se veio um dependente específico via URL (editDependent), precisamos buscar também inativos
+      // para conseguir abrir o formulário em modo de edição.
+      let query = supabase
         .from("patient_dependents")
         .select("*")
-        .eq("patient_id", patientId)
-        .eq("is_active", true)
-        .order("name");
+        .eq("patient_id", patientId);
+
+      if (!editDependentParam) {
+        query = query.eq("is_active", true);
+      }
+
+      const { data, error } = await query.order("name");
 
       if (error) throw error;
       const list = (data || []) as Dependent[];
