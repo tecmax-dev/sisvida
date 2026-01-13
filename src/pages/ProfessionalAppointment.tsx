@@ -392,15 +392,19 @@ export default function ProfessionalAppointment() {
   };
 
   const handleViewProfile = () => {
-    if (appointment) {
-      // For dependents, navigate to the dependent's holder page with dependent context
-      // For titulars, navigate directly to their page
-      if (appointment.dependent_id) {
-        window.open(`/dashboard/patients/${appointment.patient_id}/edit?tab=cadastro&dependentes=true&editDependent=${appointment.dependent_id}`, '_blank');
-      } else {
-        window.open(`/dashboard/patients/${appointment.patient_id}/edit`, '_blank');
-      }
+    if (!appointment) return;
+
+    // Titular: abre o cadastro do próprio paciente.
+    // Dependente: abre o cadastro do titular já na aba de dependentes e com o dependente pré-selecionado para edição.
+    if (appointment.dependent_id) {
+      window.open(
+        `/dashboard/patients/${appointment.patient_id}/edit?tab=dependentes&dependentes=true&editDependent=${appointment.dependent_id}`,
+        '_blank'
+      );
+      return;
     }
+
+    window.open(`/dashboard/patients/${appointment.patient_id}/edit`, '_blank');
   };
 
   const filteredRecords = filterType === 'all' 
