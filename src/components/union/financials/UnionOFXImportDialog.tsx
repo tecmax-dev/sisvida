@@ -53,7 +53,7 @@ interface UnionOFXImportDialogProps {
     fileName: string;
     cashRegisterId: string;
     userId: string;
-  }) => Promise<void>;
+  }) => Promise<{ importRecord: any; autoReconciled: number; total: number }>;
   isImporting: boolean;
   userId: string;
 }
