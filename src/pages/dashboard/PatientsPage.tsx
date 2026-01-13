@@ -1204,7 +1204,7 @@ export default function PatientsPage() {
                                   setSelectedPatient(patient);
                                   setDependentsDialogOpen(true);
                                 } else {
-                                  navigate(`/dashboard/patients/${patient.id}/edit?tab=cadastro&dependentes=true`);
+                                  navigate(`/dashboard/patients/${patient.id}/edit?tab=dependentes&dependentes=true`);
                                 }
                               }}
                             >
