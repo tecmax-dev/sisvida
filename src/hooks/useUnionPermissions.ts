@@ -1,4 +1,5 @@
 import { usePermissions, Permission } from "@/hooks/usePermissions";
+import { useAuth } from "@/hooks/useAuth";
 
 // Union-specific permission type
 export type UnionPermission =
@@ -43,17 +44,20 @@ export type UnionPermission =
 
 export function useUnionPermissions() {
   const { hasPermission, isAdmin } = usePermissions();
-  const { isSuperAdmin } = usePermissions() as any;
+  const { isSuperAdmin, userRoles } = useAuth();
+  
+  // Check if user has entidade_sindical_admin role (using type assertion for union entity role)
+  const isUnionEntityAdmin = userRoles.some(r => (r.role as string) === "entidade_sindical_admin");
 
   const hasUnionPermission = (permission: UnionPermission): boolean => {
-    // Super admins and clinic admins have all union permissions
-    if (isSuperAdmin || isAdmin) return true;
+    // Super admins, clinic admins, and union entity admins have all union permissions
+    if (isSuperAdmin || isAdmin || isUnionEntityAdmin) return true;
     return hasPermission(permission as Permission);
   };
 
   // Module access
   const hasUnionAccess = (): boolean => {
-    return hasUnionPermission("union_module_access") || isAdmin || isSuperAdmin;
+    return hasUnionPermission("union_module_access") || isAdmin || isSuperAdmin || isUnionEntityAdmin;
   };
 
   // Empresas
