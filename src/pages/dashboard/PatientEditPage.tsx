@@ -185,12 +185,18 @@ export default function PatientEditPage() {
 
   // Check URL params for dependentes action
   useEffect(() => {
-    const tabParam = searchParams.get('tab');
+    const tabParam = searchParams.get('tab') as PatientTab | null;
     const dependentesParam = searchParams.get('dependentes');
-    
-    if (tabParam === 'cadastro' && dependentesParam === 'true') {
-      setActiveTab('cadastro');
+
+    // Compatibilidade: links antigos usavam tab=cadastro&dependentes=true
+    if (dependentesParam === 'true') {
+      setActiveTab('dependentes');
       setShowDependentsForm(true);
+      return;
+    }
+
+    if (tabParam === 'cadastro' || tabParam === 'dependentes') {
+      setActiveTab(tabParam);
     }
   }, [searchParams]);
 

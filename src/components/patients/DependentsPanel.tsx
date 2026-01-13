@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Users, Plus, Edit2, Save, X, CreditCard, Calendar, User, Phone, UserX, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -67,6 +68,9 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
   const { userRoles, isSuperAdmin } = useAuth();
   const canPermanentDelete = isSuperAdmin || userRoles.some((r) => r.role === "owner" || r.role === "admin");
 
+  const [searchParams] = useSearchParams();
+  const editDependentParam = searchParams.get("editDependent");
+
   const [dependents, setDependents] = useState<Dependent[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAdding, setIsAdding] = useState(false);
@@ -75,6 +79,7 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
   const [dependentToDelete, setDependentToDelete] = useState<Dependent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [hasCheckedAutoOpen, setHasCheckedAutoOpen] = useState(false);
+  const [hasHandledEditParam, setHasHandledEditParam] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -97,12 +102,32 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
         .order("name");
 
       if (error) throw error;
-      setDependents(data || []);
-      
+      const list = (data || []) as Dependent[];
+      setDependents(list);
+
+      // Se veio um dependente específico via URL, abrir o formulário já no modo edição
+      if (editDependentParam && !hasHandledEditParam) {
+        setHasHandledEditParam(true);
+        const dep = list.find((d) => d.id === editDependentParam);
+        if (dep) {
+          setFormData({
+            name: dep.name,
+            cpf: dep.cpf ? formatCPF(dep.cpf) : "",
+            birth_date: dep.birth_date || "",
+            relationship: dep.relationship || "",
+            card_number: dep.card_number || "",
+            card_expires_at: dep.card_expires_at ? dep.card_expires_at.split("T")[0] : "",
+            notes: dep.notes || "",
+          });
+          setEditingId(dep.id);
+          setIsAdding(true);
+        }
+      }
+
       // Auto-open form if requested and no dependents exist
       if (autoOpenForm && !hasCheckedAutoOpen) {
         setHasCheckedAutoOpen(true);
-        if (!data || data.length === 0) {
+        if (list.length === 0) {
           setIsAdding(true);
         }
       }
@@ -120,8 +145,10 @@ export function DependentsPanel({ patientId, clinicId, patientPhone, autoOpenFor
 
   useEffect(() => {
     if (patientId) {
+      setHasHandledEditParam(false);
       fetchDependents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [patientId]);
 
   const resetForm = () => {
