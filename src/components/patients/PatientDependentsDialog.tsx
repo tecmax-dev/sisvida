@@ -188,7 +188,7 @@ export function PatientDependentsDialog({
 
   const handleEditDependent = (dependent: Dependent) => {
     onOpenChange(false);
-    navigate(`/dashboard/patients/${patientId}/edit?tab=cadastro&dependentes=true&editDependent=${dependent.id}`);
+    navigate(`/dashboard/patients/${patientId}/edit?tab=dependentes&dependentes=true&editDependent=${dependent.id}`);
   };
 
   return (
