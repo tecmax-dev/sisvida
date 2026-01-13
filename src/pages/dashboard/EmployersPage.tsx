@@ -20,7 +20,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Tag,
-  Filter
+  Filter,
+  Send,
+  Key
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -84,6 +86,7 @@ import { AccountingOfficeSelector } from "@/components/employers/AccountingOffic
 import { useCepLookup } from "@/hooks/useCepLookup";
 import { useCnpjLookup } from "@/hooks/useCnpjLookup";
 import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
+import { SendAccessCodeDialog } from "@/components/portals/SendAccessCodeDialog";
 
 interface Category {
   id: string;
@@ -120,6 +123,7 @@ interface Employer {
   cnae_code?: string | null;
   cnae_description?: string | null;
   registration_number?: string | null;
+  access_code?: string | null;
   category?: Category | null;
   patients?: { id: string; name: string }[];
   linked_accounting_office_id?: string | null;
@@ -176,6 +180,7 @@ export default function EmployersPage() {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [autoCategorizeDialogOpen, setAutoCategorizeDialogOpen] = useState(false);
   const [syncCnpjDialogOpen, setSyncCnpjDialogOpen] = useState(false);
+  const [sendCodeDialogOpen, setSendCodeDialogOpen] = useState(false);
   const [selectedEmployer, setSelectedEmployer] = useState<Employer | null>(null);
   const { lookupCep, loading: cepLoading } = useCepLookup();
   const { lookupCnpj, cnpjLoading } = useCnpjLookup();
@@ -183,6 +188,7 @@ export default function EmployersPage() {
   const [saving, setSaving] = useState(false);
   const [expandedEmployer, setExpandedEmployer] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [generatingCode, setGeneratingCode] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentClinic) {
@@ -470,6 +476,32 @@ export default function EmployersPage() {
     } catch (error) {
       console.error("Error deleting employer:", error);
       toast.error("Erro ao excluir empresa");
+    }
+  };
+
+  const handleGenerateAccessCode = async (employer: Employer) => {
+    setGeneratingCode(employer.id);
+    try {
+      const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+      let newCode = "";
+      for (let i = 0; i < 6; i++) {
+        newCode += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      
+      const { error } = await supabase
+        .from("employers")
+        .update({ access_code: newCode })
+        .eq("id", employer.id);
+
+      if (error) throw error;
+      
+      toast.success(`Código gerado: ${newCode}`);
+      fetchEmployers();
+    } catch (error) {
+      console.error("Error generating code:", error);
+      toast.error("Erro ao gerar código");
+    } finally {
+      setGeneratingCode(null);
     }
   };
 
@@ -808,6 +840,45 @@ export default function EmployersPage() {
                           <TableCell className="py-2 text-right">
                             <TooltipProvider>
                               <div className="flex items-center justify-end gap-1">
+                                {!isVirtual && (
+                                  employer.access_code ? (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
+                                          onClick={() => {
+                                            setSelectedEmployer(employer);
+                                            setSendCodeDialogOpen(true);
+                                          }}
+                                        >
+                                          <Send className="h-3.5 w-3.5" />
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Enviar código por e-mail</TooltipContent>
+                                    </Tooltip>
+                                  ) : (
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                          onClick={() => handleGenerateAccessCode(employer)}
+                                          disabled={generatingCode === employer.id}
+                                        >
+                                          {generatingCode === employer.id ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          ) : (
+                                            <Key className="h-3.5 w-3.5" />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>Gerar código de acesso</TooltipContent>
+                                    </Tooltip>
+                                  )
+                                )}
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <Button
@@ -1266,6 +1337,18 @@ export default function EmployersPage() {
             }}
           />
         </>
+      )}
+
+      {/* Dialog de Envio de Código de Acesso */}
+      {selectedEmployer && (
+        <SendAccessCodeDialog
+          open={sendCodeDialogOpen}
+          onOpenChange={setSendCodeDialogOpen}
+          type="employer"
+          entityId={selectedEmployer.id}
+          entityName={selectedEmployer.name}
+          currentEmail={selectedEmployer.email || ""}
+        />
       )}
     </div>
   );

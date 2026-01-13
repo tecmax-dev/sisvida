@@ -26,7 +26,8 @@ import {
   Loader2,
   FileSearch,
   Printer,
-  Upload
+  Upload,
+  Send
 } from "lucide-react";
 import {
   Dialog,
@@ -58,8 +59,15 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import AccountingOfficeImportPanel from "@/components/admin/AccountingOfficeImportPanel";
 import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
+import { SendAccessCodeDialog } from "@/components/portals/SendAccessCodeDialog";
 
 interface AccountingOffice {
   id: string;
@@ -108,6 +116,7 @@ export default function AccountingOfficesPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isSendCodeDialogOpen, setIsSendCodeDialogOpen] = useState(false);
   const [selectedOffice, setSelectedOffice] = useState<AccountingOffice | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -741,33 +750,70 @@ export default function AccountingOfficesPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handlePrintEmployersList(office)}
-                            title="Imprimir lista de empresas"
-                          >
-                            <Printer className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenDialog(office)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedOffice(office);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
+                        <TooltipProvider>
+                          <div className="flex items-center justify-end gap-1">
+                            {office.access_code && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-primary hover:text-primary/80 hover:bg-primary/10"
+                                    onClick={() => {
+                                      setSelectedOffice(office);
+                                      setIsSendCodeDialogOpen(true);
+                                    }}
+                                  >
+                                    <Send className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Enviar código por e-mail</TooltipContent>
+                              </Tooltip>
+                            )}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => handlePrintEmployersList(office)}
+                                >
+                                  <Printer className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Imprimir lista de empresas</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => handleOpenDialog(office)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Editar</TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7"
+                                  onClick={() => {
+                                    setSelectedOffice(office);
+                                    setIsDeleteDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>Excluir</TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1134,6 +1180,18 @@ export default function AccountingOfficesPage() {
         isOpen={isImportDialogOpen}
         onClose={() => setIsImportDialogOpen(false)}
       />
+
+      {/* Dialog de Envio de Código de Acesso */}
+      {selectedOffice && (
+        <SendAccessCodeDialog
+          open={isSendCodeDialogOpen}
+          onOpenChange={setIsSendCodeDialogOpen}
+          type="accounting_office"
+          entityId={selectedOffice.id}
+          entityName={selectedOffice.name}
+          currentEmail={selectedOffice.email}
+        />
+      )}
     </div>
   );
 }
