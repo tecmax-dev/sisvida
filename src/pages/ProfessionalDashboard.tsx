@@ -458,9 +458,13 @@ export default function ProfessionalDashboard() {
               <Button 
                 variant="ghost" 
                 size="icon" 
-                onClick={() => {
-                  (window as any).forceUpdatePWA?.();
-                  window.location.reload();
+                onClick={async () => {
+                  // Aguardar limpeza do PWA antes de recarregar
+                  const success = await (window as any).forceUpdatePWA?.();
+                  if (success !== false) {
+                    // Só recarrega se a limpeza foi bem sucedida e por ação explícita
+                    window.location.reload();
+                  }
                 }}
                 title="Atualizar app"
               >

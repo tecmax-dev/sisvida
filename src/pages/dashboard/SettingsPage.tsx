@@ -51,7 +51,7 @@ import {
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 export default function SettingsPage() {
-  const { user, currentClinic, profile } = useAuth();
+  const { user, currentClinic, profile, refreshProfile } = useAuth();
   const { toast } = useToast();
   const { hasPermission } = usePermissions();
   const [clinicName, setClinicName] = useState("Clínica Saúde Total");
@@ -68,6 +68,7 @@ export default function SettingsPage() {
   
   // Logo state
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [localLogoUrl, setLocalLogoUrl] = useState<string | null>(null);
   
   // Password change state
   const [newPassword, setNewPassword] = useState("");
@@ -136,7 +137,7 @@ export default function SettingsPage() {
       
       const { data, error } = await supabase
         .from('clinics')
-        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url, whatsapp_header_image_url, max_appointments_per_cpf_month, entity_nomenclature')
+        .select('enforce_schedule_validation, name, reminder_enabled, reminder_hours, map_view_type, custom_map_embed_url, whatsapp_header_image_url, max_appointments_per_cpf_month, entity_nomenclature, logo_url')
         .eq('id', currentClinic.id)
         .single();
       
@@ -150,6 +151,7 @@ export default function SettingsPage() {
         setWhatsappHeaderImage(data.whatsapp_header_image_url || null);
         setMaxCpfAppointments(data.max_appointments_per_cpf_month);
         setEntityNomenclature(data.entity_nomenclature || "Paciente");
+        setLocalLogoUrl(data.logo_url || null);
         
         // Set initial data for auto-save
         setInitialSettingsData({
@@ -414,13 +416,16 @@ export default function SettingsPage() {
       
       if (updateError) throw updateError;
       
+      // Atualizar estado local em vez de reload
+      setLocalLogoUrl(publicUrl);
+      
+      // Atualizar contexto de autenticação para refletir alterações globalmente
+      await refreshProfile();
+      
       toast({
         title: "Logo enviada",
         description: "A logo da clínica foi atualizada com sucesso.",
       });
-      
-      // Reload page to reflect changes
-      window.location.reload();
     } catch (error: any) {
       console.error('Error uploading logo:', error);
       toast({
@@ -449,12 +454,16 @@ export default function SettingsPage() {
       
       if (updateError) throw updateError;
       
+      // Atualizar estado local em vez de reload
+      setLocalLogoUrl(null);
+      
+      // Atualizar contexto de autenticação para refletir alterações globalmente
+      await refreshProfile();
+      
       toast({
         title: "Logo removida",
         description: "A logo da clínica foi removida.",
       });
-      
-      window.location.reload();
     } catch (error: any) {
       toast({
         title: "Erro ao remover logo",
@@ -694,13 +703,13 @@ export default function SettingsPage() {
                     
                     if (error) throw error;
                     
+                    // Atualizar contexto de autenticação para refletir alterações globalmente
+                    await refreshProfile();
+                    
                     toast({
                       title: "Nomenclatura salva",
                       description: `O sistema agora utilizará "${entityNomenclature}" para se referir aos cadastros.`,
                     });
-                    
-                    // Refresh to apply changes globally
-                    window.location.reload();
                   } catch (error: any) {
                     toast({
                       title: "Erro ao salvar",
