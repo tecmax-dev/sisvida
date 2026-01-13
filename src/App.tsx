@@ -135,6 +135,7 @@ import UnionIncomePage from "./pages/union/UnionIncomePage";
 import UnionCashFlowPage from "./pages/union/UnionCashFlowPage";
 import UnionStatementPage from "./pages/union/UnionStatementPage";
 import UnionReconciliationPage from "./pages/union/UnionReconciliationPage";
+import UnionBankReconciliationPage from "./pages/union/UnionBankReconciliationPage";
 import UnionCashRegistersPage from "./pages/union/UnionCashRegistersPage";
 import UnionSuppliersPage from "./pages/union/UnionSuppliersPage";
 import UnionNegotiationsPage from "./pages/union/UnionNegotiationsPage";
@@ -447,6 +448,7 @@ const App = () => (
                   <Route path="financeiro/categorias" element={<UnionCategoriesPage />} />
                   <Route path="financeiro/plano-contas" element={<UnionChartOfAccountsPage />} />
                   <Route path="financeiro/conciliacao" element={<UnionReconciliationPage />} />
+                  <Route path="financeiro/conciliacao-bancaria" element={<UnionBankReconciliationPage />} />
                   <Route path="financeiro/relatorios" element={<UnionReportsPage />} />
                   <Route path="financeiro/relatorios-lytex" element={<UnionLytexReportsPage />} />
                   <Route path="negociacoes" element={<UnionNegotiationsPage />} />
