@@ -1274,13 +1274,16 @@ export default function AttendancePageRedesign() {
                     variant="outline" 
                     size={isMobile ? "sm" : "default"} 
                     onClick={() => {
-                      // For dependents, navigate with dependent context
-                      // For titulars, navigate directly
+                      // Para dependentes, abrir diretamente a aba de Dependentes do titular já focando no dependente
                       if (appointment?.dependent_id) {
-                        navigate(`/dashboard/patients/${appointment.patient_id}/edit?tab=cadastro&dependentes=true&editDependent=${appointment.dependent_id}`);
-                      } else {
-                        navigate(`/dashboard/patients/${appointment?.patient_id}`);
+                        navigate(
+                          `/dashboard/patients/${appointment.patient_id}/edit?tab=dependentes&dependentes=true&editDependent=${appointment.dependent_id}`
+                        );
+                        return;
                       }
+
+                      // Titular
+                      navigate(`/dashboard/patients/${appointment?.patient_id}/edit`);
                     }}
                   >
                     <Eye className="h-4 w-4 mr-1.5" />
