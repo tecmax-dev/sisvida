@@ -168,16 +168,24 @@ function extractPaidDate(invoice: any): string | null {
 function extractPaidValueCents(invoice: any): number | null {
   if (!invoice) return null;
 
-  // campos diretos em Reais -> centavos
-  if (typeof invoice.payedValue === "number") return Math.round(invoice.payedValue * 100);
-  if (typeof invoice.paidValue === "number") return Math.round(invoice.paidValue * 100);
-  if (typeof invoice.paid_value === "number") return Math.round(invoice.paid_value * 100);
+  // Lytex envia payedValue já em CENTAVOS (não em Reais!)
+  // Detectamos isso comparando com totalValue (que está em centavos)
+  if (typeof invoice.payedValue === "number") {
+    // Se payedValue está próximo de totalValue, ambos estão em centavos
+    if (typeof invoice.totalValue === "number" && invoice.payedValue >= invoice.totalValue * 0.9) {
+      return Math.round(invoice.payedValue); // Já está em centavos
+    }
+    // Caso contrário, assumir centavos também (padrão Lytex)
+    return Math.round(invoice.payedValue);
+  }
+  if (typeof invoice.paidValue === "number") return Math.round(invoice.paidValue);
+  if (typeof invoice.paid_value === "number") return Math.round(invoice.paid_value);
 
   // fallback se está pago
   const mapped = mapLytexInvoiceStatus(invoice);
   if (mapped === "paid") {
-    if (typeof invoice.totalValue === "number") return Math.round(invoice.totalValue * 100);
-    if (typeof invoice.total === "number") return Math.round(invoice.total * 100);
+    if (typeof invoice.totalValue === "number") return Math.round(invoice.totalValue);
+    if (typeof invoice.total === "number") return Math.round(invoice.total * 100); // total pode estar em Reais
     if (typeof invoice.amount === "number") return Math.round(invoice.amount * 100);
   }
 
@@ -900,23 +908,24 @@ Deno.serve(async (req) => {
         };
 
         // Função auxiliar para extrair valor pago
+        // IMPORTANTE: Lytex envia payedValue já em CENTAVOS, não multiplicar!
         const extractPaidValue = (invoice: any): number | null => {
-          // Tentar campos diretos (em Reais, converter para centavos)
-          if (invoice.payedValue) return Math.round(invoice.payedValue * 100);
-          if (invoice.paidValue) return Math.round(invoice.paidValue * 100);
-          if (invoice.paid_value) return Math.round(invoice.paid_value * 100);
+          // Campos diretos da Lytex (já em centavos)
+          if (invoice.payedValue) return Math.round(invoice.payedValue);
+          if (invoice.paidValue) return Math.round(invoice.paidValue);
+          if (invoice.paid_value) return Math.round(invoice.paid_value);
           
-          // Tentar total se for pago
+          // Tentar total se for pago (também em centavos na Lytex)
           if (mapLytexInvoiceStatus(invoice) === "paid") {
-            if (invoice.totalValue) return Math.round(invoice.totalValue * 100);
-            if (invoice.total) return Math.round(invoice.total * 100);
+            if (invoice.totalValue) return Math.round(invoice.totalValue);
+            if (invoice.total) return Math.round(invoice.total * 100); // total pode estar em Reais
             if (invoice.amount) return Math.round(invoice.amount * 100);
           }
           
           // Tentar soma de pagamentos
           if (invoice.payments && Array.isArray(invoice.payments)) {
             const total = invoice.payments.reduce((acc: number, p: any) => acc + (p.value || p.amount || 0), 0);
-            if (total > 0) return Math.round(total * 100);
+            if (total > 0) return Math.round(total); // Assumir centavos
           }
           
           return null;
@@ -1536,13 +1545,14 @@ Deno.serve(async (req) => {
                 }
 
                 // Calcular taxas e valor líquido
-                // Lytex pode retornar fee, fees, ou taxas em campos específicos
+                // Lytex pode retornar fee, fees, ou taxas em campos específicos (em Reais)
                 const lytexFeeAmount = Math.round(
                   (invoice.fee || invoice.fees?.total || invoice.taxas?.total || 0) * 100
                 );
                 const lytexFeeDetails = invoice.fees || invoice.taxas || null;
                 // Valor líquido = valor pago - taxas (ou valor bruto se não pago)
-                const paidValueCents = invoice.payedValue ? Math.round(invoice.payedValue * 100) : null;
+                // IMPORTANTE: Lytex retorna payedValue em CENTAVOS, NÃO multiplicar!
+                const paidValueCents = invoice.payedValue ? Math.round(invoice.payedValue) : null;
                 const netValue = paidValueCents ? paidValueCents - lytexFeeAmount : null;
 
                 const patch = {
