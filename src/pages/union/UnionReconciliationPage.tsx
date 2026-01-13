@@ -128,6 +128,46 @@ export default function UnionReconciliationPage() {
     },
   });
 
+  // Reconcile in batch - all pending paid contributions
+  const reconcileBatchMutation = useMutation({
+    mutationFn: async (contributionIds: string[]) => {
+      const { error } = await supabase
+        .from("employer_contributions")
+        .update({
+          is_reconciled: true,
+          reconciled_at: new Date().toISOString(),
+          reconciled_by: session?.user?.id,
+          has_divergence: false,
+        })
+        .in("id", contributionIds);
+      if (error) throw error;
+      return contributionIds.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: ["union-reconciliation"] });
+      toast.success(`${count} contribuição(ões) conciliada(s) com sucesso!`);
+    },
+    onError: () => {
+      toast.error("Erro ao conciliar contribuições em lote");
+    },
+  });
+
+  // Get IDs of contributions pending reconciliation
+  const pendingReconciliationIds = useMemo(() => {
+    if (!contributions) return [];
+    return contributions
+      .filter((c) => !c.is_reconciled && c.status === "paid")
+      .map((c) => c.id);
+  }, [contributions]);
+
+  const handleBatchReconcile = () => {
+    if (pendingReconciliationIds.length === 0) {
+      toast.info("Não há contribuições pendentes de conciliação.");
+      return;
+    }
+    reconcileBatchMutation.mutate(pendingReconciliationIds);
+  };
+
   // Filter contributions
   const filteredContributions = useMemo(() => {
     if (!contributions) return [];
@@ -201,17 +241,31 @@ export default function UnionReconciliationPage() {
             Verifique e concilie divergências entre o sistema e a Lytex
           </p>
         </div>
-        <Button
-          onClick={() => syncMutation.mutate()}
-          disabled={syncMutation.isPending}
-        >
-          {syncMutation.isPending ? (
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4 mr-2" />
-          )}
-          Sincronizar com Lytex
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleBatchReconcile}
+            disabled={reconcileBatchMutation.isPending || pendingReconciliationIds.length === 0}
+          >
+            {reconcileBatchMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+            )}
+            Conciliar Todos ({pendingReconciliationIds.length})
+          </Button>
+          <Button
+            onClick={() => syncMutation.mutate()}
+            disabled={syncMutation.isPending}
+          >
+            {syncMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Sincronizar com Lytex
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
