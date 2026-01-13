@@ -73,7 +73,7 @@ export function UnionCheckPrintDialog({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clinics")
-        .select("name, cnpj")
+        .select("name, cnpj, logo_url, address, phone, email")
         .eq("id", clinicId)
         .maybeSingle();
       if (error) throw error;
@@ -130,14 +130,22 @@ export function UnionCheckPrintDialog({
       return;
     }
 
-    const printContent = printRef.current;
-    if (!printContent) return;
-
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
       toast.error("Não foi possível abrir a janela de impressão");
       return;
     }
+
+    const logoHtml = clinic?.logo_url 
+      ? `<img src="${clinic.logo_url}" alt="Logo" style="max-height: 70px; max-width: 200px; object-fit: contain;" />`
+      : `<div style="width: 70px; height: 70px; background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+           <span style="color: white; font-size: 28px; font-weight: bold;">${(clinic?.name || "E").charAt(0)}</span>
+         </div>`;
+
+    // Count paid and pending
+    const paidCount = expenses.filter(e => e.status === "paid").length;
+    const pendingCount = expenses.filter(e => e.status !== "paid" && e.status !== "cancelled").length;
+    const paidAmount = expenses.filter(e => e.status === "paid").reduce((sum, e) => sum + Number(e.net_value || e.amount), 0);
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -145,189 +153,476 @@ export function UnionCheckPrintDialog({
         <head>
           <title>Cópia de Cheque - ${searchedCheckNumber}</title>
           <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+            
             @media print {
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              @page { margin: 15mm; }
             }
+            
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
             body {
-              font-family: Arial, sans-serif;
-              padding: 20px;
+              font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+              background: #f8fafc;
+              color: #1e293b;
+              line-height: 1.5;
+            }
+            
+            .document {
               max-width: 800px;
               margin: 0 auto;
+              background: white;
+              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             }
+            
+            /* Header with gradient */
             .header {
-              text-align: center;
-              border-bottom: 2px solid #1e3a5f;
-              padding-bottom: 15px;
-              margin-bottom: 20px;
+              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #1e3a5f 100%);
+              color: white;
+              padding: 24px 32px;
+              display: flex;
+              align-items: center;
+              gap: 20px;
             }
-            .header h1 {
-              color: #1e3a5f;
-              margin: 0;
-              font-size: 24px;
+            
+            .header-logo {
+              flex-shrink: 0;
             }
-            .header p {
-              color: #666;
-              margin: 5px 0 0;
+            
+            .header-info {
+              flex: 1;
             }
-            .check-info {
-              background: #f8f9fa;
-              padding: 15px;
+            
+            .header-info h1 {
+              font-size: 22px;
+              font-weight: 700;
+              margin-bottom: 4px;
+              letter-spacing: -0.02em;
+            }
+            
+            .header-info p {
+              font-size: 13px;
+              opacity: 0.85;
+            }
+            
+            .header-badge {
+              background: rgba(255, 255, 255, 0.15);
+              backdrop-filter: blur(10px);
+              border: 1px solid rgba(255, 255, 255, 0.2);
+              padding: 8px 16px;
               border-radius: 8px;
-              margin-bottom: 20px;
+              text-align: center;
+            }
+            
+            .header-badge span {
+              display: block;
+              font-size: 11px;
+              opacity: 0.8;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            }
+            
+            .header-badge strong {
+              font-size: 20px;
+              font-weight: 700;
+            }
+            
+            /* Content area */
+            .content {
+              padding: 24px 32px;
+            }
+            
+            /* Summary cards */
+            .cards-grid {
+              display: grid;
+              grid-template-columns: repeat(4, 1fr);
+              gap: 16px;
+              margin-bottom: 24px;
+            }
+            
+            .card {
+              border-radius: 12px;
+              padding: 16px;
+              position: relative;
+              overflow: hidden;
+            }
+            
+            .card::before {
+              content: '';
+              position: absolute;
+              top: 0;
+              left: 0;
+              right: 0;
+              height: 4px;
+            }
+            
+            .card-slate {
+              background: #f8fafc;
+              border: 1px solid #e2e8f0;
+            }
+            .card-slate::before { background: #64748b; }
+            .card-slate .card-value { color: #334155; }
+            
+            .card-emerald {
+              background: #ecfdf5;
+              border: 1px solid #a7f3d0;
+            }
+            .card-emerald::before { background: #10b981; }
+            .card-emerald .card-value { color: #047857; }
+            
+            .card-amber {
+              background: #fffbeb;
+              border: 1px solid #fde68a;
+            }
+            .card-amber::before { background: #f59e0b; }
+            .card-amber .card-value { color: #b45309; }
+            
+            .card-blue {
+              background: #eff6ff;
+              border: 1px solid #bfdbfe;
+            }
+            .card-blue::before { background: #3b82f6; }
+            .card-blue .card-value { color: #1d4ed8; }
+            
+            .card-label {
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              color: #64748b;
+              margin-bottom: 4px;
+            }
+            
+            .card-value {
+              font-size: 20px;
+              font-weight: 700;
+            }
+            
+            .card-sub {
+              font-size: 12px;
+              color: #94a3b8;
+              margin-top: 2px;
+            }
+            
+            /* Table */
+            .table-container {
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              overflow: hidden;
+              margin-bottom: 24px;
+            }
+            
+            table {
+              width: 100%;
+              border-collapse: collapse;
+            }
+            
+            th {
+              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+              color: white;
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+              padding: 12px 16px;
+              text-align: left;
+            }
+            
+            th:last-child {
+              text-align: center;
+            }
+            
+            td {
+              padding: 12px 16px;
+              border-bottom: 1px solid #f1f5f9;
+              font-size: 13px;
+            }
+            
+            tr:last-child td {
+              border-bottom: none;
+            }
+            
+            tr:nth-child(even) {
+              background: #fafbfc;
+            }
+            
+            .text-right {
+              text-align: right;
+            }
+            
+            .text-center {
+              text-align: center;
+            }
+            
+            .font-medium {
+              font-weight: 500;
+            }
+            
+            .font-semibold {
+              font-weight: 600;
+            }
+            
+            /* Status badges */
+            .status {
+              display: inline-flex;
+              align-items: center;
+              padding: 4px 10px;
+              border-radius: 20px;
+              font-size: 11px;
+              font-weight: 600;
+              text-transform: uppercase;
+              letter-spacing: 0.02em;
+            }
+            
+            .status-paid {
+              background: #d1fae5;
+              color: #047857;
+            }
+            
+            .status-pending {
+              background: #fef3c7;
+              color: #b45309;
+            }
+            
+            .status-overdue {
+              background: #fee2e2;
+              color: #b91c1c;
+            }
+            
+            .status-cancelled {
+              background: #f1f5f9;
+              color: #64748b;
+            }
+            
+            .status-reversed {
+              background: #ede9fe;
+              color: #7c3aed;
+            }
+            
+            /* Total row */
+            .total-row {
+              background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+            }
+            
+            .total-row td {
+              padding: 16px;
+              border-top: 2px solid #3b82f6;
+              border-bottom: none !important;
+            }
+            
+            .total-label {
+              font-size: 14px;
+              font-weight: 700;
+              color: #1e3a5f;
+              text-transform: uppercase;
+              letter-spacing: 0.02em;
+            }
+            
+            .total-value {
+              font-size: 18px;
+              font-weight: 700;
+              color: #1e3a5f;
+            }
+            
+            /* Signature area */
+            .signature-section {
+              display: grid;
+              grid-template-columns: 1fr 1fr;
+              gap: 60px;
+              margin: 40px 0;
+              padding: 0 40px;
+            }
+            
+            .signature-box {
+              text-align: center;
+            }
+            
+            .signature-line {
+              border-top: 2px solid #cbd5e1;
+              padding-top: 8px;
+              margin-top: 50px;
+            }
+            
+            .signature-label {
+              font-size: 12px;
+              font-weight: 600;
+              color: #64748b;
+              text-transform: uppercase;
+              letter-spacing: 0.05em;
+            }
+            
+            /* Footer */
+            .footer {
+              background: #f8fafc;
+              border-top: 1px solid #e2e8f0;
+              padding: 16px 32px;
               display: flex;
               justify-content: space-between;
               align-items: center;
             }
-            .check-number {
-              font-size: 28px;
-              font-weight: bold;
-              color: #1e3a5f;
-            }
-            .bank-info {
-              text-align: right;
-              color: #666;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 20px;
-            }
-            th, td {
-              border: 1px solid #ddd;
-              padding: 10px;
-              text-align: left;
-            }
-            th {
-              background: #1e3a5f;
-              color: white;
-            }
-            tr:nth-child(even) {
-              background: #f9f9f9;
-            }
-            .status-paid {
-              background: #d1fae5;
-              color: #065f46;
-              padding: 2px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-            }
-            .status-pending {
-              background: #fef3c7;
-              color: #92400e;
-              padding: 2px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-            }
-            .status-overdue {
-              background: #fee2e2;
-              color: #991b1b;
-              padding: 2px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-            }
-            .status-cancelled {
-              background: #e2e8f0;
-              color: #475569;
-              padding: 2px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-            }
-            .status-reversed {
-              background: #ede9fe;
-              color: #5b21b6;
-              padding: 2px 8px;
-              border-radius: 4px;
-              font-size: 12px;
-            }
-            .total-row {
-              background: #f0f9ff !important;
-              font-weight: bold;
-            }
-            .total-row td {
-              border-top: 2px solid #1e3a5f;
-            }
-            .footer {
-              margin-top: 30px;
-              text-align: center;
-              color: #666;
-              font-size: 12px;
-              border-top: 1px solid #ddd;
-              padding-top: 15px;
-            }
-            .signature-area {
-              margin-top: 50px;
+            
+            .footer-left {
               display: flex;
-              justify-content: space-between;
+              align-items: center;
+              gap: 8px;
             }
-            .signature-line {
-              width: 200px;
-              border-top: 1px solid #333;
-              text-align: center;
-              padding-top: 5px;
+            
+            .footer-icon {
+              width: 32px;
+              height: 32px;
+              background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
+              border-radius: 6px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            }
+            
+            .footer-icon span {
+              color: white;
+              font-size: 14px;
+              font-weight: 700;
+            }
+            
+            .footer-text {
+              font-size: 11px;
+              color: #64748b;
+            }
+            
+            .footer-text strong {
+              display: block;
+              color: #334155;
               font-size: 12px;
+            }
+            
+            .footer-right {
+              text-align: right;
+              font-size: 11px;
+              color: #94a3b8;
             }
           </style>
         </head>
         <body>
-          <div class="header">
-            <h1>${clinic?.name || "Entidade Sindical"}</h1>
-            ${clinic?.cnpj ? `<p>CNPJ: ${clinic.cnpj}</p>` : ""}
-          </div>
-          
-          <div class="check-info">
-            <div>
-              <span style="color: #666;">Cheque Nº</span>
-              <div class="check-number">${searchedCheckNumber}</div>
+          <div class="document">
+            <!-- Header -->
+            <div class="header">
+              <div class="header-logo">
+                ${logoHtml}
+              </div>
+              <div class="header-info">
+                <h1>${clinic?.name || "Entidade Sindical"}</h1>
+                ${clinic?.cnpj ? `<p>CNPJ: ${clinic.cnpj}</p>` : ""}
+                ${clinic?.address ? `<p>${clinic.address}</p>` : ""}
+              </div>
+              <div class="header-badge">
+                <span>Cheque Nº</span>
+                <strong>${searchedCheckNumber}</strong>
+              </div>
             </div>
-            <div class="bank-info">
-              <div><strong>Portador:</strong> ${expenses[0]?.cash_register?.name || "-"}</div>
-              <div><strong>Despesas:</strong> ${expenses.length}</div>
+            
+            <!-- Content -->
+            <div class="content">
+              <!-- Summary Cards -->
+              <div class="cards-grid">
+                <div class="card card-slate">
+                  <div class="card-label">Portador</div>
+                  <div class="card-value" style="font-size: 14px;">${expenses[0]?.cash_register?.name || "-"}</div>
+                </div>
+                <div class="card card-blue">
+                  <div class="card-label">Despesas</div>
+                  <div class="card-value">${expenses.length}</div>
+                  <div class="card-sub">lançamento(s)</div>
+                </div>
+                <div class="card card-emerald">
+                  <div class="card-label">Pagos</div>
+                  <div class="card-value">${paidCount}</div>
+                  <div class="card-sub">${formatCurrency(paidAmount)}</div>
+                </div>
+                <div class="card card-amber">
+                  <div class="card-label">Pendentes</div>
+                  <div class="card-value">${pendingCount}</div>
+                  <div class="card-sub">a liquidar</div>
+                </div>
+              </div>
+              
+              <!-- Table -->
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Descrição</th>
+                      <th>Fornecedor</th>
+                      <th>Vencimento</th>
+                      <th style="text-align: right;">Valor</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    ${expenses.map((e) => `
+                      <tr>
+                        <td class="font-medium">${e.description}</td>
+                        <td>${e.supplier?.name || "-"}</td>
+                        <td>${e.due_date ? format(parseISO(e.due_date), "dd/MM/yyyy") : "-"}</td>
+                        <td class="text-right font-semibold">${formatCurrency(Number(e.net_value || e.amount))}</td>
+                        <td class="text-center">
+                          <span class="status status-${e.status}">
+                            ${e.status === "paid" ? "Pago" : 
+                              e.status === "pending" ? "Pendente" : 
+                              e.status === "overdue" ? "Vencido" : 
+                              e.status === "cancelled" ? "Cancelado" : 
+                              e.status === "reversed" ? "Estornado" : e.status}
+                          </span>
+                        </td>
+                      </tr>
+                    `).join("")}
+                    <tr class="total-row">
+                      <td colspan="3">
+                        <span class="total-label">Total do Cheque</span>
+                      </td>
+                      <td class="text-right">
+                        <span class="total-value">${formatCurrency(totalAmount)}</span>
+                      </td>
+                      <td></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              
+              <!-- Signature -->
+              <div class="signature-section">
+                <div class="signature-box">
+                  <div class="signature-line">
+                    <div class="signature-label">Emitente</div>
+                  </div>
+                </div>
+                <div class="signature-box">
+                  <div class="signature-line">
+                    <div class="signature-label">Beneficiário</div>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-          
-          <table>
-            <thead>
-              <tr>
-                <th>Descrição</th>
-                <th>Fornecedor</th>
-                <th>Vencimento</th>
-                <th>Valor</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${expenses.map((e) => `
-                <tr>
-                  <td>${e.description}</td>
-                  <td>${e.supplier?.name || "-"}</td>
-                  <td>${e.due_date ? format(parseISO(e.due_date), "dd/MM/yyyy") : "-"}</td>
-                  <td style="text-align: right;">${formatCurrency(Number(e.net_value || e.amount))}</td>
-                  <td>
-                    <span class="status-${e.status}">
-                      ${e.status === "paid" ? "Pago" : 
-                        e.status === "pending" ? "Pendente" : 
-                        e.status === "overdue" ? "Vencido" : 
-                        e.status === "cancelled" ? "Cancelado" : 
-                        e.status === "reversed" ? "Estornado" : e.status}
-                    </span>
-                  </td>
-                </tr>
-              `).join("")}
-              <tr class="total-row">
-                <td colspan="3"><strong>TOTAL DO CHEQUE</strong></td>
-                <td style="text-align: right;"><strong>${formatCurrency(totalAmount)}</strong></td>
-                <td></td>
-              </tr>
-            </tbody>
-          </table>
-          
-          <div class="signature-area">
-            <div class="signature-line">Emitente</div>
-            <div class="signature-line">Beneficiário</div>
-          </div>
-          
-          <div class="footer">
-            Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+            
+            <!-- Footer -->
+            <div class="footer">
+              <div class="footer-left">
+                <div class="footer-icon">
+                  <span>${(clinic?.name || "E").charAt(0)}</span>
+                </div>
+                <div class="footer-text">
+                  <strong>${clinic?.name || "Entidade Sindical"}</strong>
+                  ${clinic?.phone ? clinic.phone : ""} ${clinic?.email ? `• ${clinic.email}` : ""}
+                </div>
+              </div>
+              <div class="footer-right">
+                Documento gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}<br/>
+                <strong>Cópia de Cheque #${searchedCheckNumber}</strong>
+              </div>
+            </div>
           </div>
         </body>
       </html>
