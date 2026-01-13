@@ -1190,6 +1190,7 @@ export default function AccountingOfficesPage() {
           entityId={selectedOffice.id}
           entityName={selectedOffice.name}
           currentEmail={selectedOffice.email}
+          currentPhone={selectedOffice.phone || ""}
         />
       )}
     </div>
