@@ -25,7 +25,7 @@ export interface UnionEntity {
 }
 
 export function useUnionEntity() {
-  const { user, userRoles } = useAuth();
+  const { user, userRoles, currentClinic, isSuperAdmin } = useAuth();
   const [entity, setEntity] = useState<UnionEntity | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUnionEntityAdmin, setIsUnionEntityAdmin] = useState(false);
@@ -52,21 +52,40 @@ export function useUnionEntity() {
         .eq("role", "entidade_sindical_admin")
         .maybeSingle();
 
-      const isEntityAdmin = hasUnionRole || !!directRoles;
+      const isEntityAdmin = hasUnionRole || !!directRoles || isSuperAdmin;
       setIsUnionEntityAdmin(isEntityAdmin);
 
-      if (!isEntityAdmin) {
-        setEntity(null);
-        setLoading(false);
-        return;
-      }
-
-      // Fetch union entity data including clinic_id
-      const { data, error } = await supabase
+      // Try to fetch union entity by user_id first (direct entity admin)
+      let { data, error } = await supabase
         .from("union_entities")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
+
+      // If not found and user has a current clinic, try by clinic_id
+      if (!data && currentClinic?.id) {
+        const result = await supabase
+          .from("union_entities")
+          .select("*")
+          .eq("clinic_id", currentClinic.id)
+          .maybeSingle();
+        
+        data = result.data;
+        error = result.error;
+      }
+
+      // For super admins without direct link, try to get any active entity
+      if (!data && isSuperAdmin) {
+        const result = await supabase
+          .from("union_entities")
+          .select("*")
+          .eq("status", "ativa")
+          .limit(1)
+          .maybeSingle();
+        
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) {
         console.error("[UnionEntity] Error fetching entity:", error);
@@ -79,7 +98,7 @@ export function useUnionEntity() {
     };
 
     fetchUnionEntity();
-  }, [user, userRoles]);
+  }, [user, userRoles, currentClinic, isSuperAdmin]);
 
   return {
     entity,
