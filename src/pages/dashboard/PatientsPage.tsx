@@ -203,6 +203,16 @@ export default function PatientsPage() {
   const [showInactive, setShowInactive] = useState(false);
   const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
   
+  // Tab state: 'titulares' or 'dependentes'
+  const [activeTab, setActiveTab] = useState<'titulares' | 'dependentes'>('titulares');
+  
+  // Dependents state
+  const [dependents, setDependents] = useState<any[]>([]);
+  const [dependentsLoading, setDependentsLoading] = useState(false);
+  const [totalDependents, setTotalDependents] = useState(0);
+  const [dependentsSearch, setDependentsSearch] = useState("");
+  const [debouncedDependentsSearch, setDebouncedDependentsSearch] = useState("");
+  
   // Inactivation dialog state
   const [inactivationDialogOpen, setInactivationDialogOpen] = useState(false);
   const [inactivationReason, setInactivationReason] = useState("");
@@ -278,6 +288,15 @@ export default function PatientsPage() {
     }, 300);
     return () => window.clearTimeout(t);
   }, [searchTerm]);
+
+  // Debounce dependents search
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      setDebouncedDependentsSearch(dependentsSearch.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(t);
+  }, [dependentsSearch]);
 
   const normalizePhoneDigits = (value: string): string => value.replace(/\D/g, "");
 
@@ -408,6 +427,80 @@ export default function PatientsPage() {
     }
   }, [currentClinic, fetchPatients]);
 
+  // Fetch dependents when tab is active
+  const fetchDependents = useCallback(async () => {
+    if (!currentClinic) return;
+
+    setDependentsLoading(true);
+
+    try {
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      const safeSearch = debouncedDependentsSearch.replace(/,/g, " ");
+
+      let query = supabase
+        .from("patient_dependents")
+        .select(
+          `
+            id,
+            name,
+            cpf,
+            birth_date,
+            phone,
+            relationship,
+            is_active,
+            patient_id,
+            created_at,
+            patient:patients!patient_dependents_patient_id_fkey (id, name)
+          `,
+          { count: "exact" }
+        )
+        .eq("clinic_id", currentClinic.id);
+
+      // Filter by active status
+      if (showInactive) {
+        query = query.eq("is_active", false);
+      } else {
+        query = query.eq("is_active", true);
+      }
+
+      if (safeSearch.length > 0) {
+        const text = `%${safeSearch}%`;
+        const searchDigits = safeSearch.replace(/\D/g, "");
+
+        const orParts: string[] = [
+          `name.ilike.${text}`,
+        ];
+
+        if (searchDigits.length >= 3) {
+          orParts.push(`cpf.ilike.%${searchDigits}%`);
+        }
+
+        query = query.or(orParts.join(","));
+      }
+
+      const { data, error, count } = await query
+        .order("name")
+        .range(from, to);
+
+      if (error) throw error;
+
+      setDependents(data || []);
+      setTotalDependents(count || 0);
+    } catch (error) {
+      console.error("Error fetching dependents:", error);
+    } finally {
+      setDependentsLoading(false);
+    }
+  }, [currentClinic, debouncedDependentsSearch, page, pageSize, showInactive]);
+
+  useEffect(() => {
+    if (currentClinic && activeTab === 'dependentes') {
+      fetchDependents();
+    }
+  }, [currentClinic, activeTab, fetchDependents]);
+
   const fetchClinicLimit = async () => {
     if (!currentClinic) return;
     try {
@@ -431,6 +524,7 @@ export default function PatientsPage() {
     onDelete: () => fetchPatients(),
     enabled: !!currentClinic,
   });
+
 
   const fetchInsurancePlans = async () => {
     if (!currentClinic) return;
@@ -988,6 +1082,48 @@ export default function PatientsPage() {
         )}
       </div>
 
+      {/* TABS - Titulares / Dependentes */}
+      <div className="flex items-center gap-1 border-b">
+        <button
+          onClick={() => {
+            setActiveTab('titulares');
+            setPage(1);
+          }}
+          className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+            activeTab === 'titulares'
+              ? "text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4" />
+            Titulares
+          </div>
+          {activeTab === 'titulares' && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />
+          )}
+        </button>
+        <button
+          onClick={() => {
+            setActiveTab('dependentes');
+            setPage(1);
+          }}
+          className={`px-4 py-2.5 text-sm font-medium transition-colors relative ${
+            activeTab === 'dependentes'
+              ? "text-primary"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Dependentes
+          </div>
+          {activeTab === 'dependentes' && (
+            <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary rounded-t" />
+          )}
+        </button>
+      </div>
+
       {/* SEARCH - Primary Focus */}
       <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-transparent shadow-lg">
         <CardContent className="p-4">
@@ -995,9 +1131,9 @@ export default function PatientsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-primary" />
               <Input
-                placeholder="🔍 Buscar por nome, CPF ou telefone..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={activeTab === 'titulares' ? "🔍 Buscar por nome, CPF ou telefone..." : "🔍 Buscar dependente por nome ou CPF..."}
+                value={activeTab === 'titulares' ? searchTerm : dependentsSearch}
+                onChange={(e) => activeTab === 'titulares' ? setSearchTerm(e.target.value) : setDependentsSearch(e.target.value)}
                 className="pl-12 h-12 text-base border-2 border-primary/20 focus:border-primary bg-background shadow-sm"
                 autoFocus
               />
@@ -1017,49 +1153,52 @@ export default function PatientsPage() {
                 </Label>
               </div>
               <Badge variant="secondary" className="h-8 px-3 text-sm font-medium">
-                {totalPatients} resultado{totalPatients !== 1 ? "s" : ""}
+                {activeTab === 'titulares' ? totalPatients : totalDependents} resultado{(activeTab === 'titulares' ? totalPatients : totalDependents) !== 1 ? "s" : ""}
               </Badge>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Stats Cards - Compact row */}
-      <div className="grid grid-cols-4 gap-2">
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
-          <HeartPulse className="h-4 w-4 text-primary" />
-          <div>
-            <span className="text-xs text-muted-foreground">Total</span>
-            <p className="text-lg font-bold text-foreground leading-none">{totalPatients}</p>
+      {/* Stats Cards - Compact row (only for Titulares) */}
+      {activeTab === 'titulares' && (
+        <div className="grid grid-cols-4 gap-2">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+            <HeartPulse className="h-4 w-4 text-primary" />
+            <div>
+              <span className="text-xs text-muted-foreground">Total</span>
+              <p className="text-lg font-bold text-foreground leading-none">{totalPatients}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+            <UserCheck className="h-4 w-4 text-emerald-500" />
+            <div>
+              <span className="text-xs text-muted-foreground">Ativos</span>
+              <p className="text-lg font-bold text-emerald-600 leading-none">{activeCount}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-500/5 border border-rose-500/20">
+            <UserX className="h-4 w-4 text-rose-500" />
+            <div>
+              <span className="text-xs text-muted-foreground">Inativos</span>
+              <p className="text-lg font-bold text-rose-600 leading-none">{showInactive ? patients.length : inactiveCount}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/20">
+            <Shield className="h-4 w-4 text-blue-500" />
+            <div>
+              <span className="text-xs text-muted-foreground">Convênio</span>
+              <p className="text-lg font-bold text-blue-600 leading-none">{withInsuranceCount}</p>
+            </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
-          <UserCheck className="h-4 w-4 text-emerald-500" />
-          <div>
-            <span className="text-xs text-muted-foreground">Ativos</span>
-            <p className="text-lg font-bold text-emerald-600 leading-none">{activeCount}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-500/5 border border-rose-500/20">
-          <UserX className="h-4 w-4 text-rose-500" />
-          <div>
-            <span className="text-xs text-muted-foreground">Inativos</span>
-            <p className="text-lg font-bold text-rose-600 leading-none">{showInactive ? patients.length : inactiveCount}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/20">
-          <Shield className="h-4 w-4 text-blue-500" />
-          <div>
-            <span className="text-xs text-muted-foreground">Convênio</span>
-            <p className="text-lg font-bold text-blue-600 leading-none">{withInsuranceCount}</p>
-          </div>
-        </div>
-      </div>
+      )}
 
-      {/* Alerts Panel - Collapsible */}
-      <PatientAlertsPanel />
+      {/* Alerts Panel - Collapsible (only for Titulares) */}
+      {activeTab === 'titulares' && <PatientAlertsPanel />}
 
-      {/* Patients List */}
+      {/* Patients List (Titulares) */}
+      {activeTab === 'titulares' && (
       <Card>
         <div className="overflow-x-auto">
           {loading ? (
@@ -1313,6 +1452,79 @@ export default function PatientsPage() {
           </div>
         )}
       </Card>
+      )}
+
+      {/* Dependents List */}
+      {activeTab === 'dependentes' && (
+        <Card>
+          <div className="overflow-x-auto">
+            {dependentsLoading ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+                Carregando dependentes...
+              </div>
+            ) : dependents.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead className="font-semibold">Dependente</TableHead>
+                    <TableHead className="hidden sm:table-cell font-semibold">CPF</TableHead>
+                    <TableHead className="font-semibold">Parentesco</TableHead>
+                    <TableHead className="font-semibold">Titular</TableHead>
+                    <TableHead className="w-[50px]"></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {dependents.map((dep) => (
+                    <TableRow key={dep.id} className={`h-12 hover:bg-muted/30 transition-colors ${dep.is_active === false ? "opacity-60" : ""}`}>
+                      <TableCell className="py-2">
+                        <div className="flex items-center gap-2">
+                          <div className={`h-8 w-8 rounded-lg flex items-center justify-center ${dep.is_active === false ? "bg-muted text-muted-foreground" : "bg-violet-100 text-violet-600"}`}>
+                            <Users className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <button
+                              onClick={() => navigate(`/dashboard/patients/${dep.patient_id}/edit?tab=dependentes&editDependent=${dep.id}`)}
+                              className="font-medium text-sm text-primary hover:underline text-left truncate max-w-[180px] block"
+                            >
+                              {dep.name}
+                            </button>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              {dep.birth_date && <span className="text-xs text-muted-foreground">{calculateAge(dep.birth_date)} anos</span>}
+                              {dep.is_active === false && <Badge variant="outline" className="text-xs bg-rose-50 text-rose-700 border-rose-200">Inativo</Badge>}
+                            </div>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell py-2">
+                        {dep.cpf ? <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{formatCPF(dep.cpf)}</code> : <span className="text-muted-foreground text-xs">—</span>}
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <Badge variant="secondary" className="text-xs">{dep.relationship || '—'}</Badge>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <button onClick={() => navigate(`/dashboard/patients/${dep.patient_id}/edit`)} className="text-xs text-primary hover:underline truncate max-w-[150px] block">
+                          {dep.patient?.name || '—'}
+                        </button>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => navigate(`/dashboard/patients/${dep.patient_id}/edit?tab=dependentes&editDependent=${dep.id}`)}>
+                          <FileText className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nenhum dependente encontrado</p>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Profile Dialog */}
       <Dialog open={profileDialogOpen} onOpenChange={setProfileDialogOpen}>
