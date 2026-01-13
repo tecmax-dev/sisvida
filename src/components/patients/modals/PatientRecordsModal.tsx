@@ -74,6 +74,8 @@ export function PatientRecordsModal({
         .select("*, professionals(name)")
         .eq("patient_id", patientId)
         .eq("clinic_id", currentClinic.id)
+        // Importante: não misturar registros de dependentes no prontuário do titular
+        .is("dependent_id", null)
         .order("record_date", { ascending: false });
 
       if (error) throw error;
