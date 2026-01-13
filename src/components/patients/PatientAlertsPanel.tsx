@@ -3,6 +3,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { 
   Ban, 
   CreditCard, 
@@ -11,7 +16,8 @@ import {
   Phone, 
   RefreshCw,
   AlertTriangle,
-  ChevronRight
+  ChevronRight,
+  ChevronDown
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,6 +65,7 @@ export function PatientAlertsPanel() {
   const [loadingLimit, setLoadingLimit] = useState(true);
   
   const [activeTab, setActiveTab] = useState("blocked");
+  const [isOpen, setIsOpen] = useState(false);
 
   const fetchBlockedPatients = useCallback(async () => {
     if (!currentClinic) return;
@@ -282,136 +289,177 @@ export function PatientAlertsPanel() {
     </div>
   );
 
+  const totalAlerts = blockedPatients.length + expiredCardPatients.length + limitPatients.length;
+
+  // Don't show panel if no alerts
+  if (!loadingBlocked && !loadingExpired && !loadingLimit && totalAlerts === 0) {
+    return null;
+  }
+
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            <CardTitle className="text-lg">Alertas de Pacientes</CardTitle>
-          </div>
-          <Button variant="ghost" size="sm" onClick={handleRefresh}>
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3 mb-4">
-            <TabsTrigger value="blocked" className="flex items-center gap-2">
-              <Ban className="h-4 w-4" />
-              <span className="hidden sm:inline">Bloqueados</span>
-              {blockedPatients.length > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 px-1.5">
-                  {blockedPatients.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="expired" className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              <span className="hidden sm:inline">Carteira</span>
-              {expiredCardPatients.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 bg-amber-500/20 text-amber-700">
-                  {expiredCardPatients.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger value="limit" className="flex items-center gap-2">
-              <CalendarX className="h-4 w-4" />
-              <span className="hidden sm:inline">Limite</span>
-              {limitPatients.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5">
-                  {limitPatients.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="border-muted bg-muted/30">
+        <CollapsibleTrigger asChild>
+          <CardHeader className="py-2 px-4 cursor-pointer hover:bg-muted/50 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <span className="text-sm font-medium text-muted-foreground">Alertas de Pacientes</span>
+                </div>
+                
+                {/* Compact badges when collapsed */}
+                <div className="flex items-center gap-1.5">
+                  {blockedPatients.length > 0 && (
+                    <Badge variant="destructive" className="h-5 px-1.5 text-xs">
+                      <Ban className="h-3 w-3 mr-1" />
+                      {blockedPatients.length}
+                    </Badge>
+                  )}
+                  {expiredCardPatients.length > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-xs bg-amber-500/20 text-amber-700 border-amber-200">
+                      <CreditCard className="h-3 w-3 mr-1" />
+                      {expiredCardPatients.length}
+                    </Badge>
+                  )}
+                  {limitPatients.length > 0 && (
+                    <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                      <CalendarX className="h-3 w-3 mr-1" />
+                      {limitPatients.length}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className="h-7 w-7 p-0"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRefresh();
+                  }}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </Button>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+              </div>
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent>
+          <CardContent className="pt-0 pb-3 px-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="grid w-full grid-cols-3 mb-3 h-8">
+                <TabsTrigger value="blocked" className="flex items-center gap-1.5 text-xs h-7">
+                  <Ban className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Bloqueados</span>
+                  {blockedPatients.length > 0 && (
+                    <Badge variant="destructive" className="ml-1 h-4 px-1 text-xs">
+                      {blockedPatients.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="expired" className="flex items-center gap-1.5 text-xs h-7">
+                  <CreditCard className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Carteira</span>
+                  {expiredCardPatients.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs bg-amber-500/20 text-amber-700">
+                      {expiredCardPatients.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="limit" className="flex items-center gap-1.5 text-xs h-7">
+                  <CalendarX className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Limite</span>
+                  {limitPatients.length > 0 && (
+                    <Badge variant="secondary" className="ml-1 h-4 px-1 text-xs">
+                      {limitPatients.length}
+                    </Badge>
+                  )}
+                </TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="blocked" className="space-y-2 mt-0">
-            {loadingBlocked ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : blockedPatients.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Ban className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p>Nenhum paciente bloqueado por falta</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {blockedPatients.map((patient) => 
-                  renderPatientRow(patient, (
-                    <div className="mt-1 space-y-0.5">
-                      <p className="text-xs text-destructive font-medium">
-                        Bloqueado até {format(new Date(patient.no_show_blocked_until), "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Faltou com: {patient.professional_name}
-                      </p>
-                    </div>
-                  ))
+              <TabsContent value="blocked" className="space-y-1.5 mt-0">
+                {loadingBlocked ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : blockedPatients.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    <Ban className="h-8 w-8 mx-auto mb-1 opacity-30" />
+                    <p>Nenhum paciente bloqueado</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                    {blockedPatients.map((patient) => 
+                      renderPatientRow(patient, (
+                        <div className="mt-0.5">
+                          <p className="text-xs text-destructive">
+                            Bloqueado até {format(new Date(patient.no_show_blocked_until), "dd/MM/yyyy", { locale: ptBR })} • {patient.professional_name}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
-          </TabsContent>
+              </TabsContent>
 
-          <TabsContent value="expired" className="space-y-2 mt-0">
-            {loadingExpired ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : expiredCardPatients.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <CreditCard className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p>Nenhuma carteirinha vencida</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {expiredCardPatients.map((patient) => 
-                  renderPatientRow(patient, (
-                    <div className="mt-1 space-y-0.5">
-                      <p className="text-xs text-amber-600 font-medium">
-                        Vencida há {patient.days_expired} dia{patient.days_expired !== 1 ? 's' : ''}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Carteira: {patient.card_number}
-                      </p>
-                    </div>
-                  ))
+              <TabsContent value="expired" className="space-y-1.5 mt-0">
+                {loadingExpired ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : expiredCardPatients.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    <CreditCard className="h-8 w-8 mx-auto mb-1 opacity-30" />
+                    <p>Nenhuma carteirinha vencida</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                    {expiredCardPatients.map((patient) => 
+                      renderPatientRow(patient, (
+                        <div className="mt-0.5">
+                          <p className="text-xs text-amber-600">
+                            Vencida há {patient.days_expired} dia{patient.days_expired !== 1 ? 's' : ''} • {patient.card_number}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
-          </TabsContent>
+              </TabsContent>
 
-          <TabsContent value="limit" className="space-y-2 mt-0">
-            {loadingLimit ? (
-              <div className="flex items-center justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-              </div>
-            ) : limitPatients.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <CalendarX className="h-10 w-10 mx-auto mb-2 opacity-30" />
-                <p>Nenhum paciente atingiu o limite mensal</p>
-              </div>
-            ) : (
-              <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                {limitPatients.map((patient, idx) => 
-                  renderPatientRow({ ...patient, id: `${patient.id}-${idx}` }, (
-                    <div className="mt-1 space-y-0.5">
-                      <p className="text-xs text-blue-600 font-medium">
-                        {patient.appointment_count}/{patient.max_appointments} agendamento{patient.max_appointments !== 1 ? 's' : ''} este mês
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Profissional: {patient.professional_name}
-                      </p>
-                    </div>
-                  ))
+              <TabsContent value="limit" className="space-y-1.5 mt-0">
+                {loadingLimit ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : limitPatients.length === 0 ? (
+                  <div className="text-center py-4 text-muted-foreground text-sm">
+                    <CalendarX className="h-8 w-8 mx-auto mb-1 opacity-30" />
+                    <p>Nenhum paciente atingiu o limite</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-[200px] overflow-y-auto">
+                    {limitPatients.map((patient, idx) => 
+                      renderPatientRow({ ...patient, id: `${patient.id}-${idx}` }, (
+                        <div className="mt-0.5">
+                          <p className="text-xs text-blue-600">
+                            {patient.appointment_count}/{patient.max_appointments} este mês • {patient.professional_name}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
