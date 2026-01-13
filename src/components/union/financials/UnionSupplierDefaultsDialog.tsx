@@ -79,9 +79,9 @@ export function UnionSupplierDefaultsDialog({
     enabled: !!supplierId && open,
   });
 
-  // Fetch categories for expense
+  // Fetch categories for expense - use same query key as UnionCategoriesPage
   const { data: categories } = useQuery({
-    queryKey: ["union-expense-categories", clinicId],
+    queryKey: ["union-financial-categories", clinicId, "expense"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("union_financial_categories")
