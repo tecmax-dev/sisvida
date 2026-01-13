@@ -988,77 +988,76 @@ export default function PatientsPage() {
         )}
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-primary bg-primary/5">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <HeartPulse className="h-4 w-4 text-primary" />
-              <span className="text-xs font-medium text-muted-foreground">Total</span>
+      {/* SEARCH - Primary Focus */}
+      <Card className="border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-transparent shadow-lg">
+        <CardContent className="p-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-primary" />
+              <Input
+                placeholder="🔍 Buscar por nome, CPF ou telefone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-12 h-12 text-base border-2 border-primary/20 focus:border-primary bg-background shadow-sm"
+                autoFocus
+              />
             </div>
-            <p className="text-xl font-bold text-foreground mt-1">{totalPatients}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <UserCheck className="h-4 w-4 text-emerald-500" />
-              <span className="text-xs font-medium text-muted-foreground">Ativos</span>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50">
+                <Switch
+                  id="show-inactive"
+                  checked={showInactive}
+                  onCheckedChange={(checked) => {
+                    setShowInactive(checked);
+                    setPage(1);
+                  }}
+                />
+                <Label htmlFor="show-inactive" className="text-sm cursor-pointer whitespace-nowrap">
+                  Mostrar inativos
+                </Label>
+              </div>
+              <Badge variant="secondary" className="h-8 px-3 text-sm font-medium">
+                {totalPatients} resultado{totalPatients !== 1 ? "s" : ""}
+              </Badge>
             </div>
-            <p className="text-xl font-bold text-emerald-600 mt-1">{activeCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-rose-500 bg-rose-500/5">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <UserX className="h-4 w-4 text-rose-500" />
-              <span className="text-xs font-medium text-muted-foreground">Inativos</span>
-            </div>
-            <p className="text-xl font-bold text-rose-600 mt-1">{showInactive ? patients.length : inactiveCount}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-l-4 border-l-blue-500 bg-blue-500/5">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-blue-500" />
-              <span className="text-xs font-medium text-muted-foreground">Com Convênio</span>
-            </div>
-            <p className="text-xl font-bold text-blue-600 mt-1">{withInsuranceCount}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats Cards - Compact row */}
+      <div className="grid grid-cols-4 gap-2">
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary/5 border border-primary/20">
+          <HeartPulse className="h-4 w-4 text-primary" />
+          <div>
+            <span className="text-xs text-muted-foreground">Total</span>
+            <p className="text-lg font-bold text-foreground leading-none">{totalPatients}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/5 border border-emerald-500/20">
+          <UserCheck className="h-4 w-4 text-emerald-500" />
+          <div>
+            <span className="text-xs text-muted-foreground">Ativos</span>
+            <p className="text-lg font-bold text-emerald-600 leading-none">{activeCount}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-rose-500/5 border border-rose-500/20">
+          <UserX className="h-4 w-4 text-rose-500" />
+          <div>
+            <span className="text-xs text-muted-foreground">Inativos</span>
+            <p className="text-lg font-bold text-rose-600 leading-none">{showInactive ? patients.length : inactiveCount}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/5 border border-blue-500/20">
+          <Shield className="h-4 w-4 text-blue-500" />
+          <div>
+            <span className="text-xs text-muted-foreground">Convênio</span>
+            <p className="text-lg font-bold text-blue-600 leading-none">{withInsuranceCount}</p>
+          </div>
+        </div>
       </div>
 
-      {/* Alerts Panel */}
+      {/* Alerts Panel - Collapsible */}
       <PatientAlertsPanel />
-
-      {/* Search + Filter */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, CPF ou telefone..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Switch
-            id="show-inactive"
-            checked={showInactive}
-            onCheckedChange={(checked) => {
-              setShowInactive(checked);
-              setPage(1);
-            }}
-          />
-          <Label htmlFor="show-inactive" className="text-xs cursor-pointer">
-            Mostrar inativos
-          </Label>
-        </div>
-        <Badge variant="outline" className="text-xs">
-          {totalPatients} resultado{totalPatients !== 1 ? "s" : ""}
-        </Badge>
-      </div>
 
       {/* Patients List */}
       <Card>
