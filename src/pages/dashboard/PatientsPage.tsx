@@ -21,6 +21,7 @@ import {
   ChevronLeft,
   ChevronRight,
   HeartPulse,
+  Send,
 } from "lucide-react";
 import { InlineCardExpiryEdit } from "@/components/patients/InlineCardExpiryEdit";
 import { InlineAppointmentLimitEdit } from "@/components/patients/InlineAppointmentLimitEdit";
@@ -645,6 +646,52 @@ export default function PatientsPage() {
     setSelectedPatient(patient);
     fetchAnamnesisTemplates();
     setAnamnesisDialogOpen(true);
+  };
+
+  // Enviar notificação rápida de carteirinha atualizada via WhatsApp
+  const handleSendCardUpdatedNotification = async (patient: Patient) => {
+    if (!currentClinic || !patient.phone) {
+      toast({
+        title: "Erro",
+        description: "Telefone do paciente não encontrado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const expiryText = patient.card_expires_at 
+        ? format(new Date(patient.card_expires_at + "T12:00:00"), "dd/MM/yyyy")
+        : "não definida";
+
+      const message = `✅ *Carteirinha Atualizada!*\n\nOlá ${patient.name}! 👋\n\nSua carteirinha foi atualizada com sucesso!\n\n📅 *Nova validade:* ${expiryText}\n${patient.card_number ? `🎫 *Número:* ${patient.card_number}\n` : ""}\nAtenciosamente,\n${currentClinic.name}`;
+
+      const result = await sendWhatsAppMessage({
+        phone: patient.phone,
+        message,
+        clinicId: currentClinic.id,
+        type: "custom",
+      });
+
+      if (result.success) {
+        toast({
+          title: "Notificação enviada!",
+          description: `${patient.name} foi notificado(a) sobre a atualização da carteirinha.`,
+        });
+      } else {
+        toast({
+          title: "Erro ao enviar",
+          description: result.error || "Não foi possível enviar a notificação.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao enviar notificação.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleCreatePatient = async (e: React.FormEvent) => {
@@ -1399,6 +1446,12 @@ export default function PatientsPage() {
                                 ? `Dependentes (${patient.dependents_count})`
                                 : "Novo dependente"
                               }
+                            </DropdownMenuItem>
+                          )}
+                          {hasPermission("manage_patients") && patient.card_expires_at && (
+                            <DropdownMenuItem onClick={() => handleSendCardUpdatedNotification(patient)}>
+                              <Send className="h-4 w-4 mr-2" />
+                              Notificar Carteirinha
                             </DropdownMenuItem>
                           )}
                           {hasPermission("manage_patients") && (
