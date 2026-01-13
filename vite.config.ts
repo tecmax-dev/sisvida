@@ -58,8 +58,8 @@ export default defineConfig(({ mode }) => ({
         globPatterns: ["**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff2}"],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB limit
         cleanupOutdatedCaches: true, // Limpar caches antigos automaticamente
-        skipWaiting: true, // Ativar novo SW imediatamente
-        clientsClaim: true, // Tomar controle de todas as páginas
+        skipWaiting: false, // NÃO ativar novo SW imediatamente - evita reload inesperado
+        clientsClaim: false, // NÃO tomar controle imediatamente - evita remount do App
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
