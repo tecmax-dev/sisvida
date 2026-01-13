@@ -157,7 +157,7 @@ export function UnionCheckPrintDialog({
             
             @media print {
               body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-              @page { margin: 15mm; }
+              @page { margin: 8mm 10mm; size: A4; }
             }
             
             * {
@@ -170,28 +170,33 @@ export function UnionCheckPrintDialog({
               font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
               background: #f8fafc;
               color: #1e293b;
-              line-height: 1.5;
+              line-height: 1.3;
+              font-size: 11px;
             }
             
             .document {
-              max-width: 800px;
+              max-width: 100%;
               margin: 0 auto;
               background: white;
-              box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             }
             
-            /* Header with gradient */
+            /* Header compacto */
             .header {
               background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 50%, #1e3a5f 100%);
               color: white;
-              padding: 24px 32px;
+              padding: 12px 16px;
               display: flex;
               align-items: center;
-              gap: 20px;
+              gap: 12px;
             }
             
             .header-logo {
               flex-shrink: 0;
+            }
+            
+            .header-logo img {
+              max-height: 40px !important;
+              max-width: 100px !important;
             }
             
             .header-info {
@@ -199,55 +204,56 @@ export function UnionCheckPrintDialog({
             }
             
             .header-info h1 {
-              font-size: 22px;
+              font-size: 14px;
               font-weight: 700;
-              margin-bottom: 4px;
+              margin-bottom: 2px;
               letter-spacing: -0.02em;
             }
             
             .header-info p {
-              font-size: 13px;
+              font-size: 10px;
               opacity: 0.85;
+              margin: 0;
+              line-height: 1.3;
             }
             
             .header-badge {
               background: rgba(255, 255, 255, 0.15);
-              backdrop-filter: blur(10px);
               border: 1px solid rgba(255, 255, 255, 0.2);
-              padding: 8px 16px;
-              border-radius: 8px;
+              padding: 6px 12px;
+              border-radius: 6px;
               text-align: center;
             }
             
             .header-badge span {
               display: block;
-              font-size: 11px;
+              font-size: 9px;
               opacity: 0.8;
               text-transform: uppercase;
               letter-spacing: 0.05em;
             }
             
             .header-badge strong {
-              font-size: 20px;
+              font-size: 16px;
               font-weight: 700;
             }
             
-            /* Content area */
+            /* Content area compacto */
             .content {
-              padding: 24px 32px;
+              padding: 12px 16px;
             }
             
-            /* Summary cards */
+            /* Summary cards compactos */
             .cards-grid {
               display: grid;
               grid-template-columns: repeat(4, 1fr);
-              gap: 16px;
-              margin-bottom: 24px;
+              gap: 8px;
+              margin-bottom: 12px;
             }
             
             .card {
-              border-radius: 12px;
-              padding: 16px;
+              border-radius: 6px;
+              padding: 8px 10px;
               position: relative;
               overflow: hidden;
             }
@@ -258,7 +264,7 @@ export function UnionCheckPrintDialog({
               top: 0;
               left: 0;
               right: 0;
-              height: 4px;
+              height: 3px;
             }
             
             .card-slate {
@@ -290,31 +296,31 @@ export function UnionCheckPrintDialog({
             .card-blue .card-value { color: #1d4ed8; }
             
             .card-label {
-              font-size: 11px;
+              font-size: 8px;
               font-weight: 600;
               text-transform: uppercase;
               letter-spacing: 0.05em;
               color: #64748b;
-              margin-bottom: 4px;
+              margin-bottom: 2px;
             }
             
             .card-value {
-              font-size: 20px;
+              font-size: 14px;
               font-weight: 700;
             }
             
             .card-sub {
-              font-size: 12px;
+              font-size: 9px;
               color: #94a3b8;
-              margin-top: 2px;
+              margin-top: 1px;
             }
             
-            /* Table */
+            /* Table compacta */
             .table-container {
               border: 1px solid #e2e8f0;
-              border-radius: 12px;
+              border-radius: 6px;
               overflow: hidden;
-              margin-bottom: 24px;
+              margin-bottom: 12px;
             }
             
             table {
@@ -325,11 +331,11 @@ export function UnionCheckPrintDialog({
             th {
               background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
               color: white;
-              font-size: 11px;
+              font-size: 9px;
               font-weight: 600;
               text-transform: uppercase;
-              letter-spacing: 0.05em;
-              padding: 12px 16px;
+              letter-spacing: 0.03em;
+              padding: 6px 8px;
               text-align: left;
             }
             
@@ -338,9 +344,10 @@ export function UnionCheckPrintDialog({
             }
             
             td {
-              padding: 12px 16px;
+              padding: 5px 8px;
               border-bottom: 1px solid #f1f5f9;
-              font-size: 13px;
+              font-size: 10px;
+              line-height: 1.25;
             }
             
             tr:last-child td {
@@ -367,13 +374,27 @@ export function UnionCheckPrintDialog({
               font-weight: 600;
             }
             
-            /* Status badges */
+            .truncate {
+              max-width: 180px;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            
+            .truncate-sm {
+              max-width: 120px;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            
+            /* Status badges compactos */
             .status {
               display: inline-flex;
               align-items: center;
-              padding: 4px 10px;
-              border-radius: 20px;
-              font-size: 11px;
+              padding: 2px 6px;
+              border-radius: 10px;
+              font-size: 8px;
               font-weight: 600;
               text-transform: uppercase;
               letter-spacing: 0.02em;
@@ -410,13 +431,13 @@ export function UnionCheckPrintDialog({
             }
             
             .total-row td {
-              padding: 16px;
+              padding: 8px;
               border-top: 2px solid #3b82f6;
               border-bottom: none !important;
             }
             
             .total-label {
-              font-size: 14px;
+              font-size: 10px;
               font-weight: 700;
               color: #1e3a5f;
               text-transform: uppercase;
@@ -424,18 +445,18 @@ export function UnionCheckPrintDialog({
             }
             
             .total-value {
-              font-size: 18px;
+              font-size: 13px;
               font-weight: 700;
               color: #1e3a5f;
             }
             
-            /* Signature area */
+            /* Signature area compacta */
             .signature-section {
               display: grid;
               grid-template-columns: 1fr 1fr;
-              gap: 60px;
-              margin: 40px 0;
-              padding: 0 40px;
+              gap: 40px;
+              margin: 20px 0;
+              padding: 0 20px;
             }
             
             .signature-box {
@@ -443,24 +464,24 @@ export function UnionCheckPrintDialog({
             }
             
             .signature-line {
-              border-top: 2px solid #cbd5e1;
-              padding-top: 8px;
-              margin-top: 50px;
+              border-top: 1px solid #cbd5e1;
+              padding-top: 6px;
+              margin-top: 30px;
             }
             
             .signature-label {
-              font-size: 12px;
+              font-size: 9px;
               font-weight: 600;
               color: #64748b;
               text-transform: uppercase;
               letter-spacing: 0.05em;
             }
             
-            /* Footer */
+            /* Footer compacto */
             .footer {
               background: #f8fafc;
               border-top: 1px solid #e2e8f0;
-              padding: 16px 32px;
+              padding: 8px 16px;
               display: flex;
               justify-content: space-between;
               align-items: center;
@@ -469,14 +490,14 @@ export function UnionCheckPrintDialog({
             .footer-left {
               display: flex;
               align-items: center;
-              gap: 8px;
+              gap: 6px;
             }
             
             .footer-icon {
-              width: 32px;
-              height: 32px;
+              width: 20px;
+              height: 20px;
               background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
-              border-radius: 6px;
+              border-radius: 4px;
               display: flex;
               align-items: center;
               justify-content: center;
@@ -484,24 +505,24 @@ export function UnionCheckPrintDialog({
             
             .footer-icon span {
               color: white;
-              font-size: 14px;
+              font-size: 10px;
               font-weight: 700;
             }
             
             .footer-text {
-              font-size: 11px;
+              font-size: 9px;
               color: #64748b;
             }
             
             .footer-text strong {
               display: block;
               color: #334155;
-              font-size: 12px;
+              font-size: 10px;
             }
             
             .footer-right {
               text-align: right;
-              font-size: 11px;
+              font-size: 9px;
               color: #94a3b8;
             }
           </style>
@@ -511,12 +532,11 @@ export function UnionCheckPrintDialog({
             <!-- Header -->
             <div class="header">
               <div class="header-logo">
-                ${logoHtml}
+                ${logoHtml.replace('max-height: 70px', 'max-height: 40px').replace('max-width: 200px', 'max-width: 100px').replace('width: 70px; height: 70px', 'width: 40px; height: 40px').replace('font-size: 28px', 'font-size: 18px')}
               </div>
               <div class="header-info">
                 <h1>${clinic?.name || "Entidade Sindical"}</h1>
-                ${clinic?.cnpj ? `<p>CNPJ: ${clinic.cnpj}</p>` : ""}
-                ${clinic?.address ? `<p>${clinic.address}</p>` : ""}
+                ${clinic?.cnpj ? `<p>CNPJ: ${clinic.cnpj}${clinic?.address ? ` • ${clinic.address}` : ""}</p>` : ""}
               </div>
               <div class="header-badge">
                 <span>Cheque Nº</span>
@@ -530,7 +550,7 @@ export function UnionCheckPrintDialog({
               <div class="cards-grid">
                 <div class="card card-slate">
                   <div class="card-label">Portador</div>
-                  <div class="card-value" style="font-size: 14px;">${expenses[0]?.cash_register?.name || "-"}</div>
+                  <div class="card-value" style="font-size: 11px;">${expenses[0]?.cash_register?.name || "-"}</div>
                 </div>
                 <div class="card card-blue">
                   <div class="card-label">Despesas</div>
@@ -554,27 +574,27 @@ export function UnionCheckPrintDialog({
                 <table>
                   <thead>
                     <tr>
-                      <th>Descrição</th>
-                      <th>Fornecedor</th>
-                      <th>Vencimento</th>
-                      <th style="text-align: right;">Valor</th>
-                      <th>Status</th>
+                      <th style="width: 35%;">Descrição</th>
+                      <th style="width: 25%;">Fornecedor</th>
+                      <th style="width: 15%;">Vencimento</th>
+                      <th style="width: 15%; text-align: right;">Valor</th>
+                      <th style="width: 10%;">Status</th>
                     </tr>
                   </thead>
                   <tbody>
                     ${expenses.map((e) => `
                       <tr>
-                        <td class="font-medium">${e.description}</td>
-                        <td>${e.supplier?.name || "-"}</td>
+                        <td class="font-medium truncate" title="${e.description}">${e.description}</td>
+                        <td class="truncate-sm" title="${e.supplier?.name || "-"}">${e.supplier?.name || "-"}</td>
                         <td>${e.due_date ? format(parseISO(e.due_date), "dd/MM/yyyy") : "-"}</td>
                         <td class="text-right font-semibold">${formatCurrency(Number(e.net_value || e.amount))}</td>
                         <td class="text-center">
                           <span class="status status-${e.status}">
                             ${e.status === "paid" ? "Pago" : 
-                              e.status === "pending" ? "Pendente" : 
-                              e.status === "overdue" ? "Vencido" : 
-                              e.status === "cancelled" ? "Cancelado" : 
-                              e.status === "reversed" ? "Estornado" : e.status}
+                              e.status === "pending" ? "Pend" : 
+                              e.status === "overdue" ? "Venc" : 
+                              e.status === "cancelled" ? "Canc" : 
+                              e.status === "reversed" ? "Est" : e.status}
                           </span>
                         </td>
                       </tr>
