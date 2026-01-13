@@ -11591,6 +11591,21 @@ export type Database = {
       }
       is_super_admin: { Args: { _user_id: string }; Returns: boolean }
       is_union_context: { Args: { p_user_id: string }; Returns: boolean }
+      log_reconciliation_action: {
+        Args: {
+          p_action: string
+          p_clinic_id: string
+          p_details: Json
+          p_new_status: string
+          p_origin: string
+          p_performed_by: string
+          p_previous_status: string
+          p_statement_transaction_id: string
+          p_transaction_id: string
+        }
+        Returns: string
+      }
+      normalize_check_number: { Args: { check_num: string }; Returns: string }
       recalculate_union_cash_register_balance: {
         Args: { register_id: string }
         Returns: number
