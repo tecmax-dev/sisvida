@@ -3,19 +3,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -33,7 +25,6 @@ import {
 import {
   Collapsible,
   CollapsibleContent,
-  CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -61,7 +52,11 @@ import {
   CreditCard,
   FileText,
   Printer,
+  Calendar,
+  Building2,
+  Tag,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export default function UnionExpensesPage() {
   const { currentClinic, session } = useAuth();
@@ -313,20 +308,24 @@ export default function UnionExpensesPage() {
     .filter((t) => t.effectiveStatus === "paid")
     .reduce((sum, t) => sum + Number(t.net_value || t.amount), 0);
 
+  const pendingCount = processedTransactions.filter((t) => t.effectiveStatus === "pending").length;
+  const overdueCount = processedTransactions.filter((t) => t.effectiveStatus === "overdue").length;
+  const paidCount = processedTransactions.filter((t) => t.effectiveStatus === "paid").length;
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-emerald-100 text-emerald-800">Pago</Badge>;
+        return <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-200 text-xs px-2 py-0.5">Pago</Badge>;
       case "pending":
-        return <Badge className="bg-amber-100 text-amber-800">Pendente</Badge>;
+        return <Badge className="bg-amber-500/10 text-amber-700 border-amber-200 text-xs px-2 py-0.5">Pendente</Badge>;
       case "overdue":
-        return <Badge className="bg-rose-100 text-rose-800">Vencido</Badge>;
+        return <Badge className="bg-rose-500/10 text-rose-700 border-rose-200 text-xs px-2 py-0.5">Vencido</Badge>;
       case "cancelled":
-        return <Badge className="bg-slate-100 text-slate-800">Cancelado</Badge>;
+        return <Badge className="bg-slate-500/10 text-slate-600 border-slate-200 text-xs px-2 py-0.5">Cancelado</Badge>;
       case "reversed":
-        return <Badge className="bg-purple-100 text-purple-800">Estornado</Badge>;
+        return <Badge className="bg-purple-500/10 text-purple-700 border-purple-200 text-xs px-2 py-0.5">Estornado</Badge>;
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="secondary" className="text-xs px-2 py-0.5">{status}</Badge>;
     }
   };
 
@@ -347,123 +346,133 @@ export default function UnionExpensesPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div>
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-64 mt-2" />
+      <div className="space-y-4 p-1">
+        <div className="flex items-center justify-between">
+          <Skeleton className="h-7 w-32" />
+          <Skeleton className="h-9 w-28" />
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-3">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-24" />
+            <Skeleton key={i} className="h-16" />
           ))}
         </div>
-        <Skeleton className="h-96 w-full" />
+        <Skeleton className="h-[400px] w-full" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Despesas</h1>
-        <p className="text-muted-foreground">
-          Gerencie as despesas do módulo sindical
-        </p>
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-semibold text-foreground">Despesas</h1>
+          <p className="text-sm text-muted-foreground">
+            {filteredTransactions.length} de {processedTransactions.length} registros
+          </p>
+        </div>
+        {canManageExpenses() && (
+          <Button size="sm" onClick={() => { setEditingTransaction(null); setDialogOpen(true); }}>
+            <Plus className="h-4 w-4 mr-1" />
+            Nova Despesa
+          </Button>
+        )}
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-rose-500" />
-              Total de Despesas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-rose-600">{formatCurrency(totalExpenses)}</p>
-            <p className="text-xs text-muted-foreground">
-              {processedTransactions.length} lançamento(s)
-            </p>
+      {/* Compact Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="border-l-4 border-l-slate-400 bg-gradient-to-r from-slate-50/80 to-transparent">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">Total</p>
+                <p className="text-lg font-bold text-slate-700">{formatCurrency(totalExpenses)}</p>
+              </div>
+              <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-slate-500" />
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">{processedTransactions.length} lançamentos</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-500" />
-              Pendentes
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-amber-600">{formatCurrency(pendingExpenses)}</p>
+        <Card className="border-l-4 border-l-amber-400 bg-gradient-to-r from-amber-50/80 to-transparent">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Pendentes</p>
+                <p className="text-lg font-bold text-amber-700">{formatCurrency(pendingExpenses)}</p>
+              </div>
+              <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-amber-500" />
+              </div>
+            </div>
+            <p className="text-xs text-amber-600 mt-1">{pendingCount} despesas</p>
           </CardContent>
         </Card>
 
-        <Card className="border-rose-200 bg-rose-50/50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-rose-500" />
-              Vencidas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-rose-600">{formatCurrency(overdueExpenses)}</p>
+        <Card className="border-l-4 border-l-rose-400 bg-gradient-to-r from-rose-50/80 to-transparent">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-rose-600 uppercase tracking-wide">Vencidas</p>
+                <p className="text-lg font-bold text-rose-700">{formatCurrency(overdueExpenses)}</p>
+              </div>
+              <div className="h-9 w-9 rounded-lg bg-rose-100 flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-rose-500" />
+              </div>
+            </div>
+            <p className="text-xs text-rose-600 mt-1">{overdueCount} despesas</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-emerald-500" />
-              Pagas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(paidExpenses)}</p>
+        <Card className="border-l-4 border-l-emerald-400 bg-gradient-to-r from-emerald-50/80 to-transparent">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide">Pagas</p>
+                <p className="text-lg font-bold text-emerald-700">{formatCurrency(paidExpenses)}</p>
+              </div>
+              <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-emerald-500" />
+              </div>
+            </div>
+            <p className="text-xs text-emerald-600 mt-1">{paidCount} despesas</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Header with actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      {/* Toolbar */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Buscar por descrição, fornecedor, cheque..."
+            placeholder="Buscar despesas..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            className="pl-8 h-9 text-sm"
           />
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button
             variant="outline"
+            size="sm"
             onClick={() => setFiltersOpen(!filtersOpen)}
-            className={filtersOpen ? "bg-accent" : ""}
+            className={cn("h-9", filtersOpen && "bg-accent")}
           >
-            <Filter className="h-4 w-4 mr-2" />
+            <Filter className="h-4 w-4 mr-1.5" />
             Filtros
-            <ChevronDown className={`h-4 w-4 ml-2 transition-transform ${filtersOpen ? "rotate-180" : ""}`} />
+            <ChevronDown className={cn("h-3.5 w-3.5 ml-1 transition-transform", filtersOpen && "rotate-180")} />
           </Button>
           {canManageExpenses() && (
             <>
-              <Button variant="outline" onClick={() => setCheckPrintDialogOpen(true)}>
-                <Printer className="h-4 w-4 mr-2" />
-                Cópia de Cheque
+              <Button variant="outline" size="sm" className="h-9" onClick={() => setCheckPrintDialogOpen(true)}>
+                <Printer className="h-4 w-4 mr-1.5" />
+                Cópia Cheque
               </Button>
-              <Button variant="outline" onClick={() => setCheckDialogOpen(true)}>
-                <FileCheck className="h-4 w-4 mr-2" />
-                Liquidar por Cheque
-              </Button>
-              <Button
-                onClick={() => {
-                  setEditingTransaction(null);
-                  setDialogOpen(true);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Despesa
+              <Button variant="outline" size="sm" className="h-9" onClick={() => setCheckDialogOpen(true)}>
+                <FileCheck className="h-4 w-4 mr-1.5" />
+                Liquidar Cheque
               </Button>
             </>
           )}
@@ -473,13 +482,13 @@ export default function UnionExpensesPage() {
       {/* Filters Panel */}
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
         <CollapsibleContent>
-          <Card>
-            <CardContent className="pt-4">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Card className="bg-muted/30">
+            <CardContent className="p-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 <div>
-                  <Label>Status</Label>
+                  <Label className="text-xs">Status</Label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="h-8 mt-1 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -493,43 +502,39 @@ export default function UnionExpensesPage() {
                 </div>
 
                 <div>
-                  <Label>Fornecedor</Label>
+                  <Label className="text-xs">Fornecedor</Label>
                   <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="h-8 mt-1 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
                       {suppliers?.map((s) => (
-                        <SelectItem key={s.id} value={s.id}>
-                          {s.name}
-                        </SelectItem>
+                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <Label>Portador</Label>
+                  <Label className="text-xs">Portador</Label>
                   <Select value={cashRegisterFilter} onValueChange={setCashRegisterFilter}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="h-8 mt-1 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
                       {cashRegisters?.map((cr) => (
-                        <SelectItem key={cr.id} value={cr.id}>
-                          {cr.name}
-                        </SelectItem>
+                        <SelectItem key={cr.id} value={cr.id}>{cr.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <Label>Forma de Pagamento</Label>
+                  <Label className="text-xs">Pagamento</Label>
                   <Select value={paymentMethodFilter} onValueChange={setPaymentMethodFilter}>
-                    <SelectTrigger className="mt-1">
+                    <SelectTrigger className="h-8 mt-1 text-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -539,44 +544,42 @@ export default function UnionExpensesPage() {
                       <SelectItem value="bank_transfer">Transferência</SelectItem>
                       <SelectItem value="check">Cheque</SelectItem>
                       <SelectItem value="boleto">Boleto</SelectItem>
-                      <SelectItem value="credit_card">Cartão Crédito</SelectItem>
-                      <SelectItem value="debit_card">Cartão Débito</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div>
-                  <Label>Nº Cheque</Label>
+                  <Label className="text-xs">Nº Cheque</Label>
                   <Input
                     placeholder="Ex: 1258"
                     value={checkNumberFilter}
                     onChange={(e) => setCheckNumberFilter(e.target.value)}
-                    className="mt-1"
+                    className="h-8 mt-1 text-sm"
                   />
                 </div>
 
                 <div>
-                  <Label>Data Inicial</Label>
+                  <Label className="text-xs">Data Início</Label>
                   <Input
                     type="date"
                     value={startDateFilter}
                     onChange={(e) => setStartDateFilter(e.target.value)}
-                    className="mt-1"
+                    className="h-8 mt-1 text-sm"
                   />
                 </div>
 
                 <div>
-                  <Label>Data Final</Label>
+                  <Label className="text-xs">Data Fim</Label>
                   <Input
                     type="date"
                     value={endDateFilter}
                     onChange={(e) => setEndDateFilter(e.target.value)}
-                    className="mt-1"
+                    className="h-8 mt-1 text-sm"
                   />
                 </div>
               </div>
-              <div className="mt-4 flex justify-end">
-                <Button variant="ghost" size="sm" onClick={clearFilters}>
+              <div className="mt-2 flex justify-end">
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearFilters}>
                   Limpar filtros
                 </Button>
               </div>
@@ -585,132 +588,154 @@ export default function UnionExpensesPage() {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Table */}
+      {/* Expense List - Compact Professional Design */}
       <Card>
         <CardContent className="p-0">
-          <ScrollArea className="max-h-[500px]">
+          {/* Fixed Header */}
+          <div className="grid grid-cols-12 gap-2 px-3 py-2 bg-muted/50 border-b text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            <div className="col-span-3">Descrição</div>
+            <div className="col-span-2">Fornecedor</div>
+            <div className="col-span-2">Categoria / Doc</div>
+            <div className="col-span-1 text-center">Vencimento</div>
+            <div className="col-span-2 text-right">Valor</div>
+            <div className="col-span-1 text-center">Status</div>
+            <div className="col-span-1"></div>
+          </div>
+
+          <ScrollArea className="h-[calc(100vh-400px)] min-h-[300px]">
             {filteredTransactions && filteredTransactions.length > 0 ? (
-              <Table>
-                <TableHeader className="sticky top-0 bg-background z-10">
-                  <TableRow>
-                    <TableHead>Descrição</TableHead>
-                    <TableHead>Fornecedor</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Documento</TableHead>
-                    <TableHead>Pagamento</TableHead>
-                    <TableHead>Vencimento</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="w-12"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredTransactions.map((transaction) => (
-                    <TableRow key={transaction.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <TrendingDown className="h-4 w-4 text-rose-500" />
-                          <span className="font-medium">{transaction.description}</span>
+              <div className="divide-y divide-border/50">
+                {filteredTransactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className={cn(
+                      "grid grid-cols-12 gap-2 px-3 py-2 hover:bg-muted/30 transition-colors items-center text-sm",
+                      transaction.effectiveStatus === "overdue" && "bg-rose-50/30"
+                    )}
+                  >
+                    {/* Descrição */}
+                    <div className="col-span-3 flex items-center gap-2 min-w-0">
+                      <TrendingDown className="h-3.5 w-3.5 text-rose-500 flex-shrink-0" />
+                      <span className="font-medium truncate" title={transaction.description}>
+                        {transaction.description}
+                      </span>
+                    </div>
+
+                    {/* Fornecedor */}
+                    <div className="col-span-2 flex items-center gap-1.5 min-w-0">
+                      <Building2 className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                      <span className="text-muted-foreground truncate text-xs" title={transaction.supplier?.name}>
+                        {transaction.supplier?.name || "—"}
+                      </span>
+                    </div>
+
+                    {/* Categoria / Documento */}
+                    <div className="col-span-2 space-y-0.5 min-w-0">
+                      {transaction.category && (
+                        <div className="flex items-center gap-1.5">
+                          <div
+                            className="w-2 h-2 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: transaction.category.color || "#6b7280" }}
+                          />
+                          <span className="text-xs truncate">{transaction.category.name}</span>
                         </div>
-                      </TableCell>
-                      <TableCell>{transaction.supplier?.name || "-"}</TableCell>
-                      <TableCell>
-                        {transaction.category ? (
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="w-3 h-3 rounded-full"
-                              style={{ backgroundColor: transaction.category.color || "#6b7280" }}
-                            />
-                            <span>{transaction.category.name}</span>
-                          </div>
-                        ) : (
-                          "-"
+                      )}
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        {transaction.check_number && (
+                          <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                            CH:{transaction.check_number}
+                          </Badge>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {transaction.document_number && (
-                            <>
-                              <FileText className="h-3 w-3 text-muted-foreground" />
-                              <span className="text-sm">{transaction.document_number}</span>
-                            </>
-                          )}
-                          {transaction.check_number && (
-                            <Badge variant="outline" className="ml-1 text-xs">
-                              CH: {transaction.check_number}
-                            </Badge>
-                          )}
-                          {!transaction.document_number && !transaction.check_number && "-"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <CreditCard className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-sm">
-                            {getPaymentMethodLabel(transaction.payment_method)}
+                        {transaction.document_number && !transaction.check_number && (
+                          <span className="truncate flex items-center gap-0.5">
+                            <FileText className="h-2.5 w-2.5" />
+                            {transaction.document_number}
                           </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {transaction.due_date
-                          ? format(parseISO(transaction.due_date), "dd/MM/yyyy", { locale: ptBR })
-                          : "-"}
-                      </TableCell>
-                      <TableCell className="font-semibold text-rose-600">
-                        {formatCurrency(Number(transaction.net_value || transaction.amount))}
-                      </TableCell>
-                      <TableCell>{getStatusBadge(transaction.effectiveStatus)}</TableCell>
-                      <TableCell>
-                        {canManageExpenses() && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleEdit(transaction)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Editar
-                              </DropdownMenuItem>
-                              {(transaction.effectiveStatus === "pending" ||
-                                transaction.effectiveStatus === "overdue") && (
-                                <>
-                                  <DropdownMenuItem
-                                    onClick={() => liquidateMutation.mutate(transaction)}
-                                  >
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Liquidar
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() => cancelMutation.mutate(transaction)}
-                                  >
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Cancelar
-                                  </DropdownMenuItem>
-                                </>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => deleteMutation.mutate(transaction)}
-                                disabled={transaction.status === "paid"}
-                              >
-                                <Trash2 className="h-4 w-4 mr-2" />
-                                Excluir
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
                         )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      </div>
+                    </div>
+
+                    {/* Vencimento */}
+                    <div className="col-span-1 text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        <Calendar className="h-3 w-3 text-muted-foreground" />
+                        <span className={cn(
+                          "text-xs",
+                          transaction.effectiveStatus === "overdue" && "text-rose-600 font-medium"
+                        )}>
+                          {transaction.due_date
+                            ? format(parseISO(transaction.due_date), "dd/MM/yy", { locale: ptBR })
+                            : "—"}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Valor */}
+                    <div className="col-span-2 text-right">
+                      <span className={cn(
+                        "font-semibold",
+                        transaction.effectiveStatus === "paid" ? "text-emerald-600" : "text-rose-600"
+                      )}>
+                        {formatCurrency(Number(transaction.net_value || transaction.amount))}
+                      </span>
+                      <div className="text-[10px] text-muted-foreground flex items-center justify-end gap-1">
+                        <CreditCard className="h-2.5 w-2.5" />
+                        {getPaymentMethodLabel(transaction.payment_method)}
+                      </div>
+                    </div>
+
+                    {/* Status */}
+                    <div className="col-span-1 flex justify-center">
+                      {getStatusBadge(transaction.effectiveStatus)}
+                    </div>
+
+                    {/* Ações */}
+                    <div className="col-span-1 flex justify-end">
+                      {canManageExpenses() && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem onClick={() => handleEdit(transaction)}>
+                              <Edit className="h-3.5 w-3.5 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            {(transaction.effectiveStatus === "pending" ||
+                              transaction.effectiveStatus === "overdue") && (
+                              <>
+                                <DropdownMenuItem onClick={() => liquidateMutation.mutate(transaction)}>
+                                  <CheckCircle className="h-3.5 w-3.5 mr-2" />
+                                  Liquidar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => cancelMutation.mutate(transaction)}>
+                                  <XCircle className="h-3.5 w-3.5 mr-2" />
+                                  Cancelar
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => deleteMutation.mutate(transaction)}
+                              disabled={transaction.status === "paid"}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Excluir
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
               <div className="text-center py-12 text-muted-foreground">
-                <TrendingDown className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Nenhuma despesa encontrada</p>
+                <TrendingDown className="h-10 w-10 mx-auto mb-3 opacity-40" />
+                <p className="font-medium">Nenhuma despesa encontrada</p>
                 <p className="text-sm">Clique em "Nova Despesa" para começar.</p>
               </div>
             )}
