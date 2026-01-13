@@ -37,7 +37,9 @@ import {
   Building2,
   Phone,
   Mail,
+  Settings,
 } from "lucide-react";
+import { UnionSupplierDefaultsDialog } from "@/components/union/financials/UnionSupplierDefaultsDialog";
 
 export default function UnionSuppliersPage() {
   const { currentClinic } = useAuth();
@@ -47,6 +49,10 @@ export default function UnionSuppliersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<any>(null);
   const [showInactive, setShowInactive] = useState(false);
+
+  const [defaultsDialogOpen, setDefaultsDialogOpen] = useState(false);
+  const [selectedSupplierForDefaults, setSelectedSupplierForDefaults] =
+    useState<any>(null);
 
   const clinicId = currentClinic?.id;
 
@@ -311,6 +317,15 @@ export default function UnionSuppliersPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedSupplierForDefaults(supplier);
+                                  setDefaultsDialogOpen(true);
+                                }}
+                              >
+                                <Settings className="h-4 w-4 mr-2" />
+                                Vínculos / Padrões
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleEdit(supplier)}>
                                 <Edit className="h-4 w-4 mr-2" />
                                 Editar
@@ -376,6 +391,17 @@ export default function UnionSuppliersPage() {
           queryClient.invalidateQueries({ queryKey: ["union-suppliers"] });
         }}
       />
+
+      {/* Vínculos / Padrões do fornecedor */}
+      {selectedSupplierForDefaults && (
+        <UnionSupplierDefaultsDialog
+          open={defaultsDialogOpen}
+          onOpenChange={setDefaultsDialogOpen}
+          supplierId={selectedSupplierForDefaults.id}
+          supplierName={selectedSupplierForDefaults.name}
+          clinicId={clinicId}
+        />
+      )}
     </div>
   );
 }
