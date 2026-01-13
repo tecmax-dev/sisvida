@@ -39,6 +39,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { UnionTransactionDialog } from "@/components/union/financials/UnionTransactionDialog";
 import { UnionCheckLiquidationDialog } from "@/components/union/financials/UnionCheckLiquidationDialog";
+import { UnionCheckPrintDialog } from "@/components/union/financials/UnionCheckPrintDialog";
 import { toast } from "sonner";
 import { format, parseISO, startOfDay, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -59,6 +60,7 @@ import {
   XCircle,
   CreditCard,
   FileText,
+  Printer,
 } from "lucide-react";
 
 export default function UnionExpensesPage() {
@@ -68,6 +70,7 @@ export default function UnionExpensesPage() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [checkDialogOpen, setCheckDialogOpen] = useState(false);
+  const [checkPrintDialogOpen, setCheckPrintDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<any>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
@@ -76,6 +79,7 @@ export default function UnionExpensesPage() {
   const [supplierFilter, setSupplierFilter] = useState<string>("all");
   const [cashRegisterFilter, setCashRegisterFilter] = useState<string>("all");
   const [paymentMethodFilter, setPaymentMethodFilter] = useState<string>("all");
+  const [checkNumberFilter, setCheckNumberFilter] = useState<string>("");
   const [startDateFilter, setStartDateFilter] = useState("");
   const [endDateFilter, setEndDateFilter] = useState("");
 
@@ -178,6 +182,11 @@ export default function UnionExpensesPage() {
       const matchesPaymentMethod =
         paymentMethodFilter === "all" || t.payment_method === paymentMethodFilter;
 
+      // Check number filter
+      const matchesCheckNumber =
+        !checkNumberFilter || 
+        (t.check_number && t.check_number.toLowerCase().includes(checkNumberFilter.toLowerCase()));
+
       // Date range filter
       let matchesDateRange = true;
       if (startDateFilter && t.due_date) {
@@ -193,6 +202,7 @@ export default function UnionExpensesPage() {
         matchesSupplier &&
         matchesCashRegister &&
         matchesPaymentMethod &&
+        matchesCheckNumber &&
         matchesDateRange
       );
     });
@@ -203,6 +213,7 @@ export default function UnionExpensesPage() {
     supplierFilter,
     cashRegisterFilter,
     paymentMethodFilter,
+    checkNumberFilter,
     startDateFilter,
     endDateFilter,
   ]);
@@ -282,6 +293,7 @@ export default function UnionExpensesPage() {
     setSupplierFilter("all");
     setCashRegisterFilter("all");
     setPaymentMethodFilter("all");
+    setCheckNumberFilter("");
     setStartDateFilter("");
     setEndDateFilter("");
   };
@@ -436,6 +448,10 @@ export default function UnionExpensesPage() {
           </Button>
           {canManageExpenses() && (
             <>
+              <Button variant="outline" onClick={() => setCheckPrintDialogOpen(true)}>
+                <Printer className="h-4 w-4 mr-2" />
+                Cópia de Cheque
+              </Button>
               <Button variant="outline" onClick={() => setCheckDialogOpen(true)}>
                 <FileCheck className="h-4 w-4 mr-2" />
                 Liquidar por Cheque
@@ -527,6 +543,16 @@ export default function UnionExpensesPage() {
                       <SelectItem value="debit_card">Cartão Débito</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div>
+                  <Label>Nº Cheque</Label>
+                  <Input
+                    placeholder="Ex: 1258"
+                    value={checkNumberFilter}
+                    onChange={(e) => setCheckNumberFilter(e.target.value)}
+                    className="mt-1"
+                  />
                 </div>
 
                 <div>
@@ -709,6 +735,12 @@ export default function UnionExpensesPage() {
       <UnionCheckLiquidationDialog
         open={checkDialogOpen}
         onOpenChange={setCheckDialogOpen}
+        clinicId={clinicId}
+      />
+
+      <UnionCheckPrintDialog
+        open={checkPrintDialogOpen}
+        onOpenChange={setCheckPrintDialogOpen}
         clinicId={clinicId}
       />
     </div>
