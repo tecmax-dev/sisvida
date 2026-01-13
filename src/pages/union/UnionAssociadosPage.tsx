@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
+import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -92,6 +93,7 @@ export default function UnionAssociadosPage() {
   const { toast } = useToast();
   const { currentClinic } = useAuth();
   const { canManageMembers } = useUnionPermissions();
+  const { entity: unionEntity, loading: entityLoading } = useUnionEntity();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
@@ -104,14 +106,18 @@ export default function UnionAssociadosPage() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   const clinicId = currentClinic?.id;
+  const sindicatoId = unionEntity?.id;
 
-  // Buscar associados
+  // Buscar associados da entidade sindical
   const { data: associados = [], isLoading } = useQuery({
-    queryKey: ["sindical-associados", statusFilter],
+    queryKey: ["sindical-associados", sindicatoId, statusFilter],
     queryFn: async () => {
+      if (!sindicatoId) return [];
+      
       let query = supabase
         .from("sindical_associados")
         .select("*")
+        .eq("sindicato_id", sindicatoId)
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "todos") {
@@ -122,6 +128,7 @@ export default function UnionAssociadosPage() {
       if (error) throw error;
       return data as Associado[];
     },
+    enabled: !!sindicatoId,
   });
 
   // Aprovar associado e criar/vincular em patients
@@ -376,9 +383,17 @@ export default function UnionAssociadosPage() {
       {/* Lista de Associados */}
       <Card>
         <CardContent className="p-0">
-          {isLoading ? (
+          {isLoading || entityLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : !sindicatoId ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Building2 className="h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="font-medium text-foreground">Entidade não encontrada</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                Não foi possível identificar a entidade sindical vinculada.
+              </p>
             </div>
           ) : filteredAssociados.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
