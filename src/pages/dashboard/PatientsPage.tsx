@@ -86,7 +86,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { calculateAge } from "@/lib/utils";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
@@ -648,6 +648,12 @@ export default function PatientsPage() {
     setAnamnesisDialogOpen(true);
   };
 
+  // Helper para parse seguro de datas
+  const parseDateOnly = (value: string): Date => {
+    const dateOnly = value?.slice(0, 10);
+    return parseISO(dateOnly);
+  };
+
   // Enviar notificação rápida de carteirinha atualizada via WhatsApp
   const handleSendCardUpdatedNotification = async (patient: Patient) => {
     if (!currentClinic || !patient.phone) {
@@ -661,7 +667,7 @@ export default function PatientsPage() {
 
     try {
       const expiryText = patient.card_expires_at 
-        ? format(new Date(patient.card_expires_at + "T12:00:00"), "dd/MM/yyyy")
+        ? format(parseDateOnly(patient.card_expires_at), "dd/MM/yyyy")
         : "não definida";
 
       const message = `✅ *Carteirinha Atualizada!*\n\nOlá ${patient.name}! 👋\n\nSua carteirinha foi atualizada com sucesso!\n\n📅 *Nova validade:* ${expiryText}\n${patient.card_number ? `🎫 *Número:* ${patient.card_number}\n` : ""}\nAtenciosamente,\n${currentClinic.name}`;
