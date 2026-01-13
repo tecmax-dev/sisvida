@@ -842,20 +842,47 @@ Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, 
 
     console.log('[ai-assistant] Sending to AI with', messages.length, 'messages');
 
-    // First API call with tools - using Lovable AI Gateway
-    let response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages,
-        tools,
-        tool_choice: 'auto',
-      }),
-    });
+    // Helper function to call AI API with fallback
+    const callAI = async (msgs: any[], useTools: boolean = true): Promise<Response> => {
+      // Try Lovable AI Gateway first
+      let response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: msgs,
+          ...(useTools ? { tools, tool_choice: 'auto' } : {}),
+        }),
+      });
+
+      // If Lovable Gateway fails with 402 (quota), fallback to OpenAI
+      if (response.status === 402) {
+        const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+        if (OPENAI_API_KEY) {
+          console.log('[ai-assistant] Lovable Gateway 402, falling back to OpenAI');
+          response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${OPENAI_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o-mini',
+              messages: msgs,
+              ...(useTools ? { tools, tool_choice: 'auto' } : {}),
+            }),
+          });
+        }
+      }
+
+      return response;
+    };
+
+    // First API call with tools
+    let response = await callAI(messages);
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -864,14 +891,6 @@ Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, 
       if (response.status === 429) {
         return new Response(JSON.stringify({ 
           response: 'Estamos com muitas solicitações no momento. Por favor, aguarde alguns segundos e tente novamente.',
-        }), {
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        });
-      }
-      
-      if (response.status === 402) {
-        return new Response(JSON.stringify({ 
-          response: 'Sistema temporariamente indisponível. Por favor, tente novamente mais tarde.',
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
@@ -914,20 +933,8 @@ Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, 
       messages.push(assistantMessage);
       messages.push(...toolResults);
 
-      // Call AI again with tool results - using Lovable AI Gateway
-      response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages,
-          tools,
-          tool_choice: 'auto',
-        }),
-      });
+      // Call AI again with tool results - using helper with fallback
+      response = await callAI(messages);
 
       if (!response.ok) {
         const errorText = await response.text();
