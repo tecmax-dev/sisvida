@@ -187,9 +187,17 @@ export default function PatientEditPage() {
   useEffect(() => {
     const tabParam = searchParams.get('tab') as PatientTab | null;
     const dependentesParam = searchParams.get('dependentes');
+    const editDependentParam = searchParams.get('editDependent');
 
-    // Compatibilidade: links antigos usavam tab=cadastro&dependentes=true
-    if (dependentesParam === 'true') {
+    // Se veio um dependente específico, sempre forçar a aba de dependentes.
+    // Também canonicaliza a URL (evita ficar preso em tab=cadastro).
+    if (dependentesParam === 'true' || !!editDependentParam) {
+      if (tabParam !== 'dependentes') {
+        const next = new URLSearchParams(searchParams);
+        next.set('tab', 'dependentes');
+        navigate({ search: `?${next.toString()}` }, { replace: true });
+      }
+
       setActiveTab('dependentes');
       setShowDependentsForm(true);
       return;
@@ -198,7 +206,7 @@ export default function PatientEditPage() {
     if (tabParam === 'cadastro' || tabParam === 'dependentes') {
       setActiveTab(tabParam);
     }
-  }, [searchParams]);
+  }, [searchParams, navigate]);
 
   useEffect(() => {
     if (currentClinic && id) {
