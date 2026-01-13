@@ -144,6 +144,7 @@ import UnionLytexReportsPage from "./pages/union/UnionLytexReportsPage";
 import UnionCategoriesPage from "./pages/union/UnionCategoriesPage";
 import UnionChartOfAccountsPage from "./pages/union/UnionChartOfAccountsPage";
 import UnionAssociadosPage from "./pages/union/UnionAssociadosPage";
+import UnionPaymentHistoryPage from "./pages/union/UnionPaymentHistoryPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -448,6 +449,7 @@ const App = () => (
                   <Route path="financeiro/categorias" element={<UnionCategoriesPage />} />
                   <Route path="financeiro/plano-contas" element={<UnionChartOfAccountsPage />} />
                   <Route path="financeiro/conciliacao" element={<UnionReconciliationPage />} />
+                  <Route path="financeiro/historico-pagamentos" element={<UnionPaymentHistoryPage />} />
                   <Route path="financeiro/conciliacao-bancaria" element={<UnionBankReconciliationPage />} />
                   <Route path="financeiro/relatorios" element={<UnionReportsPage />} />
                   <Route path="financeiro/relatorios-lytex" element={<UnionLytexReportsPage />} />

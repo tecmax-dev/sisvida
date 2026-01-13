@@ -136,6 +136,7 @@ const unionNavTree: NavCategory[] = [
       { href: "/union/financeiro/fornecedores", icon: Building, label: "Fornecedores", permission: "union_manage_suppliers" },
       { href: "/union/financeiro/categorias", icon: ClipboardList, label: "Categorias", permission: "union_manage_categories" },
       { href: "/union/financeiro/plano-contas", icon: FolderTree, label: "Plano de Contas", permission: "union_manage_categories" },
+      { href: "/union/financeiro/historico-pagamentos", icon: History, label: "Histórico Pagamentos", permission: "union_view_financials" },
       { href: "/union/financeiro/conciliacao", icon: FileBarChart, label: "Conciliação Lytex", permission: "union_view_financials" },
       { href: "/union/financeiro/conciliacao-bancaria", icon: FileCheck2, label: "Conciliação Bancária", permission: "union_view_financials" },
       { href: "/union/financeiro/relatorios-lytex", icon: FileBarChart, label: "Relatórios Lytex", permission: "union_generate_reports" },

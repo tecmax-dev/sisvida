@@ -10256,6 +10256,78 @@ export type Database = {
           },
         ]
       }
+      union_payment_history: {
+        Row: {
+          bank_account: string | null
+          chart_of_accounts: string | null
+          check_number: string | null
+          created_at: string | null
+          description: string | null
+          due_date: string | null
+          entity_id: string | null
+          gross_value: number | null
+          id: string
+          imported_at: string | null
+          net_value: number | null
+          operational_unit: string | null
+          paid_at: string | null
+          status: string | null
+          supplier_id: string | null
+          supplier_name: string
+        }
+        Insert: {
+          bank_account?: string | null
+          chart_of_accounts?: string | null
+          check_number?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          entity_id?: string | null
+          gross_value?: number | null
+          id?: string
+          imported_at?: string | null
+          net_value?: number | null
+          operational_unit?: string | null
+          paid_at?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          supplier_name: string
+        }
+        Update: {
+          bank_account?: string | null
+          chart_of_accounts?: string | null
+          check_number?: string | null
+          created_at?: string | null
+          description?: string | null
+          due_date?: string | null
+          entity_id?: string | null
+          gross_value?: number | null
+          id?: string
+          imported_at?: string | null
+          net_value?: number | null
+          operational_unit?: string | null
+          paid_at?: string | null
+          status?: string | null
+          supplier_id?: string | null
+          supplier_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_payment_history_entity_id_fkey"
+            columns: ["entity_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_payment_history_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "union_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_share_logs: {
         Row: {
           clinic_id: string | null
