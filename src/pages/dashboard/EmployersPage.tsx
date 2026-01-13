@@ -1348,6 +1348,7 @@ export default function EmployersPage() {
           entityId={selectedEmployer.id}
           entityName={selectedEmployer.name}
           currentEmail={selectedEmployer.email || ""}
+          currentPhone={selectedEmployer.phone || ""}
         />
       )}
     </div>

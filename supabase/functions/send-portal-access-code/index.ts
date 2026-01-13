@@ -12,11 +12,14 @@ const corsHeaders = {
 interface SendAccessCodeRequest {
   type: "accounting_office" | "employer";
   entityId: string;
-  recipientEmail: string;
+  recipientEmail?: string;
   recipientName: string;
   clinicName: string;
   clinicSlug: string;
   updateEmail?: boolean;
+  updatePhone?: boolean;
+  phone?: string;
+  whatsappOnly?: boolean; // If true, only return the access code without sending email
 }
 
 const generateEmailHtml = (
@@ -123,23 +126,25 @@ const handler = async (req: Request): Promise<Response> => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     const data: SendAccessCodeRequest = await req.json();
-    console.log("send-portal-access-code: Processing request for", data.type, data.entityId);
+    console.log("send-portal-access-code: Processing request for", data.type, data.entityId, "whatsappOnly:", data.whatsappOnly);
 
     // Validate required fields
-    if (!data.type || !data.entityId || !data.recipientEmail || !data.recipientName || !data.clinicName || !data.clinicSlug) {
+    if (!data.type || !data.entityId || !data.recipientName || !data.clinicName || !data.clinicSlug) {
       return new Response(
         JSON.stringify({ error: "Campos obrigatórios não preenchidos" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(data.recipientEmail)) {
-      return new Response(
-        JSON.stringify({ error: "Email do destinatário inválido" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // For email sending, validate email
+    if (!data.whatsappOnly && data.recipientEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(data.recipientEmail)) {
+        return new Response(
+          JSON.stringify({ error: "Email do destinatário inválido" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
     }
 
     let accessCode: string;
@@ -150,7 +155,7 @@ const handler = async (req: Request): Promise<Response> => {
       // Fetch accounting office data
       const { data: office, error: fetchError } = await supabase
         .from("accounting_offices")
-        .select("access_code, email")
+        .select("access_code, email, phone")
         .eq("id", data.entityId)
         .single();
 
@@ -163,11 +168,11 @@ const handler = async (req: Request): Promise<Response> => {
       }
 
       accessCode = office.access_code;
-      identifier = data.recipientEmail;
+      identifier = data.recipientEmail || office.email;
       portalUrl = `${req.headers.get("origin") || "https://app.eclini.com.br"}/portal-contador/${data.clinicSlug}`;
 
       // Update email if different and requested
-      if (data.updateEmail && data.recipientEmail !== office.email) {
+      if (data.updateEmail && data.recipientEmail && data.recipientEmail !== office.email) {
         const { error: updateError } = await supabase
           .from("accounting_offices")
           .update({ email: data.recipientEmail.toLowerCase().trim() })
@@ -179,11 +184,25 @@ const handler = async (req: Request): Promise<Response> => {
           console.log("Email updated to:", data.recipientEmail);
         }
       }
+
+      // Update phone if different and requested
+      if (data.updatePhone && data.phone && data.phone !== office.phone) {
+        const { error: updateError } = await supabase
+          .from("accounting_offices")
+          .update({ phone: data.phone })
+          .eq("id", data.entityId);
+
+        if (updateError) {
+          console.error("Error updating phone:", updateError);
+        } else {
+          console.log("Phone updated to:", data.phone);
+        }
+      }
     } else {
       // Fetch employer data
       const { data: employer, error: fetchError } = await supabase
         .from("employers")
-        .select("access_code, cnpj, email")
+        .select("access_code, cnpj, email, phone")
         .eq("id", data.entityId)
         .single();
 
@@ -226,7 +245,7 @@ const handler = async (req: Request): Promise<Response> => {
       portalUrl = `${req.headers.get("origin") || "https://app.eclini.com.br"}/portal-empresa/${data.clinicSlug}`;
 
       // Update email if different and requested
-      if (data.updateEmail && data.recipientEmail !== employer.email) {
+      if (data.updateEmail && data.recipientEmail && data.recipientEmail !== employer.email) {
         const { error: updateError } = await supabase
           .from("employers")
           .update({ email: data.recipientEmail.toLowerCase().trim() })
@@ -238,6 +257,37 @@ const handler = async (req: Request): Promise<Response> => {
           console.log("Email updated to:", data.recipientEmail);
         }
       }
+
+      // Update phone if different and requested
+      if (data.updatePhone && data.phone && data.phone !== employer.phone) {
+        const { error: updateError } = await supabase
+          .from("employers")
+          .update({ phone: data.phone })
+          .eq("id", data.entityId);
+
+        if (updateError) {
+          console.error("Error updating phone:", updateError);
+        } else {
+          console.log("Phone updated to:", data.phone);
+        }
+      }
+    }
+
+    // If whatsappOnly, just return the access code without sending email
+    if (data.whatsappOnly) {
+      console.log("send-portal-access-code: Returning access code for WhatsApp");
+      return new Response(
+        JSON.stringify({ success: true, accessCode, identifier, portalUrl }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Send email
+    if (!data.recipientEmail) {
+      return new Response(
+        JSON.stringify({ error: "Email do destinatário é obrigatório para envio por e-mail" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const html = generateEmailHtml(
