@@ -296,6 +296,8 @@ export default function MedicalRecordsPage() {
       `)
       .eq('clinic_id', currentClinic.id)
       .eq('patient_id', selectedPatient.id)
+      // Importante: não misturar registros de dependentes no prontuário do titular
+      .is('dependent_id', null)
       .order('record_date', { ascending: false })
       .order('created_at', { ascending: false });
 
