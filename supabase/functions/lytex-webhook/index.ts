@@ -168,7 +168,8 @@ Deno.serve(async (req) => {
 
     if (newStatus === "paid") {
       updateData.paid_at = paidAt || contribution.paid_at || new Date().toISOString();
-      if (typeof payedValue === "number") updateData.paid_value = Math.round(payedValue * 100);
+      // IMPORTANTE: Lytex envia payedValue em CENTAVOS, NÃO multiplicar por 100!
+      if (typeof payedValue === "number") updateData.paid_value = Math.round(payedValue);
       if (paymentMethod) updateData.payment_method = paymentMethod;
     }
 
