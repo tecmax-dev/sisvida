@@ -25,7 +25,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, CalendarIcon, ChevronDown, Calculator, AlertTriangle, Loader2 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -35,6 +35,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { UnionSupplierCombobox } from "./UnionSupplierCombobox";
 import { UnionSupplierDialog } from "./UnionSupplierDialog";
+import { UnionSupplierDefaultsSelector } from "./UnionSupplierDefaultsSelector";
 import { useUnionFinancialData } from "@/hooks/useUnionFinancialData";
 
 interface UnionTransactionDialogProps {
@@ -81,6 +82,8 @@ export function UnionTransactionDialog({
   const [paidDate, setPaidDate] = useState<Date | undefined>();
   const [supplierDialogOpen, setSupplierDialogOpen] = useState(false);
   const [valuesOpen, setValuesOpen] = useState(false);
+  const [defaultsSelectorOpen, setDefaultsSelectorOpen] = useState(false);
+  const [selectedSupplierName, setSelectedSupplierName] = useState("");
 
   const [formData, setFormData] = useState({
     description: "",
@@ -153,6 +156,59 @@ export function UnionTransactionDialog({
   const handleSupplierCreated = () => {
     queryClient.invalidateQueries({ queryKey: ["union-suppliers", clinicId] });
     setSupplierDialogOpen(false);
+  };
+
+  // Handle supplier selection - check for defaults
+  const { data: suppliers } = useQuery({
+    queryKey: ["union-suppliers", clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("union_suppliers")
+        .select("id, name")
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!clinicId,
+  });
+
+  const handleSupplierChange = async (supplierId: string) => {
+    setFormData({ ...formData, supplier_id: supplierId });
+    
+    if (supplierId && !transaction) {
+      // Check if supplier has defaults configured
+      const { data: defaults } = await supabase
+        .from("union_supplier_defaults")
+        .select("id")
+        .eq("supplier_id", supplierId)
+        .eq("is_active", true)
+        .limit(1);
+
+      if (defaults && defaults.length > 0) {
+        const supplier = suppliers?.find(s => s.id === supplierId);
+        if (supplier) {
+          setSelectedSupplierName(supplier.name);
+          setDefaultsSelectorOpen(true);
+        }
+      }
+    }
+  };
+
+  // Handle defaults selection
+  const handleDefaultsSelect = (data: {
+    description: string;
+    category_id: string;
+    amount: string;
+    gross_value: string;
+  }) => {
+    setFormData(prev => ({
+      ...prev,
+      description: data.description,
+      category_id: data.category_id,
+      amount: data.amount,
+      gross_value: data.gross_value,
+    }));
   };
 
   useEffect(() => {
@@ -558,7 +614,7 @@ export function UnionTransactionDialog({
                   <Label>Fornecedor</Label>
                   <UnionSupplierCombobox
                     value={formData.supplier_id}
-                    onChange={(value) => setFormData({ ...formData, supplier_id: value })}
+                    onChange={handleSupplierChange}
                     clinicId={clinicId}
                     placeholder="Buscar fornecedor..."
                     onAddNew={() => setSupplierDialogOpen(true)}
@@ -704,6 +760,15 @@ export function UnionTransactionDialog({
         supplier={null}
         clinicId={clinicId}
         onSuccess={handleSupplierCreated}
+      />
+
+      {/* Dialog para seleção de defaults do fornecedor */}
+      <UnionSupplierDefaultsSelector
+        open={defaultsSelectorOpen}
+        onOpenChange={setDefaultsSelectorOpen}
+        supplierId={formData.supplier_id}
+        supplierName={selectedSupplierName}
+        onSelect={handleDefaultsSelect}
       />
     </>
   );

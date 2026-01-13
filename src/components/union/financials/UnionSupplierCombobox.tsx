@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Check, ChevronsUpDown, Truck, Plus } from "lucide-react";
+import { Check, ChevronsUpDown, Truck, Plus, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { UnionSupplierDefaultsDialog } from "./UnionSupplierDefaultsDialog";
 
 interface Supplier {
   id: string;
@@ -45,7 +46,8 @@ export function UnionSupplierCombobox({
 }: UnionSupplierComboboxProps) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
-
+  const [defaultsDialogOpen, setDefaultsDialogOpen] = useState(false);
+  const [selectedSupplierForDefaults, setSelectedSupplierForDefaults] = useState<Supplier | null>(null);
   const { data: suppliers, isLoading } = useQuery({
     queryKey: ["union-suppliers", clinicId],
     queryFn: async () => {
@@ -77,50 +79,112 @@ export function UnionSupplierCombobox({
   const selectedSupplier = suppliers?.find((s) => s.id === value);
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          disabled={disabled || isLoading}
-          className={cn(
-            "w-full justify-between",
-            !value && "text-muted-foreground"
-          )}
-        >
-          {selectedSupplier ? (
-            <span className="flex items-center gap-2 truncate">
-              <Truck className="h-4 w-4 shrink-0" />
-              <span className="truncate">{selectedSupplier.name}</span>
-            </span>
-          ) : (
-            <span className="flex items-center gap-2">
-              <Truck className="h-4 w-4" />
-              {isLoading ? "Carregando..." : placeholder}
-            </span>
-          )}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[400px] p-0" align="start">
-        <Command shouldFilter={false}>
-          <CommandInput
-            placeholder="Buscar por nome ou CNPJ..."
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandList>
-            <CommandEmpty>
-              <div className="py-4 text-center">
-                <p className="text-sm text-muted-foreground">
-                  Nenhum fornecedor encontrado.
-                </p>
-                {onAddNew && (
+    <>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled || isLoading}
+            className={cn(
+              "w-full justify-between",
+              !value && "text-muted-foreground"
+            )}
+          >
+            {selectedSupplier ? (
+              <span className="flex items-center gap-2 truncate">
+                <Truck className="h-4 w-4 shrink-0" />
+                <span className="truncate">{selectedSupplier.name}</span>
+              </span>
+            ) : (
+              <span className="flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                {isLoading ? "Carregando..." : placeholder}
+              </span>
+            )}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[400px] p-0" align="start">
+          <Command shouldFilter={false}>
+            <CommandInput
+              placeholder="Buscar por nome ou CNPJ..."
+              value={search}
+              onValueChange={setSearch}
+            />
+            <CommandList>
+              <CommandEmpty>
+                <div className="py-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum fornecedor encontrado.
+                  </p>
+                  {onAddNew && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => {
+                        setOpen(false);
+                        onAddNew();
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Cadastrar novo fornecedor
+                    </Button>
+                  )}
+                </div>
+              </CommandEmpty>
+              <CommandGroup>
+                {filteredSuppliers.map((supplier) => (
+                  <CommandItem
+                    key={supplier.id}
+                    value={supplier.id}
+                    onSelect={() => {
+                      onChange(supplier.id);
+                      setOpen(false);
+                      setSearch("");
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <div className="flex flex-col flex-1">
+                      <span className="font-medium">{supplier.name}</span>
+                      {supplier.cnpj && (
+                        <span className="text-xs text-muted-foreground">
+                          CNPJ: {supplier.cnpj}
+                        </span>
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0 hover:bg-primary/10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedSupplierForDefaults(supplier);
+                        setDefaultsDialogOpen(true);
+                        setOpen(false);
+                      }}
+                      title="Configurar vínculos"
+                    >
+                      <Settings className="h-3.5 w-3.5" />
+                    </Button>
+                    <Check
+                      className={cn(
+                        "ml-2 h-4 w-4",
+                        value === supplier.id ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+              {onAddNew && filteredSuppliers.length > 0 && (
+                <div className="border-t p-2">
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
-                    className="mt-2"
+                    className="w-full justify-start"
                     onClick={() => {
                       setOpen(false);
                       onAddNew();
@@ -129,57 +193,23 @@ export function UnionSupplierCombobox({
                     <Plus className="h-4 w-4 mr-2" />
                     Cadastrar novo fornecedor
                   </Button>
-                )}
-              </div>
-            </CommandEmpty>
-            <CommandGroup>
-              {filteredSuppliers.map((supplier) => (
-                <CommandItem
-                  key={supplier.id}
-                  value={supplier.id}
-                  onSelect={() => {
-                    onChange(supplier.id);
-                    setOpen(false);
-                    setSearch("");
-                  }}
-                  className="cursor-pointer"
-                >
-                  <div className="flex flex-col flex-1">
-                    <span className="font-medium">{supplier.name}</span>
-                    {supplier.cnpj && (
-                      <span className="text-xs text-muted-foreground">
-                        CNPJ: {supplier.cnpj}
-                      </span>
-                    )}
-                  </div>
-                  <Check
-                    className={cn(
-                      "ml-auto h-4 w-4",
-                      value === supplier.id ? "opacity-100" : "opacity-0"
-                    )}
-                  />
-                </CommandItem>
-              ))}
-            </CommandGroup>
-            {onAddNew && filteredSuppliers.length > 0 && (
-              <div className="border-t p-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
-                  onClick={() => {
-                    setOpen(false);
-                    onAddNew();
-                  }}
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Cadastrar novo fornecedor
-                </Button>
-              </div>
-            )}
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                </div>
+              )}
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+
+      {/* Dialog para gerenciar vínculos do fornecedor */}
+      {selectedSupplierForDefaults && (
+        <UnionSupplierDefaultsDialog
+          open={defaultsDialogOpen}
+          onOpenChange={setDefaultsDialogOpen}
+          supplierId={selectedSupplierForDefaults.id}
+          supplierName={selectedSupplierForDefaults.name}
+          clinicId={clinicId}
+        />
+      )}
+    </>
   );
 }

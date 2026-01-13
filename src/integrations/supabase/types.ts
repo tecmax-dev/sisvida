@@ -10307,6 +10307,64 @@ export type Database = {
           },
         ]
       }
+      union_supplier_defaults: {
+        Row: {
+          category_id: string | null
+          clinic_id: string
+          created_at: string | null
+          default_value: number | null
+          description: string
+          id: string
+          is_active: boolean | null
+          supplier_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          clinic_id: string
+          created_at?: string | null
+          default_value?: number | null
+          description: string
+          id?: string
+          is_active?: boolean | null
+          supplier_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          default_value?: number | null
+          description?: string
+          id?: string
+          is_active?: boolean | null
+          supplier_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_supplier_defaults_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "union_financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_supplier_defaults_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_supplier_defaults_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "union_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_suppliers: {
         Row: {
           address: string | null
