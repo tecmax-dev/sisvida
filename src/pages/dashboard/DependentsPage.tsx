@@ -225,7 +225,7 @@ export default function DependentsPage() {
   };
 
   const handleEditDependent = (dependent: DependentWithPatient) => {
-    navigate(`/dashboard/patients/${dependent.patient_id}/edit?tab=cadastro&dependentes=true`);
+    navigate(`/dashboard/patients/${dependent.patient_id}/edit?tab=dependentes&dependentes=true&editDependent=${dependent.id}`);
   };
 
   const handleEditPatient = (patientId: string) => {

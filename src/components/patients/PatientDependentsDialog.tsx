@@ -220,7 +220,7 @@ export function PatientDependentsDialog({
                   className="mt-3"
                   onClick={() => {
                     onOpenChange(false);
-                    navigate(`/dashboard/patients/${patientId}/edit?tab=cadastro&dependentes=true`);
+                    navigate(`/dashboard/patients/${patientId}/edit?tab=dependentes&dependentes=true`);
                   }}
                 >
                   Adicionar Dependente
@@ -307,7 +307,7 @@ export function PatientDependentsDialog({
                 variant="outline"
                 onClick={() => {
                   onOpenChange(false);
-                  navigate(`/dashboard/patients/${patientId}/edit?tab=cadastro&dependentes=true`);
+                  navigate(`/dashboard/patients/${patientId}/edit?tab=dependentes&dependentes=true`);
                 }}
               >
                 Adicionar Dependente
