@@ -194,9 +194,32 @@ export default function PatientsPage() {
   const [insurancePlans, setInsurancePlans] = useState<InsurancePlan[]>([]);
   const [clinicDefaultLimit, setClinicDefaultLimit] = useState<number | null>(null);
 
+  // Storage keys for search persistence
+  const SEARCH_TITULARES_KEY = "patients:search-titulares";
+  const SEARCH_DEPENDENTES_KEY = "patients:search-dependentes";
+  const ACTIVE_TAB_KEY = "patients:active-tab";
+
+  // Initialize search from sessionStorage
+  const getInitialSearch = (key: string): string => {
+    try {
+      return sessionStorage.getItem(key) || "";
+    } catch {
+      return "";
+    }
+  };
+
+  const getInitialTab = (): 'titulares' | 'dependentes' => {
+    try {
+      const saved = sessionStorage.getItem(ACTIVE_TAB_KEY);
+      return saved === 'dependentes' ? 'dependentes' : 'titulares';
+    } catch {
+      return 'titulares';
+    }
+  };
+
   // Search + pagination (server-side)
-  const [searchTerm, setSearchTerm] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [searchTerm, setSearchTerm] = useState(() => getInitialSearch(SEARCH_TITULARES_KEY));
+  const [debouncedSearch, setDebouncedSearch] = useState(() => getInitialSearch(SEARCH_TITULARES_KEY));
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(15);
   const [totalPatients, setTotalPatients] = useState(0);
@@ -204,14 +227,39 @@ export default function PatientsPage() {
   const [togglingActiveId, setTogglingActiveId] = useState<string | null>(null);
   
   // Tab state: 'titulares' or 'dependentes'
-  const [activeTab, setActiveTab] = useState<'titulares' | 'dependentes'>('titulares');
+  const [activeTab, setActiveTab] = useState<'titulares' | 'dependentes'>(getInitialTab);
   
   // Dependents state
   const [dependents, setDependents] = useState<any[]>([]);
   const [dependentsLoading, setDependentsLoading] = useState(false);
   const [totalDependents, setTotalDependents] = useState(0);
-  const [dependentsSearch, setDependentsSearch] = useState("");
-  const [debouncedDependentsSearch, setDebouncedDependentsSearch] = useState("");
+  const [dependentsSearch, setDependentsSearch] = useState(() => getInitialSearch(SEARCH_DEPENDENTES_KEY));
+  const [debouncedDependentsSearch, setDebouncedDependentsSearch] = useState(() => getInitialSearch(SEARCH_DEPENDENTES_KEY));
+
+  // Persist search terms to sessionStorage
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SEARCH_TITULARES_KEY, searchTerm);
+    } catch {
+      // ignore
+    }
+  }, [searchTerm]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(SEARCH_DEPENDENTES_KEY, dependentsSearch);
+    } catch {
+      // ignore
+    }
+  }, [dependentsSearch]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(ACTIVE_TAB_KEY, activeTab);
+    } catch {
+      // ignore
+    }
+  }, [activeTab]);
   
   // Inactivation dialog state
   const [inactivationDialogOpen, setInactivationDialogOpen] = useState(false);
