@@ -19,9 +19,7 @@ export default defineConfig(({ mode }) => ({
       includeAssets: [
         "favicon-eclini.png",
         "logo.png",
-        "pwa-icon.jpg",
-        "pwa-192x192.png",
-        "pwa-512x512.png",
+        "pwa-icon.png",
       ],
       manifest: {
         name: "Eclini - Gestão para Clínicas",
@@ -35,19 +33,55 @@ export default defineConfig(({ mode }) => ({
         start_url: "/",
         icons: [
           {
-            src: "/pwa-192x192.png",
+            src: "/pwa-icon.png",
+            sizes: "72x72",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/pwa-icon.png",
+            sizes: "96x96",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/pwa-icon.png",
+            sizes: "128x128",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/pwa-icon.png",
+            sizes: "144x144",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/pwa-icon.png",
+            sizes: "152x152",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/pwa-icon.png",
             sizes: "192x192",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/pwa-512x512.png",
+            src: "/pwa-icon.png",
+            sizes: "384x384",
+            type: "image/png",
+            purpose: "any",
+          },
+          {
+            src: "/pwa-icon.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "any",
           },
           {
-            src: "/pwa-512x512.png",
+            src: "/pwa-icon.png",
             sizes: "512x512",
             type: "image/png",
             purpose: "maskable",
