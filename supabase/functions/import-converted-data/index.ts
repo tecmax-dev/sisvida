@@ -796,9 +796,10 @@ async function importIndividualContributionsBatch(
       if (!patient && autoCreateMembers) {
         // Auto-create the member/patient from the Lytex data
         const memberName = row.name ? String(row.name).trim() : `SÓCIO ${formatCpf(cpf)}`;
-        const memberEmail = row.email ? String(row.email).trim().toLowerCase() : null;
-        const memberPhone = row.phone ? String(row.phone).replace(/\D/g, '') : null;
-        
+        const memberEmail = row.email ? String(row.email).trim().toLowerCase() : '';
+        // phone cannot be NULL in patients table - use empty string if not provided
+        const memberPhone = row.phone ? String(row.phone).replace(/\D/g, '') : '';
+
         const { data: newPatient, error: patientError } = await supabase
           .from('patients')
           .insert({
