@@ -141,7 +141,7 @@ Deno.serve(async (req) => {
         break;
       case 'contributions_individual':
       case 'contributions_individual_paid':
-        result = await importIndividualContributionsBatch(supabase, clinic_id, data, conversion_type);
+        result = await importIndividualContributionsBatch(supabase, clinic_id, data, conversion_type, shouldAutoCreate);
         break;
       default:
         return new Response(
@@ -651,7 +651,8 @@ async function importIndividualContributionsBatch(
   supabase: SupabaseClient,
   clinicId: string,
   data: Record<string, unknown>[],
-  conversionType: string
+  conversionType: string,
+  autoCreateMembers: boolean = false
 ): Promise<ImportResult> {
   const result: ImportResult = { success: true, inserted: 0, updated: 0, skipped: 0, errors: [] };
 
@@ -745,10 +746,59 @@ async function importIndividualContributionsBatch(
         continue;
       }
 
-      // Find patient (member) by CPF
-      const patient = patientMap.get(cpf);
+      // Find patient (member) by CPF or auto-create if not found
+      let patient = patientMap.get(cpf);
+      if (!patient && autoCreateMembers) {
+        // Auto-create the member/patient from the Lytex data
+        const memberName = row.name ? String(row.name).trim() : `SÓCIO ${formatCpf(cpf)}`;
+        const memberEmail = row.email ? String(row.email).trim().toLowerCase() : null;
+        const memberPhone = row.phone ? String(row.phone).replace(/\D/g, '') : null;
+        
+        const { data: newPatient, error: patientError } = await supabase
+          .from('patients')
+          .insert({
+            clinic_id: clinicId,
+            cpf: cpf,
+            name: memberName,
+            email: memberEmail,
+            phone: memberPhone,
+            is_active: true,
+            tag: 'Sócio', // Default tag for union members
+          })
+          .select('id, name')
+          .single();
+        
+        if (patientError) {
+          // Check if it's a duplicate CPF error
+          if (patientError.code === '23505') {
+            // Try to fetch the existing patient
+            const { data: existingPatient } = await supabase
+              .from('patients')
+              .select('id, name')
+              .eq('clinic_id', clinicId)
+              .eq('cpf', cpf)
+              .maybeSingle();
+            
+            if (existingPatient) {
+              patient = existingPatient;
+              patientMap.set(cpf, patient);
+            } else {
+              result.errors.push({ row: i + 1, message: `Sócio não encontrado e falha ao criar: ${patientError.message}`, cnpj: cpf });
+              continue;
+            }
+          } else {
+            result.errors.push({ row: i + 1, message: `Falha ao criar sócio: ${patientError.message}`, cnpj: cpf });
+            continue;
+          }
+        } else if (newPatient) {
+          patient = newPatient;
+          patientMap.set(cpf, patient);
+          console.log(`[importIndividualContributionsBatch] Auto-created member: ${memberName} (${formatCpf(cpf)})`);
+        }
+      }
+      
       if (!patient) {
-        result.errors.push({ row: i + 1, message: `Sócio não encontrado com CPF: ${formatCpf(cpf)}`, cnpj: cpf });
+        result.errors.push({ row: i + 1, message: `Sócio não encontrado com CPF: ${formatCpf(cpf)}. Ative a opção "Criar empresas automaticamente" para cadastrar novos sócios.`, cnpj: cpf });
         continue;
       }
 
