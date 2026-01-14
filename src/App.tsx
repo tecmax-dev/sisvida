@@ -175,6 +175,7 @@ const MobileHomePage = lazy(() => import("./pages/mobile/MobileHomePage"));
 const MobileAppointmentsPage = lazy(() => import("./pages/mobile/MobileAppointmentsPage"));
 const MobileProfilePage = lazy(() => import("./pages/mobile/MobileProfilePage"));
 const MobileBookingPage = lazy(() => import("./pages/mobile/MobileBookingPage"));
+const MobilePasswordResetPage = lazy(() => import("./pages/mobile/MobilePasswordResetPage"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -478,6 +479,7 @@ const App = () => (
                 <Route path="/app/agendamentos" element={<MobileAppointmentsPage />} />
                 <Route path="/app/agendar" element={<MobileBookingPage />} />
                 <Route path="/app/perfil" element={<MobileProfilePage />} />
+                <Route path="/app/recuperar-senha" element={<MobilePasswordResetPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

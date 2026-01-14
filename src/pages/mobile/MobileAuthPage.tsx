@@ -231,19 +231,13 @@ export default function MobileAuthPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <a 
-                href="#" 
+              <button
+                type="button"
                 className="text-sm text-emerald-600 hover:underline"
-                onClick={(e) => {
-                  e.preventDefault();
-                  toast({
-                    title: "Recuperar senha",
-                    description: "Entre em contato com o sindicato para recuperar ou definir sua senha.",
-                  });
-                }}
+                onClick={() => navigate("/app/recuperar-senha")}
               >
                 Esqueci minha senha
-              </a>
+              </button>
             </div>
 
             <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">

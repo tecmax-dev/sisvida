@@ -6541,6 +6541,41 @@ export type Database = {
           },
         ]
       }
+      patient_password_resets: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          patient_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          patient_id: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          patient_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_password_resets_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_segments: {
         Row: {
           clinic_id: string
@@ -11713,6 +11748,15 @@ export type Database = {
         Args: { _addon_key: string; _clinic_id: string }
         Returns: boolean
       }
+      create_password_reset_token: {
+        Args: { p_email: string }
+        Returns: {
+          message: string
+          patient_name: string
+          success: boolean
+          token: string
+        }[]
+      }
       generate_card_number:
         | { Args: { p_clinic_id: string }; Returns: string }
         | {
@@ -11860,6 +11904,13 @@ export type Database = {
           p_type: string
         }
         Returns: string
+      }
+      reset_patient_password_with_token: {
+        Args: { p_email: string; p_new_password: string; p_token: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
       }
       reverse_transaction: {
         Args: { p_reason: string; p_transaction_id: string; p_user_id?: string }
