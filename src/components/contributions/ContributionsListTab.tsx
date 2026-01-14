@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -48,6 +49,7 @@ import {
   Building2,
   FileSearch,
   Hash,
+  User,
 } from "lucide-react";
 import { format } from "date-fns";
 import { SendBoletoWhatsAppDialog } from "./SendBoletoWhatsAppDialog";
@@ -59,6 +61,12 @@ interface Employer {
   name: string;
   cnpj: string;
   registration_number?: string | null;
+}
+
+interface Member {
+  id: string;
+  name: string;
+  cpf?: string | null;
 }
 
 interface ContributionType {
@@ -78,6 +86,9 @@ interface Contribution {
   status: string;
   lytex_invoice_id: string | null;
   lytex_invoice_url: string | null;
+  lytex_boleto_digitable_line?: string | null;
+  lytex_pix_code?: string | null;
+  lytex_pix_qrcode?: string | null;
   paid_at?: string | null;
   paid_value?: number | null;
   payment_method?: string | null;
@@ -90,7 +101,9 @@ interface Contribution {
   imported_at?: string | null;
   created_at?: string;
   updated_at?: string;
+  member_id?: string | null;
   employers?: Employer;
+  patients?: Member;
   contribution_types?: ContributionType;
 }
 
@@ -173,6 +186,18 @@ export default function ContributionsListTab({
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
+  const [documentTypeTab, setDocumentTypeTab] = useState<"pj" | "pf">("pj");
+
+  // Separate contributions by type (PJ = empresas / PF = pessoa física with member_id)
+  const pjContributions = useMemo(() => {
+    return contributions.filter(c => !c.member_id);
+  }, [contributions]);
+
+  const pfContributions = useMemo(() => {
+    return contributions.filter(c => !!c.member_id);
+  }, [contributions]);
+
+  const activeContributions = documentTypeTab === "pj" ? pjContributions : pfContributions;
 
   // Get eligible contributions for WhatsApp (have boleto generated and are not paid/cancelled)
   const eligibleForWhatsApp = useMemo(() => {
@@ -203,13 +228,22 @@ export default function ContributionsListTab({
   };
 
   const filteredContributions = useMemo(() => {
-    return contributions.filter((c) => {
+    return activeContributions.filter((c) => {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
-        c.employers?.name.toLowerCase().includes(searchLower) ||
-        c.employers?.cnpj.includes(searchTerm.replace(/\D/g, "")) ||
-        c.employers?.registration_number?.includes(searchTerm) ||
-        c.contribution_types?.name.toLowerCase().includes(searchLower);
+      
+      // For PJ, search in employer data; for PF, search in member/patient data
+      const matchesSearch = documentTypeTab === "pj"
+        ? (
+          c.employers?.name.toLowerCase().includes(searchLower) ||
+          c.employers?.cnpj.includes(searchTerm.replace(/\D/g, "")) ||
+          c.employers?.registration_number?.includes(searchTerm) ||
+          c.contribution_types?.name.toLowerCase().includes(searchLower)
+        )
+        : (
+          c.patients?.name?.toLowerCase().includes(searchLower) ||
+          c.patients?.cpf?.includes(searchTerm.replace(/\D/g, "")) ||
+          c.contribution_types?.name.toLowerCase().includes(searchLower)
+        );
       
       const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
       const matchesYear = c.competence_year === yearFilter;
@@ -217,7 +251,7 @@ export default function ContributionsListTab({
 
       return matchesSearch && matchesStatus && matchesYear && matchesMonth;
     });
-  }, [contributions, searchTerm, statusFilter, yearFilter, monthFilter]);
+  }, [activeContributions, searchTerm, statusFilter, yearFilter, monthFilter, documentTypeTab]);
 
   const totalPages = Math.ceil(filteredContributions.length / ITEMS_PER_PAGE);
   const paginatedContributions = useMemo(() => {
@@ -271,8 +305,35 @@ export default function ContributionsListTab({
     setCurrentPage(1);
   };
 
+  const handleTabChange = (value: string) => {
+    setDocumentTypeTab(value as "pj" | "pf");
+    setCurrentPage(1);
+    setSearchTerm("");
+    setSelectedContributionIds(new Set());
+  };
+
   return (
     <div className="space-y-4">
+      {/* Document Type Tabs */}
+      <Tabs value={documentTypeTab} onValueChange={handleTabChange} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="pj" className="gap-2">
+            <Building2 className="h-4 w-4" />
+            Empresas (PJ)
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+              {pjContributions.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="pf" className="gap-2">
+            <User className="h-4 w-4" />
+            Pessoa Física (PF)
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+              {pfContributions.length}
+            </Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {/* Enhanced Search Card */}
       <Card className="border-2 border-amber-200 bg-gradient-to-r from-amber-50/80 to-orange-50/50 dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/20 shadow-sm">
         <CardContent className="p-4">
@@ -285,7 +346,10 @@ export default function ContributionsListTab({
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-amber-600/60 dark:text-amber-400/60" />
                 <Input
-                  placeholder="Buscar empresa, CNPJ, matrícula ou tipo..."
+                  placeholder={documentTypeTab === "pj" 
+                    ? "Buscar empresa, CNPJ, matrícula ou tipo..." 
+                    : "Buscar nome, CPF ou tipo de contribuição..."
+                  }
                   value={searchTerm}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   className="pl-10 h-11 text-base border-amber-200 focus:border-amber-400 focus:ring-amber-400/30 dark:border-amber-700 dark:focus:border-amber-500 bg-white/80 dark:bg-amber-950/20"
@@ -460,8 +524,12 @@ export default function ContributionsListTab({
                     </Tooltip>
                   </TooltipProvider>
                 </TableHead>
-                <TableHead className="font-semibold w-[80px]">Matrícula</TableHead>
-                <TableHead className="font-semibold">Empresa</TableHead>
+                {documentTypeTab === "pj" && (
+                  <TableHead className="font-semibold w-[80px]">Matrícula</TableHead>
+                )}
+                <TableHead className="font-semibold">
+                  {documentTypeTab === "pj" ? "Empresa" : "Contribuinte"}
+                </TableHead>
                 <TableHead className="font-semibold">Nº Documento</TableHead>
                 <TableHead className="font-semibold">Tipo</TableHead>
                 <TableHead className="font-semibold">Competência</TableHead>
@@ -476,10 +544,18 @@ export default function ContributionsListTab({
             <TableBody>
               {paginatedContributions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={12} className="h-32 text-center">
+                  <TableCell colSpan={documentTypeTab === "pj" ? 12 : 11} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
-                      <Receipt className="h-8 w-8 text-muted-foreground" />
-                      <p className="text-muted-foreground">Nenhuma contribuição encontrada</p>
+                      {documentTypeTab === "pj" ? (
+                        <Building2 className="h-8 w-8 text-muted-foreground" />
+                      ) : (
+                        <User className="h-8 w-8 text-muted-foreground" />
+                      )}
+                      <p className="text-muted-foreground">
+                        {documentTypeTab === "pj" 
+                          ? "Nenhuma contribuição de empresa encontrada" 
+                          : "Nenhuma contribuição de pessoa física encontrada"}
+                      </p>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -509,28 +585,50 @@ export default function ContributionsListTab({
                           </div>
                         )}
                       </TableCell>
-                      <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
-                        {contrib.employers?.registration_number ? (
-                          <code className="text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-2 py-1 rounded font-mono font-bold">
-                            {contrib.employers.registration_number}
-                          </code>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
+                      {/* Registration Number - Only for PJ */}
+                      {documentTypeTab === "pj" && (
+                        <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
+                          {contrib.employers?.registration_number ? (
+                            <code className="text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-2 py-1 rounded font-mono font-bold">
+                              {contrib.employers.registration_number}
+                            </code>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      )}
+                      
+                      {/* Contributor Name/Document Cell */}
                       <TableCell className="py-2">
                         <div className={isCancelled ? "opacity-60" : ""}>
-                          <button
-                            onClick={() => navigate(`/dashboard/empresas/${contrib.employer_id}`)}
-                            className={`font-medium text-sm text-primary hover:underline text-left ${isCancelled ? "line-through" : ""}`}
-                          >
-                            {contrib.employers?.name}
-                          </button>
-                          <p className="text-xs font-mono mt-0.5">
-                            <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 px-1.5 py-0.5 rounded">
-                              {contrib.employers?.cnpj.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}
-                            </span>
-                          </p>
+                          {documentTypeTab === "pj" ? (
+                            // PJ: Show employer data
+                            <>
+                              <button
+                                onClick={() => navigate(`/dashboard/empresas/${contrib.employer_id}`)}
+                                className={`font-medium text-sm text-primary hover:underline text-left ${isCancelled ? "line-through" : ""}`}
+                              >
+                                {contrib.employers?.name}
+                              </button>
+                              <p className="text-xs font-mono mt-0.5">
+                                <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300 px-1.5 py-0.5 rounded">
+                                  {contrib.employers?.cnpj?.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")}
+                                </span>
+                              </p>
+                            </>
+                          ) : (
+                            // PF: Show member/patient data
+                            <>
+                              <span className={`font-medium text-sm ${isCancelled ? "line-through" : ""}`}>
+                                {contrib.patients?.name || "Contribuinte Individual"}
+                              </span>
+                              <p className="text-xs font-mono mt-0.5">
+                                <span className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300 px-1.5 py-0.5 rounded">
+                                  {contrib.patients?.cpf?.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4") || "CPF não informado"}
+                                </span>
+                              </p>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
