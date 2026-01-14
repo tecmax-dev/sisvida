@@ -2854,12 +2854,33 @@ Deno.serve(async (req) => {
                   continue;
                 }
                 
-                // Extrair dados do cliente (empresa)
-                const clientCnpj = invoice.client?.cnpj || invoice.client?.document || invoice.cnpj;
-                const clientName = invoice.client?.name || invoice.client?.socialName || invoice.clientName;
+                // Extrair dados do cliente (empresa) - tentar múltiplos campos
+                const clientCnpj = 
+                  invoice.client?.cnpj || 
+                  invoice.client?.document || 
+                  invoice.cnpj ||
+                  invoice.payer?.cnpj ||
+                  invoice.payer?.document ||
+                  invoice.customerDocument ||
+                  invoice.customer?.cnpj ||
+                  invoice.customer?.document ||
+                  invoice.pagador?.cnpj ||
+                  invoice.pagador?.documento;
+                
+                const clientName = 
+                  invoice.client?.name || 
+                  invoice.client?.socialName || 
+                  invoice.clientName ||
+                  invoice.payer?.name ||
+                  invoice.payer?.socialName ||
+                  invoice.customer?.name ||
+                  invoice.pagador?.nome ||
+                  invoice.pagador?.razaoSocial;
                 
                 if (!clientCnpj) {
-                  console.log(`[Lytex] Fatura ${invoiceId} sem CNPJ do cliente, ignorando`);
+                  // Log mais detalhado para debug
+                  console.log(`[Lytex] Fatura ${invoiceId} sem CNPJ - campos disponíveis:`, 
+                    Object.keys(invoice).join(', '));
                   continue;
                 }
                 
