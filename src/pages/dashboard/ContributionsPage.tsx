@@ -98,7 +98,12 @@ export default function ContributionsPage() {
   const [contributionTypes, setContributionTypes] = useState<ContributionType[]>([]);
   const [categories, setCategories] = useState<{ id: string; name: string; color: string }[]>([]);
   const [loading, setLoading] = useState(true);
-  const [yearFilter, setYearFilter] = useState<number>(new Date().getFullYear());
+  // Initialize with previous month's year (for January, use previous year)
+  const getInitialYear = () => {
+    const now = new Date();
+    return now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+  };
+  const [yearFilter, setYearFilter] = useState<number>(getInitialYear());
   const [activeTab, setActiveTab] = useState("overview");
   const [detectedYear, setDetectedYear] = useState<number | null>(null);
   const [yearDetectionDone, setYearDetectionDone] = useState(false);
