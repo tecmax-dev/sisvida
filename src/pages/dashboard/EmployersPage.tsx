@@ -173,8 +173,12 @@ export default function EmployersPage() {
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [searchTerm, setSearchTerm] = useState(() => {
+    return sessionStorage.getItem("employers_search") || "";
+  });
+  const [categoryFilter, setCategoryFilter] = useState<string>(() => {
+    return sessionStorage.getItem("employers_category") || "all";
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
@@ -197,10 +201,16 @@ export default function EmployersPage() {
     }
   }, [currentClinic]);
 
-  // Reset to page 1 when search or filter changes
+  // Reset to page 1 when search or filter changes + persist to sessionStorage
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, categoryFilter]);
+    sessionStorage.setItem("employers_search", searchTerm);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+    sessionStorage.setItem("employers_category", categoryFilter);
+  }, [categoryFilter]);
 
   const fetchCategories = async () => {
     if (!currentClinic) return;
@@ -684,46 +694,58 @@ export default function EmployersPage() {
         </Card>
       </div>
 
-      {/* Search and Filter */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nome, CNPJ, matrícula ou paciente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-9 h-9"
-          />
-        </div>
-        
-        {categories.length > 0 && (
-          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-[180px] h-9">
-              <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-              <SelectValue placeholder="Filtrar categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as categorias</SelectItem>
-              <SelectItem value="none">Sem categoria</SelectItem>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id}>
-                  <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded-full" 
-                      style={{ backgroundColor: cat.color }}
-                    />
-                    {cat.name}
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
-        
-        <Badge variant="outline" className="text-xs">
-          {filteredEmployers.length} resultado{filteredEmployers.length !== 1 ? "s" : ""}
-        </Badge>
-      </div>
+      {/* Enhanced Search Card */}
+      <Card className="border-2 border-amber-200 bg-gradient-to-r from-amber-50/80 to-orange-50/50 dark:border-amber-800 dark:from-amber-950/30 dark:to-orange-950/20 shadow-sm">
+        <CardContent className="p-4">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search Input with Icon */}
+            <div className="flex items-center gap-3 flex-1">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50 flex items-center justify-center shrink-0 shadow-inner">
+                <Building2 className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-amber-600/60 dark:text-amber-400/60" />
+                <Input
+                  placeholder="Buscar por Razão Social, Nome Fantasia, CNPJ, matrícula..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-11 text-base border-amber-200 focus:border-amber-400 focus:ring-amber-400/30 dark:border-amber-700 dark:focus:border-amber-500 bg-white/80 dark:bg-amber-950/20"
+                />
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-2">
+              {categories.length > 0 && (
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="w-[180px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
+                    <Filter className="h-4 w-4 mr-2 text-amber-600" />
+                    <SelectValue placeholder="Filtrar categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as categorias</SelectItem>
+                    <SelectItem value="none">Sem categoria</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        <div className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full" 
+                            style={{ backgroundColor: cat.color }}
+                          />
+                          {cat.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Badge variant="secondary" className="h-8 px-3 text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
+                {filteredEmployers.length} resultado{filteredEmployers.length !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Table */}
       {filteredEmployers.length === 0 ? (
