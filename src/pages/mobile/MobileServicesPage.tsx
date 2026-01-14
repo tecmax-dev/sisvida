@@ -426,22 +426,81 @@ function OuvidoriaContent() {
   const [mensagem, setMensagem] = useState("");
   const [tipo, setTipo] = useState("sugestao");
   const [enviando, setEnviando] = useState(false);
+  const [isAnonimo, setIsAnonimo] = useState(false);
   const { toast } = useToast();
 
-  const handleEnviar = () => {
+  const handleEnviar = async () => {
     if (!mensagem.trim()) {
       toast({ title: "Digite sua mensagem", variant: "destructive" });
       return;
     }
+
     setEnviando(true);
-    setTimeout(() => {
-      setEnviando(false);
+    
+    try {
+      const patientId = sessionStorage.getItem('mobile_patient_id');
+      const clinicId = sessionStorage.getItem('mobile_clinic_id');
+      const patientName = sessionStorage.getItem('mobile_patient_name');
+
+      if (!clinicId) {
+        toast({ 
+          title: "Erro", 
+          description: "Sessão expirada. Faça login novamente.",
+          variant: "destructive" 
+        });
+        return;
+      }
+
+      // Buscar dados do paciente se não for anônimo
+      let patientData = null;
+      if (!isAnonimo && patientId) {
+        const { data } = await supabase
+          .from("patients")
+          .select("name, cpf, phone, email")
+          .eq("id", patientId)
+          .single();
+        patientData = data;
+      }
+
+      const { error } = await supabase
+        .from("ouvidoria_messages")
+        .insert({
+          clinic_id: clinicId,
+          patient_id: isAnonimo ? null : patientId,
+          patient_name: isAnonimo ? null : (patientData?.name || patientName),
+          patient_cpf: isAnonimo ? null : patientData?.cpf,
+          patient_phone: isAnonimo ? null : patientData?.phone,
+          patient_email: isAnonimo ? null : patientData?.email,
+          message_type: tipo,
+          message: mensagem.trim(),
+          is_anonymous: isAnonimo,
+        });
+
+      if (error) {
+        console.error("Error sending ouvidoria message:", error);
+        toast({ 
+          title: "Erro ao enviar", 
+          description: "Não foi possível enviar sua mensagem. Tente novamente.",
+          variant: "destructive" 
+        });
+        return;
+      }
+
       setMensagem("");
       toast({
         title: "Mensagem enviada!",
         description: "Sua manifestação foi registrada com sucesso. Retornaremos em breve.",
       });
-    }, 1500);
+    } catch (err) {
+      console.error("Error:", err);
+      toast({ 
+        title: "Erro", 
+        description: "Ocorreu um erro inesperado. Tente novamente.",
+        variant: "destructive" 
+      });
+    } finally {
+      setEnviando(false);
+    }
   };
 
   return (
@@ -482,6 +541,20 @@ function OuvidoriaContent() {
             placeholder="Descreva sua manifestação com o máximo de detalhes possível..."
             className="w-full min-h-[120px] p-3 border rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
+        </div>
+
+        {/* Opção de anonimato */}
+        <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+          <input
+            type="checkbox"
+            id="anonimo"
+            checked={isAnonimo}
+            onChange={(e) => setIsAnonimo(e.target.checked)}
+            className="w-4 h-4 rounded border-gray-300"
+          />
+          <label htmlFor="anonimo" className="text-sm">
+            Enviar de forma anônima (sua identidade não será revelada)
+          </label>
         </div>
         
         <Button

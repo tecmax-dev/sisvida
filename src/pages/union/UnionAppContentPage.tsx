@@ -67,8 +67,10 @@ import {
   ExternalLink,
   Smartphone,
   AlertTriangle,
+  MessageCircle,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { OuvidoriaMessagesTab } from "@/components/union/OuvidoriaMessagesTab";
 
 const contentTypeIcons: Record<ContentType, React.ReactNode> = {
   banner: <Image className="h-4 w-4" />,
@@ -103,12 +105,14 @@ const defaultFormData: FormData = {
   metadata: {},
 };
 
+type TabType = ContentType | "ouvidoria";
+
 export default function UnionAppContentPage() {
   const navigate = useNavigate();
   const { isSuperAdmin } = useAuth();
   const { hasUnionPermission } = useUnionPermissions();
   
-  const [activeTab, setActiveTab] = useState<ContentType>("banner");
+  const [activeTab, setActiveTab] = useState<TabType>("banner");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingContent, setEditingContent] = useState<UnionAppContent | null>(null);
@@ -143,13 +147,16 @@ export default function UnionAppContentPage() {
     );
   }
 
-  const filteredContent = allContent?.filter(c => c.content_type === activeTab) || [];
+  const filteredContent = activeTab !== "ouvidoria" 
+    ? allContent?.filter(c => c.content_type === activeTab) || []
+    : [];
 
   const handleOpenCreate = () => {
+    if (activeTab === "ouvidoria") return; // Can't create ouvidoria messages from admin
     setEditingContent(null);
     setFormData({
       ...defaultFormData,
-      content_type: activeTab,
+      content_type: activeTab as ContentType,
       order_index: filteredContent.length,
     });
     setIsDialogOpen(true);
@@ -257,18 +264,20 @@ export default function UnionAppContentPage() {
             Gestão de Conteúdo do App
           </h1>
           <p className="text-muted-foreground">
-            Gerencie banners, convênios, convenções, declarações, diretoria e documentos do aplicativo
+          Gerencie banners, convênios, convenções, declarações, diretoria, documentos e interações da ouvidoria
           </p>
         </div>
-        <Button onClick={handleOpenCreate} className="gap-2">
-          <Plus className="h-4 w-4" />
-          Novo {CONTENT_TYPE_LABELS[activeTab].slice(0, -1)}
-        </Button>
+        {activeTab !== "ouvidoria" && (
+          <Button onClick={handleOpenCreate} className="gap-2">
+            <Plus className="h-4 w-4" />
+            Novo {CONTENT_TYPE_LABELS[activeTab as ContentType].slice(0, -1)}
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as ContentType)}>
-        <TabsList className="grid w-full grid-cols-3 lg:grid-cols-6 h-auto">
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 h-auto">
           {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
             <TabsTrigger
               key={type}
@@ -282,6 +291,13 @@ export default function UnionAppContentPage() {
               </Badge>
             </TabsTrigger>
           ))}
+          <TabsTrigger
+            value="ouvidoria"
+            className="flex items-center gap-2 py-2"
+          >
+            <MessageCircle className="h-4 w-4" />
+            <span className="hidden sm:inline">Ouvidoria</span>
+          </TabsTrigger>
         </TabsList>
 
         {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
@@ -412,6 +428,11 @@ export default function UnionAppContentPage() {
             )}
           </TabsContent>
         ))}
+
+        {/* Ouvidoria Tab */}
+        <TabsContent value="ouvidoria" className="mt-4">
+          <OuvidoriaMessagesTab />
+        </TabsContent>
       </Tabs>
 
       {/* Create/Edit Dialog */}

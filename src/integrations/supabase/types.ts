@@ -5885,6 +5885,78 @@ export type Database = {
           },
         ]
       }
+      ouvidoria_messages: {
+        Row: {
+          admin_notes: string | null
+          clinic_id: string
+          created_at: string
+          id: string
+          is_anonymous: boolean | null
+          message: string
+          message_type: string
+          patient_cpf: string | null
+          patient_email: string | null
+          patient_id: string | null
+          patient_name: string | null
+          patient_phone: string | null
+          responded_at: string | null
+          responded_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          clinic_id: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean | null
+          message: string
+          message_type: string
+          patient_cpf?: string | null
+          patient_email?: string | null
+          patient_id?: string | null
+          patient_name?: string | null
+          patient_phone?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          clinic_id?: string
+          created_at?: string
+          id?: string
+          is_anonymous?: boolean | null
+          message?: string
+          message_type?: string
+          patient_cpf?: string | null
+          patient_email?: string | null
+          patient_id?: string | null
+          patient_name?: string | null
+          patient_phone?: string | null
+          responded_at?: string | null
+          responded_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ouvidoria_messages_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ouvidoria_messages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_payments: {
         Row: {
           amount: number
