@@ -49,6 +49,12 @@ interface ContributionType {
   is_active: boolean;
 }
 
+interface Member {
+  id: string;
+  name: string;
+  cpf?: string | null;
+}
+
 interface Contribution {
   id: string;
   employer_id: string;
@@ -68,7 +74,9 @@ interface Contribution {
   payment_method: string | null;
   notes: string | null;
   created_at: string;
+  member_id?: string | null;
   employers?: Employer;
+  patients?: Member;
   contribution_types?: ContributionType;
 }
 
@@ -167,7 +175,8 @@ export default function ContributionsPage() {
         .select(`
           *,
           employers (id, name, cnpj, email, phone, address, city, state, category_id, registration_number),
-          contribution_types (id, name, description, default_value, is_active)
+          contribution_types (id, name, description, default_value, is_active),
+          patients:member_id (id, name, cpf)
         `)
         .eq("clinic_id", currentClinic.id)
         .eq("competence_year", yearFilter)
