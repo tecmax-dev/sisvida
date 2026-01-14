@@ -89,6 +89,9 @@ export interface PatientFormData {
   
   // Admin-only: Limite de consultas
   maxAppointmentsPerMonth?: number | null;
+  
+  // Admin-only: Senha do app mobile
+  mobilePassword?: string;
 }
 
 const genderOptions = [
@@ -750,40 +753,78 @@ export function PatientFormFields({
         />
       </div>
 
-      {/* Admin-only: Limite de Consultas */}
+      {/* Admin-only: Limite de Consultas e Senha do App */}
       {isAdmin && (
-        <div className="border-t pt-4 mt-4">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
-              </svg>
+        <div className="border-t pt-4 mt-4 space-y-6">
+          {/* Limite de Consultas */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-amber-600 dark:text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Limite de Consultas (Admin)</p>
+                <p className="text-xs text-muted-foreground">
+                  Padrão da clínica: {clinicDefaultLimit === null || clinicDefaultLimit === 0 || clinicDefaultLimit === undefined ? 'Ilimitado' : `${clinicDefaultLimit}/mês`}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-medium">Limite de Consultas (Admin)</p>
-              <p className="text-xs text-muted-foreground">
-                Padrão da clínica: {clinicDefaultLimit === null || clinicDefaultLimit === 0 || clinicDefaultLimit === undefined ? 'Ilimitado' : `${clinicDefaultLimit}/mês`}
-              </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="maxAppointmentsPerMonth">Limite por mês</Label>
+                <Input
+                  id="maxAppointmentsPerMonth"
+                  type="number"
+                  min="0"
+                  value={formData.maxAppointmentsPerMonth?.toString() || ''}
+                  onChange={(e) => {
+                    const val = e.target.value.trim();
+                    updateField('maxAppointmentsPerMonth', val === '' ? null : parseInt(val));
+                  }}
+                  placeholder={clinicDefaultLimit?.toString() || 'Usar padrão'}
+                  className="mt-1"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Deixe vazio para usar o padrão. 0 = ilimitado.
+                </p>
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="maxAppointmentsPerMonth">Limite por mês</Label>
-              <Input
-                id="maxAppointmentsPerMonth"
-                type="number"
-                min="0"
-                value={formData.maxAppointmentsPerMonth?.toString() || ''}
-                onChange={(e) => {
-                  const val = e.target.value.trim();
-                  updateField('maxAppointmentsPerMonth', val === '' ? null : parseInt(val));
-                }}
-                placeholder={clinicDefaultLimit?.toString() || 'Usar padrão'}
-                className="mt-1"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                Deixe vazio para usar o padrão. 0 = ilimitado.
-              </p>
+
+          {/* Senha do App Mobile */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-8 w-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-emerald-600 dark:text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium">Senha do App Mobile</p>
+                <p className="text-xs text-muted-foreground">
+                  Defina uma senha para o sócio acessar o app
+                </p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="mobilePassword">Nova Senha</Label>
+                <Input
+                  id="mobilePassword"
+                  type="password"
+                  value={formData.mobilePassword || ''}
+                  onChange={(e) => updateField('mobilePassword', e.target.value)}
+                  placeholder="Deixe vazio para manter atual"
+                  className="mt-1"
+                  autoComplete="new-password"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Mínimo 6 caracteres. Deixe vazio para não alterar.
+                </p>
+              </div>
             </div>
           </div>
         </div>
