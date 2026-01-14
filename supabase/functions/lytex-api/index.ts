@@ -5,9 +5,11 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Cache para o token de acesso
-let accessToken: string | null = null;
-let tokenExpiresAt: number = 0;
+// Cache para tokens de acesso (primário e secundário)
+let accessTokenPrimary: string | null = null;
+let tokenExpiresAtPrimary: number = 0;
+let accessTokenSecondary: string | null = null;
+let tokenExpiresAtSecondary: number = 0;
 
 const LYTEX_API_URL = Deno.env.get("LYTEX_API_URL") || "https://api-pay.lytex.com.br/v2";
 
@@ -15,6 +17,153 @@ interface LytexAuthResponse {
   accessToken: string;
   refreshToken: string;
   expiresIn: number;
+}
+
+// Função para obter token primário (credenciais principais)
+async function getAccessToken(): Promise<string> {
+  const now = Date.now();
+  
+  // Retorna token em cache se ainda válido (com 5 min de margem)
+  if (accessTokenPrimary && tokenExpiresAtPrimary > now + 300000) {
+    return accessTokenPrimary;
+  }
+
+  const clientId = Deno.env.get("LYTEX_CLIENT_ID");
+  const clientSecret = Deno.env.get("LYTEX_CLIENT_SECRET");
+
+  if (!clientId || !clientSecret) {
+    throw new Error("Credenciais Lytex não configuradas");
+  }
+
+  console.log("[Lytex] Obtendo novo access token (primário)...");
+
+  const response = await fetch(`${LYTEX_API_URL}/auth/obtain_token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      clientId,
+      clientSecret,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Lytex] Erro ao autenticar (primário):", errorText);
+    throw new Error(`Erro de autenticação Lytex: ${response.status}`);
+  }
+
+  const data: LytexAuthResponse = await response.json();
+  accessTokenPrimary = data.accessToken;
+  tokenExpiresAtPrimary = now + (data.expiresIn * 1000);
+
+  console.log("[Lytex] Token primário obtido com sucesso");
+  return accessTokenPrimary;
+}
+
+// Função para obter token secundário (integração externa)
+async function getSecondaryAccessToken(): Promise<string | null> {
+  const now = Date.now();
+  
+  // Retorna token em cache se ainda válido (com 5 min de margem)
+  if (accessTokenSecondary && tokenExpiresAtSecondary > now + 300000) {
+    return accessTokenSecondary;
+  }
+
+  const clientId = Deno.env.get("LYTEX_CLIENT_ID_SECONDARY");
+  const clientSecret = Deno.env.get("LYTEX_CLIENT_SECRET_SECONDARY");
+
+  // Se não há credenciais secundárias, retorna null
+  if (!clientId || !clientSecret) {
+    console.log("[Lytex] Credenciais secundárias não configuradas - usando apenas primária");
+    return null;
+  }
+
+  console.log("[Lytex] Obtendo novo access token (secundário)...");
+
+  try {
+    const response = await fetch(`${LYTEX_API_URL}/auth/obtain_token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        clientId,
+        clientSecret,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[Lytex] Erro ao autenticar (secundário):", errorText);
+      return null;
+    }
+
+    const data: LytexAuthResponse = await response.json();
+    accessTokenSecondary = data.accessToken;
+    tokenExpiresAtSecondary = now + (data.expiresIn * 1000);
+
+    console.log("[Lytex] Token secundário obtido com sucesso");
+    return accessTokenSecondary;
+  } catch (err) {
+    console.error("[Lytex] Falha ao obter token secundário:", err);
+    return null;
+  }
+}
+
+// Tipo para resultado da busca de fatura em múltiplas integrações
+interface InvoiceFetchResult {
+  found: boolean;
+  invoice?: any;
+  source?: "primary" | "secondary";
+}
+
+// Função que tenta buscar fatura em ambas as integrações
+async function fetchInvoiceFromAnySource(invoiceId: string, primaryToken: string, secondaryToken: string | null): Promise<InvoiceFetchResult> {
+  // Tentar primeiro na integração primária
+  try {
+    const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${primaryToken}` },
+    });
+
+    if (response.ok) {
+      const invoiceData = await response.json();
+      const invoice = invoiceData?.data || invoiceData;
+      if (invoice) {
+        return { found: true, invoice, source: "primary" };
+      }
+    } else if (response.status !== 404) {
+      console.log(`[Lytex] Erro ao buscar fatura ${invoiceId} (primário): ${response.status}`);
+    }
+  } catch (err: any) {
+    console.error(`[Lytex] Erro na busca primária de ${invoiceId}:`, err?.message);
+  }
+
+  // Se não encontrou e temos token secundário, tentar nele
+  if (secondaryToken) {
+    try {
+      const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${secondaryToken}` },
+      });
+
+      if (response.ok) {
+        const invoiceData = await response.json();
+        const invoice = invoiceData?.data || invoiceData;
+        if (invoice) {
+          return { found: true, invoice, source: "secondary" };
+        }
+      } else if (response.status !== 404) {
+        console.log(`[Lytex] Erro ao buscar fatura ${invoiceId} (secundário): ${response.status}`);
+      }
+    } catch (err: any) {
+      console.error(`[Lytex] Erro na busca secundária de ${invoiceId}:`, err?.message);
+    }
+  }
+
+  return { found: false };
 }
 
 interface CreateInvoiceRequest {
@@ -40,48 +189,6 @@ interface CreateInvoiceRequest {
   description: string;
   enableBoleto: boolean;
   enablePix: boolean;
-}
-
-async function getAccessToken(): Promise<string> {
-  const now = Date.now();
-  
-  // Retorna token em cache se ainda válido (com 5 min de margem)
-  if (accessToken && tokenExpiresAt > now + 300000) {
-    return accessToken;
-  }
-
-  const clientId = Deno.env.get("LYTEX_CLIENT_ID");
-  const clientSecret = Deno.env.get("LYTEX_CLIENT_SECRET");
-
-  if (!clientId || !clientSecret) {
-    throw new Error("Credenciais Lytex não configuradas");
-  }
-
-  console.log("[Lytex] Obtendo novo access token...");
-
-  const response = await fetch(`${LYTEX_API_URL}/auth/obtain_token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      clientId,
-      clientSecret,
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("[Lytex] Erro ao autenticar:", errorText);
-    throw new Error(`Erro de autenticação Lytex: ${response.status}`);
-  }
-
-  const data: LytexAuthResponse = await response.json();
-  accessToken = data.accessToken;
-  tokenExpiresAt = now + (data.expiresIn * 1000);
-
-  console.log("[Lytex] Token obtido com sucesso");
-  return accessToken;
 }
 
 function extractList(resp: any): any[] {
@@ -2256,7 +2363,16 @@ Deno.serve(async (req) => {
           console.error("[Lytex] Erro ao criar log:", syncLogPaidErr);
         }
 
-        const token = await getAccessToken();
+        // Obter tokens de ambas as integrações
+        const tokenPrimary = await getAccessToken();
+        const tokenSecondary = await getSecondaryAccessToken();
+        
+        const hasSecondaryIntegration = !!tokenSecondary;
+        if (hasSecondaryIntegration) {
+          console.log("[Lytex] Conciliação ativada para DUAS integrações (primária + secundária)");
+        } else {
+          console.log("[Lytex] Conciliação ativada apenas para integração primária");
+        }
         
         // Estatísticas
         let totalFound = 0;
@@ -2264,6 +2380,8 @@ Deno.serve(async (req) => {
         let alreadyConciliated = 0;
         let ignored = 0;
         let errors = 0;
+        let foundInPrimary = 0;
+        let foundInSecondary = 0;
         const conciliationDetails: Array<{
           lytexInvoiceId: string;
           contributionId?: string;
@@ -2273,6 +2391,7 @@ Deno.serve(async (req) => {
           reason?: string;
           paidAt?: string;
           paidValue?: number;
+          source?: string;
         }> = [];
 
         try {
@@ -2313,15 +2432,12 @@ Deno.serve(async (req) => {
 
           console.log(`[Lytex] ${pendingContribs?.length || 0} contribuições com boleto Lytex encontradas`);
 
-        // Buscar faturas pagas na Lytex - OTIMIZADO com limite de páginas para evitar timeout
-        // Abordagem: buscar apenas contribuições pendentes que temos no sistema e verificar status na Lytex
-        const MAX_PAGES_PER_STATUS = 10; // Limitar a 1000 faturas por status para evitar timeout
-        const paidStatuses = ["paid"]; // Focar no status principal para velocidade
+        // Buscar faturas pagas na Lytex - OTIMIZADO com busca em múltiplas integrações
         const seenInvoiceIds = new Set<string>();
 
         // Estratégia otimizada: verificar diretamente as faturas que temos no sistema
         const pendingInvoiceIds = Array.from(contribByInvoiceId.keys());
-        console.log(`[Lytex] Verificando ${pendingInvoiceIds.length} faturas do sistema na API...`);
+        console.log(`[Lytex] Verificando ${pendingInvoiceIds.length} faturas do sistema na API (${hasSecondaryIntegration ? '2 integrações' : '1 integração'})...`);
 
         // Processar em lotes de 20 faturas por vez para verificar status individual
         const BATCH_SIZE = 20;
@@ -2342,27 +2458,22 @@ Deno.serve(async (req) => {
                 return;
               }
               
-              // Buscar status atual da fatura na Lytex
-              const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
-                method: "GET",
-                headers: { "Authorization": `Bearer ${token}` },
-              });
+              // Buscar status atual da fatura na Lytex - AGORA EM AMBAS INTEGRAÇÕES
+              const fetchResult = await fetchInvoiceFromAnySource(invoiceId, tokenPrimary, tokenSecondary);
 
-              if (!response.ok) {
-                if (response.status === 404) {
-                  ignored++;
-                  return;
-                }
-                console.log(`[Lytex] Erro ao buscar fatura ${invoiceId}: ${response.status}`);
+              if (!fetchResult.found || !fetchResult.invoice) {
+                ignored++;
                 return;
               }
 
-              const invoiceData = await response.json();
-              const invoice = invoiceData?.data || invoiceData;
+              const invoice = fetchResult.invoice;
+              const invoiceSource = fetchResult.source || "primary";
               
-              if (!invoice) {
-                ignored++;
-                return;
+              // Contabilizar por fonte
+              if (invoiceSource === "primary") {
+                foundInPrimary++;
+              } else {
+                foundInSecondary++;
               }
               
               totalFound++;
@@ -2448,7 +2559,7 @@ Deno.serve(async (req) => {
               }
 
               conciliated++;
-              console.log(`[Lytex] Conciliado: ${contrib.id} (${employerName}) - ${competence}`);
+              console.log(`[Lytex] Conciliado (${invoiceSource}): ${contrib.id} (${employerName}) - ${competence}`);
               
               conciliationDetails.push({
                 lytexInvoiceId: invoiceId,
@@ -2458,6 +2569,7 @@ Deno.serve(async (req) => {
                 result: "conciliated",
                 paidAt: paidAt || undefined,
                 paidValue: paidValueCents || undefined,
+                source: invoiceSource,
               });
 
               // Registrar no log de conciliação
@@ -2475,7 +2587,7 @@ Deno.serve(async (req) => {
                 lytex_fee_amount: feeAmount,
                 lytex_net_value: netValue,
                 conciliation_result: "conciliated",
-                conciliation_reason: `Baixa automática via sync - status Lytex: ${invoice.status}`,
+                conciliation_reason: `Baixa automática via sync (${invoiceSource}) - status Lytex: ${invoice.status}`,
                 raw_lytex_data: invoice,
               });
             } catch (fetchErr: any) {
@@ -2502,7 +2614,7 @@ Deno.serve(async (req) => {
           }
         }
 
-          console.log(`[Lytex] Conciliação concluída: ${conciliated} novos, ${alreadyConciliated} já conciliados, ${ignored} ignorados, ${errors} erros`);
+          console.log(`[Lytex] Conciliação concluída: ${conciliated} novos (${foundInPrimary} primária, ${foundInSecondary} secundária), ${alreadyConciliated} já conciliados, ${ignored} ignorados, ${errors} erros`);
 
           // Atualizar log final
           if (syncLogPaid?.id) {
@@ -2520,6 +2632,9 @@ Deno.serve(async (req) => {
                   alreadyConciliated,
                   ignored,
                   errors,
+                  foundInPrimary,
+                  foundInSecondary,
+                  hasSecondaryIntegration,
                   items: conciliationDetails.slice(0, 500), // Limitar para evitar payload grande
                 },
               })
@@ -2533,6 +2648,9 @@ Deno.serve(async (req) => {
             alreadyConciliated,
             ignored,
             errors,
+            foundInPrimary,
+            foundInSecondary,
+            hasSecondaryIntegration,
             syncLogId: syncLogPaid?.id,
             details: conciliationDetails.slice(0, 100),
           };
