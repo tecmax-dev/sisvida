@@ -139,6 +139,10 @@ Deno.serve(async (req) => {
       case 'lytex_invoices':
         result = await importContributionsBatch(supabase, clinic_id, data, conversion_type, shouldAutoCreate);
         break;
+      case 'contributions_individual':
+      case 'contributions_individual_paid':
+        result = await importIndividualContributionsBatch(supabase, clinic_id, data, conversion_type);
+        break;
       default:
         return new Response(
           JSON.stringify({ error: `Unsupported conversion type: ${conversion_type}` }),
@@ -641,6 +645,262 @@ async function importContributionsBatch(
   return result;
 }
 
+// ================== INDIVIDUAL CONTRIBUTIONS (PESSOA FÍSICA) ==================
+
+async function importIndividualContributionsBatch(
+  supabase: SupabaseClient,
+  clinicId: string,
+  data: Record<string, unknown>[],
+  conversionType: string
+): Promise<ImportResult> {
+  const result: ImportResult = { success: true, inserted: 0, updated: 0, skipped: 0, errors: [] };
+
+  console.log(`[importIndividualContributionsBatch] Starting with ${data.length} records`);
+
+  // 1. Pre-load all patients for this clinic (CACHE)
+  const { data: allPatients } = await supabase
+    .from('patients')
+    .select('id, cpf, name')
+    .eq('clinic_id', clinicId);
+  
+  // Normalize CPF keys
+  const patientMap = new Map<string, { id: string; name: string }>();
+  (allPatients || []).forEach(p => {
+    const normalized = normalizeCpf(p.cpf);
+    if (normalized) {
+      patientMap.set(normalized, { id: p.id, name: p.name });
+    }
+  });
+  console.log(`[importIndividualContributionsBatch] Loaded ${patientMap.size} patients into cache`);
+
+  // 2. Pre-load all contribution types for this clinic (CACHE)
+  const { data: allTypes } = await supabase
+    .from('contribution_types')
+    .select('id, name')
+    .eq('clinic_id', clinicId);
+  
+  const typeMap = new Map<string, string>();
+  (allTypes || []).forEach(t => {
+    typeMap.set(t.name.trim().toUpperCase(), t.id);
+  });
+  console.log(`[importIndividualContributionsBatch] Loaded ${typeMap.size} contribution types into cache`);
+
+  // 3. Find or create the "Contribuição Individual" type
+  let individualTypeId = typeMap.get('130 - CONTRIBUIÇÃO INDIVIDUAL');
+  if (!individualTypeId) {
+    // Try to find by partial name
+    for (const [name, id] of typeMap.entries()) {
+      if (name.includes('INDIVIDUAL') || name.includes('PESSOA FÍSICA') || name.includes('PESSOA FISICA')) {
+        individualTypeId = id;
+        break;
+      }
+    }
+  }
+  if (!individualTypeId) {
+    // Create the type
+    const { data: newType, error: typeError } = await supabase
+      .from('contribution_types')
+      .insert({
+        clinic_id: clinicId,
+        name: '130 - CONTRIBUIÇÃO INDIVIDUAL',
+        description: 'Contribuição de pessoa física (CPF)',
+        default_value: 0,
+        is_active: true,
+      })
+      .select('id')
+      .single();
+    
+    if (typeError || !newType) {
+      console.error('[importIndividualContributionsBatch] Failed to create type:', typeError);
+      result.errors.push({ row: 0, message: 'Falha ao criar tipo de contribuição individual' });
+      return result;
+    }
+    individualTypeId = newType.id;
+    console.log(`[importIndividualContributionsBatch] Created individual contribution type: ${individualTypeId}`);
+  }
+
+  // 4. Determine base status from conversion type
+  const baseStatus = conversionType.includes('paid') ? 'paid' : 'pending';
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // 5. Process all rows and build insert array
+  const toInsert: Record<string, unknown>[] = [];
+  const competenceKeysToInsert = new Set<string>();
+
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    try {
+      // Try to get CPF from various field names
+      const cpfValue = row.cpf || row.CPF || row.documento || row.DOCUMENTO || row.cnpj || row.CNPJ;
+      const cpf = normalizeCpf(cpfValue);
+      
+      if (!cpf) {
+        result.errors.push({ row: i + 1, message: 'CPF inválido ou ausente', cnpj: String(cpfValue || '') });
+        continue;
+      }
+
+      // Find patient (member) by CPF
+      const patient = patientMap.get(cpf);
+      if (!patient) {
+        result.errors.push({ row: i + 1, message: `Sócio não encontrado com CPF: ${formatCpf(cpf)}`, cnpj: cpf });
+        continue;
+      }
+
+      const value = parseCurrency(row.value);
+      if (value < 0) {
+        result.errors.push({ row: i + 1, message: 'Valor negativo não permitido', cnpj: cpf });
+        continue;
+      }
+
+      const dueDate = parseDate(row.due_date) || new Date().toISOString().split('T')[0];
+      const paymentDate = row.payment_date ? parseDate(row.payment_date) : null;
+
+      // Get the type from the row or use individual type
+      const typeName = String(row.contribution_type || row.tipo || row.type || '').trim();
+      let typeId = individualTypeId;
+      if (typeName) {
+        const normalizedTypeName = typeName.toUpperCase();
+        const customTypeId = typeMap.get(normalizedTypeName);
+        if (customTypeId) {
+          typeId = customTypeId;
+        }
+      }
+
+      // Parse competence
+      let competenceYear = new Date().getFullYear();
+      let competenceMonth = new Date().getMonth() + 1;
+      
+      if (row.competence) {
+        const competence = String(row.competence);
+        const match = competence.match(/(\d{1,2})[\/\-](\d{4})/);
+        if (match) {
+          const parsedMonth = parseInt(match[1]);
+          const parsedYear = parseInt(match[2]);
+          if (parsedMonth >= 1 && parsedMonth <= 12 && parsedYear >= 2020) {
+            competenceMonth = parsedMonth;
+            competenceYear = parsedYear;
+          }
+        }
+      }
+
+      // Generate unique key using member_id instead of employer_id
+      // Format: member-{member_id}-{type_id}-{year}-{month}
+      const activeCompetenceKey = `member-${patient.id}-${typeId}-${competenceYear}-${competenceMonth}`;
+
+      // Check for duplicates within this batch
+      if (competenceKeysToInsert.has(activeCompetenceKey)) {
+        result.skipped++;
+        continue;
+      }
+
+      competenceKeysToInsert.add(activeCompetenceKey);
+
+      // Determine final status
+      let finalStatus: string = baseStatus;
+      if (baseStatus === 'pending') {
+        finalStatus = dueDate < todayStr ? 'overdue' : 'pending';
+      }
+
+      // For individual contributions, we need to create a "virtual" employer record 
+      // or use member_id directly. Since employer_id is required, we need to handle this.
+      // Option: Create a placeholder employer for the member if needed
+      
+      // Check if we have an employer for this CPF (treated as CNPJ)
+      let employerId: string | null = null;
+      const { data: existingEmployer } = await supabase
+        .from('employers')
+        .select('id')
+        .eq('clinic_id', clinicId)
+        .eq('cnpj', cpf)
+        .maybeSingle();
+      
+      if (existingEmployer) {
+        employerId = existingEmployer.id;
+      } else {
+        // Create an employer entry for this individual (using CPF as CNPJ)
+        const { data: newEmployer, error: employerError } = await supabase
+          .from('employers')
+          .insert({
+            clinic_id: clinicId,
+            cnpj: cpf,
+            name: patient.name || `SÓCIO ${formatCpf(cpf)}`,
+            is_active: true,
+          })
+          .select('id')
+          .single();
+        
+        if (employerError) {
+          result.errors.push({ row: i + 1, message: `Falha ao criar registro de sócio: ${employerError.message}`, cnpj: cpf });
+          continue;
+        }
+        employerId = newEmployer!.id;
+        console.log(`[importIndividualContributionsBatch] Created employer for individual: ${patient.name} (${formatCpf(cpf)})`);
+      }
+
+      toInsert.push({
+        clinic_id: clinicId,
+        employer_id: employerId,
+        member_id: patient.id, // Link to the patient/member
+        contribution_type_id: typeId,
+        value,
+        due_date: dueDate,
+        status: finalStatus,
+        competence_month: competenceMonth,
+        competence_year: competenceYear,
+        paid_at: finalStatus === 'paid' ? (paymentDate || dueDate) : null,
+        paid_value: finalStatus === 'paid' ? value : null,
+        notes: row.notes || row.description ? String(row.notes || row.description).trim() : null,
+        origin: 'import',
+      });
+    } catch (err) {
+      const error = err as Error;
+      result.errors.push({ row: i + 1, message: error.message || 'Erro ao processar registro' });
+    }
+  }
+
+  console.log(`[importIndividualContributionsBatch] Prepared ${toInsert.length} individual contributions for insert`);
+
+  // 6. Batch insert (no upsert since we're using member_id which has different unique key)
+  if (toInsert.length > 0) {
+    for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
+      const batch = toInsert.slice(i, i + BATCH_SIZE);
+      const batchStart = Date.now();
+      
+      const { data: insertedData, error } = await supabase
+        .from('employer_contributions')
+        .insert(batch)
+        .select('id');
+
+      const batchDuration = Date.now() - batchStart;
+      
+      if (error) {
+        console.error(`[importIndividualContributionsBatch] Batch ${Math.floor(i / BATCH_SIZE) + 1} error (${batchDuration}ms):`, error);
+        // Try inserting one by one to identify problematic records
+        for (let j = 0; j < batch.length; j++) {
+          const { error: singleError } = await supabase
+            .from('employer_contributions')
+            .insert(batch[j]);
+          if (singleError) {
+            if (singleError.code === '23505') { // Unique violation
+              result.skipped++;
+            } else {
+              result.errors.push({ row: i + j + 1, message: singleError.message });
+            }
+          } else {
+            result.inserted++;
+          }
+        }
+      } else {
+        const insertedCount = insertedData?.length || batch.length;
+        result.inserted += insertedCount;
+        console.log(`[importIndividualContributionsBatch] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(toInsert.length / BATCH_SIZE)}: inserted=${insertedCount} (${batchDuration}ms)`);
+      }
+    }
+  }
+
+  return result;
+}
+
 // ================== SUPPLIER IMPORT FUNCTION ==================
 
 async function importSuppliersBatch(
@@ -777,6 +1037,10 @@ function normalizeCnpj(value: unknown): string | null {
 
 function formatCnpj(cnpj: string): string {
   return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+}
+
+function formatCpf(cpf: string): string {
+  return cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
 }
 
 function normalizePhone(value: unknown): string | null {
