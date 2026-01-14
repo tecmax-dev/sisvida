@@ -18,7 +18,13 @@ type AuditAction =
   | 'new_user_signup'
   | 'create_user'
   | 'update_user'
-  | 'confirm_user_email';
+  | 'confirm_user_email'
+  | 'view_contribution'
+  | 'create_contribution'
+  | 'update_contribution'
+  | 'delete_contribution'
+  | 'generate_invoice'
+  | 'sync_contributions';
 
 type EntityType = 'clinic' | 'user' | 'super_admin' | 'system' | 'subscription';
 
