@@ -85,18 +85,21 @@ export default function MobileAuthPage() {
     setLoading(true);
     
     try {
+      // Normaliza CPF removendo formatação
+      const normalizedCpf = cpf.replace(/\D/g, '');
+      
       // Verifica credenciais via função RPC
       const { data: patientData, error } = await supabase
         .rpc('verify_patient_password', {
-          p_cpf: cpf,
+          p_cpf: normalizedCpf,
           p_password: password
         });
 
       if (error) {
         console.error("Login error:", error);
         toast({
-          title: "Erro ao entrar",
-          description: "Ocorreu um erro ao verificar suas credenciais.",
+          title: "Credenciais inválidas",
+          description: "CPF ou senha incorretos. Verifique seus dados.",
           variant: "destructive",
         });
         return;
@@ -105,7 +108,7 @@ export default function MobileAuthPage() {
       if (!patientData || patientData.length === 0) {
         toast({
           title: "Credenciais inválidas",
-          description: "CPF ou senha incorretos.",
+          description: "CPF ou senha incorretos. Caso seja seu primeiro acesso, entre em contato com o sindicato.",
           variant: "destructive",
         });
         return;
