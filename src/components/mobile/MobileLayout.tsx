@@ -1,14 +1,43 @@
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Calendar, User, Bell, Menu } from "lucide-react";
+import { MobileDrawer } from "./MobileDrawer";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MobileLayoutProps {
   children: ReactNode;
 }
 
+interface PatientData {
+  name: string;
+  email: string | null;
+  photo_url: string | null;
+}
+
 export function MobileLayout({ children }: MobileLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [patient, setPatient] = useState<PatientData | null>(null);
+
+  useEffect(() => {
+    loadPatientData();
+  }, []);
+
+  const loadPatientData = async () => {
+    const patientId = sessionStorage.getItem('mobile_patient_id');
+    if (!patientId) return;
+
+    const { data } = await supabase
+      .from("patients")
+      .select("name, email, photo_url")
+      .eq("id", patientId)
+      .single();
+
+    if (data) {
+      setPatient(data);
+    }
+  };
 
   const navItems = [
     { path: "/app", icon: Home, label: "Início" },
@@ -18,9 +47,16 @@ export function MobileLayout({ children }: MobileLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      {/* Drawer */}
+      <MobileDrawer 
+        open={drawerOpen} 
+        onOpenChange={setDrawerOpen}
+        patient={patient}
+      />
+
       {/* Header */}
       <header className="bg-emerald-600 text-white px-4 py-3 flex items-center justify-between sticky top-0 z-50">
-        <button className="p-1">
+        <button className="p-1" onClick={() => setDrawerOpen(true)}>
           <Menu className="h-6 w-6" />
         </button>
         <div className="flex items-center gap-2">
