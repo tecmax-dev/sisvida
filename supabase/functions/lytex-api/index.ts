@@ -2900,16 +2900,16 @@ Deno.serve(async (req) => {
                   .single();
                 
                 if (!employer) {
-                  // Criar nova empresa
+                  // Criar nova empresa - 'name' é NOT NULL, trade_name é opcional
+                  const employerName = clientName || `Empresa ${cleanCnpj}`;
                   const { data: newEmployer, error: createErr } = await supabase
                     .from("employers")
                     .insert({
                       clinic_id: importClinicId,
                       cnpj: cleanCnpj,
-                      trade_name: clientName || `Empresa ${cleanCnpj}`,
-                      company_name: clientName,
+                      name: employerName, // Campo obrigatório
+                      trade_name: employerName,
                       is_active: true,
-                      origin: "lytex_import",
                     })
                     .select("id")
                     .single();
@@ -2941,28 +2941,31 @@ Deno.serve(async (req) => {
                 // Gerar chave única
                 const activeCompetenceKey = `${employer.id}-${compYear}-${String(compMonth).padStart(2, "0")}`;
                 
-                // Criar contribuição (active_competence_key é gerada automaticamente pelo banco)
+                // Criar contribuição - apenas colunas que EXISTEM na tabela
+                // active_competence_key é gerada automaticamente pelo banco
+                // lytex_nosso_numero NÃO existe na tabela
+                const insertData: Record<string, any> = {
+                  clinic_id: importClinicId,
+                  employer_id: employer.id,
+                  contribution_type_id: contributionTypeId,
+                  value: paidValue || totalValue || 0,
+                  due_date: dueDate || new Date().toISOString().split("T")[0],
+                  status: "paid",
+                  competence_month: compMonth,
+                  competence_year: compYear,
+                  lytex_invoice_id: invoiceId,
+                  lytex_invoice_url: invoice.link || invoice.url || invoice.invoiceUrl,
+                  lytex_original_status: invoice.status || invoice.paymentStatus,
+                  origin: source === "secondary" ? "external_lytex" : "lytex",
+                  paid_at: paidAt,
+                  paid_value: paidValue,
+                  is_reconciled: true,
+                  reconciled_at: new Date().toISOString(),
+                };
+                
                 const { error: insertErr } = await supabase
                   .from("employer_contributions")
-                  .insert({
-                    clinic_id: importClinicId,
-                    employer_id: employer.id,
-                    contribution_type_id: contributionTypeId,
-                    value: paidValue || totalValue || 0,
-                    due_date: dueDate || new Date().toISOString().split("T")[0],
-                    status: "paid",
-                    competence_month: compMonth,
-                    competence_year: compYear,
-                    lytex_invoice_id: invoiceId,
-                    lytex_invoice_url: invoice.link || invoice.url || invoice.invoiceUrl,
-                    lytex_nosso_numero: invoice.ourNumber || invoice.nossoNumero,
-                    lytex_original_status: invoice.status || invoice.paymentStatus,
-                    origin: source === "secondary" ? "external_lytex" : "lytex",
-                    paid_at: paidAt,
-                    paid_value: paidValue,
-                    is_reconciled: true,
-                    reconciled_at: new Date().toISOString(),
-                  });
+                  .insert(insertData);
                 
                 if (insertErr) {
                   // Conflito de chave única - registro já existe para esta competência
