@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { getStaticYearRange } from "@/hooks/useAvailableYears";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -190,6 +190,7 @@ export default function ContributionsListTab({
   };
   
   const [competenceFilter, setCompetenceFilter] = useState<string>(() => getInitialCompetence());
+  const [autoAdjustedCompetence, setAutoAdjustedCompetence] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -277,12 +278,58 @@ export default function ContributionsListTab({
     });
   }, [activeContributions, searchTerm, statusFilter, competenceFilter, documentTypeTab]);
 
+  // If the default competence (previous month) has no results for the loaded dataset,
+  // auto-fallback to the most recent competence available so the user sees data.
+  useEffect(() => {
+    if (autoAdjustedCompetence) return;
+
+    if (competenceFilter === "all") {
+      setAutoAdjustedCompetence(true);
+      return;
+    }
+
+    if (activeContributions.length === 0) return;
+
+    if (filteredContributions.length > 0) {
+      setAutoAdjustedCompetence(true);
+      return;
+    }
+
+    const latest = activeContributions.reduce(
+      (acc, c) => {
+        if (!acc) return { year: c.competence_year, month: c.competence_month };
+        if (c.competence_year > acc.year) return { year: c.competence_year, month: c.competence_month };
+        if (c.competence_year === acc.year && c.competence_month > acc.month) {
+          return { year: c.competence_year, month: c.competence_month };
+        }
+        return acc;
+      },
+      null as null | { year: number; month: number }
+    );
+
+    if (!latest) return;
+
+    const nextCompetence = `${String(latest.month).padStart(2, "0")}/${latest.year}`;
+    setCompetenceFilter(nextCompetence);
+    if (latest.year !== yearFilter) {
+      onYearFilterChange(latest.year);
+    }
+    setCurrentPage(1);
+    setAutoAdjustedCompetence(true);
+  }, [
+    autoAdjustedCompetence,
+    competenceFilter,
+    activeContributions,
+    filteredContributions.length,
+    yearFilter,
+    onYearFilterChange,
+  ]);
+
   const totalPages = Math.ceil(filteredContributions.length / ITEMS_PER_PAGE);
   const paginatedContributions = useMemo(() => {
     const start = (currentPage - 1) * ITEMS_PER_PAGE;
     return filteredContributions.slice(start, start + ITEMS_PER_PAGE);
   }, [filteredContributions, currentPage]);
-
   // Get selected contributions for the dialog
   const selectedContributions = useMemo(() => {
     if (selectedContributionIds.size === 0) {
