@@ -221,39 +221,75 @@ export default function EmployersPage() {
 
   const fetchEmployers = async () => {
     if (!currentClinic) return;
-    
+
     setLoading(true);
     try {
-      const { data: employersData, error: employersError } = await supabase
-        .from("employers")
-        .select("*")
-        .eq("clinic_id", currentClinic.id)
-        .order("name");
+      // Supabase/PostgREST has a default limit of 1000 rows per request.
+      // This clinic has >1000 employers, so we must paginate to avoid “missing” companies in search.
+      const PAGE_SIZE = 1000;
 
-      if (employersError) throw employersError;
+      const fetchAll = async <T,>(
+        factory: (from: number, to: number) => any
+      ): Promise<T[]> => {
+        const all: T[] = [];
+        let from = 0;
 
-      const { data: patientsData, error: patientsError } = await supabase
-        .from("patients")
-        .select("id, name, employer_cnpj, employer_name")
-        .eq("clinic_id", currentClinic.id)
-        .not("employer_cnpj", "is", null);
+        // Safety cap to avoid infinite loops if something goes wrong
+        for (let i = 0; i < 20; i++) {
+          const to = from + PAGE_SIZE - 1;
+          const { data, error } = await factory(from, to);
+          if (error) throw error;
+          const batch = (data || []) as T[];
+          all.push(...batch);
+          if (batch.length < PAGE_SIZE) break;
+          from += PAGE_SIZE;
+        }
 
-      if (patientsError) throw patientsError;
+        return all;
+      };
 
-      const employersWithPatients = (employersData || []).map((employer) => ({
-        ...employer,
-        patients: (patientsData || []).filter(
-          (p) => p.employer_cnpj === employer.cnpj
-        ),
-      }));
-
-      const employerCnpjs = new Set((employersData || []).map((e) => e.cnpj));
-      const orphanPatients = (patientsData || []).filter(
-        (p) => p.employer_cnpj && !employerCnpjs.has(p.employer_cnpj)
+      const employersData = await fetchAll<Employer>((from, to) =>
+        supabase
+          .from("employers")
+          .select("*")
+          .eq("clinic_id", currentClinic.id)
+          .order("name")
+          .range(from, to)
       );
 
+      const patientsData = await fetchAll<
+        { id: string; name: string; employer_cnpj: string | null; employer_name: string | null }
+      >((from, to) =>
+        supabase
+          .from("patients")
+          .select("id, name, employer_cnpj, employer_name")
+          .eq("clinic_id", currentClinic.id)
+          .not("employer_cnpj", "is", null)
+          .order("name")
+          .range(from, to)
+      );
+
+      const normalizeCnpj = (v: string | null | undefined) => (v || "").replace(/\D/g, "");
+
+      const employersWithPatients = (employersData || []).map((employer) => {
+        const employerCnpj = normalizeCnpj(employer.cnpj);
+        return {
+          ...employer,
+          patients: (patientsData || []).filter(
+            (p) => normalizeCnpj(p.employer_cnpj) === employerCnpj
+          ),
+        };
+      });
+
+      const employerCnpjs = new Set((employersData || []).map((e) => normalizeCnpj(e.cnpj)));
+      const orphanPatients = (patientsData || []).filter((p) => {
+        const cnpj = normalizeCnpj(p.employer_cnpj);
+        return !!cnpj && !employerCnpjs.has(cnpj);
+      });
+
       const orphanGroups = orphanPatients.reduce((acc, patient) => {
-        const cnpj = patient.employer_cnpj!;
+        const cnpj = normalizeCnpj(patient.employer_cnpj);
+        if (!cnpj) return acc;
         if (!acc[cnpj]) {
           acc[cnpj] = {
             id: `virtual-${cnpj}`,
