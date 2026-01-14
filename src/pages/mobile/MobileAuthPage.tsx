@@ -8,21 +8,75 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 
+// Função para formatar CPF
+const formatCPF = (value: string) => {
+  const numbers = value.replace(/\D/g, '');
+  if (numbers.length <= 3) return numbers;
+  if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+  if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+  return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+};
+
+// Função para validar CPF
+const isValidCPF = (cpf: string) => {
+  const numbers = cpf.replace(/\D/g, '');
+  if (numbers.length !== 11) return false;
+  
+  // Verifica se todos os dígitos são iguais
+  if (/^(\d)\1+$/.test(numbers)) return false;
+  
+  // Validação do primeiro dígito verificador
+  let sum = 0;
+  for (let i = 0; i < 9; i++) {
+    sum += parseInt(numbers[i]) * (10 - i);
+  }
+  let digit = (sum * 10) % 11;
+  if (digit === 10) digit = 0;
+  if (digit !== parseInt(numbers[9])) return false;
+  
+  // Validação do segundo dígito verificador
+  sum = 0;
+  for (let i = 0; i < 10; i++) {
+    sum += parseInt(numbers[i]) * (11 - i);
+  }
+  digit = (sum * 10) % 11;
+  if (digit === 10) digit = 0;
+  if (digit !== parseInt(numbers[10])) return false;
+  
+  return true;
+};
+
 export default function MobileAuthPage() {
-  const [email, setEmail] = useState("");
+  const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatCPF(e.target.value);
+    if (formatted.length <= 14) {
+      setCpf(formatted);
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
+    if (!cpf || !password) {
       toast({
         title: "Campos obrigatórios",
-        description: "Preencha e-mail e senha para continuar.",
+        description: "Preencha CPF e senha para continuar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!isValidCPF(cpf)) {
+      toast({
+        title: "CPF inválido",
+        description: "Por favor, insira um CPF válido.",
         variant: "destructive",
       });
       return;
@@ -31,54 +85,54 @@ export default function MobileAuthPage() {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      // Verifica credenciais via função RPC
+      const { data: patientData, error } = await supabase
+        .rpc('verify_patient_password', {
+          p_cpf: cpf,
+          p_password: password
+        });
 
       if (error) {
+        console.error("Login error:", error);
         toast({
           title: "Erro ao entrar",
-          description: "E-mail ou senha incorretos.",
+          description: "Ocorreu um erro ao verificar suas credenciais.",
           variant: "destructive",
         });
         return;
       }
 
-      if (data.user) {
-        // Check if user is a patient (member)
-        const { data: patientData, error: patientError } = await supabase
-          .from("patients")
-          .select("id, name, is_active, no_show_blocked_until, clinic_id")
-          .eq("email", email)
-          .maybeSingle();
-
-        if (patientError || !patientData) {
-          toast({
-            title: "Acesso não autorizado",
-            description: "Você não está cadastrado como sócio.",
-            variant: "destructive",
-          });
-          await supabase.auth.signOut();
-          return;
-        }
-
-        if (!patientData.is_active) {
-          toast({
-            title: "Conta inativa",
-            description: "Sua conta está inativa. Entre em contato com o sindicato.",
-            variant: "destructive",
-          });
-          await supabase.auth.signOut();
-          return;
-        }
-
-        // Store patient info for the mobile app
-        sessionStorage.setItem('mobile_patient_id', patientData.id);
-        sessionStorage.setItem('mobile_clinic_id', patientData.clinic_id);
-        
-        navigate("/app/home");
+      if (!patientData || patientData.length === 0) {
+        toast({
+          title: "Credenciais inválidas",
+          description: "CPF ou senha incorretos.",
+          variant: "destructive",
+        });
+        return;
       }
+
+      const patient = patientData[0];
+
+      if (!patient.is_active) {
+        toast({
+          title: "Conta inativa",
+          description: "Sua conta está inativa. Entre em contato com o sindicato.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Store patient info for the mobile app
+      sessionStorage.setItem('mobile_patient_id', patient.patient_id);
+      sessionStorage.setItem('mobile_clinic_id', patient.clinic_id);
+      sessionStorage.setItem('mobile_patient_name', patient.patient_name);
+      
+      toast({
+        title: "Bem-vindo!",
+        description: `Olá, ${patient.patient_name.split(' ')[0]}!`,
+      });
+      
+      navigate("/app/home");
     } catch (err) {
       console.error("Login error:", err);
       toast({
@@ -118,17 +172,21 @@ export default function MobileAuthPage() {
             <h2 className="text-xl font-semibold text-center text-foreground">
               Acesse sua conta
             </h2>
+            <p className="text-sm text-muted-foreground text-center mt-2">
+              Use seu CPF e senha cadastrados
+            </p>
           </CardHeader>
           <CardContent className="px-0">
             <form onSubmit={handleLogin} className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-foreground">E-mail</Label>
+                <Label htmlFor="cpf" className="text-foreground">CPF</Label>
                 <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="cpf"
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="000.000.000-00"
+                  value={cpf}
+                  onChange={handleCpfChange}
                   className="h-12"
                   disabled={loading}
                 />
@@ -180,12 +238,18 @@ export default function MobileAuthPage() {
                   e.preventDefault();
                   toast({
                     title: "Recuperar senha",
-                    description: "Entre em contato com o sindicato para recuperar sua senha.",
+                    description: "Entre em contato com o sindicato para recuperar ou definir sua senha.",
                   });
                 }}
               >
                 Esqueci minha senha
               </a>
+            </div>
+
+            <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
+              <p className="text-xs text-amber-800 text-center">
+                <strong>Primeiro acesso?</strong> Entre em contato com o sindicato para cadastrar sua senha.
+              </p>
             </div>
           </CardContent>
         </Card>
