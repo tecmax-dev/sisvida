@@ -48,11 +48,38 @@ export default function MobilePasswordResetPage() {
       });
       
       setStep("code");
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error sending reset email:", err);
+
+      // Supabase Functions can return non-2xx with a JSON body.
+      // Try to extract a useful message for the user.
+      let errorMessage = "Não foi possível enviar o código. Tente novamente.";
+      try {
+        const maybeContext = err?.context;
+        if (maybeContext?.json) {
+          const body = await maybeContext.json();
+          if (body?.error && typeof body.error === "string") {
+            errorMessage = body.error;
+          }
+        } else if (typeof err?.message === "string" && err.message.trim()) {
+          errorMessage = err.message;
+        }
+      } catch {
+        // ignore parsing errors
+      }
+
+      // Guidance for the most common case in our flow
+      if (
+        errorMessage.toLowerCase().includes("email não encontrado") ||
+        errorMessage.toLowerCase().includes("sem senha")
+      ) {
+        errorMessage =
+          "Não encontramos uma conta com esse e-mail (ou ela ainda não tem senha). Use a opção 'Primeiro acesso'.";
+      }
+
       toast({
         title: "Erro",
-        description: "Não foi possível enviar o código. Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
