@@ -122,6 +122,7 @@ interface InvoiceFetchResult {
 // Função que tenta buscar fatura em ambas as integrações
 async function fetchInvoiceFromAnySource(invoiceId: string, primaryToken: string, secondaryToken: string | null): Promise<InvoiceFetchResult> {
   // Tentar primeiro na integração primária
+  let primaryNotFound = false;
   try {
     const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
       method: "GET",
@@ -134,15 +135,17 @@ async function fetchInvoiceFromAnySource(invoiceId: string, primaryToken: string
       if (invoice) {
         return { found: true, invoice, source: "primary" };
       }
-    } else if (response.status !== 404) {
+    } else if (response.status === 404) {
+      primaryNotFound = true;
+    } else {
       console.log(`[Lytex] Erro ao buscar fatura ${invoiceId} (primário): ${response.status}`);
     }
   } catch (err: any) {
     console.error(`[Lytex] Erro na busca primária de ${invoiceId}:`, err?.message);
   }
 
-  // Se não encontrou e temos token secundário, tentar nele
-  if (secondaryToken) {
+  // Se não encontrou na primária e temos token secundário, tentar nele
+  if (secondaryToken && primaryNotFound) {
     try {
       const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
         method: "GET",
@@ -153,9 +156,12 @@ async function fetchInvoiceFromAnySource(invoiceId: string, primaryToken: string
         const invoiceData = await response.json();
         const invoice = invoiceData?.data || invoiceData;
         if (invoice) {
+          console.log(`[Lytex] Fatura ${invoiceId} encontrada na integração SECUNDÁRIA`);
           return { found: true, invoice, source: "secondary" };
         }
-      } else if (response.status !== 404) {
+      } else if (response.status === 404) {
+        // Não encontrado em nenhuma das duas integrações
+      } else {
         console.log(`[Lytex] Erro ao buscar fatura ${invoiceId} (secundário): ${response.status}`);
       }
     } catch (err: any) {
@@ -2379,6 +2385,8 @@ Deno.serve(async (req) => {
         let conciliated = 0;
         let alreadyConciliated = 0;
         let ignored = 0;
+        let notFoundInAnyIntegration = 0;
+        let pendingInLytex = 0; // Encontrado mas não está pago ainda
         let errors = 0;
         let foundInPrimary = 0;
         let foundInSecondary = 0;
@@ -2462,7 +2470,7 @@ Deno.serve(async (req) => {
               const fetchResult = await fetchInvoiceFromAnySource(invoiceId, tokenPrimary, tokenSecondary);
 
               if (!fetchResult.found || !fetchResult.invoice) {
-                ignored++;
+                notFoundInAnyIntegration++;
                 return;
               }
 
@@ -2481,6 +2489,7 @@ Deno.serve(async (req) => {
               
               // Só processar se estiver pago na Lytex
               if (mappedStatus !== "paid") {
+                pendingInLytex++;
                 return;
               }
               
@@ -2614,7 +2623,7 @@ Deno.serve(async (req) => {
           }
         }
 
-          console.log(`[Lytex] Conciliação concluída: ${conciliated} novos (${foundInPrimary} primária, ${foundInSecondary} secundária), ${alreadyConciliated} já conciliados, ${ignored} ignorados, ${errors} erros`);
+          console.log(`[Lytex] Conciliação concluída: ${conciliated} novos (${foundInPrimary} primária, ${foundInSecondary} secundária), ${alreadyConciliated} já conciliados, ${pendingInLytex} pendentes na Lytex, ${notFoundInAnyIntegration} não encontrados, ${errors} erros`);
 
           // Atualizar log final
           if (syncLogPaid?.id) {
@@ -2625,12 +2634,13 @@ Deno.serve(async (req) => {
                 completed_at: new Date().toISOString(),
                 invoices_conciliated: conciliated,
                 invoices_already_conciliated: alreadyConciliated,
-                invoices_ignored: ignored,
+                invoices_ignored: notFoundInAnyIntegration,
                 details: {
                   totalFound,
                   conciliated,
                   alreadyConciliated,
-                  ignored,
+                  pendingInLytex,
+                  notFoundInAnyIntegration,
                   errors,
                   foundInPrimary,
                   foundInSecondary,
@@ -2646,7 +2656,8 @@ Deno.serve(async (req) => {
             totalFound,
             conciliated,
             alreadyConciliated,
-            ignored,
+            pendingInLytex,
+            notFoundInAnyIntegration,
             errors,
             foundInPrimary,
             foundInSecondary,
