@@ -73,6 +73,7 @@ serve(async (req: Request): Promise<Response> => {
     // Send email with reset code
     const resend = new Resend(resendApiKey);
     const resendFrom = Deno.env.get("RESEND_FROM") || "SECMI <onboarding@resend.dev>";
+    console.log("RESEND_FROM value:", JSON.stringify(resendFrom));
     const firstName = result.patient_name?.split(" ")[0] || "Associado";
 
     const emailResponse = await resend.emails.send({

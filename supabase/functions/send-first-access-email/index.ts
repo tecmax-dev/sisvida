@@ -2,10 +2,6 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
-const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
-const resendFrom = Deno.env.get("RESEND_FROM") || "SECMI <onboarding@resend.dev>";
-const resend = new Resend(resendApiKey);
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -22,6 +18,7 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
     if (!resendApiKey) {
       console.error("RESEND_API_KEY not configured");
       return new Response(JSON.stringify({ error: "Serviço de email não configurado" }), {
@@ -29,6 +26,11 @@ serve(async (req: Request): Promise<Response> => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       });
     }
+
+    const resendFrom = Deno.env.get("RESEND_FROM") || "SECMI <onboarding@resend.dev>";
+    console.log("RESEND_FROM value:", JSON.stringify(resendFrom));
+
+    const resend = new Resend(resendApiKey);
 
     const { cpf, email }: FirstAccessRequest = await req.json();
 
