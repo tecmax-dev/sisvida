@@ -11881,6 +11881,21 @@ export type Database = {
           used: number
         }[]
       }
+      get_patient_dependents: {
+        Args: { p_patient_id: string }
+        Returns: {
+          birth_date: string
+          card_expires_at: string
+          card_number: string
+          cpf: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          phone: string
+          relationship: string
+        }[]
+      }
       get_user_clinic_ids: { Args: { _user_id: string }; Returns: string[] }
       get_user_permissions: {
         Args: { _clinic_id: string; _user_id: string }
