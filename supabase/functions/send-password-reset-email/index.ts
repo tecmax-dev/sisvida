@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const corsHeaders = {
@@ -72,10 +72,11 @@ serve(async (req: Request): Promise<Response> => {
 
     // Send email with reset code
     const resend = new Resend(resendApiKey);
+    const resendFrom = Deno.env.get("RESEND_FROM") || "SECMI <onboarding@resend.dev>";
     const firstName = result.patient_name?.split(" ")[0] || "Associado";
 
     const emailResponse = await resend.emails.send({
-      from: "SECMI <noreply@resend.dev>",
+      from: resendFrom,
       to: [email],
       subject: "Código de Recuperação de Senha - SECMI",
       html: `
@@ -90,29 +91,29 @@ serve(async (req: Request): Promise<Response> => {
             <h1 style="color: white; margin: 0; font-size: 24px;">SECMI</h1>
             <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Sindicato dos Comerciários</p>
           </div>
-          
+
           <div style="background-color: white; padding: 30px; border-radius: 0 0 10px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
             <h2 style="color: #333; margin-top: 0;">Olá, ${firstName}!</h2>
-            
+
             <p style="color: #666; line-height: 1.6;">
               Recebemos uma solicitação para redefinir a senha do seu acesso ao aplicativo SECMI.
             </p>
-            
+
             <div style="background-color: #f0fdf4; border: 2px solid #059669; border-radius: 10px; padding: 20px; text-align: center; margin: 25px 0;">
               <p style="color: #666; margin: 0 0 10px 0; font-size: 14px;">Seu código de recuperação:</p>
               <p style="font-size: 36px; font-weight: bold; color: #059669; margin: 0; letter-spacing: 8px;">${result.token}</p>
             </div>
-            
+
             <p style="color: #666; line-height: 1.6; font-size: 14px;">
               <strong>⏰ Este código é válido por 30 minutos.</strong>
             </p>
-            
+
             <p style="color: #666; line-height: 1.6; font-size: 14px;">
               Se você não solicitou a redefinição de senha, ignore este email. Sua conta permanece segura.
             </p>
-            
+
             <hr style="border: none; border-top: 1px solid #eee; margin: 25px 0;">
-            
+
             <p style="color: #999; font-size: 12px; text-align: center; margin: 0;">
               Este é um email automático, por favor não responda.<br>
               © 2026 SECMI - Todos os direitos reservados.
@@ -123,12 +124,23 @@ serve(async (req: Request): Promise<Response> => {
       `,
     });
 
+    if (emailResponse?.error) {
+      console.error("Resend error:", emailResponse);
+      return new Response(
+        JSON.stringify({
+          error:
+            "Não foi possível enviar o email agora. Se persistir, contate o suporte (configuração de domínio de email pendente).",
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     console.log("Email sent successfully:", emailResponse);
 
     return new Response(
-      JSON.stringify({ 
-        success: true, 
-        message: "Se o email estiver cadastrado, você receberá um código de recuperação." 
+      JSON.stringify({
+        success: true,
+        message: "Se o email estiver cadastrado, você receberá um código de recuperação.",
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

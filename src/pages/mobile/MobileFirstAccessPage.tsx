@@ -110,9 +110,27 @@ export default function MobileFirstAccessPage() {
       setStep('code');
     } catch (err: any) {
       console.error("Error sending code:", err);
+
+      // Supabase Functions can return non-2xx with a JSON body.
+      // Try to extract a useful message for the user.
+      let errorMessage = "Ocorreu um erro ao enviar o código. Tente novamente.";
+      try {
+        const maybeContext = err?.context;
+        if (maybeContext?.json) {
+          const body = await maybeContext.json();
+          if (body?.error && typeof body.error === "string") {
+            errorMessage = body.error;
+          }
+        } else if (typeof err?.message === "string" && err.message.trim()) {
+          errorMessage = err.message;
+        }
+      } catch {
+        // ignore parsing errors
+      }
+
       toast({
         title: "Erro",
-        description: "Ocorreu um erro ao enviar o código. Tente novamente.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
