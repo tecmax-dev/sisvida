@@ -208,13 +208,13 @@ export default function MobileBookingPage() {
         start_time: selectedTime,
         end_time: endTime,
         status: "scheduled" as const,
-        type: "primeira_consulta" as const,
+        type: "first_visit" as const,
         duration_minutes: duration,
       };
 
       const { error } = await supabase
         .from("appointments")
-        .insert(appointmentData);
+        .insert([appointmentData]);
 
       if (error) {
         throw error;
