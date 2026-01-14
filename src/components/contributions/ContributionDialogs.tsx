@@ -425,7 +425,7 @@ export default function ContributionDialogs({
     }
   };
 
-  const handleDeleteContribution = async () => {
+  const handleDeleteContribution = async (forceLocal = false) => {
     if (!selectedContribution) return;
     
     setDeleting(true);
@@ -434,6 +434,7 @@ export default function ContributionDialogs({
         body: {
           action: "delete_contribution",
           contributionId: selectedContribution.id,
+          forceLocal,
         },
       });
 
@@ -449,17 +450,34 @@ export default function ContributionDialogs({
         throw new Error(data.error);
       }
 
-      toast.success("Contribuição e boleto excluídos com sucesso");
+      toast.success(forceLocal 
+        ? "Contribuição excluída localmente (boleto pode permanecer na Lytex)" 
+        : "Contribuição e boleto excluídos com sucesso"
+      );
       setDeleteDialogOpen(false);
       onViewDialogChange(false);
       onRefresh();
     } catch (error: any) {
       console.error("Error deleting:", error);
-      toast.error(error.message || "Falha ao excluir. O boleto pode ainda estar ativo na Lytex.");
+      const msg = error.message || "";
+      
+      // Detectar erro de "em processamento" e oferecer forçar exclusão local
+      if ((msg.includes("processamento") || msg.includes("30 min")) && !forceLocal) {
+        toast.error(
+          "Boleto em processamento na Lytex. Aguarde 30 min ou clique novamente para forçar exclusão local.",
+          { duration: 6000 }
+        );
+        // Permitir que o próximo clique force a exclusão
+        setForceDeleteLocal(true);
+      } else {
+        toast.error(msg || "Falha ao excluir. O boleto pode ainda estar ativo na Lytex.");
+      }
     } finally {
       setDeleting(false);
     }
   };
+
+  const [forceDeleteLocal, setForceDeleteLocal] = useState(false);
 
   return (
     <>
@@ -939,14 +957,14 @@ export default function ContributionDialogs({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Voltar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting} onClick={() => setForceDeleteLocal(false)}>Voltar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={handleDeleteContribution}
+              onClick={() => handleDeleteContribution(forceDeleteLocal)}
               disabled={deleting}
               className="bg-destructive hover:bg-destructive/90"
             >
               {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Confirmar Exclusão
+              {forceDeleteLocal ? "Forçar Exclusão Local" : "Confirmar Exclusão"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

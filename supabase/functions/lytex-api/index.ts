@@ -1278,6 +1278,8 @@ Deno.serve(async (req) => {
           throw new Error("contributionId é obrigatório");
         }
 
+        const forceLocal = params.forceLocal === true;
+
         // Buscar contribuição COM due_date e value para o cancelamento
         const { data: contrib, error: fetchErr } = await supabase
           .from("employer_contributions")
@@ -1298,12 +1300,14 @@ Deno.serve(async (req) => {
           throw new Error("Esta contribuição está sendo processada. Aguarde antes de excluir.");
         }
 
+        let lytexCancelFailed = false;
+        let lytexErrorMessage = "";
+
         // Se tem boleto na Lytex e não está cancelado, cancelar primeiro
         if (contrib.lytex_invoice_id && contrib.status !== "cancelled") {
           console.log(`[Lytex] Cancelando boleto ${contrib.lytex_invoice_id} antes da exclusão...`);
           
           try {
-            // *** CORREÇÃO: Passar objeto com todos os parâmetros necessários ***
             await cancelInvoice({
               invoiceId: contrib.lytex_invoice_id,
               dueDate: contrib.due_date,
@@ -1311,18 +1315,29 @@ Deno.serve(async (req) => {
             });
             console.log("[Lytex] Boleto cancelado com sucesso antes da exclusão");
           } catch (cancelError: any) {
-            // Permitir continuar apenas se o boleto já foi cancelado ou não existe
             const errorMessage = (cancelError?.message || "").toLowerCase();
+            
+            // Permitir continuar se o boleto já foi cancelado ou não existe
             if (
               errorMessage.includes("already cancelled") ||
-              errorMessage.includes("já cancelado") ||
+              errorMessage.includes("já cancelad") ||
               errorMessage.includes("not found") ||
-              errorMessage.includes("não encontrado") ||
+              errorMessage.includes("não encontrad") ||
               errorMessage.includes("404")
             ) {
               console.warn("[Lytex] Boleto já cancelado ou não encontrado, prosseguindo com exclusão");
+            } else if (errorMessage.includes("processamento") || errorMessage.includes("30 minuto")) {
+              // Boleto em processamento - permitir forçar exclusão local
+              lytexCancelFailed = true;
+              lytexErrorMessage = "Boleto em processamento na Lytex (aguarde 30 min após criação). Deseja excluir apenas localmente?";
+              console.warn("[Lytex] Boleto em processamento, pode ser forçado com forceLocal");
+              
+              if (!forceLocal) {
+                throw new Error(lytexErrorMessage);
+              }
+              console.log("[Lytex] forceLocal=true, prosseguindo com exclusão local apenas");
             } else {
-              // Bloquear exclusão se o cancelamento falhou por outro motivo
+              // Outro erro - bloquear
               console.error("[Lytex] Falha ao cancelar boleto na Lytex:", cancelError);
               throw new Error(`Não foi possível excluir: ${cancelError.message || "falha ao cancelar boleto na Lytex"}`);
             }
