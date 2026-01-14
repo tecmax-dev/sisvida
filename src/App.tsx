@@ -183,6 +183,8 @@ const MobileServicesPage = lazy(() => import("./pages/mobile/MobileServicesPage"
 const MobileCommunicationPage = lazy(() => import("./pages/mobile/MobileCommunicationPage"));
 const MobileHelpPage = lazy(() => import("./pages/mobile/MobileHelpPage"));
 const MobileFirstAccessPage = lazy(() => import("./pages/mobile/MobileFirstAccessPage"));
+const MobileFAQPage = lazy(() => import("./pages/mobile/MobileFAQPage"));
+const MobileAboutPage = lazy(() => import("./pages/mobile/MobileAboutPage"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -496,6 +498,8 @@ const App = () => (
                 <Route path="/app/comunicacao" element={<MobileCommunicationPage />} />
                 <Route path="/app/comunicacao/:mediaType" element={<MobileCommunicationPage />} />
                 <Route path="/app/ajuda" element={<MobileHelpPage />} />
+                <Route path="/app/faq" element={<MobileFAQPage />} />
+                <Route path="/app/sobre" element={<MobileAboutPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
