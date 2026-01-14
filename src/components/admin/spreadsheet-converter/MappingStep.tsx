@@ -89,6 +89,25 @@ const TARGET_FIELDS: Record<ConversionType, { key: string; label: string; requir
     { key: 'contact_name', label: 'Nome do Contato' },
     { key: 'notes', label: 'Observações' },
   ],
+  contributions_individual: [
+    { key: 'cpf', label: 'CPF do Sócio', required: true },
+    { key: 'name', label: 'Nome' },
+    { key: 'value', label: 'Valor', required: true },
+    { key: 'due_date', label: 'Vencimento', required: true },
+    { key: 'competence', label: 'Competência' },
+    { key: 'contribution_type', label: 'Tipo Contribuição' },
+    { key: 'description', label: 'Descrição' },
+  ],
+  contributions_individual_paid: [
+    { key: 'cpf', label: 'CPF do Sócio', required: true },
+    { key: 'name', label: 'Nome' },
+    { key: 'value', label: 'Valor', required: true },
+    { key: 'payment_date', label: 'Data Pagamento', required: true },
+    { key: 'due_date', label: 'Vencimento' },
+    { key: 'competence', label: 'Competência' },
+    { key: 'contribution_type', label: 'Tipo Contribuição' },
+    { key: 'description', label: 'Descrição' },
+  ],
   lytex: [], // Will be populated dynamically based on detected layout
 };
 

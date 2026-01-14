@@ -24,7 +24,7 @@ import {
 interface LytexConverterTabProps {
   headers: string[];
   rows: Record<string, unknown>[];
-  onConvert: (convertedRows: Record<string, unknown>[], layout: LytexLayout) => void;
+  onConvert: (convertedRows: Record<string, unknown>[], layout: LytexLayout, layoutKey: string) => void;
 }
 
 export function LytexConverterTab({ headers, rows, onConvert }: LytexConverterTabProps) {
@@ -189,7 +189,7 @@ export function LytexConverterTab({ headers, rows, onConvert }: LytexConverterTa
                         }
                         return result;
                       });
-                      onConvert(converted, layout);
+                      onConvert(converted, layout, key);
                     }
                   }}
                 >
@@ -279,7 +279,7 @@ export function LytexConverterTab({ headers, rows, onConvert }: LytexConverterTa
         <div className="flex justify-end">
           <Button
             size="lg"
-            onClick={() => onConvert(convertedRows, detection.layout)}
+            onClick={() => onConvert(convertedRows, detection.layout, detection.key)}
           >
             <CheckCircle2 className="h-4 w-4 mr-2" />
             Converter {convertedRows.length} Registros

@@ -17,6 +17,8 @@ export type ConversionType =
   | 'contributions_paid' 
   | 'contributions_pending' 
   | 'contributions_cancelled'
+  | 'contributions_individual_paid'
+  | 'contributions_individual'
   | 'cadastro_pf'
   | 'cadastro_pj'
   | 'cadastro_fornecedores'
