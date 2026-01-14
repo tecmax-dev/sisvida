@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown, RefreshCw, FileX } from "lucide-react";
+import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown, RefreshCw, FileX, CloudDownload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
@@ -102,6 +102,7 @@ export default function ContributionsPage() {
   const [extractingRegistrations, setExtractingRegistrations] = useState(false);
   const [fixingTypes, setFixingTypes] = useState(false);
   const [fetchingPaid, setFetchingPaid] = useState(false);
+  const [importingExternal, setImportingExternal] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [syncResultsOpen, setSyncResultsOpen] = useState(false);
   const [syncResult, setSyncResult] = useState<LytexSyncResult | null>(null);
@@ -523,6 +524,44 @@ export default function ContributionsPage() {
     }
   };
 
+  const handleImportExternalPaidInvoices = async () => {
+    if (!currentClinic) return;
+    
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) return;
+    
+    setImportingExternal(true);
+    try {
+      toast.info("Buscando faturas pagas de todas as integrações Lytex...");
+      
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "import_external_paid_invoices",
+          clinicId: currentClinic.id,
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.imported > 0) {
+        toast.success(`${data.imported} boleto(s) externo(s) importado(s) automaticamente! (${data.processedFromPrimary} primária, ${data.processedFromSecondary} secundária)`);
+        fetchData();
+      } else if (data?.alreadyExists > 0) {
+        toast.info(`Todas as ${data.alreadyExists} faturas já existiam no banco`);
+      } else {
+        toast.info("Nenhuma fatura externa encontrada para importar");
+      }
+
+      console.log("Importação externa:", data);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error("Error importing external invoices:", error);
+      toast.error(`Erro ao importar faturas externas: ${errorMessage}`);
+    } finally {
+      setImportingExternal(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -592,6 +631,10 @@ export default function ContributionsPage() {
               <DropdownMenuItem onClick={handleFetchPaidInvoices} disabled={fetchingPaid} className="text-green-600">
                 <Receipt className="h-4 w-4 mr-2" />
                 Buscar Pagamentos (Conciliação)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleImportExternalPaidInvoices} disabled={importingExternal} className="text-blue-600">
+                <CloudDownload className="h-4 w-4 mr-2" />
+                Importar Boletos Externos Pagos
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
                 <FileBarChart className="h-4 w-4 mr-2" />
