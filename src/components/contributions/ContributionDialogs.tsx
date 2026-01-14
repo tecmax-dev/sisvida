@@ -117,6 +117,8 @@ interface ContributionDialogsProps {
   selectedContribution: Contribution | null;
   onGenerateInvoice: (contribution: Contribution) => void;
   generatingInvoice: boolean;
+  // Duplicate competence config
+  allowDuplicateCompetence?: boolean;
 }
 
 import { formatCompetence } from "@/lib/competence-format";
@@ -134,6 +136,7 @@ export default function ContributionDialogs({
   selectedContribution,
   onGenerateInvoice,
   generatingInvoice,
+  allowDuplicateCompetence = false,
 }: ContributionDialogsProps) {
   // Create form states
   const [formEmployerId, setFormEmployerId] = useState("");
@@ -226,11 +229,14 @@ export default function ContributionDialogs({
         .single();
 
       if (error) {
-        if (error.message.includes("unique_active_contribution_per_employer")) {
+        if (error.message.includes("unique_active_contribution_per_employer") && !allowDuplicateCompetence) {
           toast.error("Já existe uma contribuição ativa deste tipo para esta competência");
           return;
         }
-        throw error;
+        // If duplicate is allowed or it's a different error, throw it
+        if (!error.message.includes("unique_active_contribution_per_employer")) {
+          throw error;
+        }
       }
 
       toast.success("Contribuição criada! Gerando boleto...");
@@ -315,6 +321,13 @@ export default function ContributionDialogs({
   // Check for duplicate competence when editing
   const checkDuplicateCompetence = async () => {
     if (!selectedContribution || !editDialogOpen) return;
+    
+    // If duplicates are allowed globally, skip check
+    if (allowDuplicateCompetence) {
+      setHasDuplicate(false);
+      setDuplicateId(null);
+      return;
+    }
     
     // If competence hasn't changed, no need to check
     if (

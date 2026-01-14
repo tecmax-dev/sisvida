@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { 
   Building2, 
@@ -62,6 +63,7 @@ interface UnionEntity {
   ultimo_acesso: string | null;
   created_at: string;
   updated_at: string;
+  allow_duplicate_competence: boolean;
 }
 
 interface Plan {
@@ -133,7 +135,8 @@ export default function UnionEntitiesPage() {
     cep: '',
     plan_id: '',
     clinic_id: '',
-    status: 'em_analise' as 'ativa' | 'suspensa' | 'em_analise' | 'inativa'
+    status: 'em_analise' as 'ativa' | 'suspensa' | 'em_analise' | 'inativa',
+    allow_duplicate_competence: false
   });
 
   useEffect(() => {
@@ -227,7 +230,8 @@ export default function UnionEntitiesPage() {
       cep: '',
       plan_id: '',
       clinic_id: '',
-      status: 'em_analise'
+      status: 'em_analise',
+      allow_duplicate_competence: false
     });
     setEditingEntity(null);
   };
@@ -257,7 +261,8 @@ export default function UnionEntitiesPage() {
       cep: entity.cep || '',
       plan_id: entity.plan_id || '',
       clinic_id: entity.clinic_id || '',
-      status: entity.status
+      status: entity.status,
+      allow_duplicate_competence: entity.allow_duplicate_competence ?? false
     });
     setIsDialogOpen(true);
   };
@@ -347,6 +352,7 @@ export default function UnionEntitiesPage() {
             plan_id: formData.plan_id || null,
             clinic_id: newClinicId,
             status: formData.status,
+            allow_duplicate_competence: formData.allow_duplicate_competence,
             data_ativacao: formData.status === 'ativa' && !editingEntity.data_ativacao 
               ? new Date().toISOString() 
               : editingEntity.data_ativacao
@@ -402,6 +408,7 @@ export default function UnionEntitiesPage() {
             plan_id: formData.plan_id || null,
             clinic_id: formData.clinic_id || null,
             status: formData.status,
+            allow_duplicate_competence: formData.allow_duplicate_competence,
             data_ativacao: formData.status === 'ativa' ? new Date().toISOString() : null,
             created_by: user?.id
           })
@@ -874,6 +881,31 @@ export default function UnionEntitiesPage() {
                     A clínica vinculada determina quais empresas, contribuições e dados financeiros a entidade terá acesso.
                   </p>
                 </div>
+              </div>
+            </div>
+
+            {/* Contribution Settings */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">
+                Configurações de Contribuições
+              </h3>
+              
+              <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-0.5">
+                  <Label htmlFor="allow_duplicate_competence" className="text-sm font-medium">
+                    Permitir Duplicidade de Competência
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Quando ativado, permite emitir múltiplos boletos para a mesma empresa e competência.
+                  </p>
+                </div>
+                <Switch
+                  id="allow_duplicate_competence"
+                  checked={formData.allow_duplicate_competence}
+                  onCheckedChange={(checked) => 
+                    setFormData(prev => ({ ...prev, allow_duplicate_competence: checked }))
+                  }
+                />
               </div>
             </div>
 

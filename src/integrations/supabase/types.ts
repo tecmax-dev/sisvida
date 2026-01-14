@@ -10075,6 +10075,7 @@ export type Database = {
           abrangencia:
             | Database["public"]["Enums"]["union_entity_coverage"]
             | null
+          allow_duplicate_competence: boolean
           categoria_laboral: string | null
           cep: string | null
           cidade: string | null
@@ -10103,6 +10104,7 @@ export type Database = {
           abrangencia?:
             | Database["public"]["Enums"]["union_entity_coverage"]
             | null
+          allow_duplicate_competence?: boolean
           categoria_laboral?: string | null
           cep?: string | null
           cidade?: string | null
@@ -10131,6 +10133,7 @@ export type Database = {
           abrangencia?:
             | Database["public"]["Enums"]["union_entity_coverage"]
             | null
+          allow_duplicate_competence?: boolean
           categoria_laboral?: string | null
           cep?: string | null
           cidade?: string | null

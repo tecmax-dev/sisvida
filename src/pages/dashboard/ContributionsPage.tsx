@@ -5,6 +5,7 @@ import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, F
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
+import { useUnionEntity } from "@/hooks/useUnionEntity";
 import { toast } from "sonner";
 import { extractFunctionsError } from "@/lib/functionsError";
 
@@ -93,6 +94,7 @@ import { formatCompetence } from "@/lib/competence-format";
 export default function ContributionsPage() {
   const { currentClinic, session } = useAuth();
   const { validateSession } = useSessionValidator();
+  const { entity: unionEntity } = useUnionEntity();
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [employers, setEmployers] = useState<Employer[]>([]);
   const [contributionTypes, setContributionTypes] = useState<ContributionType[]>([]);
@@ -801,6 +803,7 @@ export default function ContributionsPage() {
         selectedContribution={selectedContribution}
         onGenerateInvoice={handleGenerateInvoice}
         generatingInvoice={generatingInvoice}
+        allowDuplicateCompetence={unionEntity?.allow_duplicate_competence ?? false}
       />
 
       <PFContributionDialog
