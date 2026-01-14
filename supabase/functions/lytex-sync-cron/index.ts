@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Esta função é chamada por um cron job para sincronizar dados da Lytex
+// Esta função é chamada por um cron job para sincronizar e conciliar boletos pagos da Lytex
 // Configurar no supabase/config.toml com schedule
 
 Deno.serve(async (req) => {
@@ -18,10 +18,10 @@ Deno.serve(async (req) => {
   const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    console.log("[Lytex Sync Cron] Iniciando sincronização automática...");
+    console.log("[Lytex Sync Cron] Iniciando sincronização automática de boletos pagos...");
 
     // Buscar todas as clínicas que têm credenciais Lytex configuradas
-    // Por enquanto, sincronizar todas as clínicas que têm contribuições
+    // Por enquanto, sincronizar todas as clínicas que têm contribuições com boleto Lytex
     const { data: clinicsWithContributions, error: clinicsError } = await supabase
       .from("employer_contributions")
       .select("clinic_id")
@@ -35,27 +35,68 @@ Deno.serve(async (req) => {
     const clinicIds = [...new Set(clinicsWithContributions?.map(c => c.clinic_id) || [])];
     console.log(`[Lytex Sync Cron] Encontradas ${clinicIds.length} clínicas para sincronizar`);
 
-    const results: any[] = [];
+    const results: Array<{
+      clinicId: string;
+      success: boolean;
+      conciliated?: number;
+      alreadyConciliated?: number;
+      ignored?: number;
+      errors?: number;
+      error?: string;
+    }> = [];
 
     for (const clinicId of clinicIds) {
       try {
         console.log(`[Lytex Sync Cron] Sincronizando clínica: ${clinicId}`);
 
-        // Chamar a função lytex-api com action import_from_lytex
-        const { data, error } = await supabase.functions.invoke("lytex-api", {
+        // 1. Primeiro, buscar e conciliar boletos pagos na Lytex (NOVA AÇÃO)
+        const { data: fetchResult, error: fetchError } = await supabase.functions.invoke("lytex-api", {
           body: {
-            action: "import_from_lytex",
+            action: "fetch_paid_invoices",
+            clinicId,
+            mode: "automatic", // Marca como execução automática no log
+          },
+        });
+
+        if (fetchError) {
+          console.error(`[Lytex Sync Cron] Erro ao buscar pagos na clínica ${clinicId}:`, fetchError);
+          results.push({ 
+            clinicId, 
+            success: false, 
+            error: fetchError.message 
+          });
+          continue;
+        }
+
+        console.log(`[Lytex Sync Cron] Clínica ${clinicId} conciliada:`, {
+          conciliated: fetchResult?.conciliated || 0,
+          alreadyConciliated: fetchResult?.alreadyConciliated || 0,
+          ignored: fetchResult?.ignored || 0,
+          errors: fetchResult?.errors || 0,
+        });
+
+        // 2. Depois, atualizar status das contribuições pendentes (sync_all_pending original)
+        const { data: syncResult, error: syncError } = await supabase.functions.invoke("lytex-api", {
+          body: {
+            action: "sync_all_pending",
             clinicId,
           },
         });
 
-        if (error) {
-          console.error(`[Lytex Sync Cron] Erro na clínica ${clinicId}:`, error);
-          results.push({ clinicId, success: false, error: error.message });
-        } else {
-          console.log(`[Lytex Sync Cron] Clínica ${clinicId} sincronizada:`, data);
-          results.push({ clinicId, success: true, ...data });
+        if (syncError) {
+          console.error(`[Lytex Sync Cron] Erro no sync_all_pending da clínica ${clinicId}:`, syncError);
         }
+
+        results.push({ 
+          clinicId, 
+          success: true, 
+          conciliated: fetchResult?.conciliated || 0,
+          alreadyConciliated: fetchResult?.alreadyConciliated || 0,
+          ignored: fetchResult?.ignored || 0,
+          errors: fetchResult?.errors || 0,
+          ...(syncResult || {}),
+        });
+
       } catch (clinicError: any) {
         console.error(`[Lytex Sync Cron] Erro na clínica ${clinicId}:`, clinicError);
         results.push({ clinicId, success: false, error: clinicError.message });
@@ -63,12 +104,15 @@ Deno.serve(async (req) => {
     }
 
     const successCount = results.filter(r => r.success).length;
-    console.log(`[Lytex Sync Cron] Sincronização concluída: ${successCount}/${clinicIds.length} clínicas`);
+    const totalConciliated = results.reduce((sum, r) => sum + (r.conciliated || 0), 0);
+    
+    console.log(`[Lytex Sync Cron] Sincronização concluída: ${successCount}/${clinicIds.length} clínicas, ${totalConciliated} boletos conciliados`);
 
     return new Response(JSON.stringify({ 
       success: true, 
       totalClinics: clinicIds.length,
       successCount,
+      totalConciliated,
       results 
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
