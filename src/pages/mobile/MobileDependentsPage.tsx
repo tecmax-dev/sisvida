@@ -19,15 +19,12 @@ import {
   ArrowLeft,
   Users,
   UserPlus,
-  Eye,
   Calendar,
   Phone,
-  Mail,
   CreditCard,
   Clock,
   AlertCircle,
   CheckCircle2,
-  XCircle,
   Loader2,
   ChevronRight,
   FileText,
@@ -35,6 +32,7 @@ import {
 } from "lucide-react";
 import { format, differenceInYears, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DependentInclusionForm } from "@/components/mobile/DependentInclusionForm";
 
 interface Dependent {
   id: string;
@@ -65,6 +63,8 @@ export default function MobileDependentsPage() {
   const [showDetailDialog, setShowDetailDialog] = useState(false);
   const [showHistoryDialog, setShowHistoryDialog] = useState(false);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [patientClinicId, setPatientClinicId] = useState<string | null>(null);
+  const [patientId, setPatientId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -74,16 +74,29 @@ export default function MobileDependentsPage() {
 
   const loadData = async () => {
     try {
-      const patientId = sessionStorage.getItem("mobile_patient_id");
+      const storedPatientId = sessionStorage.getItem("mobile_patient_id");
 
-      if (!patientId) {
+      if (!storedPatientId) {
         navigate("/app/login");
         return;
+      }
+      
+      setPatientId(storedPatientId);
+      
+      // Get clinic_id from patient
+      const { data: patientData } = await supabase
+        .from("patients")
+        .select("clinic_id")
+        .eq("id", storedPatientId)
+        .single();
+      
+      if (patientData?.clinic_id) {
+        setPatientClinicId(patientData.clinic_id);
       }
 
       // Fetch dependents using RPC to bypass RLS (mobile uses CPF auth, not Supabase Auth)
       const { data: dependentsData, error: dependentsError } = await supabase
-        .rpc("get_patient_dependents", { p_patient_id: patientId });
+        .rpc("get_patient_dependents", { p_patient_id: storedPatientId });
 
       if (dependentsError) {
         console.error("Error fetching dependents:", dependentsError);
@@ -167,11 +180,6 @@ export default function MobileDependentsPage() {
   };
 
   const handleRequestInclusion = () => {
-    // Navigate to request form or show dialog
-    toast({
-      title: "Solicitação de Inclusão",
-      description: "Para incluir um novo dependente, entre em contato com o sindicato.",
-    });
     setShowRequestDialog(true);
   };
 
@@ -504,56 +512,16 @@ export default function MobileDependentsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Request Inclusion Dialog */}
-      <Dialog open={showRequestDialog} onOpenChange={setShowRequestDialog}>
-        <DialogContent className="max-w-sm mx-4 rounded-2xl">
-          <DialogHeader>
-            <DialogTitle>Solicitar Inclusão de Dependente</DialogTitle>
-            <DialogDescription>
-              Entre em contato com o sindicato para solicitar a inclusão de um novo dependente
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="bg-emerald-50 rounded-lg p-4">
-              <h4 className="font-medium text-emerald-900 mb-2">Documentos Necessários</h4>
-              <ul className="text-sm text-emerald-700 space-y-1">
-                <li>• Documento de identidade (RG ou CNH)</li>
-                <li>• CPF do dependente</li>
-                <li>• Comprovante de parentesco</li>
-                <li>• Foto 3x4 recente</li>
-              </ul>
-            </div>
-
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-2">Canais de Atendimento</h4>
-              <div className="space-y-2 text-sm text-blue-700">
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  <span>(73) 3281-1234</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4" />
-                  <span>atendimento@secmi.org.br</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter className="flex-col gap-2">
-            <Button
-              className="w-full bg-green-600 hover:bg-green-700"
-              onClick={() => window.open("https://wa.me/5573999999999", "_blank")}
-            >
-              <Phone className="h-4 w-4 mr-2" />
-              Falar no WhatsApp
-            </Button>
-            <Button variant="outline" onClick={() => setShowRequestDialog(false)} className="w-full">
-              Fechar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Request Inclusion Form */}
+      {patientId && patientClinicId && (
+        <DependentInclusionForm
+          open={showRequestDialog}
+          onOpenChange={setShowRequestDialog}
+          patientId={patientId}
+          clinicId={patientClinicId}
+          onSuccess={loadData}
+        />
+      )}
     </div>
   );
 }
