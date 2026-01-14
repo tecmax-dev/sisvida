@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => ({
         display: "standalone",
         orientation: "portrait",
         scope: "/",
-        start_url: "/login",
+        start_url: "/auth",
         icons: [
           {
             src: "icon-72x72.png",
