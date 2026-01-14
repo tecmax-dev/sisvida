@@ -19,10 +19,12 @@ import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributi
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
 import { LytexSyncProgress, LytexActionType } from "@/components/contributions/LytexSyncProgress";
+import { LytexConciliationHistoryDialog } from "@/components/contributions/LytexConciliationHistoryDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
@@ -99,6 +101,8 @@ export default function ContributionsPage() {
   const [importing, setImporting] = useState(false);
   const [extractingRegistrations, setExtractingRegistrations] = useState(false);
   const [fixingTypes, setFixingTypes] = useState(false);
+  const [fetchingPaid, setFetchingPaid] = useState(false);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [syncResultsOpen, setSyncResultsOpen] = useState(false);
   const [syncResult, setSyncResult] = useState<LytexSyncResult | null>(null);
   const [currentSyncLogId, setCurrentSyncLogId] = useState<string | null>(null);
@@ -482,6 +486,43 @@ export default function ContributionsPage() {
     }
   };
 
+  const handleFetchPaidInvoices = async () => {
+    if (!currentClinic) return;
+    
+    const isSessionValid = await validateSession();
+    if (!isSessionValid) return;
+    
+    setFetchingPaid(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("lytex-api", {
+        body: {
+          action: "fetch_paid_invoices",
+          clinicId: currentClinic.id,
+          mode: "manual",
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.conciliated > 0) {
+        toast.success(`${data.conciliated} boleto(s) conciliado(s) automaticamente!`);
+        fetchData();
+      } else if (data?.alreadyConciliated > 0) {
+        toast.info(`Todos os ${data.alreadyConciliated} boletos pagos já estavam conciliados`);
+      } else {
+        toast.info("Nenhum boleto pago encontrado para conciliar");
+      }
+
+      console.log("Busca de pagamentos:", data);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Erro desconhecido";
+      console.error("Error fetching paid invoices:", error);
+      toast.error(`Erro ao buscar pagamentos: ${errorMessage}`);
+    } finally {
+      setFetchingPaid(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -546,6 +587,15 @@ export default function ContributionsPage() {
               <DropdownMenuItem onClick={handleFixContributionTypes} disabled={fixingTypes}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Corrigir Tipos de Contribuição
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleFetchPaidInvoices} disabled={fetchingPaid} className="text-green-600">
+                <Receipt className="h-4 w-4 mr-2" />
+                Buscar Pagamentos (Conciliação)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setHistoryDialogOpen(true)}>
+                <FileBarChart className="h-4 w-4 mr-2" />
+                Histórico de Sincronização
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -685,9 +735,17 @@ export default function ContributionsPage() {
       {/* Progress overlay during any Lytex action */}
       <LytexSyncProgress 
         syncLogId={currentSyncLogId} 
-        isActive={importing || syncing || fixingTypes || extractingRegistrations}
+        isActive={importing || syncing || fixingTypes || extractingRegistrations || fetchingPaid}
         actionType={currentActionType}
       />
+
+      {currentClinic && (
+        <LytexConciliationHistoryDialog
+          open={historyDialogOpen}
+          onOpenChange={setHistoryDialogOpen}
+          clinicId={currentClinic.id}
+        />
+      )}
     </div>
   );
 }

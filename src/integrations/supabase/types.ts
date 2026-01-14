@@ -2475,12 +2475,14 @@ export type Database = {
           is_editable: boolean | null
           is_negotiated_debt: boolean | null
           is_reconciled: boolean | null
+          last_lytex_sync_at: string | null
           lytex_boleto_barcode: string | null
           lytex_boleto_digitable_line: string | null
           lytex_fee_amount: number | null
           lytex_fee_details: Json | null
           lytex_invoice_id: string | null
           lytex_invoice_url: string | null
+          lytex_original_status: string | null
           lytex_pix_code: string | null
           lytex_pix_qrcode: string | null
           lytex_raw_data: Json | null
@@ -2521,12 +2523,14 @@ export type Database = {
           is_editable?: boolean | null
           is_negotiated_debt?: boolean | null
           is_reconciled?: boolean | null
+          last_lytex_sync_at?: string | null
           lytex_boleto_barcode?: string | null
           lytex_boleto_digitable_line?: string | null
           lytex_fee_amount?: number | null
           lytex_fee_details?: Json | null
           lytex_invoice_id?: string | null
           lytex_invoice_url?: string | null
+          lytex_original_status?: string | null
           lytex_pix_code?: string | null
           lytex_pix_qrcode?: string | null
           lytex_raw_data?: Json | null
@@ -2567,12 +2571,14 @@ export type Database = {
           is_editable?: boolean | null
           is_negotiated_debt?: boolean | null
           is_reconciled?: boolean | null
+          last_lytex_sync_at?: string | null
           lytex_boleto_barcode?: string | null
           lytex_boleto_digitable_line?: string | null
           lytex_fee_amount?: number | null
           lytex_fee_details?: Json | null
           lytex_invoice_id?: string | null
           lytex_invoice_url?: string | null
+          lytex_original_status?: string | null
           lytex_pix_code?: string | null
           lytex_pix_qrcode?: string | null
           lytex_raw_data?: Json | null
@@ -4146,6 +4152,88 @@ export type Database = {
           },
         ]
       }
+      lytex_conciliation_logs: {
+        Row: {
+          clinic_id: string
+          conciliation_reason: string | null
+          conciliation_result: string
+          contribution_id: string | null
+          created_at: string
+          id: string
+          lytex_fee_amount: number | null
+          lytex_invoice_id: string
+          lytex_net_value: number | null
+          lytex_paid_at: string | null
+          lytex_paid_value: number | null
+          lytex_payment_method: string | null
+          lytex_transaction_id: string | null
+          new_status: string | null
+          previous_status: string | null
+          raw_lytex_data: Json | null
+          sync_log_id: string | null
+        }
+        Insert: {
+          clinic_id: string
+          conciliation_reason?: string | null
+          conciliation_result: string
+          contribution_id?: string | null
+          created_at?: string
+          id?: string
+          lytex_fee_amount?: number | null
+          lytex_invoice_id: string
+          lytex_net_value?: number | null
+          lytex_paid_at?: string | null
+          lytex_paid_value?: number | null
+          lytex_payment_method?: string | null
+          lytex_transaction_id?: string | null
+          new_status?: string | null
+          previous_status?: string | null
+          raw_lytex_data?: Json | null
+          sync_log_id?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          conciliation_reason?: string | null
+          conciliation_result?: string
+          contribution_id?: string | null
+          created_at?: string
+          id?: string
+          lytex_fee_amount?: number | null
+          lytex_invoice_id?: string
+          lytex_net_value?: number | null
+          lytex_paid_at?: string | null
+          lytex_paid_value?: number | null
+          lytex_payment_method?: string | null
+          lytex_transaction_id?: string | null
+          new_status?: string | null
+          previous_status?: string | null
+          raw_lytex_data?: Json | null
+          sync_log_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lytex_conciliation_logs_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lytex_conciliation_logs_contribution_id_fkey"
+            columns: ["contribution_id"]
+            isOneToOne: false
+            referencedRelation: "employer_contributions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lytex_conciliation_logs_sync_log_id_fkey"
+            columns: ["sync_log_id"]
+            isOneToOne: false
+            referencedRelation: "lytex_sync_logs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lytex_sync_logs: {
         Row: {
           clients_imported: number | null
@@ -4156,10 +4244,14 @@ export type Database = {
           details: Json | null
           error_message: string | null
           id: string
+          invoices_already_conciliated: number | null
+          invoices_conciliated: number | null
+          invoices_ignored: number | null
           invoices_imported: number | null
           invoices_updated: number | null
           started_at: string
           status: string
+          sync_mode: string | null
           sync_type: string
         }
         Insert: {
@@ -4171,10 +4263,14 @@ export type Database = {
           details?: Json | null
           error_message?: string | null
           id?: string
+          invoices_already_conciliated?: number | null
+          invoices_conciliated?: number | null
+          invoices_ignored?: number | null
           invoices_imported?: number | null
           invoices_updated?: number | null
           started_at?: string
           status?: string
+          sync_mode?: string | null
           sync_type: string
         }
         Update: {
@@ -4186,10 +4282,14 @@ export type Database = {
           details?: Json | null
           error_message?: string | null
           id?: string
+          invoices_already_conciliated?: number | null
+          invoices_conciliated?: number | null
+          invoices_ignored?: number | null
           invoices_imported?: number | null
           invoices_updated?: number | null
           started_at?: string
           status?: string
+          sync_mode?: string | null
           sync_type?: string
         }
         Relationships: [
