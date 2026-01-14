@@ -11,7 +11,7 @@ export function MobileFeaturedServices({ dependentsCount, registrationNumber }: 
 
   const services = [
     { icon: Users, label: "Dependentes", count: dependentsCount, onClick: () => navigate("/app/dependentes") },
-    { icon: Lock, label: "Alterar senha", onClick: () => {} },
+    { icon: Lock, label: "Alterar senha", onClick: () => navigate("/app/alterar-senha") },
     { icon: CreditCard, label: "Carteirinha", onClick: () => navigate("/app/carteirinha") },
   ];
 
@@ -25,6 +25,9 @@ export function MobileFeaturedServices({ dependentsCount, registrationNumber }: 
               <service.icon className="h-6 w-6 text-emerald-600" />
             </div>
             <span className="text-xs font-medium text-center">{service.label}</span>
+            {service.count !== undefined && (
+              <span className="text-xs text-muted-foreground">{service.count} cadastrados</span>
+            )}
           </button>
         ))}
       </div>
