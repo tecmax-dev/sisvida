@@ -7888,6 +7888,113 @@ export type Database = {
         }
         Relationships: []
       }
+      push_notification_history: {
+        Row: {
+          body: string
+          clinic_id: string
+          created_at: string
+          data: Json | null
+          id: string
+          sent_at: string
+          sent_by: string | null
+          target_patient_ids: string[] | null
+          target_type: string
+          title: string
+          total_failed: number | null
+          total_sent: number | null
+          total_success: number | null
+        }
+        Insert: {
+          body: string
+          clinic_id: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          sent_at?: string
+          sent_by?: string | null
+          target_patient_ids?: string[] | null
+          target_type: string
+          title: string
+          total_failed?: number | null
+          total_sent?: number | null
+          total_success?: number | null
+        }
+        Update: {
+          body?: string
+          clinic_id?: string
+          created_at?: string
+          data?: Json | null
+          id?: string
+          sent_at?: string
+          sent_by?: string | null
+          target_patient_ids?: string[] | null
+          target_type?: string
+          title?: string
+          total_failed?: number | null
+          total_sent?: number | null
+          total_success?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_notification_history_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_notification_tokens: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          device_info: Json | null
+          id: string
+          is_active: boolean | null
+          patient_id: string
+          platform: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          device_info?: Json | null
+          id?: string
+          is_active?: boolean | null
+          patient_id: string
+          platform: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          device_info?: Json | null
+          id?: string
+          is_active?: boolean | null
+          patient_id?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_notification_tokens_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_notification_tokens_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       queue_calls: {
         Row: {
           appointment_id: string | null
