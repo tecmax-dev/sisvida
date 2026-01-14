@@ -984,7 +984,7 @@ async function importIndividualContributionsBatch(
         status: finalStatus,
         competence_month: competenceMonth,
         competence_year: competenceYear,
-        active_competence_key: activeCompetenceKey,
+        // active_competence_key is a GENERATED column - do NOT include it in insert
         paid_at: finalStatus === 'paid' ? (paymentDate || dueDate) : null,
         paid_value: finalStatus === 'paid' ? value : null,
         notes: row.notes || row.description ? String(row.notes || row.description).trim() : null,
