@@ -81,13 +81,9 @@ export default function MobileDependentsPage() {
         return;
       }
 
-      // Fetch dependents
+      // Fetch dependents using RPC to bypass RLS (mobile uses CPF auth, not Supabase Auth)
       const { data: dependentsData, error: dependentsError } = await supabase
-        .from("patient_dependents")
-        .select("id, name, cpf, birth_date, relationship, phone, is_active, card_number, card_expires_at, created_at")
-        .eq("patient_id", patientId)
-        .eq("is_active", true)
-        .order("name");
+        .rpc("get_patient_dependents", { p_patient_id: patientId });
 
       if (dependentsError) {
         console.error("Error fetching dependents:", dependentsError);
