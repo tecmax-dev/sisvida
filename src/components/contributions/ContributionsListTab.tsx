@@ -178,10 +178,17 @@ export default function ContributionsListTab({
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
-  const [monthFilter, setMonthFilter] = useState<string>(() => {
-    const currentMonth = new Date().getMonth(); // 0-11
-    return currentMonth === 0 ? "12" : String(currentMonth); // Mês anterior (1-12)
-  });
+  // Competence filter: combines month and year in MM/YYYY format
+  const getInitialCompetence = () => {
+    const now = new Date();
+    const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth(); // Previous month (1-12)
+    const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    // Use yearFilter if different from calculated year
+    const effectiveYear = yearFilter !== year ? yearFilter : year;
+    return `${String(prevMonth).padStart(2, "0")}/${effectiveYear}`;
+  };
+  
+  const [competenceFilter, setCompetenceFilter] = useState<string>(getInitialCompetence);
   const [currentPage, setCurrentPage] = useState(1);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -246,12 +253,17 @@ export default function ContributionsListTab({
         );
       
       const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
-      const matchesYear = c.competence_year === yearFilter;
-      const matchesMonth = monthFilter === "all" || c.competence_month === parseInt(monthFilter);
+      
+      // Parse competence filter (format: MM/YYYY or "all")
+      let matchesCompetence = true;
+      if (competenceFilter !== "all") {
+        const [filterMonth, filterYear] = competenceFilter.split("/").map(Number);
+        matchesCompetence = c.competence_month === filterMonth && c.competence_year === filterYear;
+      }
 
-      return matchesSearch && matchesStatus && matchesYear && matchesMonth;
+      return matchesSearch && matchesStatus && matchesCompetence;
     });
-  }, [activeContributions, searchTerm, statusFilter, yearFilter, monthFilter, documentTypeTab]);
+  }, [activeContributions, searchTerm, statusFilter, competenceFilter, documentTypeTab]);
 
   const totalPages = Math.ceil(filteredContributions.length / ITEMS_PER_PAGE);
   const paginatedContributions = useMemo(() => {
@@ -295,14 +307,16 @@ export default function ContributionsListTab({
     setCurrentPage(1);
   };
 
-  const handleMonthChange = (value: string) => {
-    setMonthFilter(value);
+  const handleCompetenceChange = (value: string) => {
+    setCompetenceFilter(value);
     setCurrentPage(1);
-  };
-
-  const handleYearChange = (value: string) => {
-    onYearFilterChange(parseInt(value));
-    setCurrentPage(1);
+    // Also update yearFilter for the parent component (reports sync)
+    if (value !== "all") {
+      const [, year] = value.split("/").map(Number);
+      if (year && year !== yearFilter) {
+        onYearFilterChange(year);
+      }
+    }
   };
 
   const handleTabChange = (value: string) => {
@@ -372,25 +386,23 @@ export default function ContributionsListTab({
                   <SelectItem value="cancelled">Cancelados</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={monthFilter} onValueChange={handleMonthChange}>
-                <SelectTrigger className="w-[130px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
-                  <SelectValue placeholder="Mês" />
+              <Select value={competenceFilter} onValueChange={handleCompetenceChange}>
+                <SelectTrigger className="w-[140px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
+                  <SelectValue placeholder="Competência" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos meses</SelectItem>
-                  {Array.from({ length: 12 }, (_, i) => (
-                    <SelectItem key={i} value={String(i + 1)}>{String(i + 1).padStart(2, "0")}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={String(yearFilter)} onValueChange={handleYearChange}>
-                <SelectTrigger className="w-[90px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getStaticYearRange().map(year => (
-                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                  ))}
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="all">Todos períodos</SelectItem>
+                  {/* Generate competence options for the last 3 years, most recent first */}
+                  {getStaticYearRange().slice().reverse().flatMap(year => 
+                    Array.from({ length: 12 }, (_, i) => 12 - i).map(month => {
+                      const competenceKey = `${String(month).padStart(2, "0")}/${year}`;
+                      return (
+                        <SelectItem key={competenceKey} value={competenceKey}>
+                          {competenceKey}
+                        </SelectItem>
+                      );
+                    })
+                  )}
                 </SelectContent>
               </Select>
               <Badge variant="secondary" className="h-8 px-3 text-sm font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300">
