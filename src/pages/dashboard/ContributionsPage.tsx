@@ -232,9 +232,23 @@ export default function ContributionsPage() {
   };
 
   const handleGenerateInvoice = async (contribution: Contribution) => {
-    if (!contribution.employers) {
-      toast.error("Dados da empresa não encontrados");
-      return;
+    // Para contribuições PF (member_id), usar dados do paciente/membro
+    const isPF = !!contribution.member_id;
+    
+    if (isPF) {
+      if (!contribution.patients) {
+        toast.error("Dados do contribuinte não encontrados");
+        return;
+      }
+      if (!contribution.patients.cpf) {
+        toast.error("CPF do contribuinte não informado");
+        return;
+      }
+    } else {
+      if (!contribution.employers) {
+        toast.error("Dados da empresa não encontrados");
+        return;
+      }
     }
 
     // Validar sessão antes de chamar a Edge Function
@@ -245,29 +259,40 @@ export default function ContributionsPage() {
 
     setGeneratingInvoice(true);
     try {
-      const response = await supabase.functions.invoke("lytex-api", {
-        body: {
-          action: "create_invoice",
-          contributionId: contribution.id,
-          clinicId: currentClinic?.id,
-          employer: {
-            cnpj: contribution.employers.cnpj,
-            name: contribution.employers.name,
-            email: contribution.employers.email,
-            phone: contribution.employers.phone,
-            address: contribution.employers.address ? {
-              street: contribution.employers.address,
-              city: contribution.employers.city,
-              state: contribution.employers.state,
-            } : undefined,
-          },
-          value: contribution.value,
-          dueDate: contribution.due_date,
-          description: `${contribution.contribution_types?.name || "Contribuição"} - ${formatCompetence(contribution.competence_month, contribution.competence_year)}`,
-          enableBoleto: true,
-          enablePix: true,
-        },
-      });
+      // Montar body de acordo com tipo (PJ ou PF)
+      const body: Record<string, unknown> = {
+        action: "create_invoice",
+        contributionId: contribution.id,
+        clinicId: currentClinic?.id,
+        value: contribution.value,
+        dueDate: contribution.due_date,
+        description: `${contribution.contribution_types?.name || "Contribuição"} - ${formatCompetence(contribution.competence_month, contribution.competence_year)}`,
+        enableBoleto: true,
+        enablePix: true,
+      };
+
+      if (isPF) {
+        // Contribuição Pessoa Física - usar CPF do membro
+        body.member = {
+          cpf: contribution.patients!.cpf,
+          name: contribution.patients!.name,
+        };
+      } else {
+        // Contribuição PJ - usar dados da empresa
+        body.employer = {
+          cnpj: contribution.employers!.cnpj,
+          name: contribution.employers!.name,
+          email: contribution.employers!.email,
+          phone: contribution.employers!.phone,
+          address: contribution.employers!.address ? {
+            street: contribution.employers!.address,
+            city: contribution.employers!.city,
+            state: contribution.employers!.state,
+          } : undefined,
+        };
+      }
+
+      const response = await supabase.functions.invoke("lytex-api", { body });
 
       if (response.error) {
         throw new Error(response.error.message);

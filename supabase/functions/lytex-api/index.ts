@@ -175,7 +175,7 @@ async function fetchInvoiceFromAnySource(invoiceId: string, primaryToken: string
 interface CreateInvoiceRequest {
   contributionId: string;
   clinicId: string;
-  employer: {
+  employer?: {
     cnpj: string;
     name: string;
     email?: string;
@@ -189,6 +189,13 @@ interface CreateInvoiceRequest {
       state?: string;
       zip?: string;
     };
+  };
+  // Para contribuições PF (pessoa física)
+  member?: {
+    cpf: string;
+    name: string;
+    email?: string;
+    phone?: string;
   };
   value: number; // em centavos
   dueDate: string; // YYYY-MM-DD
@@ -412,8 +419,15 @@ function normalizeMoneyToCents(value: number): number {
 async function createInvoice(params: CreateInvoiceRequest & { registrationNumber?: string }): Promise<any> {
   const token = await getAccessToken();
 
+  // Determinar se é PF (member) ou PJ (employer)
+  const isPF = !!params.member?.cpf;
+  
   // Formatar CPF/CNPJ (remover caracteres especiais)
-  const cleanCnpj = params.employer.cnpj.replace(/\D/g, "");
+  const document = isPF ? params.member!.cpf : params.employer!.cnpj;
+  const cleanDocument = document.replace(/\D/g, "");
+  const clientName = isPF ? params.member!.name : params.employer!.name;
+  const clientEmail = isPF ? params.member!.email : params.employer!.email;
+  const clientPhone = isPF ? params.member!.phone : params.employer!.phone;
 
   // Converter valor para centavos (inteiro) - a API Lytex exige isso
   const valueInCents = normalizeMoneyToCents(params.value);
@@ -424,10 +438,11 @@ async function createInvoice(params: CreateInvoiceRequest & { registrationNumber
   }
 
   console.log(`[Lytex] Valor original: ${params.value}, Valor em centavos: ${valueInCents}`);
+  console.log(`[Lytex] Tipo de contribuição: ${isPF ? "PF (Pessoa Física)" : "PJ (Empresa)"}`);
 
-  // Formatar nome com matrícula: "000123 - NOME DA EMPRESA"
-  let formattedName = params.employer.name;
-  if (params.registrationNumber) {
+  // Formatar nome com matrícula (apenas para PJ)
+  let formattedName = clientName;
+  if (!isPF && params.registrationNumber) {
     const paddedReg = params.registrationNumber.replace(/\D/g, "").padStart(6, "0");
     // Só adiciona prefixo se o nome ainda não começar com número
     if (!/^\d+\s*[-–]/.test(formattedName)) {
@@ -438,11 +453,11 @@ async function createInvoice(params: CreateInvoiceRequest & { registrationNumber
 
   const invoicePayload: any = {
     client: {
-      type: cleanCnpj.length === 14 ? "pj" : "pf",
+      type: cleanDocument.length === 14 ? "pj" : "pf",
       name: formattedName,
-      cpfCnpj: cleanCnpj,
-      email: params.employer.email || undefined,
-      cellphone: params.employer.phone?.replace(/\D/g, "") || undefined,
+      cpfCnpj: cleanDocument,
+      email: clientEmail || undefined,
+      cellphone: clientPhone?.replace(/\D/g, "") || undefined,
     },
     items: [
       {
@@ -460,24 +475,26 @@ async function createInvoice(params: CreateInvoiceRequest & { registrationNumber
     referenceId: params.contributionId,
   };
 
-  // Adicionar endereço apenas se estiver completo (a API da Lytex rejeita campos vazios)
-  const addr = params.employer.address;
-  const zone = addr?.zone?.trim();
-  const zip = addr?.zip?.replace(/\D/g, "").trim();
-  const city = addr?.city?.trim();
-  const state = addr?.state?.trim();
-  const street = addr?.street?.trim();
+  // Adicionar endereço apenas para PJ e se estiver completo (a API da Lytex rejeita campos vazios)
+  if (!isPF && params.employer?.address) {
+    const addr = params.employer.address;
+    const zone = addr?.zone?.trim();
+    const zip = addr?.zip?.replace(/\D/g, "").trim();
+    const city = addr?.city?.trim();
+    const state = addr?.state?.trim();
+    const street = addr?.street?.trim();
 
-  if (addr && zone && zip && city && state && street) {
-    invoicePayload.client.address = {
-      street,
-      number: addr.number?.trim() || "S/N",
-      complement: addr.complement?.trim() || undefined,
-      zone,
-      city,
-      state,
-      zip,
-    };
+    if (zone && zip && city && state && street) {
+      invoicePayload.client.address = {
+        street,
+        number: addr.number?.trim() || "S/N",
+        complement: addr.complement?.trim() || undefined,
+        zone,
+        city,
+        state,
+        zip,
+      };
+    }
   }
 
   console.log("[Lytex] Criando cobrança:", JSON.stringify(invoicePayload, null, 2));
@@ -687,36 +704,38 @@ Deno.serve(async (req) => {
       case "createInvoice": {
         // Formato simplificado (usado por negociações): clientId, clientName, clientDocument, value, dueDate, description
         // Criar cobrança diretamente na Lytex sem vincular a uma contribuição
+        // Suporta tanto PJ (CNPJ) quanto PF (CPF)
         const clientName = String(params.clientName || "").trim();
         const clientDocumentRaw = String(params.clientDocument || "").trim();
-        const cleanCnpj = clientDocumentRaw.replace(/\D/g, "");
+        const cleanDocument = clientDocumentRaw.replace(/\D/g, "");
         const dueDate = String(params.dueDate || "");
         const dueDateOnly = dueDate.includes("T") ? dueDate.split("T")[0] : dueDate;
 
-        if (!clientName || !cleanCnpj || !dueDateOnly || params.value === undefined || params.value === null) {
-          throw new Error("Dados insuficientes para emitir boleto (empresa, documento, valor e vencimento são obrigatórios)");
+        if (!clientName || !cleanDocument || !dueDateOnly || params.value === undefined || params.value === null) {
+          throw new Error("Dados insuficientes para emitir boleto (nome, documento, valor e vencimento são obrigatórios)");
         }
 
-        // Buscar matrícula do employer pelo CNPJ
-        let registrationNumber: string | undefined;
-        const { data: employer } = await supabase
-          .from("employers")
-          .select("registration_number")
-          .eq("cnpj", cleanCnpj)
-          .maybeSingle();
+        // Determinar se é PF (CPF = 11 dígitos) ou PJ (CNPJ = 14 dígitos)
+        const isPFNegotiation = cleanDocument.length === 11;
         
-        if (employer?.registration_number) {
-          registrationNumber = employer.registration_number;
-          console.log(`[Lytex] Matrícula encontrada para CNPJ ${cleanCnpj}: ${registrationNumber}`);
+        // Buscar matrícula do employer pelo CNPJ (apenas se for PJ)
+        let registrationNumber: string | undefined;
+        if (!isPFNegotiation) {
+          const { data: employer } = await supabase
+            .from("employers")
+            .select("registration_number")
+            .eq("cnpj", cleanDocument)
+            .maybeSingle();
+          
+          if (employer?.registration_number) {
+            registrationNumber = employer.registration_number;
+            console.log(`[Lytex] Matrícula encontrada para CNPJ ${cleanDocument}: ${registrationNumber}`);
+          }
         }
 
         const invoiceRequest: CreateInvoiceRequest & { registrationNumber?: string } = {
           contributionId: params.installmentId || params.clientId || "",
           clinicId: "",
-          employer: {
-            cnpj: cleanCnpj,
-            name: clientName,
-          },
           value: Number(params.value),
           dueDate: dueDateOnly,
           description: params.description || "Negociação",
@@ -724,6 +743,19 @@ Deno.serve(async (req) => {
           enablePix: true,
           registrationNumber,
         };
+
+        // Adicionar dados do pagador de acordo com o tipo
+        if (isPFNegotiation) {
+          invoiceRequest.member = {
+            cpf: cleanDocument,
+            name: clientName,
+          };
+        } else {
+          invoiceRequest.employer = {
+            cnpj: cleanDocument,
+            name: clientName,
+          };
+        }
 
         const invoice = await createInvoice(invoiceRequest);
 
@@ -766,21 +798,29 @@ Deno.serve(async (req) => {
       }
 
       case "create_invoice": {
-        // Criar cobrança na Lytex (usado por contribuições)
-        // Buscar matrícula do employer
+        // Criar cobrança na Lytex (usado por contribuições PJ e PF)
+        // Verificar se é PF (member) ou PJ (employer)
+        const isPFContrib = !!params.member?.cpf;
+        
         let registrationNumber2: string | undefined;
-        const employerCnpj = params.employer?.cnpj?.replace(/\D/g, "");
-        if (employerCnpj) {
-          const { data: employer2 } = await supabase
-            .from("employers")
-            .select("registration_number")
-            .eq("cnpj", employerCnpj)
-            .maybeSingle();
-          
-          if (employer2?.registration_number) {
-            registrationNumber2 = employer2.registration_number;
-            console.log(`[Lytex] Matrícula encontrada para CNPJ ${employerCnpj}: ${registrationNumber2}`);
+        
+        if (!isPFContrib) {
+          // PJ: Buscar matrícula do employer
+          const employerCnpj = params.employer?.cnpj?.replace(/\D/g, "");
+          if (employerCnpj) {
+            const { data: employer2 } = await supabase
+              .from("employers")
+              .select("registration_number")
+              .eq("cnpj", employerCnpj)
+              .maybeSingle();
+            
+            if (employer2?.registration_number) {
+              registrationNumber2 = employer2.registration_number;
+              console.log(`[Lytex] Matrícula encontrada para CNPJ ${employerCnpj}: ${registrationNumber2}`);
+            }
           }
+        } else {
+          console.log(`[Lytex] Contribuição PF - CPF: ${params.member.cpf}, Nome: ${params.member.name}`);
         }
 
         const invoiceParams = { ...params, registrationNumber: registrationNumber2 } as CreateInvoiceRequest & { registrationNumber?: string };
@@ -795,7 +835,7 @@ Deno.serve(async (req) => {
           invoice?.url ||
           null;
 
-        console.log(`[Lytex] create_invoice: id=${invoice?._id} url=${extractedInvoiceUrl}`);
+        console.log(`[Lytex] create_invoice (${isPFContrib ? "PF" : "PJ"}): id=${invoice?._id} url=${extractedInvoiceUrl}`);
 
         // Atualizar contribuição no banco com os dados da Lytex
         const { error: updateError } = await supabase
