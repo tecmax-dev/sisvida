@@ -2941,7 +2941,7 @@ Deno.serve(async (req) => {
                 // Gerar chave única
                 const activeCompetenceKey = `${employer.id}-${compYear}-${String(compMonth).padStart(2, "0")}`;
                 
-                // Criar contribuição
+                // Criar contribuição (active_competence_key é gerada automaticamente pelo banco)
                 const { error: insertErr } = await supabase
                   .from("employer_contributions")
                   .insert({
@@ -2962,41 +2962,13 @@ Deno.serve(async (req) => {
                     paid_value: paidValue,
                     is_reconciled: true,
                     reconciled_at: new Date().toISOString(),
-                    active_competence_key: activeCompetenceKey,
                   });
                 
                 if (insertErr) {
-                  // Pode ser conflito de chave única - tentar com sufixo
+                  // Conflito de chave única - registro já existe para esta competência
                   if (insertErr.code === "23505") {
-                    const uniqueKey = `${activeCompetenceKey}-EXT-${invoiceId.slice(-6)}`;
-                    const { error: retryErr } = await supabase
-                      .from("employer_contributions")
-                      .insert({
-                        clinic_id: importClinicId,
-                        employer_id: employer.id,
-                        contribution_type_id: contributionTypeId,
-                        value: paidValue || totalValue || 0,
-                        due_date: dueDate || new Date().toISOString().split("T")[0],
-                        status: "paid",
-                        competence_month: compMonth,
-                        competence_year: compYear,
-                        lytex_invoice_id: invoiceId,
-                        lytex_invoice_url: invoice.link || invoice.url || invoice.invoiceUrl,
-                        lytex_nosso_numero: invoice.ourNumber || invoice.nossoNumero,
-                        lytex_original_status: invoice.status || invoice.paymentStatus,
-                        origin: source === "secondary" ? "external_lytex" : "lytex",
-                        paid_at: paidAt,
-                        paid_value: paidValue,
-                        is_reconciled: true,
-                        reconciled_at: new Date().toISOString(),
-                        active_competence_key: uniqueKey,
-                      });
-                    
-                    if (retryErr) {
-                      console.error(`[Lytex] Erro ao importar fatura ${invoiceId}:`, retryErr);
-                      errors++;
-                      continue;
-                    }
+                    console.log(`[Lytex] Fatura ${invoiceId} ignorada - já existe contribuição para ${compMonth}/${compYear}`);
+                    continue;
                   } else {
                     console.error(`[Lytex] Erro ao importar fatura ${invoiceId}:`, insertErr);
                     errors++;
