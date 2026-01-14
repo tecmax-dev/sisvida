@@ -139,20 +139,23 @@ export default function ContributionsPage() {
   const detectBestYear = async () => {
     if (!currentClinic?.id) return;
 
-    // Verificar se há dados no ano atual
-    const { count } = await supabase
+    // Default behavior: start on the previous month's year (e.g. January => previous year)
+    // but if that year has no data, fall back to the most recent year available.
+    const targetYear = getInitialYear();
+
+    const { count: targetCount } = await supabase
       .from("employer_contributions")
       .select("*", { count: "exact", head: true })
       .eq("clinic_id", currentClinic.id)
-      .eq("competence_year", new Date().getFullYear());
+      .eq("competence_year", targetYear);
 
-    if (count && count > 0) {
-      setYearFilter(new Date().getFullYear());
+    if (targetCount && targetCount > 0) {
+      setYearFilter(targetYear);
       setYearDetectionDone(true);
       return;
     }
 
-    // Se não há dados no ano atual, buscar o ano mais recente com dados
+    // Fallback: buscar o ano mais recente com dados
     const { data } = await supabase
       .from("employer_contributions")
       .select("competence_year")
@@ -165,6 +168,7 @@ export default function ContributionsPage() {
       setYearFilter(bestYear);
       setDetectedYear(bestYear);
     }
+
     setYearDetectionDone(true);
   };
 
