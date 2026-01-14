@@ -513,15 +513,32 @@ export default function EmployersPage() {
         if (categoryFilter !== "none" && employer.category_id !== categoryFilter) return false;
       }
       
-      // Filter by search term
-      const search = searchTerm.toLowerCase();
-      return (
-        employer.name.toLowerCase().includes(search) ||
-        employer.cnpj.includes(search.replace(/\D/g, "")) ||
-        employer.trade_name?.toLowerCase().includes(search) ||
-        employer.registration_number?.includes(search) ||
-        employer.patients?.some((p) => p.name.toLowerCase().includes(search))
-      );
+      // If no search term, include all
+      if (!searchTerm.trim()) return true;
+      
+      // Normalize search term
+      const searchLower = searchTerm.toLowerCase().trim();
+      const searchClean = searchTerm.replace(/\D/g, "");
+      
+      // Normalize employer CNPJ for comparison
+      const cnpjClean = employer.cnpj?.replace(/\D/g, "") || "";
+      
+      // Match by name
+      if (employer.name.toLowerCase().includes(searchLower)) return true;
+      
+      // Match by trade name
+      if (employer.trade_name?.toLowerCase().includes(searchLower)) return true;
+      
+      // Match by CNPJ (both sides normalized)
+      if (searchClean.length >= 3 && cnpjClean.includes(searchClean)) return true;
+      
+      // Match by registration number
+      if (employer.registration_number?.toLowerCase().includes(searchLower)) return true;
+      
+      // Match by linked patient name
+      if (employer.patients?.some((p) => p.name.toLowerCase().includes(searchLower))) return true;
+      
+      return false;
     });
   }, [employers, searchTerm, categoryFilter]);
 

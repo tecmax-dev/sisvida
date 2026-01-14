@@ -53,17 +53,26 @@ export function EmployerSearchCombobox({
   }, [employers, value]);
 
   const filteredEmployers = useMemo(() => {
-    if (!search) return employers.slice(0, 50);
+    if (!search.trim()) return employers.slice(0, 50);
     
-    const searchLower = search.toLowerCase();
+    const searchLower = search.toLowerCase().trim();
     const searchClean = search.replace(/\D/g, "");
     
     return employers.filter((e) => {
-      const nameMatch = e.name?.toLowerCase().includes(searchLower);
-      const tradeNameMatch = e.trade_name?.toLowerCase().includes(searchLower);
-      const cnpjMatch = e.cnpj?.replace(/\D/g, "").includes(searchClean);
-      const registrationMatch = e.registration_number?.toLowerCase().includes(searchLower);
-      return nameMatch || tradeNameMatch || cnpjMatch || registrationMatch;
+      // Name match
+      if (e.name?.toLowerCase().includes(searchLower)) return true;
+      
+      // Trade name match
+      if (e.trade_name?.toLowerCase().includes(searchLower)) return true;
+      
+      // CNPJ match (both sides normalized)
+      const cnpjClean = e.cnpj?.replace(/\D/g, "") || "";
+      if (searchClean.length >= 3 && cnpjClean.includes(searchClean)) return true;
+      
+      // Registration number match
+      if (e.registration_number?.toLowerCase().includes(searchLower)) return true;
+      
+      return false;
     }).slice(0, 50);
   }, [employers, search]);
 
