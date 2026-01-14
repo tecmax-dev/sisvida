@@ -28,13 +28,27 @@ export default function NegotiationStepEmployer({
 }: NegotiationStepEmployerProps) {
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredEmployers = employers.filter(
-    (emp) =>
-      emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      emp.cnpj.includes(searchTerm.replace(/\D/g, "")) ||
-      (emp.trade_name && emp.trade_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (emp.registration_number && emp.registration_number.includes(searchTerm))
-  );
+  const filteredEmployers = employers.filter((emp) => {
+    if (!searchTerm.trim()) return true;
+    
+    const searchLower = searchTerm.toLowerCase().trim();
+    const searchClean = searchTerm.replace(/\D/g, "");
+    
+    // Name match
+    if (emp.name.toLowerCase().includes(searchLower)) return true;
+    
+    // Trade name match
+    if (emp.trade_name?.toLowerCase().includes(searchLower)) return true;
+    
+    // CNPJ match (both sides normalized)
+    const cnpjClean = emp.cnpj?.replace(/\D/g, "") || "";
+    if (searchClean.length >= 3 && cnpjClean.includes(searchClean)) return true;
+    
+    // Registration number match
+    if (emp.registration_number?.toLowerCase().includes(searchLower)) return true;
+    
+    return false;
+  });
 
   const formatCNPJ = (cnpj: string) => {
     return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");

@@ -60,6 +60,7 @@ interface Employer {
   id: string;
   name: string;
   cnpj: string;
+  trade_name?: string | null;
   registration_number?: string | null;
 }
 
@@ -238,21 +239,32 @@ export default function ContributionsListTab({
 
   const filteredContributions = useMemo(() => {
     return activeContributions.filter((c) => {
-      const searchLower = searchTerm.toLowerCase();
+      // If no search term, match all
+      let matchesSearchTerm = true;
       
-      // For PJ, search in employer data; for PF, search in member/patient data
-      const matchesSearch = documentTypeTab === "pj"
-        ? (
-          c.employers?.name.toLowerCase().includes(searchLower) ||
-          c.employers?.cnpj.includes(searchTerm.replace(/\D/g, "")) ||
-          c.employers?.registration_number?.includes(searchTerm) ||
-          c.contribution_types?.name.toLowerCase().includes(searchLower)
-        )
-        : (
-          c.patients?.name?.toLowerCase().includes(searchLower) ||
-          c.patients?.cpf?.includes(searchTerm.replace(/\D/g, "")) ||
-          c.contribution_types?.name.toLowerCase().includes(searchLower)
-        );
+      if (searchTerm.trim()) {
+        const searchLower = searchTerm.toLowerCase().trim();
+        const searchClean = searchTerm.replace(/\D/g, "");
+        
+        // For PJ, search in employer data; for PF, search in member/patient data
+        if (documentTypeTab === "pj") {
+          const employerNameMatch = c.employers?.name?.toLowerCase().includes(searchLower);
+          const employerTradeNameMatch = c.employers?.trade_name?.toLowerCase().includes(searchLower);
+          const cnpjClean = c.employers?.cnpj?.replace(/\D/g, "") || "";
+          const cnpjMatch = searchClean.length >= 3 && cnpjClean.includes(searchClean);
+          const registrationMatch = c.employers?.registration_number?.toLowerCase().includes(searchLower);
+          const typeMatch = c.contribution_types?.name?.toLowerCase().includes(searchLower);
+          
+          matchesSearchTerm = !!(employerNameMatch || employerTradeNameMatch || cnpjMatch || registrationMatch || typeMatch);
+        } else {
+          const memberNameMatch = c.patients?.name?.toLowerCase().includes(searchLower);
+          const cpfClean = c.patients?.cpf?.replace(/\D/g, "") || "";
+          const cpfMatch = searchClean.length >= 3 && cpfClean.includes(searchClean);
+          const typeMatch = c.contribution_types?.name?.toLowerCase().includes(searchLower);
+          
+          matchesSearchTerm = !!(memberNameMatch || cpfMatch || typeMatch);
+        }
+      }
       
       const matchesStatus = statusFilter === "all" || (statusFilter === "hide_cancelled" ? c.status !== "cancelled" : c.status === statusFilter);
       
@@ -263,7 +275,7 @@ export default function ContributionsListTab({
         matchesCompetence = c.competence_month === filterMonth && c.competence_year === filterYear;
       }
 
-      return matchesSearch && matchesStatus && matchesCompetence;
+      return matchesSearchTerm && matchesStatus && matchesCompetence;
     });
   }, [activeContributions, searchTerm, statusFilter, competenceFilter, documentTypeTab]);
 
