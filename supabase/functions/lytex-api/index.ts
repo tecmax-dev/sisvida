@@ -2854,16 +2854,20 @@ Deno.serve(async (req) => {
                   continue;
                 }
                 
-                // Extrair dados do cliente (empresa) - tentar múltiplos campos
+                // Extrair dados do cliente (empresa) - cpfCnpj é o campo correto na Lytex
                 const clientCnpj = 
+                  invoice.client?.cpfCnpj ||
                   invoice.client?.cnpj || 
                   invoice.client?.document || 
                   invoice.cnpj ||
+                  invoice.payer?.cpfCnpj ||
                   invoice.payer?.cnpj ||
                   invoice.payer?.document ||
                   invoice.customerDocument ||
+                  invoice.customer?.cpfCnpj ||
                   invoice.customer?.cnpj ||
                   invoice.customer?.document ||
+                  invoice.pagador?.cpfCnpj ||
                   invoice.pagador?.cnpj ||
                   invoice.pagador?.documento;
                 
