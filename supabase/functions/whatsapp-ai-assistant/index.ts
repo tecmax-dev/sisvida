@@ -852,7 +852,7 @@ Se o paciente mencionar um profissional específico (Dr. Alcides, Dra. Juliane, 
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
+          model: 'google/gemini-3-flash-preview',
           messages: msgs,
           ...(useTools ? { tools, tool_choice: 'auto' } : {}),
         }),
