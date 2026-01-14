@@ -2313,218 +2313,194 @@ Deno.serve(async (req) => {
 
           console.log(`[Lytex] ${pendingContribs?.length || 0} contribuições com boleto Lytex encontradas`);
 
-          // Buscar faturas pagas na Lytex
-          // Tentar múltiplos status para garantir cobertura completa
-          const paidStatuses = ["paid", "approved", "settled", "confirmed"];
-          const seenInvoiceIds = new Set<string>();
+        // Buscar faturas pagas na Lytex - OTIMIZADO com limite de páginas para evitar timeout
+        // Abordagem: buscar apenas contribuições pendentes que temos no sistema e verificar status na Lytex
+        const MAX_PAGES_PER_STATUS = 10; // Limitar a 1000 faturas por status para evitar timeout
+        const paidStatuses = ["paid"]; // Focar no status principal para velocidade
+        const seenInvoiceIds = new Set<string>();
 
-          for (const statusFilter of paidStatuses) {
-            let page = 1;
-            let hasMore = true;
+        // Estratégia otimizada: verificar diretamente as faturas que temos no sistema
+        const pendingInvoiceIds = Array.from(contribByInvoiceId.keys());
+        console.log(`[Lytex] Verificando ${pendingInvoiceIds.length} faturas do sistema na API...`);
 
-            while (hasMore) {
-              try {
-                const response = await fetch(`${LYTEX_API_URL}/invoices?page=${page}&limit=100&status=${statusFilter}`, {
-                  method: "GET",
-                  headers: { "Authorization": `Bearer ${token}` },
+        // Processar em lotes de 20 faturas por vez para verificar status individual
+        const BATCH_SIZE = 20;
+        for (let i = 0; i < pendingInvoiceIds.length; i += BATCH_SIZE) {
+          const batch = pendingInvoiceIds.slice(i, i + BATCH_SIZE);
+          
+          await Promise.all(batch.map(async (invoiceId) => {
+            try {
+              if (seenInvoiceIds.has(invoiceId)) return;
+              seenInvoiceIds.add(invoiceId);
+              
+              const contrib = contribByInvoiceId.get(invoiceId);
+              if (!contrib) return;
+              
+              // Já está pago? Pular
+              if (contrib.status === "paid" && contrib.paid_at) {
+                alreadyConciliated++;
+                return;
+              }
+              
+              // Buscar status atual da fatura na Lytex
+              const response = await fetch(`${LYTEX_API_URL}/invoices/${invoiceId}`, {
+                method: "GET",
+                headers: { "Authorization": `Bearer ${token}` },
+              });
+
+              if (!response.ok) {
+                if (response.status === 404) {
+                  ignored++;
+                  return;
+                }
+                console.log(`[Lytex] Erro ao buscar fatura ${invoiceId}: ${response.status}`);
+                return;
+              }
+
+              const invoiceData = await response.json();
+              const invoice = invoiceData?.data || invoiceData;
+              
+              if (!invoice) {
+                ignored++;
+                return;
+              }
+              
+              totalFound++;
+              const mappedStatus = mapLytexInvoiceStatus(invoice);
+              
+              // Só processar se estiver pago na Lytex
+              if (mappedStatus !== "paid") {
+                return;
+              }
+              
+              const employerName = contrib?.employer?.name || invoice.client?.name || "Desconhecido";
+              const competence = contrib ? `${String(contrib.competence_month).padStart(2, "0")}/${contrib.competence_year}` : null;
+
+              // Extrair dados de pagamento da fatura
+              const paidAt = extractPaidDate(invoice);
+              const paidValueCents = extractPaidValueCents(invoice);
+              const paymentMethod = extractPaymentMethod(invoice);
+              
+              // Calcular taxas e valor líquido
+              const feeAmount = Math.round((invoice.fee || invoice.fees?.total || 0) * 100);
+              const netValue = paidValueCents ? paidValueCents - feeAmount : null;
+
+              // Atualizar contribuição para PAGO
+              const updateData: Record<string, unknown> = {
+                status: "paid",
+                paid_at: paidAt || new Date().toISOString(),
+                paid_value: paidValueCents || contrib.value,
+                payment_method: paymentMethod,
+                lytex_transaction_id: invoice.transactionId || invoice._id,
+                lytex_fee_amount: feeAmount,
+                net_value: netValue,
+                lytex_original_status: invoice.status,
+                last_lytex_sync_at: new Date().toISOString(),
+                lytex_raw_data: {
+                  _id: invoice._id,
+                  status: invoice.status,
+                  paidAt: invoice.paidAt,
+                  payedValue: invoice.payedValue,
+                  paymentMethod: invoice.paymentMethod,
+                  transactionId: invoice.transactionId,
+                  fees: invoice.fees,
+                },
+                is_reconciled: true,
+                reconciled_at: new Date().toISOString(),
+              };
+
+              const { error: updateErr } = await supabase
+                .from("employer_contributions")
+                .update(updateData)
+                .eq("id", contrib.id);
+
+              if (updateErr) {
+                errors++;
+                console.error(`[Lytex] Erro ao conciliar ${contrib.id}:`, updateErr);
+                conciliationDetails.push({
+                  lytexInvoiceId: invoiceId,
+                  contributionId: contrib.id,
+                  employerName,
+                  competence: competence || undefined,
+                  result: "error",
+                  reason: updateErr.message,
                 });
 
-                if (!response.ok) {
-                  console.log(`[Lytex] Status ${statusFilter} retornou ${response.status}, pulando...`);
-                  hasMore = false;
-                  continue;
-                }
-
-                const data = await response.json();
-                const invoices = extractList(data);
-
-                if (invoices.length === 0) {
-                  hasMore = false;
-                  continue;
-                }
-
-                console.log(`[Lytex] Encontradas ${invoices.length} faturas com status ${statusFilter} (page ${page})`);
-
-                for (const invoice of invoices) {
-                  if (!invoice?._id || seenInvoiceIds.has(invoice._id)) continue;
-                  seenInvoiceIds.add(invoice._id);
-                  totalFound++;
-
-                  // Buscar contribuição correspondente
-                  // Prioridade: 1) lytex_invoice_id, 2) transactionId, 3) referenceId
-                  let contrib = contribByInvoiceId.get(invoice._id);
-                  
-                  if (!contrib && invoice.transactionId) {
-                    contrib = contribByTransactionId.get(invoice.transactionId);
-                  }
-
-                  if (!contrib && invoice.referenceId) {
-                    // referenceId é o contributionId que enviamos na criação
-                    const { data: refContrib } = await supabase
-                      .from("employer_contributions")
-                      .select("id, lytex_invoice_id, status, paid_at, paid_value, value, competence_month, competence_year, employer:employers(name)")
-                      .eq("id", invoice.referenceId)
-                      .eq("clinic_id", params.clinicId)
-                      .maybeSingle();
-                    
-                    if (refContrib) contrib = refContrib;
-                  }
-
-                  const employerName = contrib?.employer?.name || invoice.client?.name || "Desconhecido";
-                  const competence = contrib ? `${String(contrib.competence_month).padStart(2, "0")}/${contrib.competence_year}` : null;
-
-                  if (!contrib) {
-                    // Fatura na Lytex mas sem correspondência no sistema
-                    ignored++;
-                    conciliationDetails.push({
-                      lytexInvoiceId: invoice._id,
-                      employerName,
-                      result: "ignored",
-                      reason: "Sem correspondência no sistema",
-                    });
-                    continue;
-                  }
-
-                  // Verificar idempotência: já foi conciliado antes?
-                  if (contrib.status === "paid" && contrib.paid_at) {
-                    alreadyConciliated++;
-                    conciliationDetails.push({
-                      lytexInvoiceId: invoice._id,
-                      contributionId: contrib.id,
-                      employerName,
-                      competence: competence || undefined,
-                      result: "already_conciliated",
-                      reason: "Já pago no sistema",
-                      paidAt: contrib.paid_at,
-                      paidValue: contrib.paid_value,
-                    });
-                    continue;
-                  }
-
-                  // Extrair dados de pagamento da fatura
-                  const paidAt = extractPaidDate(invoice);
-                  const paidValueCents = extractPaidValueCents(invoice);
-                  const paymentMethod = extractPaymentMethod(invoice);
-                  
-                  // Calcular taxas e valor líquido
-                  const feeAmount = Math.round((invoice.fee || invoice.fees?.total || 0) * 100);
-                  const netValue = paidValueCents ? paidValueCents - feeAmount : null;
-
-                  // Atualizar contribuição para PAGO
-                  const updateData: Record<string, unknown> = {
-                    status: "paid",
-                    paid_at: paidAt || new Date().toISOString(),
-                    paid_value: paidValueCents || contrib.value,
-                    payment_method: paymentMethod,
-                    lytex_transaction_id: invoice.transactionId || invoice._id,
-                    lytex_fee_amount: feeAmount,
-                    net_value: netValue,
-                    lytex_original_status: invoice.status,
-                    last_lytex_sync_at: new Date().toISOString(),
-                    lytex_raw_data: {
-                      _id: invoice._id,
-                      status: invoice.status,
-                      paidAt: invoice.paidAt,
-                      payedValue: invoice.payedValue,
-                      paymentMethod: invoice.paymentMethod,
-                      transactionId: invoice.transactionId,
-                      fees: invoice.fees,
-                    },
-                    is_reconciled: true,
-                    reconciled_at: new Date().toISOString(),
-                  };
-
-                  const { error: updateErr } = await supabase
-                    .from("employer_contributions")
-                    .update(updateData)
-                    .eq("id", contrib.id);
-
-                  if (updateErr) {
-                    errors++;
-                    console.error(`[Lytex] Erro ao conciliar ${contrib.id}:`, updateErr);
-                    conciliationDetails.push({
-                      lytexInvoiceId: invoice._id,
-                      contributionId: contrib.id,
-                      employerName,
-                      competence: competence || undefined,
-                      result: "error",
-                      reason: updateErr.message,
-                    });
-
-                    // Registrar no log de conciliação
-                    await supabase.from("lytex_conciliation_logs").insert({
-                      clinic_id: params.clinicId,
-                      sync_log_id: syncLogPaid?.id,
-                      contribution_id: contrib.id,
-                      lytex_invoice_id: invoice._id,
-                      lytex_transaction_id: invoice.transactionId,
-                      previous_status: contrib.status,
-                      new_status: "paid",
-                      lytex_paid_at: paidAt,
-                      lytex_paid_value: paidValueCents,
-                      lytex_payment_method: paymentMethod,
-                      lytex_fee_amount: feeAmount,
-                      lytex_net_value: netValue,
-                      conciliation_result: "error",
-                      conciliation_reason: updateErr.message,
-                      raw_lytex_data: invoice,
-                    });
-                    continue;
-                  }
-
-                  conciliated++;
-                  console.log(`[Lytex] Conciliado: ${contrib.id} (${employerName}) - ${competence}`);
-                  
-                  conciliationDetails.push({
-                    lytexInvoiceId: invoice._id,
-                    contributionId: contrib.id,
-                    employerName,
-                    competence: competence || undefined,
-                    result: "conciliated",
-                    paidAt: paidAt || undefined,
-                    paidValue: paidValueCents || undefined,
-                  });
-
-                  // Registrar no log de conciliação
-                  await supabase.from("lytex_conciliation_logs").insert({
-                    clinic_id: params.clinicId,
-                    sync_log_id: syncLogPaid?.id,
-                    contribution_id: contrib.id,
-                    lytex_invoice_id: invoice._id,
-                    lytex_transaction_id: invoice.transactionId,
-                    previous_status: contrib.status,
-                    new_status: "paid",
-                    lytex_paid_at: paidAt,
-                    lytex_paid_value: paidValueCents,
-                    lytex_payment_method: paymentMethod,
-                    lytex_fee_amount: feeAmount,
-                    lytex_net_value: netValue,
-                    conciliation_result: "conciliated",
-                    conciliation_reason: `Baixa automática via sync - status Lytex: ${invoice.status}`,
-                    raw_lytex_data: invoice,
-                  });
-                }
-
-                page++;
-                if (invoices.length < 100) hasMore = false;
-
-                // Atualizar progresso
-                if (syncLogPaid?.id) {
-                  await supabase
-                    .from("lytex_sync_logs")
-                    .update({
-                      details: {
-                        progress: { phase: "processing", total: totalFound, processed: conciliated + alreadyConciliated + ignored + errors },
-                      },
-                    })
-                    .eq("id", syncLogPaid.id);
-                }
-              } catch (fetchErr: any) {
-                console.error(`[Lytex] Erro ao buscar faturas (status=${statusFilter}, page=${page}):`, fetchErr);
-                hasMore = false;
+                // Registrar no log de conciliação
+                await supabase.from("lytex_conciliation_logs").insert({
+                  clinic_id: params.clinicId,
+                  sync_log_id: syncLogPaid?.id,
+                  contribution_id: contrib.id,
+                  lytex_invoice_id: invoiceId,
+                  lytex_transaction_id: invoice.transactionId,
+                  previous_status: contrib.status,
+                  new_status: "paid",
+                  lytex_paid_at: paidAt,
+                  lytex_paid_value: paidValueCents,
+                  lytex_payment_method: paymentMethod,
+                  lytex_fee_amount: feeAmount,
+                  lytex_net_value: netValue,
+                  conciliation_result: "error",
+                  conciliation_reason: updateErr.message,
+                  raw_lytex_data: invoice,
+                });
+                return;
               }
+
+              conciliated++;
+              console.log(`[Lytex] Conciliado: ${contrib.id} (${employerName}) - ${competence}`);
+              
+              conciliationDetails.push({
+                lytexInvoiceId: invoiceId,
+                contributionId: contrib.id,
+                employerName,
+                competence: competence || undefined,
+                result: "conciliated",
+                paidAt: paidAt || undefined,
+                paidValue: paidValueCents || undefined,
+              });
+
+              // Registrar no log de conciliação
+              await supabase.from("lytex_conciliation_logs").insert({
+                clinic_id: params.clinicId,
+                sync_log_id: syncLogPaid?.id,
+                contribution_id: contrib.id,
+                lytex_invoice_id: invoiceId,
+                lytex_transaction_id: invoice.transactionId,
+                previous_status: contrib.status,
+                new_status: "paid",
+                lytex_paid_at: paidAt,
+                lytex_paid_value: paidValueCents,
+                lytex_payment_method: paymentMethod,
+                lytex_fee_amount: feeAmount,
+                lytex_net_value: netValue,
+                conciliation_result: "conciliated",
+                conciliation_reason: `Baixa automática via sync - status Lytex: ${invoice.status}`,
+                raw_lytex_data: invoice,
+              });
+            } catch (fetchErr: any) {
+              console.error(`[Lytex] Erro ao verificar fatura ${invoiceId}:`, fetchErr?.message);
             }
+          }));
+
+          // Atualizar progresso a cada lote
+          const processed = Math.min(i + BATCH_SIZE, pendingInvoiceIds.length);
+          if (syncLogPaid?.id && processed % 100 === 0) {
+            await supabase
+              .from("lytex_sync_logs")
+              .update({
+                details: {
+                  progress: { phase: "processing", total: pendingInvoiceIds.length, processed },
+                },
+              })
+              .eq("id", syncLogPaid.id);
           }
+          
+          // Log de progresso a cada 100
+          if (processed % 100 === 0 || processed === pendingInvoiceIds.length) {
+            console.log(`[Lytex] Progresso: ${processed}/${pendingInvoiceIds.length} faturas verificadas`);
+          }
+        }
 
           console.log(`[Lytex] Conciliação concluída: ${conciliated} novos, ${alreadyConciliated} já conciliados, ${ignored} ignorados, ${errors} erros`);
 
