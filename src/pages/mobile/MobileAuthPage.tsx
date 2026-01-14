@@ -77,7 +77,7 @@ export default function MobileAuthPage() {
         sessionStorage.setItem('mobile_patient_id', patientData.id);
         sessionStorage.setItem('mobile_clinic_id', patientData.clinic_id);
         
-        navigate("/app");
+        navigate("/app/home");
       }
     } catch (err) {
       console.error("Login error:", err);
