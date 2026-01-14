@@ -173,6 +173,23 @@ export const LYTEX_LAYOUTS: Record<string, LytexLayout> = {
     outputType: 'contributions',
   },
   
+  payments_individual: {
+    name: 'Pagamentos Pessoa Física',
+    description: 'Pagamentos de contribuições individuais (CPF - sócios)',
+    detectionColumns: ['cpf', 'valor', 'data_pagamento'],
+    minMatchScore: 2,
+    fields: [
+      { sourceColumns: ['cpf', 'CPF', 'cpf_cnpj', 'CPF/CNPJ', 'documento', 'DOCUMENTO'], targetField: 'cpf', transform: 'cpfcnpj' },
+      { sourceColumns: NAME_COLUMNS, targetField: 'name', transform: 'text' },
+      { sourceColumns: VALUE_COLUMNS, targetField: 'value', transform: 'currency' },
+      { sourceColumns: PAYMENT_DATE_COLUMNS, targetField: 'payment_date', transform: 'date' },
+      { sourceColumns: DUE_DATE_COLUMNS, targetField: 'due_date', transform: 'date' },
+      { sourceColumns: COMPETENCE_COLUMNS, targetField: 'competence', transform: 'competence' },
+      { sourceColumns: TYPE_COLUMNS, targetField: 'contribution_type', transform: 'text' },
+    ],
+    outputType: 'contributions',
+  },
+  
   overdue: {
     name: 'Relatório de Inadimplência',
     description: 'Contribuições vencidas/atrasadas',
@@ -281,4 +298,31 @@ export function getTargetFieldLabel(targetField: string): string {
   };
   
   return labels[targetField] || targetField;
+}
+
+/**
+ * Get the conversion type to use for the import based on the layout
+ */
+export function getConversionType(layout: LytexLayout, layoutKey: string): string {
+  // Check if it's an individual (CPF) layout
+  if (layoutKey === 'payments_individual') {
+    return 'contributions_individual_paid';
+  }
+  
+  // Check if it's a payments layout
+  if (layoutKey === 'payments') {
+    return 'contributions_paid';
+  }
+  
+  // Default based on output type
+  switch (layout.outputType) {
+    case 'contributions':
+      return 'contributions_pending';
+    case 'employers':
+      return 'lytex_clients';
+    case 'financial':
+      return 'financial';
+    default:
+      return 'contributions_pending';
+  }
 }
