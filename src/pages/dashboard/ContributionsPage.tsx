@@ -13,6 +13,7 @@ import ContributionsListTab from "@/components/contributions/ContributionsListTa
 import ContributionTypesTab from "@/components/contributions/ContributionTypesTab";
 import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
 import ContributionDialogs from "@/components/contributions/ContributionDialogs";
+import PFContributionDialog from "@/components/contributions/PFContributionDialog";
 import BulkContributionDialog from "@/components/contributions/BulkContributionDialog";
 import OfflineContributionDialog from "@/components/contributions/OfflineContributionDialog";
 import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
@@ -102,6 +103,7 @@ export default function ContributionsPage() {
 
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [createPFDialogOpen, setCreatePFDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [offlineDialogOpen, setOfflineDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -730,6 +732,7 @@ export default function ContributionsPage() {
             onViewContribution={handleViewContribution}
             onGenerateInvoice={handleGenerateInvoice}
             onOpenCreate={() => setCreateDialogOpen(true)}
+            onOpenCreatePF={() => setCreatePFDialogOpen(true)}
             onSyncAll={handleSyncAll}
             generatingInvoice={generatingInvoice}
             syncing={syncing}
@@ -781,6 +784,16 @@ export default function ContributionsPage() {
         selectedContribution={selectedContribution}
         onGenerateInvoice={handleGenerateInvoice}
         generatingInvoice={generatingInvoice}
+      />
+
+      <PFContributionDialog
+        open={createPFDialogOpen}
+        onOpenChange={setCreatePFDialogOpen}
+        contributionTypes={contributionTypes}
+        clinicId={currentClinic?.id || ""}
+        userId={session?.user.id || ""}
+        onRefresh={fetchData}
+        onGenerateInvoice={handleGenerateInvoice}
       />
 
       <BulkContributionDialog
