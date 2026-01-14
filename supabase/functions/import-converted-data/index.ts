@@ -724,6 +724,51 @@ async function importIndividualContributionsBatch(
   const baseStatus = conversionType.includes('paid') ? 'paid' : 'pending';
   const todayStr = new Date().toISOString().split('T')[0];
 
+  // 4.1 Ensure a single placeholder employer exists for individual contributions
+  // We keep employer_contributions.employer_id satisfied without creating one employer per CPF.
+  const INDIVIDUAL_EMPLOYER_CNPJ = '00000000000000';
+  let individualEmployerId: string | null = null;
+
+  {
+    const { data: existingIndividualEmployer, error: existingErr } = await supabase
+      .from('employers')
+      .select('id')
+      .eq('clinic_id', clinicId)
+      .eq('cnpj', INDIVIDUAL_EMPLOYER_CNPJ)
+      .maybeSingle();
+
+    if (existingErr) {
+      console.error('[importIndividualContributionsBatch] Failed to query placeholder employer:', existingErr);
+      result.errors.push({ row: 0, message: `Falha ao validar empresa placeholder: ${existingErr.message}` });
+      return result;
+    }
+
+    if (existingIndividualEmployer) {
+      individualEmployerId = existingIndividualEmployer.id;
+    } else {
+      const { data: newEmployer, error: employerError } = await supabase
+        .from('employers')
+        .insert({
+          clinic_id: clinicId,
+          cnpj: INDIVIDUAL_EMPLOYER_CNPJ,
+          name: 'CONTRIBUIÇÕES INDIVIDUAIS',
+          is_active: true,
+        })
+        .select('id')
+        .single();
+
+      if (employerError || !newEmployer) {
+        console.error('[importIndividualContributionsBatch] Failed to create placeholder employer:', employerError);
+        result.errors.push({ row: 0, message: `Falha ao criar empresa placeholder: ${employerError?.message ?? 'erro desconhecido'}` });
+        return result;
+      }
+
+      individualEmployerId = newEmployer.id;
+      console.log(`[importIndividualContributionsBatch] Created placeholder employer: ${INDIVIDUAL_EMPLOYER_CNPJ} -> ${individualEmployerId}`);
+    }
+  }
+
+
   // 5. Process all rows and build insert array
   const toInsert: Record<string, unknown>[] = [];
   const competenceKeysToInsert = new Set<string>();
@@ -808,8 +853,12 @@ async function importIndividualContributionsBatch(
         continue;
       }
 
-      const dueDate = parseDate(row.due_date) || new Date().toISOString().split('T')[0];
-      const paymentDate = row.payment_date ? parseDate(row.payment_date) : null;
+      const dueDateRaw = row.due_date ?? row.dueDate ?? row.vencimento ?? row.due ?? row.data_vencimento;
+      const paymentDateRaw = row.payment_date ?? row.paymentDate ?? row.pagamento ?? row.paid_at ?? row.data_pagamento;
+
+      const parsedDue = parseDate(dueDateRaw);
+      const dueDate = parsedDue || todayStr;
+      const paymentDate = paymentDateRaw ? parseDate(paymentDateRaw) : null;
 
       // Get the type from the row or use individual type
       const typeName = String(row.contribution_type || row.tipo || row.type || '').trim();
@@ -822,10 +871,18 @@ async function importIndividualContributionsBatch(
         }
       }
 
-      // Parse competence - try from competence field first, then from description
-      let competenceYear = new Date().getFullYear();
-      let competenceMonth = new Date().getMonth() + 1;
-      
+      // Parse competence
+      // Priority:
+      // 1) row.competence (MM/YYYY)
+      // 2) extract from row.description
+      // 3) fallback to due_date month/year (most reliable when Lytex report is minimal)
+      let competenceYear: number;
+      let competenceMonth: number;
+
+      const dueParts = dueDate.split('-');
+      competenceYear = parseInt(dueParts[0] || String(new Date().getFullYear()));
+      competenceMonth = parseInt(dueParts[1] || String(new Date().getMonth() + 1));
+
       if (row.competence) {
         const competence = String(row.competence);
         const match = competence.match(/(\d{1,2})[\/\-](\d{4})/);
@@ -840,16 +897,28 @@ async function importIndividualContributionsBatch(
       } else if (row.description) {
         // Try to extract competence from description (e.g., "MENSALIDADE INDIVIDUAL REFERENTE JANEIRO DE 2025")
         const descStr = String(row.description).toUpperCase();
-        
+
         // Month names mapping
         const monthNames: Record<string, number> = {
-          'JANEIRO': 1, 'FEVEREIRO': 2, 'MARCO': 3, 'MARÇO': 3, 'ABRIL': 4,
-          'MAIO': 5, 'JUNHO': 6, 'JULHO': 7, 'AGOSTO': 8,
-          'SETEMBRO': 9, 'OUTUBRO': 10, 'NOVEMBRO': 11, 'DEZEMBRO': 12
+          JANEIRO: 1,
+          FEVEREIRO: 2,
+          MARCO: 3,
+          'MARÇO': 3,
+          ABRIL: 4,
+          MAIO: 5,
+          JUNHO: 6,
+          JULHO: 7,
+          AGOSTO: 8,
+          SETEMBRO: 9,
+          OUTUBRO: 10,
+          NOVEMBRO: 11,
+          DEZEMBRO: 12,
         };
-        
+
         // Try pattern: "REFERENTE JANEIRO DE 2025" or "REFERENTE: JULHO/2025"
-        const monthYearMatch = descStr.match(/(?:REFERENTE|REF\.?|COMPETENCIA|COMPETÊNCIA)[\s:]*([A-Z]+)[\s\/DE]*(\d{4})/i);
+        const monthYearMatch = descStr.match(
+          /(?:REFERENTE|REF\.?|COMPETENCIA|COMPETÊNCIA)[\s:]*([A-ZÇÃÕÁÉÍÓÚ]+)[\s\/DE]*(\d{4})/i
+        );
         if (monthYearMatch) {
           const monthName = monthYearMatch[1].trim();
           const year = parseInt(monthYearMatch[2]);
@@ -859,7 +928,7 @@ async function importIndividualContributionsBatch(
             competenceYear = year;
           }
         } else {
-          // Try pattern: "MM/YYYY" or "YYYY-MM"
+          // Try pattern: "MM/YYYY" or "MM-YYYY"
           const numericMatch = descStr.match(/(\d{1,2})[\/\-](\d{4})/);
           if (numericMatch) {
             const parsedMonth = parseInt(numericMatch[1]);
@@ -871,6 +940,7 @@ async function importIndividualContributionsBatch(
           }
         }
       }
+
 
       // Generate unique key using member_id instead of employer_id
       // Format: member-{member_id}-{type_id}-{year}-{month}
@@ -897,41 +967,9 @@ async function importIndividualContributionsBatch(
         finalStatus = dueDate < todayStr ? 'overdue' : 'pending';
       }
 
-      // For individual contributions, we need to create a "virtual" employer record 
-      // or use member_id directly. Since employer_id is required, we need to handle this.
-      // Option: Create a placeholder employer for the member if needed
-      
-      // Check if we have an employer for this CPF (treated as CNPJ)
-      let employerId: string | null = null;
-      const { data: existingEmployer } = await supabase
-        .from('employers')
-        .select('id')
-        .eq('clinic_id', clinicId)
-        .eq('cnpj', cpf)
-        .maybeSingle();
-      
-      if (existingEmployer) {
-        employerId = existingEmployer.id;
-      } else {
-        // Create an employer entry for this individual (using CPF as CNPJ)
-        const { data: newEmployer, error: employerError } = await supabase
-          .from('employers')
-          .insert({
-            clinic_id: clinicId,
-            cnpj: cpf,
-            name: patient.name || `SÓCIO ${formatCpf(cpf)}`,
-            is_active: true,
-          })
-          .select('id')
-          .single();
-        
-        if (employerError) {
-          result.errors.push({ row: i + 1, message: `Falha ao criar registro de sócio: ${employerError.message}`, cnpj: cpf });
-          continue;
-        }
-        employerId = newEmployer!.id;
-        console.log(`[importIndividualContributionsBatch] Created employer for individual: ${patient.name} (${formatCpf(cpf)})`);
-      }
+      // For individual contributions, we use a single placeholder employer per clinic.
+      const employerId: string = individualEmployerId!;
+
 
       // Extract lytex_invoice_id if present
       const lytexInvoiceId = row.lytex_invoice_id ? String(row.lytex_invoice_id).trim() : null;
@@ -946,6 +984,7 @@ async function importIndividualContributionsBatch(
         status: finalStatus,
         competence_month: competenceMonth,
         competence_year: competenceYear,
+        active_competence_key: activeCompetenceKey,
         paid_at: finalStatus === 'paid' ? (paymentDate || dueDate) : null,
         paid_value: finalStatus === 'paid' ? value : null,
         notes: row.notes || row.description ? String(row.notes || row.description).trim() : null,
@@ -960,40 +999,37 @@ async function importIndividualContributionsBatch(
 
   console.log(`[importIndividualContributionsBatch] Prepared ${toInsert.length} individual contributions for insert`);
 
-  // 6. Batch insert (no upsert since we're using member_id which has different unique key)
+  // 6. Batch insert (idempotent via active_competence_key)
   if (toInsert.length > 0) {
     for (let i = 0; i < toInsert.length; i += BATCH_SIZE) {
       const batch = toInsert.slice(i, i + BATCH_SIZE);
       const batchStart = Date.now();
-      
+
       const { data: insertedData, error } = await supabase
         .from('employer_contributions')
-        .insert(batch)
+        .upsert(batch, {
+          onConflict: 'active_competence_key',
+          ignoreDuplicates: true,
+        })
         .select('id');
 
       const batchDuration = Date.now() - batchStart;
-      
+
       if (error) {
-        console.error(`[importIndividualContributionsBatch] Batch ${Math.floor(i / BATCH_SIZE) + 1} error (${batchDuration}ms):`, error);
-        // Try inserting one by one to identify problematic records
-        for (let j = 0; j < batch.length; j++) {
-          const { error: singleError } = await supabase
-            .from('employer_contributions')
-            .insert(batch[j]);
-          if (singleError) {
-            if (singleError.code === '23505') { // Unique violation
-              result.skipped++;
-            } else {
-              result.errors.push({ row: i + j + 1, message: singleError.message });
-            }
-          } else {
-            result.inserted++;
-          }
-        }
+        console.error(
+          `[importIndividualContributionsBatch] Batch ${Math.floor(i / BATCH_SIZE) + 1} error (${batchDuration}ms):`,
+          error
+        );
+        result.errors.push({ row: 0, message: `Erro no lote ${Math.floor(i / BATCH_SIZE) + 1}: ${error.message}` });
       } else {
-        const insertedCount = insertedData?.length || batch.length;
+        const insertedCount = insertedData?.length || 0;
         result.inserted += insertedCount;
-        console.log(`[importIndividualContributionsBatch] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(toInsert.length / BATCH_SIZE)}: inserted=${insertedCount} (${batchDuration}ms)`);
+        result.skipped += batch.length - insertedCount;
+        console.log(
+          `[importIndividualContributionsBatch] Batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(
+            toInsert.length / BATCH_SIZE
+          )}: inserted=${insertedCount}, skipped=${batch.length - insertedCount} (${batchDuration}ms)`
+        );
       }
     }
   }
