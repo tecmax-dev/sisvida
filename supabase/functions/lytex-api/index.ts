@@ -2534,13 +2534,22 @@ Deno.serve(async (req) => {
             throw new Error(`Erro ao carregar contribuições: ${pendingErr.message}`);
           }
 
-          // Criar mapas para busca rápida
-          const contribByInvoiceId = new Map<string, any>();
+          // Criar mapas para busca rápida - AGORA USANDO ARRAY PARA DETECTAR DUPLICATAS
+          const contribsByInvoiceId = new Map<string, any[]>();
           const contribByTransactionId = new Map<string, any>();
+          const duplicatedInvoiceIds = new Set<string>();
           
           for (const c of pendingContribs || []) {
             if (c.lytex_invoice_id) {
-              contribByInvoiceId.set(c.lytex_invoice_id, c);
+              const existing = contribsByInvoiceId.get(c.lytex_invoice_id) || [];
+              existing.push(c);
+              contribsByInvoiceId.set(c.lytex_invoice_id, existing);
+              
+              // Detectar duplicatas (mais de uma contribuição NÃO CANCELADA com mesmo invoice_id)
+              const activeContribs = existing.filter((x: any) => x.status !== 'cancelled');
+              if (activeContribs.length > 1) {
+                duplicatedInvoiceIds.add(c.lytex_invoice_id);
+              }
             }
             if (c.lytex_transaction_id) {
               contribByTransactionId.set(c.lytex_transaction_id, c);
@@ -2548,12 +2557,24 @@ Deno.serve(async (req) => {
           }
 
           console.log(`[Lytex] ${pendingContribs?.length || 0} contribuições com boleto Lytex encontradas`);
+          
+          // AUDITORIA: Logar duplicatas encontradas
+          if (duplicatedInvoiceIds.size > 0) {
+            console.warn(`[Lytex] ⚠️ ALERTA: ${duplicatedInvoiceIds.size} invoice_ids com múltiplas contribuições ativas detectados!`);
+            for (const invoiceId of duplicatedInvoiceIds) {
+              const contribs = contribsByInvoiceId.get(invoiceId) || [];
+              const activeContribs = contribs.filter((x: any) => x.status !== 'cancelled');
+              console.warn(`[Lytex] Invoice ${invoiceId} tem ${activeContribs.length} contribuições ativas:`, 
+                activeContribs.map((c: any) => `${c.id} (${c.competence_month}/${c.competence_year} - status: ${c.status})`).join(', '));
+            }
+          }
 
         // Buscar faturas pagas na Lytex - OTIMIZADO com busca em múltiplas integrações
         const seenInvoiceIds = new Set<string>();
+        let skippedDuplicates = 0;
 
         // Estratégia otimizada: verificar diretamente as faturas que temos no sistema
-        const pendingInvoiceIds = Array.from(contribByInvoiceId.keys());
+        const pendingInvoiceIds = Array.from(contribsByInvoiceId.keys());
         console.log(`[Lytex] Verificando ${pendingInvoiceIds.length} faturas do sistema na API (${hasSecondaryIntegration ? '2 integrações' : '1 integração'})...`);
 
         // Processar em lotes de 20 faturas por vez para verificar status individual
@@ -2561,13 +2582,47 @@ Deno.serve(async (req) => {
         for (let i = 0; i < pendingInvoiceIds.length; i += BATCH_SIZE) {
           const batch = pendingInvoiceIds.slice(i, i + BATCH_SIZE);
           
-          await Promise.all(batch.map(async (invoiceId) => {
+          await Promise.all(batch.map(async (invoiceId: string) => {
             try {
               if (seenInvoiceIds.has(invoiceId)) return;
               seenInvoiceIds.add(invoiceId);
               
-              const contrib = contribByInvoiceId.get(invoiceId);
-              if (!contrib) return;
+              // CORREÇÃO: Buscar TODAS as contribuições com este invoice_id
+              const contribs = contribsByInvoiceId.get(invoiceId) || [];
+              
+              // Filtrar apenas contribuições ativas (não canceladas)
+              const activeContribs = contribs.filter((c: any) => c.status !== 'cancelled');
+              
+              // PROTEÇÃO: Se há múltiplas contribuições ativas com o mesmo invoice_id, NÃO conciliar automaticamente
+              if (activeContribs.length > 1) {
+                skippedDuplicates++;
+                console.warn(`[Lytex] ⚠️ PULANDO invoice ${invoiceId}: ${activeContribs.length} contribuições ativas detectadas. Requer revisão manual.`);
+                conciliationDetails.push({
+                  lytexInvoiceId: invoiceId,
+                  result: "skipped_duplicate",
+                  reason: `${activeContribs.length} contribuições ativas com o mesmo invoice_id. Revisão manual necessária.`,
+                  employerName: activeContribs[0]?.employer?.name || "Desconhecido",
+                });
+                
+                // Logar detalhes das duplicatas para auditoria
+                await supabase.from("lytex_conciliation_logs").insert({
+                  clinic_id: params.clinicId,
+                  sync_log_id: syncLogPaid?.id,
+                  lytex_invoice_id: invoiceId,
+                  conciliation_result: "skipped_duplicate",
+                  conciliation_reason: `Múltiplas contribuições ativas (${activeContribs.length}) com o mesmo invoice_id: ${activeContribs.map((c: any) => `${c.id} (${c.competence_month}/${c.competence_year})`).join(', ')}`,
+                  raw_lytex_data: { activeContributionIds: activeContribs.map((c: any) => c.id) },
+                });
+                return;
+              }
+              
+              // Se não há contribuição ativa, pular
+              if (activeContribs.length === 0) {
+                return;
+              }
+              
+              // Usar a única contribuição ativa
+              const contrib = activeContribs[0];
               
               // Já está pago? Pular
               if (contrib.status === "paid" && contrib.paid_at) {
@@ -2732,7 +2787,7 @@ Deno.serve(async (req) => {
           }
         }
 
-          console.log(`[Lytex] Conciliação concluída: ${conciliated} novos (${foundInPrimary} primária, ${foundInSecondary} secundária), ${alreadyConciliated} já conciliados, ${pendingInLytex} pendentes na Lytex, ${notFoundInAnyIntegration} não encontrados, ${errors} erros`);
+          console.log(`[Lytex] Conciliação concluída: ${conciliated} novos (${foundInPrimary} primária, ${foundInSecondary} secundária), ${alreadyConciliated} já conciliados, ${skippedDuplicates} duplicatas puladas, ${pendingInLytex} pendentes na Lytex, ${notFoundInAnyIntegration} não encontrados, ${errors} erros`);
 
           // Atualizar log final
           if (syncLogPaid?.id) {
@@ -2748,6 +2803,7 @@ Deno.serve(async (req) => {
                   totalFound,
                   conciliated,
                   alreadyConciliated,
+                  skippedDuplicates,
                   pendingInLytex,
                   notFoundInAnyIntegration,
                   errors,
@@ -2765,6 +2821,7 @@ Deno.serve(async (req) => {
             totalFound,
             conciliated,
             alreadyConciliated,
+            skippedDuplicates,
             pendingInLytex,
             notFoundInAnyIntegration,
             errors,
@@ -2773,6 +2830,7 @@ Deno.serve(async (req) => {
             hasSecondaryIntegration,
             syncLogId: syncLogPaid?.id,
             details: conciliationDetails.slice(0, 100),
+            duplicateWarning: skippedDuplicates > 0 ? `${skippedDuplicates} registros com invoice_id duplicado foram ignorados. Revisão manual necessária.` : undefined,
           };
 
         } catch (fetchPaidErr: any) {
