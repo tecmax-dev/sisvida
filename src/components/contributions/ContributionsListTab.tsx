@@ -181,17 +181,15 @@ export default function ContributionsListTab({
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
-  // Competence filter: combines month and year in MM/YYYY format
+  // Competence filter: always starts with previous month (MM/YYYY)
   const getInitialCompetence = () => {
     const now = new Date();
     const prevMonth = now.getMonth() === 0 ? 12 : now.getMonth(); // Previous month (1-12)
-    const year = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
-    // Use yearFilter if different from calculated year
-    const effectiveYear = yearFilter !== year ? yearFilter : year;
-    return `${String(prevMonth).padStart(2, "0")}/${effectiveYear}`;
+    const prevYear = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear();
+    return `${String(prevMonth).padStart(2, "0")}/${prevYear}`;
   };
   
-  const [competenceFilter, setCompetenceFilter] = useState<string>(getInitialCompetence);
+  const [competenceFilter, setCompetenceFilter] = useState<string>(() => getInitialCompetence());
   const [currentPage, setCurrentPage] = useState(1);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
