@@ -451,13 +451,22 @@ async function createInvoice(params: CreateInvoiceRequest & { registrationNumber
     }
   }
 
+  // Sanitize phone: keep only digits and limit to 11 characters (Lytex max)
+  const sanitizePhone = (phone?: string): string | undefined => {
+    if (!phone) return undefined;
+    const digits = phone.replace(/\D/g, "");
+    if (digits.length === 0) return undefined;
+    // Lytex API requires cellphone to have at most 11 characters
+    return digits.slice(-11); // Take last 11 digits (removes country code if present)
+  };
+
   const invoicePayload: any = {
     client: {
       type: cleanDocument.length === 14 ? "pj" : "pf",
       name: formattedName,
       cpfCnpj: cleanDocument,
       email: clientEmail || undefined,
-      cellphone: clientPhone?.replace(/\D/g, "") || undefined,
+      cellphone: sanitizePhone(clientPhone),
     },
     items: [
       {
