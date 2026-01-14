@@ -31,12 +31,13 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { Loader2, Check, ChevronsUpDown, User } from "lucide-react";
+import { Loader2, Check, ChevronsUpDown, User, FileStack } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { formatCompetence } from "@/lib/competence-format";
+import PFBatchContributionDialog from "./PFBatchContributionDialog";
 
 interface Member {
   id: string;
@@ -86,6 +87,7 @@ interface PFContributionDialogProps {
   userId: string;
   onRefresh: () => void;
   onGenerateInvoice: (contribution: Contribution) => Promise<void>;
+  onOpenBatch?: () => void;
 }
 
 // CNPJ do Sindicato Comerciários para emissão de boletos PF
@@ -99,6 +101,7 @@ export default function PFContributionDialog({
   userId,
   onRefresh,
   onGenerateInvoice,
+  onOpenBatch,
 }: PFContributionDialogProps) {
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
@@ -451,24 +454,38 @@ export default function PFContributionDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={saving}
-          >
-            Cancelar
-          </Button>
-          <Button onClick={handleSave} disabled={saving}>
-            {saving ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Salvando...
-              </>
-            ) : (
-              "Salvar"
-            )}
-          </Button>
+        <DialogFooter className="flex-col sm:flex-row gap-2">
+          {onOpenBatch && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onOpenBatch}
+              disabled={saving}
+              className="w-full sm:w-auto"
+            >
+              <FileStack className="h-4 w-4 mr-2" />
+              Gerar em Lote
+            </Button>
+          )}
+          <div className="flex gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={saving}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Salvando...
+                </>
+              ) : (
+                "Salvar"
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

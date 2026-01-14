@@ -14,6 +14,7 @@ import ContributionTypesTab from "@/components/contributions/ContributionTypesTa
 import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
 import ContributionDialogs from "@/components/contributions/ContributionDialogs";
 import PFContributionDialog from "@/components/contributions/PFContributionDialog";
+import PFBatchContributionDialog from "@/components/contributions/PFBatchContributionDialog";
 import BulkContributionDialog from "@/components/contributions/BulkContributionDialog";
 import OfflineContributionDialog from "@/components/contributions/OfflineContributionDialog";
 import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
@@ -104,6 +105,7 @@ export default function ContributionsPage() {
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createPFDialogOpen, setCreatePFDialogOpen] = useState(false);
+  const [createPFBatchDialogOpen, setCreatePFBatchDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [offlineDialogOpen, setOfflineDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
@@ -794,6 +796,19 @@ export default function ContributionsPage() {
         userId={session?.user.id || ""}
         onRefresh={fetchData}
         onGenerateInvoice={handleGenerateInvoice}
+        onOpenBatch={() => {
+          setCreatePFDialogOpen(false);
+          setCreatePFBatchDialogOpen(true);
+        }}
+      />
+
+      <PFBatchContributionDialog
+        open={createPFBatchDialogOpen}
+        onOpenChange={setCreatePFBatchDialogOpen}
+        contributionTypes={contributionTypes}
+        clinicId={currentClinic?.id || ""}
+        userId={session?.user.id || ""}
+        onRefresh={fetchData}
       />
 
       <BulkContributionDialog
