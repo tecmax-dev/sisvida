@@ -2,10 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "./competence-format";
 
 interface Contribution {
   id: string;
@@ -76,7 +73,7 @@ export function generateBoletosReport(contributions: Contribution[]) {
     c.employers?.registration_number || "-",
     c.employers?.name || "-",
     formatCNPJ(c.employers?.cnpj || ""),
-    `${MONTHS[c.competence_month - 1]}/${c.competence_year}`,
+    formatCompetence(c.competence_month, c.competence_year),
     format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy"),
     formatCurrency(c.value),
     getStatusLabel(c.status),
@@ -124,7 +121,7 @@ export function generateBoletosReport(contributions: Contribution[]) {
     doc.setFontSize(9);
     
     yPos += 5;
-    const competence = `${MONTHS[c.competence_month - 1]}/${c.competence_year}`;
+    const competence = formatCompetence(c.competence_month, c.competence_year);
     doc.text(`Competência: ${competence} | Valor: ${formatCurrency(c.value)} | Vencimento: ${format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy")}`, 14, yPos);
     
     if (c.lytex_invoice_url) {

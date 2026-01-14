@@ -56,6 +56,7 @@ import {
 import { format, addMonths, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+import { formatCompetence } from "@/lib/competence-format";
 
 function parseDateOnly(value: string): Date {
   // Handles both DATE (YYYY-MM-DD) and TIMESTAMP strings safely
@@ -987,7 +988,7 @@ export default function NegotiationDetailsDialog({
                         <TableCell>{item.contribution_type_name}</TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-xs">
-                            {MONTHS[item.competence_month - 1]}/{item.competence_year}
+                            {formatCompetence(item.competence_month, item.competence_year)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">{formatCurrency(item.original_value)}</TableCell>

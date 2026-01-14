@@ -120,8 +120,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   },
 };
 
-const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+import { formatCompetence } from "@/lib/competence-format";
 
 export default function EmployerPortal() {
   const { clinicSlug } = useParams();
@@ -397,7 +396,7 @@ export default function EmployerPortal() {
           },
           value: contrib.amount,
           dueDate: contrib.due_date,
-          description: `${contrib.contribution_type?.name || "Contribuição"} - ${MONTHS[contrib.competence_month - 1]}/${contrib.competence_year}`,
+          description: `${contrib.contribution_type?.name || "Contribuição"} - ${formatCompetence(contrib.competence_month, contrib.competence_year)}`,
           enableBoleto: true,
           enablePix: true,
         },
@@ -471,7 +470,7 @@ export default function EmployerPortal() {
       if (yearFilter !== "all" && c.competence_year.toString() !== yearFilter) return false;
       if (searchTerm) {
         const term = searchTerm.toLowerCase();
-        const competence = `${MONTHS_FULL[c.competence_month - 1]}/${c.competence_year}`.toLowerCase();
+        const competence = formatCompetence(c.competence_month, c.competence_year).toLowerCase();
         const type = (c.contribution_type?.name || "").toLowerCase();
         if (!competence.includes(term) && !type.includes(term)) return false;
       }
@@ -618,7 +617,7 @@ export default function EmployerPortal() {
             <DialogDescription>
               {selectedContribution && (
                 <span className="text-slate-600">
-                  {MONTHS_FULL[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year} • {formatCurrency(selectedContribution.amount || 0)}
+                  {formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)} • {formatCurrency(selectedContribution.amount || 0)}
                 </span>
               )}
             </DialogDescription>
@@ -691,7 +690,7 @@ export default function EmployerPortal() {
             <DialogDescription>
               {selectedContribution && (
                 <span className="text-slate-600">
-                  {MONTHS_FULL[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year}
+                  {formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)}
                 </span>
               )}
             </DialogDescription>
@@ -1017,7 +1016,7 @@ export default function EmployerPortal() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1 flex-wrap">
                               <h3 className="font-medium text-slate-900 text-sm">
-                                {MONTHS_FULL[contrib.competence_month - 1]}/{contrib.competence_year}
+                                {formatCompetence(contrib.competence_month, contrib.competence_year)}
                               </h3>
                               <Badge 
                                 variant="outline" 

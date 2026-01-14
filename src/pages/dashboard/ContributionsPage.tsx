@@ -77,6 +77,8 @@ const MONTHS = [
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
 
+import { formatCompetence } from "@/lib/competence-format";
+
 export default function ContributionsPage() {
   const { currentClinic, session } = useAuth();
   const { validateSession } = useSessionValidator();
@@ -252,7 +254,7 @@ export default function ContributionsPage() {
           },
           value: contribution.value,
           dueDate: contribution.due_date,
-          description: `${contribution.contribution_types?.name || "Contribuição"} - ${MONTHS[contribution.competence_month - 1]}/${contribution.competence_year}`,
+          description: `${contribution.contribution_types?.name || "Contribuição"} - ${formatCompetence(contribution.competence_month, contribution.competence_year)}`,
           enableBoleto: true,
           enablePix: true,
         },

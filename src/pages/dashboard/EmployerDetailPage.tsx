@@ -143,10 +143,7 @@ interface Contribution {
   contribution_types?: ContributionType;
 }
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 const STATUS_CONFIG = {
   pending: { label: "Pendente", color: "bg-amber-100 text-amber-700", icon: Clock },
@@ -433,7 +430,7 @@ export default function EmployerDetailPage() {
       if (valueInCents > 0 && newContrib) {
         try {
           const contribType = contributionTypes.find(t => t.id === contribTypeId);
-          const description = `${contribType?.name || "Contribuição"} - ${MONTHS[contribMonth - 1]}/${contribYear}`;
+          const description = `${contribType?.name || "Contribuição"} - ${formatCompetence(contribMonth, contribYear)}`;
           
           await supabase.functions.invoke("lytex-api", {
             body: {
@@ -511,7 +508,7 @@ export default function EmployerDetailPage() {
           },
           value: contribution.value,
           dueDate: contribution.due_date,
-          description: `${contribution.contribution_types?.name || "Contribuição"} - ${MONTHS[contribution.competence_month - 1]}/${contribution.competence_year}`,
+          description: `${contribution.contribution_types?.name || "Contribuição"} - ${formatCompetence(contribution.competence_month, contribution.competence_year)}`,
           enableBoleto: true,
           enablePix: true,
         },
@@ -628,7 +625,7 @@ export default function EmployerDetailPage() {
       
       // Gerar nova descrição com tipo e competência
       const selectedType = contributionTypes.find(t => t.id === editTypeId);
-      const newDescription = `${selectedType?.name || 'Contribuição'} - ${MONTHS[editMonth - 1]}/${editYear}`;
+      const newDescription = `${selectedType?.name || 'Contribuição'} - ${formatCompetence(editMonth, editYear)}`;
       
       // Check if due date changed and is in the future - auto change status to pending
       const dueDateChanged = editDueDate !== selectedContribution.due_date;
@@ -902,7 +899,7 @@ export default function EmployerDetailPage() {
                           <TableRow key={contrib.id} className="hover:bg-rose-100/30">
                             <TableCell className="font-medium">{contrib.contribution_types?.name}</TableCell>
                             <TableCell>
-                              {MONTHS[contrib.competence_month - 1]?.slice(0, 3)}/{contrib.competence_year}
+                              {formatCompetence(contrib.competence_month, contrib.competence_year)}
                             </TableCell>
                             <TableCell className="text-rose-600 font-medium">
                               {format(new Date(contrib.due_date + "T12:00:00"), "dd/MM/yyyy")}
@@ -1122,7 +1119,7 @@ export default function EmployerDetailPage() {
                             </span>
                           </TableCell>
                           <TableCell className="font-medium">
-                            {MONTHS[contrib.competence_month - 1]?.slice(0, 3)}/{contrib.competence_year}
+                            {formatCompetence(contrib.competence_month, contrib.competence_year)}
                           </TableCell>
                           <TableCell>
                             {format(new Date(contrib.due_date + "T12:00:00"), "dd/MM/yyyy")}
@@ -1627,8 +1624,8 @@ export default function EmployerDetailPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {MONTHS.map((month, i) => (
-                      <SelectItem key={i} value={String(i + 1)}>{month}</SelectItem>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <SelectItem key={i} value={String(i + 1)}>{String(i + 1).padStart(2, "0")}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -1697,7 +1694,7 @@ export default function EmployerDetailPage() {
                 <div>
                   <p className="text-muted-foreground">Competência</p>
                   <p className="font-medium">
-                    {MONTHS[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year}
+                    {formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)}
                   </p>
                 </div>
                 <div>
@@ -1955,8 +1952,8 @@ export default function EmployerDetailPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {MONTHS.map((month, i) => (
-                      <SelectItem key={i} value={String(i + 1)}>{month}</SelectItem>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <SelectItem key={i} value={String(i + 1)}>{String(i + 1).padStart(2, "0")}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

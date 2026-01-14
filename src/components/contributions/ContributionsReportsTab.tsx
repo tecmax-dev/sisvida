@@ -93,10 +93,7 @@ interface ContributionsReportsTabProps {
   onYearFilterChange: (year: number) => void;
 }
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 type ReportType = 'general' | 'by-employer' | 'synthetic' | 'analytical' | 'defaulting';
 
@@ -228,8 +225,8 @@ export default function ContributionsReportsTab({
   }, [filteredContributions]);
 
   const periodLabel = useMemo(() => {
-    const monthLabel = monthFilter === "all" ? "Todos os meses" : MONTHS[parseInt(monthFilter) - 1];
-    return `${monthLabel} de ${yearFilter}`;
+    const monthLabel = monthFilter === "all" ? "Todos os meses" : String(parseInt(monthFilter)).padStart(2, "0");
+    return `${monthLabel}/${yearFilter}`;
   }, [yearFilter, monthFilter]);
 
   const handleExportCSV = () => {
@@ -368,8 +365,10 @@ export default function ContributionsReportsTab({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os meses</SelectItem>
-                {MONTHS.map((month, i) => (
-                  <SelectItem key={i} value={String(i + 1)}>{month}</SelectItem>
+                {Array.from({ length: 12 }, (_, i) => (
+                  <SelectItem key={i} value={String(i + 1)}>
+                    {String(i + 1).padStart(2, "0")}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -3,10 +3,7 @@ import autoTable from "jspdf-autotable";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "./competence-format";
 
 // Brand Colors (Eclini/SECMI)
 const COLORS = {
@@ -421,7 +418,7 @@ async function generateByEmployerReport(data: ReportData, config: ReportConfig, 
   yPos = addSectionTitle(doc, "Contribuições Detalhadas", yPos);
   
   const tableData = data.contributions.map(c => [
-    `${MONTHS[c.competence_month - 1]}/${c.competence_year}`,
+    formatCompetence(c.competence_month, c.competence_year),
     c.contribution_types?.name || "-",
     format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy"),
     formatCurrency(c.value),
@@ -546,7 +543,7 @@ async function generateAnalyticalReport(data: ReportData, config: ReportConfig) 
     String(i + 1),
     c.employers?.name?.substring(0, 25) || "-",
     formatCNPJ(c.employers?.cnpj || ""),
-    `${MONTHS[c.competence_month - 1].substring(0, 3)}/${c.competence_year}`,
+    formatCompetence(c.competence_month, c.competence_year),
     c.contribution_types?.name?.substring(0, 20) || "-",
     format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy"),
     formatCurrency(c.value),

@@ -30,10 +30,7 @@ interface NegotiationStepContributionsProps {
   allowPartial: boolean;
 }
 
-const MONTHS = [
-  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-  "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 export default function NegotiationStepContributions({
   contributions,
@@ -148,7 +145,7 @@ export default function NegotiationStepContributions({
                       {contribution.contribution_types?.name || "Contribuição"}
                     </p>
                     <Badge variant="outline" className="text-xs">
-                      {MONTHS[contribution.competence_month - 1]}/{contribution.competence_year}
+                      {formatCompetence(contribution.competence_month, contribution.competence_year)}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">

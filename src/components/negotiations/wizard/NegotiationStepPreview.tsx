@@ -83,10 +83,7 @@ interface NegotiationStepPreviewProps {
   customDates?: Record<number, Date>;
 }
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 export default function NegotiationStepPreview({
   employer,
@@ -192,7 +189,7 @@ export default function NegotiationStepPreview({
 
     const contributionsData = calculatedItems.map((item) => [
       item.contribution.contribution_types?.name || "-",
-      `${MONTHS[item.contribution.competence_month - 1]}/${item.contribution.competence_year}`,
+      formatCompetence(item.contribution.competence_month, item.contribution.competence_year),
       format(new Date(item.contribution.due_date), "dd/MM/yyyy"),
       formatCurrency(item.contribution.value),
       `${item.daysOverdue} dias`,
@@ -360,7 +357,7 @@ export default function NegotiationStepPreview({
                   <TableCell className="text-sm">{item.contribution.contribution_types?.name}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-xs">
-                      {MONTHS[item.contribution.competence_month - 1]}/{item.contribution.competence_year}
+                      {formatCompetence(item.contribution.competence_month, item.contribution.competence_year)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">{formatCurrency(item.contribution.value)}</TableCell>
