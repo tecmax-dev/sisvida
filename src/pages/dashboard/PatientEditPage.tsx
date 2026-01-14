@@ -125,6 +125,7 @@ const initialFormData: PatientFormData = {
   fatherName: '',
   notes: '',
   maxAppointmentsPerMonth: null,
+  mobilePassword: '',
 };
 
 export default function PatientEditPage() {
@@ -419,9 +420,22 @@ export default function PatientEditPage() {
       .eq('id', id);
 
     if (error) throw error;
+
+    // If admin set a password, save it via RPC
+    if (isAdmin && dataToSave.mobilePassword && dataToSave.mobilePassword.length >= 6) {
+      const { error: pwError } = await supabase.rpc('set_patient_password', {
+        p_patient_id: id,
+        p_password: dataToSave.mobilePassword
+      });
+      
+      if (pwError) {
+        console.error('Error setting password:', pwError);
+      }
+    }
     
-    // Update initial data after successful save
-    setInitialData(dataToSave);
+    // Update initial data after successful save (clear password field)
+    setInitialData({ ...dataToSave, mobilePassword: '' });
+    setFormData(prev => ({ ...prev, mobilePassword: '' }));
   }, [currentClinic, id, isAdmin]);
 
   // Validation function for auto-save
