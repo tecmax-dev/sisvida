@@ -28,6 +28,7 @@ import {
   Settings,
   FolderTree,
   FileCheck2,
+  HeartPulse,
 } from "lucide-react";
 import {
   Collapsible,
@@ -296,6 +297,26 @@ export function UnionSidebar() {
           </Collapsible>
         );
       })}
+
+      {/* Quick access card - Módulo Clínica */}
+      <div className="mt-4 pt-4 border-t border-sidebar-border/50">
+        <Link
+          to="/dashboard"
+          className={cn(
+            "flex items-center gap-3 px-3 py-3 rounded-lg text-sm transition-all duration-200",
+            "bg-gradient-to-r from-cyan-500/20 to-emerald-500/20 hover:from-cyan-500/30 hover:to-emerald-500/30",
+            "border border-cyan-400/30 text-cyan-100 hover:text-white"
+          )}
+        >
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500 to-emerald-500 flex items-center justify-center shadow-sm">
+            <HeartPulse className="h-4 w-4 text-white" />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-medium">Módulo Clínica</span>
+            <span className="text-xs text-cyan-200/70">Acesso rápido</span>
+          </div>
+        </Link>
+      </div>
     </nav>
   );
 }
