@@ -6636,6 +6636,7 @@ export type Database = {
           no_show_unblocked_at: string | null
           no_show_unblocked_by: string | null
           notes: string | null
+          password_hash: string | null
           phone: string
           photo_url: string | null
           preferred_channel: string | null
@@ -6699,6 +6700,7 @@ export type Database = {
           no_show_unblocked_at?: string | null
           no_show_unblocked_by?: string | null
           notes?: string | null
+          password_hash?: string | null
           phone: string
           photo_url?: string | null
           preferred_channel?: string | null
@@ -6762,6 +6764,7 @@ export type Database = {
           no_show_unblocked_at?: string | null
           no_show_unblocked_by?: string | null
           notes?: string | null
+          password_hash?: string | null
           phone?: string
           photo_url?: string | null
           preferred_channel?: string | null
@@ -11862,6 +11865,10 @@ export type Database = {
         Args: { p_reason: string; p_transaction_id: string; p_user_id?: string }
         Returns: Json
       }
+      set_patient_password: {
+        Args: { p_password: string; p_patient_id: string }
+        Returns: boolean
+      }
       sync_all_dependents_card_expiry: {
         Args: { p_clinic_id: string }
         Returns: number
@@ -11871,6 +11878,17 @@ export type Database = {
       user_has_permission: {
         Args: { _clinic_id: string; _permission_key: string; _user_id: string }
         Returns: boolean
+      }
+      verify_patient_password: {
+        Args: { p_clinic_id?: string; p_cpf: string; p_password: string }
+        Returns: {
+          clinic_id: string
+          is_active: boolean
+          no_show_blocked_until: string
+          patient_email: string
+          patient_id: string
+          patient_name: string
+        }[]
       }
     }
     Enums: {
