@@ -730,12 +730,18 @@ async function importIndividualContributionsBatch(
   for (let i = 0; i < data.length; i++) {
     const row = data[i];
     try {
+      // Debug: log first few rows to see what fields are coming in
+      if (i < 3) {
+        console.log(`[importIndividualContributionsBatch] Row ${i + 1} fields:`, Object.keys(row).join(', '));
+        console.log(`[importIndividualContributionsBatch] Row ${i + 1} data:`, JSON.stringify(row));
+      }
+
       // Try to get CPF from various field names
       const cpfValue = row.cpf || row.CPF || row.documento || row.DOCUMENTO || row.cnpj || row.CNPJ;
       const cpf = normalizeCpf(cpfValue);
       
       if (!cpf) {
-        result.errors.push({ row: i + 1, message: 'CPF inválido ou ausente', cnpj: String(cpfValue || '') });
+        result.errors.push({ row: i + 1, message: `CPF inválido ou ausente. Valor recebido: ${String(cpfValue || 'vazio')}`, cnpj: String(cpfValue || '') });
         continue;
       }
 
