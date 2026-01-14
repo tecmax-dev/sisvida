@@ -168,6 +168,13 @@ import UnionEntitiesPage from "./pages/admin/UnionEntitiesPage";
 
 // Login exclusivo para entidades sindicais
 const UnionEntityLoginPage = lazy(() => import("./pages/UnionEntityLoginPage"));
+
+// Mobile App Pages
+const MobileAuthPage = lazy(() => import("./pages/mobile/MobileAuthPage"));
+const MobileHomePage = lazy(() => import("./pages/mobile/MobileHomePage"));
+const MobileAppointmentsPage = lazy(() => import("./pages/mobile/MobileAppointmentsPage"));
+const MobileProfilePage = lazy(() => import("./pages/mobile/MobileProfilePage"));
+const MobileBookingPage = lazy(() => import("./pages/mobile/MobileBookingPage"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -464,6 +471,13 @@ const App = () => (
                   <Route path="homologacao/bloqueios" element={<HomologacaoBloqueiosPage />} />
                   <Route path="homologacao/config" element={<HomologacaoConfigPage />} />
                 </Route>
+                {/* Mobile App Routes */}
+                <Route path="/app" element={<MobileAuthPage />} />
+                <Route path="/app/login" element={<MobileAuthPage />} />
+                <Route path="/app/home" element={<MobileHomePage />} />
+                <Route path="/app/agendamentos" element={<MobileAppointmentsPage />} />
+                <Route path="/app/agendar" element={<MobileBookingPage />} />
+                <Route path="/app/perfil" element={<MobileProfilePage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
