@@ -1135,7 +1135,7 @@ export default function SettingsPage() {
       description: "Configure o intervalo entre mensagens",
       icon: <Clock className="h-5 w-5 text-primary" />,
       permission: "manage_settings",
-      feature: "whatsapp_evolution_api",
+      feature: null,
       isComponent: true,
       component: currentClinic ? <WhatsAppDelayConfig clinicId={currentClinic.id} /> : null,
     },
