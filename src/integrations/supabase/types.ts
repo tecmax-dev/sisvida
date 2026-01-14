@@ -6394,6 +6394,44 @@ export type Database = {
           },
         ]
       }
+      patient_first_access_tokens: {
+        Row: {
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          patient_id: string
+          token: string
+          used_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          patient_id: string
+          token: string
+          used_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          patient_id?: string
+          token?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_first_access_tokens_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_folders: {
         Row: {
           clinic_id: string
@@ -11740,6 +11778,15 @@ export type Database = {
       }
     }
     Functions: {
+      check_patient_first_access: {
+        Args: { p_cpf: string; p_email: string }
+        Returns: {
+          clinic_id: string
+          patient_email: string
+          patient_id: string
+          patient_name: string
+        }[]
+      }
       check_whatsapp_multiattendance_access: {
         Args: { p_clinic_id: string }
         Returns: boolean
@@ -11747,6 +11794,14 @@ export type Database = {
       clinic_has_addon: {
         Args: { _addon_key: string; _clinic_id: string }
         Returns: boolean
+      }
+      complete_first_access: {
+        Args: { p_email: string; p_password: string; p_token: string }
+        Returns: boolean
+      }
+      create_first_access_token: {
+        Args: { p_email: string; p_patient_id: string }
+        Returns: string
       }
       create_password_reset_token: {
         Args: { p_email: string }

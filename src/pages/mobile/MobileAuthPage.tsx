@@ -243,10 +243,17 @@ export default function MobileAuthPage() {
               </button>
             </div>
 
-            <div className="mt-4 p-4 bg-amber-50 rounded-lg border border-amber-200">
-              <p className="text-xs text-amber-800 text-center">
-                <strong>Primeiro acesso?</strong> Entre em contato com o sindicato para cadastrar sua senha.
+            <div className="mt-4 p-4 bg-emerald-50 rounded-lg border border-emerald-200">
+              <p className="text-sm text-emerald-800 text-center">
+                <strong>Primeiro acesso?</strong>
               </p>
+              <button
+                type="button"
+                className="w-full mt-2 text-sm text-emerald-700 font-medium hover:underline"
+                onClick={() => navigate("/app/primeiro-acesso")}
+              >
+                Clique aqui para cadastrar sua senha
+              </button>
             </div>
           </CardContent>
         </Card>
