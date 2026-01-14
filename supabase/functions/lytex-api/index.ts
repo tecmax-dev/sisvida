@@ -637,43 +637,65 @@ async function cancelInvoice(params: { invoiceId: string; dueDate?: string; valu
     }
   };
 
-  console.log(`[Lytex] Cancelando cobrança ${params.invoiceId} via DELETE...`);
+  console.log(`[Lytex] Cancelando cobrança ${params.invoiceId} via PUT (status: cancelled)...`);
 
-  // Tentar cancelar via DELETE primeiro
-  const deleteResponse = await fetch(`${LYTEX_API_URL}/invoices/${params.invoiceId}`, {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-    },
-  });
+  // A API Lytex usa PUT com status "cancelled" para cancelar faturas (DELETE não é suportado)
+  const cancelPayload: any = {
+    status: "cancelled",
+  };
 
-  if (deleteResponse.ok) {
-    console.log("[Lytex] Cobrança cancelada com sucesso via DELETE");
-    return { success: true };
+  // Adicionar dueDate se disponível (exigido em alguns cenários da API)
+  if (params.dueDate) {
+    cancelPayload.dueDate = params.dueDate;
   }
 
-  const deleteText = await deleteResponse.text();
-  const deleteMsg = extractLytexMessage(deleteText) || `Erro ao cancelar: ${deleteResponse.status}`;
-  console.log(`[Lytex] DELETE retornou ${deleteResponse.status}: ${deleteText}`);
+  // Adicionar items se value disponível
+  if (params.value !== undefined) {
+    cancelPayload.items = [{ name: "Contribuição", quantity: 1, value: params.value }];
+  }
 
-  // Se DELETE falhar, tentar via PUT com status cancelled como fallback
-  if (params.dueDate) {
-    console.log("[Lytex] Tentando cancelar via PUT (fallback)...");
+  const response = await fetch(`${LYTEX_API_URL}/invoices/${params.invoiceId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${token}`,
+    },
+    body: JSON.stringify(cancelPayload),
+  });
+
+  const responseText = await response.text();
+  let responseData: any = {};
+  if (responseText) {
     try {
-      return await updateInvoice({
-        invoiceId: params.invoiceId,
-        dueDate: params.dueDate,
-        value: params.value,
-        status: "cancelled",
-      });
-    } catch (putError) {
-      console.error("[Lytex] Fallback PUT também falhou:", putError);
-      // Propagar o motivo mais útil do DELETE (sem assumir JSON)
-      throw new Error(deleteMsg);
+      responseData = JSON.parse(responseText);
+    } catch {
+      responseData = { raw: responseText };
     }
   }
 
-  throw new Error(deleteMsg);
+  if (response.ok) {
+    console.log("[Lytex] Cobrança cancelada com sucesso via PUT");
+    return { success: true, ...responseData };
+  }
+
+  // Verificar se é erro conhecido (já cancelado, não encontrado, etc.)
+  const errorMsg = extractLytexMessage(responseText) || `Erro ao cancelar: ${response.status}`;
+  const lowerMsg = errorMsg.toLowerCase();
+
+  // Permitir continuar se já estiver cancelado ou não encontrado
+  if (
+    lowerMsg.includes("already cancelled") ||
+    lowerMsg.includes("já cancelad") ||
+    lowerMsg.includes("not found") ||
+    lowerMsg.includes("não encontrad") ||
+    response.status === 404
+  ) {
+    console.warn("[Lytex] Fatura já cancelada ou não encontrada, considerando sucesso:", errorMsg);
+    return { success: true, alreadyCancelled: true };
+  }
+
+  console.error("[Lytex] Erro ao cancelar cobrança:", response.status, JSON.stringify(responseData));
+  throw new Error(errorMsg);
 }
 
 Deno.serve(async (req) => {
