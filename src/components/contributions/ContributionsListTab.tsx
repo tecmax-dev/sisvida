@@ -278,6 +278,16 @@ export default function ContributionsListTab({
     });
   }, [activeContributions, searchTerm, statusFilter, competenceFilter, documentTypeTab]);
 
+  useEffect(() => {
+    console.debug("[ContributionsListTab] state", {
+      yearFilter,
+      competenceFilter,
+      activeCount: activeContributions.length,
+      filteredCount: filteredContributions.length,
+      tab: documentTypeTab,
+    });
+  }, [yearFilter, competenceFilter, activeContributions.length, filteredContributions.length, documentTypeTab]);
+
   // If the default competence (previous month) has no results for the loaded dataset,
   // auto-fallback to the most recent competence available so the user sees data.
   useEffect(() => {

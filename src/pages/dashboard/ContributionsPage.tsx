@@ -198,6 +198,11 @@ export default function ContributionsPage() {
         .order("created_at", { ascending: false });
 
       if (contribError) throw contribError;
+      console.debug("[ContributionsPage] loaded", {
+        clinicId: currentClinic.id,
+        yearFilter,
+        contributions: contribData?.length ?? 0,
+      });
       setContributions(contribData || []);
 
       // Fetch employers with category
