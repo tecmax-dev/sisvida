@@ -15,7 +15,7 @@ import { MappingStep } from "./MappingStep";
 import { ValidationStep } from "./ValidationStep";
 import { ResultStep } from "./ResultStep";
 import { LytexConverterTab } from "./LytexConverterTab";
-import { LytexLayout } from "@/lib/spreadsheet-converter/lytex-layouts";
+import { LytexLayout, getConversionType } from "@/lib/spreadsheet-converter/lytex-layouts";
 
 interface FieldMapping {
   sourceColumn: string;
@@ -65,10 +65,12 @@ export function SpreadsheetConverter() {
     setInvalidRowsCount(invalid);
   }, []);
 
-  const handleLytexConvert = useCallback((converted: Record<string, unknown>[], layout: LytexLayout) => {
+  const handleLytexConvert = useCallback((converted: Record<string, unknown>[], layout: LytexLayout, layoutKey: string) => {
     setValidRows(converted);
     setInvalidRowsCount(0);
-    setConversionType('lytex');
+    // Use the specific conversion type based on the layout key
+    const specificType = getConversionType(layout, layoutKey) as ConversionType;
+    setConversionType(specificType);
     setMappings(layout.fields.map(f => ({
       sourceColumn: f.sourceColumns[0],
       targetField: f.targetField,

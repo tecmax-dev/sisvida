@@ -50,6 +50,8 @@ function mapConversionType(type: ConversionType): ValidatorConversionType {
     contributions_paid: 'contributions_paid',
     contributions_pending: 'contributions_pending',
     contributions_cancelled: 'contributions_cancelled',
+    contributions_individual: 'contributions_paid', // Use same validator
+    contributions_individual_paid: 'contributions_paid', // Use same validator
     cadastro_pf: 'cadastro_pf',
     cadastro_pj: 'cadastro_pj',
     cadastro_fornecedores: 'cadastro_fornecedores',
