@@ -112,6 +112,7 @@ interface ContributionsListTabProps {
   onViewContribution: (contribution: Contribution) => void;
   onGenerateInvoice: (contribution: Contribution) => void;
   onOpenCreate: () => void;
+  onOpenCreatePF: () => void;
   onSyncAll: () => void;
   generatingInvoice: boolean;
   syncing: boolean;
@@ -168,6 +169,7 @@ export default function ContributionsListTab({
   onViewContribution,
   onGenerateInvoice,
   onOpenCreate,
+  onOpenCreatePF,
   onSyncAll,
   generatingInvoice,
   syncing,
@@ -506,9 +508,9 @@ export default function ContributionsListTab({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <Button onClick={onOpenCreate}>
+        <Button onClick={documentTypeTab === "pf" ? onOpenCreatePF : onOpenCreate}>
           <Plus className="h-4 w-4 mr-2" />
-          Nova Contribuição
+          Nova Contribuição {documentTypeTab === "pf" ? "PF" : ""}
         </Button>
       </div>
 
