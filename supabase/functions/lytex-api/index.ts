@@ -2878,9 +2878,9 @@ Deno.serve(async (req) => {
                   invoice.pagador?.razaoSocial;
                 
                 if (!clientCnpj) {
-                  // Log mais detalhado para debug
-                  console.log(`[Lytex] Fatura ${invoiceId} sem CNPJ - campos disponíveis:`, 
-                    Object.keys(invoice).join(', '));
+                  // Log mais detalhado para debug - incluir estrutura do client
+                  console.log(`[Lytex] Fatura ${invoiceId} sem CNPJ - client:`, 
+                    JSON.stringify(invoice.client || {}).substring(0, 500));
                   continue;
                 }
                 
