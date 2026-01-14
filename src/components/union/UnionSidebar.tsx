@@ -29,6 +29,7 @@ import {
   FolderTree,
   FileCheck2,
   HeartPulse,
+  Smartphone,
 } from "lucide-react";
 import {
   Collapsible,
@@ -87,6 +88,12 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
     text: "text-teal-200",
     border: "border-teal-400/30",
     accent: "bg-teal-500/30"
+  },
+  conteudoapp: {
+    bg: "bg-pink-500/20",
+    text: "text-pink-200",
+    border: "border-pink-400/30",
+    accent: "bg-pink-500/30"
   }
 };
 
@@ -166,6 +173,15 @@ const unionNavTree: NavCategory[] = [
       { href: "/union/homologacao/servicos", icon: ClipboardList, label: "Serviços", permission: "union_module_access" },
       { href: "/union/homologacao/bloqueios", icon: CalendarX, label: "Bloqueios", permission: "union_module_access" },
       { href: "/union/homologacao/config", icon: Settings, label: "Configurações", permission: "union_module_access" },
+    ]
+  },
+  {
+    id: "conteudoapp",
+    label: "Gestão de Conteúdo",
+    icon: Smartphone,
+    color: "conteudoapp",
+    items: [
+      { href: "/union/conteudo-app", icon: Smartphone, label: "Conteúdo do App", permission: "union_module_access" },
     ]
   }
 ];

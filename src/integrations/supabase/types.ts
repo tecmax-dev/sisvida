@@ -9726,6 +9726,68 @@ export type Database = {
           },
         ]
       }
+      union_app_content: {
+        Row: {
+          clinic_id: string
+          content_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          external_link: string | null
+          file_url: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          metadata: Json | null
+          order_index: number
+          title: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          clinic_id: string
+          content_type: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          external_link?: string | null
+          file_url?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          metadata?: Json | null
+          order_index?: number
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          content_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          external_link?: string | null
+          file_url?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          metadata?: Json | null
+          order_index?: number
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_app_content_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_audit_logs: {
         Row: {
           action: string
