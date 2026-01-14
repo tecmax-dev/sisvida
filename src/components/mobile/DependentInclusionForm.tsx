@@ -31,6 +31,7 @@ import {
   AlertCircle,
   CheckCircle2,
   FileText,
+  Phone,
 } from "lucide-react";
 import { format, differenceInYears, parse, isValid } from "date-fns";
 
@@ -127,10 +128,59 @@ export function DependentInclusionForm({
   const [documentPreview, setDocumentPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [checkingCpf, setCheckingCpf] = useState(false);
+  const [cpfExists, setCpfExists] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  const handleInputChange = (field: keyof FormData, value: string) => {
+  // Check if CPF already exists in the database
+  const checkCpfExists = async (cpf: string) => {
+    const cleanCpf = cpf.replace(/\D/g, "");
+    if (cleanCpf.length !== 11 || !isValidCPF(cpf)) {
+      setCpfExists(false);
+      return;
+    }
+
+    setCheckingCpf(true);
+    try {
+      // Check in patients table
+      const { data: patientData } = await supabase
+        .from("patients")
+        .select("id, name")
+        .eq("clinic_id", clinicId)
+        .eq("cpf", cleanCpf)
+        .maybeSingle();
+
+      if (patientData) {
+        setCpfExists(true);
+        setErrors((prev) => ({ ...prev, cpf: "exists" }));
+        return;
+      }
+
+      // Check in patient_dependents table
+      const { data: dependentData } = await supabase
+        .from("patient_dependents")
+        .select("id, name")
+        .eq("clinic_id", clinicId)
+        .eq("cpf", cleanCpf)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (dependentData) {
+        setCpfExists(true);
+        setErrors((prev) => ({ ...prev, cpf: "exists" }));
+        return;
+      }
+
+      setCpfExists(false);
+    } catch (error) {
+      console.error("Error checking CPF:", error);
+    } finally {
+      setCheckingCpf(false);
+    }
+  };
+
+  const handleInputChange = async (field: keyof FormData, value: string) => {
     let formattedValue = value;
 
     switch (field) {
@@ -147,6 +197,12 @@ export function DependentInclusionForm({
 
     setFormData((prev) => ({ ...prev, [field]: formattedValue }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
+    setCpfExists(false);
+
+    // Check CPF when fully entered
+    if (field === "cpf" && formattedValue.replace(/\D/g, "").length === 11) {
+      await checkCpfExists(formattedValue);
+    }
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,6 +263,8 @@ export function DependentInclusionForm({
       newErrors.cpf = "CPF é obrigatório";
     } else if (!isValidCPF(formData.cpf)) {
       newErrors.cpf = "CPF inválido";
+    } else if (cpfExists) {
+      newErrors.cpf = "exists";
     }
 
     // Birth date validation
@@ -421,16 +479,52 @@ export function DependentInclusionForm({
               <Label htmlFor="cpf" className="text-sm font-medium">
                 CPF <span className="text-red-500">*</span>
               </Label>
-              <Input
-                id="cpf"
-                placeholder="000.000.000-00"
-                value={formData.cpf}
-                onChange={(e) => handleInputChange("cpf", e.target.value)}
-                className={errors.cpf ? "border-red-500" : ""}
-                disabled={isLoading}
-                inputMode="numeric"
-              />
-              {errors.cpf && (
+              <div className="relative">
+                <Input
+                  id="cpf"
+                  placeholder="000.000.000-00"
+                  value={formData.cpf}
+                  onChange={(e) => handleInputChange("cpf", e.target.value)}
+                  className={errors.cpf || cpfExists ? "border-red-500 pr-10" : ""}
+                  disabled={isLoading}
+                  inputMode="numeric"
+                />
+                {checkingCpf && (
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  </div>
+                )}
+              </div>
+              
+              {/* CPF Already Exists Warning */}
+              {cpfExists && (
+                <Card className="bg-amber-50 border-amber-200">
+                  <CardContent className="p-3">
+                    <div className="flex gap-2">
+                      <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div className="text-xs text-amber-800">
+                        <p className="font-medium mb-1">CPF já cadastrado!</p>
+                        <p className="mb-2">
+                          Este CPF já está registrado em nossa base de dados. 
+                          Para mais informações, entre em contato conosco.
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="bg-green-600 hover:bg-green-700 text-white border-0 h-8 text-xs"
+                          onClick={() => window.open("https://wa.me/5573999999999?text=Olá! Estou tentando cadastrar um dependente, mas o CPF já existe no sistema.", "_blank")}
+                        >
+                          <Phone className="h-3 w-3 mr-1" />
+                          Falar no WhatsApp
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {errors.cpf && errors.cpf !== "exists" && (
                 <p className="text-xs text-red-500 flex items-center gap-1">
                   <AlertCircle className="h-3 w-3" />
                   {errors.cpf}
