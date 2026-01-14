@@ -125,10 +125,7 @@ const ACTION_LABELS: Record<string, string> = {
   synced: "Sincronizado",
 };
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 const PAYMENT_METHODS: Record<string, string> = {
   boleto: "Boleto Bancário",
@@ -284,7 +281,7 @@ export default function ContributionDetailDialog({
                     <div>
                       <p className="text-xs text-muted-foreground">Competência</p>
                       <p className="font-medium">
-                        {MONTHS[contribution.competence_month - 1]} / {contribution.competence_year}
+                        {formatCompetence(contribution.competence_month, contribution.competence_year)}
                       </p>
                     </div>
                     <div>

@@ -65,10 +65,7 @@ interface EmployerContributionFiltersProps {
   clinicInfo?: ClinicInfo;
 }
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 const STATUS_OPTIONS = [
   { value: "all", label: "Todos" },
@@ -385,7 +382,7 @@ export function EmployerContributionFilters({
     const headers: string[] = [];
     const fieldMap: Record<string, (c: ContributionItem) => string> = {
       type: (c) => c.contribution_types?.name || "-",
-      competence: (c) => `${MONTHS[c.competence_month - 1]?.slice(0, 3)}/${c.competence_year}`,
+      competence: (c) => formatCompetence(c.competence_month, c.competence_year),
       due_date: (c) => format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy"),
       value: (c) => formatCurrency(c.value),
       status: (c) => c.status === "paid" ? "Pago" : c.status === "overdue" ? "Vencido" : c.status === "cancelled" ? "Cancelado" : "Pendente",
@@ -538,8 +535,10 @@ export function EmployerContributionFilters({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">Todos</SelectItem>
-                      {MONTHS.map((m, i) => (
-                        <SelectItem key={i} value={(i + 1).toString()}>{m}</SelectItem>
+                      {Array.from({ length: 12 }, (_, i) => (
+                        <SelectItem key={i} value={(i + 1).toString()}>
+                          {String(i + 1).padStart(2, "0")}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

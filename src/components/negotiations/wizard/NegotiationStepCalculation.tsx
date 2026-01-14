@@ -50,10 +50,7 @@ interface NegotiationStepCalculationProps {
   };
 }
 
-const MONTHS = [
-  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-  "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 export default function NegotiationStepCalculation({
   calculatedItems,
@@ -126,7 +123,7 @@ export default function NegotiationStepCalculation({
                           {item.contribution.contribution_types?.name}
                         </p>
                         <Badge variant="outline" className="text-xs">
-                          {MONTHS[item.contribution.competence_month - 1]}/{item.contribution.competence_year}
+                          {formatCompetence(item.contribution.competence_month, item.contribution.competence_year)}
                         </Badge>
                       </div>
                     </TableCell>

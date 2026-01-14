@@ -148,10 +148,7 @@ const STATUS_CONFIG = {
   },
 };
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 export default function ContributionsListTab({
   contributions,
@@ -317,8 +314,8 @@ export default function ContributionsListTab({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos meses</SelectItem>
-                  {MONTHS.map((month, i) => (
-                    <SelectItem key={i} value={String(i + 1)}>{month}</SelectItem>
+                  {Array.from({ length: 12 }, (_, i) => (
+                    <SelectItem key={i} value={String(i + 1)}>{String(i + 1).padStart(2, "0")}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -550,7 +547,7 @@ export default function ContributionsListTab({
                       </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
                         <span className="text-sm font-medium">
-                          {MONTHS[contrib.competence_month - 1]?.slice(0, 3)}/{contrib.competence_year}
+                          {formatCompetence(contrib.competence_month, contrib.competence_year)}
                         </span>
                       </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>

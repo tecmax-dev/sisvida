@@ -92,10 +92,7 @@ interface SendNegotiationWhatsAppDialogProps {
   clinicId: string;
 }
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 const STATUS_LABELS: Record<string, string> = {
   simulation: "Simulação",
@@ -272,7 +269,7 @@ export function SendNegotiationWhatsAppDialog({
 
     const contributionsData = items.map((item) => [
       item.contribution_type_name || "-",
-      `${MONTHS[item.competence_month - 1]}/${item.competence_year}`,
+      formatCompetence(item.competence_month, item.competence_year),
       format(parseDateOnly(item.due_date), "dd/MM/yyyy"),
       formatCurrency(item.original_value),
       `${item.days_overdue}`,

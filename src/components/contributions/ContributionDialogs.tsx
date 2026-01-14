@@ -119,10 +119,7 @@ interface ContributionDialogsProps {
   generatingInvoice: boolean;
 }
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 export default function ContributionDialogs({
   createDialogOpen,
@@ -367,7 +364,7 @@ export default function ContributionDialogs({
       
       // Gerar nova descrição com tipo e competência
       const selectedType = contributionTypes.find(t => t.id === editTypeId);
-      const newDescription = `${selectedType?.name || 'Contribuição'} - ${MONTHS[editMonth - 1]}/${editYear}`;
+      const newDescription = `${selectedType?.name || 'Contribuição'} - ${formatCompetence(editMonth, editYear)}`;
       
       // If there's a duplicate and user confirmed, cancel the duplicate first
       if (hasDuplicate && forceDuplicate && duplicateId) {
@@ -556,8 +553,10 @@ export default function ContributionDialogs({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {MONTHS.map((month, i) => (
-                      <SelectItem key={i} value={String(i + 1)}>{month}</SelectItem>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <SelectItem key={i} value={String(i + 1)}>
+                        {String(i + 1).padStart(2, "0")}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -645,7 +644,7 @@ export default function ContributionDialogs({
                 <div>
                   <p className="text-muted-foreground">Competência</p>
                   <p className="font-medium">
-                    {MONTHS[selectedContribution.competence_month - 1]}/{selectedContribution.competence_year}
+                    {formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)}
                   </p>
                 </div>
                 <div>
@@ -836,8 +835,10 @@ export default function ContributionDialogs({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {MONTHS.map((month, i) => (
-                      <SelectItem key={i} value={String(i + 1)}>{month}</SelectItem>
+                    {Array.from({ length: 12 }, (_, i) => (
+                      <SelectItem key={i} value={String(i + 1)}>
+                        {String(i + 1).padStart(2, "0")}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>

@@ -29,10 +29,7 @@ interface SendOverdueWhatsAppDialogProps {
   clinicId: string;
 }
 
-const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
+import { formatCompetence } from "@/lib/competence-format";
 
 const formatCurrency = (cents: number) => {
   return new Intl.NumberFormat("pt-BR", {
@@ -78,7 +75,7 @@ export function SendOverdueWhatsAppDialog({
     overdueContributions.forEach((c) => {
       const daysLate = differenceInDays(today, new Date(c.due_date + "T12:00:00"));
       message += `📌 *${c.contribution_types?.name || "Contribuição"}*\n`;
-      message += `   Competência: ${MONTHS[c.competence_month - 1]}/${c.competence_year}\n`;
+      message += `   Competência: ${formatCompetence(c.competence_month, c.competence_year)}\n`;
       message += `   Vencimento: ${format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy")}\n`;
       message += `   Atraso: *${daysLate} dia(s)*\n`;
       message += `   Valor: *${formatCurrency(c.value)}*\n`;
@@ -172,7 +169,7 @@ export function SendOverdueWhatsAppDialog({
                   <div>
                     <p className="font-medium">{c.contribution_types?.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      {MONTHS[c.competence_month - 1]?.slice(0, 3)}/{c.competence_year} • {daysLate} dias de atraso
+                      {formatCompetence(c.competence_month, c.competence_year)} • {daysLate} dias de atraso
                     </p>
                   </div>
                   <span className="font-medium text-amber-600">{formatCurrency(c.value)}</span>
