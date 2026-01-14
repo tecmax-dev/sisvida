@@ -368,6 +368,29 @@ async function listInvoices(page = 1, limit = 100, status?: string): Promise<any
   return response.json();
 }
 
+// Listar faturas com token específico (para buscar em ambas integrações)
+async function listInvoicesWithToken(token: string, page = 1, limit = 100, status?: string): Promise<any> {
+  let url = `${LYTEX_API_URL}/invoices?page=${page}&limit=${limit}`;
+  if (status) {
+    url += `&status=${status}`;
+  }
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Authorization": `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("[Lytex] Erro ao listar faturas:", response.status, errorText);
+    throw new Error(`Erro ao listar faturas: ${response.status}`);
+  }
+
+  return response.json();
+}
+
 function normalizeMoneyToCents(value: number): number {
   if (typeof value !== "number" || Number.isNaN(value)) {
     throw new Error("Valor inválido para emissão");
@@ -2685,6 +2708,334 @@ Deno.serve(async (req) => {
 
           throw fetchPaidErr;
         }
+        break;
+      }
+
+      // ===== NOVA AÇÃO: Importar faturas pagas de OUTRAS integrações =====
+      case "import_external_paid_invoices": {
+        if (!params.clinicId) {
+          throw new Error("clinicId é obrigatório");
+        }
+        
+        const importClinicId = params.clinicId;
+        console.log("[Lytex] Iniciando importação de faturas pagas externas...");
+        
+        // Buscar tokens de ambas integrações
+        const tokenPrimary = await getAccessToken();
+        const tokenSecondary = await getSecondaryAccessToken();
+        
+        const hasSecondaryIntegration = tokenSecondary !== null;
+        console.log(`[Lytex] Integrações disponíveis: Primária ✓, Secundária ${hasSecondaryIntegration ? '✓' : '✗'}`);
+        
+        // Buscar todos os lytex_invoice_id já existentes no banco para este clinic
+        const { data: existingContributions } = await supabase
+          .from("employer_contributions")
+          .select("lytex_invoice_id")
+          .eq("clinic_id", importClinicId)
+          .not("lytex_invoice_id", "is", null);
+        
+        const existingInvoiceIds = new Set(
+          (existingContributions || [])
+            .map((c: any) => c.lytex_invoice_id)
+            .filter(Boolean)
+        );
+        
+        console.log(`[Lytex] ${existingInvoiceIds.size} faturas já existem no banco`);
+        
+        // Buscar todos os tipos de contribuição para mapear
+        const { data: contributionTypes } = await supabase
+          .from("contribution_types")
+          .select("id, name")
+          .eq("clinic_id", importClinicId)
+          .eq("is_active", true);
+        
+        // Função para extrair tipo de contribuição da descrição
+        const extractContributionType = (description: string): string | null => {
+          if (!description || !contributionTypes?.length) return contributionTypes?.[0]?.id || null;
+          
+          const descLower = description.toLowerCase();
+          const typeKeywords: Record<string, string[]> = {
+            "taxa negocial": ["124", "taxa negocial", "negocial", "mensalidade"],
+            "taxa assistencial": ["125", "taxa assistencial", "assistencial"],
+            "mensalidade": ["126", "mensalidade sindical", "mensalidade"],
+            "contribuição confederativa": ["127", "confederativa"],
+            "contribuição sindical": ["128", "contribuição sindical", "sind."],
+          };
+          
+          for (const [typeName, keywords] of Object.entries(typeKeywords)) {
+            for (const kw of keywords) {
+              if (descLower.includes(kw.toLowerCase())) {
+                const foundType = contributionTypes?.find((t: any) => 
+                  t.name.toLowerCase().includes(typeName.toLowerCase())
+                );
+                if (foundType) return foundType.id;
+              }
+            }
+          }
+          
+          return contributionTypes?.[0]?.id || null;
+        };
+        
+        // Função para extrair competência da descrição
+        const extractCompetenceFromDescription = (description: string): { month: number; year: number } | null => {
+          if (!description) return null;
+          
+          const months: Record<string, number> = {
+            "janeiro": 1, "fevereiro": 2, "março": 3, "marco": 3, "abril": 4,
+            "maio": 5, "junho": 6, "julho": 7, "agosto": 8, "setembro": 9,
+            "outubro": 10, "novembro": 11, "dezembro": 12,
+            "jan": 1, "fev": 2, "mar": 3, "abr": 4, "mai": 5, "jun": 6,
+            "jul": 7, "ago": 8, "set": 9, "out": 10, "nov": 11, "dez": 12,
+          };
+          
+          // Padrão: "REFERENTE: DEZEMBRO/2025" ou "MENSALIDADE - Janeiro/2026"
+          const regex = /(?:referente|ref\.?|competencia|competência)?:?\s*([a-zç]+)[\s\/\-]+(\d{4})/i;
+          const match = description.match(regex);
+          
+          if (match) {
+            const monthName = match[1].toLowerCase();
+            const year = parseInt(match[2]);
+            const month = months[monthName];
+            if (month && year >= 2020) {
+              return { month, year };
+            }
+          }
+          
+          // Tentar MM/YYYY
+          const mmyyyyMatch = description.match(/(\d{1,2})[\s\/\-](\d{4})/);
+          if (mmyyyyMatch) {
+            const month = parseInt(mmyyyyMatch[1]);
+            const year = parseInt(mmyyyyMatch[2]);
+            if (month >= 1 && month <= 12 && year >= 2020) {
+              return { month, year };
+            }
+          }
+          
+          return null;
+        };
+        
+        // Estatísticas
+        let imported = 0;
+        let alreadyExists = 0;
+        let errors = 0;
+        let processedFromPrimary = 0;
+        let processedFromSecondary = 0;
+        const importDetails: any[] = [];
+        
+        // Função para processar faturas de uma integração
+        const processIntegrationInvoices = async (token: string, source: "primary" | "secondary") => {
+          let page = 1;
+          const limit = 100;
+          let hasMore = true;
+          let totalProcessed = 0;
+          
+          while (hasMore) {
+            try {
+              console.log(`[Lytex] Buscando faturas pagas da integração ${source}, página ${page}...`);
+              
+              const response = await listInvoicesWithToken(token, page, limit, "paid");
+              const invoices = extractList(response);
+              
+              console.log(`[Lytex] Encontradas ${invoices.length} faturas pagas na página ${page}`);
+              
+              if (!invoices || invoices.length === 0) {
+                hasMore = false;
+                break;
+              }
+              
+              for (const invoice of invoices) {
+                const invoiceId = invoice.id || invoice._id;
+                
+                if (!invoiceId) continue;
+                
+                // Verificar se já existe
+                if (existingInvoiceIds.has(invoiceId)) {
+                  alreadyExists++;
+                  continue;
+                }
+                
+                // Extrair dados do cliente (empresa)
+                const clientCnpj = invoice.client?.cnpj || invoice.client?.document || invoice.cnpj;
+                const clientName = invoice.client?.name || invoice.client?.socialName || invoice.clientName;
+                
+                if (!clientCnpj) {
+                  console.log(`[Lytex] Fatura ${invoiceId} sem CNPJ do cliente, ignorando`);
+                  continue;
+                }
+                
+                // Normalizar CNPJ
+                const cleanCnpj = clientCnpj.replace(/\D/g, "");
+                
+                // Buscar ou criar empresa
+                let { data: employer } = await supabase
+                  .from("employers")
+                  .select("id")
+                  .eq("clinic_id", importClinicId)
+                  .or(`cnpj.eq.${cleanCnpj},cnpj.eq.${clientCnpj}`)
+                  .single();
+                
+                if (!employer) {
+                  // Criar nova empresa
+                  const { data: newEmployer, error: createErr } = await supabase
+                    .from("employers")
+                    .insert({
+                      clinic_id: importClinicId,
+                      cnpj: cleanCnpj,
+                      trade_name: clientName || `Empresa ${cleanCnpj}`,
+                      company_name: clientName,
+                      is_active: true,
+                      origin: "lytex_import",
+                    })
+                    .select("id")
+                    .single();
+                  
+                  if (createErr) {
+                    console.error(`[Lytex] Erro ao criar empresa ${cleanCnpj}:`, createErr);
+                    errors++;
+                    continue;
+                  }
+                  employer = newEmployer;
+                  console.log(`[Lytex] Empresa ${cleanCnpj} criada automaticamente`);
+                }
+                
+                // Extrair dados da fatura
+                const description = invoice.description || invoice.memo || "";
+                const competence = extractCompetenceFromDescription(description);
+                const contributionTypeId = extractContributionType(description);
+                
+                const dueDate = invoice.dueDate || invoice.due_date;
+                const paidAt = extractPaidDate(invoice);
+                const paidValue = extractPaidValueCents(invoice);
+                const totalValue = invoice.totalValue || invoice.total;
+                
+                // Usar data atual como fallback para competência
+                const now = new Date();
+                const compMonth = competence?.month || now.getMonth() + 1;
+                const compYear = competence?.year || now.getFullYear();
+                
+                // Gerar chave única
+                const activeCompetenceKey = `${employer.id}-${compYear}-${String(compMonth).padStart(2, "0")}`;
+                
+                // Criar contribuição
+                const { error: insertErr } = await supabase
+                  .from("employer_contributions")
+                  .insert({
+                    clinic_id: importClinicId,
+                    employer_id: employer.id,
+                    contribution_type_id: contributionTypeId,
+                    value: paidValue || totalValue || 0,
+                    due_date: dueDate || new Date().toISOString().split("T")[0],
+                    status: "paid",
+                    competence_month: compMonth,
+                    competence_year: compYear,
+                    lytex_invoice_id: invoiceId,
+                    lytex_invoice_url: invoice.link || invoice.url || invoice.invoiceUrl,
+                    lytex_nosso_numero: invoice.ourNumber || invoice.nossoNumero,
+                    lytex_status: invoice.status || invoice.paymentStatus,
+                    origin: source === "secondary" ? "external_lytex" : "lytex",
+                    paid_at: paidAt,
+                    paid_value: paidValue,
+                    is_reconciled: true,
+                    reconciled_at: new Date().toISOString(),
+                    active_competence_key: activeCompetenceKey,
+                  });
+                
+                if (insertErr) {
+                  // Pode ser conflito de chave única - tentar com sufixo
+                  if (insertErr.code === "23505") {
+                    const uniqueKey = `${activeCompetenceKey}-EXT-${invoiceId.slice(-6)}`;
+                    const { error: retryErr } = await supabase
+                      .from("employer_contributions")
+                      .insert({
+                        clinic_id: importClinicId,
+                        employer_id: employer.id,
+                        contribution_type_id: contributionTypeId,
+                        value: paidValue || totalValue || 0,
+                        due_date: dueDate || new Date().toISOString().split("T")[0],
+                        status: "paid",
+                        competence_month: compMonth,
+                        competence_year: compYear,
+                        lytex_invoice_id: invoiceId,
+                        lytex_invoice_url: invoice.link || invoice.url || invoice.invoiceUrl,
+                        lytex_nosso_numero: invoice.ourNumber || invoice.nossoNumero,
+                        lytex_status: invoice.status || invoice.paymentStatus,
+                        origin: source === "secondary" ? "external_lytex" : "lytex",
+                        paid_at: paidAt,
+                        paid_value: paidValue,
+                        is_reconciled: true,
+                        reconciled_at: new Date().toISOString(),
+                        active_competence_key: uniqueKey,
+                      });
+                    
+                    if (retryErr) {
+                      console.error(`[Lytex] Erro ao importar fatura ${invoiceId}:`, retryErr);
+                      errors++;
+                      continue;
+                    }
+                  } else {
+                    console.error(`[Lytex] Erro ao importar fatura ${invoiceId}:`, insertErr);
+                    errors++;
+                    continue;
+                  }
+                }
+                
+                imported++;
+                if (source === "primary") processedFromPrimary++;
+                else processedFromSecondary++;
+                
+                existingInvoiceIds.add(invoiceId); // Evitar duplicatas dentro da mesma execução
+                
+                importDetails.push({
+                  invoiceId,
+                  cnpj: cleanCnpj,
+                  clientName,
+                  competence: `${compMonth}/${compYear}`,
+                  value: (paidValue || totalValue || 0) / 100,
+                  source,
+                });
+                
+                totalProcessed++;
+              }
+              
+              // Próxima página
+              page++;
+              
+              // Limite de segurança
+              if (page > 100) {
+                console.log(`[Lytex] Limite de páginas atingido para integração ${source}`);
+                hasMore = false;
+              }
+              
+            } catch (err: any) {
+              console.error(`[Lytex] Erro ao processar página ${page} da integração ${source}:`, err?.message);
+              hasMore = false;
+            }
+          }
+          
+          return totalProcessed;
+        };
+        
+        // Processar integração primária
+        await processIntegrationInvoices(tokenPrimary, "primary");
+        
+        // Processar integração secundária se disponível
+        if (hasSecondaryIntegration && tokenSecondary) {
+          await processIntegrationInvoices(tokenSecondary, "secondary");
+        }
+        
+        console.log(`[Lytex] Importação concluída: ${imported} novas (${processedFromPrimary} primária, ${processedFromSecondary} secundária), ${alreadyExists} já existiam, ${errors} erros`);
+        
+        result = {
+          success: true,
+          imported,
+          alreadyExists,
+          errors,
+          processedFromPrimary,
+          processedFromSecondary,
+          hasSecondaryIntegration,
+          details: importDetails.slice(0, 100),
+        };
+        
         break;
       }
 
