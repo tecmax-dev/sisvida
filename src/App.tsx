@@ -176,6 +176,12 @@ const MobileAppointmentsPage = lazy(() => import("./pages/mobile/MobileAppointme
 const MobileProfilePage = lazy(() => import("./pages/mobile/MobileProfilePage"));
 const MobileBookingPage = lazy(() => import("./pages/mobile/MobileBookingPage"));
 const MobilePasswordResetPage = lazy(() => import("./pages/mobile/MobilePasswordResetPage"));
+const MobileDependentsPage = lazy(() => import("./pages/mobile/MobileDependentsPage"));
+const MobileChangePasswordPage = lazy(() => import("./pages/mobile/MobileChangePasswordPage"));
+const MobileCardPage = lazy(() => import("./pages/mobile/MobileCardPage"));
+const MobileServicesPage = lazy(() => import("./pages/mobile/MobileServicesPage"));
+const MobileCommunicationPage = lazy(() => import("./pages/mobile/MobileCommunicationPage"));
+const MobileHelpPage = lazy(() => import("./pages/mobile/MobileHelpPage"));
 const MobileFirstAccessPage = lazy(() => import("./pages/mobile/MobileFirstAccessPage"));
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -482,6 +488,14 @@ const App = () => (
                 <Route path="/app/perfil" element={<MobileProfilePage />} />
                 <Route path="/app/recuperar-senha" element={<MobilePasswordResetPage />} />
                 <Route path="/app/primeiro-acesso" element={<MobileFirstAccessPage />} />
+                <Route path="/app/dependentes" element={<MobileDependentsPage />} />
+                <Route path="/app/alterar-senha" element={<MobileChangePasswordPage />} />
+                <Route path="/app/carteirinha" element={<MobileCardPage />} />
+                <Route path="/app/servicos" element={<MobileServicesPage />} />
+                <Route path="/app/servicos/:serviceId" element={<MobileServicesPage />} />
+                <Route path="/app/comunicacao" element={<MobileCommunicationPage />} />
+                <Route path="/app/comunicacao/:mediaType" element={<MobileCommunicationPage />} />
+                <Route path="/app/ajuda" element={<MobileHelpPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>

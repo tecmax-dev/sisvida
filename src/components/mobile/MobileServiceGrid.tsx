@@ -6,14 +6,14 @@ export function MobileServiceGrid() {
 
   const services = [
     { icon: Calendar, label: "Agendamentos", onClick: () => navigate("/app/agendamentos") },
-    { icon: FileText, label: "Convenções", onClick: () => {} },
-    { icon: ClipboardList, label: "Declarações", onClick: () => {} },
-    { icon: Building, label: "Convênios", onClick: () => {} },
-    { icon: Receipt, label: "Boletos", onClick: () => {} },
-    { icon: Users, label: "Diretoria", onClick: () => {} },
-    { icon: FileText, label: "Documentos", onClick: () => {} },
-    { icon: HeadphonesIcon, label: "Atendimentos", onClick: () => {} },
-    { icon: MessageCircle, label: "Ouvidoria", onClick: () => {} },
+    { icon: FileText, label: "Convenções", onClick: () => navigate("/app/servicos/convencoes") },
+    { icon: ClipboardList, label: "Declarações", onClick: () => navigate("/app/servicos/declaracoes") },
+    { icon: Building, label: "Convênios", onClick: () => navigate("/app/servicos/convenios") },
+    { icon: Receipt, label: "Boletos", onClick: () => navigate("/app/servicos/boletos") },
+    { icon: Users, label: "Diretoria", onClick: () => navigate("/app/servicos/diretoria") },
+    { icon: FileText, label: "Documentos", onClick: () => navigate("/app/servicos/documentos") },
+    { icon: HeadphonesIcon, label: "Atendimentos", onClick: () => navigate("/app/servicos/atendimentos") },
+    { icon: MessageCircle, label: "Ouvidoria", onClick: () => navigate("/app/servicos/ouvidoria") },
   ];
 
   return (
