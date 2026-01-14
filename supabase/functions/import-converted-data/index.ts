@@ -772,7 +772,7 @@ async function importIndividualContributionsBatch(
         }
       }
 
-      // Parse competence
+      // Parse competence - try from competence field first, then from description
       let competenceYear = new Date().getFullYear();
       let competenceMonth = new Date().getMonth() + 1;
       
@@ -785,6 +785,39 @@ async function importIndividualContributionsBatch(
           if (parsedMonth >= 1 && parsedMonth <= 12 && parsedYear >= 2020) {
             competenceMonth = parsedMonth;
             competenceYear = parsedYear;
+          }
+        }
+      } else if (row.description) {
+        // Try to extract competence from description (e.g., "MENSALIDADE INDIVIDUAL REFERENTE JANEIRO DE 2025")
+        const descStr = String(row.description).toUpperCase();
+        
+        // Month names mapping
+        const monthNames: Record<string, number> = {
+          'JANEIRO': 1, 'FEVEREIRO': 2, 'MARCO': 3, 'MARÇO': 3, 'ABRIL': 4,
+          'MAIO': 5, 'JUNHO': 6, 'JULHO': 7, 'AGOSTO': 8,
+          'SETEMBRO': 9, 'OUTUBRO': 10, 'NOVEMBRO': 11, 'DEZEMBRO': 12
+        };
+        
+        // Try pattern: "REFERENTE JANEIRO DE 2025" or "REFERENTE: JULHO/2025"
+        const monthYearMatch = descStr.match(/(?:REFERENTE|REF\.?|COMPETENCIA|COMPETÊNCIA)[\s:]*([A-Z]+)[\s\/DE]*(\d{4})/i);
+        if (monthYearMatch) {
+          const monthName = monthYearMatch[1].trim();
+          const year = parseInt(monthYearMatch[2]);
+          const month = monthNames[monthName];
+          if (month && year >= 2020) {
+            competenceMonth = month;
+            competenceYear = year;
+          }
+        } else {
+          // Try pattern: "MM/YYYY" or "YYYY-MM"
+          const numericMatch = descStr.match(/(\d{1,2})[\/\-](\d{4})/);
+          if (numericMatch) {
+            const parsedMonth = parseInt(numericMatch[1]);
+            const parsedYear = parseInt(numericMatch[2]);
+            if (parsedMonth >= 1 && parsedMonth <= 12 && parsedYear >= 2020) {
+              competenceMonth = parsedMonth;
+              competenceYear = parsedYear;
+            }
           }
         }
       }
@@ -801,9 +834,16 @@ async function importIndividualContributionsBatch(
 
       competenceKeysToInsert.add(activeCompetenceKey);
 
-      // Determine final status
+      // Determine final status - check row.status from Lytex first
       let finalStatus: string = baseStatus;
-      if (baseStatus === 'pending') {
+      const rowStatus = String(row.status || '').toLowerCase().trim();
+      if (rowStatus.includes('pago') || rowStatus === 'paid') {
+        finalStatus = 'paid';
+      } else if (rowStatus.includes('aguardando') || rowStatus === 'pending') {
+        finalStatus = 'pending';
+      } else if (rowStatus.includes('cancelad') || rowStatus === 'cancelled') {
+        finalStatus = 'cancelled';
+      } else if (baseStatus === 'pending') {
         finalStatus = dueDate < todayStr ? 'overdue' : 'pending';
       }
 
@@ -843,6 +883,9 @@ async function importIndividualContributionsBatch(
         console.log(`[importIndividualContributionsBatch] Created employer for individual: ${patient.name} (${formatCpf(cpf)})`);
       }
 
+      // Extract lytex_invoice_id if present
+      const lytexInvoiceId = row.lytex_invoice_id ? String(row.lytex_invoice_id).trim() : null;
+
       toInsert.push({
         clinic_id: clinicId,
         employer_id: employerId,
@@ -857,6 +900,7 @@ async function importIndividualContributionsBatch(
         paid_value: finalStatus === 'paid' ? value : null,
         notes: row.notes || row.description ? String(row.notes || row.description).trim() : null,
         origin: 'import',
+        lytex_invoice_id: lytexInvoiceId,
       });
     } catch (err) {
       const error = err as Error;

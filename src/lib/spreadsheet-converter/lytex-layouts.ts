@@ -24,28 +24,40 @@ const CNPJ_COLUMNS = [
   'nr_cnpj', 'NR_CNPJ', 'num_documento', 'NUM_DOCUMENTO'
 ];
 
+// Specific CPF columns for individual (pessoa física) reports
+const CPF_COLUMNS = [
+  'cpf', 'CPF', 'pagador cpf/cnpj', 'Pagador CPF/CNPJ', 'PAGADOR CPF/CNPJ',
+  'cpf_cnpj', 'CPF/CNPJ', 'documento', 'DOCUMENTO', 'doc', 'DOC',
+  'cpf pagador', 'CPF Pagador', 'CPF_PAGADOR'
+];
+
 const NAME_COLUMNS = [
   'razao_social', 'RAZAO_SOCIAL', 'razão social', 'Razão Social', 'RAZÃO SOCIAL',
   'nome', 'NOME', 'name', 'NAME', 'empresa', 'EMPRESA', 'cliente', 'CLIENTE',
-  'nm_empresa', 'NM_EMPRESA', 'razao', 'RAZAO', 'nome_empresa', 'NOME_EMPRESA'
+  'nm_empresa', 'NM_EMPRESA', 'razao', 'RAZAO', 'nome_empresa', 'NOME_EMPRESA',
+  'pagador', 'Pagador', 'PAGADOR', 'nome_pagador', 'Nome Pagador', 'NOME_PAGADOR'
 ];
 
 const VALUE_COLUMNS = [
   'valor', 'VALOR', 'value', 'VALUE', 'montante', 'MONTANTE', 'total', 'TOTAL',
   'vl_total', 'VL_TOTAL', 'valor_total', 'VALOR_TOTAL', 'vl_cobranca', 'VL_COBRANCA',
-  'valor_fatura', 'VALOR_FATURA', 'vlr', 'VLR', 'amount', 'AMOUNT'
+  'valor_fatura', 'VALOR_FATURA', 'vlr', 'VLR', 'amount', 'AMOUNT',
+  'valor original', 'Valor Original', 'VALOR ORIGINAL', 'valor_original', 'VALOR_ORIGINAL',
+  'valor pago', 'Valor Pago', 'VALOR PAGO', 'valor_pago', 'VALOR_PAGO'
 ];
 
 const DUE_DATE_COLUMNS = [
   'vencimento', 'VENCIMENTO', 'dt_vencimento', 'DT_VENCIMENTO', 'data_vencimento',
   'DATA_VENCIMENTO', 'due_date', 'DUE_DATE', 'prazo', 'PRAZO', 'data_vcto', 'DATA_VCTO',
-  'vcto', 'VCTO', 'vecto', 'VECTO'
+  'vcto', 'VCTO', 'vecto', 'VECTO',
+  'data de vencimento', 'Data de vencimento', 'DATA DE VENCIMENTO'
 ];
 
 const PAYMENT_DATE_COLUMNS = [
   'data_pagamento', 'DATA_PAGAMENTO', 'dt_pagamento', 'DT_PAGAMENTO', 'pagamento',
   'PAGAMENTO', 'payment_date', 'PAYMENT_DATE', 'dt_pgto', 'DT_PGTO', 'data_pgto',
-  'DATA_PGTO', 'pago_em', 'PAGO_EM'
+  'DATA_PGTO', 'pago_em', 'PAGO_EM',
+  'data de pagamento', 'Data de pagamento', 'DATA DE PAGAMENTO'
 ];
 
 const STATUS_COLUMNS = [
@@ -61,18 +73,21 @@ const COMPETENCE_COLUMNS = [
 
 const EMAIL_COLUMNS = [
   'email', 'EMAIL', 'e-mail', 'E-MAIL', 'e_mail', 'E_MAIL', 'correio', 'CORREIO',
-  'mail', 'MAIL', 'ds_email', 'DS_EMAIL'
+  'mail', 'MAIL', 'ds_email', 'DS_EMAIL',
+  'e-mail pagador', 'E-mail Pagador', 'E-MAIL PAGADOR'
 ];
 
 const PHONE_COLUMNS = [
   'telefone', 'TELEFONE', 'phone', 'PHONE', 'tel', 'TEL', 'fone', 'FONE',
   'celular', 'CELULAR', 'whatsapp', 'WHATSAPP', 'contato', 'CONTATO',
-  'nr_telefone', 'NR_TELEFONE'
+  'nr_telefone', 'NR_TELEFONE',
+  'telefone pagador', 'Telefone Pagador', 'TELEFONE PAGADOR'
 ];
 
 const ADDRESS_COLUMNS = [
   'endereco', 'ENDERECO', 'endereço', 'ENDEREÇO', 'address', 'ADDRESS',
-  'logradouro', 'LOGRADOURO', 'rua', 'RUA', 'ds_endereco', 'DS_ENDERECO'
+  'logradouro', 'LOGRADOURO', 'rua', 'RUA', 'ds_endereco', 'DS_ENDERECO',
+  'endereço pagador', 'Endereço Pagador', 'ENDEREÇO PAGADOR'
 ];
 
 const CITY_COLUMNS = [
@@ -94,6 +109,13 @@ const DESCRIPTION_COLUMNS = [
   'comentario', 'COMENTARIO', 'comentário', 'COMENTÁRIO', 'comentarios', 'COMENTARIOS',
   'informacao', 'INFORMACAO', 'informação', 'INFORMAÇÃO', 'info', 'INFO',
   'tipo', 'TIPO', // Muitas planilhas usam "Tipo" para descrição
+];
+
+// Invoice code columns specific to Lytex
+const INVOICE_CODE_COLUMNS = [
+  'cód. fatura', 'Cód. Fatura', 'CÓD. FATURA', 'cod_fatura', 'COD_FATURA',
+  'codigo_fatura', 'CODIGO_FATURA', 'invoice_id', 'INVOICE_ID', 
+  'cod fatura', 'Cod Fatura', 'COD FATURA', 'id_fatura', 'ID_FATURA'
 ];
 
 const TYPE_COLUMNS = [
@@ -179,13 +201,35 @@ export const LYTEX_LAYOUTS: Record<string, LytexLayout> = {
     detectionColumns: ['cpf', 'valor', 'data_pagamento'],
     minMatchScore: 2,
     fields: [
-      { sourceColumns: ['cpf', 'CPF', 'cpf_cnpj', 'CPF/CNPJ', 'documento', 'DOCUMENTO'], targetField: 'cpf', transform: 'cpfcnpj' },
+      { sourceColumns: CPF_COLUMNS, targetField: 'cpf', transform: 'cpfcnpj' },
       { sourceColumns: NAME_COLUMNS, targetField: 'name', transform: 'text' },
       { sourceColumns: VALUE_COLUMNS, targetField: 'value', transform: 'currency' },
       { sourceColumns: PAYMENT_DATE_COLUMNS, targetField: 'payment_date', transform: 'date' },
       { sourceColumns: DUE_DATE_COLUMNS, targetField: 'due_date', transform: 'date' },
       { sourceColumns: COMPETENCE_COLUMNS, targetField: 'competence', transform: 'competence' },
+      { sourceColumns: DESCRIPTION_COLUMNS, targetField: 'description', transform: 'text' },
       { sourceColumns: TYPE_COLUMNS, targetField: 'contribution_type', transform: 'text' },
+    ],
+    outputType: 'contributions',
+  },
+  
+  // NEW: Full Lytex individual report with all columns
+  lytex_individual_full: {
+    name: 'Relatório Lytex Pessoa Física',
+    description: 'Relatório completo da Lytex com CPF, status, valores e datas',
+    detectionColumns: ['pagador cpf/cnpj', 'valor original', 'data de pagamento', 'status', 'cód. fatura'],
+    minMatchScore: 3,
+    fields: [
+      { sourceColumns: CPF_COLUMNS, targetField: 'cpf', transform: 'cpfcnpj' },
+      { sourceColumns: NAME_COLUMNS, targetField: 'name', transform: 'text' },
+      { sourceColumns: VALUE_COLUMNS, targetField: 'value', transform: 'currency' },
+      { sourceColumns: PAYMENT_DATE_COLUMNS, targetField: 'payment_date', transform: 'date' },
+      { sourceColumns: DUE_DATE_COLUMNS, targetField: 'due_date', transform: 'date' },
+      { sourceColumns: STATUS_COLUMNS, targetField: 'status', transform: 'status' },
+      { sourceColumns: DESCRIPTION_COLUMNS, targetField: 'description', transform: 'text' },
+      { sourceColumns: INVOICE_CODE_COLUMNS, targetField: 'lytex_invoice_id', transform: 'text' },
+      { sourceColumns: EMAIL_COLUMNS, targetField: 'email', transform: 'text' },
+      { sourceColumns: PHONE_COLUMNS, targetField: 'phone', transform: 'phone' },
     ],
     outputType: 'contributions',
   },
@@ -279,7 +323,7 @@ export function getTargetFieldLabel(targetField: string): string {
   const labels: Record<string, string> = {
     cnpj: 'CNPJ',
     cpf: 'CPF',
-    name: 'Razão Social',
+    name: 'Nome/Razão Social',
     value: 'Valor',
     due_date: 'Vencimento',
     payment_date: 'Data Pagamento',
@@ -295,6 +339,7 @@ export function getTargetFieldLabel(targetField: string): string {
     date: 'Data',
     type: 'Tipo',
     days_overdue: 'Dias em Atraso',
+    lytex_invoice_id: 'Cód. Fatura Lytex',
   };
   
   return labels[targetField] || targetField;
@@ -304,8 +349,8 @@ export function getTargetFieldLabel(targetField: string): string {
  * Get the conversion type to use for the import based on the layout
  */
 export function getConversionType(layout: LytexLayout, layoutKey: string): string {
-  // Check if it's an individual (CPF) layout
-  if (layoutKey === 'payments_individual') {
+  // Check if it's an individual (CPF) layout - both simple and full Lytex report
+  if (layoutKey === 'payments_individual' || layoutKey === 'lytex_individual_full') {
     return 'contributions_individual_paid';
   }
   
