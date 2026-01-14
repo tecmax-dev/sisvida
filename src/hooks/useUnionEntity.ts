@@ -22,6 +22,7 @@ export interface UnionEntity {
   data_ativacao: string | null;
   ultimo_acesso: string | null;
   clinic_id: string | null;
+  allow_duplicate_competence: boolean;
 }
 
 export function useUnionEntity() {
