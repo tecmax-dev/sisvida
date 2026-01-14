@@ -11978,6 +11978,19 @@ export type Database = {
         }
         Returns: string
       }
+      request_dependent_inclusion: {
+        Args: {
+          p_birth_date: string
+          p_clinic_id: string
+          p_cpf: string
+          p_cpf_photo_url: string
+          p_name: string
+          p_patient_id: string
+          p_phone: string
+          p_relationship: string
+        }
+        Returns: string
+      }
       reset_patient_password_with_token: {
         Args: { p_email: string; p_new_password: string; p_token: string }
         Returns: {
