@@ -2,7 +2,9 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
+const resendApiKey = Deno.env.get("RESEND_API_KEY") ?? "";
+const resendFrom = Deno.env.get("RESEND_FROM") || "SECMI <onboarding@resend.dev>";
+const resend = new Resend(resendApiKey);
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,13 +22,21 @@ serve(async (req: Request): Promise<Response> => {
   }
 
   try {
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY not configured");
+      return new Response(JSON.stringify({ error: "Serviço de email não configurado" }), {
+        status: 500,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
+    }
+
     const { cpf, email }: FirstAccessRequest = await req.json();
 
     if (!cpf || !email) {
-      return new Response(
-        JSON.stringify({ error: "CPF e email são obrigatórios" }),
-        { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders } }
-      );
+      return new Response(JSON.stringify({ error: "CPF e email são obrigatórios" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json", ...corsHeaders },
+      });
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -79,7 +89,7 @@ serve(async (req: Request): Promise<Response> => {
     const firstName = patient.patient_name.split(' ')[0];
     
     const emailResponse = await resend.emails.send({
-      from: "SECMI <onboarding@resend.dev>",
+      from: resendFrom,
       to: [email],
       subject: "Código de Primeiro Acesso - App SECMI",
       html: `
@@ -104,7 +114,7 @@ serve(async (req: Request): Promise<Response> => {
             <tr>
               <td style="padding: 40px 30px;">
                 <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 22px;">
-                  Olá, ${firstName}! 👋
+                  Olá, ${firstName}!
                 </h2>
                 <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin: 0 0 30px 0;">
                   Você solicitou o cadastro de senha para primeiro acesso ao aplicativo SECMI.
@@ -141,12 +151,23 @@ serve(async (req: Request): Promise<Response> => {
       `,
     });
 
+    if (emailResponse?.error) {
+      console.error("Resend error:", emailResponse);
+      return new Response(
+        JSON.stringify({
+          error:
+            "Não foi possível enviar o email agora. Se persistir, contate o suporte (configuração de domínio de email pendente).",
+        }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders } }
+      );
+    }
+
     console.log("Email sent:", emailResponse);
 
-    return new Response(
-      JSON.stringify({ success: true, message: "Código enviado para seu email" }),
-      { status: 200, headers: { "Content-Type": "application/json", ...corsHeaders } }
-    );
+    return new Response(JSON.stringify({ success: true, message: "Código enviado para seu email" }), {
+      status: 200,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
   } catch (error: any) {
     console.error("Error in send-first-access-email:", error);
     return new Response(
