@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { sendWhatsAppMessage } from "@/lib/whatsapp";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Contribution {
   id: string;
@@ -54,11 +55,13 @@ interface SendBoletoWhatsAppDialogProps {
 }
 
 const DELAY_OPTIONS = [
-  { value: 5, label: "5 segundos" },
-  { value: 10, label: "10 segundos (recomendado)" },
+  { value: 5, label: "5 segundos (risco)" },
+  { value: 10, label: "10 segundos" },
   { value: 15, label: "15 segundos" },
-  { value: 20, label: "20 segundos" },
+  { value: 20, label: "20 segundos (recomendado)" },
   { value: 30, label: "30 segundos" },
+  { value: 45, label: "45 segundos" },
+  { value: 60, label: "60 segundos (conservador)" },
 ];
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -75,6 +78,33 @@ export function SendBoletoWhatsAppDialog({
   const [sending, setSending] = useState(false);
   const [sendProgress, setSendProgress] = useState({ current: 0, total: 0 });
   const [delaySeconds, setDelaySeconds] = useState(10);
+  const [loadingConfig, setLoadingConfig] = useState(false);
+
+  // Load clinic's WhatsApp delay configuration
+  useEffect(() => {
+    if (open && clinicId) {
+      loadClinicConfig();
+    }
+  }, [open, clinicId]);
+
+  const loadClinicConfig = async () => {
+    try {
+      setLoadingConfig(true);
+      const { data, error } = await supabase
+        .from("clinics")
+        .select("whatsapp_message_delay_seconds")
+        .eq("id", clinicId)
+        .single();
+
+      if (!error && data?.whatsapp_message_delay_seconds) {
+        setDelaySeconds(data.whatsapp_message_delay_seconds);
+      }
+    } catch (error) {
+      console.error("Error loading clinic config:", error);
+    } finally {
+      setLoadingConfig(false);
+    }
+  };
 
   // Filter contributions that have boleto generated (ID) and are not paid/cancelled
   const eligibleContributions = contributions.filter(

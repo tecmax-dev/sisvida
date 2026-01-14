@@ -20,6 +20,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { TwilioConfigPanel } from "@/components/settings/TwilioConfigPanel";
 import { WhatsAppProviderSelector } from "@/components/settings/WhatsAppProviderSelector";
+import { WhatsAppDelayConfig } from "@/components/settings/WhatsAppDelayConfig";
 import { ApiKeysPanel } from "@/components/settings/ApiKeysPanel";
 import { WebhooksPanel } from "@/components/settings/WebhooksPanel";
 import { MessageHistoryPanel } from "@/components/settings/MessageHistoryPanel";
@@ -1127,6 +1128,16 @@ export default function SettingsPage() {
       feature: "whatsapp_twilio",
       isComponent: true,
       component: currentClinic ? <TwilioConfigPanel clinicId={currentClinic.id} /> : null,
+    },
+    {
+      id: "whatsapp-delay",
+      title: "Intervalo de Disparo",
+      description: "Configure o intervalo entre mensagens",
+      icon: <Clock className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: "whatsapp_evolution_api",
+      isComponent: true,
+      component: currentClinic ? <WhatsAppDelayConfig clinicId={currentClinic.id} /> : null,
     },
     {
       id: "message-history",

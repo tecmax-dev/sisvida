@@ -1888,6 +1888,7 @@ export type Database = {
           updated_at: string
           use_ai_booking: boolean | null
           whatsapp_header_image_url: string | null
+          whatsapp_message_delay_seconds: number | null
           whatsapp_provider: string | null
         }
         Insert: {
@@ -1925,6 +1926,7 @@ export type Database = {
           updated_at?: string
           use_ai_booking?: boolean | null
           whatsapp_header_image_url?: string | null
+          whatsapp_message_delay_seconds?: number | null
           whatsapp_provider?: string | null
         }
         Update: {
@@ -1962,6 +1964,7 @@ export type Database = {
           updated_at?: string
           use_ai_booking?: boolean | null
           whatsapp_header_image_url?: string | null
+          whatsapp_message_delay_seconds?: number | null
           whatsapp_provider?: string | null
         }
         Relationships: []
