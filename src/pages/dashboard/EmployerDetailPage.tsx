@@ -84,6 +84,7 @@ import { SendBoletoEmailDialog } from "@/components/contributions/SendBoletoEmai
 import { SendOverdueWhatsAppDialog } from "@/components/contributions/SendOverdueWhatsAppDialog";
 import EmployerContributionsTab from "@/components/employers/EmployerContributionsTab";
 import { AccountingOfficeSelector } from "@/components/employers/AccountingOfficeSelector";
+import CreateAwaitingValueDialog from "@/components/contributions/CreateAwaitingValueDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
@@ -1217,91 +1218,22 @@ export default function EmployerDetailPage() {
         </TabsContent>
       </Tabs>
 
-      {/* Create Contribution Dialog */}
-      <Dialog open={createContribDialogOpen} onOpenChange={setCreateContribDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Nova Contribuição</DialogTitle>
-            <DialogDescription>
-              Cadastrar contribuição para {employer.name}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label>Tipo de Contribuição *</Label>
-              <Select value={contribTypeId} onValueChange={handleTypeChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {contributionTypes.map((type) => (
-                    <SelectItem key={type.id} value={type.id}>{type.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Mês Competência *</Label>
-                <Select value={String(contribMonth)} onValueChange={(v) => setContribMonth(parseInt(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Array.from({ length: 12 }, (_, i) => (
-                      <SelectItem key={i} value={String(i + 1)}>{String(i + 1).padStart(2, "0")}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Ano *</Label>
-                <Select value={String(contribYear)} onValueChange={(v) => setContribYear(parseInt(v))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {getStaticYearRange().map(year => (
-                      <SelectItem key={year} value={String(year)}>{year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Valor (R$) *</Label>
-                <Input
-                  placeholder="0,00"
-                  value={contribValue}
-                  onChange={(e) => setContribValue(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Vencimento *</Label>
-                <Input
-                  type="date"
-                  value={contribDueDate}
-                  onChange={(e) => setContribDueDate(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateContribDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreateContribution} disabled={saving}>
-              {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Create Contribution Dialog - Awaiting Value with Public Link */}
+      <CreateAwaitingValueDialog
+        open={createContribDialogOpen}
+        onOpenChange={setCreateContribDialogOpen}
+        employer={{
+          id: employer.id,
+          name: employer.name,
+          cnpj: employer.cnpj,
+          phone: employer.phone,
+          email: employer.email,
+        }}
+        contributionTypes={contributionTypes}
+        clinicId={currentClinic?.id || ""}
+        userId={session?.user?.id || ""}
+        onSuccess={() => fetchData()}
+      />
 
       {/* View Contribution Dialog */}
       <Dialog open={viewContribDialogOpen} onOpenChange={setViewContribDialogOpen}>

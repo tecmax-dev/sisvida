@@ -167,7 +167,15 @@ serve(async (req) => {
     }
 
     // Verificar permissões do portal
-    if (portal_type === "employer" && portal_id) {
+    if (portal_type === "public_token" && portal_id) {
+      // Acesso via token público - validar se token corresponde
+      if (contribution.public_access_token !== portal_id) {
+        return new Response(
+          JSON.stringify({ error: "Token de acesso inválido" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    } else if (portal_type === "employer" && portal_id) {
       if (contribution.employer_id !== portal_id) {
         return new Response(
           JSON.stringify({ error: "Você não tem permissão para acessar esta contribuição" }),

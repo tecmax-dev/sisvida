@@ -60,6 +60,7 @@ const EmployerPortal = lazy(() => import("./pages/EmployerPortal"));
 const AccountingOfficePortal = lazy(() => import("./pages/AccountingOfficePortal"));
 const HomologacaoPublicBooking = lazy(() => import("./pages/HomologacaoPublicBooking"));
 const HomologacaoProtocolValidation = lazy(() => import("./pages/HomologacaoProtocolValidation"));
+const PublicContributionValue = lazy(() => import("./pages/PublicContributionValue"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -338,6 +339,8 @@ const App = () => (
                 <Route path="/panel/:token" element={<PublicPanel />} />
                 <Route path="/totem/:token" element={<PublicTotem />} />
                 <Route path="/card/:token" element={<CardValidation />} />
+                {/* Public Contribution Value */}
+                <Route path="/contribuicao/:token" element={<PublicContributionValue />} />
                 {/* Homologação Public Routes */}
                 <Route path="/agendamento/profissional/:slug" element={<HomologacaoPublicBooking />} />
                 <Route path="/protocolo/:token" element={<HomologacaoProtocolValidation />} />
