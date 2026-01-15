@@ -15,11 +15,18 @@ interface PatientData {
   photo_url: string | null;
 }
 
+interface ClinicData {
+  name: string;
+  logo_url: string | null;
+  entity_nomenclature: string | null;
+}
+
 export function MobileLayout({ children }: MobileLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [patient, setPatient] = useState<PatientData | null>(null);
+  const [clinic, setClinic] = useState<ClinicData | null>(null);
 
   // Get session data for push notifications
   const patientId = sessionStorage.getItem('mobile_patient_id');
@@ -30,6 +37,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
 
   useEffect(() => {
     loadPatientData();
+    loadClinicData();
   }, []);
 
   const loadPatientData = async () => {
@@ -44,6 +52,21 @@ export function MobileLayout({ children }: MobileLayoutProps) {
 
     if (data) {
       setPatient(data);
+    }
+  };
+
+  const loadClinicData = async () => {
+    const clinicId = sessionStorage.getItem('mobile_clinic_id');
+    if (!clinicId) return;
+
+    const { data } = await supabase
+      .from("clinics")
+      .select("name, logo_url, entity_nomenclature")
+      .eq("id", clinicId)
+      .single();
+
+    if (data) {
+      setClinic(data);
     }
   };
 
@@ -72,20 +95,28 @@ export function MobileLayout({ children }: MobileLayoutProps) {
         </button>
         
         <div className="flex items-center gap-3">
-          <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/30">
-            <img 
-              src="/logo-sindicato.png" 
-              alt="SECMI" 
-              className="w-8 h-8 object-contain" 
-              onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }} 
-            />
+          <div className="w-11 h-11 bg-white rounded-xl flex items-center justify-center shadow-lg shadow-emerald-600/30 overflow-hidden">
+            {clinic?.logo_url ? (
+              <img 
+                src={clinic.logo_url} 
+                alt={clinic.name} 
+                className="w-full h-full object-cover" 
+                onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }} 
+              />
+            ) : (
+              <img 
+                src="/placeholder.svg" 
+                alt="Logo" 
+                className="w-8 h-8 object-contain opacity-50" 
+              />
+            )}
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="font-bold text-lg leading-tight tracking-tight">SECMI</h1>
+              <h1 className="font-bold text-lg leading-tight tracking-tight">{clinic?.name || "SECMI"}</h1>
               <Sparkles className="h-3.5 w-3.5 text-amber-300" />
             </div>
-            <p className="text-[10px] font-medium opacity-90 tracking-wide">SINDICATO DOS COMERCIÁRIOS</p>
+            <p className="text-[10px] font-medium opacity-90 tracking-wide">{clinic?.entity_nomenclature || "Sindicato"}</p>
           </div>
         </div>
         
