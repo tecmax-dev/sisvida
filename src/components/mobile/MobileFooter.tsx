@@ -1,6 +1,32 @@
 import { Instagram, Facebook, Youtube, Globe, MessageCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+
+interface ClinicData {
+  name: string;
+  logo_url: string | null;
+  entity_nomenclature: string | null;
+}
 
 export function MobileFooter() {
+  const [clinic, setClinic] = useState<ClinicData | null>(null);
+
+  useEffect(() => {
+    const loadClinic = async () => {
+      const clinicId = sessionStorage.getItem('mobile_clinic_id');
+      if (!clinicId) return;
+
+      const { data } = await supabase
+        .from("clinics")
+        .select("name, logo_url, entity_nomenclature")
+        .eq("id", clinicId)
+        .single();
+
+      if (data) setClinic(data);
+    };
+    loadClinic();
+  }, []);
+
   const socialLinks = [
     { icon: Instagram, href: "#", gradient: "from-pink-500 via-rose-500 to-orange-500" },
     { icon: Facebook, href: "#", gradient: "from-blue-600 to-blue-700" },
@@ -13,18 +39,26 @@ export function MobileFooter() {
       <div className="px-6 text-center">
         {/* Logo area */}
         <div className="flex justify-center mb-4">
-          <div className="w-14 h-14 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/10">
-            <img 
-              src="/logo-sindicato.png" 
-              alt="SECMI" 
-              className="w-10 h-10 object-contain opacity-90" 
-              onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }} 
-            />
+          <div className="w-14 h-14 bg-white/10 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/10 overflow-hidden">
+            {clinic?.logo_url ? (
+              <img 
+                src={clinic.logo_url} 
+                alt={clinic.name} 
+                className="w-full h-full object-cover" 
+                onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }} 
+              />
+            ) : (
+              <img 
+                src="/placeholder.svg" 
+                alt="Logo" 
+                className="w-10 h-10 object-contain opacity-50" 
+              />
+            )}
           </div>
         </div>
         
-        <p className="text-sm font-medium text-white/80 mb-1">SECMI</p>
-        <p className="text-xs text-white/50 mb-5">Sindicato dos Comerciários de Itabuna</p>
+        <p className="text-sm font-medium text-white/80 mb-1">{clinic?.name || "SECMI"}</p>
+        <p className="text-xs text-white/50 mb-5">{clinic?.entity_nomenclature || "Sindicato"}</p>
         
         {/* Social links */}
         <div className="flex justify-center gap-3 mb-6">
