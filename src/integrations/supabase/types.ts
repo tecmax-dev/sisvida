@@ -10342,13 +10342,24 @@ export type Database = {
           created_at: string | null
           desconto: string | null
           descricao: string | null
+          detalhes_extras: string | null
+          email: string | null
           endereco: string | null
+          facebook: string | null
+          google_maps_url: string | null
+          horario_funcionamento: string | null
           id: string
+          image_url: string | null
+          instagram: string | null
           is_active: boolean | null
+          logo_url: string | null
           nome: string
           order_index: number | null
+          street_view_url: string | null
           telefone: string | null
           updated_at: string | null
+          website: string | null
+          whatsapp: string | null
         }
         Insert: {
           categoria: string
@@ -10357,13 +10368,24 @@ export type Database = {
           created_at?: string | null
           desconto?: string | null
           descricao?: string | null
+          detalhes_extras?: string | null
+          email?: string | null
           endereco?: string | null
+          facebook?: string | null
+          google_maps_url?: string | null
+          horario_funcionamento?: string | null
           id?: string
+          image_url?: string | null
+          instagram?: string | null
           is_active?: boolean | null
+          logo_url?: string | null
           nome: string
           order_index?: number | null
+          street_view_url?: string | null
           telefone?: string | null
           updated_at?: string | null
+          website?: string | null
+          whatsapp?: string | null
         }
         Update: {
           categoria?: string
@@ -10372,13 +10394,24 @@ export type Database = {
           created_at?: string | null
           desconto?: string | null
           descricao?: string | null
+          detalhes_extras?: string | null
+          email?: string | null
           endereco?: string | null
+          facebook?: string | null
+          google_maps_url?: string | null
+          horario_funcionamento?: string | null
           id?: string
+          image_url?: string | null
+          instagram?: string | null
           is_active?: boolean | null
+          logo_url?: string | null
           nome?: string
           order_index?: number | null
+          street_view_url?: string | null
           telefone?: string | null
           updated_at?: string | null
+          website?: string | null
+          whatsapp?: string | null
         }
         Relationships: [
           {
