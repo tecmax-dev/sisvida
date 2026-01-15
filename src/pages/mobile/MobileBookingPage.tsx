@@ -120,13 +120,13 @@ export default function MobileBookingPage() {
 
       setProfessionals(professionalsData || []);
 
-      // Load dependents
-      const { data: dependentsData } = await supabase
-        .from("patient_dependents")
-        .select("id, name")
-        .eq("patient_id", patientId)
-        .eq("is_active", true)
-        .order("name");
+      // Load dependents using RPC to bypass RLS (mobile uses CPF auth, not Supabase Auth)
+      const { data: dependentsData, error: dependentsError } = await supabase
+        .rpc("get_patient_dependents", { p_patient_id: patientId });
+
+      if (dependentsError) {
+        console.error("Error fetching dependents:", dependentsError);
+      }
 
       setDependents(dependentsData || []);
     } catch (err) {
