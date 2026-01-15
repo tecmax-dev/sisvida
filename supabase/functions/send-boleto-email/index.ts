@@ -1,8 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
 
-const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -187,6 +185,31 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
+    // Initialize Resend INSIDE handler to ensure fresh secret reading
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    const resendFrom = Deno.env.get("RESEND_FROM");
+    
+    console.log("send-boleto-email: RESEND_API_KEY present:", !!resendApiKey);
+    console.log("send-boleto-email: RESEND_FROM value:", resendFrom);
+    
+    if (!resendApiKey) {
+      console.error("send-boleto-email: RESEND_API_KEY not configured");
+      return new Response(
+        JSON.stringify({ error: "Configuração de e-mail não encontrada (API_KEY)" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (!resendFrom) {
+      console.error("send-boleto-email: RESEND_FROM not configured");
+      return new Response(
+        JSON.stringify({ error: "Configuração de e-mail não encontrada (FROM)" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const resend = new Resend(resendApiKey);
+    
     const data: SendBoletoEmailRequest = await req.json();
     console.log("send-boleto-email: Processing request for", data.recipientEmail, "with", data.boletos.length, "boletos");
 
@@ -222,23 +245,32 @@ const handler = async (req: Request): Promise<Response> => {
     const toEmails = [data.recipientEmail];
     const ccEmails = data.ccEmail ? [data.ccEmail] : undefined;
 
-    console.log("send-boleto-email: Sending email to", toEmails, "cc:", ccEmails);
+    console.log("send-boleto-email: Sending email from:", resendFrom, "to:", toEmails, "cc:", ccEmails);
 
-    // Use RESEND_FROM secret or fallback
-    const fromAddress = Deno.env.get("RESEND_FROM") || `${data.clinicName} <onboarding@resend.dev>`;
-    
     const emailResponse = await resend.emails.send({
-      from: fromAddress,
+      from: resendFrom,
       to: toEmails,
       cc: ccEmails,
       subject,
       html,
     });
 
-    console.log("send-boleto-email: Email sent successfully:", emailResponse);
+    // Check if Resend returned an error
+    if (emailResponse.error) {
+      console.error("send-boleto-email: Resend error:", emailResponse.error);
+      return new Response(
+        JSON.stringify({ 
+          error: emailResponse.error.message || "Erro ao enviar email",
+          details: emailResponse.error
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log("send-boleto-email: Email sent successfully! ID:", emailResponse.data?.id);
 
     return new Response(
-      JSON.stringify({ success: true, data: emailResponse }),
+      JSON.stringify({ success: true, data: emailResponse.data }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
