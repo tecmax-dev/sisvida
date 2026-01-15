@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Building2 } from "lucide-react";
 
 // Função para formatar CPF
 const formatCPF = (value: string) => {
@@ -46,13 +46,33 @@ const isValidCPF = (cpf: string) => {
   return true;
 };
 
+// Target clinic for this mobile app
+const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+
 export default function MobileAuthPage() {
   const [cpf, setCpf] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [clinicData, setClinicData] = useState<{ name: string; logo_url: string | null } | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Load clinic data for branding
+  useEffect(() => {
+    const loadClinicData = async () => {
+      const { data } = await supabase
+        .from("clinics")
+        .select("name, logo_url")
+        .eq("id", TARGET_CLINIC_ID)
+        .single();
+      
+      if (data) {
+        setClinicData(data);
+      }
+    };
+    loadClinicData();
+  }, []);
 
   const handleCpfChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCPF(e.target.value);
@@ -116,7 +136,6 @@ export default function MobileAuthPage() {
 
       // In some environments the same CPF may exist in multiple clinics (historical imports).
       // This mobile app must operate on the intended clinic dataset.
-      const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d"; // Sindicato Comerciários
 
       const patient =
         patientData.find((p: any) => p.clinic_id === TARGET_CLINIC_ID) ?? patientData[0];
@@ -160,19 +179,24 @@ export default function MobileAuthPage() {
       {/* Header */}
       <div className="bg-emerald-600 text-white py-8 px-4 text-center">
         <div className="flex justify-center mb-4">
-          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
-            <img 
-              src="/logo-sindicato.png" 
-              alt="SECMI" 
-              className="w-16 h-16 object-contain"
-              onError={(e) => {
-                e.currentTarget.src = "/placeholder.svg";
-              }}
-            />
+          <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center overflow-hidden">
+            {clinicData?.logo_url ? (
+              <img 
+                src={clinicData.logo_url} 
+                alt={clinicData.name || "Logo"} 
+                className="w-16 h-16 object-contain"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
+                }}
+              />
+            ) : (
+              <Building2 className="w-10 h-10 text-emerald-600" />
+            )}
+            <Building2 className="fallback-icon hidden w-10 h-10 text-emerald-600" />
           </div>
         </div>
-        <h1 className="text-2xl font-bold">SECMI</h1>
-        <p className="text-sm opacity-90">SINDICATO DOS COMERCIÁRIOS</p>
+        <h1 className="text-2xl font-bold">{clinicData?.name || "Carregando..."}</h1>
       </div>
 
       {/* Login Card */}
