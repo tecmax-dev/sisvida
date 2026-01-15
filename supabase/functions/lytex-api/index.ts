@@ -2513,7 +2513,11 @@ Deno.serve(async (req) => {
 
         try {
           // Carregar mapa de contribuições pendentes da clínica por lytex_invoice_id
-          const { data: pendingContribs, error: pendingErr } = await supabase
+          // Filtrar por data se especificado (para evitar processar todo o histórico)
+          const daysBack = params.daysBack ?? null; // null = sem filtro (comportamento atual)
+          const onlyPending = params.onlyPending ?? false; // se true, busca apenas contribuições não pagas
+
+          let query = supabase
             .from("employer_contributions")
             .select(`
               id,
@@ -2523,6 +2527,7 @@ Deno.serve(async (req) => {
               paid_at,
               paid_value,
               value,
+              due_date,
               competence_month,
               competence_year,
               employer:employers(name, cnpj)
@@ -2530,9 +2535,28 @@ Deno.serve(async (req) => {
             .eq("clinic_id", params.clinicId)
             .not("lytex_invoice_id", "is", null);
 
+          // Filtrar apenas contribuições não pagas se solicitado
+          if (onlyPending) {
+            query = query.in("status", ["pending", "overdue", "processing"]);
+          }
+
+          // Filtrar por vencimento nos últimos N dias (para reduzir volume)
+          if (daysBack && typeof daysBack === "number" && daysBack > 0) {
+            const cutoffDate = new Date();
+            cutoffDate.setDate(cutoffDate.getDate() - daysBack);
+            const cutoffStr = cutoffDate.toISOString().split("T")[0];
+            query = query.gte("due_date", cutoffStr);
+            console.log(`[Lytex] Filtrando contribuições com vencimento >= ${cutoffStr} (${daysBack} dias)`);
+          }
+
+          const { data: pendingContribs, error: pendingErr } = await query;
+
           if (pendingErr) {
             throw new Error(`Erro ao carregar contribuições: ${pendingErr.message}`);
           }
+
+          console.log(`[Lytex] Encontradas ${pendingContribs?.length || 0} contribuições para verificar${daysBack ? ` (últimos ${daysBack} dias)` : ''}`);
+
 
           // Criar mapas para busca rápida - AGORA USANDO ARRAY PARA DETECTAR DUPLICATAS
           const contribsByInvoiceId = new Map<string, any[]>();
