@@ -21,12 +21,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, FileStack, Building2, CheckCircle2, Tag } from "lucide-react";
+import { Loader2, FileStack, Building2, CheckCircle2, Tag, Mail, Send } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
 import { extractFunctionsError } from "@/lib/functionsError";
+
+interface CreatedContribution {
+  id: string;
+  public_access_token: string;
+  employer: {
+    id: string;
+    name: string;
+    email?: string | null;
+    cnpj: string;
+  };
+}
 
 interface Category {
   id: string;
@@ -38,6 +49,7 @@ interface Employer {
   id: string;
   name: string;
   cnpj: string;
+  email?: string | null;
   category_id?: string | null;
   registration_number?: string | null;
 }
@@ -96,6 +108,12 @@ export default function BulkContributionDialog({
     failed: 0, 
     errors: [] 
   });
+  
+  // Created contributions for email sending
+  const [createdContributions, setCreatedContributions] = useState<CreatedContribution[]>([]);
+  const [sendingEmails, setSendingEmails] = useState(false);
+  const [emailProgress, setEmailProgress] = useState({ current: 0, total: 0 });
+  const [clinicName, setClinicName] = useState("");
 
   // Filter employers
   const [searchTerm, setSearchTerm] = useState("");
@@ -152,8 +170,23 @@ export default function BulkContributionDialog({
       setSearchTerm("");
       setCategoryFilter("all");
       setResults({ success: 0, failed: 0, errors: [] });
+      setCreatedContributions([]);
+      fetchClinicName();
     }
   }, [open]);
+
+  const fetchClinicName = async () => {
+    try {
+      const { data } = await supabase
+        .from("clinics")
+        .select("name")
+        .eq("id", clinicId)
+        .single();
+      if (data) setClinicName(data.name);
+    } catch (error) {
+      console.error("Error fetching clinic name:", error);
+    }
+  };
 
   // Handle select all - now respects category filter
   useEffect(() => {
@@ -217,6 +250,7 @@ export default function BulkContributionDialog({
     let boletoFailedCount = 0;
     const errors: string[] = [];
     let sessionExpired = false;
+    const newCreatedContributions: CreatedContribution[] = [];
 
     // Process in batches to avoid overwhelming the server
     for (let i = 0; i < selectedEmployers.length; i++) {
@@ -224,6 +258,11 @@ export default function BulkContributionDialog({
       const employer = employers.find(e => e.id === employerId);
       
       try {
+        // Generate public token for zero value contributions
+        const publicToken = (generateZero || finalValue === 0) 
+          ? crypto.randomUUID() 
+          : null;
+
         // Create contribution
         const { data: newContribution, error: insertError } = await supabase
           .from("employer_contributions")
@@ -237,6 +276,7 @@ export default function BulkContributionDialog({
             due_date: dueDate,
             status: status,
             created_by: userId,
+            public_access_token: publicToken,
           })
           .select(`
             *,
@@ -249,6 +289,20 @@ export default function BulkContributionDialog({
         }
 
         successCount++;
+
+        // Store for email sending if zero value
+        if (publicToken && newContribution && employer) {
+          newCreatedContributions.push({
+            id: newContribution.id,
+            public_access_token: publicToken,
+            employer: {
+              id: employer.id,
+              name: employer.name,
+              email: employer.email,
+              cnpj: employer.cnpj,
+            },
+          });
+        }
 
         // Generate boleto only if value > 0
         if (finalValue > 0 && newContribution) {
@@ -305,6 +359,7 @@ export default function BulkContributionDialog({
       if (sessionExpired) break;
     }
 
+    setCreatedContributions(newCreatedContributions);
     setProcessing(false);
     setStep("result");
     
@@ -314,10 +369,110 @@ export default function BulkContributionDialog({
         toast.warning(`${successCount} contribuições criadas. ${boletoSuccessCount} boletos gerados, ${boletoFailedCount} falharam.`);
       } else if (finalValue > 0) {
         toast.success(`${successCount} contribuições criadas com boletos gerados.`);
+      } else if (newCreatedContributions.length > 0) {
+        toast.success(`${successCount} contribuições criadas. Você pode enviar os links por email.`);
       }
       onRefresh();
     } else if (successCount > 0 && sessionExpired) {
       onRefresh();
+    }
+  };
+
+  const handleSendBulkEmails = async () => {
+    const contributionsWithEmail = createdContributions.filter(c => c.employer.email);
+    
+    if (contributionsWithEmail.length === 0) {
+      toast.error("Nenhuma empresa possui email cadastrado");
+      return;
+    }
+
+    setSendingEmails(true);
+    setEmailProgress({ current: 0, total: contributionsWithEmail.length });
+
+    let successCount = 0;
+    let failedCount = 0;
+    const baseUrl = window.location.origin;
+
+    for (let i = 0; i < contributionsWithEmail.length; i++) {
+      const contrib = contributionsWithEmail[i];
+      const publicLink = `${baseUrl}/contribuicao/${contrib.public_access_token}`;
+
+      try {
+        const { error } = await supabase.functions.invoke("send-boleto-email", {
+          body: {
+            recipientEmail: contrib.employer.email,
+            recipientName: contrib.employer.name,
+            clinicName: clinicName || "Sindicato",
+            boletos: [{
+              employerName: contrib.employer.name,
+              employerCnpj: contrib.employer.cnpj,
+              contributionType: selectedType?.name || "Contribuição",
+              competenceMonth: month,
+              competenceYear: year,
+              dueDate: dueDate,
+              value: 0,
+              status: "awaiting_value",
+              invoiceUrl: publicLink,
+              isAwaitingValue: true,
+            }],
+          },
+        });
+
+        if (error) throw error;
+        successCount++;
+      } catch (error) {
+        console.error(`Error sending email to ${contrib.employer.email}:`, error);
+        failedCount++;
+      }
+
+      setEmailProgress({ current: i + 1, total: contributionsWithEmail.length });
+    }
+
+    setSendingEmails(false);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} email(s) enviado(s) com sucesso!`);
+    }
+    if (failedCount > 0) {
+      toast.error(`${failedCount} email(s) falharam ao enviar.`);
+    }
+  };
+
+  const handleSendSingleEmail = async (contrib: CreatedContribution) => {
+    if (!contrib.employer.email) {
+      toast.error("Esta empresa não possui email cadastrado");
+      return;
+    }
+
+    const baseUrl = window.location.origin;
+    const publicLink = `${baseUrl}/contribuicao/${contrib.public_access_token}`;
+
+    try {
+      const { error } = await supabase.functions.invoke("send-boleto-email", {
+        body: {
+          recipientEmail: contrib.employer.email,
+          recipientName: contrib.employer.name,
+          clinicName: clinicName || "Sindicato",
+          boletos: [{
+            employerName: contrib.employer.name,
+            employerCnpj: contrib.employer.cnpj,
+            contributionType: selectedType?.name || "Contribuição",
+            competenceMonth: month,
+            competenceYear: year,
+            dueDate: dueDate,
+            value: 0,
+            status: "awaiting_value",
+            invoiceUrl: publicLink,
+            isAwaitingValue: true,
+          }],
+        },
+      });
+
+      if (error) throw error;
+      toast.success(`Email enviado para ${contrib.employer.email}`);
+    } catch (error) {
+      console.error("Error sending email:", error);
+      toast.error("Erro ao enviar email");
     }
   };
 
@@ -608,10 +763,83 @@ export default function BulkContributionDialog({
                   </ScrollArea>
                 </div>
               )}
+
+              {/* Email sending section for zero value contributions */}
+              {createdContributions.length > 0 && (
+                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Mail className="h-5 w-5 text-blue-600" />
+                    <h4 className="font-medium text-blue-900 dark:text-blue-100">
+                      Enviar Links por Email
+                    </h4>
+                  </div>
+                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                    {createdContributions.filter(c => c.employer.email).length} de {createdContributions.length} empresas possuem email cadastrado.
+                  </p>
+
+                  {sendingEmails ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                        <span className="text-sm text-blue-700 dark:text-blue-300">
+                          Enviando emails... {emailProgress.current} de {emailProgress.total}
+                        </span>
+                      </div>
+                      <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          style={{ width: `${(emailProgress.current / emailProgress.total) * 100}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <Button 
+                        onClick={handleSendBulkEmails}
+                        disabled={createdContributions.filter(c => c.employer.email).length === 0}
+                        className="w-full gap-2"
+                        variant="default"
+                      >
+                        <Send className="h-4 w-4" />
+                        Enviar Todos os Emails ({createdContributions.filter(c => c.employer.email).length})
+                      </Button>
+
+                      <div className="text-xs text-muted-foreground text-center">ou envie individualmente:</div>
+
+                      <ScrollArea className="h-40 border rounded-md bg-background">
+                        <div className="p-2 space-y-1">
+                          {createdContributions.map((contrib) => (
+                            <div 
+                              key={contrib.id} 
+                              className="flex items-center justify-between p-2 rounded hover:bg-muted/50"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm font-medium truncate">{contrib.employer.name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {contrib.employer.email || "Sem email"}
+                                </p>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleSendSingleEmail(contrib)}
+                                disabled={!contrib.employer.email}
+                                className="ml-2 shrink-0"
+                              >
+                                <Mail className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <DialogFooter>
-              <Button onClick={() => onOpenChange(false)}>
+              <Button onClick={() => onOpenChange(false)} disabled={sendingEmails}>
                 Fechar
               </Button>
             </DialogFooter>
