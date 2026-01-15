@@ -107,15 +107,27 @@ export default function ContributionsOverviewTab({
     const overdue = yearContribs.filter(c => c.status === "overdue").length;
     const cancelled = yearContribs.filter(c => c.status === "cancelled").length;
     const totalValue = yearContribs.reduce((acc, c) => acc + c.value, 0);
-    const paidValue = yearContribs
-      .filter(c => c.status === "paid")
-      .reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+    
+    // Pagamentos recebidos no mês vigente (baseado em paid_at, não competência)
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    const currentMonthPaid = contributions.filter(c => {
+      if (c.status !== "paid" || !c.paid_at) return false;
+      const paidDate = new Date(c.paid_at);
+      return paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear;
+    });
+    
+    const paidValue = currentMonthPaid.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+    const paidCount = currentMonthPaid.length;
+    
     const pendingValue = yearContribs
       .filter(c => c.status === "pending" || c.status === "overdue")
       .reduce((acc, c) => acc + c.value, 0);
     
-    return { total, pending, paid, overdue, cancelled, totalValue, paidValue, pendingValue };
-  }, [yearContribs]);
+    return { total, pending, paid, overdue, cancelled, totalValue, paidValue, paidCount, pendingValue };
+  }, [yearContribs, contributions]);
 
   // Pagamentos de hoje e ontem (filtrados por paid_at)
   const recentPayments = useMemo(() => {
@@ -274,10 +286,10 @@ export default function ContributionsOverviewTab({
           <CardContent className="p-4">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-              <span className="text-xs font-medium text-muted-foreground">Recebido</span>
+              <span className="text-xs font-medium text-muted-foreground">Recebido ({MONTHS_FULL[new Date().getMonth()]})</span>
             </div>
             <p className="text-2xl font-bold text-emerald-600 mt-1">{formatCurrency(stats.paidValue)}</p>
-            <p className="text-xs text-muted-foreground">{stats.paid} contribuições</p>
+            <p className="text-xs text-muted-foreground">{stats.paidCount} contribuições</p>
           </CardContent>
         </Card>
 
