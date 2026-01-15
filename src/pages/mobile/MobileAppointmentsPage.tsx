@@ -387,9 +387,9 @@ export default function MobileAppointmentsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background flex flex-col pb-20">
       {/* Header */}
-      <div className="bg-emerald-600 text-white px-4 py-4 pt-12">
+      <div className="bg-emerald-600 text-white px-4 py-4 sticky top-0 z-50">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate("/app/home")} className="p-1">
             <ArrowLeft className="h-6 w-6" />

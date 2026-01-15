@@ -46,7 +46,7 @@ export default function MobileFAQPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4 sticky top-0 z-50">
         <button onClick={() => navigate(-1)} className="p-1">
@@ -56,7 +56,7 @@ export default function MobileFAQPage() {
       </header>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto p-4">
         <p className="text-muted-foreground mb-6">
           Encontre respostas para as perguntas mais comuns sobre o aplicativo e os serviços do sindicato.
         </p>
