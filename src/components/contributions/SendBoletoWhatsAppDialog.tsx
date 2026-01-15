@@ -208,6 +208,12 @@ ${contrib.lytex_invoice_url}
         } else {
           errorCount++;
           console.error(`Erro no boleto ${i + 1}:`, result.error);
+          
+          // Check if it's a rate limit error - stop immediately
+          if (result.error?.includes('Limite') || result.error?.includes('limite')) {
+            toast.error("📊 Limite de mensagens atingido!\n\nFaça upgrade do plano para continuar enviando.");
+            break;
+          }
         }
 
         // Aguardar intervalo antes do próximo (exceto no último)
