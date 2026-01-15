@@ -50,7 +50,15 @@ import {
   FileSearch,
   Hash,
   User,
+  ChevronDown,
+  Link2,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { SendBoletoWhatsAppDialog } from "./SendBoletoWhatsAppDialog";
 import { SendBoletoEmailDialog } from "./SendBoletoEmailDialog";
@@ -114,6 +122,7 @@ interface ContributionsListTabProps {
   onGenerateInvoice: (contribution: Contribution) => void;
   onOpenCreate: () => void;
   onOpenCreatePF: () => void;
+  onOpenCreateWithoutValue?: () => void;
   onSyncAll: () => void;
   generatingInvoice: boolean;
   syncing: boolean;
@@ -171,6 +180,7 @@ export default function ContributionsListTab({
   onGenerateInvoice,
   onOpenCreate,
   onOpenCreatePF,
+  onOpenCreateWithoutValue,
   onSyncAll,
   generatingInvoice,
   syncing,
@@ -575,10 +585,34 @@ export default function ContributionsListTab({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <Button onClick={documentTypeTab === "pf" ? onOpenCreatePF : onOpenCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Contribuição {documentTypeTab === "pf" ? "PF" : ""}
-        </Button>
+        {documentTypeTab === "pf" ? (
+          <Button onClick={onOpenCreatePF}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Contribuição PF
+          </Button>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Contribuição
+                <ChevronDown className="h-4 w-4 ml-2" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onOpenCreate}>
+                <Receipt className="h-4 w-4 mr-2" />
+                Com Valor (Gera Boleto)
+              </DropdownMenuItem>
+              {onOpenCreateWithoutValue && (
+                <DropdownMenuItem onClick={onOpenCreateWithoutValue}>
+                  <Link2 className="h-4 w-4 mr-2" />
+                  Sem Valor (Gera Link)
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
 
       {/* Table */}
