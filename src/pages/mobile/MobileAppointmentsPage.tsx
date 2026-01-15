@@ -264,7 +264,13 @@ export default function MobileAppointmentsPage() {
           <div className="flex items-start justify-between mb-2">
             <div className="flex-1">
               <h3 className="font-medium text-foreground">
-                {appointment.procedure?.name || appointment.type}
+                {appointment.procedure?.name || {
+                  first_visit: "Primeira Consulta",
+                  return: "Retorno",
+                  exam: "Exame",
+                  procedure: "Procedimento",
+                  telemedicine: "Telemedicina"
+                }[appointment.type] || appointment.type}
               </h3>
               {appointment.dependent && (
                 <p className="text-sm text-purple-600 font-medium">
