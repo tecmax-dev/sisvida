@@ -73,6 +73,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OuvidoriaMessagesTab } from "@/components/union/OuvidoriaMessagesTab";
 import { PushNotificationsTab } from "@/components/union/PushNotificationsTab";
+import { ConveniosManagementTab } from "@/components/union/ConveniosManagementTab";
 
 const contentTypeIcons: Record<ContentType, React.ReactNode> = {
   banner: <Image className="h-4 w-4" />,
@@ -311,7 +312,9 @@ export default function UnionAppContentPage() {
 
         {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
           <TabsContent key={type} value={type} className="mt-4">
-            {filteredContent.length === 0 ? (
+            {type === "convenio" ? (
+              <ConveniosManagementTab />
+            ) : filteredContent.length === 0 ? (
               <Card className="border-dashed">
                 <CardContent className="py-12 text-center">
                   <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
@@ -333,7 +336,6 @@ export default function UnionAppContentPage() {
                   <Card key={content.id} className={!content.is_active ? "opacity-60" : ""}>
                     <CardContent className="p-4">
                       <div className="flex items-start gap-4">
-                        {/* Image preview */}
                         {content.image_url && (
                           <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                             <img
@@ -343,8 +345,6 @@ export default function UnionAppContentPage() {
                             />
                           </div>
                         )}
-
-                        {/* Content info */}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between gap-2">
                             <div>
@@ -361,8 +361,6 @@ export default function UnionAppContentPage() {
                               </Badge>
                             </div>
                           </div>
-
-                          {/* Links */}
                           <div className="flex flex-wrap gap-2 mt-2">
                             {content.external_link && (
                               <a
@@ -388,8 +386,6 @@ export default function UnionAppContentPage() {
                             )}
                           </div>
                         </div>
-
-                        {/* Actions */}
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <Button
                             variant="ghost"
