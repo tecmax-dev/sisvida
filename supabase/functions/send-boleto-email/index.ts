@@ -224,8 +224,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("send-boleto-email: Sending email to", toEmails, "cc:", ccEmails);
 
+    // Use RESEND_FROM secret or fallback
+    const fromAddress = Deno.env.get("RESEND_FROM") || `${data.clinicName} <onboarding@resend.dev>`;
+    
     const emailResponse = await resend.emails.send({
-      from: `${data.clinicName} <onboarding@resend.dev>`,
+      from: fromAddress,
       to: toEmails,
       cc: ccEmails,
       subject,
