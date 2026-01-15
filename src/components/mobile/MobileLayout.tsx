@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Calendar, User, Bell, Menu } from "lucide-react";
 import { MobileDrawer } from "./MobileDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -19,6 +20,13 @@ export function MobileLayout({ children }: MobileLayoutProps) {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [patient, setPatient] = useState<PatientData | null>(null);
+
+  // Get session data for push notifications
+  const patientId = sessionStorage.getItem('mobile_patient_id');
+  const clinicId = sessionStorage.getItem('mobile_clinic_id');
+
+  // Initialize push notifications
+  usePushNotifications({ patientId, clinicId });
 
   useEffect(() => {
     loadPatientData();
