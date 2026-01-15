@@ -15,61 +15,169 @@ interface PushNotificationRequest {
   target_patient_ids?: string[];
 }
 
-interface FCMResponse {
-  success: number;
-  failure: number;
-  results?: Array<{ error?: string; message_id?: string }>;
+interface ServiceAccount {
+  type: string;
+  project_id: string;
+  private_key_id: string;
+  private_key: string;
+  client_email: string;
+  client_id: string;
+  auth_uri: string;
+  token_uri: string;
+  auth_provider_x509_cert_url: string;
+  client_x509_cert_url: string;
 }
 
-async function sendFCMNotification(
-  tokens: string[],
-  title: string,
-  body: string,
-  data?: Record<string, string>
-): Promise<FCMResponse> {
-  const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');
-  
-  if (!fcmServerKey) {
-    console.error('FCM_SERVER_KEY not configured');
-    throw new Error('FCM_SERVER_KEY not configured. Please add the Firebase Cloud Messaging Server Key.');
-  }
+// Create JWT for OAuth2 authentication
+async function createJWT(serviceAccount: ServiceAccount): Promise<string> {
+  const header = {
+    alg: 'RS256',
+    typ: 'JWT',
+  };
 
-  console.log(`Sending FCM notification to ${tokens.length} tokens`);
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: serviceAccount.client_email,
+    sub: serviceAccount.client_email,
+    aud: 'https://oauth2.googleapis.com/token',
+    iat: now,
+    exp: now + 3600,
+    scope: 'https://www.googleapis.com/auth/firebase.messaging',
+  };
+
+  const encoder = new TextEncoder();
+  const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const payloadB64 = btoa(JSON.stringify(payload)).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+  const unsignedToken = `${headerB64}.${payloadB64}`;
+
+  // Import the private key
+  const pemHeader = '-----BEGIN PRIVATE KEY-----';
+  const pemFooter = '-----END PRIVATE KEY-----';
+  const pemContents = serviceAccount.private_key
+    .replace(pemHeader, '')
+    .replace(pemFooter, '')
+    .replace(/\s/g, '');
   
-  // Use the legacy FCM API for simplicity with server keys
-  const response = await fetch('https://fcm.googleapis.com/fcm/send', {
+  const binaryKey = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+  
+  const cryptoKey = await crypto.subtle.importKey(
+    'pkcs8',
+    binaryKey,
+    {
+      name: 'RSASSA-PKCS1-v1_5',
+      hash: 'SHA-256',
+    },
+    false,
+    ['sign']
+  );
+
+  // Sign the token
+  const signature = await crypto.subtle.sign(
+    'RSASSA-PKCS1-v1_5',
+    cryptoKey,
+    encoder.encode(unsignedToken)
+  );
+
+  const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+  return `${unsignedToken}.${signatureB64}`;
+}
+
+// Get OAuth2 access token
+async function getAccessToken(serviceAccount: ServiceAccount): Promise<string> {
+  const jwt = await createJWT(serviceAccount);
+  
+  const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `key=${fcmServerKey}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
     },
-    body: JSON.stringify({
-      registration_ids: tokens,
-      notification: {
-        title,
-        body,
-        sound: 'default',
-        badge: 1,
-      },
-      data: {
-        ...data,
-        click_action: 'FLUTTER_NOTIFICATION_CLICK',
-      },
-      priority: 'high',
-      content_available: true,
+    body: new URLSearchParams({
+      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+      assertion: jwt,
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('FCM API error:', response.status, errorText);
-    throw new Error(`FCM API error: ${response.status} - ${errorText}`);
+    console.error('OAuth2 token error:', response.status, errorText);
+    throw new Error(`Failed to get access token: ${response.status} - ${errorText}`);
   }
 
-  const result = await response.json();
-  console.log('FCM response:', JSON.stringify(result));
-  
-  return result as FCMResponse;
+  const data = await response.json();
+  return data.access_token;
+}
+
+// Send notification using FCM v1 API
+async function sendFCMNotificationV1(
+  token: string,
+  title: string,
+  body: string,
+  projectId: string,
+  accessToken: string,
+  data?: Record<string, string>
+): Promise<{ success: boolean; error?: string }> {
+  const message = {
+    message: {
+      token: token,
+      notification: {
+        title,
+        body,
+      },
+      android: {
+        priority: 'high',
+        notification: {
+          sound: 'default',
+          default_vibrate_timings: true,
+          default_light_settings: true,
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: 'default',
+            badge: 1,
+          },
+        },
+      },
+      data: data ? { ...data, click_action: 'FLUTTER_NOTIFICATION_CLICK' } : { click_action: 'FLUTTER_NOTIFICATION_CLICK' },
+    },
+  };
+
+  try {
+    const response = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${projectId}/messages:send`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+      }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('FCM v1 API error:', response.status, JSON.stringify(errorData));
+      
+      // Check for unregistered token
+      const errorCode = errorData?.error?.details?.[0]?.errorCode || errorData?.error?.code;
+      if (errorCode === 'UNREGISTERED' || errorCode === 'INVALID_ARGUMENT') {
+        return { success: false, error: errorCode };
+      }
+      
+      return { success: false, error: errorData?.error?.message || 'Unknown error' };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('FCM request error:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
 }
 
 serve(async (req) => {
@@ -82,18 +190,37 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if FCM_SERVER_KEY is configured
-    const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');
-    if (!fcmServerKey) {
-      console.error('FCM_SERVER_KEY not configured');
+    // Get Firebase Service Account
+    const serviceAccountJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
+    if (!serviceAccountJson) {
+      console.error('FIREBASE_SERVICE_ACCOUNT not configured');
       return new Response(
         JSON.stringify({ 
-          error: 'FCM_SERVER_KEY not configured',
-          message: 'Please configure the Firebase Cloud Messaging Server Key in your project secrets.'
+          error: 'FIREBASE_SERVICE_ACCOUNT not configured',
+          message: 'Please configure the Firebase Service Account JSON in your project secrets.'
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    let serviceAccount: ServiceAccount;
+    try {
+      serviceAccount = JSON.parse(serviceAccountJson);
+    } catch (parseError) {
+      console.error('Failed to parse service account JSON:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid service account JSON',
+          message: 'The FIREBASE_SERVICE_ACCOUNT secret contains invalid JSON.'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Get OAuth2 access token
+    console.log('Getting OAuth2 access token...');
+    const accessToken = await getAccessToken(serviceAccount);
+    console.log('Successfully obtained access token');
 
     const payload: PushNotificationRequest = await req.json();
     console.log('Push notification request:', JSON.stringify(payload));
@@ -159,40 +286,34 @@ serve(async (req) => {
       );
     }
 
-    const tokens = tokensData.map(t => t.token);
     const uniquePatientIds = [...new Set(tokensData.map(t => t.patient_id))];
-    
-    console.log(`Found ${tokens.length} tokens for ${uniquePatientIds.length} patients`);
+    console.log(`Found ${tokensData.length} tokens for ${uniquePatientIds.length} patients`);
 
-    // Send notifications in batches of 500 (FCM limit)
-    const batchSize = 500;
+    // Send notifications one by one (FCM v1 API requires individual sends)
     let totalSuccess = 0;
     let totalFailed = 0;
     const invalidTokens: string[] = [];
 
-    for (let i = 0; i < tokens.length; i += batchSize) {
-      const batch = tokens.slice(i, i + batchSize);
-      
-      try {
-        const result = await sendFCMNotification(batch, title, body, data);
-        totalSuccess += result.success || 0;
-        totalFailed += result.failure || 0;
+    for (const tokenData of tokensData) {
+      const result = await sendFCMNotificationV1(
+        tokenData.token,
+        title,
+        body,
+        serviceAccount.project_id,
+        accessToken,
+        data
+      );
+
+      if (result.success) {
+        totalSuccess++;
+      } else {
+        totalFailed++;
+        console.log(`Token failed:`, result.error);
         
-        // Track invalid tokens for cleanup
-        if (result.results) {
-          result.results.forEach((r, idx) => {
-            if (r.error) {
-              console.log(`Token ${i + idx} failed:`, r.error);
-              // Mark tokens with permanent errors for deactivation
-              if (r.error === 'NotRegistered' || r.error === 'InvalidRegistration') {
-                invalidTokens.push(batch[idx]);
-              }
-            }
-          });
+        // Mark tokens with permanent errors for deactivation
+        if (result.error === 'UNREGISTERED' || result.error === 'INVALID_ARGUMENT') {
+          invalidTokens.push(tokenData.token);
         }
-      } catch (batchError) {
-        console.error(`Batch ${i / batchSize + 1} failed:`, batchError);
-        totalFailed += batch.length;
       }
     }
 
@@ -215,7 +336,7 @@ serve(async (req) => {
         data,
         target_type,
         target_patient_ids: target_type === 'specific' ? target_patient_ids : null,
-        total_sent: tokens.length,
+        total_sent: tokensData.length,
         total_success: totalSuccess,
         total_failed: totalFailed,
       });
@@ -229,7 +350,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        total_sent: tokens.length,
+        total_sent: tokensData.length,
         total_success: totalSuccess,
         total_failed: totalFailed,
         invalid_tokens_removed: invalidTokens.length,
