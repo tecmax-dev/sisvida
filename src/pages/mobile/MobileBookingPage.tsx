@@ -86,14 +86,23 @@ export default function MobileBookingPage() {
       // Check if patient is blocked
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
-        .select("no_show_blocked_until, is_active")
+        .select("no_show_blocked_until, no_show_unblocked_at, is_active")
         .eq("id", patientId)
         .single();
 
+      if (patientError) throw patientError;
+
+      // If the patient was blocked due to no-show, admins can unblock by setting no_show_unblocked_at.
+      // The mobile app must respect this to avoid keeping the user blocked incorrectly.
       if (patientData?.no_show_blocked_until) {
         const blockedUntil = parseISO(patientData.no_show_blocked_until);
-        if (isBefore(new Date(), blockedUntil)) {
-          setBlockedMessage(`Você está bloqueado para agendamentos até ${format(blockedUntil, "dd/MM/yyyy", { locale: ptBR })}`);
+        const isStillWithinBlock = isBefore(new Date(), blockedUntil);
+        const isUnblockedByAdmin = !!patientData?.no_show_unblocked_at;
+
+        if (isStillWithinBlock && !isUnblockedByAdmin) {
+          setBlockedMessage(
+            `Você está bloqueado para agendamentos até ${format(blockedUntil, "dd/MM/yyyy", { locale: ptBR })}`
+          );
         }
       }
 
