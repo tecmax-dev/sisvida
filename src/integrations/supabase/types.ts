@@ -2499,6 +2499,7 @@ export type Database = {
           paid_value: number | null
           payment_method: string | null
           portal_reissue_count: number
+          public_access_token: string | null
           reconciled_at: string | null
           reconciled_by: string | null
           reconciliation_notes: string | null
@@ -2547,6 +2548,7 @@ export type Database = {
           paid_value?: number | null
           payment_method?: string | null
           portal_reissue_count?: number
+          public_access_token?: string | null
           reconciled_at?: string | null
           reconciled_by?: string | null
           reconciliation_notes?: string | null
@@ -2595,6 +2597,7 @@ export type Database = {
           paid_value?: number | null
           payment_method?: string | null
           portal_reissue_count?: number
+          public_access_token?: string | null
           reconciled_at?: string | null
           reconciled_by?: string | null
           reconciliation_notes?: string | null
@@ -12235,6 +12238,7 @@ export type Database = {
             Args: { p_clinic_id: string; p_patient_id?: string }
             Returns: string
           }
+      generate_contribution_access_token: { Args: never; Returns: string }
       generate_employer_access_code: { Args: never; Returns: string }
       generate_employer_registration_number: {
         Args: { p_clinic_id: string }
