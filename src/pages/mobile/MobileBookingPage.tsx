@@ -6,13 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Calendar } from "@/components/ui/calendar";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   ArrowLeft, 
   Loader2, 
-  Calendar as CalendarIcon,
-  Clock,
   User,
   AlertTriangle,
   Check,
@@ -24,8 +21,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, isAfter, getDay } from "date-fns";
+import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { DateTimeSelectionStep } from "@/components/mobile/DateTimeSelectionStep";
 
 // Day name mapping (getDay returns 0=Sunday, 1=Monday, etc.)
 const dayMap: Record<number, string> = {
@@ -391,9 +389,9 @@ export default function MobileBookingPage() {
         <h1 className="text-lg font-semibold flex-1 text-center pr-8">Agendar Consulta</h1>
       </div>
 
-      {/* Progress */}
+      {/* Progress - now 3 steps */}
       <div className="px-4 py-3 flex items-center gap-2">
-        {[1, 2, 3, 4].map((s) => (
+        {[1, 2, 3].map((s) => (
           <div 
             key={s} 
             className={`flex-1 h-1 rounded-full ${s <= step ? 'bg-emerald-600' : 'bg-gray-200'}`}
@@ -516,86 +514,23 @@ export default function MobileBookingPage() {
             </div>
           )}
 
-          {/* Step 3: Date */}
+          {/* Step 3: Date and Time in same screen */}
           {step === 3 && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-foreground">Escolha a data</h2>
-              
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={setSelectedDate}
-                locale={ptBR}
-                disabled={(date) => {
-                  // Disable past dates
-                  if (isBefore(startOfDay(date), startOfDay(new Date()))) return true;
-                  
-                  // Disable dates where professional doesn't work
-                  const professional = professionals.find(p => p.id === selectedProfessionalId);
-                  if (!isDateEnabled(date, professional)) return true;
-                  
-                  return false;
-                }}
-                className="rounded-md border mx-auto"
-              />
-
-              <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
-                disabled={!selectedDate}
-                onClick={() => {
-                  setSelectedTime(""); // Reset time when changing date
-                  setStep(4);
-                }}
-              >
-                Continuar
-              </Button>
-            </div>
-          )}
-
-          {/* Step 4: Time */}
-          {step === 4 && (
-            <div className="space-y-6">
-              <h2 className="text-lg font-semibold text-foreground">Escolha o horário</h2>
-              
-              <p className="text-sm text-muted-foreground">
-                {selectedDate && format(selectedDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
-              </p>
-
-              {availableSlots.filter(s => s.available).length > 0 ? (
-                <div className="grid grid-cols-4 gap-2">
-                  {availableSlots.filter(s => s.available).map((slot) => (
-                    <Button
-                      key={slot.time}
-                      variant={selectedTime === slot.time ? "default" : "outline"}
-                      className={selectedTime === slot.time ? "bg-emerald-600 hover:bg-emerald-700" : ""}
-                      onClick={() => setSelectedTime(slot.time)}
-                    >
-                      {slot.time}
-                    </Button>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Clock className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">Nenhum horário disponível para esta data.</p>
-                </div>
-              )}
-
-              <Button 
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
-                disabled={!selectedTime || submitting}
-                onClick={handleSubmit}
-              >
-                {submitting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Agendando...
-                  </>
-                ) : (
-                  "Confirmar Agendamento"
-                )}
-              </Button>
-            </div>
+            <DateTimeSelectionStep
+              selectedDate={selectedDate}
+              setSelectedDate={(date) => {
+                setSelectedDate(date);
+                setSelectedTime(""); // Reset time when changing date
+              }}
+              selectedTime={selectedTime}
+              setSelectedTime={setSelectedTime}
+              availableSlots={availableSlots}
+              professionals={professionals}
+              selectedProfessionalId={selectedProfessionalId}
+              isDateEnabled={isDateEnabled}
+              submitting={submitting}
+              onSubmit={handleSubmit}
+            />
           )}
         </div>
       </ScrollArea>
