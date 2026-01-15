@@ -117,10 +117,13 @@ export function SendAccessCodeDialog({
     if (codeError) throw codeError;
     if (!codeData?.accessCode) throw new Error("Código de acesso não encontrado");
 
+    // Use custom domain for portals
+    const portalDomain = "https://app.eclini.com.br";
+    
     const portalName = type === "accounting_office" ? "Portal do Contador" : "Portal da Empresa";
     const portalUrl = type === "accounting_office" 
-      ? `https://app.eclini.com.br/portal-contador/${currentClinic.slug}`
-      : `https://app.eclini.com.br/portal-empresa/${currentClinic.slug}`;
+      ? `${portalDomain}/portal-contador/${currentClinic.slug}`
+      : `${portalDomain}/portal-empresa/${currentClinic.slug}`;
     
     const identifier = type === "accounting_office" 
       ? email 
