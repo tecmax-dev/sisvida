@@ -31,11 +31,12 @@ async function sendFCMNotification(
   
   if (!fcmServerKey) {
     console.error('FCM_SERVER_KEY not configured');
-    throw new Error('FCM_SERVER_KEY not configured');
+    throw new Error('FCM_SERVER_KEY not configured. Please add the Firebase Cloud Messaging Server Key.');
   }
 
   console.log(`Sending FCM notification to ${tokens.length} tokens`);
   
+  // Use the legacy FCM API for simplicity with server keys
   const response = await fetch('https://fcm.googleapis.com/fcm/send', {
     method: 'POST',
     headers: {
@@ -50,14 +51,18 @@ async function sendFCMNotification(
         sound: 'default',
         badge: 1,
       },
-      data: data || {},
+      data: {
+        ...data,
+        click_action: 'FLUTTER_NOTIFICATION_CLICK',
+      },
       priority: 'high',
+      content_available: true,
     }),
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error('FCM API error:', errorText);
+    console.error('FCM API error:', response.status, errorText);
     throw new Error(`FCM API error: ${response.status} - ${errorText}`);
   }
 
@@ -77,6 +82,19 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Check if FCM_SERVER_KEY is configured
+    const fcmServerKey = Deno.env.get('FCM_SERVER_KEY');
+    if (!fcmServerKey) {
+      console.error('FCM_SERVER_KEY not configured');
+      return new Response(
+        JSON.stringify({ 
+          error: 'FCM_SERVER_KEY not configured',
+          message: 'Please configure the Firebase Cloud Messaging Server Key in your project secrets.'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const payload: PushNotificationRequest = await req.json();
     console.log('Push notification request:', JSON.stringify(payload));
 
@@ -92,7 +110,7 @@ serve(async (req) => {
     // Build query for tokens
     let tokensQuery = supabase
       .from('push_notification_tokens')
-      .select('token, patient_id')
+      .select('token, patient_id, platform')
       .eq('clinic_id', clinic_id)
       .eq('is_active', true);
 
@@ -106,13 +124,29 @@ serve(async (req) => {
     if (tokensError) {
       console.error('Error fetching tokens:', tokensError);
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch device tokens' }),
+        JSON.stringify({ error: 'Failed to fetch device tokens', details: tokensError.message }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     if (!tokensData || tokensData.length === 0) {
       console.log('No active tokens found for clinic:', clinic_id);
+      
+      // Still record in history
+      await supabase
+        .from('push_notification_history')
+        .insert({
+          clinic_id,
+          title,
+          body,
+          data,
+          target_type,
+          target_patient_ids: target_type === 'specific' ? target_patient_ids : null,
+          total_sent: 0,
+          total_success: 0,
+          total_failed: 0,
+        });
+
       return new Response(
         JSON.stringify({ 
           success: true, 
@@ -134,6 +168,7 @@ serve(async (req) => {
     const batchSize = 500;
     let totalSuccess = 0;
     let totalFailed = 0;
+    const invalidTokens: string[] = [];
 
     for (let i = 0; i < tokens.length; i += batchSize) {
       const batch = tokens.slice(i, i + batchSize);
@@ -143,11 +178,15 @@ serve(async (req) => {
         totalSuccess += result.success || 0;
         totalFailed += result.failure || 0;
         
-        // Log individual failures for debugging
+        // Track invalid tokens for cleanup
         if (result.results) {
           result.results.forEach((r, idx) => {
             if (r.error) {
               console.log(`Token ${i + idx} failed:`, r.error);
+              // Mark tokens with permanent errors for deactivation
+              if (r.error === 'NotRegistered' || r.error === 'InvalidRegistration') {
+                invalidTokens.push(batch[idx]);
+              }
             }
           });
         }
@@ -155,6 +194,15 @@ serve(async (req) => {
         console.error(`Batch ${i / batchSize + 1} failed:`, batchError);
         totalFailed += batch.length;
       }
+    }
+
+    // Deactivate invalid tokens
+    if (invalidTokens.length > 0) {
+      console.log(`Deactivating ${invalidTokens.length} invalid tokens`);
+      await supabase
+        .from('push_notification_tokens')
+        .update({ is_active: false })
+        .in('token', invalidTokens);
     }
 
     // Record in history
@@ -184,6 +232,7 @@ serve(async (req) => {
         total_sent: tokens.length,
         total_success: totalSuccess,
         total_failed: totalFailed,
+        invalid_tokens_removed: invalidTokens.length,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
