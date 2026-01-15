@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { Resend } from "https://esm.sh/resend@2.0.0";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -185,8 +185,8 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Initialize Resend INSIDE handler to ensure fresh secret reading
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
+    // Read SMTP config from secrets
+    const smtpApiKey = Deno.env.get("RESEND_API_KEY");
     const resendFrom = Deno.env.get("RESEND_FROM");
 
     const mask = (v?: string | null) => {
@@ -195,17 +195,17 @@ const handler = async (req: Request): Promise<Response> => {
       return `${v.slice(0, 4)}***${v.slice(-4)}`;
     };
 
-    console.log("send-boleto-email: RESEND_API_KEY present:", !!resendApiKey);
+    console.log("send-boleto-email: RESEND_API_KEY present:", !!smtpApiKey);
     console.log("send-boleto-email: RESEND_FROM (masked):", mask(resendFrom));
-    
-    if (!resendApiKey) {
+
+    if (!smtpApiKey) {
       console.error("send-boleto-email: RESEND_API_KEY not configured");
       return new Response(
         JSON.stringify({ error: "Configuração de e-mail não encontrada (API_KEY)" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    
+
     if (!resendFrom) {
       console.error("send-boleto-email: RESEND_FROM not configured");
       return new Response(
@@ -214,8 +214,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Validate RESEND_FROM format early to avoid Resend validation errors
-    // Accepted: email@example.com OR Name <email@example.com>
+    // Validate RESEND_FROM format: email@example.com OR Name <email@example.com>
     const simpleEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const fromEmailMatch = resendFrom.match(/<\s*([^>]+)\s*>/);
     const fromEmail = (fromEmailMatch?.[1] || resendFrom).trim();
@@ -223,14 +222,11 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("send-boleto-email: Invalid RESEND_FROM format (masked):", mask(resendFrom));
       return new Response(
         JSON.stringify({
-          error:
-            "Configuração inválida do remetente (RESEND_FROM). Use 'email@dominio.com' ou 'Nome <email@dominio.com>'.",
+          error: "Configuração inválida do remetente (RESEND_FROM). Use 'email@dominio.com' ou 'Nome <email@dominio.com>'.",
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const resend = new Resend(resendApiKey);
 
     const data: SendBoletoEmailRequest = await req.json();
     console.log("send-boleto-email: Processing request for", data.recipientEmail, "with", data.boletos.length, "boletos");
@@ -264,41 +260,47 @@ const handler = async (req: Request): Promise<Response> => {
       ? `${data.boletos.length} Boletos de Contribuição - ${data.clinicName}`
       : `Boleto de Contribuição - ${data.boletos[0].contributionType} ${MONTHS[data.boletos[0].competenceMonth - 1]}/${data.boletos[0].competenceYear}`;
 
-    const toEmails = [data.recipientEmail];
-    const ccEmails = data.ccEmail ? [data.ccEmail] : undefined;
+    console.log("send-boleto-email: Connecting to SMTP (smtp.resend.com:465)...");
 
-    console.log("send-boleto-email: Sending email from (masked):", mask(resendFrom), "to:", toEmails, "cc:", ccEmails);
+    // Create SMTP client for Resend
+    const client = new SMTPClient({
+      connection: {
+        hostname: "smtp.resend.com",
+        port: 465,
+        tls: true,
+        auth: {
+          username: "resend",
+          password: smtpApiKey,
+        },
+      },
+    });
 
-    const emailResponse = await resend.emails.send({
+    const toAddresses = data.ccEmail 
+      ? [data.recipientEmail, data.ccEmail]
+      : [data.recipientEmail];
+
+    console.log("send-boleto-email: Sending email via SMTP from:", mask(resendFrom), "to:", toAddresses);
+
+    await client.send({
       from: resendFrom,
-      to: toEmails,
-      cc: ccEmails,
+      to: toAddresses,
       subject,
+      content: "Seu cliente de e-mail não suporta HTML. Por favor, abra em um cliente compatível.",
       html,
     });
 
-    // Check if Resend returned an error
-    if (emailResponse.error) {
-      console.error("send-boleto-email: Resend error:", emailResponse.error);
-      return new Response(
-        JSON.stringify({ 
-          error: emailResponse.error.message || "Erro ao enviar email",
-          details: emailResponse.error
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    await client.close();
 
-    console.log("send-boleto-email: Email sent successfully! ID:", emailResponse.data?.id);
+    console.log("send-boleto-email: Email sent successfully via SMTP!");
 
     return new Response(
-      JSON.stringify({ success: true, data: emailResponse.data }),
+      JSON.stringify({ success: true, message: "Email enviado com sucesso via SMTP" }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("send-boleto-email: Error:", error);
+    console.error("send-boleto-email: SMTP Error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Erro ao enviar email" }),
+      JSON.stringify({ error: error.message || "Erro ao enviar email via SMTP" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
