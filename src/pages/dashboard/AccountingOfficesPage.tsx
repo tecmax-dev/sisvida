@@ -68,6 +68,8 @@ import {
 import AccountingOfficeImportPanel from "@/components/admin/AccountingOfficeImportPanel";
 import { CnpjInputCard } from "@/components/ui/cnpj-input-card";
 import { SendAccessCodeDialog } from "@/components/portals/SendAccessCodeDialog";
+import { BulkSendAccessCodeDialog } from "@/components/portals/BulkSendAccessCodeDialog";
+import { MessageCircle } from "lucide-react";
 
 interface AccountingOffice {
   id: string;
@@ -117,6 +119,7 @@ export default function AccountingOfficesPage() {
   const [isLinkDialogOpen, setIsLinkDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isSendCodeDialogOpen, setIsSendCodeDialogOpen] = useState(false);
+  const [isBulkSendDialogOpen, setIsBulkSendDialogOpen] = useState(false);
   const [selectedOffice, setSelectedOffice] = useState<AccountingOffice | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
@@ -583,6 +586,14 @@ export default function AccountingOfficesPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsBulkSendDialogOpen(true)}
+            disabled={offices.filter(o => o.is_active && o.access_code).length === 0}
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Enviar Códigos
+          </Button>
           <Button variant="outline" onClick={() => setIsImportDialogOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
             Importar
@@ -1193,6 +1204,13 @@ export default function AccountingOfficesPage() {
           currentPhone={selectedOffice.phone || ""}
         />
       )}
+
+      {/* Dialog de Envio em Lote */}
+      <BulkSendAccessCodeDialog
+        open={isBulkSendDialogOpen}
+        onOpenChange={setIsBulkSendDialogOpen}
+        offices={offices}
+      />
     </div>
   );
 }
