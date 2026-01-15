@@ -49,12 +49,16 @@ Deno.serve(async (req) => {
       try {
         console.log(`[Lytex Sync Cron] Sincronizando clínica: ${clinicId}`);
 
-        // 1. Primeiro, buscar e conciliar boletos pagos na Lytex (NOVA AÇÃO)
+        // 1. Primeiro, buscar e conciliar boletos pagos na Lytex
+        // OTIMIZAÇÃO: Filtrar apenas contribuições pendentes com vencimento nos últimos 90 dias
+        // Isso evita processar todo o histórico e reduz falsos positivos
         const { data: fetchResult, error: fetchError } = await supabase.functions.invoke("lytex-api", {
           body: {
             action: "fetch_paid_invoices",
             clinicId,
             mode: "automatic", // Marca como execução automática no log
+            daysBack: 90, // Processar apenas boletos com vencimento nos últimos 90 dias
+            onlyPending: true, // Apenas contribuições que ainda não estão pagas
           },
         });
 
@@ -71,7 +75,7 @@ Deno.serve(async (req) => {
         console.log(`[Lytex Sync Cron] Clínica ${clinicId} conciliada:`, {
           conciliated: fetchResult?.conciliated || 0,
           alreadyConciliated: fetchResult?.alreadyConciliated || 0,
-          ignored: fetchResult?.ignored || 0,
+          pendingInLytex: fetchResult?.pendingInLytex || 0,
           errors: fetchResult?.errors || 0,
         });
 

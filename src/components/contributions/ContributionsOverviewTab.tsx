@@ -11,6 +11,8 @@ import {
   TrendingDown,
   PiggyBank,
   BarChart3,
+  Calendar,
+  CalendarDays,
 } from "lucide-react";
 import {
   BarChart,
@@ -115,6 +117,41 @@ export default function ContributionsOverviewTab({
     return { total, pending, paid, overdue, cancelled, totalValue, paidValue, pendingValue };
   }, [yearContribs]);
 
+  // Pagamentos de hoje e ontem (filtrados por paid_at)
+  const recentPayments = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const todayStr = today.toISOString().split("T")[0];
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    
+    const paidContribs = contributions.filter(c => c.status === "paid" && c.paid_at);
+    
+    const todayPayments = paidContribs.filter(c => {
+      if (!c.paid_at) return false;
+      const paidDate = c.paid_at.split("T")[0];
+      return paidDate === todayStr;
+    });
+    
+    const yesterdayPayments = paidContribs.filter(c => {
+      if (!c.paid_at) return false;
+      const paidDate = c.paid_at.split("T")[0];
+      return paidDate === yesterdayStr;
+    });
+    
+    const todayValue = todayPayments.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+    const yesterdayValue = yesterdayPayments.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+    
+    return {
+      todayCount: todayPayments.length,
+      todayValue,
+      yesterdayCount: yesterdayPayments.length,
+      yesterdayValue,
+    };
+  }, [contributions]);
+
   const monthlyData = useMemo(() => {
     return MONTHS.map((month, index) => {
       const monthContribs = yearContribs.filter(c => c.competence_month === index + 1);
@@ -181,6 +218,45 @@ export default function ContributionsOverviewTab({
 
   return (
     <div className="space-y-6">
+      {/* Pagamentos Recentes - Cards destacados */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/20 dark:to-teal-950/20 border-emerald-200 dark:border-emerald-800">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Calendar className="h-4 w-4 text-emerald-600" />
+                  <span className="text-sm font-medium text-emerald-700 dark:text-emerald-400">Pagamentos Hoje</span>
+                </div>
+                <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(recentPayments.todayValue)}</p>
+                <p className="text-xs text-emerald-600 dark:text-emerald-500">{recentPayments.todayCount} boletos baixados</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-gradient-to-br from-cyan-50 to-sky-50 dark:from-cyan-950/20 dark:to-sky-950/20 border-cyan-200 dark:border-cyan-800">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <CalendarDays className="h-4 w-4 text-cyan-600" />
+                  <span className="text-sm font-medium text-cyan-700 dark:text-cyan-400">Pagamentos Ontem</span>
+                </div>
+                <p className="text-2xl font-bold text-cyan-700 dark:text-cyan-300">{formatCurrency(recentPayments.yesterdayValue)}</p>
+                <p className="text-xs text-cyan-600 dark:text-cyan-500">{recentPayments.yesterdayCount} boletos baixados</p>
+              </div>
+              <div className="h-12 w-12 rounded-full bg-cyan-500/20 flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-cyan-600" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         <Card className="border-l-4 border-l-primary">
