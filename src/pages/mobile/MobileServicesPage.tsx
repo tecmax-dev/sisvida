@@ -24,6 +24,7 @@ import {
   HeadphonesIcon,
   MessageCircle,
   ChevronRight,
+  ChevronLeft,
   MapPin,
   Phone,
   Clock,
@@ -33,6 +34,10 @@ import {
   Loader2,
   Copy,
   CheckCircle2,
+  Heart,
+  GraduationCap,
+  Sparkles,
+  Scale,
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -154,15 +159,96 @@ function DeclaracoesContent() {
 
 // ============ CONVÊNIOS ============
 function ConveniosContent() {
-  const [convenios] = useState([
-    { id: "1", nome: "Farmácia Popular", categoria: "Saúde", desconto: "15%", endereco: "Rua das Flores, 123", telefone: "(11) 3333-4444" },
-    { id: "2", nome: "Ótica Visão", categoria: "Saúde", desconto: "20%", endereco: "Av. Central, 456", telefone: "(11) 5555-6666" },
-    { id: "3", nome: "Academia FitLife", categoria: "Bem-estar", desconto: "30%", endereco: "Praça da Saúde, 789", telefone: "(11) 7777-8888" },
-    { id: "4", nome: "Supermercado Economia", categoria: "Alimentação", desconto: "5%", endereco: "Rua do Comércio, 321", telefone: "(11) 9999-0000" },
-    { id: "5", nome: "Auto Escola Direção", categoria: "Serviços", desconto: "10%", endereco: "Av. dos Motoristas, 654", telefone: "(11) 2222-3333" },
-  ]);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  
+  const categorias = [
+    { id: "saude", nome: "Saúde", icon: Heart, color: "from-rose-500 to-pink-500" },
+    { id: "estudos", nome: "Estudos", icon: GraduationCap, color: "from-blue-500 to-indigo-500" },
+    { id: "estetica", nome: "Estética e Beleza", icon: Sparkles, color: "from-purple-500 to-fuchsia-500" },
+    { id: "juridico", nome: "Jurídico", icon: Scale, color: "from-amber-500 to-orange-500" },
+  ];
 
-  const categorias = [...new Set(convenios.map(c => c.categoria))];
+  const convenios = [
+    // Saúde
+    { id: "1", nome: "Dr. José Alcides", categoria: "saude", descricao: "Clínico Geral" },
+    { id: "2", nome: "Dra. Juliane Leite", categoria: "saude", descricao: "Dentista" },
+    { id: "3", nome: "Dr. Jorge Avelar", categoria: "saude", descricao: "Ortopedista" },
+    { id: "4", nome: "Dr. Pedro Roberto", categoria: "saude", descricao: "Urologista" },
+    { id: "5", nome: "Drª Daniela Sales", categoria: "saude", descricao: "Terapia Holística" },
+    { id: "6", nome: "Hospital São José", categoria: "saude", descricao: "Descontos em Exames" },
+    { id: "7", nome: "Laboratório Lidi", categoria: "saude", descricao: "Desconto em Exames" },
+    { id: "8", nome: "Clínica OftalmoSul", categoria: "saude", descricao: "Desconto em Consulta e Exames" },
+    { id: "9", nome: "Clínica Médico Center", categoria: "saude", descricao: "Desconto em Consulta e Exames" },
+    { id: "10", nome: "Laboratório Biolife", categoria: "saude", descricao: "Desconto em Exames" },
+    { id: "11", nome: "Clínica Pensar", categoria: "saude", descricao: "Desconto em Consultas" },
+    { id: "12", nome: "Dra. Uiara Tiuba", categoria: "saude", descricao: "Médica Pediatra" },
+    // Estudos
+    { id: "13", nome: "Faculdade de Ilhéus", categoria: "estudos", descricao: "Desconto para titular e dependentes" },
+    { id: "14", nome: "Uniasselvi", categoria: "estudos", descricao: "Desconto para titular e dependentes" },
+    { id: "15", nome: "CCAA", categoria: "estudos", descricao: "Desconto na mensalidade" },
+    // Estética e Beleza
+    { id: "16", nome: "Espaçolaser", categoria: "estetica", descricao: "Desconto para titular e dependentes" },
+    // Jurídico
+    { id: "17", nome: "Dra. Dione Mattos", categoria: "juridico", descricao: "Gratuito para Associados" },
+  ];
+
+  const filteredConvenios = activeCategory 
+    ? convenios.filter(c => c.categoria === activeCategory)
+    : [];
+
+  const getCategoryInfo = (catId: string) => categorias.find(c => c.id === catId);
+
+  if (activeCategory) {
+    const catInfo = getCategoryInfo(activeCategory);
+    const IconComponent = catInfo?.icon || Heart;
+    
+    return (
+      <div className="space-y-4">
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={() => setActiveCategory(null)}
+          className="flex items-center gap-2 text-muted-foreground hover:text-foreground -ml-2"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Voltar às categorias
+        </Button>
+
+        <div className={`rounded-xl bg-gradient-to-r ${catInfo?.color} p-4 text-white`}>
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-white/20 rounded-lg">
+              <IconComponent className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg">{catInfo?.nome}</h3>
+              <p className="text-white/80 text-sm">{filteredConvenios.length} parceiro{filteredConvenios.length !== 1 ? 's' : ''}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          {filteredConvenios.map((conv) => (
+            <Card key={conv.id} className="border shadow-sm hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg bg-gradient-to-r ${catInfo?.color} bg-opacity-10`}>
+                    <IconComponent className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm">{conv.nome}</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">{conv.descricao}</p>
+                  </div>
+                  <Badge className="bg-emerald-100 text-emerald-700 text-xs shrink-0">
+                    Conveniado
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -170,33 +256,30 @@ function ConveniosContent() {
         Aproveite descontos exclusivos em nossos parceiros conveniados. Apresente sua carteirinha para obter o benefício.
       </p>
       
-      {categorias.map((cat) => (
-        <div key={cat} className="space-y-2">
-          <h4 className="font-semibold text-sm text-muted-foreground">{cat}</h4>
-          {convenios.filter(c => c.categoria === cat).map((conv) => (
-            <Card key={conv.id} className="border shadow-sm">
+      <div className="grid grid-cols-2 gap-3">
+        {categorias.map((cat) => {
+          const IconComponent = cat.icon;
+          const count = convenios.filter(c => c.categoria === cat.id).length;
+          
+          return (
+            <Card 
+              key={cat.id} 
+              className="border shadow-sm hover:shadow-md transition-all cursor-pointer active:scale-95"
+              onClick={() => setActiveCategory(cat.id)}
+            >
               <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-semibold text-sm">{conv.nome}</h4>
-                      <Badge className="bg-emerald-100 text-emerald-800 text-xs">{conv.desconto} OFF</Badge>
-                    </div>
-                    <div className="flex items-center gap-1 mt-2 text-xs text-muted-foreground">
-                      <MapPin className="h-3 w-3" />
-                      <span>{conv.endereco}</span>
-                    </div>
-                    <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                      <Phone className="h-3 w-3" />
-                      <span>{conv.telefone}</span>
-                    </div>
-                  </div>
+                <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${cat.color} flex items-center justify-center mb-3`}>
+                  <IconComponent className="h-6 w-6 text-white" />
                 </div>
+                <h4 className="font-semibold text-sm">{cat.nome}</h4>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {count} parceiro{count !== 1 ? 's' : ''}
+                </p>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 }
