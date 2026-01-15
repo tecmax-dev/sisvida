@@ -51,6 +51,64 @@ export function PushNotificationsTab() {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [addingTestToken, setAddingTestToken] = useState(false);
+
+  // Add test token for development
+  const handleAddTestToken = async () => {
+    if (!currentClinic?.id) return;
+    
+    setAddingTestToken(true);
+    try {
+      // Get a random patient from the clinic
+      const { data: patients } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("clinic_id", currentClinic.id)
+        .limit(1);
+
+      const patientId = patients?.[0]?.id;
+      if (!patientId) {
+        toast({
+          title: "Erro",
+          description: "Nenhum paciente encontrado para vincular o token de teste.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Generate a fake FCM token for testing
+      const testToken = `test_token_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      const { error } = await supabase
+        .from("push_notification_tokens")
+        .insert({
+          patient_id: patientId,
+          clinic_id: currentClinic.id,
+          token: testToken,
+          platform: "android",
+          is_active: true,
+          device_info: { test: true, created_at: new Date().toISOString() },
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Token de teste adicionado!",
+        description: "Agora você pode testar o envio de notificações (o envio real falhará, mas o fluxo funcionará).",
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["push-token-stats"] });
+    } catch (err) {
+      console.error("Error adding test token:", err);
+      toast({
+        title: "Erro",
+        description: err instanceof Error ? err.message : "Erro ao adicionar token",
+        variant: "destructive",
+      });
+    } finally {
+      setAddingTestToken(false);
+    }
+  };
 
   // Fetch token statistics
   const { data: tokenStats, isLoading: loadingStats } = useQuery({
@@ -269,9 +327,30 @@ export function PushNotificationsTab() {
             </Button>
 
             {(tokenStats?.total || 0) === 0 && (
-              <p className="text-sm text-amber-600 text-center">
-                ⚠️ Nenhum dispositivo registrado. Os usuários precisam abrir o app mobile para receber notificações.
-              </p>
+              <div className="space-y-3">
+                <p className="text-sm text-amber-600 text-center">
+                  ⚠️ Nenhum dispositivo registrado. Os usuários precisam abrir o app mobile para receber notificações.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleAddTestToken}
+                  disabled={addingTestToken}
+                  className="w-full"
+                >
+                  {addingTestToken ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Adicionando...
+                    </>
+                  ) : (
+                    <>
+                      <Smartphone className="mr-2 h-4 w-4" />
+                      Adicionar Token de Teste
+                    </>
+                  )}
+                </Button>
+              </div>
             )}
           </CardContent>
         </Card>
