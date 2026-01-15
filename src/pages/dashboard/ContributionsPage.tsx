@@ -18,6 +18,7 @@ import PFContributionDialog from "@/components/contributions/PFContributionDialo
 import PFBatchContributionDialog from "@/components/contributions/PFBatchContributionDialog";
 import BulkContributionDialog from "@/components/contributions/BulkContributionDialog";
 import OfflineContributionDialog from "@/components/contributions/OfflineContributionDialog";
+import CreateWithoutValueDialog from "@/components/contributions/CreateWithoutValueDialog";
 import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
 import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
@@ -116,6 +117,7 @@ export default function ContributionsPage() {
   const [createPFBatchDialogOpen, setCreatePFBatchDialogOpen] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [offlineDialogOpen, setOfflineDialogOpen] = useState(false);
+  const [createWithoutValueDialogOpen, setCreateWithoutValueDialogOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
@@ -752,6 +754,7 @@ export default function ContributionsPage() {
             onGenerateInvoice={handleGenerateInvoice}
             onOpenCreate={() => setCreateDialogOpen(true)}
             onOpenCreatePF={() => setCreatePFDialogOpen(true)}
+            onOpenCreateWithoutValue={() => setCreateWithoutValueDialogOpen(true)}
             onSyncAll={handleSyncAll}
             generatingInvoice={generatingInvoice}
             syncing={syncing}
@@ -849,6 +852,16 @@ export default function ContributionsPage() {
         userId={session?.user.id || ""}
         onRefresh={fetchData}
         categories={categories}
+      />
+
+      <CreateWithoutValueDialog
+        open={createWithoutValueDialogOpen}
+        onOpenChange={setCreateWithoutValueDialogOpen}
+        employers={employers}
+        contributionTypes={contributionTypes}
+        clinicId={currentClinic?.id || ""}
+        userId={session?.user.id || ""}
+        onSuccess={fetchData}
       />
 
       <LytexSyncResultsDialog
