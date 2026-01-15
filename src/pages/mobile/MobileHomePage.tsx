@@ -9,7 +9,7 @@ import { MobileFeaturedServices } from "@/components/mobile/MobileFeaturedServic
 import { MobileCommunicationSection } from "@/components/mobile/MobileCommunicationSection";
 import { MobileHelpSection } from "@/components/mobile/MobileHelpSection";
 import { MobileFooter } from "@/components/mobile/MobileFooter";
-import { Loader2, Sparkles, Award } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface PatientData {
   id: string;
@@ -93,57 +93,7 @@ export default function MobileHomePage() {
 
   return (
     <MobileLayout>
-      {/* Welcome Card - Premium design */}
-      <div className="mx-4 mt-5">
-        <div className="bg-white rounded-3xl p-5 shadow-xl shadow-emerald-500/10 border border-gray-100/50 relative overflow-hidden">
-          {/* Decorative gradient blob */}
-          <div className="absolute -top-12 -right-12 w-32 h-32 bg-gradient-to-br from-emerald-200/50 to-teal-200/50 rounded-full blur-2xl" />
-          
-          <div className="relative flex items-center gap-4">
-            <div className="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-emerald-100 to-teal-100 flex-shrink-0 shadow-lg shadow-emerald-500/20">
-              {patient?.photo_url ? (
-                <img 
-                  src={patient.photo_url} 
-                  alt={patient.name} 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white font-bold text-2xl">
-                  {firstName.charAt(0)}
-                </div>
-              )}
-            </div>
-            
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-semibold text-emerald-600 bg-emerald-100 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <Award className="h-3 w-3" />
-                  Associado
-                </span>
-              </div>
-              <h2 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-                Olá, {firstName} <span className="text-2xl">👋</span>
-              </h2>
-              <p className="text-sm text-gray-500">Que bom ter você conosco!</p>
-            </div>
-          </div>
-          
-          {/* Status bar */}
-          <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-xs font-medium text-gray-500">Conta ativa</span>
-            </div>
-            {patient?.registration_number && (
-              <span className="text-xs font-mono text-gray-400">
-                Nº {patient.registration_number}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Featured Services */}
+      {/* Featured Services - Quick access */}
       <MobileFeaturedServices 
         dependentsCount={dependentsCount}
         registrationNumber={patient?.registration_number}
