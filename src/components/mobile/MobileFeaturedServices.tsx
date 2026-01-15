@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useMobileAppTabs } from "@/hooks/useMobileAppTabs";
 import illustrationDependentes from "@/assets/mobile/illustration-dependentes.png";
 import illustrationAlterarSenha from "@/assets/mobile/illustration-alterar-senha.png";
 import illustrationCarteirinha from "@/assets/mobile/illustration-carteirinha.png";
@@ -10,24 +11,35 @@ interface Props {
 
 export function MobileFeaturedServices({ dependentsCount, registrationNumber }: Props) {
   const navigate = useNavigate();
+  const { isTabActive, loading } = useMobileAppTabs();
 
-  const services = [
+  const allServices = [
     { 
+      key: "dependentes",
       image: illustrationDependentes,
       label: "Dependentes", 
       onClick: () => navigate("/app/dependentes") 
     },
     { 
+      key: "alterar-senha",
       image: illustrationAlterarSenha,
       label: "Alterar senha",
       onClick: () => navigate("/app/alterar-senha") 
     },
     { 
+      key: "carteirinha",
       image: illustrationCarteirinha,
       label: "Carteirinha",
       onClick: () => navigate("/app/carteirinha") 
     },
   ];
+
+  // Filter out inactive tabs
+  const services = allServices.filter(service => isTabActive(service.key));
+
+  if (loading || services.length === 0) {
+    return null;
+  }
 
   return (
     <section className="px-4 py-4">
