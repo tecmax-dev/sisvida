@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -27,6 +27,8 @@ import {
   Cell,
   Legend,
 } from "recharts";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Contribution {
   id: string;
@@ -88,6 +90,43 @@ export default function ContributionsOverviewTab({
   contributionTypes,
   yearFilter,
 }: ContributionsOverviewTabProps) {
+  const { currentClinic } = useAuth();
+  
+  // Estado para pagamentos do mês vigente (query independente)
+  const [currentMonthPayments, setCurrentMonthPayments] = useState<{
+    paidValue: number;
+    paidCount: number;
+  }>({ paidValue: 0, paidCount: 0 });
+
+  // Busca pagamentos do mês vigente diretamente do banco (independente do filtro de ano)
+  useEffect(() => {
+    const fetchCurrentMonthPayments = async () => {
+      if (!currentClinic?.id) return;
+      
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      
+      const { data, error } = await supabase
+        .from("employer_contributions")
+        .select("paid_value, value")
+        .eq("clinic_id", currentClinic.id)
+        .eq("status", "paid")
+        .gte("paid_at", startOfMonth.toISOString())
+        .lte("paid_at", endOfMonth.toISOString());
+      
+      if (!error && data) {
+        const paidValue = data.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+        setCurrentMonthPayments({
+          paidValue,
+          paidCount: data.length,
+        });
+      }
+    };
+    
+    fetchCurrentMonthPayments();
+  }, [currentClinic?.id]);
+
   const formatCurrency = (cents: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -108,26 +147,12 @@ export default function ContributionsOverviewTab({
     const cancelled = yearContribs.filter(c => c.status === "cancelled").length;
     const totalValue = yearContribs.reduce((acc, c) => acc + c.value, 0);
     
-    // Pagamentos recebidos no mês vigente (baseado em paid_at, não competência)
-    const now = new Date();
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-    
-    const currentMonthPaid = contributions.filter(c => {
-      if (c.status !== "paid" || !c.paid_at) return false;
-      const paidDate = new Date(c.paid_at);
-      return paidDate.getMonth() === currentMonth && paidDate.getFullYear() === currentYear;
-    });
-    
-    const paidValue = currentMonthPaid.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
-    const paidCount = currentMonthPaid.length;
-    
     const pendingValue = yearContribs
       .filter(c => c.status === "pending" || c.status === "overdue")
       .reduce((acc, c) => acc + c.value, 0);
     
-    return { total, pending, paid, overdue, cancelled, totalValue, paidValue, paidCount, pendingValue };
-  }, [yearContribs, contributions]);
+    return { total, pending, paid, overdue, cancelled, totalValue, pendingValue };
+  }, [yearContribs]);
 
   // Pagamentos de hoje e ontem (filtrados por paid_at)
   const recentPayments = useMemo(() => {
@@ -288,8 +313,8 @@ export default function ContributionsOverviewTab({
               <CheckCircle2 className="h-4 w-4 text-emerald-500" />
               <span className="text-xs font-medium text-muted-foreground">Recebido ({MONTHS_FULL[new Date().getMonth()]})</span>
             </div>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">{formatCurrency(stats.paidValue)}</p>
-            <p className="text-xs text-muted-foreground">{stats.paidCount} contribuições</p>
+            <p className="text-2xl font-bold text-emerald-600 mt-1">{formatCurrency(currentMonthPayments.paidValue)}</p>
+            <p className="text-xs text-muted-foreground">{currentMonthPayments.paidCount} contribuições</p>
           </CardContent>
         </Card>
 
