@@ -729,9 +729,9 @@ export default function MobileServicesPage() {
   // Service detail view
   if (selectedService) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         {/* Header */}
-        <header className={`${selectedService.color} text-white p-4 pt-12`}>
+        <header className={`${selectedService.color} text-white p-4 sticky top-0 z-50`}>
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -749,8 +749,10 @@ export default function MobileServicesPage() {
         </header>
 
         {/* Content */}
-        <ScrollArea className="flex-1 p-4">
-          {renderServiceContent()}
+        <ScrollArea className="flex-1 overflow-y-auto">
+          <div className="p-4">
+            {renderServiceContent()}
+          </div>
         </ScrollArea>
       </div>
     );
@@ -758,9 +760,9 @@ export default function MobileServicesPage() {
 
   // Services list view
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* Header */}
-      <header className="bg-emerald-600 text-white p-4 pt-12">
+      <header className="bg-emerald-600 text-white p-4 sticky top-0 z-50">
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
@@ -775,7 +777,7 @@ export default function MobileServicesPage() {
       </header>
 
       {/* Services Grid */}
-      <div className="p-4">
+      <div className="flex-1 overflow-y-auto p-4">
         <div className="grid grid-cols-2 gap-3">
           {services.map((service) => (
             <Card

@@ -8,7 +8,7 @@ export default function MobileAboutPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
       <header className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4 sticky top-0 z-50">
         <button onClick={() => navigate(-1)} className="p-1">
@@ -18,7 +18,7 @@ export default function MobileAboutPage() {
       </header>
 
       {/* Content */}
-      <div className="p-4 space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* Logo and App Info */}
         <div className="text-center py-6">
           <div className="w-24 h-24 bg-emerald-100 rounded-2xl mx-auto flex items-center justify-center mb-4">
