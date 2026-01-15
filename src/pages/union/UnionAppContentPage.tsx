@@ -151,12 +151,13 @@ export default function UnionAppContentPage() {
     );
   }
 
-  const filteredContent = activeTab !== "ouvidoria" 
-    ? allContent?.filter(c => c.content_type === activeTab) || []
-    : [];
+  const filteredContent =
+    activeTab !== "ouvidoria" && activeTab !== "push" && activeTab !== "tabs"
+      ? allContent?.filter((c) => c.content_type === activeTab) || []
+      : [];
 
   const handleOpenCreate = () => {
-    if (activeTab === "ouvidoria") return; // Can't create ouvidoria messages from admin
+    if (activeTab === "ouvidoria" || activeTab === "push" || activeTab === "tabs") return;
     setEditingContent(null);
     setFormData({
       ...defaultFormData,
@@ -271,7 +272,7 @@ export default function UnionAppContentPage() {
           Gerencie banners, convênios, convenções, declarações, diretoria, documentos e interações da ouvidoria
           </p>
         </div>
-      {activeTab !== "ouvidoria" && activeTab !== "push" && (
+        {activeTab !== "ouvidoria" && activeTab !== "push" && activeTab !== "tabs" && (
           <Button onClick={handleOpenCreate} className="gap-2">
             <Plus className="h-4 w-4" />
             Novo {CONTENT_TYPE_LABELS[activeTab as ContentType].slice(0, -1)}
