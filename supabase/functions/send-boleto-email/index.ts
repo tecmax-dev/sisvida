@@ -188,9 +188,15 @@ const handler = async (req: Request): Promise<Response> => {
     // Initialize Resend INSIDE handler to ensure fresh secret reading
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
     const resendFrom = Deno.env.get("RESEND_FROM");
-    
+
+    const mask = (v?: string | null) => {
+      if (!v) return v;
+      if (v.length <= 8) return "***";
+      return `${v.slice(0, 4)}***${v.slice(-4)}`;
+    };
+
     console.log("send-boleto-email: RESEND_API_KEY present:", !!resendApiKey);
-    console.log("send-boleto-email: RESEND_FROM value:", resendFrom);
+    console.log("send-boleto-email: RESEND_FROM (masked):", mask(resendFrom));
     
     if (!resendApiKey) {
       console.error("send-boleto-email: RESEND_API_KEY not configured");
@@ -208,8 +214,24 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Validate RESEND_FROM format early to avoid Resend validation errors
+    // Accepted: email@example.com OR Name <email@example.com>
+    const simpleEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const fromEmailMatch = resendFrom.match(/<\s*([^>]+)\s*>/);
+    const fromEmail = (fromEmailMatch?.[1] || resendFrom).trim();
+    if (!simpleEmailRegex.test(fromEmail)) {
+      console.error("send-boleto-email: Invalid RESEND_FROM format (masked):", mask(resendFrom));
+      return new Response(
+        JSON.stringify({
+          error:
+            "Configuração inválida do remetente (RESEND_FROM). Use 'email@dominio.com' ou 'Nome <email@dominio.com>'.",
+        }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const resend = new Resend(resendApiKey);
-    
+
     const data: SendBoletoEmailRequest = await req.json();
     console.log("send-boleto-email: Processing request for", data.recipientEmail, "with", data.boletos.length, "boletos");
 
@@ -245,7 +267,7 @@ const handler = async (req: Request): Promise<Response> => {
     const toEmails = [data.recipientEmail];
     const ccEmails = data.ccEmail ? [data.ccEmail] : undefined;
 
-    console.log("send-boleto-email: Sending email from:", resendFrom, "to:", toEmails, "cc:", ccEmails);
+    console.log("send-boleto-email: Sending email from (masked):", mask(resendFrom), "to:", toEmails, "cc:", ccEmails);
 
     const emailResponse = await resend.emails.send({
       from: resendFrom,
