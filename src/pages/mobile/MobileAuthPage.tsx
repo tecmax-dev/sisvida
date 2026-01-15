@@ -55,17 +55,20 @@ export default function MobileAuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [clinicData, setClinicData] = useState<{ name: string; logo_url: string | null } | null>(null);
+  const [logoError, setLogoError] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   // Load clinic data for branding
   useEffect(() => {
     const loadClinicData = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("clinics")
         .select("name, logo_url")
         .eq("id", TARGET_CLINIC_ID)
         .single();
+      
+      console.log("[MobileAuth] Clinic data:", data, "Error:", error);
       
       if (data) {
         setClinicData(data);
@@ -180,20 +183,16 @@ export default function MobileAuthPage() {
       <div className="bg-emerald-600 text-white py-8 px-4 text-center">
         <div className="flex justify-center mb-4">
           <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center overflow-hidden">
-            {clinicData?.logo_url ? (
+            {clinicData?.logo_url && !logoError ? (
               <img 
                 src={clinicData.logo_url} 
                 alt={clinicData.name || "Logo"} 
                 className="w-16 h-16 object-contain"
-                onError={(e) => {
-                  e.currentTarget.style.display = 'none';
-                  e.currentTarget.parentElement?.querySelector('.fallback-icon')?.classList.remove('hidden');
-                }}
+                onError={() => setLogoError(true)}
               />
             ) : (
               <Building2 className="w-10 h-10 text-emerald-600" />
             )}
-            <Building2 className="fallback-icon hidden w-10 h-10 text-emerald-600" />
           </div>
         </div>
         <h1 className="text-2xl font-bold">{clinicData?.name || "Carregando..."}</h1>
