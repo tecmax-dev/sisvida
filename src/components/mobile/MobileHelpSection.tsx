@@ -1,54 +1,54 @@
 import { useNavigate } from "react-router-dom";
-import { MapPin, ChevronRight, Navigation, HelpCircle, Phone } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { MapPin, Phone, MessageCircle } from "lucide-react";
 
 export function MobileHelpSection() {
   const navigate = useNavigate();
 
+  const handleWhatsApp = () => {
+    window.open("https://wa.me/5573991234567", "_blank");
+  };
+
   return (
-    <section className="px-4 py-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-sm font-bold text-gray-800 tracking-wide">PRECISA DE AJUDA?</h3>
-        <div className="h-1 w-12 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full" />
-      </div>
+    <section className="px-4 py-4 pb-8">
+      <h3 className="text-sm font-bold text-gray-800 tracking-wide mb-4">PRECISA DE AJUDA?</h3>
       
-      <div 
-        className="bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 rounded-3xl p-5 flex items-center gap-4 cursor-pointer border border-emerald-100/50 shadow-lg shadow-emerald-500/10 hover:shadow-xl hover:shadow-emerald-500/15 transition-all duration-300 group"
-        onClick={() => navigate("/app/ajuda")}
-      >
-        <div className="flex-1 space-y-3">
-          <div className="flex items-center gap-2">
-            <HelpCircle className="h-4 w-4 text-emerald-600" />
-            <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wide">Localização</span>
+      <div className="space-y-3">
+        {/* Location Card */}
+        <div 
+          className="bg-white rounded-xl p-4 flex items-center gap-4 border border-gray-200 shadow-sm cursor-pointer transition-all duration-200 active:scale-[0.98]"
+          onClick={() => navigate("/app/ajuda")}
+        >
+          <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+            <MapPin className="h-6 w-6 text-emerald-600" />
           </div>
-          <h4 className="font-bold text-gray-800 text-lg leading-snug">Como chegar até nós?</h4>
-          <Button 
-            size="sm" 
-            className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/25 rounded-xl px-4 gap-2"
-          >
-            <Navigation className="h-4 w-4" />
-            Ver no mapa
-          </Button>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-800">Como chegar até nós?</p>
+            <p className="text-xs text-gray-500">Ver localização no mapa</p>
+          </div>
         </div>
-        
-        <div className="w-20 h-20 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-500/30 group-hover:scale-105 transition-transform duration-300">
-          <MapPin className="h-9 w-9 text-white drop-shadow-sm" />
+
+        {/* Phone Card */}
+        <div 
+          className="bg-white rounded-xl p-4 flex items-center gap-4 border border-gray-200 shadow-sm cursor-pointer transition-all duration-200 active:scale-[0.98]"
+          onClick={() => window.open("tel:+557332812500")}
+        >
+          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+            <Phone className="h-6 w-6 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-800">Central de Atendimento</p>
+            <p className="text-xs text-gray-500">(73) 3281-2500</p>
+          </div>
         </div>
       </div>
 
-      {/* Quick contact card */}
-      <div className="mt-4 bg-white rounded-2xl p-4 border border-gray-100 shadow-sm flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
-            <Phone className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <p className="text-xs text-gray-500 font-medium">Central de Atendimento</p>
-            <p className="text-sm font-bold text-gray-800">(73) 3281-2500</p>
-          </div>
-        </div>
-        <ChevronRight className="h-5 w-5 text-gray-400" />
-      </div>
+      {/* WhatsApp Floating Button */}
+      <button
+        onClick={handleWhatsApp}
+        className="fixed bottom-20 right-4 w-14 h-14 bg-green-500 rounded-full flex items-center justify-center shadow-lg shadow-green-500/30 z-50 transition-all duration-200 active:scale-90 hover:bg-green-600"
+      >
+        <MessageCircle className="h-7 w-7 text-white" />
+      </button>
     </section>
   );
 }
