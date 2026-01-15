@@ -158,49 +158,82 @@ function DeclaracoesContent() {
 }
 
 // ============ CONVÊNIOS ============
+interface ConvenioCategory {
+  id: string;
+  nome: string;
+  icon: string;
+  color: string;
+}
+
+interface Convenio {
+  id: string;
+  nome: string;
+  categoria: string;
+  descricao: string | null;
+  category_id: string | null;
+}
+
+const iconMap: Record<string, any> = {
+  Heart,
+  GraduationCap,
+  Sparkles,
+  Scale,
+};
+
 function ConveniosContent() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  
-  const categorias = [
-    { id: "saude", nome: "Saúde", icon: Heart, color: "from-rose-500 to-pink-500" },
-    { id: "estudos", nome: "Estudos", icon: GraduationCap, color: "from-blue-500 to-indigo-500" },
-    { id: "estetica", nome: "Estética e Beleza", icon: Sparkles, color: "from-purple-500 to-fuchsia-500" },
-    { id: "juridico", nome: "Jurídico", icon: Scale, color: "from-amber-500 to-orange-500" },
-  ];
+  const [categorias, setCategorias] = useState<ConvenioCategory[]>([]);
+  const [convenios, setConvenios] = useState<Convenio[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const convenios = [
-    // Saúde
-    { id: "1", nome: "Dr. José Alcides", categoria: "saude", descricao: "Clínico Geral" },
-    { id: "2", nome: "Dra. Juliane Leite", categoria: "saude", descricao: "Dentista" },
-    { id: "3", nome: "Dr. Jorge Avelar", categoria: "saude", descricao: "Ortopedista" },
-    { id: "4", nome: "Dr. Pedro Roberto", categoria: "saude", descricao: "Urologista" },
-    { id: "5", nome: "Drª Daniela Sales", categoria: "saude", descricao: "Terapia Holística" },
-    { id: "6", nome: "Hospital São José", categoria: "saude", descricao: "Descontos em Exames" },
-    { id: "7", nome: "Laboratório Lidi", categoria: "saude", descricao: "Desconto em Exames" },
-    { id: "8", nome: "Clínica OftalmoSul", categoria: "saude", descricao: "Desconto em Consulta e Exames" },
-    { id: "9", nome: "Clínica Médico Center", categoria: "saude", descricao: "Desconto em Consulta e Exames" },
-    { id: "10", nome: "Laboratório Biolife", categoria: "saude", descricao: "Desconto em Exames" },
-    { id: "11", nome: "Clínica Pensar", categoria: "saude", descricao: "Desconto em Consultas" },
-    { id: "12", nome: "Dra. Uiara Tiuba", categoria: "saude", descricao: "Médica Pediatra" },
-    // Estudos
-    { id: "13", nome: "Faculdade de Ilhéus", categoria: "estudos", descricao: "Desconto para titular e dependentes" },
-    { id: "14", nome: "Uniasselvi", categoria: "estudos", descricao: "Desconto para titular e dependentes" },
-    { id: "15", nome: "CCAA", categoria: "estudos", descricao: "Desconto na mensalidade" },
-    // Estética e Beleza
-    { id: "16", nome: "Espaçolaser", categoria: "estetica", descricao: "Desconto para titular e dependentes" },
-    // Jurídico
-    { id: "17", nome: "Dra. Dione Mattos", categoria: "juridico", descricao: "Gratuito para Associados" },
-  ];
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch categories
+      const { data: catData } = await supabase
+        .from('union_convenio_categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('order_index');
+      
+      // Fetch convenios
+      const { data: convData } = await supabase
+        .from('union_convenios')
+        .select('*')
+        .eq('is_active', true)
+        .order('order_index');
+
+      if (catData) setCategorias(catData);
+      if (convData) setConvenios(convData);
+    } catch (error) {
+      console.error('Error fetching convenios:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filteredConvenios = activeCategory 
-    ? convenios.filter(c => c.categoria === activeCategory)
+    ? convenios.filter(c => c.category_id === activeCategory)
     : [];
 
   const getCategoryInfo = (catId: string) => categorias.find(c => c.id === catId);
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   if (activeCategory) {
     const catInfo = getCategoryInfo(activeCategory);
-    const IconComponent = catInfo?.icon || Heart;
+    const IconComponent = iconMap[catInfo?.icon || 'Heart'] || Heart;
     
     return (
       <div className="space-y-4">
@@ -214,7 +247,7 @@ function ConveniosContent() {
           Voltar às categorias
         </Button>
 
-        <div className={`rounded-xl bg-gradient-to-r ${catInfo?.color} p-4 text-white`}>
+        <div className={`rounded-xl bg-gradient-to-r ${catInfo?.color || 'from-rose-500 to-pink-500'} p-4 text-white`}>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg">
               <IconComponent className="h-6 w-6" />
@@ -231,7 +264,7 @@ function ConveniosContent() {
             <Card key={conv.id} className="border shadow-sm hover:shadow-md transition-shadow">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg bg-gradient-to-r ${catInfo?.color} bg-opacity-10`}>
+                  <div className={`p-2 rounded-lg bg-gradient-to-r ${catInfo?.color || 'from-rose-500 to-pink-500'} bg-opacity-10`}>
                     <IconComponent className="h-5 w-5 text-primary" />
                   </div>
                   <div className="flex-1">
@@ -258,8 +291,8 @@ function ConveniosContent() {
       
       <div className="grid grid-cols-2 gap-3">
         {categorias.map((cat) => {
-          const IconComponent = cat.icon;
-          const count = convenios.filter(c => c.categoria === cat.id).length;
+          const IconComponent = iconMap[cat.icon] || Heart;
+          const count = convenios.filter(c => c.category_id === cat.id).length;
           
           return (
             <Card 
