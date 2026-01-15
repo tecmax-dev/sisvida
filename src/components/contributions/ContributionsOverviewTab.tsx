@@ -40,7 +40,13 @@ interface Contribution {
   due_date: string;
   status: string;
   paid_at: string | null;
+  /**
+   * Valor efetivamente pago pelo contribuinte (inclui juros/multas, mas pode incluir taxas do provedor).
+   * Mantido para compatibilidade.
+   */
   paid_value: number | null;
+  /** Taxas do provedor (ex: Lytex) em centavos, quando disponível */
+  lytex_fee_amount?: number | null;
   employers?: { name: string; cnpj: string };
   contribution_types?: { name: string };
 }
@@ -91,22 +97,30 @@ export default function ContributionsOverviewTab({
   yearFilter,
 }: ContributionsOverviewTabProps) {
   const { currentClinic } = useAuth();
-  
+
   // Estado para pagamentos do mês vigente (query independente)
   const [currentMonthPayments, setCurrentMonthPayments] = useState<{
     paidValue: number;
     paidCount: number;
   }>({ paidValue: 0, paidCount: 0 });
 
+  // Estado para pagamentos de hoje e ontem (query independente, sem depender do yearFilter)
+  const [recentPayments, setRecentPayments] = useState<{
+    todayCount: number;
+    todayValue: number;
+    yesterdayCount: number;
+    yesterdayValue: number;
+  }>({ todayCount: 0, todayValue: 0, yesterdayCount: 0, yesterdayValue: 0 });
+
   // Busca pagamentos do mês vigente diretamente do banco (independente do filtro de ano)
   useEffect(() => {
     const fetchCurrentMonthPayments = async () => {
       if (!currentClinic?.id) return;
-      
+
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-      
+
       const { data, error } = await supabase
         .from("employer_contributions")
         .select("paid_value, value")
@@ -114,7 +128,7 @@ export default function ContributionsOverviewTab({
         .eq("status", "paid")
         .gte("paid_at", startOfMonth.toISOString())
         .lte("paid_at", endOfMonth.toISOString());
-      
+
       if (!error && data) {
         const paidValue = data.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
         setCurrentMonthPayments({
@@ -123,8 +137,61 @@ export default function ContributionsOverviewTab({
         });
       }
     };
-    
+
     fetchCurrentMonthPayments();
+  }, [currentClinic?.id]);
+
+  // Busca pagamentos de hoje e ontem diretamente do banco para evitar divergência com filtros de competência.
+  useEffect(() => {
+    const TZ = "America/Sao_Paulo";
+
+    const formatDateKey = (date: Date) =>
+      new Intl.DateTimeFormat("en-CA", {
+        timeZone: TZ,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(date);
+
+    const fetchRecentPayments = async () => {
+      if (!currentClinic?.id) return;
+
+      const todayKey = formatDateKey(new Date());
+      const yesterdayBase = new Date();
+      yesterdayBase.setDate(yesterdayBase.getDate() - 1);
+      const yesterdayKey = formatDateKey(yesterdayBase);
+
+      // SP não usa mais DST; offset fixo -03:00 é suficiente aqui.
+      const yesterdayStart = new Date(`${yesterdayKey}T00:00:00-03:00`);
+      const todayEnd = new Date(`${todayKey}T23:59:59.999-03:00`);
+
+      const { data, error } = await supabase
+        .from("employer_contributions")
+        .select("paid_at, paid_value, value")
+        .eq("clinic_id", currentClinic.id)
+        .eq("status", "paid")
+        .gte("paid_at", yesterdayStart.toISOString())
+        .lte("paid_at", todayEnd.toISOString());
+
+      if (error || !data) return;
+
+      const today = data.filter((c) => c.paid_at && formatDateKey(new Date(c.paid_at)) === todayKey);
+      const yesterday = data.filter(
+        (c) => c.paid_at && formatDateKey(new Date(c.paid_at)) === yesterdayKey,
+      );
+
+      const sum = (rows: Array<{ paid_value: number | null; value: number }>) =>
+        rows.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+
+      setRecentPayments({
+        todayCount: today.length,
+        todayValue: sum(today),
+        yesterdayCount: yesterday.length,
+        yesterdayValue: sum(yesterday),
+      });
+    };
+
+    fetchRecentPayments();
   }, [currentClinic?.id]);
 
   const formatCurrency = (cents: number) => {
@@ -134,72 +201,25 @@ export default function ContributionsOverviewTab({
     }).format(cents / 100);
   };
 
-  const yearContribs = useMemo(() => 
-    contributions.filter(c => c.competence_year === yearFilter),
-    [contributions, yearFilter]
+  const yearContribs = useMemo(
+    () => contributions.filter((c) => c.competence_year === yearFilter),
+    [contributions, yearFilter],
   );
 
   const stats = useMemo(() => {
     const total = yearContribs.length;
-    const pending = yearContribs.filter(c => c.status === "pending").length;
-    const paid = yearContribs.filter(c => c.status === "paid").length;
-    const overdue = yearContribs.filter(c => c.status === "overdue").length;
-    const cancelled = yearContribs.filter(c => c.status === "cancelled").length;
+    const pending = yearContribs.filter((c) => c.status === "pending").length;
+    const paid = yearContribs.filter((c) => c.status === "paid").length;
+    const overdue = yearContribs.filter((c) => c.status === "overdue").length;
+    const cancelled = yearContribs.filter((c) => c.status === "cancelled").length;
     const totalValue = yearContribs.reduce((acc, c) => acc + c.value, 0);
-    
+
     const pendingValue = yearContribs
-      .filter(c => c.status === "pending" || c.status === "overdue")
+      .filter((c) => c.status === "pending" || c.status === "overdue")
       .reduce((acc, c) => acc + c.value, 0);
-    
+
     return { total, pending, paid, overdue, cancelled, totalValue, pendingValue };
   }, [yearContribs]);
-
-  // Pagamentos de hoje e ontem (filtrados por paid_at)
-  // IMPORTANT: usamos timezone America/Sao_Paulo para bater com a referência do Lytex e evitar falso positivo por UTC.
-  const recentPayments = useMemo(() => {
-    const TZ = "America/Sao_Paulo";
-
-    const formatDateKey = (date: Date) => {
-      // en-CA -> YYYY-MM-DD
-      return new Intl.DateTimeFormat("en-CA", {
-        timeZone: TZ,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }).format(date);
-    };
-
-    const todayKey = formatDateKey(new Date());
-
-    // Para obter "ontem" no mesmo timezone, pegamos a data local e retrocedemos 1 dia,
-    // e formatamos novamente no TZ.
-    const yesterdayBase = new Date();
-    yesterdayBase.setDate(yesterdayBase.getDate() - 1);
-    const yesterdayKey = formatDateKey(yesterdayBase);
-
-    const paidContribs = contributions.filter((c) => c.status === "paid" && c.paid_at);
-
-    const todayPayments = paidContribs.filter((c) => {
-      if (!c.paid_at) return false;
-      return formatDateKey(new Date(c.paid_at)) === todayKey;
-    });
-
-    const yesterdayPayments = paidContribs.filter((c) => {
-      if (!c.paid_at) return false;
-      return formatDateKey(new Date(c.paid_at)) === yesterdayKey;
-    });
-
-    // Usar paid_value (valor recebido com juros/multas, sem tarifas) quando disponível
-    const todayValue = todayPayments.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
-    const yesterdayValue = yesterdayPayments.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
-
-    return {
-      todayCount: todayPayments.length,
-      todayValue,
-      yesterdayCount: yesterdayPayments.length,
-      yesterdayValue,
-    };
-  }, [contributions]);
 
   const monthlyData = useMemo(() => {
     return MONTHS.map((month, index) => {
