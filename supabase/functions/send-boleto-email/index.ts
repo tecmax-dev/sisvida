@@ -13,10 +13,11 @@ interface BoletoData {
   competenceYear: number;
   dueDate: string;
   value: number;
-  status: string;
+  status?: string;
   invoiceUrl: string;
   digitableLine?: string;
   pixCode?: string;
+  isAwaitingValue?: boolean;
 }
 
 interface SendBoletoEmailRequest {
@@ -54,6 +55,54 @@ const formatDate = (dateStr: string) => {
 
 const generateBoletoCard = (boleto: BoletoData): string => {
   const competence = `${MONTHS[boleto.competenceMonth - 1]}/${boleto.competenceYear}`;
+  
+  // Handle "awaiting value" case
+  if (boleto.isAwaitingValue) {
+    return `
+      <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 16px 0; background: #ffffff;">
+        <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
+          ${boleto.contributionType} - ${competence}
+        </h3>
+        
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; width: 120px;">Empresa:</td>
+            <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">${boleto.employerName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">CNPJ:</td>
+            <td style="padding: 8px 0; color: #1f2937;">${formatCNPJ(boleto.employerCnpj)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Vencimento:</td>
+            <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">${formatDate(boleto.dueDate)}</td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280;">Status:</td>
+            <td style="padding: 8px 0;">
+              <span style="display: inline-block; padding: 4px 12px; background: #eff6ff; color: #2563eb; border-radius: 4px; font-size: 12px; font-weight: 500;">
+                Aguardando Valor
+              </span>
+            </td>
+          </tr>
+        </table>
+        
+        <div style="margin-top: 20px; padding: 16px; background: #fef3c7; border-radius: 8px; border: 1px solid #fcd34d;">
+          <p style="margin: 0; color: #92400e; font-size: 14px; text-align: center;">
+            Clique no botao abaixo para informar o valor e gerar o boleto.
+          </p>
+        </div>
+        
+        <div style="margin-top: 16px; text-align: center;">
+          <a href="${boleto.invoiceUrl}" target="_blank" style="display: inline-block; padding: 12px 32px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 14px;">
+            Informar Valor e Gerar Boleto
+          </a>
+        </div>
+      </div>
+    `;
+  }
+  
+  // Regular boleto card
   const statusLabel = boleto.status === "overdue" ? "Vencido" : "Pendente";
   const statusBg = boleto.status === "overdue" ? "#fef2f2" : "#fffbeb";
   const statusColor = boleto.status === "overdue" ? "#dc2626" : "#d97706";

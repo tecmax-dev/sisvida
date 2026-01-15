@@ -24,7 +24,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, CalendarIcon, Copy, ExternalLink, Send, CheckCircle2 } from "lucide-react";
+import { Loader2, CalendarIcon, Copy, ExternalLink, Send, CheckCircle2, Mail } from "lucide-react";
 import { format, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -80,10 +80,13 @@ export default function CreateAwaitingValueDialog({
   const [year, setYear] = useState(now.getFullYear());
   const [dueDate, setDueDate] = useState<Date | undefined>(addMonths(now, 1));
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
+  const [sendEmail, setSendEmail] = useState(false);
+  const [emailAddress, setEmailAddress] = useState("");
   
   // Result state
   const [publicLink, setPublicLink] = useState("");
   const [copied, setCopied] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
 
   // Reset form on open
   useEffect(() => {
@@ -94,8 +97,11 @@ export default function CreateAwaitingValueDialog({
       setYear(now.getFullYear());
       setDueDate(addMonths(now, 1));
       setSendWhatsApp(true);
+      setSendEmail(false);
+      setEmailAddress(employer.email || "");
       setPublicLink("");
       setCopied(false);
+      setSendingEmail(false);
     }
   }, [open, contributionTypes]);
 
@@ -165,6 +171,54 @@ export default function CreateAwaitingValueDialog({
         const phone = employer.phone.replace(/\D/g, "");
         const formattedPhone = phone.startsWith("55") ? phone : `55${phone}`;
         window.open(`https://wa.me/${formattedPhone}?text=${message}`, "_blank");
+      }
+
+      // Send via Email if checked
+      if (sendEmail && emailAddress) {
+        const selectedType = contributionTypes.find(t => t.id === typeId);
+        const typeName = selectedType?.name || "Contribuição";
+        const competence = `${MONTHS[month - 1]}/${year}`;
+        const vencimento = format(dueDate, "dd/MM/yyyy");
+        
+        try {
+          // Fetch clinic name
+          const { data: clinicData } = await supabase
+            .from("clinics")
+            .select("name")
+            .eq("id", clinicId)
+            .single();
+          
+          const clinicName = clinicData?.name || "Sistema";
+          
+          const { error: emailError } = await supabase.functions.invoke("send-boleto-email", {
+            body: {
+              recipientEmail: emailAddress,
+              recipientName: employer.name,
+              clinicName,
+              boletos: [{
+                employerName: employer.name,
+                employerCnpj: employer.cnpj,
+                contributionType: typeName,
+                competenceMonth: month,
+                competenceYear: year,
+                value: 0,
+                dueDate: format(dueDate, "yyyy-MM-dd"),
+                invoiceUrl: link,
+                isAwaitingValue: true,
+              }],
+            },
+          });
+          
+          if (emailError) {
+            console.error("Email send error:", emailError);
+            toast.warning("Contribuição criada, mas erro ao enviar e-mail");
+          } else {
+            toast.success("E-mail enviado com sucesso!");
+          }
+        } catch (emailErr) {
+          console.error("Email error:", emailErr);
+          toast.warning("Contribuição criada, mas erro ao enviar e-mail");
+        }
       }
 
       toast.success("Contribuição criada com sucesso!");
@@ -291,19 +345,49 @@ export default function CreateAwaitingValueDialog({
                 </Popover>
               </div>
 
-              {/* WhatsApp Option */}
-              {employer.phone && (
-                <div className="flex items-center space-x-2 pt-2">
-                  <Checkbox
-                    id="sendWhatsapp"
-                    checked={sendWhatsApp}
-                    onCheckedChange={(checked) => setSendWhatsApp(!!checked)}
-                  />
-                  <label htmlFor="sendWhatsapp" className="text-sm cursor-pointer">
-                    Enviar link via WhatsApp
-                  </label>
+              {/* Send Options */}
+              <div className="space-y-3 pt-2 border-t">
+                <Label className="text-xs uppercase text-muted-foreground">Opções de Envio</Label>
+                
+                {/* WhatsApp Option */}
+                {employer.phone && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="sendWhatsapp"
+                      checked={sendWhatsApp}
+                      onCheckedChange={(checked) => setSendWhatsApp(!!checked)}
+                    />
+                    <label htmlFor="sendWhatsapp" className="text-sm cursor-pointer flex items-center gap-2">
+                      <Send className="h-4 w-4 text-emerald-600" />
+                      Enviar via WhatsApp
+                    </label>
+                  </div>
+                )}
+
+                {/* Email Option */}
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="sendEmail"
+                      checked={sendEmail}
+                      onCheckedChange={(checked) => setSendEmail(!!checked)}
+                    />
+                    <label htmlFor="sendEmail" className="text-sm cursor-pointer flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-blue-600" />
+                      Enviar via E-mail
+                    </label>
+                  </div>
+                  {sendEmail && (
+                    <Input
+                      type="email"
+                      placeholder="email@empresa.com"
+                      value={emailAddress}
+                      onChange={(e) => setEmailAddress(e.target.value)}
+                      className="mt-2"
+                    />
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
             <DialogFooter>
