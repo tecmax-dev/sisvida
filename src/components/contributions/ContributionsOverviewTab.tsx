@@ -178,8 +178,9 @@ export default function ContributionsOverviewTab({
       return paidDate === yesterdayStr;
     });
     
-    const todayValue = todayPayments.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
-    const yesterdayValue = yesterdayPayments.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
+    // Usar valor principal (value) sem descontos de tarifas
+    const todayValue = todayPayments.reduce((acc, c) => acc + c.value, 0);
+    const yesterdayValue = yesterdayPayments.reduce((acc, c) => acc + c.value, 0);
     
     return {
       todayCount: todayPayments.length,
