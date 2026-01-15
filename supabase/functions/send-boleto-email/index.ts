@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,7 +28,7 @@ interface SendBoletoEmailRequest {
 }
 
 const MONTHS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
 
@@ -55,14 +54,14 @@ const formatDate = (dateStr: string) => {
 
 const generateBoletoCard = (boleto: BoletoData): string => {
   const competence = `${MONTHS[boleto.competenceMonth - 1]}/${boleto.competenceYear}`;
-  const statusLabel = boleto.status === "overdue" ? "🔴 Vencido" : "🟡 Pendente";
+  const statusLabel = boleto.status === "overdue" ? "Vencido" : "Pendente";
   const statusBg = boleto.status === "overdue" ? "#fef2f2" : "#fffbeb";
   const statusColor = boleto.status === "overdue" ? "#dc2626" : "#d97706";
 
   return `
     <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 16px 0; background: #ffffff;">
       <h3 style="margin: 0 0 16px 0; color: #1f2937; font-size: 16px; font-weight: 600;">
-        📋 ${boleto.contributionType} - ${competence}
+        ${boleto.contributionType} - ${competence}
       </h3>
       
       <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
@@ -94,13 +93,13 @@ const generateBoletoCard = (boleto: BoletoData): string => {
       
       <div style="margin-top: 20px; text-align: center;">
         <a href="${boleto.invoiceUrl}" target="_blank" style="display: inline-block; padding: 12px 32px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 14px;">
-          📥 Baixar Boleto
+          Baixar Boleto
         </a>
       </div>
       
       ${boleto.digitableLine ? `
         <div style="margin-top: 16px; padding: 12px; background: #f3f4f6; border-radius: 6px;">
-          <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 12px; font-weight: 500;">Linha Digitável:</p>
+          <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 12px; font-weight: 500;">Linha Digitavel:</p>
           <code style="display: block; word-break: break-all; color: #1f2937; font-size: 13px; font-family: monospace;">
             ${boleto.digitableLine}
           </code>
@@ -109,7 +108,7 @@ const generateBoletoCard = (boleto: BoletoData): string => {
       
       ${boleto.pixCode ? `
         <div style="margin-top: 12px; padding: 12px; background: #f0fdf4; border-radius: 6px; border: 1px solid #bbf7d0;">
-          <p style="margin: 0 0 8px 0; color: #166534; font-size: 12px; font-weight: 500;">💚 Pague via PIX (copie o código):</p>
+          <p style="margin: 0 0 8px 0; color: #166534; font-size: 12px; font-weight: 500;">Pague via PIX (copie o codigo):</p>
           <code style="display: block; word-break: break-all; color: #166534; font-size: 11px; font-family: monospace;">
             ${boleto.pixCode}
           </code>
@@ -135,7 +134,7 @@ const generateEmailHtml = (data: SendBoletoEmailRequest): string => {
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); padding: 32px 24px; text-align: center;">
           <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
-            📧 Boleto(s) de Contribuição
+            Boleto(s) de Contribuicao
           </h1>
           <p style="margin: 8px 0 0 0; color: #bfdbfe; font-size: 14px;">
             ${data.clinicName}
@@ -165,7 +164,7 @@ const generateEmailHtml = (data: SendBoletoEmailRequest): string => {
         <!-- Footer -->
         <div style="padding: 24px; background: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
           <p style="margin: 0 0 8px 0; color: #6b7280; font-size: 13px;">
-            Em caso de dúvidas, entre em contato conosco.
+            Em caso de duvidas, entre em contato conosco.
           </p>
           <p style="margin: 0; color: #9ca3af; font-size: 12px;">
             ${data.clinicName}
@@ -185,8 +184,7 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    // Read SMTP config from secrets
-    const smtpApiKey = Deno.env.get("RESEND_API_KEY");
+    const resendApiKey = Deno.env.get("RESEND_API_KEY");
     const resendFrom = Deno.env.get("RESEND_FROM");
 
     const mask = (v?: string | null) => {
@@ -195,13 +193,13 @@ const handler = async (req: Request): Promise<Response> => {
       return `${v.slice(0, 4)}***${v.slice(-4)}`;
     };
 
-    console.log("send-boleto-email: RESEND_API_KEY present:", !!smtpApiKey);
+    console.log("send-boleto-email: RESEND_API_KEY present:", !!resendApiKey);
     console.log("send-boleto-email: RESEND_FROM (masked):", mask(resendFrom));
 
-    if (!smtpApiKey) {
+    if (!resendApiKey) {
       console.error("send-boleto-email: RESEND_API_KEY not configured");
       return new Response(
-        JSON.stringify({ error: "Configuração de e-mail não encontrada (API_KEY)" }),
+        JSON.stringify({ error: "Configuracao de e-mail nao encontrada (API_KEY)" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -209,7 +207,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!resendFrom) {
       console.error("send-boleto-email: RESEND_FROM not configured");
       return new Response(
-        JSON.stringify({ error: "Configuração de e-mail não encontrada (FROM)" }),
+        JSON.stringify({ error: "Configuracao de e-mail nao encontrada (FROM)" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -222,7 +220,7 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("send-boleto-email: Invalid RESEND_FROM format (masked):", mask(resendFrom));
       return new Response(
         JSON.stringify({
-          error: "Configuração inválida do remetente (RESEND_FROM). Use 'email@dominio.com' ou 'Nome <email@dominio.com>'.",
+          error: "Configuracao invalida do remetente (RESEND_FROM). Use 'email@dominio.com' ou 'Nome <email@dominio.com>'.",
         }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -234,7 +232,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Validate required fields
     if (!data.recipientEmail || !data.recipientName || !data.clinicName || !data.boletos?.length) {
       return new Response(
-        JSON.stringify({ error: "Campos obrigatórios não preenchidos" }),
+        JSON.stringify({ error: "Campos obrigatorios nao preenchidos" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -243,64 +241,68 @@ const handler = async (req: Request): Promise<Response> => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(data.recipientEmail)) {
       return new Response(
-        JSON.stringify({ error: "Email do destinatário inválido" }),
+        JSON.stringify({ error: "Email do destinatario invalido" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     if (data.ccEmail && !emailRegex.test(data.ccEmail)) {
       return new Response(
-        JSON.stringify({ error: "Email de cópia inválido" }),
+        JSON.stringify({ error: "Email de copia invalido" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
     const html = generateEmailHtml(data);
+    
+    // Build subject without special characters to avoid encoding issues
+    const monthName = MONTHS[data.boletos[0].competenceMonth - 1];
     const subject = data.boletos.length > 1
-      ? `${data.boletos.length} Boletos de Contribuição - ${data.clinicName}`
-      : `Boleto de Contribuição - ${data.boletos[0].contributionType} ${MONTHS[data.boletos[0].competenceMonth - 1]}/${data.boletos[0].competenceYear}`;
+      ? `${data.boletos.length} Boletos de Contribuicao - ${data.clinicName}`
+      : `Boleto de Contribuicao - ${data.boletos[0].contributionType} ${monthName}/${data.boletos[0].competenceYear}`;
 
-    console.log("send-boleto-email: Connecting to SMTP (smtp.resend.com:465)...");
-
-    // Create SMTP client for Resend
-    const client = new SMTPClient({
-      connection: {
-        hostname: "smtp.resend.com",
-        port: 465,
-        tls: true,
-        auth: {
-          username: "resend",
-          password: smtpApiKey,
-        },
-      },
-    });
+    console.log("send-boleto-email: Subject:", subject);
 
     const toAddresses = data.ccEmail 
       ? [data.recipientEmail, data.ccEmail]
       : [data.recipientEmail];
 
-    console.log("send-boleto-email: Sending email via SMTP from:", mask(resendFrom), "to:", toAddresses);
+    console.log("send-boleto-email: Sending email via Resend API from:", mask(resendFrom), "to:", toAddresses);
 
-    await client.send({
+    // Use Resend HTTP API directly for proper UTF-8 encoding
+    const emailPayload = {
       from: resendFrom,
       to: toAddresses,
       subject,
-      content: "Seu cliente de e-mail não suporta HTML. Por favor, abra em um cliente compatível.",
       html,
+    };
+
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(emailPayload),
     });
 
-    await client.close();
+    const emailResponse = await response.json();
 
-    console.log("send-boleto-email: Email sent successfully via SMTP!");
+    if (!response.ok) {
+      console.error("send-boleto-email: Resend API error:", emailResponse);
+      throw new Error(emailResponse.message || "Erro na API do Resend");
+    }
+
+    console.log("send-boleto-email: Email sent successfully!", emailResponse);
 
     return new Response(
-      JSON.stringify({ success: true, message: "Email enviado com sucesso via SMTP" }),
+      JSON.stringify({ success: true, message: "Email enviado com sucesso", id: emailResponse.data?.id }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error("send-boleto-email: SMTP Error:", error);
+    console.error("send-boleto-email: Error:", error);
     return new Response(
-      JSON.stringify({ error: error.message || "Erro ao enviar email via SMTP" }),
+      JSON.stringify({ error: error.message || "Erro ao enviar email" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
