@@ -56,6 +56,7 @@ interface Professional {
   specialty: string | null;
   appointment_duration: number;
   schedule: ProfessionalSchedule | null;
+  avatar_url: string | null;
 }
 
 interface Dependent {
@@ -137,7 +138,7 @@ export default function MobileBookingPage() {
       // Load professionals with schedule
       const { data: professionalsData } = await supabase
         .from("professionals")
-        .select("id, name, specialty, appointment_duration, schedule")
+        .select("id, name, specialty, appointment_duration, schedule, avatar_url")
         .eq("clinic_id", clinicId)
         .eq("is_active", true)
         .order("name");
@@ -487,9 +488,17 @@ export default function MobileBookingPage() {
                     }}
                   >
                     <CardContent className="p-4 flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
-                        <User className="h-6 w-6 text-emerald-600" />
-                      </div>
+                      {prof.avatar_url ? (
+                        <img 
+                          src={prof.avatar_url} 
+                          alt={prof.name}
+                          className="w-12 h-12 rounded-full object-cover border border-border"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <User className="h-6 w-6 text-emerald-600" />
+                        </div>
+                      )}
                       <div className="flex-1">
                         <p className="font-medium text-foreground">{prof.name}</p>
                         {prof.specialty && (
