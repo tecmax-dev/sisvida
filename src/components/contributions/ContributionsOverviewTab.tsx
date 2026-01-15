@@ -155,33 +155,44 @@ export default function ContributionsOverviewTab({
   }, [yearContribs]);
 
   // Pagamentos de hoje e ontem (filtrados por paid_at)
+  // IMPORTANT: usamos timezone America/Sao_Paulo para bater com a referência do Lytex e evitar falso positivo por UTC.
   const recentPayments = useMemo(() => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const todayStr = today.toISOString().split("T")[0];
-    const yesterdayStr = yesterday.toISOString().split("T")[0];
-    
-    const paidContribs = contributions.filter(c => c.status === "paid" && c.paid_at);
-    
-    const todayPayments = paidContribs.filter(c => {
+    const TZ = "America/Sao_Paulo";
+
+    const formatDateKey = (date: Date) => {
+      // en-CA -> YYYY-MM-DD
+      return new Intl.DateTimeFormat("en-CA", {
+        timeZone: TZ,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(date);
+    };
+
+    const todayKey = formatDateKey(new Date());
+
+    // Para obter "ontem" no mesmo timezone, pegamos a data local e retrocedemos 1 dia,
+    // e formatamos novamente no TZ.
+    const yesterdayBase = new Date();
+    yesterdayBase.setDate(yesterdayBase.getDate() - 1);
+    const yesterdayKey = formatDateKey(yesterdayBase);
+
+    const paidContribs = contributions.filter((c) => c.status === "paid" && c.paid_at);
+
+    const todayPayments = paidContribs.filter((c) => {
       if (!c.paid_at) return false;
-      const paidDate = c.paid_at.split("T")[0];
-      return paidDate === todayStr;
+      return formatDateKey(new Date(c.paid_at)) === todayKey;
     });
-    
-    const yesterdayPayments = paidContribs.filter(c => {
+
+    const yesterdayPayments = paidContribs.filter((c) => {
       if (!c.paid_at) return false;
-      const paidDate = c.paid_at.split("T")[0];
-      return paidDate === yesterdayStr;
+      return formatDateKey(new Date(c.paid_at)) === yesterdayKey;
     });
-    
+
     // Usar paid_value (valor recebido com juros/multas, sem tarifas) quando disponível
     const todayValue = todayPayments.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
     const yesterdayValue = yesterdayPayments.reduce((acc, c) => acc + (c.paid_value || c.value), 0);
-    
+
     return {
       todayCount: todayPayments.length,
       todayValue,
