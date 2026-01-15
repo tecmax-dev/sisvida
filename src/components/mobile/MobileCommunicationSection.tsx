@@ -26,7 +26,7 @@ export function MobileCommunicationSection() {
     { 
       icon: Play, 
       label: "Vídeos", 
-      bgColor: "bg-red-500",
+      bgColor: "bg-red-600",
       path: "/app/comunicacao/videos" 
     },
   ];
@@ -35,7 +35,7 @@ export function MobileCommunicationSection() {
     <section className="px-4 py-4">
       <h3 className="text-sm font-bold text-gray-800 tracking-wide mb-4">COMUNICAÇÃO</h3>
       
-      <div className="grid grid-cols-4 gap-4">
+      <div className="flex justify-between px-2">
         {items.map((item, idx) => (
           <button
             key={idx}
