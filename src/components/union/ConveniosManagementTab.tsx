@@ -62,6 +62,18 @@ import {
   Star,
   Gift,
   Percent,
+  Globe,
+  Mail,
+  Instagram,
+  Facebook,
+  MessageCircle,
+  Clock,
+  Image,
+  Link2,
+  Map,
+  ExternalLink,
+  Upload,
+  FileText,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -89,6 +101,17 @@ interface Convenio {
   order_index: number;
   is_active: boolean;
   created_at: string;
+  logo_url: string | null;
+  image_url: string | null;
+  website: string | null;
+  email: string | null;
+  whatsapp: string | null;
+  instagram: string | null;
+  facebook: string | null;
+  google_maps_url: string | null;
+  street_view_url: string | null;
+  horario_funcionamento: string | null;
+  detalhes_extras: string | null;
 }
 
 const AVAILABLE_ICONS = [
@@ -154,6 +177,17 @@ export function ConveniosManagementTab() {
     telefone: "",
     endereco: "",
     is_active: true,
+    logo_url: "",
+    image_url: "",
+    website: "",
+    email: "",
+    whatsapp: "",
+    instagram: "",
+    facebook: "",
+    google_maps_url: "",
+    street_view_url: "",
+    horario_funcionamento: "",
+    detalhes_extras: "",
   });
 
   // Delete dialog state
@@ -310,6 +344,17 @@ export function ConveniosManagementTab() {
       telefone: "",
       endereco: "",
       is_active: true,
+      logo_url: "",
+      image_url: "",
+      website: "",
+      email: "",
+      whatsapp: "",
+      instagram: "",
+      facebook: "",
+      google_maps_url: "",
+      street_view_url: "",
+      horario_funcionamento: "",
+      detalhes_extras: "",
     });
     setIsConvenioDialogOpen(true);
   };
@@ -324,6 +369,17 @@ export function ConveniosManagementTab() {
       telefone: convenio.telefone || "",
       endereco: convenio.endereco || "",
       is_active: convenio.is_active,
+      logo_url: convenio.logo_url || "",
+      image_url: convenio.image_url || "",
+      website: convenio.website || "",
+      email: convenio.email || "",
+      whatsapp: convenio.whatsapp || "",
+      instagram: convenio.instagram || "",
+      facebook: convenio.facebook || "",
+      google_maps_url: convenio.google_maps_url || "",
+      street_view_url: convenio.street_view_url || "",
+      horario_funcionamento: convenio.horario_funcionamento || "",
+      detalhes_extras: convenio.detalhes_extras || "",
     });
     setIsConvenioDialogOpen(true);
   };
@@ -348,6 +404,17 @@ export function ConveniosManagementTab() {
             telefone: convenioForm.telefone || null,
             endereco: convenioForm.endereco || null,
             is_active: convenioForm.is_active,
+            logo_url: convenioForm.logo_url || null,
+            image_url: convenioForm.image_url || null,
+            website: convenioForm.website || null,
+            email: convenioForm.email || null,
+            whatsapp: convenioForm.whatsapp || null,
+            instagram: convenioForm.instagram || null,
+            facebook: convenioForm.facebook || null,
+            google_maps_url: convenioForm.google_maps_url || null,
+            street_view_url: convenioForm.street_view_url || null,
+            horario_funcionamento: convenioForm.horario_funcionamento || null,
+            detalhes_extras: convenioForm.detalhes_extras || null,
           })
           .eq("id", editingConvenio.id);
 
@@ -367,6 +434,17 @@ export function ConveniosManagementTab() {
             endereco: convenioForm.endereco || null,
             order_index: convenios.length,
             is_active: convenioForm.is_active,
+            logo_url: convenioForm.logo_url || null,
+            image_url: convenioForm.image_url || null,
+            website: convenioForm.website || null,
+            email: convenioForm.email || null,
+            whatsapp: convenioForm.whatsapp || null,
+            instagram: convenioForm.instagram || null,
+            facebook: convenioForm.facebook || null,
+            google_maps_url: convenioForm.google_maps_url || null,
+            street_view_url: convenioForm.street_view_url || null,
+            horario_funcionamento: convenioForm.horario_funcionamento || null,
+            detalhes_extras: convenioForm.detalhes_extras || null,
           });
 
         if (error) throw error;
@@ -732,91 +810,304 @@ export function ConveniosManagementTab() {
 
       {/* Convenio Dialog */}
       <Dialog open={isConvenioDialogOpen} onOpenChange={setIsConvenioDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh]">
+        <DialogContent className="max-w-2xl max-h-[90vh]">
           <DialogHeader>
             <DialogTitle>
               {editingConvenio ? "Editar" : "Novo"} Convênio
             </DialogTitle>
             <DialogDescription>
-              Preencha as informações do convênio
+              Preencha as informações completas do convênio
             </DialogDescription>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[60vh] pr-4">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nome *</Label>
-                <Input
-                  value={convenioForm.nome}
-                  onChange={(e) => setConvenioForm(prev => ({ ...prev, nome: e.target.value }))}
-                  placeholder="Nome do convênio/parceiro"
-                />
+          <ScrollArea className="max-h-[65vh] pr-4">
+            <div className="space-y-6">
+              {/* Informações Básicas */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                  <FileText className="h-4 w-4" />
+                  Informações Básicas
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Nome *</Label>
+                    <Input
+                      value={convenioForm.nome}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, nome: e.target.value }))}
+                      placeholder="Nome do convênio/parceiro"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Categoria</Label>
+                    <Select
+                      value={convenioForm.category_id}
+                      onValueChange={(v) => setConvenioForm(prev => ({ ...prev, category_id: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categories.filter(c => c.is_active).map((cat) => {
+                          const IconComp = getIconComponent(cat.icon);
+                          return (
+                            <SelectItem key={cat.id} value={cat.id}>
+                              <div className="flex items-center gap-2">
+                                <IconComp className="h-4 w-4" style={{ color: cat.color || undefined }} />
+                                {cat.nome}
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Descrição</Label>
+                  <Textarea
+                    value={convenioForm.descricao}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, descricao: e.target.value }))}
+                    placeholder="Breve descrição do convênio/parceiro"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Desconto/Benefício</Label>
+                    <Input
+                      value={convenioForm.desconto}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, desconto: e.target.value }))}
+                      placeholder="Ex: 20% de desconto"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Clock className="h-3 w-3" />
+                      Horário de Funcionamento
+                    </Label>
+                    <Input
+                      value={convenioForm.horario_funcionamento}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, horario_funcionamento: e.target.value }))}
+                      placeholder="Ex: Seg-Sex 8h às 18h"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Categoria</Label>
-                <Select
-                  value={convenioForm.category_id}
-                  onValueChange={(v) => setConvenioForm(prev => ({ ...prev, category_id: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione uma categoria" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.filter(c => c.is_active).map((cat) => {
-                      const IconComp = getIconComponent(cat.icon);
-                      return (
-                        <SelectItem key={cat.id} value={cat.id}>
-                          <div className="flex items-center gap-2">
-                            <IconComp className="h-4 w-4" style={{ color: cat.color || undefined }} />
-                            {cat.nome}
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+              {/* Imagens */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                  <Image className="h-4 w-4" />
+                  Imagens
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Upload className="h-3 w-3" />
+                      URL do Logo
+                    </Label>
+                    <Input
+                      value={convenioForm.logo_url}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, logo_url: e.target.value }))}
+                      placeholder="https://example.com/logo.png"
+                    />
+                    {convenioForm.logo_url && (
+                      <img 
+                        src={convenioForm.logo_url} 
+                        alt="Preview logo" 
+                        className="h-12 w-auto object-contain rounded border"
+                        onError={(e) => e.currentTarget.style.display = 'none'}
+                      />
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Image className="h-3 w-3" />
+                      URL da Imagem Principal
+                    </Label>
+                    <Input
+                      value={convenioForm.image_url}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, image_url: e.target.value }))}
+                      placeholder="https://example.com/imagem.png"
+                    />
+                    {convenioForm.image_url && (
+                      <img 
+                        src={convenioForm.image_url} 
+                        alt="Preview imagem" 
+                        className="h-20 w-auto object-cover rounded border"
+                        onError={(e) => e.currentTarget.style.display = 'none'}
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Descrição</Label>
-                <Textarea
-                  value={convenioForm.descricao}
-                  onChange={(e) => setConvenioForm(prev => ({ ...prev, descricao: e.target.value }))}
-                  placeholder="Breve descrição do convênio"
-                  rows={2}
-                />
+              {/* Contato */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                  <Phone className="h-4 w-4" />
+                  Contato
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Phone className="h-3 w-3" />
+                      Telefone
+                    </Label>
+                    <Input
+                      value={convenioForm.telefone}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, telefone: e.target.value }))}
+                      placeholder="(00) 0000-0000"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <MessageCircle className="h-3 w-3" />
+                      WhatsApp
+                    </Label>
+                    <Input
+                      value={convenioForm.whatsapp}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, whatsapp: e.target.value }))}
+                      placeholder="(00) 00000-0000"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Mail className="h-3 w-3" />
+                      E-mail
+                    </Label>
+                    <Input
+                      type="email"
+                      value={convenioForm.email}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="contato@empresa.com"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Globe className="h-3 w-3" />
+                      Website
+                    </Label>
+                    <Input
+                      value={convenioForm.website}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, website: e.target.value }))}
+                      placeholder="https://www.empresa.com"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Desconto/Benefício</Label>
-                <Input
-                  value={convenioForm.desconto}
-                  onChange={(e) => setConvenioForm(prev => ({ ...prev, desconto: e.target.value }))}
-                  placeholder="Ex: 20% de desconto, 2 meses grátis..."
-                />
+              {/* Redes Sociais */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                  <Link2 className="h-4 w-4" />
+                  Redes Sociais
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Instagram className="h-3 w-3" />
+                      Instagram
+                    </Label>
+                    <Input
+                      value={convenioForm.instagram}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, instagram: e.target.value }))}
+                      placeholder="https://instagram.com/usuario"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Facebook className="h-3 w-3" />
+                      Facebook
+                    </Label>
+                    <Input
+                      value={convenioForm.facebook}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, facebook: e.target.value }))}
+                      placeholder="https://facebook.com/pagina"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Telefone</Label>
-                <Input
-                  value={convenioForm.telefone}
-                  onChange={(e) => setConvenioForm(prev => ({ ...prev, telefone: e.target.value }))}
-                  placeholder="(00) 00000-0000"
-                />
+              {/* Localização */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                  <MapPin className="h-4 w-4" />
+                  Localização
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Endereço</Label>
+                  <Input
+                    value={convenioForm.endereco}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, endereco: e.target.value }))}
+                    placeholder="Endereço completo do estabelecimento"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <Map className="h-3 w-3" />
+                      Link Google Maps
+                    </Label>
+                    <Input
+                      value={convenioForm.google_maps_url}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, google_maps_url: e.target.value }))}
+                      placeholder="https://maps.google.com/..."
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <ExternalLink className="h-3 w-3" />
+                      Link Street View
+                    </Label>
+                    <Input
+                      value={convenioForm.street_view_url}
+                      onChange={(e) => setConvenioForm(prev => ({ ...prev, street_view_url: e.target.value }))}
+                      placeholder="https://www.google.com/maps/@..."
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Endereço</Label>
-                <Input
-                  value={convenioForm.endereco}
-                  onChange={(e) => setConvenioForm(prev => ({ ...prev, endereco: e.target.value }))}
-                  placeholder="Endereço do estabelecimento"
-                />
+              {/* Detalhes Extras */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 text-sm font-semibold text-primary border-b pb-2">
+                  <FileText className="h-4 w-4" />
+                  Informações Adicionais
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Detalhes Extras</Label>
+                  <Textarea
+                    value={convenioForm.detalhes_extras}
+                    onChange={(e) => setConvenioForm(prev => ({ ...prev, detalhes_extras: e.target.value }))}
+                    placeholder="Informações adicionais, condições especiais, observações..."
+                    rows={3}
+                  />
+                </div>
               </div>
 
-              <div className="flex items-center justify-between">
-                <Label>Ativo</Label>
+              {/* Status */}
+              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+                <Label className="font-medium">Convênio Ativo</Label>
                 <Switch
                   checked={convenioForm.is_active}
                   onCheckedChange={(checked) => setConvenioForm(prev => ({ ...prev, is_active: checked }))}
