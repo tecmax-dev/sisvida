@@ -24,14 +24,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay } from "date-fns";
+import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, isAfter, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
+
+// Day name mapping (getDay returns 0=Sunday, 1=Monday, etc.)
+const dayMap: Record<number, string> = {
+  0: 'sunday',
+  1: 'monday',
+  2: 'tuesday',
+  3: 'wednesday',
+  4: 'thursday',
+  5: 'friday',
+  6: 'saturday'
+};
+
+interface ScheduleBlock {
+  days: string[];
+  start_time: string;
+  end_time: string;
+  duration?: number;
+  start_date?: string;
+  end_date?: string;
+}
+
+interface ProfessionalSchedule {
+  _blocks?: ScheduleBlock[];
+  [key: string]: { enabled: boolean; slots: { start: string; end: string }[] } | ScheduleBlock[] | undefined;
+}
 
 interface Professional {
   id: string;
   name: string;
   specialty: string | null;
   appointment_duration: number;
+  schedule: ProfessionalSchedule | null;
 }
 
 interface Dependent {
@@ -110,15 +136,15 @@ export default function MobileBookingPage() {
         setBlockedMessage("Sua conta está inativa. Entre em contato com o sindicato.");
       }
 
-      // Load professionals
+      // Load professionals with schedule
       const { data: professionalsData } = await supabase
         .from("professionals")
-        .select("id, name, specialty, appointment_duration")
+        .select("id, name, specialty, appointment_duration, schedule")
         .eq("clinic_id", clinicId)
         .eq("is_active", true)
         .order("name");
 
-      setProfessionals(professionalsData || []);
+      setProfessionals((professionalsData || []) as Professional[]);
 
       // Load dependents using RPC to bypass RLS (mobile uses CPF auth, not Supabase Auth)
       const { data: dependentsData, error: dependentsError } = await supabase
@@ -136,13 +162,60 @@ export default function MobileBookingPage() {
     }
   };
 
+  // Check if a date is enabled for the selected professional based on schedule blocks
+  const isDateEnabled = (date: Date, professional: Professional | undefined): boolean => {
+    if (!professional?.schedule) return false;
+    
+    const blocks = professional.schedule._blocks;
+    if (!blocks || blocks.length === 0) return false;
+    
+    const dayName = dayMap[getDay(date)];
+    const dateStr = format(date, "yyyy-MM-dd");
+    
+    // Check if this date is within any active block and the day is enabled
+    return blocks.some(block => {
+      // Check if day of week matches
+      if (!block.days.includes(dayName)) return false;
+      
+      // Check date range if specified
+      if (block.start_date && block.end_date) {
+        return dateStr >= block.start_date && dateStr <= block.end_date;
+      }
+      
+      return true;
+    });
+  };
+
+  // Get schedule blocks applicable for a specific date
+  const getBlocksForDate = (date: Date, schedule: ProfessionalSchedule | null): ScheduleBlock[] => {
+    if (!schedule?._blocks) return [];
+    
+    const dayName = dayMap[getDay(date)];
+    const dateStr = format(date, "yyyy-MM-dd");
+    
+    return schedule._blocks.filter(block => {
+      // Check if day of week matches
+      if (!block.days.includes(dayName)) return false;
+      
+      // Check date range if specified
+      if (block.start_date && block.end_date) {
+        return dateStr >= block.start_date && dateStr <= block.end_date;
+      }
+      
+      return true;
+    });
+  };
+
   const loadAvailableSlots = async () => {
     if (!selectedProfessionalId || !selectedDate) return;
 
     try {
-      const clinicId = sessionStorage.getItem('mobile_clinic_id');
       const professional = professionals.find(p => p.id === selectedProfessionalId);
-      const duration = professional?.appointment_duration || 30;
+      if (!professional?.schedule) {
+        setAvailableSlots([]);
+        return;
+      }
+
       const dateStr = format(selectedDate, "yyyy-MM-dd");
 
       // Get existing appointments for this day
@@ -153,33 +226,59 @@ export default function MobileBookingPage() {
         .eq("appointment_date", dateStr)
         .not("status", "in", '("cancelled","no_show")');
 
-      // Generate time slots from 08:00 to 18:00
+      // Get applicable blocks for this date
+      const applicableBlocks = getBlocksForDate(selectedDate, professional.schedule);
+      
+      if (applicableBlocks.length === 0) {
+        setAvailableSlots([]);
+        return;
+      }
+
       const slots: TimeSlot[] = [];
       const now = new Date();
+      const defaultDuration = professional.appointment_duration || 30;
 
-      // Simple slot generation
-      for (let hour = 8; hour < 18; hour++) {
-        for (let min = 0; min < 60; min += duration) {
-          const timeStr = `${hour.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`;
-
+      // Generate slots from each applicable block
+      for (const block of applicableBlocks) {
+        const blockDuration = block.duration || defaultDuration;
+        const [startHour, startMin] = block.start_time.split(":").map(Number);
+        const [endHour, endMin] = block.end_time.split(":").map(Number);
+        
+        const startMinutes = startHour * 60 + startMin;
+        const endMinutes = endHour * 60 + endMin;
+        
+        for (let currentMinutes = startMinutes; currentMinutes + blockDuration <= endMinutes; currentMinutes += blockDuration) {
+          const hours = Math.floor(currentMinutes / 60);
+          const mins = currentMinutes % 60;
+          const timeStr = `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}`;
+          
           // Check if slot is in the past for today
           if (isSameDay(selectedDate, now)) {
             const slotDateTime = new Date(selectedDate);
-            const [h, m] = timeStr.split(":").map(Number);
-            slotDateTime.setHours(h, m);
+            slotDateTime.setHours(hours, mins);
             if (isBefore(slotDateTime, now)) continue;
           }
-
+          
           // Check if slot conflicts with existing appointments
+          const slotEndMinutes = currentMinutes + blockDuration;
+          const slotEndTime = `${Math.floor(slotEndMinutes / 60).toString().padStart(2, '0')}:${(slotEndMinutes % 60).toString().padStart(2, '0')}`;
+          
           const isOccupied = existingAppointments?.some(apt => {
             const aptStart = (apt.start_time as string).slice(0, 5);
             const aptEnd = (apt.end_time as string).slice(0, 5);
-            return timeStr >= aptStart && timeStr < aptEnd;
+            // Check for any overlap
+            return (timeStr < aptEnd && slotEndTime > aptStart);
           });
-
-          slots.push({ time: timeStr, available: !isOccupied });
+          
+          // Avoid duplicate slots if blocks overlap
+          if (!slots.some(s => s.time === timeStr)) {
+            slots.push({ time: timeStr, available: !isOccupied });
+          }
         }
       }
+
+      // Sort slots by time
+      slots.sort((a, b) => a.time.localeCompare(b.time));
 
       setAvailableSlots(slots);
     } catch (err) {
@@ -203,10 +302,13 @@ export default function MobileBookingPage() {
       const patientId = sessionStorage.getItem('mobile_patient_id');
       const clinicId = sessionStorage.getItem('mobile_clinic_id');
       const professional = professionals.find(p => p.id === selectedProfessionalId);
-      const duration = professional?.appointment_duration || 30;
+      
+      // Get the duration from the applicable block for this date
+      const applicableBlocks = getBlocksForDate(selectedDate, professional?.schedule || null);
+      const blockDuration = applicableBlocks[0]?.duration || professional?.appointment_duration || 30;
 
       const [hours, minutes] = selectedTime.split(":").map(Number);
-      const endTime = format(addMinutes(new Date(2000, 0, 1, hours, minutes), duration), "HH:mm");
+      const endTime = format(addMinutes(new Date(2000, 0, 1, hours, minutes), blockDuration), "HH:mm");
 
       const appointmentData = {
         clinic_id: clinicId,
@@ -218,7 +320,7 @@ export default function MobileBookingPage() {
         end_time: endTime,
         status: "scheduled" as const,
         type: "first_visit" as const,
-        duration_minutes: duration,
+        duration_minutes: blockDuration,
       };
 
       const { error } = await supabase
@@ -378,7 +480,13 @@ export default function MobileBookingPage() {
                   <Card 
                     key={prof.id}
                     className={`cursor-pointer transition-colors ${selectedProfessionalId === prof.id ? "border-emerald-600 bg-emerald-50" : ""}`}
-                    onClick={() => setSelectedProfessionalId(prof.id)}
+                    onClick={() => {
+                      setSelectedProfessionalId(prof.id);
+                      // Reset date and time when changing professional
+                      setSelectedDate(undefined);
+                      setSelectedTime("");
+                      setAvailableSlots([]);
+                    }}
                   >
                     <CardContent className="p-4 flex items-center gap-4">
                       <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -418,14 +526,26 @@ export default function MobileBookingPage() {
                 selected={selectedDate}
                 onSelect={setSelectedDate}
                 locale={ptBR}
-                disabled={(date) => isBefore(startOfDay(date), startOfDay(new Date()))}
+                disabled={(date) => {
+                  // Disable past dates
+                  if (isBefore(startOfDay(date), startOfDay(new Date()))) return true;
+                  
+                  // Disable dates where professional doesn't work
+                  const professional = professionals.find(p => p.id === selectedProfessionalId);
+                  if (!isDateEnabled(date, professional)) return true;
+                  
+                  return false;
+                }}
                 className="rounded-md border mx-auto"
               />
 
               <Button 
                 className="w-full bg-emerald-600 hover:bg-emerald-700"
                 disabled={!selectedDate}
-                onClick={() => setStep(4)}
+                onClick={() => {
+                  setSelectedTime(""); // Reset time when changing date
+                  setStep(4);
+                }}
               >
                 Continuar
               </Button>
