@@ -10257,6 +10257,113 @@ export type Database = {
           },
         ]
       }
+      union_convenio_categories: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          nome: string
+          order_index: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          order_index?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          order_index?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_convenio_categories_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_convenios: {
+        Row: {
+          categoria: string
+          category_id: string | null
+          clinic_id: string
+          created_at: string | null
+          desconto: string | null
+          descricao: string | null
+          endereco: string | null
+          id: string
+          is_active: boolean | null
+          nome: string
+          order_index: number | null
+          telefone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          categoria: string
+          category_id?: string | null
+          clinic_id: string
+          created_at?: string | null
+          desconto?: string | null
+          descricao?: string | null
+          endereco?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome: string
+          order_index?: number | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          categoria?: string
+          category_id?: string | null
+          clinic_id?: string
+          created_at?: string | null
+          desconto?: string | null
+          descricao?: string | null
+          endereco?: string | null
+          id?: string
+          is_active?: boolean | null
+          nome?: string
+          order_index?: number | null
+          telefone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_convenios_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "union_convenio_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_convenios_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_cost_centers: {
         Row: {
           clinic_id: string
