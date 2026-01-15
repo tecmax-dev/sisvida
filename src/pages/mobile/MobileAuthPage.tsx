@@ -114,9 +114,17 @@ export default function MobileAuthPage() {
         return;
       }
 
-      const patient = patientData[0];
+      // In some environments the same CPF may exist in multiple clinics (historical imports).
+      // This mobile app must operate on the intended clinic dataset.
+      const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d"; // Sindicato Comerciários
 
-      if (!patient.is_active) {
+      const patient =
+        patientData.find((p: any) => p.clinic_id === TARGET_CLINIC_ID) ?? patientData[0];
+
+      console.log("[MobileAuth] verify_patient_password candidates:", patientData);
+      console.log("[MobileAuth] selected patient:", patient);
+
+      if (!patient?.is_active) {
         toast({
           title: "Conta inativa",
           description: "Sua conta está inativa. Entre em contato com o sindicato.",
@@ -129,7 +137,6 @@ export default function MobileAuthPage() {
       sessionStorage.setItem('mobile_patient_id', patient.patient_id);
       sessionStorage.setItem('mobile_clinic_id', patient.clinic_id);
       sessionStorage.setItem('mobile_patient_name', patient.patient_name);
-      
       toast({
         title: "Bem-vindo!",
         description: `Olá, ${patient.patient_name.split(' ')[0]}!`,
