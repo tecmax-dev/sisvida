@@ -158,18 +158,6 @@ export default function Auth() {
         return;
       }
       
-      // Forçar redirecionamento para domínio correto após OAuth callback
-      const expectedDomain = "https://app.eclini.com.br";
-      const currentOrigin = window.location.origin;
-      if (event === "SIGNED_IN" && session?.user && currentOrigin !== expectedDomain && !currentOrigin.includes("localhost")) {
-        // Se está em um domínio diferente do esperado (ex: preview), redirecionar
-        const isPreviewDomain = currentOrigin.includes("lovable.app") || currentOrigin.includes("supabase");
-        if (isPreviewDomain && window.location.pathname === "/auth") {
-          window.location.href = `${expectedDomain}/auth`;
-          return;
-        }
-      }
-      
       if (session?.user) {
         setTimeout(() => {
           // Verificar refs novamente antes de redirecionar
