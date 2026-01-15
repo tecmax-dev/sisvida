@@ -93,6 +93,32 @@ export default function MobileHomePage() {
 
   return (
     <MobileLayout>
+      {/* Welcome Card */}
+      <div className="mx-4 mt-4">
+        <div className="bg-blue-50 rounded-2xl p-4 flex items-center gap-4">
+          <div className="w-14 h-14 rounded-full overflow-hidden bg-gray-200 flex-shrink-0">
+            {patient?.photo_url ? (
+              <img 
+                src={patient.photo_url} 
+                alt={patient.name} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full bg-emerald-500 flex items-center justify-center text-white font-bold text-xl">
+                {firstName.charAt(0)}
+              </div>
+            )}
+          </div>
+          
+          <div className="flex-1">
+            <h2 className="text-lg font-bold text-gray-800">
+              Olá, {firstName.toUpperCase()} 👋
+            </h2>
+            <p className="text-sm text-gray-500">Que bom ter você conosco!</p>
+          </div>
+        </div>
+      </div>
+
       {/* Featured Services - Quick access */}
       <MobileFeaturedServices 
         dependentsCount={dependentsCount}
