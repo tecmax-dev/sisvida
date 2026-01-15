@@ -21,12 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, FileStack, Building2, CheckCircle2, Tag, Mail, Send } from "lucide-react";
+import { Loader2, FileStack, Building2, CheckCircle2, Tag, Mail, Send, MessageCircle } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
 import { extractFunctionsError } from "@/lib/functionsError";
+import { sendWhatsAppMessage } from "@/lib/whatsapp";
 
 interface CreatedContribution {
   id: string;
@@ -35,6 +36,7 @@ interface CreatedContribution {
     id: string;
     name: string;
     email?: string | null;
+    phone?: string | null;
     cnpj: string;
   };
 }
@@ -50,6 +52,7 @@ interface Employer {
   name: string;
   cnpj: string;
   email?: string | null;
+  phone?: string | null;
   category_id?: string | null;
   registration_number?: string | null;
 }
@@ -109,10 +112,13 @@ export default function BulkContributionDialog({
     errors: [] 
   });
   
-  // Created contributions for email sending
+  // Created contributions for email/whatsapp sending
   const [createdContributions, setCreatedContributions] = useState<CreatedContribution[]>([]);
   const [sendingEmails, setSendingEmails] = useState(false);
   const [emailProgress, setEmailProgress] = useState({ current: 0, total: 0 });
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  const [whatsAppProgress, setWhatsAppProgress] = useState({ current: 0, total: 0 });
+  const [messageDelay, setMessageDelay] = useState(10);
   const [clinicName, setClinicName] = useState("");
 
   // Filter employers
@@ -179,10 +185,13 @@ export default function BulkContributionDialog({
     try {
       const { data } = await supabase
         .from("clinics")
-        .select("name")
+        .select("name, whatsapp_message_delay_seconds")
         .eq("id", clinicId)
         .single();
-      if (data) setClinicName(data.name);
+      if (data) {
+        setClinicName(data.name);
+        setMessageDelay(data.whatsapp_message_delay_seconds || 10);
+      }
     } catch (error) {
       console.error("Error fetching clinic name:", error);
     }
@@ -290,7 +299,7 @@ export default function BulkContributionDialog({
 
         successCount++;
 
-        // Store for email sending if zero value
+        // Store for email/whatsapp sending if zero value
         if (publicToken && newContribution && employer) {
           newCreatedContributions.push({
             id: newContribution.id,
@@ -299,6 +308,7 @@ export default function BulkContributionDialog({
               id: employer.id,
               name: employer.name,
               email: employer.email,
+              phone: employer.phone,
               cnpj: employer.cnpj,
             },
           });
@@ -473,6 +483,111 @@ export default function BulkContributionDialog({
     } catch (error) {
       console.error("Error sending email:", error);
       toast.error("Erro ao enviar email");
+    }
+  };
+
+  const handleSendBulkWhatsApp = async () => {
+    const contributionsWithPhone = createdContributions.filter(c => c.employer.phone);
+    
+    if (contributionsWithPhone.length === 0) {
+      toast.error("Nenhuma empresa possui telefone cadastrado");
+      return;
+    }
+
+    setSendingWhatsApp(true);
+    setWhatsAppProgress({ current: 0, total: contributionsWithPhone.length });
+
+    let successCount = 0;
+    let failedCount = 0;
+    const baseUrl = window.location.origin;
+
+    for (let i = 0; i < contributionsWithPhone.length; i++) {
+      const contrib = contributionsWithPhone[i];
+      const publicLink = `${baseUrl}/contribuicao/${contrib.public_access_token}`;
+      
+      const message = `🏢 *${clinicName || "Sindicato"}*\n\n` +
+        `Olá, *${contrib.employer.name}*!\n\n` +
+        `Foi gerada uma contribuição para sua empresa.\n\n` +
+        `📋 *Tipo:* ${selectedType?.name || "Contribuição"}\n` +
+        `📅 *Competência:* ${month.toString().padStart(2, "0")}/${year}\n` +
+        `⏳ *Vencimento:* ${format(new Date(dueDate), "dd/MM/yyyy")}\n\n` +
+        `Para informar o valor e gerar o boleto, acesse o link abaixo:\n\n` +
+        `🔗 ${publicLink}\n\n` +
+        `Atenciosamente,\n${clinicName || "Sindicato"}`;
+
+      try {
+        const result = await sendWhatsAppMessage({
+          clinicId,
+          phone: contrib.employer.phone!,
+          message,
+        });
+
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+        successCount++;
+      } catch (error: any) {
+        console.error(`Error sending WhatsApp to ${contrib.employer.phone}:`, error);
+        failedCount++;
+        
+        // Check for quota limit
+        if (error?.message?.includes("Limite") || error?.message?.includes("429")) {
+          toast.error("Limite de mensagens atingido. Enviados: " + successCount);
+          break;
+        }
+      }
+
+      setWhatsAppProgress({ current: i + 1, total: contributionsWithPhone.length });
+
+      // Apply delay between messages to prevent bans
+      if (i < contributionsWithPhone.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, messageDelay * 1000));
+      }
+    }
+
+    setSendingWhatsApp(false);
+
+    if (successCount > 0) {
+      toast.success(`${successCount} mensagem(ns) enviada(s) com sucesso!`);
+    }
+    if (failedCount > 0 && !failedCount) {
+      toast.error(`${failedCount} mensagem(ns) falharam ao enviar.`);
+    }
+  };
+
+  const handleSendSingleWhatsApp = async (contrib: CreatedContribution) => {
+    if (!contrib.employer.phone) {
+      toast.error("Esta empresa não possui telefone cadastrado");
+      return;
+    }
+
+    const baseUrl = window.location.origin;
+    const publicLink = `${baseUrl}/contribuicao/${contrib.public_access_token}`;
+    
+    const message = `🏢 *${clinicName || "Sindicato"}*\n\n` +
+      `Olá, *${contrib.employer.name}*!\n\n` +
+      `Foi gerada uma contribuição para sua empresa.\n\n` +
+      `📋 *Tipo:* ${selectedType?.name || "Contribuição"}\n` +
+      `📅 *Competência:* ${month.toString().padStart(2, "0")}/${year}\n` +
+      `⏳ *Vencimento:* ${format(new Date(dueDate), "dd/MM/yyyy")}\n\n` +
+      `Para informar o valor e gerar o boleto, acesse o link abaixo:\n\n` +
+      `🔗 ${publicLink}\n\n` +
+      `Atenciosamente,\n${clinicName || "Sindicato"}`;
+
+    try {
+      const result = await sendWhatsAppMessage({
+        clinicId,
+        phone: contrib.employer.phone,
+        message,
+      });
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+      toast.success(`WhatsApp enviado para ${contrib.employer.name}`);
+    } catch (error) {
+      console.error("Error sending WhatsApp:", error);
+      toast.error("Erro ao enviar WhatsApp");
     }
   };
 
@@ -764,82 +879,144 @@ export default function BulkContributionDialog({
                 </div>
               )}
 
-              {/* Email sending section for zero value contributions */}
+              {/* Sending options section for zero value contributions */}
               {createdContributions.length > 0 && (
-                <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Mail className="h-5 w-5 text-blue-600" />
-                    <h4 className="font-medium text-blue-900 dark:text-blue-100">
-                      Enviar Links por Email
-                    </h4>
-                  </div>
-                  <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
-                    {createdContributions.filter(c => c.employer.email).length} de {createdContributions.length} empresas possuem email cadastrado.
-                  </p>
-
-                  {sendingEmails ? (
-                    <div className="space-y-2">
-                      <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                        <span className="text-sm text-blue-700 dark:text-blue-300">
-                          Enviando emails... {emailProgress.current} de {emailProgress.total}
-                        </span>
-                      </div>
-                      <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
-                        <div 
-                          className="bg-blue-600 h-2 rounded-full transition-all"
-                          style={{ width: `${(emailProgress.current / emailProgress.total) * 100}%` }}
-                        />
-                      </div>
+                <div className="mt-6 space-y-4">
+                  {/* WhatsApp Section */}
+                  <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <MessageCircle className="h-5 w-5 text-green-600" />
+                      <h4 className="font-medium text-green-900 dark:text-green-100">
+                        Enviar Links por WhatsApp
+                      </h4>
                     </div>
-                  ) : (
-                    <div className="space-y-3">
+                    <p className="text-sm text-green-700 dark:text-green-300 mb-4">
+                      {createdContributions.filter(c => c.employer.phone).length} de {createdContributions.length} empresas possuem telefone cadastrado.
+                    </p>
+
+                    {sendingWhatsApp ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-green-600" />
+                          <span className="text-sm text-green-700 dark:text-green-300">
+                            Enviando WhatsApp... {whatsAppProgress.current} de {whatsAppProgress.total}
+                          </span>
+                        </div>
+                        <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-2">
+                          <div 
+                            className="bg-green-600 h-2 rounded-full transition-all"
+                            style={{ width: `${(whatsAppProgress.current / whatsAppProgress.total) * 100}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-green-600 dark:text-green-400">
+                          Intervalo de {messageDelay}s entre mensagens para evitar bloqueio
+                        </p>
+                      </div>
+                    ) : (
+                      <Button 
+                        onClick={handleSendBulkWhatsApp}
+                        disabled={createdContributions.filter(c => c.employer.phone).length === 0 || sendingEmails}
+                        className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Enviar Todos por WhatsApp ({createdContributions.filter(c => c.employer.phone).length})
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Email Section */}
+                  <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Mail className="h-5 w-5 text-blue-600" />
+                      <h4 className="font-medium text-blue-900 dark:text-blue-100">
+                        Enviar Links por Email
+                      </h4>
+                    </div>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mb-4">
+                      {createdContributions.filter(c => c.employer.email).length} de {createdContributions.length} empresas possuem email cadastrado.
+                    </p>
+
+                    {sendingEmails ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                          <span className="text-sm text-blue-700 dark:text-blue-300">
+                            Enviando emails... {emailProgress.current} de {emailProgress.total}
+                          </span>
+                        </div>
+                        <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                          <div 
+                            className="bg-blue-600 h-2 rounded-full transition-all"
+                            style={{ width: `${(emailProgress.current / emailProgress.total) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ) : (
                       <Button 
                         onClick={handleSendBulkEmails}
-                        disabled={createdContributions.filter(c => c.employer.email).length === 0}
+                        disabled={createdContributions.filter(c => c.employer.email).length === 0 || sendingWhatsApp}
                         className="w-full gap-2"
                         variant="default"
                       >
                         <Send className="h-4 w-4" />
-                        Enviar Todos os Emails ({createdContributions.filter(c => c.employer.email).length})
+                        Enviar Todos por Email ({createdContributions.filter(c => c.employer.email).length})
                       </Button>
+                    )}
+                  </div>
 
-                      <div className="text-xs text-muted-foreground text-center">ou envie individualmente:</div>
-
-                      <ScrollArea className="h-40 border rounded-md bg-background">
-                        <div className="p-2 space-y-1">
-                          {createdContributions.map((contrib) => (
-                            <div 
-                              key={contrib.id} 
-                              className="flex items-center justify-between p-2 rounded hover:bg-muted/50"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <p className="text-sm font-medium truncate">{contrib.employer.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {contrib.employer.email || "Sem email"}
-                                </p>
+                  {/* Individual send list */}
+                  <div className="border rounded-lg">
+                    <div className="p-2 border-b bg-muted/50">
+                      <span className="text-xs text-muted-foreground">Ou envie individualmente:</span>
+                    </div>
+                    <ScrollArea className="h-40">
+                      <div className="p-2 space-y-1">
+                        {createdContributions.map((contrib) => (
+                          <div 
+                            key={contrib.id} 
+                            className="flex items-center justify-between p-2 rounded hover:bg-muted/50"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium truncate">{contrib.employer.name}</p>
+                              <div className="flex gap-2 text-xs text-muted-foreground">
+                                {contrib.employer.phone && <span>📱 {contrib.employer.phone}</span>}
+                                {contrib.employer.email && <span>✉️ {contrib.employer.email}</span>}
+                                {!contrib.employer.phone && !contrib.employer.email && <span>Sem contato</span>}
                               </div>
+                            </div>
+                            <div className="flex gap-1 shrink-0">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleSendSingleWhatsApp(contrib)}
+                                disabled={!contrib.employer.phone || sendingWhatsApp || sendingEmails}
+                                className="h-8 w-8 p-0"
+                                title="Enviar WhatsApp"
+                              >
+                                <MessageCircle className="h-4 w-4 text-green-600" />
+                              </Button>
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 onClick={() => handleSendSingleEmail(contrib)}
-                                disabled={!contrib.employer.email}
-                                className="ml-2 shrink-0"
+                                disabled={!contrib.employer.email || sendingWhatsApp || sendingEmails}
+                                className="h-8 w-8 p-0"
+                                title="Enviar Email"
                               >
-                                <Mail className="h-4 w-4" />
+                                <Mail className="h-4 w-4 text-blue-600" />
                               </Button>
                             </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                  )}
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
+                  </div>
                 </div>
               )}
             </div>
 
             <DialogFooter>
-              <Button onClick={() => onOpenChange(false)} disabled={sendingEmails}>
+              <Button onClick={() => onOpenChange(false)} disabled={sendingEmails || sendingWhatsApp}>
                 Fechar
               </Button>
             </DialogFooter>
