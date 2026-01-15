@@ -218,3 +218,6 @@ verify_jwt = true
 
 [functions.migrate-union-financial-data]
 verify_jwt = true
+
+[functions.send-push-notification]
+verify_jwt = true
