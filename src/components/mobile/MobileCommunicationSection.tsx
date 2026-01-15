@@ -1,35 +1,54 @@
 import { useNavigate } from "react-router-dom";
-import { Image, Newspaper, Radio, Play } from "lucide-react";
+import { Image, Newspaper, Radio, Play, LucideIcon } from "lucide-react";
+import { useMobileAppTabs } from "@/hooks/useMobileAppTabs";
 
 export function MobileCommunicationSection() {
   const navigate = useNavigate();
+  const { isTabActive, loading } = useMobileAppTabs();
 
-  const items = [
+  const allItems: { 
+    key: string;
+    icon: LucideIcon; 
+    label: string; 
+    bgColor: string;
+    path: string;
+  }[] = [
     { 
+      key: "galeria",
       icon: Image, 
       label: "Galeria", 
       bgColor: "bg-blue-500",
       path: "/app/comunicacao/galeria" 
     },
     { 
+      key: "jornais",
       icon: Newspaper, 
       label: "Jornais", 
       bgColor: "bg-amber-500",
       path: "/app/comunicacao/jornais" 
     },
     { 
+      key: "radios",
       icon: Radio, 
       label: "Rádios", 
       bgColor: "bg-emerald-500",
       path: "/app/comunicacao/radios" 
     },
     { 
+      key: "videos",
       icon: Play, 
       label: "Vídeos", 
       bgColor: "bg-red-600",
       path: "/app/comunicacao/videos" 
     },
   ];
+
+  // Filter out inactive tabs
+  const items = allItems.filter(item => isTabActive(item.key));
+
+  if (loading || items.length === 0) {
+    return null;
+  }
 
   return (
     <section className="px-4 py-4">

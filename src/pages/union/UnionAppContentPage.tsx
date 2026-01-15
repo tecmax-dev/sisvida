@@ -74,6 +74,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { OuvidoriaMessagesTab } from "@/components/union/OuvidoriaMessagesTab";
 import { PushNotificationsTab } from "@/components/union/PushNotificationsTab";
 import { ConveniosManagementTab } from "@/components/union/ConveniosManagementTab";
+import { MobileAppTabsManagement } from "@/components/union/MobileAppTabsManagement";
 
 const contentTypeIcons: Record<ContentType, React.ReactNode> = {
   banner: <Image className="h-4 w-4" />,
@@ -108,7 +109,7 @@ const defaultFormData: FormData = {
   metadata: {},
 };
 
-type TabType = ContentType | "ouvidoria" | "push";
+type TabType = ContentType | "ouvidoria" | "push" | "tabs";
 
 export default function UnionAppContentPage() {
   const navigate = useNavigate();
@@ -280,7 +281,7 @@ export default function UnionAppContentPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-8 h-auto">
+        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9 h-auto">
           {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
             <TabsTrigger
               key={type}
@@ -307,6 +308,13 @@ export default function UnionAppContentPage() {
           >
             <Bell className="h-4 w-4" />
             <span className="hidden sm:inline">Push</span>
+          </TabsTrigger>
+          <TabsTrigger
+            value="tabs"
+            className="flex items-center gap-2 py-2"
+          >
+            <Smartphone className="h-4 w-4" />
+            <span className="hidden sm:inline">Abas App</span>
           </TabsTrigger>
         </TabsList>
 
@@ -442,6 +450,11 @@ export default function UnionAppContentPage() {
         {/* Push Notifications Tab */}
         <TabsContent value="push" className="mt-4">
           <PushNotificationsTab />
+        </TabsContent>
+
+        {/* App Tabs Management */}
+        <TabsContent value="tabs" className="mt-4">
+          <MobileAppTabsManagement />
         </TabsContent>
       </Tabs>
 

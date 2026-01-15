@@ -5434,6 +5434,39 @@ export type Database = {
           },
         ]
       }
+      mobile_app_tabs: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          order_index: number
+          tab_category: string
+          tab_key: string
+          tab_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          tab_category?: string
+          tab_key: string
+          tab_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_index?: number
+          tab_category?: string
+          tab_key?: string
+          tab_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       municipal_holidays: {
         Row: {
           city: string

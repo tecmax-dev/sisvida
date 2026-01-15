@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useMobileAppTabs } from "@/hooks/useMobileAppTabs";
 import illustrationAgendamentos from "@/assets/mobile/illustration-agendamentos.png";
 import illustrationConvencoes from "@/assets/mobile/illustration-convencoes.png";
 import illustrationDeclaracoes from "@/assets/mobile/illustration-declaracoes.png";
@@ -11,54 +12,71 @@ import illustrationOuvidoria from "@/assets/mobile/illustration-ouvidoria.png";
 
 export function MobileServiceGrid() {
   const navigate = useNavigate();
+  const { isTabActive, loading } = useMobileAppTabs();
 
-  const services = [
+  const allServices = [
     { 
+      key: "agendamentos",
       image: illustrationAgendamentos, 
       label: "Agendamentos", 
       onClick: () => navigate("/app/agendamentos") 
     },
     { 
+      key: "convencoes",
       image: illustrationConvencoes, 
       label: "Convenções",
       onClick: () => navigate("/app/servicos/convencoes") 
     },
     { 
+      key: "declaracoes",
       image: illustrationDeclaracoes, 
       label: "Declarações",
       onClick: () => navigate("/app/servicos/declaracoes") 
     },
     { 
+      key: "convenios",
       image: illustrationConvenios, 
       label: "Convênios",
       onClick: () => navigate("/app/servicos/convenios") 
     },
     { 
+      key: "boletos",
       image: illustrationBoletos, 
       label: "Boletos",
       onClick: () => navigate("/app/servicos/boletos") 
     },
     { 
+      key: "diretoria",
       image: illustrationDiretoria, 
       label: "Diretoria",
       onClick: () => navigate("/app/servicos/diretoria") 
     },
     { 
+      key: "documentos",
       image: illustrationDocumentos, 
       label: "Documentos",
       onClick: () => navigate("/app/servicos/documentos") 
     },
     { 
+      key: "atendimentos",
       image: illustrationAtendimentos, 
       label: "Atendimentos",
       onClick: () => navigate("/app/servicos/atendimentos") 
     },
     { 
+      key: "ouvidoria",
       image: illustrationOuvidoria, 
       label: "Ouvidoria",
       onClick: () => navigate("/app/servicos/ouvidoria") 
     },
   ];
+
+  // Filter out inactive tabs
+  const services = allServices.filter(service => isTabActive(service.key));
+
+  if (loading || services.length === 0) {
+    return null;
+  }
 
   return (
     <section className="px-4 py-4">
