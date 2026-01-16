@@ -72,6 +72,13 @@ interface Employer {
   cnpj: string;
   trade_name?: string | null;
   registration_number?: string | null;
+  category_id?: string | null;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  color?: string | null;
 }
 
 interface Member {
@@ -121,6 +128,7 @@ interface Contribution {
 
 interface ContributionsListTabProps {
   contributions: Contribution[];
+  categories?: Category[];
   onViewContribution: (contribution: Contribution) => void;
   onGenerateInvoice: (contribution: Contribution) => void;
   onOpenCreate: () => void;
@@ -179,6 +187,7 @@ import { formatCompetence } from "@/lib/competence-format";
 
 export default function ContributionsListTab({
   contributions,
+  categories = [],
   onViewContribution,
   onGenerateInvoice,
   onOpenCreate,
@@ -194,6 +203,7 @@ export default function ContributionsListTab({
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   // Competence filter: always starts with previous month (MM/YYYY)
   const getInitialCompetence = () => {
     const now = new Date();
@@ -296,9 +306,15 @@ export default function ContributionsListTab({
         matchesCompetence = c.competence_month === filterMonth && c.competence_year === filterYear;
       }
 
-      return matchesSearchTerm && matchesStatus && matchesCompetence;
+      // Category filter - only applies to PJ contributions
+      let matchesCategory = true;
+      if (categoryFilter !== "all" && documentTypeTab === "pj") {
+        matchesCategory = c.employers?.category_id === categoryFilter;
+      }
+
+      return matchesSearchTerm && matchesStatus && matchesCompetence && matchesCategory;
     });
-  }, [activeContributions, searchTerm, statusFilter, competenceFilter, documentTypeTab]);
+  }, [activeContributions, searchTerm, statusFilter, competenceFilter, categoryFilter, documentTypeTab]);
 
   useEffect(() => {
     console.debug("[ContributionsListTab] state", {
@@ -492,6 +508,22 @@ export default function ContributionsListTab({
 
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-2">
+              {/* Category filter - only visible for PJ tab */}
+              {documentTypeTab === "pj" && categories.length > 0 && (
+                <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[160px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
+                    <SelectValue placeholder="Categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas categorias</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <Select value={statusFilter} onValueChange={handleStatusChange}>
                 <SelectTrigger className="w-[130px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
                   <SelectValue placeholder="Status" />
