@@ -36,6 +36,7 @@ import {
   PortalContainer, 
   PortalMain 
 } from "@/components/portal/PortalLayout";
+import { PortalConventionsSection } from "@/components/portal/PortalServicesSection";
 
 interface Clinic {
   id: string;
@@ -630,6 +631,13 @@ export default function MemberPortal() {
             })
           )}
         </div>
+
+        {/* Convenções Coletivas */}
+        {clinic?.id && (
+          <div className="mt-6">
+            <PortalConventionsSection clinicId={clinic.id} />
+          </div>
+        )}
       </PortalMain>
 
       {/* Overdue Alert Dialog */}
