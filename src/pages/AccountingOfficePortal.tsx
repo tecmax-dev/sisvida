@@ -46,7 +46,7 @@ import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection, PortalHomologacaoCard } from "@/components/portal/PortalServicesSection";
 import { PortalContributionsList } from "@/components/portal/PortalContributionsList";
 import { PortalLinkedEmployersList } from "@/components/portal/PortalLinkedEmployersList";
-import { HomologacaoBookingDialog } from "@/components/portal/HomologacaoBookingDialog";
+import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
 import { formatCompetence } from "@/lib/competence-format";
 
 interface AccountingOffice {
@@ -180,8 +180,8 @@ export default function AccountingOfficePortal() {
     return now.getMonth() === 0 ? String(now.getFullYear() - 1) : String(now.getFullYear());
   });
   
-  // Views
-  const [activeView, setActiveView] = useState<"services" | "contributions" | "employers">("services");
+  // Views - added homologacao view
+  const [activeView, setActiveView] = useState<"services" | "contributions" | "employers" | "homologacao">("services");
   
   // Dialog de segunda via
   const [showReissueDialog, setShowReissueDialog] = useState(false);
@@ -194,8 +194,7 @@ export default function AccountingOfficePortal() {
   const [newValue, setNewValue] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
 
-  // Dialog de homologação
-  const [showHomologacaoDialog, setShowHomologacaoDialog] = useState(false);
+  // Employer selecionado para homologação (view embutida)
   const [selectedEmployerForHomologacao, setSelectedEmployerForHomologacao] = useState<Employer | null>(null);
 
   // Restaurar sessão do sessionStorage
@@ -771,17 +770,40 @@ export default function AccountingOfficePortal() {
             }}
             onScheduleHomologacao={(employer) => {
               setSelectedEmployerForHomologacao(employer);
-              setShowHomologacaoDialog(true);
+              setActiveView("homologacao");
             }}
           />
+        </PortalMain>
+      </PortalContainer>
+    );
+  }
 
-          {/* Dialog de Agendamento de Homologação */}
-          <HomologacaoBookingDialog
-            open={showHomologacaoDialog}
-            onOpenChange={setShowHomologacaoDialog}
+  // Homologacao Booking View (embutida)
+  if (activeView === "homologacao" && selectedEmployerForHomologacao && clinic?.id) {
+    return (
+      <PortalContainer>
+        <PortalHeader
+          logoUrl={clinic?.logo_url}
+          clinicName={clinic?.name}
+          entityName={accountingOffice?.name || "Escritório"}
+          entitySubtitle={accountingOffice?.email}
+          onLogout={handleLogout}
+          onRefresh={() => accountingOffice && loadData(accountingOffice.id)}
+          variant="teal"
+        />
+        
+        <PortalMain>
+          <PortalHomologacaoBooking
             employer={selectedEmployerForHomologacao}
-            clinicSlug={clinicSlug}
-            clinicId={clinic?.id}
+            clinicId={clinic.id}
+            onBack={() => {
+              setSelectedEmployerForHomologacao(null);
+              setActiveView("employers");
+            }}
+            onSuccess={() => {
+              setSelectedEmployerForHomologacao(null);
+              setActiveView("employers");
+            }}
           />
         </PortalMain>
       </PortalContainer>

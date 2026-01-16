@@ -1,0 +1,580 @@
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "sonner";
+import { 
+  Calendar, 
+  Clock, 
+  User, 
+  Building2, 
+  CheckCircle,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  ArrowLeft,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface Employer {
+  id: string;
+  name: string;
+  cnpj: string;
+  trade_name?: string;
+  phone?: string | null;
+  email?: string | null;
+}
+
+interface Professional {
+  id: string;
+  name: string;
+  slug: string;
+  function?: string | null;
+  avatar_url?: string | null;
+  clinic_id: string;
+}
+
+interface Schedule {
+  id: string;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  capacity: number;
+}
+
+interface ServiceType {
+  id: string;
+  name: string;
+  duration_minutes: number;
+}
+
+interface TimeSlot {
+  time: string;
+  available: boolean;
+  capacity: number;
+  booked: number;
+}
+
+interface PortalHomologacaoBookingProps {
+  employer: Employer;
+  clinicId: string;
+  onBack: () => void;
+  onSuccess?: () => void;
+}
+
+export function PortalHomologacaoBooking({ 
+  employer, 
+  clinicId, 
+  onBack,
+  onSuccess 
+}: PortalHomologacaoBookingProps) {
+  const [selectedProfessional, setSelectedProfessional] = useState<Professional | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedService, setSelectedService] = useState<string | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [step, setStep] = useState<'professional' | 'datetime' | 'employee' | 'confirmation'>('professional');
+  
+  const [employeeData, setEmployeeData] = useState({
+    employee_name: '',
+    employee_cpf: '',
+  });
+
+  // Fetch professionals
+  const { data: professionals, isLoading: loadingProfessionals } = useQuery({
+    queryKey: ["portal-homologacao-professionals", clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("homologacao_professionals")
+        .select("id, name, slug, function, avatar_url, clinic_id")
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true)
+        .eq("public_booking_enabled", true);
+      
+      if (error) throw error;
+      return data as Professional[];
+    },
+  });
+
+  // Fetch schedules for selected professional
+  const { data: schedules } = useQuery({
+    queryKey: ["portal-homologacao-schedules", selectedProfessional?.id],
+    queryFn: async () => {
+      if (!selectedProfessional?.id) return [];
+      const { data, error } = await supabase
+        .from("homologacao_schedules")
+        .select("*")
+        .eq("professional_id", selectedProfessional.id)
+        .eq("is_active", true);
+      
+      if (error) throw error;
+      return data as Schedule[];
+    },
+    enabled: !!selectedProfessional?.id,
+  });
+
+  // Fetch service types
+  const { data: serviceTypes } = useQuery({
+    queryKey: ["portal-homologacao-service-types", clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("homologacao_service_types")
+        .select("id, name, duration_minutes")
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true);
+      
+      if (error) throw error;
+      return data as ServiceType[];
+    },
+  });
+
+  // Auto-select first service
+  useEffect(() => {
+    if (serviceTypes && serviceTypes.length > 0 && !selectedService) {
+      setSelectedService(serviceTypes[0].id);
+    }
+  }, [serviceTypes, selectedService]);
+
+  // Fetch existing appointments
+  const { data: appointments } = useQuery({
+    queryKey: ["portal-homologacao-appointments", selectedProfessional?.id, selectedDate],
+    queryFn: async () => {
+      if (!selectedProfessional?.id || !selectedDate) return [];
+      const dateStr = format(selectedDate, "yyyy-MM-dd");
+      const { data, error } = await supabase
+        .from("homologacao_appointments")
+        .select("start_time, end_time, status")
+        .eq("professional_id", selectedProfessional.id)
+        .eq("appointment_date", dateStr)
+        .neq("status", "cancelled");
+      
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedProfessional?.id && !!selectedDate,
+  });
+
+  // Create appointment mutation
+  const createMutation = useMutation({
+    mutationFn: async () => {
+      if (!selectedProfessional || !selectedDate || !selectedTime || !selectedService) {
+        throw new Error("Dados incompletos");
+      }
+
+      const service = serviceTypes?.find(s => s.id === selectedService);
+      if (!service) throw new Error("Serviço não encontrado");
+
+      const [hours, minutes] = selectedTime.split(':').map(Number);
+      const endDate = new Date();
+      endDate.setHours(hours, minutes + service.duration_minutes);
+      const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
+
+      const appointmentData = {
+        clinic_id: clinicId,
+        professional_id: selectedProfessional.id,
+        service_type_id: selectedService,
+        appointment_date: format(selectedDate, "yyyy-MM-dd"),
+        start_time: selectedTime,
+        end_time: endTime,
+        employee_name: employeeData.employee_name,
+        employee_cpf: employeeData.employee_cpf || null,
+        company_name: employer.name,
+        company_cnpj: employer.cnpj || null,
+        company_phone: employer.phone || null,
+        company_email: employer.email || null,
+        notes: `Agendado via Portal do Contador`,
+        status: 'scheduled',
+      };
+
+      const { data, error } = await supabase
+        .from("homologacao_appointments")
+        .insert(appointmentData)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (data) => {
+      toast.success("Agendamento realizado com sucesso!");
+      setStep('confirmation');
+      
+      // Trigger notifications
+      supabase.functions.invoke("send-homologacao-notifications", {
+        body: { appointment_id: data.id }
+      }).catch(console.error);
+    },
+    onError: (error) => {
+      toast.error("Erro ao criar agendamento: " + error.message);
+    },
+  });
+
+  // Generate available time slots
+  const getAvailableSlots = (): TimeSlot[] => {
+    if (!selectedDate || !schedules) return [];
+
+    const dayOfWeek = selectedDate.getDay();
+    const daySchedule = schedules.find(s => s.day_of_week === dayOfWeek);
+    
+    if (!daySchedule) return [];
+
+    const slots: TimeSlot[] = [];
+    const [startHour, startMinute] = daySchedule.start_time.split(':').map(Number);
+    const [endHour, endMinute] = daySchedule.end_time.split(':').map(Number);
+    
+    let currentTime = startHour * 60 + startMinute;
+    const endTimeMinutes = endHour * 60 + endMinute;
+    const interval = 30;
+
+    while (currentTime < endTimeMinutes) {
+      const hours = Math.floor(currentTime / 60);
+      const minutes = currentTime % 60;
+      const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+      
+      const bookedCount = appointments?.filter(a => a.start_time === timeStr).length || 0;
+      
+      slots.push({
+        time: timeStr,
+        available: bookedCount < daySchedule.capacity,
+        capacity: daySchedule.capacity,
+        booked: bookedCount,
+      });
+      
+      currentTime += interval;
+    }
+
+    return slots;
+  };
+
+  const isDayAvailable = (date: Date) => {
+    if (!schedules) return false;
+    const dayOfWeek = date.getDay();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (date < today) return false;
+    return schedules.some(s => s.day_of_week === dayOfWeek);
+  };
+
+  const calendarDays = () => {
+    const start = startOfMonth(currentMonth);
+    const end = endOfMonth(currentMonth);
+    return eachDayOfInterval({ start, end });
+  };
+
+  const handleSubmit = () => {
+    if (!employeeData.employee_name.trim()) {
+      toast.error("Nome do funcionário é obrigatório");
+      return;
+    }
+    createMutation.mutate();
+  };
+
+  // Confirmation step
+  if (step === 'confirmation') {
+    return (
+      <div className="space-y-6">
+        <Card className="border-emerald-200 bg-emerald-50">
+          <CardContent className="pt-6 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-emerald-100 rounded-full flex items-center justify-center">
+              <CheckCircle className="w-8 h-8 text-emerald-600" />
+            </div>
+            <h2 className="text-xl font-bold text-emerald-800 mb-2">
+              Agendamento Confirmado!
+            </h2>
+            <p className="text-emerald-600 mb-4">
+              O agendamento de homologação foi realizado com sucesso.
+            </p>
+            <div className="text-left bg-white rounded-lg p-4 space-y-2">
+              <p><strong>Empresa:</strong> {employer.trade_name || employer.name}</p>
+              <p><strong>Funcionário:</strong> {employeeData.employee_name}</p>
+              <p><strong>Data:</strong> {selectedDate && format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}</p>
+              <p><strong>Horário:</strong> {selectedTime}</p>
+              <p><strong>Profissional:</strong> {selectedProfessional?.name}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Button onClick={onBack} className="w-full">
+          Voltar às Empresas
+        </Button>
+      </div>
+    );
+  }
+
+  // Step 1: Select professional
+  if (step === 'professional') {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Voltar
+          </Button>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">Agendar Homologação</h2>
+            <p className="text-sm text-slate-500">{employer.trade_name || employer.name}</p>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <User className="h-5 w-5 text-emerald-600" />
+              Selecione o Profissional
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingProfessionals ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+              </div>
+            ) : professionals?.length === 0 ? (
+              <p className="text-center text-slate-500 py-8">
+                Nenhum profissional disponível
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {professionals?.map((prof) => (
+                  <Card
+                    key={prof.id}
+                    className={cn(
+                      "cursor-pointer transition-all",
+                      selectedProfessional?.id === prof.id
+                        ? "border-emerald-500 bg-emerald-50"
+                        : "hover:border-emerald-300"
+                    )}
+                    onClick={() => setSelectedProfessional(prof)}
+                  >
+                    <CardContent className="p-3 flex items-center gap-3">
+                      {prof.avatar_url ? (
+                        <img src={prof.avatar_url} alt={prof.name} className="h-10 w-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="h-10 w-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <span className="text-sm font-semibold text-emerald-700">{prof.name.charAt(0)}</span>
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-medium text-slate-900">{prof.name}</p>
+                        {prof.function && <p className="text-xs text-slate-500">{prof.function}</p>}
+                      </div>
+                      {selectedProfessional?.id === prof.id && (
+                        <CheckCircle className="h-5 w-5 text-emerald-600 ml-auto" />
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Button 
+          onClick={() => setStep('datetime')} 
+          disabled={!selectedProfessional}
+          className="w-full bg-emerald-600 hover:bg-emerald-700"
+        >
+          Continuar
+        </Button>
+      </div>
+    );
+  }
+
+  // Step 2: Select date/time
+  if (step === 'datetime') {
+    const availableSlots = getAvailableSlots();
+
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => setStep('professional')}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            Voltar
+          </Button>
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800">Selecione Data e Horário</h2>
+            <p className="text-sm text-slate-500">{selectedProfessional?.name}</p>
+          </div>
+        </div>
+
+        {/* Calendar */}
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-blue-600" />
+                {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+              </CardTitle>
+              <div className="flex gap-1">
+                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(prev => addDays(startOfMonth(prev), -1))}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(prev => addDays(endOfMonth(prev), 1))}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-500 mb-2">
+              {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => (
+                <div key={d} className="py-1">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-1">
+              {Array(calendarDays()[0]?.getDay() || 0).fill(null).map((_, i) => (
+                <div key={`empty-${i}`} />
+              ))}
+              {calendarDays().map((day) => {
+                const isAvailable = isDayAvailable(day);
+                const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
+                
+                return (
+                  <Button
+                    key={day.toISOString()}
+                    variant="ghost"
+                    size="sm"
+                    disabled={!isAvailable}
+                    onClick={() => {
+                      setSelectedDate(day);
+                      setSelectedTime(null);
+                    }}
+                    className={cn(
+                      "h-9 w-full p-0",
+                      isSelected && "bg-emerald-600 text-white hover:bg-emerald-700",
+                      !isAvailable && "opacity-30"
+                    )}
+                  >
+                    {format(day, "d")}
+                  </Button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Time slots */}
+        {selectedDate && (
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Clock className="h-5 w-5 text-purple-600" />
+                Horários Disponíveis
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {availableSlots.length === 0 ? (
+                <p className="text-center text-slate-500 py-4">Nenhum horário disponível</p>
+              ) : (
+                <div className="grid grid-cols-4 gap-2">
+                  {availableSlots.map((slot) => (
+                    <Button
+                      key={slot.time}
+                      variant={selectedTime === slot.time ? "default" : "outline"}
+                      size="sm"
+                      disabled={!slot.available}
+                      onClick={() => setSelectedTime(slot.time)}
+                      className={cn(
+                        selectedTime === slot.time && "bg-emerald-600 hover:bg-emerald-700"
+                      )}
+                    >
+                      {slot.time}
+                    </Button>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        <Button 
+          onClick={() => setStep('employee')} 
+          disabled={!selectedDate || !selectedTime}
+          className="w-full bg-emerald-600 hover:bg-emerald-700"
+        >
+          Continuar
+        </Button>
+      </div>
+    );
+  }
+
+  // Step 3: Employee data
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <Button variant="ghost" size="sm" onClick={() => setStep('datetime')}>
+          <ArrowLeft className="h-4 w-4 mr-1" />
+          Voltar
+        </Button>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-800">Dados do Funcionário</h2>
+          <p className="text-sm text-slate-500">
+            {selectedDate && format(selectedDate, "dd/MM/yyyy")} às {selectedTime}
+          </p>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <Card className="bg-slate-50">
+        <CardContent className="pt-4 space-y-1 text-sm">
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-slate-400" />
+            <span className="font-medium">{employer.trade_name || employer.name}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-slate-400" />
+            <span>{selectedProfessional?.name}</span>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Funcionário a ser homologado</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="employee_name">Nome Completo *</Label>
+            <Input
+              id="employee_name"
+              placeholder="Nome do funcionário"
+              value={employeeData.employee_name}
+              onChange={(e) => setEmployeeData(prev => ({ ...prev, employee_name: e.target.value }))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="employee_cpf">CPF</Label>
+            <Input
+              id="employee_cpf"
+              placeholder="000.000.000-00"
+              value={employeeData.employee_cpf}
+              onChange={(e) => setEmployeeData(prev => ({ ...prev, employee_cpf: e.target.value }))}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Button 
+        onClick={handleSubmit} 
+        disabled={createMutation.isPending || !employeeData.employee_name.trim()}
+        className="w-full bg-emerald-600 hover:bg-emerald-700"
+      >
+        {createMutation.isPending ? (
+          <>
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            Agendando...
+          </>
+        ) : (
+          "Confirmar Agendamento"
+        )}
+      </Button>
+    </div>
+  );
+}
