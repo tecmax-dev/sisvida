@@ -27,7 +27,26 @@ const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres
 
 type AuthView = "login" | "signup" | "forgot-password" | "reset-password" | "first-access";
 
+const PUBLISHED_FALLBACK_HOST = "eclini.lovable.app";
+const CANONICAL_CUSTOM_DOMAIN = "https://app.eclini.com.br";
+
 export default function Auth() {
+  // Canonicaliza APENAS o domínio publicado fallback (eclini.lovable.app) para o domínio customizado.
+  // Importante: não fazer isso durante callbacks OAuth (quando há ?code=... ou hash), para não quebrar PKCE.
+  if (typeof window !== "undefined") {
+    const isOnPublishedFallback = window.location.hostname === PUBLISHED_FALLBACK_HOST;
+    const isAuthRoute = window.location.pathname.startsWith("/auth");
+    const url = new URL(window.location.href);
+    const isOAuthCallback = url.searchParams.has("code") || url.searchParams.has("error") || !!window.location.hash;
+
+    if (isOnPublishedFallback && isAuthRoute && !isOAuthCallback) {
+      window.location.replace(
+        `${CANONICAL_CUSTOM_DOMAIN}${window.location.pathname}${window.location.search}${window.location.hash}`
+      );
+      return null;
+    }
+  }
+
   const [searchParams] = useSearchParams();
   const [view, setView] = useState<AuthView>(
     searchParams.get("tab") === "signup" ? "signup" : "login"
@@ -43,7 +62,7 @@ export default function Auth() {
   const [isFirstAccess, setIsFirstAccess] = useState(false);
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const recaptchaRef = useRef<ReCAPTCHA>(null);
-  
+
   // useRef para controlar o fluxo de primeiro acesso - atualizado imediatamente sem re-render
   const isFirstAccessFlowRef = useRef(false);
   const [errors, setErrors] = useState<{ 
@@ -53,10 +72,10 @@ export default function Auth() {
     name?: string;
     recaptcha?: string;
   }>({});
-  
+
   // useRef para controlar o fluxo de recuperação - atualizado imediatamente sem re-render
   const isRecoveryFlowRef = useRef(false);
-  
+
   const navigate = useNavigate();
   const { toast } = useToast();
 
