@@ -14,12 +14,12 @@ import authDashboardMockup from "@/assets/auth-dashboard-mockup.png";
 
 const RECAPTCHA_SITE_KEY = "6Ld57z0sAAAAALhKQGqzGspRkCr8iYbNOvWcbLDW";
 
-// Canonical URL / OAuth redirects
-const CUSTOM_DOMAIN = "https://app.eclini.com.br";
-const PRIMARY_LOVABLE_DOMAIN = "eclini.lovable.app";
+// OAuth redirects MUST stay on the same origin to preserve PKCE state.
+// Using a different domain between the auth start and the callback will cause:
+// "Unable to exchange external code".
 const getAppBaseUrl = () => {
-  if (typeof window === "undefined") return CUSTOM_DOMAIN;
-  return window.location.hostname === PRIMARY_LOVABLE_DOMAIN ? CUSTOM_DOMAIN : window.location.origin;
+  if (typeof window === "undefined") return "";
+  return window.location.origin;
 };
 
 const emailSchema = z.string().email("Email inválido");
@@ -60,13 +60,11 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Garantir URL canônica após OAuth (evita ficar preso em eclini.lovable.app)
-  useEffect(() => {
-    if (window.location.hostname === PRIMARY_LOVABLE_DOMAIN) {
-      const target = `${CUSTOM_DOMAIN}${window.location.pathname}${window.location.search}${window.location.hash}`;
-      window.location.replace(target);
-    }
-  }, []);
+  // Importante: não forçar troca de domínio aqui.
+  // Se o login iniciar em um domínio e retornar em outro, o PKCE quebra e gera
+  // "Unable to exchange external code".
+  // A canonicalização deve ser feita via redirecionamento no provedor de hosting/DNS,
+  // não no cliente durante o fluxo de OAuth.
 
   // Verificar URL hash IMEDIATAMENTE na inicialização - antes de qualquer coisa
   useEffect(() => {
