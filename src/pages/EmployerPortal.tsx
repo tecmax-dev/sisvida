@@ -1060,6 +1060,14 @@ export default function EmployerPortal() {
                                 {format(dueDate, "dd/MM/yyyy")}
                               </p>
                             </div>
+                            {contrib.status === "paid" && contrib.paid_at && (
+                              <div className="text-center">
+                                <p className="text-xs text-slate-400 mb-0.5">Pagamento</p>
+                                <p className="font-medium text-emerald-600">
+                                  {format(new Date(contrib.paid_at), "dd/MM/yyyy")}
+                                </p>
+                              </div>
+                            )}
                             <div className="text-center min-w-[100px]">
                               <p className="text-xs text-slate-400 mb-0.5">Valor</p>
                               <p className="font-semibold text-slate-900">
@@ -1211,10 +1219,18 @@ export default function EmployerPortal() {
                         </div>
 
                         {/* Mobile: Extra Info */}
-                        <div className="flex md:hidden items-center gap-4 mt-3 text-xs text-slate-500">
+                        <div className="flex md:hidden items-center gap-4 mt-3 text-xs text-slate-500 flex-wrap">
                           <span className={isOverdue ? 'text-red-600' : ''}>
                             Venc: {format(dueDate, "dd/MM/yyyy")}
                           </span>
+                          {contrib.status === "paid" && contrib.paid_at && (
+                            <>
+                              <span>•</span>
+                              <span className="text-emerald-600 font-medium">
+                                Pago: {format(new Date(contrib.paid_at), "dd/MM/yyyy")}
+                              </span>
+                            </>
+                          )}
                           <span>•</span>
                           <span className="font-semibold text-slate-900">{formatCurrency(contrib.amount || 0)}</span>
                         </div>

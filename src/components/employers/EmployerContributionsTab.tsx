@@ -173,7 +173,7 @@ function ContributionCard({
             )}
             <div className="flex-1 min-w-0">
               <p className="font-medium text-sm truncate">{contrib.contribution_types?.name || "Contribuição"}</p>
-              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
                 <span className="flex items-center gap-1">
                   <Calendar className="h-3 w-3" />
                   {formatCompetence(contrib.competence_month, contrib.competence_year)}
@@ -182,6 +182,14 @@ function ContributionCard({
                 <span className={contrib.status === "overdue" ? "text-rose-600 font-medium" : ""}>
                   Venc: {format(new Date(contrib.due_date + "T12:00:00"), "dd/MM/yy")}
                 </span>
+                {contrib.status === "paid" && contrib.paid_at && (
+                  <>
+                    <span>•</span>
+                    <span className="text-emerald-600 font-medium">
+                      Pago: {format(new Date(contrib.paid_at), "dd/MM/yy")}
+                    </span>
+                  </>
+                )}
               </div>
             </div>
           </div>

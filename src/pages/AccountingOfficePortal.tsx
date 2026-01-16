@@ -60,6 +60,8 @@ interface Contribution {
   due_date: string;
   value: number;
   status: string;
+  paid_at?: string | null;
+  paid_value?: number | null;
   lytex_invoice_url?: string;
   lytex_invoice_id?: string;
   portal_reissue_count?: number;
@@ -888,6 +890,14 @@ export default function AccountingOfficePortal() {
                                 {dueDate.toLocaleDateString("pt-BR")}
                               </p>
                             </div>
+                            {contrib.status === "paid" && contrib.paid_at && (
+                              <div className="text-center">
+                                <p className="text-xs text-slate-400 mb-0.5">Pagamento</p>
+                                <p className="font-medium text-emerald-600">
+                                  {new Date(contrib.paid_at).toLocaleDateString("pt-BR")}
+                                </p>
+                              </div>
+                            )}
                             <div className="text-center min-w-[100px]">
                               <p className="text-xs text-slate-400 mb-0.5">Valor</p>
                               <p className="font-semibold text-slate-900">
@@ -1010,12 +1020,20 @@ export default function AccountingOfficePortal() {
                         </div>
 
                         {/* Mobile: Extra Info */}
-                        <div className="flex md:hidden items-center gap-4 mt-3 text-xs text-slate-500">
+                        <div className="flex md:hidden items-center gap-4 mt-3 text-xs text-slate-500 flex-wrap">
                           <span>{MONTHS[contrib.competence_month - 1]}/{contrib.competence_year}</span>
                           <span>•</span>
                           <span className={contrib.status === 'overdue' ? 'text-red-600' : ''}>
                             Venc: {dueDate.toLocaleDateString("pt-BR")}
                           </span>
+                          {contrib.status === "paid" && contrib.paid_at && (
+                            <>
+                              <span>•</span>
+                              <span className="text-emerald-600 font-medium">
+                                Pago: {new Date(contrib.paid_at).toLocaleDateString("pt-BR")}
+                              </span>
+                            </>
+                          )}
                           <span>•</span>
                           <span className="font-semibold text-slate-900">{formatCurrency(contrib.value)}</span>
                         </div>
