@@ -124,7 +124,6 @@ export function PortalContributionsList({
 }: PortalContributionsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const formatCurrency = (valueInCents: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -163,9 +162,9 @@ export function PortalContributionsList({
         const employerCnpj = c.employer?.cnpj?.replace(/\D/g, "") || "";
         const typeName = c.contribution_type?.name?.toLowerCase() || "";
         const searchNormalized = searchTerm.replace(/\D/g, "");
-        
-        if (!employerName.includes(term) && 
-            !employerCnpj.includes(searchNormalized) && 
+
+        if (!employerName.includes(term) &&
+            !employerCnpj.includes(searchNormalized) &&
             !typeName.includes(term)) {
           return false;
         }
@@ -177,7 +176,7 @@ export function PortalContributionsList({
   // Group by competence
   const groupedContributions = useMemo(() => {
     const groups: Record<string, Contribution[]> = {};
-    
+
     filteredContributions.forEach(c => {
       const key = `${c.competence_year}-${String(c.competence_month).padStart(2, "0")}`;
       if (!groups[key]) groups[key] = [];
@@ -201,27 +200,6 @@ export function PortalContributionsList({
         };
       });
   }, [filteredContributions]);
-
-  // Auto-expand first 2 groups on initial load
-  const hasInitializedRef = useRef(false);
-  useEffect(() => {
-    if (groupedContributions.length > 0 && !hasInitializedRef.current) {
-      hasInitializedRef.current = true;
-      const initial = new Set(groupedContributions.slice(0, 2).map(g => g.key));
-      setExpandedGroups(initial);
-    }
-    // Only run once on mount, not on every groupedContributions change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupedContributions.length]);
-
-  const setGroupOpen = (key: string, open: boolean) => {
-    setExpandedGroups(prev => {
-      const next = new Set(prev);
-      if (open) next.add(key);
-      else next.delete(key);
-      return next;
-    });
-  };
 
   const stats = useMemo(() => ({
     pending: contributions.filter(c => c.status === "pending").length,
@@ -335,11 +313,10 @@ export function PortalContributionsList({
             </Card>
           ) : (
             <div className="space-y-3">
-              {groupedContributions.map((group) => (
+              {groupedContributions.map((group, index) => (
                 <Collapsible
                   key={group.key}
-                  open={expandedGroups.has(group.key)}
-                  onOpenChange={(open) => setGroupOpen(group.key, open)}
+                  defaultOpen={index < 2}
                 >
                   <Card className="bg-white border-0 shadow-sm overflow-hidden">
                     <CollapsibleTrigger className="w-full">
@@ -371,7 +348,7 @@ export function PortalContributionsList({
                                 </Badge>
                               )}
                             </div>
-                            <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform ${expandedGroups.has(group.key) ? 'rotate-180' : ''}`} />
+                            <ChevronDown className="h-5 w-5 text-slate-400 transition-transform data-[state=open]:rotate-180" />
                           </div>
                         </div>
                       </CardHeader>
