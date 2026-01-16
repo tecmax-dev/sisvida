@@ -31,11 +31,11 @@ const generateEmailHtml = (
   const portalName = type === "accounting_office" ? "Portal do Contador" : "Portal da Empresa";
   const identifierLabel = type === "accounting_office" ? "E-mail" : "CNPJ";
 
-  // Mensagem de boas-vindas ao novo sistema
+  // Mensagem de boas-vindas ao novo sistema (sem acentos para compatibilidade SMTP)
   const welcomeMessage = `
     <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin: 0 0 24px 0;">
       <h3 style="margin: 0 0 12px 0; color: #92400e; font-size: 16px; font-weight: 600;">
-        🎉 Novidade: Sistema eCLINI
+        Novidade: Sistema eCLINI
       </h3>
       <p style="margin: 0; color: #78350f; font-size: 14px; line-height: 1.6;">
         O <strong>${clinicName}</strong> atualizou seu sistema de gestao de contribuicoes para o <strong>eCLINI</strong>. 
@@ -85,6 +85,19 @@ const generateEmailHtml = (
             <div style="font-family: 'Courier New', Courier, monospace; font-size: 36px; font-weight: bold; color: #0d9488; letter-spacing: 8px; padding: 16px 0;">
               ${accessCode}
             </div>
+          </div>
+          
+          <!-- Dados de Acesso -->
+          <div style="background: #ecfdf5; border: 1px solid #10b981; border-radius: 8px; padding: 20px; margin: 24px 0;">
+            <h3 style="margin: 0 0 12px 0; color: #065f46; font-size: 15px; font-weight: 600;">
+              Seus dados de acesso:
+            </h3>
+            <p style="margin: 0 0 8px 0; color: #047857; font-size: 14px;">
+              <strong>${identifierLabel}:</strong> ${identifier}
+            </p>
+            <p style="margin: 0; color: #047857; font-size: 14px;">
+              <strong>Codigo:</strong> ${accessCode}
+            </p>
           </div>
           
           <!-- Instructions -->
