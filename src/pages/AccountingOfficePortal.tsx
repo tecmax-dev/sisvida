@@ -686,7 +686,13 @@ export default function AccountingOfficePortal() {
                 icon={<FileText className="h-6 w-6" />}
                 title="Contribuições"
                 description="Gerencie boletos e pagamentos"
-                onClick={() => setActiveView("contributions")}
+                onClick={() => {
+                  console.log("DEBUG: Clicou em Contribuições");
+                  console.log("DEBUG: contributions:", contributions);
+                  console.log("DEBUG: contributions length:", contributions.length);
+                  console.log("DEBUG: primeiro contrib:", contributions[0]);
+                  setActiveView("contributions");
+                }}
                 color="teal"
                 badge={stats.overdue > 0 ? `${stats.overdue}` : undefined}
               />
