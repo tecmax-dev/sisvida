@@ -430,9 +430,9 @@ function ContributionCard({
   formatCNPJ,
   parseISODateToLocalNoon
 }: ContributionCardProps) {
-  const dueDate = parseISODateToLocalNoon(contrib.due_date);
+  const dueDate = contrib.due_date ? parseISODateToLocalNoon(contrib.due_date) : new Date();
   const today = new Date();
-  const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+  const daysDiff = contrib.due_date ? Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)) : 0;
   const isOverdue90Days = daysDiff > 90;
   const reissueCount = contrib.portal_reissue_count || 0;
   const reissueLimitReached = reissueCount >= 2;
@@ -488,7 +488,7 @@ function ContributionCard({
             </>
           )}
           <span className={contrib.status === 'overdue' ? 'text-red-600 font-medium' : ''}>
-            Venc: {dueDate.toLocaleDateString("pt-BR")}
+            Venc: {contrib.due_date ? dueDate.toLocaleDateString("pt-BR") : "-"}
           </span>
           {contrib.status === "paid" && contrib.paid_at && (
             <>
