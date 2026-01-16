@@ -793,38 +793,70 @@ export default function AccountingOfficePortal() {
           Voltar aos serviços
         </Button>
 
-        {/* Services Cards - Same as home */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <PortalServiceCard
-            icon={<FileText className="h-6 w-6" />}
-            title="Contribuições"
-            description="Gerencie boletos e pagamentos"
-            onClick={() => {}}
-            color="teal"
-            badge={stats.overdue > 0 ? `${stats.overdue}` : undefined}
-            isActive
-          />
-          <PortalServiceCard
-            icon={<Building className="h-6 w-6" />}
-            title="Empresas Vinculadas"
-            description={`${employers.length} empresa(s) sob gestão`}
+        {/* Stats Cards - Compact style */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Card 
+            className="bg-white border border-slate-200 shadow-sm cursor-default ring-2 ring-teal-500 ring-offset-1"
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-8 w-8 rounded-lg bg-teal-100 flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-teal-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-600">Contribuições</span>
+              </div>
+              <p className="text-2xl font-bold text-slate-900">{contributions.length}</p>
+              <p className="text-sm text-slate-500">{formatCurrency(contributions.reduce((sum, c) => sum + (c.value || 0), 0))}</p>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className="bg-white border border-slate-200 shadow-sm cursor-pointer hover:shadow-md hover:border-blue-300 transition-all"
             onClick={() => setActiveView("employers")}
-            color="blue"
-          />
-          <PortalServiceCard
-            icon={<FileCheck className="h-6 w-6" />}
-            title="Relatórios"
-            description="Imprima relatórios das empresas"
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Building className="h-4 w-4 text-blue-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-600">Empresas</span>
+              </div>
+              <p className="text-2xl font-bold text-slate-900">{employers.length}</p>
+              <p className="text-sm text-slate-500">vinculadas</p>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className="bg-white border border-slate-200 shadow-sm cursor-pointer hover:shadow-md hover:border-purple-300 transition-all"
             onClick={handlePrintEmployersList}
-            color="purple"
-          />
-          <PortalServiceCard
-            icon={<Users className="h-6 w-6" />}
-            title="Atualizar Dados"
-            description="Atualize informações do escritório"
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                  <FileCheck className="h-4 w-4 text-purple-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-600">Relatórios</span>
+              </div>
+              <p className="text-2xl font-bold text-slate-900">PDF</p>
+              <p className="text-sm text-slate-500">gerar relatório</p>
+            </CardContent>
+          </Card>
+          
+          <Card 
+            className="bg-white border border-slate-200 shadow-sm cursor-pointer hover:shadow-md hover:border-amber-300 transition-all"
             onClick={() => toast.info("Entre em contato para atualizar seus dados")}
-            color="amber"
-          />
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-amber-600" />
+                </div>
+                <span className="text-sm font-medium text-slate-600">Dados</span>
+              </div>
+              <p className="text-2xl font-bold text-slate-900">Atualizar</p>
+              <p className="text-sm text-slate-500">informações</p>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Contributions List - New Component */}
