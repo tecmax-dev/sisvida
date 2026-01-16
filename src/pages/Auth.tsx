@@ -14,6 +14,14 @@ import authDashboardMockup from "@/assets/auth-dashboard-mockup.png";
 
 const RECAPTCHA_SITE_KEY = "6Ld57z0sAAAAALhKQGqzGspRkCr8iYbNOvWcbLDW";
 
+// Canonical URL / OAuth redirects
+const CUSTOM_DOMAIN = "https://app.eclini.com.br";
+const PRIMARY_LOVABLE_DOMAIN = "eclini.lovable.app";
+const getAppBaseUrl = () => {
+  if (typeof window === "undefined") return CUSTOM_DOMAIN;
+  return window.location.hostname === PRIMARY_LOVABLE_DOMAIN ? CUSTOM_DOMAIN : window.location.origin;
+};
+
 const emailSchema = z.string().email("Email inválido");
 const passwordSchema = z.string().min(6, "Senha deve ter no mínimo 6 caracteres");
 
@@ -51,6 +59,14 @@ export default function Auth() {
   
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Garantir URL canônica após OAuth (evita ficar preso em eclini.lovable.app)
+  useEffect(() => {
+    if (window.location.hostname === PRIMARY_LOVABLE_DOMAIN) {
+      const target = `${CUSTOM_DOMAIN}${window.location.pathname}${window.location.search}${window.location.hash}`;
+      window.location.replace(target);
+    }
+  }, []);
 
   // Verificar URL hash IMEDIATAMENTE na inicialização - antes de qualquer coisa
   useEffect(() => {
@@ -263,7 +279,7 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      const redirectUrl = `${window.location.origin}/auth`;
+      const redirectUrl = `${getAppBaseUrl()}/auth`;
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: redirectUrl,
@@ -448,7 +464,7 @@ export default function Auth() {
           email,
           password: tempPassword,
           options: {
-            emailRedirectTo: `${window.location.origin}/`,
+            emailRedirectTo: `${getAppBaseUrl()}/`,
             data: {
               name: name,
             },
@@ -519,16 +535,13 @@ export default function Auth() {
     }
   };
 
-  // Domínio fixo para evitar redirecionamento para URLs de preview/supabase
-  const CUSTOM_DOMAIN = "https://app.eclini.com.br";
-
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${CUSTOM_DOMAIN}/auth`,
+          redirectTo: `${getAppBaseUrl()}/auth`,
         },
       });
 
