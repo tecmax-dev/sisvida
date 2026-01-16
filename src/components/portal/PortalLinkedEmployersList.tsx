@@ -15,6 +15,7 @@ import {
   ChevronUp,
   ExternalLink,
   Printer,
+  Calendar,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -38,6 +39,7 @@ interface PortalLinkedEmployersListProps {
   accountingOfficeName: string;
   clinicName?: string;
   onViewContributions?: (employerId: string) => void;
+  onScheduleHomologacao?: (employer: Employer) => void;
 }
 
 export function PortalLinkedEmployersList({
@@ -45,6 +47,7 @@ export function PortalLinkedEmployersList({
   accountingOfficeName,
   clinicName,
   onViewContributions,
+  onScheduleHomologacao,
 }: PortalLinkedEmployersListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -255,7 +258,21 @@ export function PortalLinkedEmployersList({
                         </p>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 sm:gap-2">
+                        {onScheduleHomologacao && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onScheduleHomologacao(employer);
+                            }}
+                            className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                          >
+                            <Calendar className="h-4 w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Homologação</span>
+                          </Button>
+                        )}
                         {onViewContributions && (
                           <Button
                             size="sm"
@@ -263,7 +280,7 @@ export function PortalLinkedEmployersList({
                             onClick={() => onViewContributions(employer.id)}
                             className="text-teal-600 hover:text-teal-700 hover:bg-teal-50"
                           >
-                            <FileText className="h-4 w-4 mr-1" />
+                            <FileText className="h-4 w-4 sm:mr-1" />
                             <span className="hidden sm:inline">Contribuições</span>
                           </Button>
                         )}

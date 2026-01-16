@@ -160,7 +160,7 @@ serve(async (req) => {
       // Buscar dados das empresas - filtrar pelo mesmo union_entity_id para isolamento
       let query = supabase
         .from("employers")
-        .select("id, name, cnpj, trade_name, union_entity_id")
+        .select("id, name, cnpj, trade_name, union_entity_id, phone, email")
         .in("id", employerIds)
         .order("name");
 

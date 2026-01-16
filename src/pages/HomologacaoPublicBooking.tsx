@@ -195,21 +195,31 @@ export default function HomologacaoPublicBooking() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [step, setStep] = useState<'form' | 'datetime' | 'confirmation'>('form');
   const [createdAppointment, setCreatedAppointment] = useState<any>(null);
+  
+  // Read query params for auto-fill from portal
+  const queryParams = new URLSearchParams(window.location.search);
+  const prefillCompanyName = queryParams.get('company_name') || '';
+  const prefillCompanyCnpj = queryParams.get('company_cnpj') || '';
+  const prefillCompanyPhone = queryParams.get('company_phone') || '';
+  const prefillCompanyEmail = queryParams.get('company_email') || '';
+  const fromPortal = queryParams.get('from_portal');
+  
   const [formData, setFormData] = useState<FormData>({
     employee_name: '',
     employee_cpf: '',
-    company_name: '',
-    company_cnpj: '',
-    company_phone: '',
-    company_email: '',
+    company_name: prefillCompanyName,
+    company_cnpj: prefillCompanyCnpj,
+    company_phone: prefillCompanyPhone,
+    company_email: prefillCompanyEmail,
     company_contact_name: '',
-    notes: '',
+    notes: fromPortal ? `Agendado via Portal do ${fromPortal === 'contador' ? 'Contador' : 'Empregador'}` : '',
   });
   
-  // Collapsible sections state
+  // Collapsible sections state - if coming from portal with prefilled data, start on employee section
+  const hasPrefilledEmployer = !!(prefillCompanyName && prefillCompanyCnpj);
   const [openSections, setOpenSections] = useState({
-    employer: true,
-    employee: false,
+    employer: !hasPrefilledEmployer,
+    employee: hasPrefilledEmployer,
     professional: false,
     datetime: false,
   });

@@ -46,6 +46,7 @@ import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection, PortalHomologacaoCard } from "@/components/portal/PortalServicesSection";
 import { PortalContributionsList } from "@/components/portal/PortalContributionsList";
 import { PortalLinkedEmployersList } from "@/components/portal/PortalLinkedEmployersList";
+import { HomologacaoBookingDialog } from "@/components/portal/HomologacaoBookingDialog";
 import { formatCompetence } from "@/lib/competence-format";
 
 interface AccountingOffice {
@@ -61,6 +62,8 @@ interface Employer {
   cnpj: string;
   trade_name?: string;
   registration_number?: string | null;
+  phone?: string | null;
+  email?: string | null;
 }
 
 interface Contribution {
@@ -190,6 +193,10 @@ export default function AccountingOfficePortal() {
   const [showSetValueDialog, setShowSetValueDialog] = useState(false);
   const [newValue, setNewValue] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
+
+  // Dialog de homologação
+  const [showHomologacaoDialog, setShowHomologacaoDialog] = useState(false);
+  const [selectedEmployerForHomologacao, setSelectedEmployerForHomologacao] = useState<Employer | null>(null);
 
   // Restaurar sessão do sessionStorage
   useEffect(() => {
@@ -762,6 +769,19 @@ export default function AccountingOfficePortal() {
               setFilterEmployer(employerId);
               setActiveView("contributions");
             }}
+            onScheduleHomologacao={(employer) => {
+              setSelectedEmployerForHomologacao(employer);
+              setShowHomologacaoDialog(true);
+            }}
+          />
+
+          {/* Dialog de Agendamento de Homologação */}
+          <HomologacaoBookingDialog
+            open={showHomologacaoDialog}
+            onOpenChange={setShowHomologacaoDialog}
+            employer={selectedEmployerForHomologacao}
+            clinicSlug={clinicSlug}
+            clinicId={clinic?.id}
           />
         </PortalMain>
       </PortalContainer>
