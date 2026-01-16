@@ -472,7 +472,7 @@ function ContributionCard({
             <>
               <span>•</span>
               <span className="text-emerald-600 font-medium">
-                Pago: {new Date(contrib.paid_at).toLocaleDateString("pt-BR")}
+                Pago: {parseISODateToLocalNoon(contrib.paid_at.slice(0, 10)).toLocaleDateString("pt-BR")}
               </span>
             </>
           )}
