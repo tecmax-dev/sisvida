@@ -559,6 +559,8 @@ export default function ContributionsPage() {
           action: "fetch_paid_invoices",
           clinicId: currentClinic.id,
           mode: "manual",
+          daysBack: null, // Processar TODAS as contribuições pendentes (sem limite de data)
+          onlyPending: true, // Apenas contribuições não pagas
         },
       });
 
@@ -567,10 +569,19 @@ export default function ContributionsPage() {
       if (data?.conciliated > 0) {
         toast.success(`${data.conciliated} boleto(s) conciliado(s) automaticamente!`);
         fetchData();
+      } else if (data?.alreadyConciliated > 0 && data?.pendingInLytex > 0) {
+        toast.info(`${data.alreadyConciliated} já conciliados, ${data.pendingInLytex} ainda pendentes na Lytex`);
       } else if (data?.alreadyConciliated > 0) {
         toast.info(`Todos os ${data.alreadyConciliated} boletos pagos já estavam conciliados`);
+      } else if (data?.pendingInLytex > 0) {
+        toast.info(`${data.pendingInLytex} boleto(s) ainda pendente(s) na Lytex (não pagos)`);
       } else {
         toast.info("Nenhum boleto pago encontrado para conciliar");
+      }
+      
+      // Log detalhado para auditoria
+      if (data?.skippedDuplicates > 0) {
+        console.warn(`[Lytex] ${data.skippedDuplicates} boletos com duplicidade ignorados - revisão manual necessária`);
       }
 
       console.log("Busca de pagamentos:", data);
