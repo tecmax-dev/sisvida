@@ -63,6 +63,7 @@ const HomologacaoProtocolValidation = lazy(() => import("./pages/HomologacaoProt
 const PublicContributionValue = lazy(() => import("./pages/PublicContributionValue"));
 const PortalAccessPage = lazy(() => import("./pages/public/PortalAccessPage"));
 const PresentationPage = lazy(() => import("./pages/public/PresentationPage"));
+const ClinicPresentationPage = lazy(() => import("./pages/public/ClinicPresentationPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 
 // Portal do Profissional
@@ -287,6 +288,7 @@ const App = () => (
                 <Route path="/acessos" element={<PortalAccessPage />} />
                 <Route path="/portais" element={<PortalAccessPage />} />
                 <Route path="/apresentacao" element={<PresentationPage />} />
+                <Route path="/apresentacao-clinica" element={<ClinicPresentationPage />} />
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/instalar" element={<InstallPage />} />
