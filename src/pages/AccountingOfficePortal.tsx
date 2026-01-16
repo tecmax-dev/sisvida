@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -13,17 +13,12 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { 
   Building2, 
-  LogOut, 
   FileText, 
   Search, 
-  Calendar, 
   DollarSign,
   ExternalLink,
   Building,
-  Mail,
-  Lock,
   Loader2,
-  Printer,
   RefreshCw,
   AlertCircle,
   Clock,
@@ -32,10 +27,24 @@ import {
   Filter,
   TrendingUp,
   ChevronRight,
-  Handshake
+  Handshake,
+  X,
+  FileCheck,
+  Users,
+  Mail
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  PortalHeader, 
+  PortalWelcomeBanner, 
+  PortalServiceCard, 
+  PortalContainer, 
+  PortalMain 
+} from "@/components/portal/PortalLayout";
+import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
+import { PortalConventionsSection, PortalHomologacaoCard } from "@/components/portal/PortalServicesSection";
+import { formatCompetence } from "@/lib/competence-format";
 
 interface AccountingOffice {
   id: string;
@@ -158,13 +167,16 @@ export default function AccountingOfficePortal() {
   const [filterStatus, setFilterStatus] = useState<string>("hide_cancelled");
   const [filterEmployer, setFilterEmployer] = useState<string>("all");
   const [filterMonth, setFilterMonth] = useState<string>(() => {
-    const currentMonth = new Date().getMonth(); // 0-11
-    return currentMonth === 0 ? "12" : String(currentMonth); // Mês anterior (1-12)
+    const currentMonth = new Date().getMonth();
+    return currentMonth === 0 ? "12" : String(currentMonth);
   });
   const [filterYear, setFilterYear] = useState<string>(() => {
     const now = new Date();
     return now.getMonth() === 0 ? String(now.getFullYear() - 1) : String(now.getFullYear());
   });
+  
+  // Views
+  const [activeView, setActiveView] = useState<"services" | "contributions">("services");
   
   // Dialog de segunda via
   const [showReissueDialog, setShowReissueDialog] = useState(false);
@@ -214,8 +226,8 @@ export default function AccountingOfficePortal() {
     }
   };
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setIsLoading(true);
 
     try {
@@ -281,6 +293,7 @@ export default function AccountingOfficePortal() {
     setContributions([]);
     setEmail("");
     setAccessCode("");
+    setActiveView("services");
   };
 
   const formatCurrency = (valueInCents: number) => {
@@ -478,242 +491,281 @@ export default function AccountingOfficePortal() {
     toast.success("Relatório gerado com sucesso!");
   };
 
+  const clearFilters = () => {
+    setSearchTerm("");
+    setFilterStatus("hide_cancelled");
+    setFilterEmployer("all");
+    setFilterMonth("all");
+    setFilterYear("all");
+  };
+
+  const hasActiveFilters = (filterStatus !== "hide_cancelled") || filterEmployer !== "all" || filterMonth !== "all" || filterYear !== "all" || searchTerm;
+
   const currentYear = new Date().getFullYear();
-  const availableYears = [...new Set([currentYear, ...contributions.map(c => c.competence_year)])].sort((a, b) => b - a);
+  const availableYears = useMemo(() => {
+    return [...new Set([currentYear, ...contributions.map(c => c.competence_year)])].sort((a, b) => b - a);
+  }, [contributions, currentYear]);
 
-  const filteredContributions = contributions.filter(contrib => {
-    const matchesSearch = searchTerm === "" || 
-      contrib.employer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contrib.employer?.cnpj?.includes(searchTerm.replace(/\D/g, "")) ||
-      contrib.employer?.registration_number?.includes(searchTerm);
-    
-    const matchesStatus = filterStatus === "all" || (filterStatus === "hide_cancelled" ? contrib.status !== "cancelled" : contrib.status === filterStatus);
-    const matchesEmployer = filterEmployer === "all" || contrib.employer_id === filterEmployer;
-    const matchesMonth = filterMonth === "all" || contrib.competence_month === parseInt(filterMonth);
-    const matchesYear = filterYear === "all" || contrib.competence_year === parseInt(filterYear);
-    
-    return matchesSearch && matchesStatus && matchesEmployer && matchesMonth && matchesYear;
-  });
+  const filteredContributions = useMemo(() => {
+    return contributions.filter(contrib => {
+      const matchesSearch = searchTerm === "" || 
+        contrib.employer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        contrib.employer?.cnpj?.includes(searchTerm.replace(/\D/g, "")) ||
+        contrib.employer?.registration_number?.includes(searchTerm);
+      
+      const matchesStatus = filterStatus === "all" || (filterStatus === "hide_cancelled" ? contrib.status !== "cancelled" : contrib.status === filterStatus);
+      const matchesEmployer = filterEmployer === "all" || contrib.employer_id === filterEmployer;
+      const matchesMonth = filterMonth === "all" || contrib.competence_month === parseInt(filterMonth);
+      const matchesYear = filterYear === "all" || contrib.competence_year === parseInt(filterYear);
+      
+      return matchesSearch && matchesStatus && matchesEmployer && matchesMonth && matchesYear;
+    });
+  }, [contributions, searchTerm, filterStatus, filterEmployer, filterMonth, filterYear]);
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: contributions.length,
     pending: contributions.filter(c => c.status === "pending").length,
     overdue: contributions.filter(c => c.status === "overdue").length,
     paid: contributions.filter(c => c.status === "paid").length,
     totalValue: contributions.filter(c => c.status !== "cancelled" && c.status !== "paid").reduce((sum, c) => sum + (c.value || 0), 0),
     paidValue: contributions.filter(c => c.status === "paid").reduce((sum, c) => sum + (c.value || 0), 0),
-  };
+    overdueValue: contributions.filter(c => c.status === "overdue").reduce((sum, c) => sum + (c.value || 0), 0),
+  }), [contributions]);
 
   // Login Screen
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-40" />
-        
-        <Card className="w-full max-w-md relative bg-white/95 backdrop-blur shadow-2xl border-0">
-          <CardHeader className="text-center space-y-4 pb-2">
-            {clinic?.logo_url ? (
-              <img 
-                src={clinic.logo_url} 
-                alt={clinic.name} 
-                className="h-14 mx-auto object-contain"
-              />
-            ) : (
-              <div className="h-14 w-14 mx-auto bg-gradient-to-br from-teal-500 to-cyan-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Building2 className="h-7 w-7 text-white" />
-              </div>
-            )}
-            <div>
-              <CardTitle className="text-xl font-semibold text-slate-800">Portal do Contador</CardTitle>
-              <CardDescription className="text-slate-500">
-                Acesse para gerenciar as contribuições
-              </CardDescription>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-slate-700 text-sm font-medium">E-mail</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-11 border-slate-200 focus:border-teal-500 focus:ring-teal-500"
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="accessCode" className="text-slate-700 text-sm font-medium">Código de Acesso</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                  <Input
-                    id="accessCode"
-                    type="text"
-                    placeholder="XXXXXXXX"
-                    value={accessCode}
-                    onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
-                    className="pl-10 h-11 uppercase tracking-widest font-mono border-slate-200 focus:border-teal-500 focus:ring-teal-500"
-                    maxLength={10}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <Button 
-                type="submit" 
-                className="w-full h-11 bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-medium shadow-lg shadow-teal-500/25"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Entrando...
-                  </>
-                ) : (
-                  "Acessar Portal"
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+      <PortalLoginScreen
+        logoUrl={clinic?.logo_url}
+        clinicName={clinic?.name}
+        title="Portal do Contador"
+        subtitle="Gerencie as contribuições das empresas"
+        variant="accounting"
+        fields={{
+          identifier: {
+            label: "E-mail",
+            placeholder: "seu@email.com",
+            value: email,
+            onChange: setEmail,
+            icon: <Mail className="h-4 w-4" />,
+            type: "email"
+          },
+          accessCode: {
+            value: accessCode,
+            onChange: setAccessCode,
+          },
+        }}
+        onSubmit={handleLogin}
+        isLoading={isLoading}
+      />
     );
   }
 
-  // Dashboard
-  return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white sticky top-0 z-20 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              {clinic?.logo_url ? (
-                <img 
-                  src={clinic.logo_url} 
-                  alt={clinic.name} 
-                  className="h-9 object-contain brightness-0 invert"
-                />
-              ) : (
-                <div className="h-9 w-9 bg-white/10 rounded-lg flex items-center justify-center">
-                  <Building2 className="h-5 w-5" />
+  // Services View
+  if (activeView === "services") {
+    return (
+      <PortalContainer>
+        <PortalHeader
+          logoUrl={clinic?.logo_url}
+          clinicName={clinic?.name}
+          entityName={accountingOffice?.name || "Escritório"}
+          entitySubtitle={accountingOffice?.email}
+          onLogout={handleLogout}
+          onRefresh={() => accountingOffice && loadData(accountingOffice.id)}
+          onPrint={handlePrintEmployersList}
+          variant="teal"
+        />
+        
+        <PortalMain>
+          {/* Welcome Banner */}
+          <PortalWelcomeBanner
+            logoUrl={clinic?.logo_url}
+            clinicName={clinic?.name}
+            entityName={accountingOffice?.name || "Escritório"}
+            variant="teal"
+          />
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="bg-white border-0 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Empresas</p>
+                    <p className="text-2xl font-bold text-slate-900 mt-1">{employers.length}</p>
+                  </div>
+                  <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                    <Building className="h-5 w-5 text-blue-600" />
+                  </div>
                 </div>
-              )}
-              <div className="hidden sm:block">
-                <h1 className="font-semibold text-base leading-tight">{accountingOffice?.name}</h1>
-                <p className="text-xs text-white/60">{accountingOffice?.email}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="sm"
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-white border-0 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Vencidos</p>
+                    <p className="text-2xl font-bold text-red-600 mt-1">{stats.overdue}</p>
+                  </div>
+                  <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-white border-0 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Pagos</p>
+                    <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.paid}</p>
+                  </div>
+                  <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            <Card className="bg-gradient-to-br from-teal-500 to-cyan-600 border-0 shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Total Pendente</p>
+                    <p className="text-xl font-bold text-white mt-1">{formatCurrency(stats.totalValue)}</p>
+                  </div>
+                  <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <TrendingUp className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Overdue Alert */}
+          {stats.overdue > 0 && (
+            <Card className="bg-gradient-to-r from-red-50 to-orange-50 border-red-200">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <AlertCircle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-red-800">
+                      {stats.overdue} contribuições vencidas
+                    </p>
+                    <p className="text-sm text-red-600">
+                      Valor total em atraso: {formatCurrency(stats.overdueValue)}
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-red-300 text-red-700 hover:bg-red-100"
+                    onClick={() => {
+                      setFilterStatus("overdue");
+                      setActiveView("contributions");
+                    }}
+                  >
+                    Ver detalhes
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Services Grid */}
+          <div>
+            <h2 className="text-lg font-semibold text-slate-800 mb-4">Serviços</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <PortalServiceCard
+                icon={<FileText className="h-6 w-6" />}
+                title="Contribuições"
+                description="Gerencie boletos e pagamentos"
+                onClick={() => setActiveView("contributions")}
+                color="teal"
+                badge={stats.overdue > 0 ? `${stats.overdue}` : undefined}
+              />
+              <PortalServiceCard
+                icon={<Building className="h-6 w-6" />}
+                title="Empresas Vinculadas"
+                description={`${employers.length} empresa(s) sob gestão`}
                 onClick={handlePrintEmployersList}
-                className="text-white/80 hover:text-white hover:bg-white/10"
-              >
-                <Printer className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Imprimir</span>
-              </Button>
-              <Button 
-                variant="ghost" 
-                size="sm"
-                onClick={handleLogout}
-                className="text-white/80 hover:text-white hover:bg-white/10"
-              >
-                <LogOut className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Sair</span>
-              </Button>
+                color="blue"
+              />
+              <PortalServiceCard
+                icon={<FileCheck className="h-6 w-6" />}
+                title="Relatórios"
+                description="Imprima relatórios das empresas"
+                onClick={handlePrintEmployersList}
+                color="purple"
+              />
+              <PortalServiceCard
+                icon={<Users className="h-6 w-6" />}
+                title="Atualizar Dados"
+                description="Atualize informações do escritório"
+                onClick={() => toast.info("Entre em contato para atualizar seus dados")}
+                color="amber"
+              />
             </div>
           </div>
-        </div>
-      </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Empresas</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{employers.length}</p>
-                </div>
-                <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <Building className="h-5 w-5 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Pendentes</p>
-                  <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pending}</p>
-                </div>
-                <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-amber-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Vencidos</p>
-                  <p className="text-2xl font-bold text-red-600 mt-1">{stats.overdue}</p>
-                </div>
-                <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center">
-                  <AlertCircle className="h-5 w-5 text-red-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Homologação Card */}
+          <PortalHomologacaoCard clinicSlug={clinicSlug} />
 
-          <Card className="bg-white border-0 shadow-sm hover:shadow-md transition-shadow">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Pagos</p>
-                  <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.paid}</p>
-                </div>
-                <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-gradient-to-br from-teal-500 to-cyan-600 border-0 shadow-sm col-span-2 lg:col-span-1">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Total Pendente</p>
-                  <p className="text-xl font-bold text-white mt-1">{formatCurrency(stats.totalValue)}</p>
-                </div>
-                <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          {/* Convenções Coletivas */}
+          <PortalConventionsSection clinicId={clinic?.id} />
+        </PortalMain>
+      </PortalContainer>
+    );
+  }
+
+  // Contributions View
+  return (
+    <PortalContainer>
+      <PortalHeader
+        logoUrl={clinic?.logo_url}
+        clinicName={clinic?.name}
+        entityName={accountingOffice?.name || "Escritório"}
+        entitySubtitle={accountingOffice?.email}
+        onLogout={handleLogout}
+        onRefresh={() => accountingOffice && loadData(accountingOffice.id)}
+        variant="teal"
+      />
+      
+      <PortalMain>
+        {/* Back button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setActiveView("services")}
+          className="text-slate-600 hover:text-slate-900 -ml-2"
+        >
+          <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+          Voltar aos serviços
+        </Button>
 
         {/* Filters */}
         <Card className="bg-white border-0 shadow-sm">
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Filter className="h-4 w-4 text-slate-400" />
-              <span className="text-sm font-medium text-slate-600">Filtros</span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-slate-400" />
+                <span className="text-sm font-medium text-slate-600">Filtros</span>
+              </div>
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-8 px-2 text-xs text-slate-500 hover:text-slate-700"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Limpar
+                </Button>
+              )}
             </div>
             <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="col-span-2 md:col-span-1">
@@ -773,7 +825,7 @@ export default function AccountingOfficePortal() {
               
               <Select value={filterYear} onValueChange={setFilterYear}>
                 <SelectTrigger className="h-9 text-sm border-slate-200">
-                  <SelectValue placeholder="Ano Competência" />
+                  <SelectValue placeholder="Ano" />
                 </SelectTrigger>
                 <SelectContent className="bg-white">
                   <SelectItem value="all">Todos</SelectItem>
@@ -823,7 +875,6 @@ export default function AccountingOfficePortal() {
                     const reissueLimitReached = reissueCount >= 2;
                     const statusConfig = STATUS_CONFIG[contrib.status] || STATUS_CONFIG.pending;
                     
-                    // Verificar se está em negociação ativa
                     const isInActiveNegotiation = contrib.negotiation_id && 
                       contrib.negotiation && 
                       ['active', 'approved', 'pending_approval'].includes(contrib.negotiation.status);
@@ -940,7 +991,6 @@ export default function AccountingOfficePortal() {
                               </TooltipProvider>
                             )}
                             
-                            {/* Boleto em negociação - bloquear 2ª via */}
                             {isInActiveNegotiation && contrib.status === 'overdue' && (
                               <TooltipProvider>
                                 <Tooltip>
@@ -958,7 +1008,6 @@ export default function AccountingOfficePortal() {
                               </TooltipProvider>
                             )}
                             
-                            {/* 2ª via normal - apenas para boletos não em negociação */}
                             {!isInActiveNegotiation && contrib.status === 'overdue' && !isOverdue90Days && (
                               reissueLimitReached ? (
                                 <TooltipProvider>
@@ -1045,7 +1094,7 @@ export default function AccountingOfficePortal() {
             )}
           </CardContent>
         </Card>
-      </main>
+      </PortalMain>
 
       {/* Dialog de Segunda Via */}
       <Dialog open={showReissueDialog} onOpenChange={(open) => {
@@ -1184,6 +1233,6 @@ export default function AccountingOfficePortal() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PortalContainer>
   );
 }
