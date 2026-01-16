@@ -94,11 +94,15 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Configure SMTP client
+    // Port 465 uses implicit SSL/TLS, Port 587 uses STARTTLS
+    const useTls = port === 465 || encryption === "ssl";
+    console.log(`[test-smtp-connection] Using TLS: ${useTls} (port: ${port}, encryption: ${encryption})`);
+    
     const client = new SMTPClient({
       connection: {
         hostname: host,
         port: port,
-        tls: encryption === "ssl",
+        tls: useTls,
         auth: {
           username: username,
           password: password,
