@@ -13,12 +13,15 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Send, Mail } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Loader2, Send, Mail, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { supabase } from "@/integrations/supabase/client";
+
+const BOLETOS_PER_EMAIL = 15; // Maximum boletos per email to avoid timeout
 
 interface Contribution {
   id: string;
@@ -67,6 +70,7 @@ export function SendBoletoEmailDialog({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [clinicName, setClinicName] = useState("");
+  const [sendProgress, setSendProgress] = useState({ current: 0, total: 0, sent: 0 });
 
   // Filter contributions that have boleto generated (URL) OR public_access_token and are not paid/cancelled
   const eligibleContributions = contributions.filter(
@@ -201,25 +205,71 @@ export function SendBoletoEmailDialog({
         };
       });
 
-      const { data, error } = await supabase.functions.invoke("send-boleto-email", {
-        body: {
-          recipientEmail: recipientEmail.trim(),
-          recipientName: recipientName.trim() || recipientEmail,
-          ccEmail: ccEmail.trim() || undefined,
-          clinicName: clinicName || "Sindicato",
-          boletos,
-        },
-      });
+      // Split boletos into batches to avoid timeout
+      const batches: typeof boletos[] = [];
+      for (let i = 0; i < boletos.length; i += BOLETOS_PER_EMAIL) {
+        batches.push(boletos.slice(i, i + BOLETOS_PER_EMAIL));
+      }
 
-      if (error) throw error;
+      setSendProgress({ current: 0, total: batches.length, sent: 0 });
 
-      toast.success(`Email enviado com sucesso para ${recipientEmail}`);
-      onOpenChange(false);
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        setSendProgress({ current: i + 1, total: batches.length, sent: successCount });
+
+        try {
+          const { error } = await supabase.functions.invoke("send-boleto-email", {
+            body: {
+              recipientEmail: recipientEmail.trim(),
+              recipientName: recipientName.trim() || recipientEmail,
+              ccEmail: ccEmail.trim() || undefined,
+              clinicName: clinicName || "Sindicato",
+              boletos: batch,
+            },
+          });
+
+          if (error) {
+            console.error(`Erro no lote ${i + 1}:`, error);
+            errorCount++;
+          } else {
+            successCount++;
+          }
+        } catch (batchError) {
+          console.error(`Erro no lote ${i + 1}:`, batchError);
+          errorCount++;
+        }
+
+        // Small delay between batches to avoid rate limiting
+        if (i < batches.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+
+      setSendProgress({ current: batches.length, total: batches.length, sent: successCount });
+
+      if (errorCount === 0) {
+        toast.success(
+          batches.length > 1
+            ? `${batches.length} emails enviados com sucesso para ${recipientEmail}`
+            : `Email enviado com sucesso para ${recipientEmail}`
+        );
+        onOpenChange(false);
+      } else if (successCount > 0) {
+        toast.warning(
+          `${successCount} email(s) enviado(s), ${errorCount} falha(s). Verifique os logs.`
+        );
+      } else {
+        toast.error("Falha ao enviar todos os emails");
+      }
     } catch (error: any) {
       console.error("Erro ao enviar email:", error);
       toast.error(error.message || "Erro ao enviar email");
     } finally {
       setSending(false);
+      setSendProgress({ current: 0, total: 0, sent: 0 });
     }
   };
 
@@ -367,12 +417,36 @@ export function SendBoletoEmailDialog({
             )}
           </div>
 
+          {/* Selection summary and progress */}
           {selectedIds.size > 0 && (
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>{selectedIds.size} boleto(s) selecionado(s)</span>
-              <span className="font-medium text-foreground">
-                Total: {formatCurrency(totalValue)}
-              </span>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>{selectedIds.size} boleto(s) selecionado(s)</span>
+                <span className="font-medium text-foreground">
+                  Total: {formatCurrency(totalValue)}
+                </span>
+              </div>
+              
+              {/* Show batch info when many boletos selected */}
+              {selectedIds.size > BOLETOS_PER_EMAIL && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Serão enviados {Math.ceil(selectedIds.size / BOLETOS_PER_EMAIL)} email(s) 
+                  com até {BOLETOS_PER_EMAIL} boletos cada
+                </p>
+              )}
+              
+              {/* Progress bar during sending */}
+              {sending && sendProgress.total > 1 && (
+                <div className="space-y-1">
+                  <Progress 
+                    value={(sendProgress.current / sendProgress.total) * 100} 
+                    className="h-2"
+                  />
+                  <p className="text-xs text-muted-foreground text-center">
+                    Enviando lote {sendProgress.current} de {sendProgress.total}...
+                  </p>
+                </div>
+              )}
             </div>
           )}
         </div>
