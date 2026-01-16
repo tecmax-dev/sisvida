@@ -81,16 +81,31 @@ export default function Auth() {
 
   useEffect(() => {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    
+
     // Check for errors in URL (expired/invalid link)
     const error = hashParams.get("error");
     const errorCode = hashParams.get("error_code");
-    
+    const errorDescription = hashParams.get("error_description") || "";
+
+    // Erro comum quando o PKCE/callback falha no provedor (ex.: Google OAuth)
+    if (error === "server_error" && /Unable\s+to\s+exchange\s+external\s+code/i.test(errorDescription)) {
+      // Limpar o hash da URL para não ficar “preso” no erro
+      window.history.replaceState(null, "", window.location.pathname);
+
+      toast({
+        title: "Falha no login com Google",
+        description:
+          "O servidor não conseguiu trocar o código do Google (PKCE). Isso normalmente acontece por Client ID/Secret incorretos no backend ou por iniciar o login em um domínio e retornar em outro. Confira as configurações do Google e tente novamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (error === "access_denied") {
       // Clear the hash from URL
       window.history.replaceState(null, '', window.location.pathname);
       isRecoveryFlowRef.current = false;
-      
+
       if (errorCode === "otp_expired") {
         toast({
           title: "Link expirado",
