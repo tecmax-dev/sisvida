@@ -18,19 +18,14 @@ import {
   Clock, 
   XCircle,
   RefreshCw,
-  ExternalLink,
   Bell,
   Calendar,
   DollarSign,
   AlertTriangle,
   Loader2,
-  Filter,
-  Search,
   TrendingUp,
-  X,
   ChevronRight,
   Handshake,
-  FileCheck,
   Users
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -45,6 +40,7 @@ import {
 } from "@/components/portal/PortalLayout";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection, PortalHomologacaoCard } from "@/components/portal/PortalServicesSection";
+import { PortalContributionsList } from "@/components/portal/PortalContributionsList";
 
 interface Clinic {
   id: string;
@@ -755,167 +751,33 @@ export default function EmployerPortal() {
         {/* Contributions View */}
         {activeView === "contributions" && (
           <>
-            {/* Filters */}
-            <Card className="bg-white border-0 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <Filter className="h-4 w-4 text-slate-400" />
-                  <span className="text-sm font-medium text-slate-600">Filtros</span>
-                  {hasActiveFilters && (
-                    <Button variant="ghost" size="sm" onClick={clearFilters} className="h-6 px-2 text-xs ml-auto">
-                      <X className="h-3 w-3 mr-1" />Limpar
-                    </Button>
-                  )}
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input placeholder="Buscar..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-9 h-9 text-sm border-slate-200" />
-                  </div>
-                  {contributionTypes.length > 0 && (
-                    <Select value={typeFilter} onValueChange={setTypeFilter}>
-                      <SelectTrigger className="h-9 text-sm border-slate-200"><SelectValue placeholder="Tipo" /></SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="all">Todos os tipos</SelectItem>
-                        {contributionTypes.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-9 text-sm border-slate-200"><SelectValue placeholder="Status" /></SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="hide_cancelled">Ocultar cancelados</SelectItem>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="paid">Pago</SelectItem>
-                      <SelectItem value="overdue">Vencido</SelectItem>
-                      <SelectItem value="awaiting_value">Aguardando</SelectItem>
-                      <SelectItem value="cancelled">Cancelado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {contributionYears.length > 0 && (
-                    <Select value={yearFilter} onValueChange={setYearFilter}>
-                      <SelectTrigger className="h-9 text-sm border-slate-200"><SelectValue placeholder="Ano" /></SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="all">Todos os anos</SelectItem>
-                        {contributionYears.map(year => <SelectItem key={year} value={year.toString()}>{year}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
+            {/* Back button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setActiveView("services")}
+              className="text-slate-600 hover:text-slate-900 -ml-2"
+            >
+              <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+              Voltar aos serviços
+            </Button>
 
-            {/* Contributions List */}
-            <Card className="bg-white border-0 shadow-sm">
-              <CardHeader className="pb-3 border-b border-slate-100">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base font-semibold text-slate-800 flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-slate-400" />Contribuições
-                  </CardTitle>
-                  <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-medium">{filteredContributions.length} registros</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                {filteredContributions.length === 0 ? (
-                  <div className="text-center py-16">
-                    <FileText className="h-12 w-12 mx-auto mb-3 text-slate-200" />
-                    <p className="text-slate-500 text-sm">Nenhuma contribuição encontrada</p>
-                    {hasActiveFilters && <Button variant="link" size="sm" onClick={clearFilters} className="mt-2">Limpar filtros</Button>}
-                  </div>
-                ) : (
-                  <ScrollArea className="h-[500px]">
-                    <div className="divide-y divide-slate-100">
-                      {filteredContributions.map((contrib) => {
-                        const dueDate = new Date(contrib.due_date + "T12:00:00");
-                        const today = new Date();
-                        const daysDiff = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
-                        const isOverdue90Days = daysDiff > 90;
-                        const reissueCount = contrib.portal_reissue_count || 0;
-                        const reissueLimitReached = reissueCount >= 2;
-                        const isOverdue = contrib.status === 'overdue';
-                        const statusConfig = STATUS_CONFIG[contrib.status] || STATUS_CONFIG.pending;
-                        const isInActiveNegotiation = contrib.negotiation_id && contrib.negotiation && ['active', 'approved', 'pending_approval'].includes(contrib.negotiation.status);
-
-                        return (
-                          <div key={contrib.id} className="p-4 hover:bg-slate-50/50 transition-colors">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                  <h3 className="font-medium text-slate-900 text-sm">{formatCompetence(contrib.competence_month, contrib.competence_year)}</h3>
-                                  <Badge variant="outline" className={`${statusConfig.bgColor} ${statusConfig.color} border text-xs px-2 py-0 h-5 gap-1`}>
-                                    {statusConfig.icon}{statusConfig.label}
-                                  </Badge>
-                                  {isInActiveNegotiation && (
-                                    <Badge variant="outline" className="bg-indigo-50 border-indigo-200 text-indigo-700 text-xs px-2 py-0 h-5 gap-1">
-                                      <Handshake className="h-3 w-3" />Parcelamento {contrib.negotiation?.installments_count}x
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-3 text-xs text-slate-500">
-                                  <span>{contrib.contribution_type?.name || "Contribuição"}</span>
-                                  {contrib.lytex_invoice_id && <><span>•</span><span className="font-mono text-slate-400">#{contrib.lytex_invoice_id.slice(-8).toUpperCase()}</span></>}
-                                </div>
-                              </div>
-                              <div className="hidden md:flex items-center gap-6 text-sm">
-                                <div className="text-center">
-                                  <p className="text-xs text-slate-400 mb-0.5">Vencimento</p>
-                                  <p className={`font-medium ${isOverdue ? 'text-red-600' : 'text-slate-700'}`}>{format(dueDate, "dd/MM/yyyy")}</p>
-                                </div>
-                                {contrib.status === "paid" && contrib.paid_at && (
-                                  <div className="text-center">
-                                    <p className="text-xs text-slate-400 mb-0.5">Pagamento</p>
-                                    <p className="font-medium text-emerald-600">{format(new Date(contrib.paid_at), "dd/MM/yyyy")}</p>
-                                  </div>
-                                )}
-                                <div className="text-center min-w-[100px]">
-                                  <p className="text-xs text-slate-400 mb-0.5">Valor</p>
-                                  <p className="font-semibold text-slate-900">{formatCurrency(contrib.amount || 0)}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                {contrib.lytex_url && contrib.status !== "paid" && contrib.status !== "cancelled" && (
-                                  <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => window.open(contrib.lytex_url!, "_blank")}>
-                                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />Boleto
-                                    </Button>
-                                  </TooltipTrigger><TooltipContent>Abrir boleto</TooltipContent></Tooltip></TooltipProvider>
-                                )}
-                                {!contrib.lytex_url && !contrib.lytex_invoice_id && contrib.status !== "paid" && contrib.status !== "cancelled" && contrib.status !== "awaiting_value" && !isInActiveNegotiation && (
-                                  <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                                    <Button variant="outline" size="sm" className="h-8 px-3 text-xs" onClick={() => handleGenerateInvoice(contrib)} disabled={generatingInvoiceId === contrib.id}>
-                                      {generatingInvoiceId === contrib.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5 mr-1.5" />}Emitir
-                                    </Button>
-                                  </TooltipTrigger><TooltipContent>Emitir boleto (Lytex)</TooltipContent></Tooltip></TooltipProvider>
-                                )}
-                                {!isInActiveNegotiation && isOverdue && !isOverdue90Days && !reissueLimitReached && (
-                                  <TooltipProvider><Tooltip><TooltipTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-8 px-3 text-xs hover:bg-amber-50 hover:text-amber-700" onClick={() => { setSelectedContribution(contrib); setShowReissueDialog(true); }}>
-                                      <RefreshCw className="h-3.5 w-3.5 mr-1.5" />2ª Via {reissueCount > 0 && `(${reissueCount}/2)`}
-                                    </Button>
-                                  </TooltipTrigger><TooltipContent>Gerar nova via</TooltipContent></Tooltip></TooltipProvider>
-                                )}
-                                {contrib.status === "awaiting_value" && (
-                                  <Button size="sm" className="h-8 px-3 text-xs bg-purple-600 hover:bg-purple-700" onClick={() => { setSelectedContribution(contrib); setShowSetValueDialog(true); }}>
-                                    <DollarSign className="h-3.5 w-3.5 mr-1.5" />Definir Valor
-                                  </Button>
-                                )}
-                                <ChevronRight className="h-4 w-4 text-slate-300 hidden lg:block" />
-                              </div>
-                            </div>
-                            <div className="flex md:hidden items-center gap-4 mt-3 text-xs text-slate-500 flex-wrap">
-                              <span className={isOverdue ? 'text-red-600' : ''}>Venc: {format(dueDate, "dd/MM/yyyy")}</span>
-                              {contrib.status === "paid" && contrib.paid_at && <><span>•</span><span className="text-emerald-600 font-medium">Pago: {format(new Date(contrib.paid_at), "dd/MM/yyyy")}</span></>}
-                              <span>•</span><span className="font-semibold text-slate-900">{formatCurrency(contrib.amount || 0)}</span>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </ScrollArea>
-                )}
-              </CardContent>
-            </Card>
+            {/* Contributions List - New Component */}
+            <PortalContributionsList
+              contributions={contributions}
+              isLoading={false}
+              showEmployerInfo={false}
+              onReissue={(contrib) => {
+                setSelectedContribution(contrib as any);
+                setShowReissueDialog(true);
+              }}
+              onSetValue={(contrib) => {
+                setSelectedContribution(contrib as any);
+                setShowSetValueDialog(true);
+              }}
+              onGenerateInvoice={(contrib) => handleGenerateInvoice(contrib as any)}
+              generatingInvoiceId={generatingInvoiceId}
+            />
           </>
         )}
 
