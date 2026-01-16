@@ -30,10 +30,10 @@ serve(async (req) => {
         );
       }
 
-      // Buscar empresa - agora incluindo union_entity_id para isolamento multi-tenant
+      // Buscar empresa - agora incluindo union_entity_id e category_id para isolamento e filtragem de CCTs
       const { data: employer, error } = await supabase
         .from("employers")
-        .select("id, name, cnpj, clinic_id, access_code, access_code_expires_at, union_entity_id")
+        .select("id, name, cnpj, clinic_id, access_code, access_code_expires_at, union_entity_id, category_id")
         .eq("cnpj", cleanCnpj)
         .single();
 
@@ -104,6 +104,7 @@ serve(async (req) => {
             cnpj: employer.cnpj,
             clinic_id: employer.clinic_id,
             union_entity_id: employer.union_entity_id,
+            category_id: employer.category_id,
           },
           union_entity: unionEntity,
           session_token: sessionToken,

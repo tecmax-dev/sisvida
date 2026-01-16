@@ -54,6 +54,7 @@ interface Employer {
   name: string;
   cnpj: string;
   clinic_id: string;
+  category_id?: string | null;
 }
 
 interface Contribution {
@@ -744,7 +745,7 @@ export default function EmployerPortal() {
         {clinic?.id && (
           <div className="grid md:grid-cols-2 gap-6">
             <PortalHomologacaoCard clinicSlug={clinicSlug} />
-            <PortalConventionsSection clinicId={clinic.id} />
+            <PortalConventionsSection clinicId={clinic.id} employerCategoryId={employer?.category_id} />
           </div>
         )}
 
