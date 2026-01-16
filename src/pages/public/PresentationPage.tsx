@@ -7,6 +7,7 @@ import clinicModule from "@/assets/presentation/clinic-module.jpg";
 import unionModule from "@/assets/presentation/union-module.jpg";
 import technologyStack from "@/assets/presentation/technology-stack.jpg";
 import portalsAccess from "@/assets/presentation/portals-access.jpg";
+import ecliniLogo from "@/assets/eclini-logo.png";
 
 export default function PresentationPage() {
   const handlePrint = () => {
@@ -54,8 +55,8 @@ export default function PresentationPage() {
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-12">
           <div className="mb-8">
-            <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-2xl">
-              <span className="text-4xl font-bold text-blue-600">eC</span>
+            <div className="w-32 h-32 bg-white rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-2xl p-4">
+              <img src={ecliniLogo} alt="eCLINI" className="w-full h-full object-contain" />
             </div>
             <h1 className="text-6xl font-bold mb-4 tracking-tight">eCLINI</h1>
             <p className="text-2xl text-blue-100">Sistema Integrado de Gestão Clínica e Sindical</p>
