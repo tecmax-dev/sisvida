@@ -65,6 +65,11 @@ interface CreateWithoutValueDialogProps {
   clinicId: string;
   userId: string;
   onSuccess: () => void;
+  /**
+   * Optional: when creating a contribution for a different year than the current page filter,
+   * allow the parent page to switch the year so the new record becomes visible immediately.
+   */
+  onEnsureYearVisible?: (year: number) => void;
 }
 
 const MONTHS = [
@@ -83,6 +88,7 @@ export default function CreateWithoutValueDialog({
   clinicId,
   userId,
   onSuccess,
+  onEnsureYearVisible,
 }: CreateWithoutValueDialogProps) {
   const { currentClinic } = useAuth();
   const [step, setStep] = useState<"form" | "success">("form");
@@ -186,6 +192,9 @@ export default function CreateWithoutValueDialog({
       if (sendEmail && selectedEmployer?.email) {
         await handleSendEmail(url);
       }
+
+      // Switch the page year filter to this contribution year so it shows up right away.
+      onEnsureYearVisible?.(year);
 
       setStep("success");
       toast.success("Contribuição criada com sucesso!");

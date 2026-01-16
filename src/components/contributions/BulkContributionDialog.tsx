@@ -72,6 +72,11 @@ interface BulkContributionDialogProps {
   clinicId: string;
   userId: string;
   onRefresh: () => void;
+  /**
+   * Optional: when creating contributions for a different year than the current page filter,
+   * allow the parent page to switch the year so the newly created items become visible.
+   */
+  onEnsureYearVisible?: (year: number) => void;
   categories?: Category[];
 }
 
@@ -88,6 +93,7 @@ export default function BulkContributionDialog({
   clinicId,
   userId,
   onRefresh,
+  onEnsureYearVisible,
   categories = [],
 }: BulkContributionDialogProps) {
   const [step, setStep] = useState<"config" | "processing" | "result">("config");
@@ -397,8 +403,13 @@ export default function BulkContributionDialog({
       } else if (newCreatedContributions.length > 0) {
         toast.success(`${successCount} contribuições criadas. Você pode enviar os links por email.`);
       }
+
+      // Ensure the page is showing the year we just created, otherwise the refresh
+      // will re-fetch the previous year and the user won't see the new items.
+      onEnsureYearVisible?.(year);
       onRefresh();
     } else if (successCount > 0 && sessionExpired) {
+      onEnsureYearVisible?.(year);
       onRefresh();
     }
   };
