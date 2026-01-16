@@ -52,6 +52,7 @@ import {
   User,
   ChevronDown,
   Link2,
+  CheckSquare,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -387,6 +388,24 @@ export default function ContributionsListTab({
     setSelectedContributionIds(newSet);
   };
 
+  // Get all eligible contributions from the current filtered list
+  const allEligibleContributions = useMemo(() => {
+    return filteredContributions.filter(
+      (c) => (c.lytex_invoice_id || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
+    );
+  }, [filteredContributions]);
+
+  const allEligibleSelected = allEligibleContributions.length > 0 && 
+    allEligibleContributions.every((c) => selectedContributionIds.has(c.id));
+
+  const handleSelectAllEligible = () => {
+    if (allEligibleSelected) {
+      setSelectedContributionIds(new Set());
+    } else {
+      setSelectedContributionIds(new Set(allEligibleContributions.map((c) => c.id)));
+    }
+  };
+
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
     setCurrentPage(1);
@@ -515,6 +534,32 @@ export default function ContributionsListTab({
 
       {/* Action Buttons */}
       <div className="flex flex-wrap items-center gap-2 justify-end">
+        {/* Select All Eligible Button */}
+        {allEligibleContributions.length > 0 && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={allEligibleSelected ? "secondary" : "outline"}
+                  size="sm"
+                  onClick={handleSelectAllEligible}
+                  className={allEligibleSelected ? "bg-purple-100 text-purple-700 border-purple-300" : ""}
+                >
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  {allEligibleSelected ? "Desmarcar Todos" : "Selecionar Todos"}
+                  <Badge variant="secondary" className="ml-2 h-5 px-1.5 text-xs">
+                    {allEligibleContributions.length}
+                  </Badge>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {allEligibleSelected 
+                  ? "Desmarcar todas as contribuições elegíveis"
+                  : `Selecionar todas as ${allEligibleContributions.length} contribuição(ões) elegíveis para envio`}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
