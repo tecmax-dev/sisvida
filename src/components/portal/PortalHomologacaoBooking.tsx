@@ -50,6 +50,11 @@ interface Schedule {
   capacity: number;
 }
 
+interface Block {
+  block_date: string;
+  professional_id: string | null;
+}
+
 interface ServiceType {
   id: string;
   name: string;
@@ -143,6 +148,20 @@ export function PortalHomologacaoBooking({
     }
   }, [serviceTypes, selectedService]);
 
+  // Fetch blocks for the clinic
+  const { data: blocks } = useQuery({
+    queryKey: ["portal-homologacao-blocks", clinicId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("homologacao_blocks")
+        .select("block_date, professional_id")
+        .eq("clinic_id", clinicId);
+      
+      if (error) throw error;
+      return data as Block[];
+    },
+  });
+
   // Fetch existing appointments
   const { data: appointments } = useQuery({
     queryKey: ["portal-homologacao-appointments", selectedProfessional?.id, selectedDate],
@@ -217,7 +236,7 @@ export function PortalHomologacaoBooking({
     },
   });
 
-  // Generate available time slots
+  // Generate available time slots based on service duration
   const getAvailableSlots = (): TimeSlot[] => {
     if (!selectedDate || !schedules) return [];
 
@@ -227,41 +246,61 @@ export function PortalHomologacaoBooking({
     if (!daySchedule) return [];
 
     const slots: TimeSlot[] = [];
-    const [startHour, startMinute] = daySchedule.start_time.split(':').map(Number);
-    const [endHour, endMinute] = daySchedule.end_time.split(':').map(Number);
+    const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
+    const [endHour, endMin] = daySchedule.end_time.split(':').map(Number);
     
-    let currentTime = startHour * 60 + startMinute;
-    const endTimeMinutes = endHour * 60 + endMinute;
-    const interval = 30;
+    // Use service duration for interval
+    const service = serviceTypes?.find(s => s.id === selectedService);
+    const interval = service?.duration_minutes || 30;
 
-    while (currentTime < endTimeMinutes) {
-      const hours = Math.floor(currentTime / 60);
-      const minutes = currentTime % 60;
-      const timeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    let currentHour = startHour;
+    let currentMin = startMin;
+
+    while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
+      const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
       
-      const bookedCount = appointments?.filter(a => a.start_time === timeStr).length || 0;
-      
+      const bookedCount = appointments?.filter(apt => 
+        apt.start_time?.slice(0, 5) === timeStr
+      ).length || 0;
+
       slots.push({
         time: timeStr,
         available: bookedCount < daySchedule.capacity,
         capacity: daySchedule.capacity,
         booked: bookedCount,
       });
-      
-      currentTime += interval;
+
+      currentMin += interval;
+      if (currentMin >= 60) {
+        currentHour += Math.floor(currentMin / 60);
+        currentMin = currentMin % 60;
+      }
     }
 
     return slots;
   };
 
-  const isDayAvailable = (date: Date) => {
-    if (!schedules) return false;
+  // Check if a date is available (respects schedules, blocks, and past dates)
+  const isDayAvailable = (date: Date): boolean => {
+    if (!schedules || !selectedProfessional) return false;
+
     const dayOfWeek = date.getDay();
+    const hasSchedule = schedules.some(s => s.day_of_week === dayOfWeek);
+    if (!hasSchedule) return false;
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
     if (date < today) return false;
-    return schedules.some(s => s.day_of_week === dayOfWeek);
+
+    // Check if date is blocked
+    const dateStr = format(date, "yyyy-MM-dd");
+    const isBlocked = blocks?.some(b => 
+      b.block_date === dateStr && 
+      (b.professional_id === null || b.professional_id === selectedProfessional.id)
+    );
+    if (isBlocked) return false;
+
+    return true;
   };
 
   const calendarDays = () => {
