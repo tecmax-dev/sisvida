@@ -50,7 +50,7 @@ const PortalAccessPage = () => {
       icon: Users,
       color: "from-emerald-500 to-teal-600",
       hoverColor: "hover:from-emerald-600 hover:to-teal-700",
-      path: "/app",
+      path: `/portal-socio/${clinicData?.slug || ""}`,
     },
   ];
 
