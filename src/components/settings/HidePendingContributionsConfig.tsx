@@ -3,28 +3,63 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CalendarIcon, EyeOff, Trash2, AlertTriangle } from "lucide-react";
-import { format, parse, isValid } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { EyeOff, Trash2, AlertTriangle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+// Helper to format competence as MM/YYYY
+const formatCompetence = (month: number, year: number): string => {
+  return `${String(month).padStart(2, "0")}/${year}`;
+};
+
+// Helper to parse competence from MM/YYYY string
+const parseCompetence = (value: string): { month: number; year: number } | null => {
+  const match = value.match(/^(\d{1,2})\/(\d{4})$/);
+  if (!match) return null;
+  const month = parseInt(match[1], 10);
+  const year = parseInt(match[2], 10);
+  if (month < 1 || month > 12 || year < 2020 || year > 2099) return null;
+  return { month, year };
+};
 
 export function HidePendingContributionsConfig() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
-  const [startDate, setStartDate] = useState<Date | undefined>();
-  const [endDate, setEndDate] = useState<Date | undefined>();
-  const [startDateInput, setStartDateInput] = useState("");
-  const [endDateInput, setEndDateInput] = useState("");
+  
+  // Start competence (De:)
+  const [startMonth, setStartMonth] = useState<number | undefined>();
+  const [startYear, setStartYear] = useState<number | undefined>();
+  const [startInput, setStartInput] = useState("");
+  
+  // End competence (Até:)
+  const [endMonth, setEndMonth] = useState<number | undefined>();
+  const [endYear, setEndYear] = useState<number | undefined>();
+  const [endInput, setEndInput] = useState("");
+  
   const [saving, setSaving] = useState(false);
   const [hiddenCount, setHiddenCount] = useState<number>(0);
 
-  // Load current setting
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 2019 }, (_, i) => 2020 + i);
+  const months = [
+    { value: 1, label: "01 - Janeiro" },
+    { value: 2, label: "02 - Fevereiro" },
+    { value: 3, label: "03 - Março" },
+    { value: 4, label: "04 - Abril" },
+    { value: 5, label: "05 - Maio" },
+    { value: 6, label: "06 - Junho" },
+    { value: 7, label: "07 - Julho" },
+    { value: 8, label: "08 - Agosto" },
+    { value: 9, label: "09 - Setembro" },
+    { value: 10, label: "10 - Outubro" },
+    { value: 11, label: "11 - Novembro" },
+    { value: 12, label: "12 - Dezembro" },
+  ];
+
+  // Load current setting - parse from stored date
   useEffect(() => {
     const loadSetting = async () => {
       if (!currentClinic?.id) return;
@@ -36,86 +71,112 @@ export function HidePendingContributionsConfig() {
         .single();
 
       if (!error && data?.hide_pending_before_date) {
-        // For backwards compatibility, use saved date as end date
+        // Parse stored date as end competence (YYYY-MM-DD -> month/year)
         const date = new Date(data.hide_pending_before_date);
-        setEndDate(date);
-        setEndDateInput(format(date, "dd/MM/yyyy"));
+        const month = date.getMonth() + 1;
+        const year = date.getFullYear();
+        setEndMonth(month);
+        setEndYear(year);
+        setEndInput(formatCompetence(month, year));
       }
     };
 
     loadSetting();
   }, [currentClinic?.id]);
 
-  // Count hidden contributions when dates change
+  // Count hidden contributions when competences change
   useEffect(() => {
     const countHidden = async () => {
-      if (!currentClinic?.id || (!startDate && !endDate)) {
+      if (!currentClinic?.id) {
+        setHiddenCount(0);
+        return;
+      }
+      
+      const hasStart = startMonth && startYear;
+      const hasEnd = endMonth && endYear;
+      
+      if (!hasStart && !hasEnd) {
         setHiddenCount(0);
         return;
       }
 
-      let query = supabase
+      // Build filter based on competence (year * 100 + month for easy comparison)
+      const startValue = hasStart ? startYear! * 100 + startMonth! : 0;
+      const endValue = hasEnd ? endYear! * 100 + endMonth! : 999999;
+
+      const { data, error } = await supabase
         .from("employer_contributions")
-        .select("*", { count: "exact", head: true })
+        .select("competence_month, competence_year")
         .eq("clinic_id", currentClinic.id)
         .in("status", ["pending", "overdue"]);
 
-      if (startDate) {
-        query = query.gte("due_date", format(startDate, "yyyy-MM-dd"));
-      }
-      if (endDate) {
-        query = query.lt("due_date", format(endDate, "yyyy-MM-dd"));
-      }
-
-      const { count, error } = await query;
-
-      if (!error && count !== null) {
-        setHiddenCount(count);
+      if (!error && data) {
+        const filtered = data.filter((c) => {
+          const compValue = c.competence_year * 100 + c.competence_month;
+          return compValue >= startValue && compValue <= endValue;
+        });
+        setHiddenCount(filtered.length);
       }
     };
 
     countHidden();
-  }, [currentClinic?.id, startDate, endDate]);
+  }, [currentClinic?.id, startMonth, startYear, endMonth, endYear]);
 
-  // Handle typed date input for start date
-  const handleStartDateInputChange = (value: string) => {
-    setStartDateInput(value);
-    if (value.length === 10) {
-      const parsed = parse(value, "dd/MM/yyyy", new Date());
-      if (isValid(parsed)) {
-        setStartDate(parsed);
+  // Handle typed input for start competence
+  const handleStartInputChange = (value: string) => {
+    setStartInput(value);
+    if (value.length >= 6) {
+      const parsed = parseCompetence(value);
+      if (parsed) {
+        setStartMonth(parsed.month);
+        setStartYear(parsed.year);
       }
     }
   };
 
-  // Handle typed date input for end date
-  const handleEndDateInputChange = (value: string) => {
-    setEndDateInput(value);
-    if (value.length === 10) {
-      const parsed = parse(value, "dd/MM/yyyy", new Date());
-      if (isValid(parsed)) {
-        setEndDate(parsed);
+  // Handle typed input for end competence
+  const handleEndInputChange = (value: string) => {
+    setEndInput(value);
+    if (value.length >= 6) {
+      const parsed = parseCompetence(value);
+      if (parsed) {
+        setEndMonth(parsed.month);
+        setEndYear(parsed.year);
       }
     }
   };
 
-  // Handle calendar selection for start date
-  const handleStartCalendarSelect = (date: Date | undefined) => {
-    setStartDate(date);
-    if (date) {
-      setStartDateInput(format(date, "dd/MM/yyyy"));
-    } else {
-      setStartDateInput("");
+  // Handle select changes for start
+  const handleStartMonthChange = (value: string) => {
+    const month = parseInt(value, 10);
+    setStartMonth(month);
+    if (startYear) {
+      setStartInput(formatCompetence(month, startYear));
     }
   };
 
-  // Handle calendar selection for end date
-  const handleEndCalendarSelect = (date: Date | undefined) => {
-    setEndDate(date);
-    if (date) {
-      setEndDateInput(format(date, "dd/MM/yyyy"));
-    } else {
-      setEndDateInput("");
+  const handleStartYearChange = (value: string) => {
+    const year = parseInt(value, 10);
+    setStartYear(year);
+    if (startMonth) {
+      setStartInput(formatCompetence(startMonth, year));
+    }
+  };
+
+  // Handle select changes for end
+  const handleEndMonthChange = (value: string) => {
+    const month = parseInt(value, 10);
+    setEndMonth(month);
+    if (endYear) {
+      setEndInput(formatCompetence(month, endYear));
+    }
+  };
+
+  const handleEndYearChange = (value: string) => {
+    const year = parseInt(value, 10);
+    setEndYear(year);
+    if (endMonth) {
+      setEndInput(formatCompetence(endMonth, year));
     }
   };
 
@@ -124,29 +185,36 @@ export function HidePendingContributionsConfig() {
 
     setSaving(true);
     try {
+      // Store as first day of the month for the end competence (backwards compatibility)
+      const hideDate = endMonth && endYear
+        ? `${endYear}-${String(endMonth).padStart(2, "0")}-01`
+        : null;
+
       const { error } = await supabase
         .from("clinics")
-        .update({
-          hide_pending_before_date: endDate
-            ? format(endDate, "yyyy-MM-dd")
-            : null,
-        })
+        .update({ hide_pending_before_date: hideDate })
         .eq("id", currentClinic.id);
 
       if (error) throw error;
 
-      const dateRange = startDate && endDate
-        ? `de ${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}`
-        : endDate
-        ? `anteriores a ${format(endDate, "dd/MM/yyyy")}`
-        : startDate
-        ? `a partir de ${format(startDate, "dd/MM/yyyy")}`
+      const hasStart = startMonth && startYear;
+      const hasEnd = endMonth && endYear;
+      
+      const startStr = hasStart ? formatCompetence(startMonth!, startYear!) : "";
+      const endStr = hasEnd ? formatCompetence(endMonth!, endYear!) : "";
+      
+      const rangeStr = hasStart && hasEnd
+        ? `de ${startStr} a ${endStr}`
+        : hasEnd
+        ? `até ${endStr}`
+        : hasStart
+        ? `a partir de ${startStr}`
         : "";
 
       toast({
         title: "Configuração salva",
-        description: dateRange
-          ? `Contribuições pendentes ${dateRange} serão ocultadas.`
+        description: rangeStr
+          ? `Contribuições pendentes da competência ${rangeStr} serão ocultadas.`
           : "Todas as contribuições pendentes serão exibidas.",
       });
     } catch (error: any) {
@@ -172,10 +240,13 @@ export function HidePendingContributionsConfig() {
 
       if (error) throw error;
 
-      setStartDate(undefined);
-      setEndDate(undefined);
-      setStartDateInput("");
-      setEndDateInput("");
+      setStartMonth(undefined);
+      setStartYear(undefined);
+      setStartInput("");
+      setEndMonth(undefined);
+      setEndYear(undefined);
+      setEndInput("");
+      
       toast({
         title: "Configuração removida",
         description: "Todas as contribuições pendentes serão exibidas.",
@@ -191,15 +262,17 @@ export function HidePendingContributionsConfig() {
     }
   };
 
+  const hasAnyValue = startMonth || startYear || endMonth || endYear;
+
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <EyeOff className="h-5 w-5" />
-          Ocultar Pendências Antigas
+          Ocultar Pendências por Competência
         </CardTitle>
         <CardDescription>
-          Configure uma data limite para ocultar contribuições pendentes ou vencidas anteriores a esta data. 
+          Configure um intervalo de competências (mês/ano) para ocultar contribuições pendentes ou vencidas.
           Útil para evitar exibição de débitos em processo de conciliação ou auditoria.
         </CardDescription>
       </CardHeader>
@@ -212,70 +285,85 @@ export function HidePendingContributionsConfig() {
           </AlertDescription>
         </Alert>
 
-        <div className="space-y-2">
-          <Label>Ocultar pendências no período:</Label>
+        <div className="space-y-4">
+          <Label>Ocultar pendências da competência:</Label>
+          
+          {/* Start competence (De:) */}
           <div className="flex flex-wrap gap-2 items-center">
-            {/* Start date */}
-            <span className="text-sm text-muted-foreground">De:</span>
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="DD/MM/AAAA"
-                value={startDateInput}
-                onChange={(e) => handleStartDateInputChange(e.target.value)}
-                className="w-[130px]"
-                maxLength={10}
-              />
-            </div>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="shrink-0">
-                  <CalendarIcon className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                <Calendar
-                  mode="single"
-                  selected={startDate}
-                  onSelect={handleStartCalendarSelect}
-                  initialFocus
-                  locale={ptBR}
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
+            <span className="text-sm text-muted-foreground w-8">De:</span>
+            <Input
+              type="text"
+              placeholder="MM/AAAA"
+              value={startInput}
+              onChange={(e) => handleStartInputChange(e.target.value)}
+              className="w-[100px]"
+              maxLength={7}
+            />
+            <span className="text-sm text-muted-foreground">ou</span>
+            <Select value={startMonth?.toString() || ""} onValueChange={handleStartMonthChange}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Mês" />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((m) => (
+                  <SelectItem key={m.value} value={m.value.toString()}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={startYear?.toString() || ""} onValueChange={handleStartYearChange}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Ano" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((y) => (
+                  <SelectItem key={y} value={y.toString()}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* End date */}
-            <span className="text-sm text-muted-foreground">a:</span>
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="DD/MM/AAAA"
-                value={endDateInput}
-                onChange={(e) => handleEndDateInputChange(e.target.value)}
-                className="w-[130px]"
-                maxLength={10}
-              />
-            </div>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" size="icon" className="shrink-0">
-                  <CalendarIcon className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
-                <Calendar
-                  mode="single"
-                  selected={endDate}
-                  onSelect={handleEndCalendarSelect}
-                  initialFocus
-                  locale={ptBR}
-                  className="p-3 pointer-events-auto"
-                />
-              </PopoverContent>
-            </Popover>
-
-            {(startDate || endDate) && (
+          {/* End competence (Até:) */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm text-muted-foreground w-8">Até:</span>
+            <Input
+              type="text"
+              placeholder="MM/AAAA"
+              value={endInput}
+              onChange={(e) => handleEndInputChange(e.target.value)}
+              className="w-[100px]"
+              maxLength={7}
+            />
+            <span className="text-sm text-muted-foreground">ou</span>
+            <Select value={endMonth?.toString() || ""} onValueChange={handleEndMonthChange}>
+              <SelectTrigger className="w-[140px]">
+                <SelectValue placeholder="Mês" />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map((m) => (
+                  <SelectItem key={m.value} value={m.value.toString()}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={endYear?.toString() || ""} onValueChange={handleEndYearChange}>
+              <SelectTrigger className="w-[100px]">
+                <SelectValue placeholder="Ano" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map((y) => (
+                  <SelectItem key={y} value={y.toString()}>
+                    {y}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            {hasAnyValue && (
               <Button variant="ghost" size="icon" onClick={handleClear} disabled={saving}>
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
@@ -283,7 +371,7 @@ export function HidePendingContributionsConfig() {
           </div>
         </div>
 
-        {(startDate || endDate) && hiddenCount > 0 && (
+        {hasAnyValue && hiddenCount > 0 && (
           <p className="text-sm text-muted-foreground">
             <strong>{hiddenCount.toLocaleString("pt-BR")}</strong> contribuição(ões) pendente(s) ou vencida(s) 
             serão ocultadas com esta configuração.
