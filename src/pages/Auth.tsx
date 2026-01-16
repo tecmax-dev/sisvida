@@ -542,6 +542,8 @@ export default function Auth() {
         provider: 'google',
         options: {
           redirectTo: `${getAppBaseUrl()}/auth`,
+          // Alguns tenants (Google Workspace) falham sem escopo explícito de e-mail
+          scopes: "https://www.googleapis.com/auth/userinfo.email",
         },
       });
 
