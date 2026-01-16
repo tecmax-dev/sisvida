@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CalendarIcon, EyeOff, Trash2, AlertTriangle, Search } from "lucide-react";
+import { CalendarIcon, EyeOff, Trash2, AlertTriangle } from "lucide-react";
 import { format, parse, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -17,8 +17,10 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 export function HidePendingContributionsConfig() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
-  const [hidePendingBeforeDate, setHidePendingBeforeDate] = useState<Date | undefined>();
-  const [dateInputValue, setDateInputValue] = useState("");
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
+  const [startDateInput, setStartDateInput] = useState("");
+  const [endDateInput, setEndDateInput] = useState("");
   const [saving, setSaving] = useState(false);
   const [hiddenCount, setHiddenCount] = useState<number>(0);
 
@@ -34,30 +36,38 @@ export function HidePendingContributionsConfig() {
         .single();
 
       if (!error && data?.hide_pending_before_date) {
+        // For backwards compatibility, use saved date as end date
         const date = new Date(data.hide_pending_before_date);
-        setHidePendingBeforeDate(date);
-        setDateInputValue(format(date, "dd/MM/yyyy"));
+        setEndDate(date);
+        setEndDateInput(format(date, "dd/MM/yyyy"));
       }
     };
 
     loadSetting();
   }, [currentClinic?.id]);
 
-  // Count hidden contributions when date changes
+  // Count hidden contributions when dates change
   useEffect(() => {
     const countHidden = async () => {
-      if (!currentClinic?.id || !hidePendingBeforeDate) {
+      if (!currentClinic?.id || (!startDate && !endDate)) {
         setHiddenCount(0);
         return;
       }
 
-      const dateStr = format(hidePendingBeforeDate, "yyyy-MM-dd");
-      const { count, error } = await supabase
+      let query = supabase
         .from("employer_contributions")
         .select("*", { count: "exact", head: true })
         .eq("clinic_id", currentClinic.id)
-        .in("status", ["pending", "overdue"])
-        .lt("due_date", dateStr);
+        .in("status", ["pending", "overdue"]);
+
+      if (startDate) {
+        query = query.gte("due_date", format(startDate, "yyyy-MM-dd"));
+      }
+      if (endDate) {
+        query = query.lt("due_date", format(endDate, "yyyy-MM-dd"));
+      }
+
+      const { count, error } = await query;
 
       if (!error && count !== null) {
         setHiddenCount(count);
@@ -65,28 +75,47 @@ export function HidePendingContributionsConfig() {
     };
 
     countHidden();
-  }, [currentClinic?.id, hidePendingBeforeDate]);
+  }, [currentClinic?.id, startDate, endDate]);
 
-  // Handle typed date input
-  const handleDateInputChange = (value: string) => {
-    setDateInputValue(value);
-    
-    // Try to parse the date when input is complete (dd/MM/yyyy = 10 chars)
+  // Handle typed date input for start date
+  const handleStartDateInputChange = (value: string) => {
+    setStartDateInput(value);
     if (value.length === 10) {
       const parsed = parse(value, "dd/MM/yyyy", new Date());
       if (isValid(parsed)) {
-        setHidePendingBeforeDate(parsed);
+        setStartDate(parsed);
       }
     }
   };
 
-  // Handle calendar selection
-  const handleCalendarSelect = (date: Date | undefined) => {
-    setHidePendingBeforeDate(date);
+  // Handle typed date input for end date
+  const handleEndDateInputChange = (value: string) => {
+    setEndDateInput(value);
+    if (value.length === 10) {
+      const parsed = parse(value, "dd/MM/yyyy", new Date());
+      if (isValid(parsed)) {
+        setEndDate(parsed);
+      }
+    }
+  };
+
+  // Handle calendar selection for start date
+  const handleStartCalendarSelect = (date: Date | undefined) => {
+    setStartDate(date);
     if (date) {
-      setDateInputValue(format(date, "dd/MM/yyyy"));
+      setStartDateInput(format(date, "dd/MM/yyyy"));
     } else {
-      setDateInputValue("");
+      setStartDateInput("");
+    }
+  };
+
+  // Handle calendar selection for end date
+  const handleEndCalendarSelect = (date: Date | undefined) => {
+    setEndDate(date);
+    if (date) {
+      setEndDateInput(format(date, "dd/MM/yyyy"));
+    } else {
+      setEndDateInput("");
     }
   };
 
@@ -98,18 +127,26 @@ export function HidePendingContributionsConfig() {
       const { error } = await supabase
         .from("clinics")
         .update({
-          hide_pending_before_date: hidePendingBeforeDate
-            ? format(hidePendingBeforeDate, "yyyy-MM-dd")
+          hide_pending_before_date: endDate
+            ? format(endDate, "yyyy-MM-dd")
             : null,
         })
         .eq("id", currentClinic.id);
 
       if (error) throw error;
 
+      const dateRange = startDate && endDate
+        ? `de ${format(startDate, "dd/MM/yyyy")} a ${format(endDate, "dd/MM/yyyy")}`
+        : endDate
+        ? `anteriores a ${format(endDate, "dd/MM/yyyy")}`
+        : startDate
+        ? `a partir de ${format(startDate, "dd/MM/yyyy")}`
+        : "";
+
       toast({
         title: "Configuração salva",
-        description: hidePendingBeforeDate
-          ? `Contribuições pendentes anteriores a ${format(hidePendingBeforeDate, "dd/MM/yyyy")} serão ocultadas.`
+        description: dateRange
+          ? `Contribuições pendentes ${dateRange} serão ocultadas.`
           : "Todas as contribuições pendentes serão exibidas.",
       });
     } catch (error: any) {
@@ -135,8 +172,10 @@ export function HidePendingContributionsConfig() {
 
       if (error) throw error;
 
-      setHidePendingBeforeDate(undefined);
-      setDateInputValue("");
+      setStartDate(undefined);
+      setEndDate(undefined);
+      setStartDateInput("");
+      setEndDateInput("");
       toast({
         title: "Configuração removida",
         description: "Todas as contribuições pendentes serão exibidas.",
@@ -174,37 +213,31 @@ export function HidePendingContributionsConfig() {
         </Alert>
 
         <div className="space-y-2">
-          <Label>Ocultar pendências anteriores a:</Label>
-          <div className="flex gap-2 items-center">
-            {/* Input para digitar data */}
+          <Label>Ocultar pendências no período:</Label>
+          <div className="flex flex-wrap gap-2 items-center">
+            {/* Start date */}
+            <span className="text-sm text-muted-foreground">De:</span>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="DD/MM/AAAA"
-                value={dateInputValue}
-                onChange={(e) => handleDateInputChange(e.target.value)}
-                className="pl-9 w-[140px]"
+                value={startDateInput}
+                onChange={(e) => handleStartDateInputChange(e.target.value)}
+                className="w-[130px]"
                 maxLength={10}
               />
             </div>
-
-            {/* Calendar picker */}
             <Popover>
               <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                >
+                <Button variant="outline" size="icon" className="shrink-0">
                   <CalendarIcon className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                 <Calendar
                   mode="single"
-                  selected={hidePendingBeforeDate}
-                  onSelect={handleCalendarSelect}
+                  selected={startDate}
+                  onSelect={handleStartCalendarSelect}
                   initialFocus
                   locale={ptBR}
                   className="p-3 pointer-events-auto"
@@ -212,7 +245,37 @@ export function HidePendingContributionsConfig() {
               </PopoverContent>
             </Popover>
 
-            {hidePendingBeforeDate && (
+            {/* End date */}
+            <span className="text-sm text-muted-foreground">a:</span>
+            <div className="relative">
+              <Input
+                type="text"
+                placeholder="DD/MM/AAAA"
+                value={endDateInput}
+                onChange={(e) => handleEndDateInputChange(e.target.value)}
+                className="w-[130px]"
+                maxLength={10}
+              />
+            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="icon" className="shrink-0">
+                  <CalendarIcon className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                <Calendar
+                  mode="single"
+                  selected={endDate}
+                  onSelect={handleEndCalendarSelect}
+                  initialFocus
+                  locale={ptBR}
+                  className="p-3 pointer-events-auto"
+                />
+              </PopoverContent>
+            </Popover>
+
+            {(startDate || endDate) && (
               <Button variant="ghost" size="icon" onClick={handleClear} disabled={saving}>
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
@@ -220,7 +283,7 @@ export function HidePendingContributionsConfig() {
           </div>
         </div>
 
-        {hidePendingBeforeDate && hiddenCount > 0 && (
+        {(startDate || endDate) && hiddenCount > 0 && (
           <p className="text-sm text-muted-foreground">
             <strong>{hiddenCount.toLocaleString("pt-BR")}</strong> contribuição(ões) pendente(s) ou vencida(s) 
             serão ocultadas com esta configuração.
