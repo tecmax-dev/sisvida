@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { SMTPClient } from "https://deno.land/x/denomailer@1.6.0/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,7 +50,6 @@ const formatCNPJ = (cnpj: string) => {
 };
 
 const formatDate = (dateStr: string) => {
-  // Timezone-safe: parse YYYY-MM-DD without timezone shift
   const dateOnly = (dateStr || "").slice(0, 10);
   const match = dateOnly.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!match) return dateStr;
@@ -59,7 +59,6 @@ const formatDate = (dateStr: string) => {
 const generateBoletoCard = (boleto: BoletoData): string => {
   const competence = `${MONTHS[boleto.competenceMonth - 1]}/${boleto.competenceYear}`;
   
-  // Handle "awaiting value" case
   if (boleto.isAwaitingValue) {
     return `
       <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 16px 0; background: #ffffff;">
@@ -105,7 +104,6 @@ const generateBoletoCard = (boleto: BoletoData): string => {
     `;
   }
   
-  // Regular boleto card
   const statusLabel = boleto.status === "overdue" ? "Vencido" : "Pendente";
   const statusBg = boleto.status === "overdue" ? "#fef2f2" : "#fffbeb";
   const statusColor = boleto.status === "overdue" ? "#dc2626" : "#d97706";
@@ -236,8 +234,11 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const resendApiKey = Deno.env.get("RESEND_API_KEY");
-    const resendFrom = Deno.env.get("RESEND_FROM");
+    const smtpHost = Deno.env.get("SMTP_HOST");
+    const smtpPort = parseInt(Deno.env.get("SMTP_PORT") || "465", 10);
+    const smtpUser = Deno.env.get("SMTP_USER");
+    const smtpPassword = Deno.env.get("SMTP_PASSWORD");
+    const smtpFrom = Deno.env.get("SMTP_FROM");
 
     const mask = (v?: string | null) => {
       if (!v) return v;
@@ -245,35 +246,15 @@ const handler = async (req: Request): Promise<Response> => {
       return `${v.slice(0, 4)}***${v.slice(-4)}`;
     };
 
-    console.log("send-boleto-email: RESEND_API_KEY present:", !!resendApiKey);
-    console.log("send-boleto-email: RESEND_FROM (masked):", mask(resendFrom));
+    console.log("send-boleto-email: SMTP_HOST:", smtpHost);
+    console.log("send-boleto-email: SMTP_PORT:", smtpPort);
+    console.log("send-boleto-email: SMTP_USER present:", !!smtpUser);
+    console.log("send-boleto-email: SMTP_FROM (masked):", mask(smtpFrom));
 
-    if (!resendApiKey) {
-      console.error("send-boleto-email: RESEND_API_KEY not configured");
+    if (!smtpHost || !smtpUser || !smtpPassword || !smtpFrom) {
+      console.error("send-boleto-email: SMTP not fully configured");
       return new Response(
-        JSON.stringify({ error: "Configuracao de e-mail nao encontrada (API_KEY)" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    if (!resendFrom) {
-      console.error("send-boleto-email: RESEND_FROM not configured");
-      return new Response(
-        JSON.stringify({ error: "Configuracao de e-mail nao encontrada (FROM)" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // Validate RESEND_FROM format: email@example.com OR Name <email@example.com>
-    const simpleEmailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const fromEmailMatch = resendFrom.match(/<\s*([^>]+)\s*>/);
-    const fromEmail = (fromEmailMatch?.[1] || resendFrom).trim();
-    if (!simpleEmailRegex.test(fromEmail)) {
-      console.error("send-boleto-email: Invalid RESEND_FROM format (masked):", mask(resendFrom));
-      return new Response(
-        JSON.stringify({
-          error: "Configuracao invalida do remetente (RESEND_FROM). Use 'email@dominio.com' ou 'Nome <email@dominio.com>'.",
-        }),
+        JSON.stringify({ error: "Configuracao SMTP incompleta. Verifique SMTP_HOST, SMTP_USER, SMTP_PASSWORD e SMTP_FROM." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -315,42 +296,50 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("send-boleto-email: Subject:", subject);
 
+    // Build recipient list
     const toAddresses = data.ccEmail 
       ? [data.recipientEmail, data.ccEmail]
       : [data.recipientEmail];
 
-    console.log("send-boleto-email: Sending email via Resend API from:", mask(resendFrom), "to:", toAddresses);
+    console.log("send-boleto-email: Sending email via SMTP to:", toAddresses);
 
-    // Use Resend HTTP API directly for proper UTF-8 encoding
-    const emailPayload = {
-      from: resendFrom,
-      to: toAddresses,
-      subject,
-      html,
-    };
-
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${resendApiKey}`,
-        "Content-Type": "application/json",
+    // Create SMTP client with SSL (port 465)
+    const client = new SMTPClient({
+      connection: {
+        hostname: smtpHost,
+        port: smtpPort,
+        tls: true,
+        auth: {
+          username: smtpUser,
+          password: smtpPassword,
+        },
       },
-      body: JSON.stringify(emailPayload),
     });
 
-    const emailResponse = await response.json();
+    try {
+      await client.send({
+        from: smtpFrom,
+        to: toAddresses,
+        subject: subject,
+        content: "Visualize este email em um cliente que suporte HTML.",
+        html: html,
+      });
 
-    if (!response.ok) {
-      console.error("send-boleto-email: Resend API error:", emailResponse);
-      throw new Error(emailResponse.message || "Erro na API do Resend");
+      await client.close();
+
+      console.log("send-boleto-email: Email sent successfully via SMTP!");
+
+      return new Response(
+        JSON.stringify({ success: true, message: "Email enviado com sucesso" }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    } catch (smtpError: any) {
+      console.error("send-boleto-email: SMTP error:", smtpError);
+      try {
+        await client.close();
+      } catch (_) {}
+      throw new Error(`Erro SMTP: ${smtpError.message || smtpError}`);
     }
-
-    console.log("send-boleto-email: Email sent successfully!", emailResponse);
-
-    return new Response(
-      JSON.stringify({ success: true, message: "Email enviado com sucesso", id: emailResponse.data?.id }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
   } catch (error: any) {
     console.error("send-boleto-email: Error:", error);
     return new Response(
