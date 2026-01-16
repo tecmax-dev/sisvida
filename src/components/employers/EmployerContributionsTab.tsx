@@ -32,6 +32,7 @@ import {
   FileText,
 } from "lucide-react";
 import { format } from "date-fns";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { EmployerContributionFilters } from "@/components/contributions/EmployerContributionFilters";
 
 // Format currency from cents
@@ -186,7 +187,7 @@ function ContributionCard({
                   <>
                     <span>•</span>
                     <span className="text-emerald-600 font-medium">
-                      Pago: {format(new Date(contrib.paid_at), "dd/MM/yy")}
+                      Pago: {format(parseDateOnlyToLocalNoon(contrib.paid_at), "dd/MM/yy")}
                     </span>
                   </>
                 )}

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { openWhatsApp } from "@/lib/whatsapp";
+import { formatDateBR } from "@/lib/date";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -67,7 +68,7 @@ export function PatientHeader({
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return null;
-    return new Date(dateString).toLocaleDateString('pt-BR');
+    return formatDateBR(dateString) || null;
   };
 
   const age = calculateAge(birthDate);
