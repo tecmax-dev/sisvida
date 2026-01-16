@@ -634,11 +634,11 @@ export default function PresentationPage() {
 
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                  <span className="text-2xl">📱</span>
+                  <span className="text-2xl">📞</span>
                 </div>
                 <div>
-                  <p className="text-blue-300 text-sm">WhatsApp</p>
-                  <p className="text-xl font-semibold">(73) XXXXX-XXXX</p>
+                  <p className="text-blue-300 text-sm">Telefone</p>
+                  <p className="text-xl font-semibold">(71) 3144-9898</p>
                 </div>
               </div>
 
