@@ -200,14 +200,19 @@ serve(async (req) => {
     const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://eclini.lovable.app';
     const logoUrl = settings?.logo_url || clinic?.whatsapp_header_image_url || clinic?.logo_url || 'https://eclini.lovable.app/eclini-whatsapp-header.jpg';
 
-    // Format appointment date
-    const appointmentDateObj = new Date(appointment.appointment_date + 'T12:00:00');
-    const appointmentDate = appointmentDateObj.toLocaleDateString('pt-BR', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+    // Format appointment date (timezone-safe)
+    const dateOnly = (appointment.appointment_date || "").slice(0, 10);
+    const dateMatch = dateOnly.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    let appointmentDate = appointment.appointment_date;
+    if (dateMatch) {
+      const dateObj = new Date(Number(dateMatch[1]), Number(dateMatch[2]) - 1, Number(dateMatch[3]), 12, 0, 0);
+      appointmentDate = dateObj.toLocaleDateString('pt-BR', {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    }
 
     const createdAtFormatted = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
 

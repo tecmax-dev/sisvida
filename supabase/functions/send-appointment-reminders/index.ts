@@ -119,13 +119,19 @@ async function sendWhatsAppWithImage(
   }
 }
 
-function formatDateTime(date: Date, time: string): string {
-  const dateStr = date.toLocaleDateString('pt-BR', {
+function formatDateTime(dateStr: string, time: string): string {
+  // Timezone-safe: parse YYYY-MM-DD at noon local time to avoid shifts
+  const dateOnly = (dateStr || "").slice(0, 10);
+  const match = dateOnly.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return dateStr;
+  
+  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0);
+  const formatted = date.toLocaleDateString('pt-BR', {
     weekday: 'long',
     day: 'numeric',
     month: 'long'
   });
-  return dateStr;
+  return formatted;
 }
 
 function formatAppointmentReminder(
@@ -336,9 +342,8 @@ serve(async (req) => {
           continue;
         }
 
-        // Format date for message
-        const appointmentDate = new Date(appointment.appointment_date + 'T00:00:00');
-        const dateFormatted = formatDateTime(appointmentDate, appointment.start_time);
+        // Format date for message (pass the date string directly for timezone-safe formatting)
+        const dateFormatted = formatDateTime(appointment.appointment_date, appointment.start_time);
         const time = appointment.start_time.substring(0, 5);
 
         // Build confirmation link (only if not using direct reply)

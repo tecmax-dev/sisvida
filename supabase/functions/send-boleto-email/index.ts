@@ -49,8 +49,11 @@ const formatCNPJ = (cnpj: string) => {
 };
 
 const formatDate = (dateStr: string) => {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("pt-BR");
+  // Timezone-safe: parse YYYY-MM-DD without timezone shift
+  const dateOnly = (dateStr || "").slice(0, 10);
+  const match = dateOnly.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return dateStr;
+  return `${match[3]}/${match[2]}/${match[1]}`;
 };
 
 const generateBoletoCard = (boleto: BoletoData): string => {

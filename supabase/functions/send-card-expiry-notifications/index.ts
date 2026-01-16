@@ -75,7 +75,10 @@ serve(async (req) => {
         continue;
       }
 
-      const expiryDate = new Date(card.expires_at).toLocaleDateString("pt-BR");
+      // Timezone-safe date formatting
+      const dateOnly = (card.expires_at || "").slice(0, 10);
+      const dateMatch = dateOnly.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      const expiryDate = dateMatch ? `${dateMatch[3]}/${dateMatch[2]}/${dateMatch[1]}` : card.expires_at;
       
       // Create payslip request record
       const { data: payslipRequest, error: payslipError } = await supabase

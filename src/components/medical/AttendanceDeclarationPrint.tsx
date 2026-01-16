@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { DocumentSettings } from "@/hooks/useDocumentSettings";
+import { formatDateBR } from "@/lib/date";
 
 interface AttendanceDeclarationPrintProps {
   clinic: {
@@ -54,7 +55,7 @@ export const AttendanceDeclarationPrint = forwardRef<HTMLDivElement, AttendanceD
     const template = settings?.attendance_template || defaultTemplate;
     const variables = {
       patient_name: patient.name,
-      date: appointmentDate.toLocaleDateString('pt-BR'),
+      date: formatDateBR(date),
       start_time: startTime,
       end_time: endTime,
     };

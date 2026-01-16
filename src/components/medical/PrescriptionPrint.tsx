@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { DocumentSettings } from "@/hooks/useDocumentSettings";
+import { formatDateBR } from "@/lib/date";
 
 interface PrescriptionPrintProps {
   clinic: {
@@ -55,7 +56,7 @@ export const PrescriptionPrint = forwardRef<HTMLDivElement, PrescriptionPrintPro
             </div>
             <div className="text-right">
               <h2 className="text-2xl font-bold text-primary">{title}</h2>
-              <p className="text-sm text-gray-600">{new Date(date).toLocaleDateString('pt-BR')}</p>
+              <p className="text-sm text-gray-600">{formatDateBR(date)}</p>
             </div>
           </div>
         </div>
