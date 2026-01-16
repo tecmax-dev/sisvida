@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { supabase } from '@/integrations/supabase/client';
+import { formatDateBR } from '@/lib/date';
 
 export interface ExportOptions {
   clinicId: string;
@@ -30,14 +31,11 @@ const formatCPFForExport = (cpf: string | null): string => {
   return cpf;
 };
 
-// Format date for export
+// Format date for export (timezone-safe for YYYY-MM-DD)
 const formatDateForExport = (date: string | null): string => {
   if (!date) return '';
-  try {
-    return new Date(date).toLocaleDateString('pt-BR');
-  } catch {
-    return date;
-  }
+  const br = formatDateBR(date);
+  return br || date;
 };
 
 export async function exportClinicData(

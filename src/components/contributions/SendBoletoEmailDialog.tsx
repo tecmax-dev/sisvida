@@ -17,6 +17,7 @@ import { Loader2, Send, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Contribution {
@@ -323,7 +324,7 @@ export function SendBoletoEmailDialog({
                             {contrib.employers?.name || "Empresa"}
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {monthName} • Venc: {format(new Date(contrib.due_date), "dd/MM/yy")}
+                            {monthName} • Venc: {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yy")}
                           </p>
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
