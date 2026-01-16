@@ -492,8 +492,8 @@ export default function ContributionsListTab({
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   <SelectItem value="all">Todos períodos</SelectItem>
-                  {/* Generate competence options for the last 3 years, most recent first */}
-                  {getStaticYearRange().slice().reverse().flatMap(year => 
+                  {/* Generate competence options: years descending, months descending within each year */}
+                  {getStaticYearRange().flatMap(year => 
                     Array.from({ length: 12 }, (_, i) => 12 - i).map(month => {
                       const competenceKey = `${String(month).padStart(2, "0")}/${year}`;
                       return (
