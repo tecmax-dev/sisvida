@@ -466,7 +466,7 @@ function ContributionCard({
             </>
           )}
           <span className={contrib.status === 'overdue' ? 'text-red-600 font-medium' : ''}>
-            Venc: {contrib.due_date ? dueDate.toLocaleDateString("pt-BR") : "-"}
+            Venc: {contrib.due_date ? parseISODateToLocalNoon(contrib.due_date.slice(0, 10)).toLocaleDateString("pt-BR") : "-"}
           </span>
           {contrib.status === "paid" && contrib.paid_at && (
             <>

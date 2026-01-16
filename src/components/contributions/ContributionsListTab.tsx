@@ -63,16 +63,7 @@ import { format } from "date-fns";
 import { SendBoletoWhatsAppDialog } from "./SendBoletoWhatsAppDialog";
 import { SendBoletoEmailDialog } from "./SendBoletoEmailDialog";
 import { generateBoletosReport } from "@/lib/boleto-report";
-
-const parseDateOnlyToLocalNoon = (value: string): Date => {
-  const dateOnly = (value || "").slice(0, 10);
-  const match = dateOnly.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return new Date(NaN);
-  const y = Number(match[1]);
-  const m = Number(match[2]);
-  const d = Number(match[3]);
-  return new Date(y, m - 1, d, 12, 0, 0, 0);
-};
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
 interface Employer {
   id: string;
@@ -775,7 +766,7 @@ export default function ContributionsListTab({
                       </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
                         <span className="text-sm">
-                          {format(new Date(contrib.due_date + "T12:00:00"), "dd/MM/yyyy")}
+                          {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yyyy")}
                         </span>
                       </TableCell>
                       <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>

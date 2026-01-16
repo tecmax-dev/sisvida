@@ -181,7 +181,7 @@ function ContributionCard({
                 </span>
                 <span>•</span>
                 <span className={contrib.status === "overdue" ? "text-rose-600 font-medium" : ""}>
-                  Venc: {format(new Date(contrib.due_date + "T12:00:00"), "dd/MM/yy")}
+                  Venc: {format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yy")}
                 </span>
                 {contrib.status === "paid" && contrib.paid_at && (
                   <>
