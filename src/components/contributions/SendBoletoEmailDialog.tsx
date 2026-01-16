@@ -64,18 +64,20 @@ export function SendBoletoEmailDialog({
   defaultEmail = "",
   defaultName = "",
 }: SendBoletoEmailDialogProps) {
-  const [recipientEmail, setRecipientEmail] = useState("");
-  const [recipientName, setRecipientName] = useState("");
+  const [overrideEmail, setOverrideEmail] = useState("");
   const [ccEmail, setCcEmail] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sending, setSending] = useState(false);
   const [clinicName, setClinicName] = useState("");
-  const [sendProgress, setSendProgress] = useState({ current: 0, total: 0, sent: 0 });
+  const [sendProgress, setSendProgress] = useState({ current: 0, total: 0, sent: 0, errors: 0 });
 
   // Filter contributions that have boleto generated (URL) OR public_access_token and are not paid/cancelled
   const eligibleContributions = contributions.filter(
     (c) => (c.lytex_invoice_url || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
   );
+
+  // Check if it's a single contribution (individual send mode)
+  const isSingleMode = eligibleContributions.length === 1 || selectedIds.size === 1;
 
   useEffect(() => {
     if (open) {
@@ -94,27 +96,12 @@ export function SendBoletoEmailDialog({
         }
       });
       setSelectedIds(validIds);
-
-      // Pre-fill email/name if single employer
-      const selectedContribs = eligibleContributions.filter((c) => validIds.has(c.id));
-      const uniqueEmployers = new Set(selectedContribs.map((c) => c.employers?.cnpj));
-      
-      if (uniqueEmployers.size === 1 && selectedContribs[0]?.employers) {
-        setRecipientEmail(selectedContribs[0].employers.email || defaultEmail);
-        setRecipientName(selectedContribs[0].employers.name || defaultName);
-      } else {
-        setRecipientEmail(defaultEmail);
-        setRecipientName(defaultName);
-      }
-    } else if (eligibleContributions.length === 1 && eligibleContributions[0].employers) {
+    } else if (eligibleContributions.length === 1) {
       setSelectedIds(new Set([eligibleContributions[0].id]));
-      setRecipientEmail(eligibleContributions[0].employers.email || defaultEmail);
-      setRecipientName(eligibleContributions[0].employers.name || defaultName);
     } else {
       setSelectedIds(new Set());
-      setRecipientEmail(defaultEmail);
-      setRecipientName(defaultName);
     }
+    setOverrideEmail("");
     setCcEmail("");
   };
 
@@ -156,15 +143,42 @@ export function SendBoletoEmailDialog({
     }).format(value / 100);
   };
 
-  const handleSend = async () => {
-    if (!recipientEmail.trim()) {
-      toast.error("Digite o email do destinatário");
-      return;
+  // Group contributions by employer email for batch sending
+  const groupContributionsByEmail = () => {
+    const selected = eligibleContributions.filter((c) => selectedIds.has(c.id));
+    const groups = new Map<string, typeof selected>();
+
+    // If override email is set and single mode, use it
+    if (overrideEmail.trim() && isSingleMode) {
+      groups.set(overrideEmail.trim(), selected);
+      return groups;
     }
 
+    // Group by employer email
+    for (const contrib of selected) {
+      const email = contrib.employers?.email?.trim();
+      if (!email) continue;
+
+      if (!groups.has(email)) {
+        groups.set(email, []);
+      }
+      groups.get(email)!.push(contrib);
+    }
+
+    return groups;
+  };
+
+  // Count contributions without valid email
+  const countWithoutEmail = () => {
+    const selected = eligibleContributions.filter((c) => selectedIds.has(c.id));
+    return selected.filter((c) => !c.employers?.email?.trim()).length;
+  };
+
+  const handleSend = async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(recipientEmail)) {
-      toast.error("Email do destinatário inválido");
+
+    if (overrideEmail.trim() && !emailRegex.test(overrideEmail.trim())) {
+      toast.error("Email alternativo inválido");
       return;
     }
 
@@ -178,89 +192,109 @@ export function SendBoletoEmailDialog({
       return;
     }
 
+    const emailGroups = groupContributionsByEmail();
+    const withoutEmailCount = countWithoutEmail();
+
+    if (emailGroups.size === 0) {
+      toast.error("Nenhuma empresa selecionada possui email cadastrado");
+      return;
+    }
+
     setSending(true);
 
     try {
-      const selected = eligibleContributions.filter((c) => selectedIds.has(c.id));
-
-      const boletos = selected.map((c) => {
-        const isAwaitingValue = c.status === "awaiting_value" || (!c.lytex_invoice_url && c.public_access_token);
-        const invoiceUrl = isAwaitingValue && c.public_access_token
-          ? `${window.location.origin}/contribuicao/${c.public_access_token}`
-          : c.lytex_invoice_url || "";
-        
-        return {
-          employerName: c.employers?.name || "Empresa",
-          employerCnpj: c.employers?.cnpj || "",
-          contributionType: c.contribution_types?.name || "Contribuição",
-          competenceMonth: c.competence_month,
-          competenceYear: c.competence_year,
-          dueDate: c.due_date,
-          value: c.value,
-          status: c.status,
-          invoiceUrl,
-          digitableLine: c.lytex_boleto_digitable_line || undefined,
-          pixCode: c.lytex_pix_code || undefined,
-          isAwaitingValue,
-        };
+      let totalBatches = 0;
+      // Calculate total batches across all email groups
+      emailGroups.forEach((contribs) => {
+        totalBatches += Math.ceil(contribs.length / BOLETOS_PER_EMAIL);
       });
 
-      // Split boletos into batches to avoid timeout
-      const batches: typeof boletos[] = [];
-      for (let i = 0; i < boletos.length; i += BOLETOS_PER_EMAIL) {
-        batches.push(boletos.slice(i, i + BOLETOS_PER_EMAIL));
-      }
-
-      setSendProgress({ current: 0, total: batches.length, sent: 0 });
+      setSendProgress({ current: 0, total: totalBatches, sent: 0, errors: 0 });
 
       let successCount = 0;
       let errorCount = 0;
+      let currentBatch = 0;
 
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
-        setSendProgress({ current: i + 1, total: batches.length, sent: successCount });
+      for (const [email, contribs] of emailGroups) {
+        const boletos = contribs.map((c) => {
+          const isAwaitingValue = c.status === "awaiting_value" || (!c.lytex_invoice_url && c.public_access_token);
+          const invoiceUrl = isAwaitingValue && c.public_access_token
+            ? `${window.location.origin}/contribuicao/${c.public_access_token}`
+            : c.lytex_invoice_url || "";
+          
+          return {
+            employerName: c.employers?.name || "Empresa",
+            employerCnpj: c.employers?.cnpj || "",
+            contributionType: c.contribution_types?.name || "Contribuição",
+            competenceMonth: c.competence_month,
+            competenceYear: c.competence_year,
+            dueDate: c.due_date,
+            value: c.value,
+            status: c.status,
+            invoiceUrl,
+            digitableLine: c.lytex_boleto_digitable_line || undefined,
+            pixCode: c.lytex_pix_code || undefined,
+            isAwaitingValue,
+          };
+        });
 
-        try {
-          const { error } = await supabase.functions.invoke("send-boleto-email", {
-            body: {
-              recipientEmail: recipientEmail.trim(),
-              recipientName: recipientName.trim() || recipientEmail,
-              ccEmail: ccEmail.trim() || undefined,
-              clinicName: clinicName || "Sindicato",
-              boletos: batch,
-            },
-          });
-
-          if (error) {
-            console.error(`Erro no lote ${i + 1}:`, error);
-            errorCount++;
-          } else {
-            successCount++;
-          }
-        } catch (batchError) {
-          console.error(`Erro no lote ${i + 1}:`, batchError);
-          errorCount++;
+        // Split boletos into batches to avoid timeout
+        const batches: typeof boletos[] = [];
+        for (let i = 0; i < boletos.length; i += BOLETOS_PER_EMAIL) {
+          batches.push(boletos.slice(i, i + BOLETOS_PER_EMAIL));
         }
 
-        // Small delay between batches to avoid rate limiting
-        if (i < batches.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 500));
+        const recipientName = contribs[0]?.employers?.name || email;
+
+        for (let i = 0; i < batches.length; i++) {
+          const batch = batches[i];
+          currentBatch++;
+          setSendProgress({ current: currentBatch, total: totalBatches, sent: successCount, errors: errorCount });
+
+          try {
+            const { error } = await supabase.functions.invoke("send-boleto-email", {
+              body: {
+                recipientEmail: email,
+                recipientName: recipientName,
+                ccEmail: ccEmail.trim() || undefined,
+                clinicName: clinicName || "Sindicato",
+                boletos: batch,
+              },
+            });
+
+            if (error) {
+              console.error(`Erro ao enviar para ${email} (lote ${i + 1}):`, error);
+              errorCount++;
+            } else {
+              successCount++;
+            }
+          } catch (batchError) {
+            console.error(`Erro ao enviar para ${email} (lote ${i + 1}):`, batchError);
+            errorCount++;
+          }
+
+          // Small delay between batches to avoid rate limiting
+          if (currentBatch < totalBatches) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
         }
       }
 
-      setSendProgress({ current: batches.length, total: batches.length, sent: successCount });
+      setSendProgress({ current: totalBatches, total: totalBatches, sent: successCount, errors: errorCount });
 
-      if (errorCount === 0) {
+      if (errorCount === 0 && withoutEmailCount === 0) {
         toast.success(
-          batches.length > 1
-            ? `${batches.length} emails enviados com sucesso para ${recipientEmail}`
-            : `Email enviado com sucesso para ${recipientEmail}`
+          successCount > 1
+            ? `${successCount} email(s) enviado(s) com sucesso`
+            : `Email enviado com sucesso`
         );
         onOpenChange(false);
       } else if (successCount > 0) {
-        toast.warning(
-          `${successCount} email(s) enviado(s), ${errorCount} falha(s). Verifique os logs.`
-        );
+        const messages = [];
+        if (successCount > 0) messages.push(`${successCount} email(s) enviado(s)`);
+        if (errorCount > 0) messages.push(`${errorCount} falha(s)`);
+        if (withoutEmailCount > 0) messages.push(`${withoutEmailCount} sem email cadastrado`);
+        toast.warning(messages.join(", "));
       } else {
         toast.error("Falha ao enviar todos os emails");
       }
@@ -269,13 +303,16 @@ export function SendBoletoEmailDialog({
       toast.error(error.message || "Erro ao enviar email");
     } finally {
       setSending(false);
-      setSendProgress({ current: 0, total: 0, sent: 0 });
+      setSendProgress({ current: 0, total: 0, sent: 0, errors: 0 });
     }
   };
 
   const totalValue = eligibleContributions
     .filter((c) => selectedIds.has(c.id))
     .reduce((sum, c) => sum + c.value, 0);
+
+  const withoutEmailCount = countWithoutEmail();
+  const selectedWithEmail = selectedIds.size - withoutEmailCount;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -286,34 +323,30 @@ export function SendBoletoEmailDialog({
             Enviar Boletos por Email
           </DialogTitle>
           <DialogDescription>
-            Selecione os boletos e informe o email para envio.
+            {isSingleMode 
+              ? "O email será enviado para o endereço cadastrado da empresa, ou você pode informar um email alternativo."
+              : "Os emails serão enviados automaticamente para o endereço cadastrado de cada empresa."}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
+          {/* Only show override email field for single contribution mode */}
+          {isSingleMode && (
             <div className="space-y-2">
-              <Label htmlFor="recipientEmail">Email do destinatário *</Label>
+              <Label htmlFor="overrideEmail">Email alternativo (opcional)</Label>
               <Input
-                id="recipientEmail"
+                id="overrideEmail"
                 type="email"
-                placeholder="email@empresa.com"
-                value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
+                placeholder={eligibleContributions.find(c => selectedIds.has(c.id))?.employers?.email || "email@empresa.com"}
+                value={overrideEmail}
+                onChange={(e) => setOverrideEmail(e.target.value)}
                 disabled={sending}
               />
+              <p className="text-xs text-muted-foreground">
+                Deixe em branco para usar o email cadastrado da empresa
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="recipientName">Nome do destinatário</Label>
-              <Input
-                id="recipientName"
-                placeholder="Nome da empresa"
-                value={recipientName}
-                onChange={(e) => setRecipientName(e.target.value)}
-                disabled={sending}
-              />
-            </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="ccEmail">Email em cópia (CC)</Label>
@@ -427,23 +460,30 @@ export function SendBoletoEmailDialog({
                 </span>
               </div>
               
-              {/* Show batch info when many boletos selected */}
-              {selectedIds.size > BOLETOS_PER_EMAIL && (
+              {/* Warning for items without email */}
+              {withoutEmailCount > 0 && (
+                <p className="text-xs text-amber-600 text-center">
+                  ⚠️ {withoutEmailCount} empresa(s) sem email cadastrado (não receberão)
+                </p>
+              )}
+              
+              {/* Info about how emails will be sent */}
+              {!isSingleMode && selectedWithEmail > 0 && (
                 <p className="text-xs text-muted-foreground text-center">
-                  Serão enviados {Math.ceil(selectedIds.size / BOLETOS_PER_EMAIL)} email(s) 
-                  com até {BOLETOS_PER_EMAIL} boletos cada
+                  {selectedWithEmail} email(s) serão enviados para os endereços cadastrados
                 </p>
               )}
               
               {/* Progress bar during sending */}
-              {sending && sendProgress.total > 1 && (
+              {sending && sendProgress.total > 0 && (
                 <div className="space-y-1">
                   <Progress 
                     value={(sendProgress.current / sendProgress.total) * 100} 
                     className="h-2"
                   />
                   <p className="text-xs text-muted-foreground text-center">
-                    Enviando lote {sendProgress.current} de {sendProgress.total}...
+                    Enviando {sendProgress.current} de {sendProgress.total}... 
+                    ({sendProgress.sent} sucesso, {sendProgress.errors} erro)
                   </p>
                 </div>
               )}
@@ -457,7 +497,7 @@ export function SendBoletoEmailDialog({
           </Button>
           <Button
             onClick={handleSend}
-            disabled={sending || selectedIds.size === 0 || !recipientEmail.trim()}
+            disabled={sending || selectedIds.size === 0 || (selectedWithEmail === 0 && !overrideEmail.trim())}
             className="gap-2"
           >
             {sending ? (
