@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -202,13 +202,15 @@ export function PortalContributionsList({
       });
   }, [filteredContributions]);
 
-  // Auto-expand first 2 groups
-  useMemo(() => {
-    if (groupedContributions.length > 0 && expandedGroups.size === 0) {
+  // Auto-expand first 2 groups on initial load
+  const hasInitializedRef = useRef(false);
+  useEffect(() => {
+    if (groupedContributions.length > 0 && !hasInitializedRef.current) {
+      hasInitializedRef.current = true;
       const initial = new Set(groupedContributions.slice(0, 2).map(g => g.key));
       setExpandedGroups(initial);
     }
-  }, [groupedContributions.length]);
+  }, [groupedContributions]);
 
   const toggleGroup = (key: string) => {
     setExpandedGroups(prev => {
