@@ -237,31 +237,36 @@ export function PortalHomologacaoBooking({
   });
 
   // Generate available time slots based on service duration
-  const getAvailableSlots = (): TimeSlot[] => {
-    if (!selectedDate || !schedules) return [];
+  const getAvailableSlotsForDate = (date: Date): TimeSlot[] => {
+    if (!date || !schedules) return [];
 
-    const dayOfWeek = selectedDate.getDay();
-    const daySchedule = schedules.find(s => s.day_of_week === dayOfWeek);
-    
+    const dayOfWeek = date.getDay();
+    const daySchedule = schedules.find((s) => s.day_of_week === dayOfWeek);
+
     if (!daySchedule) return [];
 
     const slots: TimeSlot[] = [];
-    const [startHour, startMin] = daySchedule.start_time.split(':').map(Number);
-    const [endHour, endMin] = daySchedule.end_time.split(':').map(Number);
-    
+    const [startHour, startMin] = daySchedule.start_time.split(":").map(Number);
+    const [endHour, endMin] = daySchedule.end_time.split(":").map(Number);
+
     // Use service duration for interval
-    const service = serviceTypes?.find(s => s.id === selectedService);
+    const service = serviceTypes?.find((s) => s.id === selectedService);
     const interval = service?.duration_minutes || 30;
 
     let currentHour = startHour;
     let currentMin = startMin;
 
-    while (currentHour < endHour || (currentHour === endHour && currentMin < endMin)) {
-      const timeStr = `${String(currentHour).padStart(2, '0')}:${String(currentMin).padStart(2, '0')}`;
-      
-      const bookedCount = appointments?.filter(apt => 
-        apt.start_time?.slice(0, 5) === timeStr
-      ).length || 0;
+    while (
+      currentHour < endHour ||
+      (currentHour === endHour && currentMin < endMin)
+    ) {
+      const timeStr = `${String(currentHour).padStart(2, "0")}:${String(
+        currentMin
+      ).padStart(2, "0")}`;
+
+      const bookedCount =
+        appointments?.filter((apt) => apt.start_time?.slice(0, 5) === timeStr)
+          .length || 0;
 
       slots.push({
         time: timeStr,
@@ -278,6 +283,11 @@ export function PortalHomologacaoBooking({
     }
 
     return slots;
+  };
+
+  const getAvailableSlots = (): TimeSlot[] => {
+    if (!selectedDate) return [];
+    return getAvailableSlotsForDate(selectedDate);
   };
 
   // Check if a date is available (respects schedules, blocks, and past dates)
@@ -527,20 +537,94 @@ export function PortalHomologacaoBooking({
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-4">
               <Clock className="h-5 w-5 text-slate-600" />
-              <span className="font-medium text-slate-900">Horários Disponíveis</span>
+              <span className="font-medium text-slate-900">Dias e Horários Disponíveis</span>
             </div>
 
             {!selectedDate ? (
-              <p className="text-center text-slate-400 py-4 text-sm">
-                Selecione uma data no calendário acima
-              </p>
+              <div className="space-y-3">
+                <p className="text-center text-slate-500 text-sm">
+                  Selecione um dia abaixo (já com horários disponíveis)
+                </p>
+
+                {(() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  const end = addDays(today, 30);
+                  const upcomingDays = eachDayOfInterval({ start: today, end });
+
+                  const dayCards = upcomingDays
+                    .filter((d) => isDayAvailable(d))
+                    .map((d) => {
+                      const slots = getAvailableSlotsForDate(d).filter((s) => s.available);
+                      return {
+                        date: d,
+                        slots,
+                      };
+                    })
+                    .filter((x) => x.slots.length > 0)
+                    .slice(0, 10);
+
+                  if (dayCards.length === 0) {
+                    return (
+                      <p className="text-center text-slate-500 py-4 text-sm">
+                        Nenhum dia com horários disponíveis nos próximos 30 dias.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div className="grid gap-2">
+                      {dayCards.map(({ date, slots }) => (
+                        <button
+                          key={date.toISOString()}
+                          onClick={() => {
+                            setSelectedDate(date);
+                            setSelectedTime(null);
+                          }}
+                          className="w-full text-left rounded-xl border border-slate-200 bg-white hover:border-emerald-400 hover:bg-emerald-50 transition-colors p-3"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <p className="font-semibold text-slate-900">
+                                {format(date, "EEEE", { locale: ptBR })}
+                              </p>
+                              <p className="text-sm text-slate-600">
+                                {format(date, "dd/MM/yyyy", { locale: ptBR })}
+                              </p>
+                            </div>
+                            <Badge variant="secondary">
+                              {slots.length} horário{slots.length === 1 ? "" : "s"}
+                            </Badge>
+                          </div>
+
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {slots.slice(0, 6).map((s) => (
+                              <span
+                                key={s.time}
+                                className="text-xs font-semibold px-2 py-1 rounded-md bg-slate-100 text-slate-700"
+                              >
+                                {s.time}
+                              </span>
+                            ))}
+                            {slots.length > 6 && (
+                              <span className="text-xs text-slate-500 px-2 py-1">
+                                +{slots.length - 6}
+                              </span>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
+              </div>
             ) : availableSlots.length === 0 ? (
               <p className="text-center text-slate-500 py-4 text-sm">
                 Nenhum horário disponível para esta data
               </p>
             ) : (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                {availableSlots.filter(s => s.available).map((slot) => (
+                {availableSlots.filter((s) => s.available).map((slot) => (
                   <button
                     key={slot.time}
                     onClick={() => setSelectedTime(slot.time)}
