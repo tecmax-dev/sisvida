@@ -214,14 +214,11 @@ export function PortalContributionsList({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupedContributions.length]);
 
-  const toggleGroup = (key: string) => {
+  const setGroupOpen = (key: string, open: boolean) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
+      if (open) next.add(key);
+      else next.delete(key);
       return next;
     });
   };
@@ -342,7 +339,7 @@ export function PortalContributionsList({
                 <Collapsible
                   key={group.key}
                   open={expandedGroups.has(group.key)}
-                  onOpenChange={() => toggleGroup(group.key)}
+                  onOpenChange={(open) => setGroupOpen(group.key, open)}
                 >
                   <Card className="bg-white border-0 shadow-sm overflow-hidden">
                     <CollapsibleTrigger className="w-full">
