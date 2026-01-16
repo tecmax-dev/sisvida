@@ -24,6 +24,7 @@ const DEFAULT_PLACEMENTS: WidgetPlacement[] = [
   { id: "whatsapp-provider", column: "left", order: 7 },
   { id: "evolution-api", column: "left", order: 8 },
   { id: "twilio-config", column: "left", order: 9 },
+  { id: "hide-pending-contributions", column: "left", order: 10 },
   // Right column
   { id: "map-view", column: "right", order: 0 },
   { id: "online-booking", column: "right", order: 1 },
@@ -32,6 +33,8 @@ const DEFAULT_PLACEMENTS: WidgetPlacement[] = [
   { id: "webhooks", column: "right", order: 4 },
   { id: "ai-assistant", column: "right", order: 5 },
   { id: "password-change", column: "right", order: 6 },
+  { id: "whatsapp-delay", column: "right", order: 7 },
+  { id: "entity-nomenclature", column: "right", order: 8 },
 ];
 
 export function useSettingsWidgets() {
