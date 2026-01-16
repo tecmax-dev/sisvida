@@ -265,6 +265,9 @@ export default function OfflineContributionDialog({
           // Gerar data de vencimento baseado no modo selecionado
           let dueDateStr: string;
           
+          // Data mínima válida: primeiro dia do mês de competência
+          const competenceStartDate = new Date(competence.year, competence.month - 1, 1);
+          
           if (dueDateMode === 'fixed' && customDueDate) {
             // Data fixa para todos
             dueDateStr = format(customDueDate, "yyyy-MM-dd");
@@ -280,6 +283,14 @@ export default function OfflineContributionDialog({
             // Último dia do mês de competência (padrão)
             const dueDate = new Date(competence.year, competence.month, 0);
             dueDateStr = format(dueDate, "yyyy-MM-dd");
+          }
+          
+          // VALIDAÇÃO: Vencimento não pode ser anterior ao mês de competência
+          const generatedDueDate = new Date(dueDateStr);
+          if (generatedDueDate < competenceStartDate) {
+            console.warn(`[Validação] Vencimento ${dueDateStr} anterior à competência ${competence.month}/${competence.year}. Corrigindo para último dia do mês.`);
+            const correctedDueDate = new Date(competence.year, competence.month, 0);
+            dueDateStr = format(correctedDueDate, "yyyy-MM-dd");
           }
           
           // Verificar se existe contribuição ativa para esta competência
