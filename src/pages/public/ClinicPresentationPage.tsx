@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
+import { PageNumber } from "@/components/print/PageNumber";
 
 // Import images
 import coverHero from "@/assets/presentation/cover-hero.jpg";
@@ -54,6 +55,7 @@ export default function ClinicPresentationPage() {
 
       {/* PAGE 1 - COVER */}
       <div className="print-cover min-h-screen print:min-h-[277mm] flex flex-col relative overflow-hidden">
+        <PageNumber current={1} total={8} variant="light" />
         <img 
           src={coverHero} 
           alt="Cover" 
@@ -86,7 +88,8 @@ export default function ClinicPresentationPage() {
       </div>
 
       {/* PAGE 2 - SUMÁRIO EXECUTIVO */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={2} total={8} />
         <div className="border-b-4 border-cyan-600 pb-2 mb-4">
           <h2 className="text-3xl print:text-2xl font-bold text-gray-800">Sumário Executivo</h2>
         </div>
@@ -151,7 +154,8 @@ export default function ClinicPresentationPage() {
       </div>
 
       {/* PAGE 3 - FUNCIONALIDADES PRINCIPAIS */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={3} total={8} />
         <div className="border-b-4 border-cyan-600 pb-2 mb-4">
           <span className="text-cyan-600 font-semibold text-xs">RECURSOS PRINCIPAIS</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Gestão Clínica Completa</h2>
@@ -236,7 +240,8 @@ export default function ClinicPresentationPage() {
       </div>
 
       {/* PAGE 4 - RECURSOS ADICIONAIS */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={4} total={8} />
         <div className="border-b-4 border-teal-600 pb-2 mb-4">
           <span className="text-teal-600 font-semibold text-xs">FUNCIONALIDADES EXTRAS</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Recursos Adicionais</h2>
@@ -325,7 +330,8 @@ export default function ClinicPresentationPage() {
       </div>
 
       {/* PAGE 5 - TECNOLOGIA */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={5} total={8} />
         <div className="border-b-4 border-purple-600 pb-2 mb-4">
           <span className="text-purple-600 font-semibold text-xs">INFRAESTRUTURA</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Tecnologia de Ponta</h2>
@@ -385,7 +391,8 @@ export default function ClinicPresentationPage() {
       </div>
 
       {/* PAGE 6 - BENEFÍCIOS */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={6} total={8} />
         <div className="border-b-4 border-teal-600 pb-2 mb-4">
           <span className="text-teal-600 font-semibold text-xs">VALOR ENTREGUE</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Benefícios do Sistema</h2>
@@ -460,7 +467,8 @@ export default function ClinicPresentationPage() {
       </div>
 
       {/* PAGE 7 - PLANOS */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={7} total={8} />
         <div className="border-b-4 border-blue-600 pb-2 mb-4">
           <span className="text-blue-600 font-semibold text-xs">INVESTIMENTO</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Planos e Preços</h2>
@@ -546,6 +554,7 @@ export default function ClinicPresentationPage() {
 
       {/* PAGE 8 - CONTATO */}
       <div className="page-break print-page print:min-h-[277mm] flex flex-col relative overflow-hidden">
+        <PageNumber current={8} total={8} variant="light" />
         <div className="absolute inset-0 bg-gradient-to-br from-cyan-900 via-teal-900 to-blue-900" />
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-6">

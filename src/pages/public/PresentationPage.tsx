@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { Printer, Download } from "lucide-react";
+import { Printer } from "lucide-react";
+import { PageNumber } from "@/components/print/PageNumber";
 
 // Import images
 import coverHero from "@/assets/presentation/cover-hero.jpg";
@@ -56,6 +57,7 @@ export default function PresentationPage() {
 
       {/* PAGE 1 - COVER */}
       <div className="print-cover min-h-screen print:min-h-[277mm] flex flex-col relative overflow-hidden">
+        <PageNumber current={1} total={10} variant="light" />
         <img 
           src={coverHero} 
           alt="Cover" 
@@ -88,7 +90,8 @@ export default function PresentationPage() {
       </div>
 
       {/* PAGE 2 - SUMÁRIO EXECUTIVO */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={2} total={10} />
         <div className="border-b-4 border-blue-600 pb-2 mb-4">
           <h2 className="text-3xl print:text-2xl font-bold text-gray-800">Sumário Executivo</h2>
         </div>
@@ -153,7 +156,8 @@ export default function PresentationPage() {
       </div>
 
       {/* PAGE 3 - MÓDULO CLÍNICA */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={3} total={10} />
         <div className="border-b-4 border-cyan-600 pb-2 mb-4">
           <span className="text-cyan-600 font-semibold text-xs">MÓDULO 01</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Gestão Clínica</h2>
@@ -234,7 +238,8 @@ export default function PresentationPage() {
       </div>
 
       {/* PAGE 4 - MÓDULO SINDICAL */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={4} total={10} />
         <div className="border-b-4 border-amber-600 pb-2 mb-4">
           <span className="text-amber-600 font-semibold text-xs">MÓDULO 02</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Gestão Sindical</h2>
@@ -315,7 +320,8 @@ export default function PresentationPage() {
       </div>
 
       {/* PAGE 5 - PORTAIS */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={5} total={10} />
         <div className="border-b-4 border-green-600 pb-2 mb-4">
           <span className="text-green-600 font-semibold text-xs">ECOSSISTEMA</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Portais de Acesso</h2>
@@ -395,7 +401,8 @@ export default function PresentationPage() {
       </div>
 
       {/* PAGE 6 - TECNOLOGIA */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={6} total={10} />
         <div className="border-b-4 border-purple-600 pb-2 mb-4">
           <span className="text-purple-600 font-semibold text-xs">INFRAESTRUTURA</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Tecnologia Implementada</h2>
@@ -455,7 +462,8 @@ export default function PresentationPage() {
       </div>
 
       {/* PAGE 7 - COMPLEXIDADE */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={7} total={10} />
         <div className="border-b-4 border-rose-600 pb-2 mb-4">
           <span className="text-rose-600 font-semibold text-xs">DIMENSÃO TÉCNICA</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Complexidade do Projeto</h2>
@@ -520,7 +528,8 @@ export default function PresentationPage() {
       </div>
 
       {/* PAGE 8 - BENEFÍCIOS */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={8} total={10} />
         <div className="border-b-4 border-emerald-600 pb-2 mb-4">
           <span className="text-emerald-600 font-semibold text-xs">VALOR ENTREGUE</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Benefícios</h2>
@@ -578,7 +587,8 @@ export default function PresentationPage() {
       </div>
 
       {/* PAGE 9 - RECURSOS DISPONÍVEIS */}
-      <div className="page-break print-page p-6 print:p-4 flex flex-col">
+      <div className="page-break print-page p-6 print:p-4 flex flex-col relative">
+        <PageNumber current={9} total={10} />
         <div className="border-b-4 border-indigo-600 pb-2 mb-4">
           <span className="text-indigo-600 font-semibold text-xs">FUNCIONALIDADES</span>
           <h2 className="text-2xl print:text-xl font-bold text-gray-800">Recursos Disponíveis</h2>
@@ -617,6 +627,7 @@ export default function PresentationPage() {
 
       {/* PAGE 10 - CONTATO */}
       <div className="page-break print-page print:min-h-[277mm] flex flex-col relative overflow-hidden">
+        <PageNumber current={10} total={10} variant="light" />
         <div className="absolute inset-0 bg-gradient-to-br from-blue-900 via-indigo-900 to-purple-900" />
         
         <div className="relative z-10 flex-1 flex flex-col justify-center items-center text-center text-white p-6">
