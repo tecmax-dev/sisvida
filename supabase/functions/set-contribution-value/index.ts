@@ -6,6 +6,152 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const MONTHS = [
+  "Janeiro", "Fevereiro", "Marco", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
+const formatCurrency = (cents: number) => {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(cents / 100);
+};
+
+const formatCNPJ = (cnpj: string) => {
+  const cleaned = cnpj.replace(/\D/g, "");
+  if (cleaned.length === 14) {
+    return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+  }
+  return cnpj;
+};
+
+const formatDate = (dateStr: string) => {
+  const dateOnly = (dateStr || "").slice(0, 10);
+  const match = dateOnly.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return dateStr;
+  return `${match[3]}/${match[2]}/${match[1]}`;
+};
+
+async function sendManagerNotification(params: {
+  managerEmail: string;
+  clinicName: string;
+  employerName: string;
+  employerCnpj: string;
+  contributionType: string;
+  competenceMonth: number;
+  competenceYear: number;
+  dueDate: string;
+  value: number;
+  invoiceUrl: string;
+}): Promise<void> {
+  const resendApiKey = Deno.env.get("RESEND_API_KEY");
+  const resendFrom = Deno.env.get("RESEND_FROM");
+
+  if (!resendApiKey || !resendFrom) {
+    console.log("[SetValue] Notificacao de gestor ignorada: RESEND nao configurado");
+    return;
+  }
+
+  const competence = `${MONTHS[params.competenceMonth - 1]}/${params.competenceYear}`;
+  
+  const html = `
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+      <div style="max-width: 600px; margin: 0 auto; background: #ffffff;">
+        <div style="background: linear-gradient(135deg, #059669 0%, #10b981 100%); padding: 32px 24px; text-align: center;">
+          <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
+            Novo Valor de Contribuicao Informado
+          </h1>
+          <p style="margin: 8px 0 0 0; color: #d1fae5; font-size: 14px;">
+            ${params.clinicName}
+          </p>
+        </div>
+        
+        <div style="padding: 24px;">
+          <p style="margin: 0 0 16px 0; color: #374151; font-size: 15px; line-height: 1.6;">
+            Uma empresa informou o valor de uma contribuicao atraves do link publico:
+          </p>
+          
+          <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin: 16px 0; background: #f9fafb;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280; width: 140px;">Empresa:</td>
+                <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">${params.employerName}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">CNPJ:</td>
+                <td style="padding: 8px 0; color: #1f2937;">${formatCNPJ(params.employerCnpj)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Tipo:</td>
+                <td style="padding: 8px 0; color: #1f2937;">${params.contributionType}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Competencia:</td>
+                <td style="padding: 8px 0; color: #1f2937; font-weight: 500;">${competence}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Vencimento:</td>
+                <td style="padding: 8px 0; color: #1f2937;">${formatDate(params.dueDate)}</td>
+              </tr>
+              <tr>
+                <td style="padding: 8px 0; color: #6b7280;">Valor Informado:</td>
+                <td style="padding: 8px 0; color: #059669; font-weight: 600; font-size: 18px;">${formatCurrency(params.value)}</td>
+              </tr>
+            </table>
+          </div>
+          
+          <div style="margin-top: 20px; text-align: center;">
+            <a href="${params.invoiceUrl}" target="_blank" style="display: inline-block; padding: 12px 32px; background: #2563eb; color: #ffffff; text-decoration: none; border-radius: 6px; font-weight: 500; font-size: 14px;">
+              Ver Boleto Gerado
+            </a>
+          </div>
+        </div>
+        
+        <div style="padding: 24px; background: #f9fafb; border-top: 1px solid #e5e7eb; text-align: center;">
+          <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+            Notificacao automatica do sistema de contribuicoes
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+
+  const subject = `Valor Informado - ${params.contributionType} ${competence} - ${params.employerName}`;
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${resendApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: resendFrom,
+        to: [params.managerEmail],
+        subject,
+        html,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("[SetValue] Erro ao enviar notificacao ao gestor:", errorData);
+    } else {
+      console.log("[SetValue] Notificacao enviada ao gestor:", params.managerEmail);
+    }
+  } catch (error) {
+    console.error("[SetValue] Erro ao enviar notificacao ao gestor:", error);
+  }
+}
+
 // Cache para o token de acesso Lytex
 let accessToken: string | null = null;
 let tokenExpiresAt: number = 0;
@@ -139,13 +285,13 @@ serve(async (req) => {
       );
     }
 
-    // Buscar contribuição
+    // Buscar contribuição com dados da clínica para notificação
     const { data: contribution, error: contribError } = await supabase
       .from("employer_contributions")
       .select(`
         *,
-        employer:employers(id, name, cnpj, email, phone),
-        contribution_type:contribution_types(name)
+        employer:employers(id, name, cnpj, email, phone, clinic_id),
+        contribution_type:contribution_types(name, clinic_id)
       `)
       .eq("id", contribution_id)
       .single();
@@ -156,6 +302,19 @@ serve(async (req) => {
         JSON.stringify({ error: "Contribuição não encontrada" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Buscar dados da clínica para notificação
+    const clinicId = contribution.employer?.clinic_id || contribution.contribution_type?.clinic_id || contribution.clinic_id;
+    let clinicData: { name: string; email: string | null } | null = null;
+    
+    if (clinicId) {
+      const { data: clinic } = await supabase
+        .from("clinics")
+        .select("name, email")
+        .eq("id", clinicId)
+        .single();
+      clinicData = clinic;
     }
 
     // Verificar se status permite alteração
@@ -253,6 +412,27 @@ serve(async (req) => {
           user_agent: req.headers.get("user-agent") || "unknown",
           details: { contribution_id, value: valueInCents },
         });
+      }
+
+      // Enviar notificação ao gestor da clínica via email (apenas para links públicos)
+      if (portal_type === "public_token" && clinicData?.email) {
+        try {
+          await sendManagerNotification({
+            managerEmail: clinicData.email,
+            clinicName: clinicData.name,
+            employerName: contribution.employer?.name || "Empresa",
+            employerCnpj: contribution.employer?.cnpj || "",
+            contributionType: contribution.contribution_type?.name || "Contribuição",
+            competenceMonth: contribution.competence_month,
+            competenceYear: contribution.competence_year,
+            dueDate: contribution.due_date,
+            value: valueInCents,
+            invoiceUrl: invoice.invoiceUrl,
+          });
+        } catch (notifError) {
+          console.error("[SetValue] Erro ao enviar notificacao (nao critico):", notifError);
+          // Não bloqueia o fluxo principal
+        }
       }
 
       return new Response(
