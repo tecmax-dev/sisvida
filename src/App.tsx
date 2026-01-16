@@ -62,6 +62,7 @@ const HomologacaoPublicBooking = lazy(() => import("./pages/HomologacaoPublicBoo
 const HomologacaoProtocolValidation = lazy(() => import("./pages/HomologacaoProtocolValidation"));
 const PublicContributionValue = lazy(() => import("./pages/PublicContributionValue"));
 const PortalAccessPage = lazy(() => import("./pages/public/PortalAccessPage"));
+const PresentationPage = lazy(() => import("./pages/public/PresentationPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 
 // Portal do Profissional
@@ -285,6 +286,7 @@ const App = () => (
                 <Route path="/login-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/acessos" element={<PortalAccessPage />} />
                 <Route path="/portais" element={<PortalAccessPage />} />
+                <Route path="/apresentacao" element={<PresentationPage />} />
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/instalar" element={<InstallPage />} />
