@@ -761,6 +761,7 @@ export default function ContributionsPage() {
         <TabsContent value="contributions">
           <ContributionsListTab
             contributions={contributions}
+            categories={categories}
             onViewContribution={handleViewContribution}
             onGenerateInvoice={handleGenerateInvoice}
             onOpenCreate={() => setCreateDialogOpen(true)}
