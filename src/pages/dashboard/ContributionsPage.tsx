@@ -851,6 +851,7 @@ export default function ContributionsPage() {
         clinicId={currentClinic?.id || ""}
         userId={session?.user.id || ""}
         onRefresh={fetchData}
+        onEnsureYearVisible={setYearFilter}
         categories={categories}
       />
 
@@ -873,6 +874,7 @@ export default function ContributionsPage() {
         clinicId={currentClinic?.id || ""}
         userId={session?.user.id || ""}
         onSuccess={fetchData}
+        onEnsureYearVisible={setYearFilter}
       />
 
       <LytexSyncResultsDialog
