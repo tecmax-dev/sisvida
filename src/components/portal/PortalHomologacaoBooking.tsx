@@ -539,16 +539,16 @@ export function PortalHomologacaoBooking({
                 Nenhum horário disponível para esta data
               </p>
             ) : (
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
                 {availableSlots.filter(s => s.available).map((slot) => (
                   <button
                     key={slot.time}
                     onClick={() => setSelectedTime(slot.time)}
                     className={cn(
-                      "px-6 py-2.5 rounded-lg border text-sm font-medium transition-all min-w-[80px]",
+                      "py-3 px-4 rounded-xl border-2 text-sm font-semibold transition-all shadow-sm",
                       selectedTime === slot.time
-                        ? "bg-emerald-600 text-white border-emerald-600"
-                        : "bg-white text-slate-700 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50"
+                        ? "bg-emerald-600 text-white border-emerald-600 shadow-emerald-200 shadow-md"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 hover:shadow-md"
                     )}
                   >
                     {slot.time}
