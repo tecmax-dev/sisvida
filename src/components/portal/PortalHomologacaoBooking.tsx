@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays, startOfMonth, endOfMonth, eachDayOfInterval } from "date-fns";
+import { format, addDays, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,14 +11,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { 
-  Calendar, 
-  Clock, 
-  User, 
-  Building2, 
+import {
+  Calendar,
+  Clock,
+  User,
+  Building2,
   CheckCircle,
-  ChevronLeft,
-  ChevronRight,
   Loader2,
   ArrowLeft,
 } from "lucide-react";
@@ -85,7 +83,6 @@ export function PortalHomologacaoBooking({
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [selectedService, setSelectedService] = useState<string | null>(null);
-  const [currentMonth, setCurrentMonth] = useState(new Date());
   const [step, setStep] = useState<'professional' | 'datetime' | 'employee' | 'confirmation'>('professional');
   
   const [employeeData, setEmployeeData] = useState({
@@ -313,11 +310,6 @@ export function PortalHomologacaoBooking({
     return true;
   };
 
-  const calendarDays = () => {
-    const start = startOfMonth(currentMonth);
-    const end = endOfMonth(currentMonth);
-    return eachDayOfInterval({ start, end });
-  };
 
   const handleSubmit = () => {
     if (!employeeData.employee_name.trim()) {
@@ -439,9 +431,6 @@ export function PortalHomologacaoBooking({
   // Step 2: Select date/time
   if (step === 'datetime') {
     const availableSlots = getAvailableSlots();
-    const days = calendarDays();
-    const firstDayOffset = days[0]?.getDay() || 0;
-
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-3">
@@ -455,189 +444,134 @@ export function PortalHomologacaoBooking({
           </div>
         </div>
 
-        {/* Calendar Card - Updated */}
+        {/* Escolha a data (estilo cards horizontais) */}
         <Card className="shadow-sm">
-          <CardContent className="p-4 space-y-4">
-            {/* Month Navigation */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-slate-600" />
-                <span className="font-medium text-slate-900 capitalize">
-                  {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-                </span>
-              </div>
-              <div className="flex gap-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8"
-                  onClick={() => setCurrentMonth(prev => addDays(startOfMonth(prev), -1))}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  className="h-8 w-8"
-                  onClick={() => setCurrentMonth(prev => addDays(endOfMonth(prev), 1))}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
-            {/* Day Headers */}
-            <div className="grid grid-cols-7 mb-2">
-              {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => (
-                <div key={d} className="text-center text-sm font-medium text-slate-500 py-2">
-                  {d}
-                </div>
-              ))}
-            </div>
-
-            {/* Calendar Grid */}
-            <div className="grid grid-cols-7 gap-y-1">
-              {Array(firstDayOffset).fill(null).map((_, i) => (
-                <div key={`empty-${i}`} className="h-10" />
-              ))}
-              {days.map((day) => {
-                const isAvailable = isDayAvailable(day);
-                const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
-                const isToday = day.toDateString() === new Date().toDateString();
-                
-                return (
-                  <div key={day.toISOString()} className="flex justify-center">
-                    <button
-                      disabled={!isAvailable}
-                      onClick={() => {
-                        setSelectedDate(day);
-                        setSelectedTime(null);
-                      }}
-                      className={cn(
-                        "h-10 w-10 rounded-full flex items-center justify-center text-sm transition-colors",
-                        isSelected 
-                          ? "bg-emerald-600 text-white font-semibold" 
-                          : isAvailable
-                            ? "hover:bg-slate-100 text-slate-900 font-medium"
-                            : "text-slate-300 cursor-not-allowed",
-                        isToday && !isSelected && "text-emerald-600 font-bold"
-                      )}
-                    >
-                      {format(day, "d")}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Time Slots Card - Updated */}
-        <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Clock className="h-5 w-5 text-slate-600" />
-              <span className="font-medium text-slate-900">Dias e Horários Disponíveis</span>
+            <div className="flex items-center gap-2 mb-3">
+              <Calendar className="h-5 w-5 text-slate-600" />
+              <span className="font-medium text-slate-900">Escolha a data</span>
             </div>
 
-            {!selectedDate ? (
-              <div className="space-y-3">
-                <p className="text-center text-slate-500 text-sm">
-                  Selecione um dia abaixo (já com horários disponíveis)
-                </p>
+            {(() => {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              const end = addDays(today, 30);
+              const upcomingDays = eachDayOfInterval({ start: today, end });
 
-                {(() => {
-                  const today = new Date();
-                  today.setHours(0, 0, 0, 0);
-                  const end = addDays(today, 30);
-                  const upcomingDays = eachDayOfInterval({ start: today, end });
+              const dayCards = upcomingDays
+                .filter((d) => isDayAvailable(d))
+                .map((d) => {
+                  const slots = getAvailableSlotsForDate(d).filter((s) => s.available);
+                  return { date: d, slots };
+                })
+                .filter((x) => x.slots.length > 0)
+                .slice(0, 10);
 
-                  const dayCards = upcomingDays
-                    .filter((d) => isDayAvailable(d))
-                    .map((d) => {
-                      const slots = getAvailableSlotsForDate(d).filter((s) => s.available);
-                      return {
-                        date: d,
-                        slots,
-                      };
-                    })
-                    .filter((x) => x.slots.length > 0)
-                    .slice(0, 10);
+              if (dayCards.length === 0) {
+                return (
+                  <p className="text-center text-slate-500 py-4 text-sm">
+                    Nenhuma data disponível nos próximos 30 dias.
+                  </p>
+                );
+              }
 
-                  if (dayCards.length === 0) {
-                    return (
-                      <p className="text-center text-slate-500 py-4 text-sm">
-                        Nenhum dia com horários disponíveis nos próximos 30 dias.
-                      </p>
-                    );
-                  }
+              return (
+                <ScrollArea className="w-full">
+                  <div className="flex gap-3 pb-2">
+                    {dayCards.map(({ date, slots }) => {
+                      const isSelected =
+                        !!selectedDate && date.toDateString() === selectedDate.toDateString();
 
-                  return (
-                    <div className="grid gap-2">
-                      {dayCards.map(({ date, slots }) => (
+                      return (
                         <button
                           key={date.toISOString()}
                           onClick={() => {
                             setSelectedDate(date);
                             setSelectedTime(null);
                           }}
-                          className="w-full text-left rounded-xl border border-slate-200 bg-white hover:border-emerald-400 hover:bg-emerald-50 transition-colors p-3"
+                          className={cn(
+                            "min-w-[120px] rounded-xl border bg-white p-3 text-left transition-colors",
+                            isSelected
+                              ? "border-emerald-500 bg-emerald-50"
+                              : "border-slate-200 hover:border-emerald-400 hover:bg-emerald-50",
+                          )}
                         >
-                          <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-start justify-between gap-2">
                             <div>
-                              <p className="font-semibold text-slate-900">
+                              <p className="text-xs font-semibold text-slate-500 uppercase">
                                 {format(date, "EEEE", { locale: ptBR })}
                               </p>
-                              <p className="text-sm text-slate-600">
-                                {format(date, "dd/MM/yyyy", { locale: ptBR })}
-                              </p>
+                              <div className="mt-1 flex items-end gap-2">
+                                <span className="text-2xl font-bold text-slate-900">
+                                  {format(date, "d")}
+                                </span>
+                                <span className="text-xs font-semibold text-slate-500">
+                                  {format(date, "MMM", { locale: ptBR })}
+                                </span>
+                              </div>
                             </div>
-                            <Badge variant="secondary">
-                              {slots.length} horário{slots.length === 1 ? "" : "s"}
-                            </Badge>
-                          </div>
 
-                          <div className="mt-2 flex flex-wrap gap-2">
-                            {slots.slice(0, 6).map((s) => (
-                              <span
-                                key={s.time}
-                                className="text-xs font-semibold px-2 py-1 rounded-md bg-slate-100 text-slate-700"
-                              >
-                                {s.time}
-                              </span>
-                            ))}
-                            {slots.length > 6 && (
-                              <span className="text-xs text-slate-500 px-2 py-1">
-                                +{slots.length - 6}
-                              </span>
+                            {isSelected && (
+                              <CheckCircle className="h-5 w-5 text-emerald-600" />
                             )}
                           </div>
+
+                          <div className="mt-2 flex items-center justify-between">
+                            <span className="text-xs text-slate-500">Horários</span>
+                            <Badge variant="secondary">
+                              {slots.length}
+                            </Badge>
+                          </div>
                         </button>
-                      ))}
-                    </div>
-                  );
-                })()}
-              </div>
-            ) : availableSlots.length === 0 ? (
+                      );
+                    })}
+                  </div>
+                </ScrollArea>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
+        {/* Escolha o horário (lista) */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="h-5 w-5 text-slate-600" />
+              <span className="font-medium text-slate-900">Escolha o horário</span>
+            </div>
+
+            {selectedDate ? (
+              <p className="text-sm text-slate-500 mb-3 capitalize">
+                {format(selectedDate, "EEEE, d 'de' MMMM", { locale: ptBR })}
+              </p>
+            ) : (
+              <p className="text-sm text-slate-500 mb-3">
+                Selecione uma data acima para ver os horários.
+              </p>
+            )}
+
+            {!selectedDate ? null : availableSlots.length === 0 ? (
               <p className="text-center text-slate-500 py-4 text-sm">
                 Nenhum horário disponível para esta data
               </p>
             ) : (
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-                {availableSlots.filter((s) => s.available).map((slot) => (
-                  <button
-                    key={slot.time}
-                    onClick={() => setSelectedTime(slot.time)}
-                    className={cn(
-                      "py-3 px-4 rounded-xl border-2 text-sm font-semibold transition-all shadow-sm",
-                      selectedTime === slot.time
-                        ? "bg-emerald-600 text-white border-emerald-600 shadow-emerald-200 shadow-md"
-                        : "bg-white text-slate-700 border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 hover:shadow-md"
-                    )}
-                  >
-                    {slot.time}
-                  </button>
-                ))}
+              <div className="space-y-2">
+                {availableSlots
+                  .filter((s) => s.available)
+                  .map((slot) => (
+                    <button
+                      key={slot.time}
+                      onClick={() => setSelectedTime(slot.time)}
+                      className={cn(
+                        "w-full rounded-xl border bg-white py-3 text-center text-sm font-semibold transition-colors",
+                        selectedTime === slot.time
+                          ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                          : "border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 text-slate-800",
+                      )}
+                    >
+                      {slot.time}
+                    </button>
+                  ))}
               </div>
             )}
           </CardContent>
