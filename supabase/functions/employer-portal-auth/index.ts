@@ -136,15 +136,36 @@ serve(async (req) => {
         }
       }
 
+      // Buscar o clinic_id da empresa para verificar configuração de ocultação
+      const { data: employerData } = await supabase
+        .from("employers")
+        .select("clinic_id")
+        .eq("id", employer_id)
+        .single();
+
+      // Buscar configuração de ocultação de pendências
+      let hidePendingBeforeDate: string | null = null;
+      if (employerData?.clinic_id) {
+        const { data: clinicData } = await supabase
+          .from("clinics")
+          .select("hide_pending_before_date")
+          .eq("id", employerData.clinic_id)
+          .single();
+        
+        hidePendingBeforeDate = clinicData?.hide_pending_before_date || null;
+      }
+
       // Buscar contribuições com informação de negociação
-      const { data: contributions, error } = await supabase
+      let query = supabase
         .from("employer_contributions")
         .select(`
           *,
           contribution_type:contribution_types(name),
           negotiation:debt_negotiations(id, negotiation_code, status, installments_count)
         `)
-        .eq("employer_id", employer_id)
+        .eq("employer_id", employer_id);
+
+      const { data: contributions, error } = await query
         .order("competence_year", { ascending: false })
         .order("competence_month", { ascending: false });
 
@@ -153,6 +174,20 @@ serve(async (req) => {
           JSON.stringify({ error: "Erro ao buscar contribuições" }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // Filtrar contribuições ocultadas (pendentes/vencidas anteriores à data configurada)
+      let filteredContributions = contributions || [];
+      if (hidePendingBeforeDate) {
+        const hideDate = new Date(hidePendingBeforeDate);
+        filteredContributions = filteredContributions.filter(c => {
+          // Ocultar apenas pendentes/vencidas anteriores à data
+          if ((c.status === 'pending' || c.status === 'overdue') && c.due_date) {
+            const dueDate = new Date(c.due_date);
+            return dueDate >= hideDate;
+          }
+          return true; // Manter pagas, canceladas, awaiting_value, etc.
+        });
       }
 
       // Registrar log
@@ -164,7 +199,7 @@ serve(async (req) => {
       });
 
       return new Response(
-        JSON.stringify({ contributions }),
+        JSON.stringify({ contributions: filteredContributions }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

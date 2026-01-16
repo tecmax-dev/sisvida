@@ -15,7 +15,8 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw, UserCircle } from "lucide-react";
+import { Building2, Bell, Clock, Globe, ShieldCheck, MapPin, ExternalLink, Lock, ImageIcon, Upload, Trash2, Users, Bot, User, Settings2, RotateCcw, UserCircle, EyeOff } from "lucide-react";
+import { HidePendingContributionsConfig } from "@/components/settings/HidePendingContributionsConfig";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { EvolutionConfigPanel } from "@/components/settings/EvolutionConfigPanel";
 import { TwilioConfigPanel } from "@/components/settings/TwilioConfigPanel";
@@ -1221,6 +1222,16 @@ export default function SettingsPage() {
           </Button>
         </div>
       ),
+    },
+    {
+      id: "hide-pending-contributions",
+      title: "Ocultar Pendências Antigas",
+      description: "Configure uma data limite para ocultar contribuições pendentes/vencidas",
+      icon: <EyeOff className="h-5 w-5 text-primary" />,
+      permission: "manage_settings",
+      feature: null,
+      isComponent: true,
+      component: <HidePendingContributionsConfig />,
     },
   ], [
     clinicName, user, profile, reminderEnabled, reminderTime, whatsappHeaderImage, 

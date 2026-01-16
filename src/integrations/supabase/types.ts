@@ -1868,6 +1868,7 @@ export type Database = {
           email: string | null
           enforce_schedule_validation: boolean | null
           entity_nomenclature: string | null
+          hide_pending_before_date: string | null
           holidays_enabled: boolean | null
           id: string
           is_blocked: boolean | null
@@ -1906,6 +1907,7 @@ export type Database = {
           email?: string | null
           enforce_schedule_validation?: boolean | null
           entity_nomenclature?: string | null
+          hide_pending_before_date?: string | null
           holidays_enabled?: boolean | null
           id?: string
           is_blocked?: boolean | null
@@ -1944,6 +1946,7 @@ export type Database = {
           email?: string | null
           enforce_schedule_validation?: boolean | null
           entity_nomenclature?: string | null
+          hide_pending_before_date?: string | null
           holidays_enabled?: boolean | null
           id?: string
           is_blocked?: boolean | null
