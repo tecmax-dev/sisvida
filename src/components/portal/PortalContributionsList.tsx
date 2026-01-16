@@ -59,10 +59,12 @@ interface PortalContributionsListProps {
   contributions: Contribution[];
   isLoading: boolean;
   showEmployerInfo?: boolean;
+  filterEmployerId?: string;
   onReissue: (contribution: Contribution) => void;
   onSetValue: (contribution: Contribution) => void;
   onGenerateInvoice?: (contribution: Contribution) => void;
   generatingInvoiceId?: string | null;
+  onClearEmployerFilter?: () => void;
 }
 
 const MONTHS = [
@@ -113,10 +115,12 @@ export function PortalContributionsList({
   contributions,
   isLoading,
   showEmployerInfo = false,
+  filterEmployerId,
   onReissue,
   onSetValue,
   onGenerateInvoice,
-  generatingInvoiceId
+  generatingInvoiceId,
+  onClearEmployerFilter
 }: PortalContributionsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
@@ -139,9 +143,12 @@ export function PortalContributionsList({
     return new Date(y, (m || 1) - 1, d || 1, 12, 0, 0);
   };
 
-  // Filter by tab and search
+  // Filter by tab, employer and search
   const filteredContributions = useMemo(() => {
     return contributions.filter(c => {
+      // Employer filter (external)
+      if (filterEmployerId && c.employer_id !== filterEmployerId) return false;
+
       // Tab filter
       if (activeTab === "pending" && c.status !== "pending") return false;
       if (activeTab === "overdue" && c.status !== "overdue") return false;
@@ -165,7 +172,7 @@ export function PortalContributionsList({
       }
       return true;
     });
-  }, [contributions, activeTab, searchTerm]);
+  }, [contributions, activeTab, searchTerm, filterEmployerId]);
 
   // Group by competence
   const groupedContributions = useMemo(() => {
@@ -230,8 +237,34 @@ export function PortalContributionsList({
     );
   }
 
+  // Get filtered employer name for display
+  const filteredEmployerName = useMemo(() => {
+    if (!filterEmployerId) return null;
+    const emp = contributions.find(c => c.employer_id === filterEmployerId)?.employer;
+    return emp?.name || emp?.cnpj;
+  }, [filterEmployerId, contributions]);
+
   return (
     <div className="space-y-4">
+      {/* Employer Filter Indicator */}
+      {filteredEmployerName && (
+        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <span className="text-sm text-blue-700">
+            Filtrando por: <strong>{filteredEmployerName}</strong>
+          </span>
+          {onClearEmployerFilter && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={onClearEmployerFilter}
+              className="h-6 px-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+            >
+              Limpar filtro
+            </Button>
+          )}
+        </div>
+      )}
+
       {/* Search */}
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
