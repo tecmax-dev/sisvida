@@ -445,9 +445,9 @@ export function PortalHomologacaoBooking({
           </div>
         </div>
 
-        {/* Calendar Card */}
-        <Card>
-          <CardContent className="p-4">
+        {/* Calendar Card - Updated */}
+        <Card className="shadow-sm">
+          <CardContent className="p-4 space-y-4">
             {/* Month Navigation */}
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
@@ -522,7 +522,7 @@ export function PortalHomologacaoBooking({
           </CardContent>
         </Card>
 
-        {/* Time Slots Card */}
+        {/* Time Slots Card - Updated */}
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-2 mb-4">
