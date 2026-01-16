@@ -208,6 +208,13 @@ export function PortalContributionsList({
     awaiting: contributions.filter(c => c.status === "awaiting_value").length,
   }), [contributions]);
 
+  // Get filtered employer name for display (MUST be before any conditional returns)
+  const filteredEmployerName = useMemo(() => {
+    if (!filterEmployerId) return null;
+    const emp = contributions.find(c => c.employer_id === filterEmployerId)?.employer;
+    return emp?.name || emp?.cnpj;
+  }, [filterEmployerId, contributions]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
@@ -215,13 +222,6 @@ export function PortalContributionsList({
       </div>
     );
   }
-
-  // Get filtered employer name for display
-  const filteredEmployerName = useMemo(() => {
-    if (!filterEmployerId) return null;
-    const emp = contributions.find(c => c.employer_id === filterEmployerId)?.employer;
-    return emp?.name || emp?.cnpj;
-  }, [filterEmployerId, contributions]);
 
   return (
     <div className="space-y-4">
