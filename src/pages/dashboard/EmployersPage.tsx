@@ -22,7 +22,8 @@ import {
   Tag,
   Filter,
   Send,
-  Key
+  Key,
+  Download
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -588,6 +589,44 @@ export default function EmployersPage() {
     });
   }, [employers, searchTerm, categoryFilter]);
 
+  // Export CSV function
+  const handleExportCSV = () => {
+    const dataToExport = categoryFilter === "none" 
+      ? employers.filter(e => e.category_id === null)
+      : filteredEmployers;
+    
+    if (dataToExport.length === 0) {
+      toast.error("Nenhum dado para exportar");
+      return;
+    }
+
+    const formatCnpj = (cnpj: string) => {
+      const clean = cnpj.replace(/\D/g, "");
+      return clean.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5");
+    };
+
+    let csvContent = "\uFEFF"; // BOM for Excel UTF-8
+    csvContent += "CNPJ;Razao Social;Nome Fantasia;Email;Telefone;CNAE;Descricao CNAE\n";
+    
+    dataToExport.forEach((emp) => {
+      const cnpj = formatCnpj(emp.cnpj);
+      const name = (emp.name || "").replace(/;/g, ",");
+      const tradeName = (emp.trade_name || "").replace(/;/g, ",");
+      const email = emp.email || "";
+      const phone = emp.phone || "";
+      const cnaeCode = emp.cnae_code || "";
+      const cnaeDesc = (emp.cnae_description || "").replace(/;/g, ",");
+      csvContent += `${cnpj};${name};${tradeName};${email};${phone};${cnaeCode};${cnaeDesc}\n`;
+    });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `empresas-sem-categoria-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    toast.success(`${dataToExport.length} empresas exportadas!`);
+  };
+
   // Pagination
   const totalPages = Math.ceil(filteredEmployers.length / ITEMS_PER_PAGE);
   const paginatedEmployers = useMemo(() => {
@@ -621,6 +660,15 @@ export default function EmployersPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={handleExportCSV}
+            className="gap-2"
+            title="Exportar lista filtrada para CSV"
+          >
+            <Download className="h-4 w-4" />
+            Exportar CSV
+          </Button>
           <Button 
             variant="outline" 
             onClick={() => setSyncCnpjDialogOpen(true)}
