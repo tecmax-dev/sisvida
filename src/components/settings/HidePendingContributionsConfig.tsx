@@ -166,13 +166,14 @@ export function HidePendingContributionsConfig() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                 <Calendar
                   mode="single"
                   selected={hidePendingBeforeDate}
                   onSelect={setHidePendingBeforeDate}
                   initialFocus
                   locale={ptBR}
+                  className="p-3 pointer-events-auto"
                 />
               </PopoverContent>
             </Popover>
