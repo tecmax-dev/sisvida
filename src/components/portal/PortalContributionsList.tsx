@@ -312,16 +312,16 @@ export function PortalContributionsList({
             <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
             Pagas
           </TabsTrigger>
-          {stats.awaiting > 0 && (
-            <TabsTrigger 
-              value="awaiting" 
-              className="data-[state=active]:bg-purple-500 data-[state=active]:text-white rounded-lg px-4 py-2"
-            >
-              <DollarSign className="h-3.5 w-3.5 mr-1.5" />
-              Sem Valor
+          <TabsTrigger 
+            value="awaiting" 
+            className="data-[state=active]:bg-purple-500 data-[state=active]:text-white rounded-lg px-4 py-2"
+          >
+            <DollarSign className="h-3.5 w-3.5 mr-1.5" />
+            Aguardando
+            {stats.awaiting > 0 && (
               <Badge className="ml-1.5 bg-purple-100 text-purple-700 h-5 px-1.5">{stats.awaiting}</Badge>
-            </TabsTrigger>
-          )}
+            )}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-4">
