@@ -182,6 +182,29 @@ export default function ContributionsPage() {
     }
   }, [currentClinic, yearFilter, yearDetectionDone]);
 
+  // Fetch categories only once (they don't depend on yearFilter)
+  const fetchCategories = async () => {
+    if (!currentClinic) return;
+    
+    const { data: catData, error: catError } = await supabase
+      .from("employer_categories")
+      .select("id, name, color")
+      .eq("clinic_id", currentClinic.id)
+      .eq("is_active", true)
+      .order("name");
+
+    if (!catError && catData) {
+      setCategories(catData);
+    }
+  };
+
+  // Fetch categories on mount
+  useEffect(() => {
+    if (currentClinic) {
+      fetchCategories();
+    }
+  }, [currentClinic?.id]);
+
   const fetchData = async () => {
     if (!currentClinic) return;
     setLoading(true);
@@ -219,17 +242,6 @@ export default function ContributionsPage() {
 
       if (empError) throw empError;
       setEmployers(empData || []);
-
-      // Fetch categories
-      const { data: catData, error: catError } = await supabase
-        .from("employer_categories")
-        .select("id, name, color")
-        .eq("clinic_id", currentClinic.id)
-        .eq("is_active", true)
-        .order("name");
-
-      if (catError) throw catError;
-      setCategories(catData || []);
 
       // Fetch contribution types
       const { data: typesData, error: typesError } = await supabase
