@@ -49,15 +49,16 @@ Deno.serve(async (req) => {
       try {
         console.log(`[Lytex Sync Cron] Sincronizando clínica: ${clinicId}`);
 
-        // 1. Primeiro, buscar e conciliar boletos pagos na Lytex
-        // OTIMIZAÇÃO: Filtrar apenas contribuições pendentes com vencimento nos últimos 90 dias
-        // Isso evita processar todo o histórico e reduz falsos positivos
+        // 1. Buscar e conciliar boletos pagos na Lytex
+        // Processa TODAS as contribuições pendentes para garantir conciliação completa
+        // CORREÇÃO: Remover filtro daysBack para processar TODO o histórico pendente
+        // Muitas contribuições antigas (>180 dias) estavam sendo ignoradas
         const { data: fetchResult, error: fetchError } = await supabase.functions.invoke("lytex-api", {
           body: {
             action: "fetch_paid_invoices",
             clinicId,
             mode: "automatic", // Marca como execução automática no log
-            daysBack: 90, // Processar apenas boletos com vencimento nos últimos 90 dias
+            daysBack: null, // Processar TODAS as contribuições pendentes (sem limite de data)
             onlyPending: true, // Apenas contribuições que ainda não estão pagas
           },
         });
