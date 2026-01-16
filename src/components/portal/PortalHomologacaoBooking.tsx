@@ -429,6 +429,8 @@ export function PortalHomologacaoBooking({
   // Step 2: Select date/time
   if (step === 'datetime') {
     const availableSlots = getAvailableSlots();
+    const days = calendarDays();
+    const firstDayOffset = days[0]?.getDay() || 0;
 
     return (
       <div className="space-y-4">
@@ -443,95 +445,119 @@ export function PortalHomologacaoBooking({
           </div>
         </div>
 
-        {/* Calendar */}
+        {/* Calendar Card */}
         <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Calendar className="h-5 w-5 text-blue-600" />
-                {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
-              </CardTitle>
+          <CardContent className="p-4">
+            {/* Month Navigation */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Calendar className="h-5 w-5 text-slate-600" />
+                <span className="font-medium text-slate-900 capitalize">
+                  {format(currentMonth, "MMMM yyyy", { locale: ptBR })}
+                </span>
+              </div>
               <div className="flex gap-1">
-                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(prev => addDays(startOfMonth(prev), -1))}>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => setCurrentMonth(prev => addDays(startOfMonth(prev), -1))}
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(prev => addDays(endOfMonth(prev), 1))}>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  onClick={() => setCurrentMonth(prev => addDays(endOfMonth(prev), 1))}
+                >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-7 gap-1 text-center text-xs text-slate-500 mb-2">
+
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 mb-2">
               {["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"].map(d => (
-                <div key={d} className="py-1">{d}</div>
+                <div key={d} className="text-center text-sm font-medium text-slate-500 py-2">
+                  {d}
+                </div>
               ))}
             </div>
-            <div className="grid grid-cols-7 gap-1">
-              {Array(calendarDays()[0]?.getDay() || 0).fill(null).map((_, i) => (
-                <div key={`empty-${i}`} />
+
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7 gap-y-1">
+              {Array(firstDayOffset).fill(null).map((_, i) => (
+                <div key={`empty-${i}`} className="h-10" />
               ))}
-              {calendarDays().map((day) => {
+              {days.map((day) => {
                 const isAvailable = isDayAvailable(day);
                 const isSelected = selectedDate && day.toDateString() === selectedDate.toDateString();
+                const isToday = day.toDateString() === new Date().toDateString();
                 
                 return (
-                  <Button
-                    key={day.toISOString()}
-                    variant="ghost"
-                    size="sm"
-                    disabled={!isAvailable}
-                    onClick={() => {
-                      setSelectedDate(day);
-                      setSelectedTime(null);
-                    }}
-                    className={cn(
-                      "h-9 w-full p-0",
-                      isSelected && "bg-emerald-600 text-white hover:bg-emerald-700",
-                      !isAvailable && "opacity-30"
-                    )}
-                  >
-                    {format(day, "d")}
-                  </Button>
+                  <div key={day.toISOString()} className="flex justify-center">
+                    <button
+                      disabled={!isAvailable}
+                      onClick={() => {
+                        setSelectedDate(day);
+                        setSelectedTime(null);
+                      }}
+                      className={cn(
+                        "h-10 w-10 rounded-full flex items-center justify-center text-sm transition-colors",
+                        isSelected 
+                          ? "bg-emerald-600 text-white font-semibold" 
+                          : isAvailable
+                            ? "hover:bg-slate-100 text-slate-900 font-medium"
+                            : "text-slate-300 cursor-not-allowed",
+                        isToday && !isSelected && "text-emerald-600 font-bold"
+                      )}
+                    >
+                      {format(day, "d")}
+                    </button>
+                  </div>
                 );
               })}
             </div>
           </CardContent>
         </Card>
 
-        {/* Time slots */}
-        {selectedDate && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Clock className="h-5 w-5 text-purple-600" />
-                Horários Disponíveis
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {availableSlots.length === 0 ? (
-                <p className="text-center text-slate-500 py-4">Nenhum horário disponível</p>
-              ) : (
-                <div className="grid grid-cols-4 gap-2">
-                  {availableSlots.map((slot) => (
-                    <Button
-                      key={slot.time}
-                      variant={selectedTime === slot.time ? "default" : "outline"}
-                      size="sm"
-                      disabled={!slot.available}
-                      onClick={() => setSelectedTime(slot.time)}
-                      className={cn(
-                        selectedTime === slot.time && "bg-emerald-600 hover:bg-emerald-700"
-                      )}
-                    >
-                      {slot.time}
-                    </Button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        )}
+        {/* Time Slots Card */}
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Clock className="h-5 w-5 text-slate-600" />
+              <span className="font-medium text-slate-900">Horários Disponíveis</span>
+            </div>
+
+            {!selectedDate ? (
+              <p className="text-center text-slate-400 py-4 text-sm">
+                Selecione uma data no calendário acima
+              </p>
+            ) : availableSlots.length === 0 ? (
+              <p className="text-center text-slate-500 py-4 text-sm">
+                Nenhum horário disponível para esta data
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-3">
+                {availableSlots.filter(s => s.available).map((slot) => (
+                  <button
+                    key={slot.time}
+                    onClick={() => setSelectedTime(slot.time)}
+                    className={cn(
+                      "px-6 py-2.5 rounded-lg border text-sm font-medium transition-all min-w-[80px]",
+                      selectedTime === slot.time
+                        ? "bg-emerald-600 text-white border-emerald-600"
+                        : "bg-white text-slate-700 border-slate-200 hover:border-emerald-300 hover:bg-emerald-50"
+                    )}
+                  >
+                    {slot.time}
+                  </button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <Button 
           onClick={() => setStep('employee')} 
