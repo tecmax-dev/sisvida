@@ -519,13 +519,16 @@ export default function Auth() {
     }
   };
 
+  // Domínio fixo para evitar redirecionamento para URLs de preview/supabase
+  const CUSTOM_DOMAIN = "https://app.eclini.com.br";
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth`,
+          redirectTo: `${CUSTOM_DOMAIN}/auth`,
         },
       });
 
