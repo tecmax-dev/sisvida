@@ -207,18 +207,27 @@ export default function ContributionsListTab({
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
-  const [documentTypeTab, setDocumentTypeTab] = useState<"pj" | "pf">("pj");
+  const [documentTypeTab, setDocumentTypeTab] = useState<"pj" | "pf" | "awaiting">("pj");
 
   // Separate contributions by type (PJ = empresas / PF = pessoa física with member_id)
   const pjContributions = useMemo(() => {
-    return contributions.filter(c => !c.member_id);
+    return contributions.filter(c => !c.member_id && c.status !== "awaiting_value");
   }, [contributions]);
 
   const pfContributions = useMemo(() => {
-    return contributions.filter(c => !!c.member_id);
+    return contributions.filter(c => !!c.member_id && c.status !== "awaiting_value");
   }, [contributions]);
 
-  const activeContributions = documentTypeTab === "pj" ? pjContributions : pfContributions;
+  // Contributions awaiting value (have public_access_token)
+  const awaitingContributions = useMemo(() => {
+    return contributions.filter(c => c.status === "awaiting_value" || (!c.lytex_invoice_url && c.public_access_token));
+  }, [contributions]);
+
+  const activeContributions = documentTypeTab === "pj" 
+    ? pjContributions 
+    : documentTypeTab === "pf" 
+      ? pfContributions 
+      : awaitingContributions;
 
   // Get eligible contributions for WhatsApp (have boleto generated OR public_access_token and are not paid/cancelled)
   const eligibleForWhatsApp = useMemo(() => {
@@ -362,7 +371,7 @@ export default function ContributionsListTab({
 
   const eligibleOnPage = useMemo(() => {
     return paginatedContributions.filter(
-      (c) => c.lytex_invoice_id && c.status !== "paid" && c.status !== "cancelled"
+      (c) => (c.lytex_invoice_id || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
     );
   }, [paginatedContributions]);
 
@@ -401,7 +410,7 @@ export default function ContributionsListTab({
   };
 
   const handleTabChange = (value: string) => {
-    setDocumentTypeTab(value as "pj" | "pf");
+    setDocumentTypeTab(value as "pj" | "pf" | "awaiting");
     setCurrentPage(1);
     setSearchTerm("");
     setSelectedContributionIds(new Set());
@@ -411,7 +420,7 @@ export default function ContributionsListTab({
     <div className="space-y-4">
       {/* Document Type Tabs */}
       <Tabs value={documentTypeTab} onValueChange={handleTabChange} className="w-full">
-        <TabsList className="grid w-full max-w-md grid-cols-2">
+        <TabsList className="grid w-full max-w-xl grid-cols-3">
           <TabsTrigger value="pj" className="gap-2">
             <Building2 className="h-4 w-4" />
             Empresas (PJ)
@@ -424,6 +433,13 @@ export default function ContributionsListTab({
             Pessoa Física (PF)
             <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
               {pfContributions.length}
+            </Badge>
+          </TabsTrigger>
+          <TabsTrigger value="awaiting" className="gap-2">
+            <Clock className="h-4 w-4" />
+            Aguardando Valor
+            <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
+              {awaitingContributions.length}
             </Badge>
           </TabsTrigger>
         </TabsList>
@@ -441,9 +457,12 @@ export default function ContributionsListTab({
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-amber-600/60 dark:text-amber-400/60" />
                 <Input
-                  placeholder={documentTypeTab === "pj" 
-                    ? "Buscar empresa, CNPJ, matrícula ou tipo..." 
-                    : "Buscar nome, CPF ou tipo de contribuição..."
+                  placeholder={
+                    documentTypeTab === "pj" 
+                      ? "Buscar empresa, CNPJ, matrícula ou tipo..." 
+                      : documentTypeTab === "pf"
+                        ? "Buscar nome, CPF ou tipo de contribuição..."
+                        : "Buscar empresa ou contribuinte aguardando valor..."
                   }
                   value={searchTerm}
                   onChange={(e) => handleSearchChange(e.target.value)}
@@ -641,11 +660,11 @@ export default function ContributionsListTab({
                     </Tooltip>
                   </TooltipProvider>
                 </TableHead>
-                {documentTypeTab === "pj" && (
+                {(documentTypeTab === "pj" || documentTypeTab === "awaiting") && (
                   <TableHead className="font-semibold w-[80px]">Matrícula</TableHead>
                 )}
                 <TableHead className="font-semibold">
-                  {documentTypeTab === "pj" ? "Empresa" : "Contribuinte"}
+                  {documentTypeTab === "pj" ? "Empresa" : documentTypeTab === "pf" ? "Contribuinte" : "Empresa/Contribuinte"}
                 </TableHead>
                 <TableHead className="font-semibold">Nº Documento</TableHead>
                 <TableHead className="font-semibold">Tipo</TableHead>
@@ -661,18 +680,27 @@ export default function ContributionsListTab({
             <TableBody>
               {paginatedContributions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={documentTypeTab === "pj" ? 12 : 11} className="h-32 text-center">
+                  <TableCell colSpan={(documentTypeTab === "pj" || documentTypeTab === "awaiting") ? 12 : 11} className="h-32 text-center">
                     <div className="flex flex-col items-center gap-2">
                       {documentTypeTab === "pj" ? (
                         <Building2 className="h-8 w-8 text-muted-foreground" />
-                      ) : (
+                      ) : documentTypeTab === "pf" ? (
                         <User className="h-8 w-8 text-muted-foreground" />
+                      ) : (
+                        <Clock className="h-8 w-8 text-purple-400" />
                       )}
                       <p className="text-muted-foreground">
                         {documentTypeTab === "pj" 
                           ? "Nenhuma contribuição de empresa encontrada" 
-                          : "Nenhuma contribuição de pessoa física encontrada"}
+                          : documentTypeTab === "pf"
+                            ? "Nenhuma contribuição de pessoa física encontrada"
+                            : "Nenhuma contribuição aguardando valor"}
                       </p>
+                      {documentTypeTab === "awaiting" && (
+                        <p className="text-xs text-muted-foreground">
+                          Use "Nova Contribuição" → "Sem Valor" para criar lançamentos aguardando preenchimento
+                        </p>
+                      )}
                     </div>
                   </TableCell>
                 </TableRow>
@@ -681,7 +709,7 @@ export default function ContributionsListTab({
                   const statusConfig = STATUS_CONFIG[contrib.status as keyof typeof STATUS_CONFIG];
                   const StatusIcon = statusConfig?.icon || Clock;
                   const isCancelled = contrib.status === "cancelled";
-                  const isEligibleForSelection = contrib.lytex_invoice_id && contrib.status !== "paid" && contrib.status !== "cancelled";
+                  const isEligibleForSelection = (contrib.lytex_invoice_id || contrib.public_access_token) && contrib.status !== "paid" && contrib.status !== "cancelled";
 
                   return (
                     <TableRow 
@@ -702,8 +730,8 @@ export default function ContributionsListTab({
                           </div>
                         )}
                       </TableCell>
-                      {/* Registration Number - Only for PJ */}
-                      {documentTypeTab === "pj" && (
+                      {/* Registration Number - For PJ and Awaiting tabs */}
+                      {(documentTypeTab === "pj" || documentTypeTab === "awaiting") && (
                         <TableCell className={`py-2 ${isCancelled ? "opacity-60" : ""}`}>
                           {contrib.employers?.registration_number ? (
                             <code className="text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 px-2 py-1 rounded font-mono font-bold">
@@ -718,8 +746,8 @@ export default function ContributionsListTab({
                       {/* Contributor Name/Document Cell */}
                       <TableCell className="py-2">
                         <div className={isCancelled ? "opacity-60" : ""}>
-                          {documentTypeTab === "pj" ? (
-                            // PJ: Show employer data
+                          {(documentTypeTab === "pj" || (documentTypeTab === "awaiting" && !contrib.member_id)) ? (
+                            // PJ or Awaiting with employer: Show employer data
                             <>
                               <button
                                 onClick={() => navigate(`/dashboard/empresas/${contrib.employer_id}`)}
@@ -780,9 +808,15 @@ export default function ContributionsListTab({
                         )}
                       </TableCell>
                       <TableCell className={`py-2 text-right ${isCancelled ? "opacity-60" : ""}`}>
-                        <span className={`font-medium ${isCancelled ? "line-through" : ""}`}>
-                          {formatCurrency(contrib.value)}
-                        </span>
+                        {contrib.status === "awaiting_value" || (contrib.value === 0 && contrib.public_access_token) ? (
+                          <span className="text-sm text-purple-600 dark:text-purple-400 font-medium">
+                            Aguardando
+                          </span>
+                        ) : (
+                          <span className={`font-medium ${isCancelled ? "line-through" : ""}`}>
+                            {formatCurrency(contrib.value)}
+                          </span>
+                        )}
                       </TableCell>
                       <TableCell className="py-2 text-center">
                         <Badge 
@@ -803,6 +837,16 @@ export default function ContributionsListTab({
                           >
                             <ExternalLink className="h-3 w-3" />
                             Ver Boleto
+                          </a>
+                        ) : contrib.public_access_token && (contrib.status === "awaiting_value" || !contrib.lytex_invoice_url) ? (
+                          <a
+                            href={`/contribuicao/${contrib.public_access_token}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-purple-600 hover:underline font-medium"
+                          >
+                            <Link2 className="h-3 w-3" />
+                            Link Público
                           </a>
                         ) : contrib.lytex_invoice_id && (contrib.status === "paid" || contrib.status === "cancelled") ? (
                           <Badge variant="outline" className="text-xs text-emerald-600">
