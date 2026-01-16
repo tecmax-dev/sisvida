@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -224,36 +224,37 @@ export function PortalContributionsList({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Employer Filter Indicator */}
-      {filteredEmployerName && (
-        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <span className="text-sm text-blue-700">
-            Filtrando por: <strong>{filteredEmployerName}</strong>
-          </span>
-          {onClearEmployerFilter && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={onClearEmployerFilter}
-              className="h-6 px-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
-            >
-              Limpar filtro
-            </Button>
-          )}
-        </div>
-      )}
+    <Card className="bg-white border-0 shadow-sm overflow-hidden">
+      <CardContent className="p-4 sm:p-6 space-y-4">
+        {/* Employer Filter Indicator */}
+        {filteredEmployerName && (
+          <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <span className="text-sm text-blue-700">
+              Filtrando por: <strong>{filteredEmployerName}</strong>
+            </span>
+            {onClearEmployerFilter && (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={onClearEmployerFilter}
+                className="h-6 px-2 text-blue-600 hover:text-blue-800 hover:bg-blue-100"
+              >
+                Limpar filtro
+              </Button>
+            )}
+          </div>
+        )}
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <Input
-          placeholder={showEmployerInfo ? "Buscar por empresa, CNPJ ou tipo..." : "Buscar por tipo de contribuição..."}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-9 h-10 bg-white border-slate-200"
-        />
-      </div>
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input
+            placeholder={showEmployerInfo ? "Buscar por empresa, CNPJ ou tipo..." : "Buscar por tipo de contribuição..."}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 h-10 bg-slate-50 border-slate-200"
+          />
+        </div>
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -305,31 +306,29 @@ export function PortalContributionsList({
 
         <TabsContent value={activeTab} className="mt-4">
           {filteredContributions.length === 0 ? (
-            <Card className="bg-white border-0 shadow-sm">
-              <CardContent className="py-12 text-center">
-                <FileText className="h-12 w-12 mx-auto mb-3 text-slate-200" />
-                <p className="text-slate-500">Nenhuma contribuição encontrada</p>
-              </CardContent>
-            </Card>
+            <div className="py-12 text-center bg-slate-50 rounded-xl border border-slate-200">
+              <FileText className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+              <p className="text-slate-500">Nenhuma contribuição encontrada</p>
+            </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {groupedContributions.map((group, index) => (
                 <Collapsible
                   key={group.key}
                   defaultOpen={index < 2}
                 >
-                  <Card className="bg-white border-0 shadow-sm overflow-hidden">
+                  <div className="border border-slate-200 rounded-xl overflow-hidden bg-slate-50/50">
                     <CollapsibleTrigger className="w-full">
-                      <CardHeader className="py-3 px-4 hover:bg-slate-50 transition-colors">
+                      <div className="py-3 px-4 hover:bg-slate-100/50 transition-colors">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center">
-                              <Calendar className="h-5 w-5 text-slate-600" />
+                            <div className="h-10 w-10 rounded-xl bg-teal-100 flex items-center justify-center">
+                              <Calendar className="h-5 w-5 text-teal-600" />
                             </div>
                             <div className="text-left">
-                              <CardTitle className="text-base font-semibold text-slate-800">
+                              <p className="text-base font-semibold text-slate-800">
                                 {group.label}
-                              </CardTitle>
+                              </p>
                               <p className="text-xs text-slate-500">
                                 {group.items.length} contribuição(ões) • {formatCurrency(group.totalValue)}
                               </p>
@@ -351,12 +350,12 @@ export function PortalContributionsList({
                             <ChevronDown className="h-5 w-5 text-slate-400 transition-transform data-[state=open]:rotate-180" />
                           </div>
                         </div>
-                      </CardHeader>
+                      </div>
                     </CollapsibleTrigger>
                     
                     <CollapsibleContent>
-                      <CardContent className="pt-0 pb-3 px-3">
-                        <div className="grid gap-2">
+                      <div className="pt-0 pb-3 px-4 border-t border-slate-200 bg-white">
+                        <div className="grid gap-2 pt-3">
                           {group.items.map((contrib) => (
                             <ContributionCard
                               key={contrib.id}
@@ -372,16 +371,17 @@ export function PortalContributionsList({
                             />
                           ))}
                         </div>
-                      </CardContent>
+                      </div>
                     </CollapsibleContent>
-                  </Card>
+                  </div>
                 </Collapsible>
               ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
-    </div>
+      </CardContent>
+    </Card>
   );
 }
 
