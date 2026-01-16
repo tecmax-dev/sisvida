@@ -122,6 +122,10 @@ export function PortalContributionsList({
   generatingInvoiceId,
   onClearEmployerFilter
 }: PortalContributionsListProps) {
+  console.log("DEBUG PortalContributionsList: render");
+  console.log("DEBUG: contributions recebidas:", contributions);
+  console.log("DEBUG: isLoading:", isLoading);
+  
   const [searchTerm, setSearchTerm] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
