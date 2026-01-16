@@ -31,6 +31,20 @@ const generateEmailHtml = (
   const portalName = type === "accounting_office" ? "Portal do Contador" : "Portal da Empresa";
   const identifierLabel = type === "accounting_office" ? "E-mail" : "CNPJ";
 
+  // Mensagem de boas-vindas ao novo sistema
+  const welcomeMessage = `
+    <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border: 2px solid #f59e0b; border-radius: 12px; padding: 20px; margin: 0 0 24px 0;">
+      <h3 style="margin: 0 0 12px 0; color: #92400e; font-size: 16px; font-weight: 600;">
+        🎉 Novidade: Sistema eCLINI
+      </h3>
+      <p style="margin: 0; color: #78350f; font-size: 14px; line-height: 1.6;">
+        O <strong>${clinicName}</strong> atualizou seu sistema de gestao de contribuicoes para o <strong>eCLINI</strong>. 
+        A partir de agora, todos os boletos, consultas e servicos estarao disponiveis atraves deste novo portal, 
+        oferecendo mais praticidade e seguranca para voce.
+      </p>
+    </div>
+  `;
+
   return `
     <!DOCTYPE html>
     <html lang="pt-BR">
@@ -44,7 +58,7 @@ const generateEmailHtml = (
         <!-- Header -->
         <div style="background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); padding: 32px 24px; text-align: center;">
           <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 600;">
-            Codigo de Acesso
+            Bem-vindo ao eCLINI
           </h1>
           <p style="margin: 8px 0 0 0; color: #99f6e4; font-size: 14px;">
             ${portalName} - ${clinicName}
@@ -56,6 +70,9 @@ const generateEmailHtml = (
           <p style="margin: 0 0 16px 0; color: #374151; font-size: 15px; line-height: 1.6;">
             Prezado(a) <strong>${recipientName}</strong>,
           </p>
+          
+          ${welcomeMessage}
+          
           <p style="margin: 0 0 24px 0; color: #374151; font-size: 15px; line-height: 1.6;">
             Segue seu codigo de acesso ao ${portalName}:
           </p>
@@ -103,7 +120,7 @@ const generateEmailHtml = (
             Em caso de duvidas, entre em contato conosco.
           </p>
           <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-            ${clinicName}
+            ${clinicName} - Sistema eCLINI
           </p>
         </div>
       </div>

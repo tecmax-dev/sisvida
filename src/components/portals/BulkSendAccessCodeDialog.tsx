@@ -124,17 +124,22 @@ export function BulkSendAccessCodeDialog({
 
     const portalUrl = getPortalUrl();
     
-    const message = `🔑 *Código de Acesso - Portal do Contador*
+    const message = `🎉 *Novidade: Sistema eCLINI*
 
 Olá *${office.name}*!
 
-Segue seu código de acesso ao Portal do Contador da ${currentClinic.name}:
+O *${currentClinic.name}* atualizou seu sistema de gestão de contribuições para o *eCLINI*.
 
+A partir de agora, todos os boletos, consultas de empresas e serviços estarão disponíveis através do novo *Portal do Contador*.
+
+🔑 *Seus dados de acesso:*
+
+📧 *E-mail:* ${office.email}
 📌 *Código:* ${office.access_code}
 
 📋 *Como acessar:*
 1️⃣ Acesse: ${portalUrl}
-2️⃣ Informe: ${office.email}
+2️⃣ Informe seu e-mail
 3️⃣ Digite o código acima
 
 ⚠️ Este código é pessoal e intransferível.
