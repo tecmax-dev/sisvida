@@ -37,6 +37,7 @@ interface Contribution {
   competence_year: number;
   lytex_invoice_id: string | null;
   lytex_invoice_url: string | null;
+  public_access_token?: string | null;
   employers?: {
     name: string;
     cnpj: string;
@@ -107,9 +108,9 @@ export function SendBoletoWhatsAppDialog({
     }
   };
 
-  // Filter contributions that have boleto generated (ID) and are not paid/cancelled
+  // Filter contributions that have boleto generated (ID) OR have public_access_token (awaiting_value) and are not paid/cancelled
   const eligibleContributions = contributions.filter(
-    (c) => c.lytex_invoice_id && c.status !== "paid" && c.status !== "cancelled"
+    (c) => (c.lytex_invoice_id || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
   );
 
   const handleToggle = (id: string) => {
@@ -182,9 +183,33 @@ export function SendBoletoWhatsAppDialog({
           { locale: ptBR }
         );
         const dueDate = format(parseDateOnlyToLocalNoon(contrib.due_date), "dd/MM/yyyy");
-        const statusLabel = contrib.status === "overdue" ? "⚠️ VENCIDO" : "🟢 A vencer";
+        
+        // Check if it's an awaiting_value contribution
+        const isAwaitingValue = contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token);
+        const statusLabel = isAwaitingValue 
+          ? "📝 Aguardando valor" 
+          : contrib.status === "overdue" 
+            ? "⚠️ VENCIDO" 
+            : "🟢 A vencer";
+        
+        // Use public link for awaiting_value, otherwise use lytex URL
+        const linkUrl = isAwaitingValue && contrib.public_access_token
+          ? `${window.location.origin}/contribuicao/${contrib.public_access_token}`
+          : contrib.lytex_invoice_url;
 
-        const message = `📋 *Boleto de Contribuição*
+        const message = isAwaitingValue
+          ? `📋 *Contribuição - Informe o Valor*
+
+━━━━━━━━━━━━━━━━
+*Empresa:* ${contrib.employers?.name || "N/A"}
+*Competência:* ${monthName}
+*Vencimento:* ${dueDate}
+*Status:* ${statusLabel}
+
+🔗 *Clique para informar o valor:*
+${linkUrl}
+━━━━━━━━━━━━━━━━`
+          : `📋 *Boleto de Contribuição*
 
 ━━━━━━━━━━━━━━━━
 *Empresa:* ${contrib.employers?.name || "N/A"}
@@ -194,7 +219,7 @@ export function SendBoletoWhatsAppDialog({
 *Status:* ${statusLabel}
 
 🔗 *Link do Boleto:*
-${contrib.lytex_invoice_url}
+${linkUrl}
 ━━━━━━━━━━━━━━━━`;
 
         const result = await sendWhatsAppMessage({
@@ -347,7 +372,7 @@ ${contrib.lytex_invoice_url}
                 Nenhum boleto disponível para envio.
                 <br />
                 <span className="text-xs">
-                  (Apenas boletos pendentes/vencidos com link gerado)
+                  (Boletos ou links de valor não encontrados)
                 </span>
               </p>
             ) : (
@@ -385,13 +410,25 @@ ${contrib.lytex_invoice_url}
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className="text-sm font-semibold whitespace-nowrap">
-                            {formatCurrency(contrib.value)}
+                            {contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
+                              ? "Sem valor"
+                              : formatCurrency(contrib.value)}
                           </span>
                           <Badge
-                            variant={contrib.status === "overdue" ? "destructive" : "outline"}
+                            variant={
+                              contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
+                                ? "secondary"
+                                : contrib.status === "overdue" 
+                                  ? "destructive" 
+                                  : "outline"
+                            }
                             className="text-[10px] px-1.5"
                           >
-                            {contrib.status === "overdue" ? "Vencido" : "Pendente"}
+                            {contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
+                              ? "Aguardando"
+                              : contrib.status === "overdue" 
+                                ? "Vencido" 
+                                : "Pendente"}
                           </Badge>
                         </div>
                       </div>

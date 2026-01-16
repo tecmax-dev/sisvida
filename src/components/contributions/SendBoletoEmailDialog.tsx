@@ -31,6 +31,7 @@ interface Contribution {
   lytex_invoice_url: string | null;
   lytex_boleto_digitable_line?: string | null;
   lytex_pix_code?: string | null;
+  public_access_token?: string | null;
   employers?: {
     name: string;
     cnpj: string;
@@ -67,9 +68,9 @@ export function SendBoletoEmailDialog({
   const [sending, setSending] = useState(false);
   const [clinicName, setClinicName] = useState("");
 
-  // Filter contributions that have boleto generated (URL) and are not paid/cancelled
+  // Filter contributions that have boleto generated (URL) OR public_access_token and are not paid/cancelled
   const eligibleContributions = contributions.filter(
-    (c) => c.lytex_invoice_url && c.status !== "paid" && c.status !== "cancelled"
+    (c) => (c.lytex_invoice_url || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
   );
 
   useEffect(() => {
@@ -178,19 +179,27 @@ export function SendBoletoEmailDialog({
     try {
       const selected = eligibleContributions.filter((c) => selectedIds.has(c.id));
 
-      const boletos = selected.map((c) => ({
-        employerName: c.employers?.name || "Empresa",
-        employerCnpj: c.employers?.cnpj || "",
-        contributionType: c.contribution_types?.name || "Contribuição",
-        competenceMonth: c.competence_month,
-        competenceYear: c.competence_year,
-        dueDate: c.due_date,
-        value: c.value,
-        status: c.status,
-        invoiceUrl: c.lytex_invoice_url!,
-        digitableLine: c.lytex_boleto_digitable_line || undefined,
-        pixCode: c.lytex_pix_code || undefined,
-      }));
+      const boletos = selected.map((c) => {
+        const isAwaitingValue = c.status === "awaiting_value" || (!c.lytex_invoice_url && c.public_access_token);
+        const invoiceUrl = isAwaitingValue && c.public_access_token
+          ? `${window.location.origin}/contribuicao/${c.public_access_token}`
+          : c.lytex_invoice_url || "";
+        
+        return {
+          employerName: c.employers?.name || "Empresa",
+          employerCnpj: c.employers?.cnpj || "",
+          contributionType: c.contribution_types?.name || "Contribuição",
+          competenceMonth: c.competence_month,
+          competenceYear: c.competence_year,
+          dueDate: c.due_date,
+          value: c.value,
+          status: c.status,
+          invoiceUrl,
+          digitableLine: c.lytex_boleto_digitable_line || undefined,
+          pixCode: c.lytex_pix_code || undefined,
+          isAwaitingValue,
+        };
+      });
 
       const { data, error } = await supabase.functions.invoke("send-boleto-email", {
         body: {
@@ -291,7 +300,7 @@ export function SendBoletoEmailDialog({
                 Nenhum boleto disponível para envio.
                 <br />
                 <span className="text-xs">
-                  (Apenas boletos pendentes/vencidos com link gerado)
+                  (Boletos ou links de valor não encontrados)
                 </span>
               </p>
             ) : (
@@ -329,13 +338,25 @@ export function SendBoletoEmailDialog({
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className="text-sm font-semibold whitespace-nowrap">
-                            {formatCurrency(contrib.value)}
+                            {contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
+                              ? "Sem valor"
+                              : formatCurrency(contrib.value)}
                           </span>
                           <Badge
-                            variant={contrib.status === "overdue" ? "destructive" : "outline"}
+                            variant={
+                              contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
+                                ? "secondary"
+                                : contrib.status === "overdue" 
+                                  ? "destructive" 
+                                  : "outline"
+                            }
                             className="text-[10px] px-1.5"
                           >
-                            {contrib.status === "overdue" ? "Vencido" : "Pendente"}
+                            {contrib.status === "awaiting_value" || (!contrib.lytex_invoice_url && contrib.public_access_token)
+                              ? "Aguardando"
+                              : contrib.status === "overdue" 
+                                ? "Vencido" 
+                                : "Pendente"}
                           </Badge>
                         </div>
                       </div>
