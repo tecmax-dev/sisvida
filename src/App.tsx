@@ -61,6 +61,7 @@ const AccountingOfficePortal = lazy(() => import("./pages/AccountingOfficePortal
 const HomologacaoPublicBooking = lazy(() => import("./pages/HomologacaoPublicBooking"));
 const HomologacaoProtocolValidation = lazy(() => import("./pages/HomologacaoProtocolValidation"));
 const PublicContributionValue = lazy(() => import("./pages/PublicContributionValue"));
+const PortalAccessPage = lazy(() => import("./pages/public/PortalAccessPage"));
 
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
@@ -281,6 +282,8 @@ const App = () => (
                 <Route path="/sindicato/seja-socio/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
                 <Route path="/entidade-sindical" element={<UnionEntityLoginPage />} />
                 <Route path="/login-sindical" element={<UnionEntityLoginPage />} />
+                <Route path="/acessos" element={<PortalAccessPage />} />
+                <Route path="/portais" element={<PortalAccessPage />} />
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/instalar" element={<InstallPage />} />
