@@ -45,6 +45,7 @@ import {
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection, PortalHomologacaoCard } from "@/components/portal/PortalServicesSection";
 import { PortalContributionsList } from "@/components/portal/PortalContributionsList";
+import { PortalLinkedEmployersList } from "@/components/portal/PortalLinkedEmployersList";
 import { formatCompetence } from "@/lib/competence-format";
 
 interface AccountingOffice {
@@ -177,7 +178,7 @@ export default function AccountingOfficePortal() {
   });
   
   // Views
-  const [activeView, setActiveView] = useState<"services" | "contributions">("services");
+  const [activeView, setActiveView] = useState<"services" | "contributions" | "employers">("services");
   
   // Dialog de segunda via
   const [showReissueDialog, setShowReissueDialog] = useState(false);
@@ -693,7 +694,7 @@ export default function AccountingOfficePortal() {
                 icon={<Building className="h-6 w-6" />}
                 title="Empresas Vinculadas"
                 description={`${employers.length} empresa(s) sob gestão`}
-                onClick={handlePrintEmployersList}
+                onClick={() => setActiveView("employers")}
                 color="blue"
               />
               <PortalServiceCard
@@ -718,6 +719,50 @@ export default function AccountingOfficePortal() {
 
           {/* Convenções Coletivas */}
           <PortalConventionsSection clinicId={clinic?.id} />
+        </PortalMain>
+      </PortalContainer>
+    );
+  }
+
+  // Employers View
+  if (activeView === "employers") {
+    return (
+      <PortalContainer>
+        <PortalHeader
+          logoUrl={clinic?.logo_url}
+          clinicName={clinic?.name}
+          entityName={accountingOffice?.name || "Escritório"}
+          entitySubtitle={accountingOffice?.email}
+          onLogout={handleLogout}
+          onRefresh={() => accountingOffice && loadData(accountingOffice.id)}
+          variant="teal"
+        />
+        
+        <PortalMain>
+          {/* Back button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setActiveView("services")}
+            className="text-slate-600 hover:text-slate-900 -ml-2"
+          >
+            <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
+            Voltar aos serviços
+          </Button>
+
+          <h2 className="text-lg font-semibold text-slate-800 mt-2">
+            Empresas Vinculadas
+          </h2>
+
+          <PortalLinkedEmployersList
+            employers={employers}
+            accountingOfficeName={accountingOffice?.name || "Escritório"}
+            clinicName={clinic?.name}
+            onViewContributions={(employerId) => {
+              setFilterEmployer(employerId);
+              setActiveView("contributions");
+            }}
+          />
         </PortalMain>
       </PortalContainer>
     );
@@ -757,6 +802,8 @@ export default function AccountingOfficePortal() {
           }))}
           isLoading={isLoadingData}
           showEmployerInfo={true}
+          filterEmployerId={filterEmployer !== "all" ? filterEmployer : undefined}
+          onClearEmployerFilter={() => setFilterEmployer("all")}
           onReissue={(contrib) => {
             setSelectedContribution(contrib as any);
             setShowReissueDialog(true);
