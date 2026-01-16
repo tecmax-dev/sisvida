@@ -187,7 +187,7 @@ export function PortalServiceCard({
     <button
       onClick={onClick}
       disabled={disabled || isActive}
-      className={`group relative p-4 rounded-xl border-2 transition-all duration-200 text-left w-full ${
+      className={`group relative p-5 rounded-xl border-2 transition-all duration-200 text-left w-full ${
         colorStyles[color]
       } ${isActive ? activeStyles[color] : ""} ${disabled ? "opacity-50 cursor-not-allowed" : isActive ? "cursor-default" : "cursor-pointer hover:shadow-md hover:-translate-y-0.5"}`}
     >
@@ -196,11 +196,11 @@ export function PortalServiceCard({
           {badge}
         </span>
       )}
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${iconColorStyles[color]}`}>
+      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${iconColorStyles[color]}`}>
         {icon}
       </div>
-      <h3 className="font-semibold text-slate-900 text-sm mb-0.5">{title}</h3>
-      <p className="text-xs text-slate-600 line-clamp-1">{description}</p>
+      <h3 className="font-semibold text-slate-900 mb-1">{title}</h3>
+      <p className="text-sm text-slate-600">{description}</p>
     </button>
   );
 }

@@ -794,9 +794,9 @@ export default function AccountingOfficePortal() {
         </Button>
 
         {/* Services Cards - Same as home */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <PortalServiceCard
-            icon={<FileText className="h-5 w-5" />}
+            icon={<FileText className="h-6 w-6" />}
             title="Contribuições"
             description="Gerencie boletos e pagamentos"
             onClick={() => {}}
@@ -805,23 +805,23 @@ export default function AccountingOfficePortal() {
             isActive
           />
           <PortalServiceCard
-            icon={<Building className="h-5 w-5" />}
+            icon={<Building className="h-6 w-6" />}
             title="Empresas Vinculadas"
-            description={`${employers.length} empresa(s)`}
+            description={`${employers.length} empresa(s) sob gestão`}
             onClick={() => setActiveView("employers")}
             color="blue"
           />
           <PortalServiceCard
-            icon={<FileCheck className="h-5 w-5" />}
+            icon={<FileCheck className="h-6 w-6" />}
             title="Relatórios"
-            description="Imprima relatórios"
+            description="Imprima relatórios das empresas"
             onClick={handlePrintEmployersList}
             color="purple"
           />
           <PortalServiceCard
-            icon={<Users className="h-5 w-5" />}
+            icon={<Users className="h-6 w-6" />}
             title="Atualizar Dados"
-            description="Atualize informações"
+            description="Atualize informações do escritório"
             onClick={() => toast.info("Entre em contato para atualizar seus dados")}
             color="amber"
           />
