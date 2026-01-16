@@ -12,13 +12,15 @@ interface Convention {
   file_url: string | null;
   external_link: string | null;
   is_active: boolean;
+  metadata: Record<string, unknown> | null;
 }
 
 interface PortalConventionsSectionProps {
   clinicId: string;
+  employerCategoryId?: string | null;
 }
 
-export function PortalConventionsSection({ clinicId }: PortalConventionsSectionProps) {
+export function PortalConventionsSection({ clinicId, employerCategoryId }: PortalConventionsSectionProps) {
   const [conventions, setConventions] = useState<Convention[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -27,15 +29,26 @@ export function PortalConventionsSection({ clinicId }: PortalConventionsSectionP
       try {
         const { data, error } = await supabase
           .from("union_app_content")
-          .select("id, title, description, file_url, external_link, is_active")
+          .select("id, title, description, file_url, external_link, is_active, metadata")
           .eq("clinic_id", clinicId)
           .eq("content_type", "convencao")
           .eq("is_active", true)
           .order("order_index", { ascending: true })
-          .limit(5);
+          .limit(10);
 
         if (!error && data) {
-          setConventions(data);
+          // Filtrar CCTs pela categoria da empresa
+          const filtered = (data as Convention[]).filter((conv) => {
+            const metadata = conv.metadata as { target_category_id?: string } | null;
+            const targetCategoryId = metadata?.target_category_id;
+            // Se a CCT não tem categoria definida, mostrar para todos
+            if (!targetCategoryId) return true;
+            // Se a empresa não tem categoria, não mostrar CCTs restritas
+            if (!employerCategoryId) return false;
+            // Verificar se a categoria da empresa corresponde
+            return targetCategoryId === employerCategoryId;
+          });
+          setConventions(filtered);
         }
       } catch (err) {
         console.error("Error loading conventions:", err);
@@ -47,7 +60,7 @@ export function PortalConventionsSection({ clinicId }: PortalConventionsSectionP
     if (clinicId) {
       loadConventions();
     }
-  }, [clinicId]);
+  }, [clinicId, employerCategoryId]);
 
   if (isLoading) {
     return (

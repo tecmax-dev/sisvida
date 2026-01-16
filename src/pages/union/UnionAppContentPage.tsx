@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useUnionPermissions } from "@/hooks/useUnionPermissions";
@@ -69,12 +69,19 @@ import {
   AlertTriangle,
   MessageCircle,
   Bell,
+  Building2,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OuvidoriaMessagesTab } from "@/components/union/OuvidoriaMessagesTab";
 import { PushNotificationsTab } from "@/components/union/PushNotificationsTab";
 import { ConveniosManagementTab } from "@/components/union/ConveniosManagementTab";
 import { MobileAppTabsManagement } from "@/components/union/MobileAppTabsManagement";
+import { supabase } from "@/integrations/supabase/client";
+
+interface EmployerCategory {
+  id: string;
+  name: string;
+}
 
 const contentTypeIcons: Record<ContentType, React.ReactNode> = {
   banner: <Image className="h-4 w-4" />,
@@ -123,12 +130,29 @@ export default function UnionAppContentPage() {
   const [deletingContentId, setDeletingContentId] = useState<string | null>(null);
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [isUploading, setIsUploading] = useState(false);
+  const [categories, setCategories] = useState<EmployerCategory[]>([]);
 
   const { data: allContent, isLoading } = useUnionAppContent();
   const createContent = useCreateUnionAppContent();
   const updateContent = useUpdateUnionAppContent();
   const deleteContent = useDeleteUnionAppContent();
   const uploadFile = useUploadContentFile();
+  const { currentClinic } = useAuth();
+
+  // Load employer categories for CCT filtering
+  useEffect(() => {
+    const loadCategories = async () => {
+      if (!currentClinic?.id) return;
+      const { data } = await supabase
+        .from("employer_categories")
+        .select("id, name")
+        .eq("clinic_id", currentClinic.id)
+        .eq("is_active", true)
+        .order("name");
+      if (data) setCategories(data);
+    };
+    loadCategories();
+  }, [currentClinic?.id]);
 
   // Check if user has admin access
   const hasAdminAccess = isSuperAdmin || hasUnionPermission("union_module_access");
@@ -573,6 +597,38 @@ export default function UnionAppContentPage() {
                       Ver arquivo atual
                     </a>
                   )}
+                </div>
+              )}
+
+              {/* Category Selection - for CCT only */}
+              {formData.content_type === 'convencao' && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4" />
+                    Categoria de Empresas
+                  </Label>
+                  <Select
+                    value={(formData.metadata.target_category_id as string) || "all"}
+                    onValueChange={(v) => setFormData(prev => ({ 
+                      ...prev, 
+                      metadata: { ...prev.metadata, target_category_id: v === "all" ? undefined : v }
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a categoria..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as categorias</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Apenas empresas da categoria selecionada verão esta CCT no portal.
+                  </p>
                 </div>
               )}
 
