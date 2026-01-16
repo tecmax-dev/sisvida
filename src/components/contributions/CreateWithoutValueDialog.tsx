@@ -133,6 +133,23 @@ export default function CreateWithoutValueDialog({
       return;
     }
 
+    // VALIDAÇÃO CRÍTICA: Vencimento não pode ser anterior ao mês de competência
+    const competenceStart = new Date(year, month - 1, 1);
+    const MONTHS_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    
+    if (dueDate < competenceStart) {
+      toast.error(`Data de vencimento não pode ser anterior ao mês de competência (${MONTHS_PT[month - 1]}/${year})`);
+      return;
+    }
+
+    // VALIDAÇÃO: Competência não pode estar muito no futuro em relação ao vencimento
+    const dueDateYear = dueDate.getFullYear();
+    if (year > dueDateYear + 1) {
+      toast.error(`Competência ${MONTHS_PT[month - 1]}/${year} é inconsistente com a data de vencimento`);
+      return;
+    }
+
     setLoading(true);
     try {
       const token = crypto.randomUUID();

@@ -389,6 +389,24 @@ export default function EmployerDetailPage() {
       return;
     }
 
+    // VALIDAÇÃO CRÍTICA: Vencimento não pode ser anterior ao mês de competência
+    const dueDateObj = new Date(contribDueDate);
+    const competenceStart = new Date(contribYear, contribMonth - 1, 1);
+    const MONTHS_PT = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+      "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+    
+    if (dueDateObj < competenceStart) {
+      toast.error(`Data de vencimento não pode ser anterior ao mês de competência (${MONTHS_PT[contribMonth - 1]}/${contribYear})`);
+      return;
+    }
+
+    // VALIDAÇÃO: Competência não pode estar muito no futuro em relação ao vencimento
+    const dueDateYear = dueDateObj.getFullYear();
+    if (contribYear > dueDateYear + 1) {
+      toast.error(`Competência ${MONTHS_PT[contribMonth - 1]}/${contribYear} é inconsistente com a data de vencimento`);
+      return;
+    }
+
     setSaving(true);
     try {
       // Parse value - treat empty or invalid as 0

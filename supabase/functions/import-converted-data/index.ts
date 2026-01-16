@@ -568,6 +568,17 @@ async function importContributionsBatch(
         }
       }
 
+      // VALIDAÇÃO CRÍTICA: competência não pode ser posterior ao ano do vencimento + 1
+      // Previne importações com competência 2026 e vencimento 2024
+      const dueDateYear = parseInt(dueDate.split('-')[0]);
+      const dueDateMonth = parseInt(dueDate.split('-')[1]);
+      
+      if (competenceYear > dueDateYear + 1) {
+        console.warn(`[importContributionsBatch] Row ${i + 1}: Competência ${competenceMonth}/${competenceYear} inconsistente com vencimento ${dueDate}. Corrigindo para ${dueDateMonth}/${dueDateYear}`);
+        competenceYear = dueDateYear;
+        competenceMonth = dueDateMonth;
+      }
+
       // Gerar chave única - adicionar sufixo -DN para débitos negociados (código 99)
       // Isso permite que exista uma contribuição normal de dezembro E um débito negociado do mesmo período
       let activeCompetenceKey = `${employerId}-${typeId}-${competenceYear}-${competenceMonth}`;

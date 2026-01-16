@@ -239,6 +239,21 @@ export default function BulkContributionDialog({
       return;
     }
 
+    // VALIDAÇÃO CRÍTICA: Vencimento não pode ser anterior ao mês de competência
+    const dueDateObj = new Date(dueDate);
+    const competenceStart = new Date(year, month - 1, 1);
+    if (dueDateObj < competenceStart) {
+      toast.error(`Data de vencimento (${new Date(dueDate).toLocaleDateString('pt-BR')}) não pode ser anterior ao mês de competência (${MONTHS[month - 1]}/${year})`);
+      return;
+    }
+
+    // VALIDAÇÃO: Competência não pode estar muito no futuro em relação ao vencimento
+    const dueDateYear = dueDateObj.getFullYear();
+    if (year > dueDateYear + 1) {
+      toast.error(`Competência ${MONTHS[month - 1]}/${year} é inconsistente com a data de vencimento de ${dueDateYear}`);
+      return;
+    }
+
     // Verificar sessão antes de começar
     const isSessionValid = await validateSession();
     if (!isSessionValid) {
