@@ -140,6 +140,7 @@ interface PortalServiceCardProps {
   color: "blue" | "green" | "purple" | "amber" | "teal" | "indigo" | "rose";
   badge?: string;
   disabled?: boolean;
+  isActive?: boolean;
 }
 
 export function PortalServiceCard({
@@ -149,7 +150,8 @@ export function PortalServiceCard({
   onClick,
   color,
   badge,
-  disabled
+  disabled,
+  isActive
 }: PortalServiceCardProps) {
   const colorStyles = {
     blue: "bg-blue-50 hover:bg-blue-100 border-blue-200 group-hover:border-blue-300",
@@ -159,6 +161,16 @@ export function PortalServiceCard({
     teal: "bg-teal-50 hover:bg-teal-100 border-teal-200 group-hover:border-teal-300",
     indigo: "bg-indigo-50 hover:bg-indigo-100 border-indigo-200 group-hover:border-indigo-300",
     rose: "bg-rose-50 hover:bg-rose-100 border-rose-200 group-hover:border-rose-300",
+  };
+
+  const activeStyles = {
+    blue: "ring-2 ring-blue-500 ring-offset-2",
+    green: "ring-2 ring-emerald-500 ring-offset-2",
+    purple: "ring-2 ring-purple-500 ring-offset-2",
+    amber: "ring-2 ring-amber-500 ring-offset-2",
+    teal: "ring-2 ring-teal-500 ring-offset-2",
+    indigo: "ring-2 ring-indigo-500 ring-offset-2",
+    rose: "ring-2 ring-rose-500 ring-offset-2",
   };
 
   const iconColorStyles = {
@@ -174,21 +186,21 @@ export function PortalServiceCard({
   return (
     <button
       onClick={onClick}
-      disabled={disabled}
-      className={`group relative p-5 rounded-xl border-2 transition-all duration-200 text-left w-full ${
+      disabled={disabled || isActive}
+      className={`group relative p-4 rounded-xl border-2 transition-all duration-200 text-left w-full ${
         colorStyles[color]
-      } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer hover:shadow-md hover:-translate-y-0.5"}`}
+      } ${isActive ? activeStyles[color] : ""} ${disabled ? "opacity-50 cursor-not-allowed" : isActive ? "cursor-default" : "cursor-pointer hover:shadow-md hover:-translate-y-0.5"}`}
     >
       {badge && (
         <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
           {badge}
         </span>
       )}
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-3 ${iconColorStyles[color]}`}>
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-2 ${iconColorStyles[color]}`}>
         {icon}
       </div>
-      <h3 className="font-semibold text-slate-900 mb-1">{title}</h3>
-      <p className="text-sm text-slate-600">{description}</p>
+      <h3 className="font-semibold text-slate-900 text-sm mb-0.5">{title}</h3>
+      <p className="text-xs text-slate-600 line-clamp-1">{description}</p>
     </button>
   );
 }
