@@ -112,6 +112,7 @@ interface Contribution {
   created_at?: string;
   updated_at?: string;
   member_id?: string | null;
+  public_access_token?: string | null;
   employers?: Employer;
   patients?: Member;
   contribution_types?: ContributionType;
@@ -219,10 +220,10 @@ export default function ContributionsListTab({
 
   const activeContributions = documentTypeTab === "pj" ? pjContributions : pfContributions;
 
-  // Get eligible contributions for WhatsApp (have boleto generated and are not paid/cancelled)
+  // Get eligible contributions for WhatsApp (have boleto generated OR public_access_token and are not paid/cancelled)
   const eligibleForWhatsApp = useMemo(() => {
     return contributions.filter(
-      (c) => c.lytex_invoice_id && c.status !== "paid" && c.status !== "cancelled"
+      (c) => (c.lytex_invoice_id || c.public_access_token) && c.status !== "paid" && c.status !== "cancelled"
     );
   }, [contributions]);
 
