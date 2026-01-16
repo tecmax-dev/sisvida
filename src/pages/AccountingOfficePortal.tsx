@@ -793,6 +793,40 @@ export default function AccountingOfficePortal() {
           Voltar aos serviços
         </Button>
 
+        {/* Services Cards - Same as home */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <PortalServiceCard
+            icon={<FileText className="h-5 w-5" />}
+            title="Contribuições"
+            description="Gerencie boletos e pagamentos"
+            onClick={() => {}}
+            color="teal"
+            badge={stats.overdue > 0 ? `${stats.overdue}` : undefined}
+            isActive
+          />
+          <PortalServiceCard
+            icon={<Building className="h-5 w-5" />}
+            title="Empresas Vinculadas"
+            description={`${employers.length} empresa(s)`}
+            onClick={() => setActiveView("employers")}
+            color="blue"
+          />
+          <PortalServiceCard
+            icon={<FileCheck className="h-5 w-5" />}
+            title="Relatórios"
+            description="Imprima relatórios"
+            onClick={handlePrintEmployersList}
+            color="purple"
+          />
+          <PortalServiceCard
+            icon={<Users className="h-5 w-5" />}
+            title="Atualizar Dados"
+            description="Atualize informações"
+            onClick={() => toast.info("Entre em contato para atualizar seus dados")}
+            color="amber"
+          />
+        </div>
+
         {/* Contributions List - New Component */}
         <PortalContributionsList
           contributions={contributions.map(c => ({
