@@ -8,8 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { CalendarIcon, EyeOff, Trash2, AlertTriangle } from "lucide-react";
-import { format } from "date-fns";
+import { CalendarIcon, EyeOff, Trash2, AlertTriangle, Search } from "lucide-react";
+import { format, parse, isValid } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,6 +18,7 @@ export function HidePendingContributionsConfig() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
   const [hidePendingBeforeDate, setHidePendingBeforeDate] = useState<Date | undefined>();
+  const [dateInputValue, setDateInputValue] = useState("");
   const [saving, setSaving] = useState(false);
   const [hiddenCount, setHiddenCount] = useState<number>(0);
 
@@ -33,7 +34,9 @@ export function HidePendingContributionsConfig() {
         .single();
 
       if (!error && data?.hide_pending_before_date) {
-        setHidePendingBeforeDate(new Date(data.hide_pending_before_date));
+        const date = new Date(data.hide_pending_before_date);
+        setHidePendingBeforeDate(date);
+        setDateInputValue(format(date, "dd/MM/yyyy"));
       }
     };
 
@@ -63,6 +66,29 @@ export function HidePendingContributionsConfig() {
 
     countHidden();
   }, [currentClinic?.id, hidePendingBeforeDate]);
+
+  // Handle typed date input
+  const handleDateInputChange = (value: string) => {
+    setDateInputValue(value);
+    
+    // Try to parse the date when input is complete (dd/MM/yyyy = 10 chars)
+    if (value.length === 10) {
+      const parsed = parse(value, "dd/MM/yyyy", new Date());
+      if (isValid(parsed)) {
+        setHidePendingBeforeDate(parsed);
+      }
+    }
+  };
+
+  // Handle calendar selection
+  const handleCalendarSelect = (date: Date | undefined) => {
+    setHidePendingBeforeDate(date);
+    if (date) {
+      setDateInputValue(format(date, "dd/MM/yyyy"));
+    } else {
+      setDateInputValue("");
+    }
+  };
 
   const handleSave = async () => {
     if (!currentClinic?.id) return;
@@ -110,6 +136,7 @@ export function HidePendingContributionsConfig() {
       if (error) throw error;
 
       setHidePendingBeforeDate(undefined);
+      setDateInputValue("");
       toast({
         title: "Configuração removida",
         description: "Todas as contribuições pendentes serão exibidas.",
@@ -148,29 +175,36 @@ export function HidePendingContributionsConfig() {
 
         <div className="space-y-2">
           <Label>Ocultar pendências anteriores a:</Label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {/* Input para digitar data */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="text"
+                placeholder="DD/MM/AAAA"
+                value={dateInputValue}
+                onChange={(e) => handleDateInputChange(e.target.value)}
+                className="pl-9 w-[140px]"
+                maxLength={10}
+              />
+            </div>
+
+            {/* Calendar picker */}
             <Popover>
               <PopoverTrigger asChild>
                 <Button
                   variant="outline"
-                  className={cn(
-                    "w-[280px] justify-start text-left font-normal",
-                    !hidePendingBeforeDate && "text-muted-foreground"
-                  )}
+                  size="icon"
+                  className="shrink-0"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {hidePendingBeforeDate ? (
-                    format(hidePendingBeforeDate, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
-                  ) : (
-                    "Selecione uma data"
-                  )}
+                  <CalendarIcon className="h-4 w-4" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                 <Calendar
                   mode="single"
                   selected={hidePendingBeforeDate}
-                  onSelect={setHidePendingBeforeDate}
+                  onSelect={handleCalendarSelect}
                   initialFocus
                   locale={ptBR}
                   className="p-3 pointer-events-auto"
