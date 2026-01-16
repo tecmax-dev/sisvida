@@ -36,6 +36,7 @@ const generateEmailHtml = (
     <html lang="pt-BR">
     <head>
       <meta charset="UTF-8">
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
     <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
@@ -84,7 +85,7 @@ const generateEmailHtml = (
           <!-- CTA Button -->
           <div style="text-align: center; margin: 32px 0;">
             <a href="${portalUrl}" target="_blank" style="display: inline-block; padding: 14px 40px; background: linear-gradient(135deg, #0f766e 0%, #14b8a6 100%); color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 4px 14px rgba(20, 184, 166, 0.4);">
-              Acessar Portal
+            Acessar Portal
             </a>
           </div>
           
@@ -336,9 +337,9 @@ const handler = async (req: Request): Promise<Response> => {
     await client.send({
       from: `${data.clinicName} <${smtpFrom}>`,
       to: data.recipientEmail,
-      subject,
-      content: "auto",
-      html,
+      subject: subject,
+      content: "Veja este email em um cliente que suporte HTML.",
+      html: html,
     });
 
     await client.close();
