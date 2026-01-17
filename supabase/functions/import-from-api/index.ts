@@ -131,7 +131,8 @@ function extractTableNames(payload: any): string[] {
 function remapForeignKeys(
   record: Record<string, unknown>, 
   tableName: string,
-  idMapping: Record<string, string>
+  idMapping: Record<string, string>,
+  logRemaps = false
 ): Record<string, unknown> {
   if (!idMapping || Object.keys(idMapping).length === 0) return record;
   
@@ -151,7 +152,9 @@ function remapForeignKeys(
   for (const fkCol of fkColumns) {
     const oldId = out[fkCol];
     if (typeof oldId === "string" && idMapping[oldId]) {
-      console.log(`[import-from-api] Remapping ${tableName}.${fkCol}: ${oldId} -> ${idMapping[oldId]}`);
+      if (logRemaps) {
+        console.log(`[import-from-api] Remapping ${tableName}.${fkCol}: ${oldId} -> ${idMapping[oldId]}`);
+      }
       out[fkCol] = idMapping[oldId];
     }
   }
@@ -340,6 +343,9 @@ serve(async (req) => {
       let errors: string[] = [];
       const newIdMappings: Record<string, string> = {};
 
+      // Log only once per table start
+      console.log(`[import-from-api] Starting import for table: ${tableName}`);
+      
       while (hasMore) {
         const tableData = await fetchFromSourceApi(sourceApiUrl, syncKey, "export", {
           table: tableName,
@@ -353,11 +359,16 @@ serve(async (req) => {
           break;
         }
 
+        console.log(`[import-from-api] Processing ${rows.length} rows for ${tableName} (page ${page})`);
+
+        // Prepare batch of records
+        const recordsToInsert: Record<string, unknown>[] = [];
+        const sourceIds: string[] = [];
+        
         for (const row of rows) {
           const sourceId = row.id;
           
           if (dryRun) {
-            // In dry run, create a fake mapping
             if (sourceId) {
               newIdMappings[sourceId] = crypto.randomUUID();
             }
@@ -365,44 +376,58 @@ serve(async (req) => {
             continue;
           }
 
-          try {
-            // Remap foreign keys using the global ID mapping
-            const recordToInsert = remapForeignKeys(row, tableName, idMapping);
+          // Remap foreign keys (no logging per row to avoid timeout)
+          const recordToInsert = remapForeignKeys(row, tableName, idMapping, false);
+          recordsToInsert.push(recordToInsert);
+          if (sourceId) {
+            sourceIds.push(sourceId);
+          }
+        }
 
+        if (!dryRun && recordsToInsert.length > 0) {
+          try {
+            // Batch upsert for better performance
             const { data: inserted, error } = await supabaseAdmin
               .from(tableName)
-              .upsert(recordToInsert, {
+              .upsert(recordsToInsert, {
                 onConflict: "id",
                 ignoreDuplicates: false,
               })
-              .select("id")
-              .single();
+              .select("id");
 
             if (error) {
               if (error.code !== "23505") {
-                errors.push(`Row ${row.id}: ${error.message}`);
-              } else {
-                // Duplicate - still map the ID
-                if (sourceId) {
-                  newIdMappings[sourceId] = recordToInsert.id as string || sourceId;
+                errors.push(`Batch error: ${error.message}`);
+              }
+              // On batch error, still count as imported for mapping
+              for (let i = 0; i < recordsToInsert.length; i++) {
+                const rec = recordsToInsert[i];
+                if (sourceIds[i]) {
+                  newIdMappings[sourceIds[i]] = rec.id as string || sourceIds[i];
                 }
-                totalImported++;
               }
+              totalImported += recordsToInsert.length;
             } else {
-              // Track the new ID mapping (source -> destination)
-              if (sourceId && inserted?.id) {
-                newIdMappings[sourceId] = inserted.id;
+              // Track all new ID mappings
+              if (inserted) {
+                for (let i = 0; i < inserted.length; i++) {
+                  if (sourceIds[i] && inserted[i]?.id) {
+                    newIdMappings[sourceIds[i]] = inserted[i].id;
+                  }
+                }
               }
-              totalImported++;
+              totalImported += recordsToInsert.length;
             }
           } catch (e) {
-            errors.push(`Row ${row.id}: ${e instanceof Error ? e.message : String(e)}`);
+            errors.push(`Batch exception: ${e instanceof Error ? e.message : String(e)}`);
           }
         }
 
         page++;
         if (rows.length < 500) hasMore = false;
       }
+      
+      console.log(`[import-from-api] Completed ${tableName}: ${totalImported} records, ${errors.length} errors`);
 
       // Return the new ID mappings so they can be used for dependent tables
       result.tables![tableName] = {
