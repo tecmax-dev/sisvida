@@ -45,6 +45,52 @@ const TABLE_ORDER = [
   // ... other tables will be imported after these
 ];
 
+function extractTableNames(payload: any): string[] {
+  if (!payload) return [];
+
+  // Common shapes:
+  // - ["table1", "table2"]
+  // - [{ table: "table1", count: 10 }]
+  // - { tables: [...] }
+  // - { data: [...] }
+  // - { data: { tables: [...] } }
+  const candidates = [
+    payload,
+    payload?.tables,
+    payload?.data,
+    payload?.data?.tables,
+    payload?.summary,
+  ].filter(Boolean);
+
+  for (const c of candidates) {
+    if (Array.isArray(c)) {
+      if (c.length === 0) return [];
+
+      if (typeof c[0] === "string") {
+        return c.filter((x) => typeof x === "string" && x.trim().length > 0).map((x) => x.trim());
+      }
+
+      if (typeof c[0] === "object") {
+        const names = c
+          .map((x) => (x?.table ?? x?.name ?? x?.tablename ?? x?.table_name))
+          .filter((x) => typeof x === "string" && x.trim().length > 0)
+          .map((x) => x.trim());
+        if (names.length > 0) return names;
+      }
+    }
+
+    // Some APIs return a dictionary of table->count
+    if (c && typeof c === "object" && !Array.isArray(c)) {
+      const keys = Object.keys(c).filter((k) => typeof k === "string" && k.trim().length > 0);
+      // Heuristic: if values look numeric, treat keys as table names
+      const numericLike = keys.filter((k) => typeof (c as any)[k] === "number");
+      if (numericLike.length > 0) return keys;
+    }
+  }
+
+  return [];
+}
+
 function remapUserIds(record: Record<string, unknown>, mapping: Record<string, string>): Record<string, unknown> {
   if (!mapping || Object.keys(mapping).length === 0) return record;
   const out: Record<string, unknown> = { ...record };
@@ -139,11 +185,20 @@ serve(async (req) => {
       userMapping: body.userMapping || {},
     };
 
-    // Phase 1: Get summary and import users
+    // Phase 1: Get available tables from source API
     if (phase === "summary") {
-      console.log("[import-from-api] Fetching summary...");
-      const summary = await fetchFromSourceApi(sourceApiUrl, syncKey, "summary");
-      return new Response(JSON.stringify({ success: true, summary }), {
+      console.log("[import-from-api] Fetching tables list...");
+      const raw = await fetchFromSourceApi(sourceApiUrl, syncKey, "tables");
+      const tableNames = extractTableNames(raw);
+
+      console.log(`[import-from-api] Source tables discovered: ${tableNames.length}`);
+      if (tableNames.length > 0) {
+        console.log("[import-from-api] First tables:", tableNames.slice(0, 10));
+      } else {
+        console.log("[import-from-api] Raw tables payload preview:", JSON.stringify(raw)?.slice(0, 800));
+      }
+
+      return new Response(JSON.stringify({ success: true, summary: tableNames }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
