@@ -27,27 +27,26 @@ interface ImportResult {
 interface AuthUser {
   id: string;
   email: string;
-  encrypted_password?: string;
   raw_user_meta_data?: Record<string, unknown>;
-  created_at?: string;
 }
 
-// Parse SQL into individual statements
-function parseSqlStatements(sql: string): string[] {
-  const statements: string[] = [];
+// Stream-based SQL parser - processes line by line to save memory
+function* parseStatementsStreaming(sql: string): Generator<string> {
   let current = "";
   let inString = false;
   let stringChar = "";
   let inDollarQuote = false;
   let dollarTag = "";
+  let lineStart = 0;
 
   for (let i = 0; i < sql.length; i++) {
     const char = sql[i];
     const nextChar = sql[i + 1] || "";
 
-    // Handle dollar-quoted strings (PostgreSQL)
+    // Handle dollar-quoted strings
     if (!inString && char === "$") {
-      const match = sql.slice(i).match(/^\$([a-zA-Z0-9_]*)\$/);
+      const remaining = sql.slice(i, Math.min(i + 50, sql.length));
+      const match = remaining.match(/^\$([a-zA-Z0-9_]*)\$/);
       if (match) {
         if (!inDollarQuote) {
           inDollarQuote = true;
@@ -93,19 +92,16 @@ function parseSqlStatements(sql: string): string[] {
       continue;
     }
 
-    // Handle comments
+    // Skip single-line comments
     if (char === "-" && nextChar === "-") {
-      while (i < sql.length && sql[i] !== "\n") {
-        i++;
-      }
+      while (i < sql.length && sql[i] !== "\n") i++;
       continue;
     }
 
+    // Skip multi-line comments
     if (char === "/" && nextChar === "*") {
       i += 2;
-      while (i < sql.length - 1 && !(sql[i] === "*" && sql[i + 1] === "/")) {
-        i++;
-      }
+      while (i < sql.length - 1 && !(sql[i] === "*" && sql[i + 1] === "/")) i++;
       i++;
       continue;
     }
@@ -113,9 +109,10 @@ function parseSqlStatements(sql: string): string[] {
     if (char === ";") {
       const stmt = current.trim();
       if (stmt) {
-        statements.push(stmt);
+        yield stmt;
       }
       current = "";
+      lineStart = i + 1;
       continue;
     }
 
@@ -124,10 +121,25 @@ function parseSqlStatements(sql: string): string[] {
 
   const lastStmt = current.trim();
   if (lastStmt) {
-    statements.push(lastStmt);
+    yield lastStmt;
   }
+}
 
-  return statements;
+// Quick scan to find auth.users statements and count without full parsing
+function quickScanAuthUsers(sql: string): { count: number; emails: string[] } {
+  const result = { count: 0, emails: [] as string[] };
+  const regex = /INSERT\s+INTO\s+auth\.users[^;]+;/gi;
+  let match;
+  
+  while ((match = regex.exec(sql)) !== null) {
+    result.count++;
+    const emailMatch = match[0].match(/'([^']+@[^']+)'/);
+    if (emailMatch && result.emails.length < 10) {
+      result.emails.push(emailMatch[1]);
+    }
+  }
+  
+  return result;
 }
 
 // Extract table name from SQL statement
@@ -144,24 +156,22 @@ function extractTableName(sql: string): string {
   return "unknown";
 }
 
-// Check if statement is for auth.users
 function isAuthUsersStatement(sql: string): boolean {
   return /INSERT\s+INTO\s+auth\.users/i.test(sql);
 }
 
-// Parse auth.users INSERT statement to extract user data
+// Lightweight auth user parser
 function parseAuthUserInsert(sql: string): AuthUser | null {
   try {
-    // Match INSERT INTO auth.users (columns) VALUES (values)
     const columnsMatch = sql.match(/INSERT\s+INTO\s+auth\.users\s*\(([^)]+)\)/i);
     const valuesMatch = sql.match(/VALUES\s*\((.+)\)$/is);
 
     if (!columnsMatch || !valuesMatch) return null;
 
-    const columns = columnsMatch[1].split(",").map(c => c.trim().replace(/"/g, ""));
+    const columns = columnsMatch[1].split(",").map(c => c.trim().replace(/"/g, "").toLowerCase());
     const valuesStr = valuesMatch[1];
 
-    // Parse values (handling quoted strings and NULLs)
+    // Simple value extraction
     const values: string[] = [];
     let current = "";
     let inQuote = false;
@@ -193,96 +203,130 @@ function parseAuthUserInsert(sql: string): AuthUser | null {
 
       current += char;
     }
-    if (current.trim()) {
-      values.push(current.trim());
-    }
+    if (current.trim()) values.push(current.trim());
 
-    // Build user object
     const user: AuthUser = { id: "", email: "" };
+    const idIdx = columns.indexOf("id");
+    const emailIdx = columns.indexOf("email");
 
-    columns.forEach((col, idx) => {
-      let val = values[idx];
-      if (!val || val.toUpperCase() === "NULL") return;
-
-      // Remove quotes and type casts
-      val = val.replace(/^'|'$/g, "").replace(/'''/g, "'").replace(/''/g, "'");
-      val = val.replace(/::[\w\[\]]+/g, ""); // Remove type casts
-
-      switch (col.toLowerCase()) {
-        case "id":
-          user.id = val.replace(/^'|'$/g, "");
-          break;
-        case "email":
-          user.email = val.replace(/^'|'$/g, "");
-          break;
-        case "encrypted_password":
-          user.encrypted_password = val.replace(/^'|'$/g, "");
-          break;
-        case "raw_user_meta_data":
-          try {
-            user.raw_user_meta_data = JSON.parse(val.replace(/^'|'$/g, ""));
-          } catch {
-            // Ignore parse errors
-          }
-          break;
-      }
-    });
-
-    if (user.id && user.email) {
-      return user;
+    if (idIdx >= 0 && values[idIdx]) {
+      user.id = values[idIdx].replace(/^'|'$/g, "").replace(/::[\w\[\]]+/g, "");
     }
+    if (emailIdx >= 0 && values[emailIdx]) {
+      user.email = values[emailIdx].replace(/^'|'$/g, "").replace(/::[\w\[\]]+/g, "");
+    }
+
+    if (user.id && user.email) return user;
     return null;
-  } catch (e) {
-    console.error("[import-sql-backup] Error parsing auth user:", e);
+  } catch {
     return null;
   }
 }
 
-// Replace old user IDs with new ones in SQL statement
 function remapUserIds(sql: string, idMapping: Record<string, string>): string {
   let result = sql;
   for (const [oldId, newId] of Object.entries(idMapping)) {
-    // Replace UUID in various formats
-    const patterns = [
-      new RegExp(`'${oldId}'`, "gi"),
-      new RegExp(`"${oldId}"`, "gi"),
-    ];
-    for (const pattern of patterns) {
-      result = result.replace(pattern, `'${newId}'`);
-    }
+    result = result.replace(new RegExp(`'${oldId}'`, "gi"), `'${newId}'`);
   }
   return result;
 }
 
-// Check if statement should be skipped
 function shouldSkip(sql: string): boolean {
-  const upper = sql.toUpperCase().trim();
+  const upper = sql.substring(0, 50).toUpperCase().trim();
 
-  if (upper.startsWith("SET SESSION_REPLICATION_ROLE")) return true;
   if (upper.startsWith("SET ")) return true;
-  if (upper.startsWith("CREATE TABLE")) return true;
-  if (upper.startsWith("CREATE INDEX")) return true;
-  if (upper.startsWith("CREATE TRIGGER")) return true;
-  if (upper.startsWith("CREATE FUNCTION")) return true;
-  if (upper.startsWith("CREATE POLICY")) return true;
-  if (upper.startsWith("ALTER TABLE") && upper.includes("ENABLE ROW LEVEL SECURITY")) return true;
+  if (upper.startsWith("CREATE ")) return true;
+  if (upper.startsWith("ALTER ")) return true;
+  if (upper.startsWith("DROP ")) return true;
   if (upper.startsWith("--")) return true;
+  if (upper.startsWith("COMMENT ")) return true;
+  if (upper.startsWith("GRANT ")) return true;
+  if (upper.startsWith("REVOKE ")) return true;
 
-  // Skip auth schema tables (except users which we handle specially)
+  // Skip other auth schema tables
   if (/INSERT\s+INTO\s+auth\.(identities|sessions|refresh_tokens|mfa|audit_log)/i.test(sql)) return true;
 
   return false;
 }
 
-// Tables that reference user_id
-const USER_ID_TABLES = [
-  "profiles",
-  "user_roles",
-  "super_admins",
-  "professionals",
-  "audit_logs",
-  "attachment_access_logs",
-];
+const USER_ID_TABLES = ["profiles", "user_roles", "super_admins", "professionals", "audit_logs", "attachment_access_logs"];
+
+// Helper to parse SQL value to JS type
+function parseValue(val: string): string | number | boolean | null | object {
+  if (!val || val.toUpperCase() === "NULL") return null;
+  if (val.toUpperCase() === "TRUE") return true;
+  if (val.toUpperCase() === "FALSE") return false;
+
+  val = val.replace(/::[\w\[\]]+/g, "");
+
+  if (val.startsWith("'") && val.endsWith("'")) {
+    const inner = val.slice(1, -1).replace(/''/g, "'");
+    // Check if it's JSON
+    if ((inner.startsWith("{") || inner.startsWith("[")) && (inner.endsWith("}") || inner.endsWith("]"))) {
+      try {
+        return JSON.parse(inner);
+      } catch {
+        return inner;
+      }
+    }
+    return inner;
+  }
+
+  const num = parseFloat(val);
+  if (!isNaN(num) && val.match(/^-?\d+\.?\d*$/)) return num;
+
+  return val;
+}
+
+// Parse INSERT and build record
+function parseInsertToRecord(sql: string): { table: string; record: Record<string, unknown> } | null {
+  const match = sql.match(/INSERT\s+INTO\s+(?:public\.)?["']?(\w+)["']?\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)$/is);
+  if (!match) return null;
+
+  const table = match[1];
+  const columns = match[2].split(",").map(c => c.trim().replace(/"/g, ""));
+  const valuesStr = match[3];
+
+  const values: (string | number | boolean | null | object)[] = [];
+  let current = "";
+  let inQuote = false;
+  let depth = 0;
+
+  for (let i = 0; i < valuesStr.length; i++) {
+    const char = valuesStr[i];
+
+    if (char === "'" && valuesStr[i - 1] !== "\\") {
+      if (inQuote && valuesStr[i + 1] === "'") {
+        current += "'";
+        i++;
+        continue;
+      }
+      inQuote = !inQuote;
+      current += char;
+      continue;
+    }
+
+    if (!inQuote) {
+      if (char === "(") depth++;
+      if (char === ")") depth--;
+      if (char === "," && depth === 0) {
+        values.push(parseValue(current.trim()));
+        current = "";
+        continue;
+      }
+    }
+
+    current += char;
+  }
+  if (current.trim()) values.push(parseValue(current.trim()));
+
+  const record: Record<string, unknown> = {};
+  columns.forEach((col, idx) => {
+    record[col] = values[idx];
+  });
+
+  return { table, record };
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -291,9 +335,7 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      throw new Error("Authorization header required");
-    }
+    if (!authHeader) throw new Error("Authorization header required");
 
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -306,11 +348,8 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    // Verify super admin
     const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
-    if (userError || !user) {
-      throw new Error("Unauthorized");
-    }
+    if (userError || !user) throw new Error("Unauthorized");
 
     const { data: isSuperAdmin } = await supabaseAdmin
       .from("super_admins")
@@ -318,21 +357,14 @@ serve(async (req) => {
       .eq("user_id", user.id)
       .single();
 
-    if (!isSuperAdmin) {
-      throw new Error("Super admin access required");
-    }
+    if (!isSuperAdmin) throw new Error("Super admin access required");
 
     const { sql, dryRun = false, skipAuthTables = false } = await req.json();
 
-    if (!sql || typeof sql !== "string") {
-      throw new Error("SQL content is required");
-    }
+    if (!sql || typeof sql !== "string") throw new Error("SQL content is required");
 
     console.log(`[import-sql-backup] Starting import (dryRun: ${dryRun}, skipAuthTables: ${skipAuthTables})...`);
     console.log(`[import-sql-backup] SQL length: ${sql.length} characters`);
-
-    const statements = parseSqlStatements(sql);
-    console.log(`[import-sql-backup] Parsed ${statements.length} statements`);
 
     const result: ImportResult = {
       success: true,
@@ -345,110 +377,110 @@ serve(async (req) => {
       usersSkipped: 0,
     };
 
-    // PHASE 1: Extract and create auth users
+    // Quick scan for auth users first
+    const authScan = quickScanAuthUsers(sql);
+    console.log(`[import-sql-backup] Quick scan found ${authScan.count} auth.users statements`);
+
+    // PHASE 1: Process auth.users first (collect all)
     console.log("[import-sql-backup] Phase 1: Processing auth.users...");
-    const authUserStatements = statements.filter(isAuthUsersStatement);
-    console.log(`[import-sql-backup] Found ${authUserStatements.length} auth.users statements`);
-
-    for (const stmt of authUserStatements) {
-      const authUser = parseAuthUserInsert(stmt);
-      if (!authUser) {
-        result.details.push({
-          table: "auth.users",
-          operation: "INSERT",
-          status: "skipped",
-          message: "Could not parse user data",
-        });
-        result.skipped++;
-        continue;
-      }
-
-      console.log(`[import-sql-backup] Processing user: ${authUser.email} (old ID: ${authUser.id})`);
-
-      if (dryRun) {
-        result.details.push({
-          table: "auth.users",
-          operation: "INSERT",
-          status: "success",
-          message: `Would create user ${authUser.email}`,
-        });
-        result.userMapping[authUser.id] = `new-id-for-${authUser.email}`;
-        result.usersCreated++;
-        continue;
-      }
-
+    
+    // Cache existing users once
+    let existingUsersMap: Map<string, string> = new Map();
+    if (!dryRun && authScan.count > 0) {
       try {
-        // Check if user already exists
-        const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
-        const existingUser = existingUsers?.users?.find(u => u.email === authUser.email);
-
-        if (existingUser) {
-          console.log(`[import-sql-backup] User ${authUser.email} already exists with ID ${existingUser.id}`);
-          result.userMapping[authUser.id] = existingUser.id;
-          result.usersSkipped++;
-          result.details.push({
-            table: "auth.users",
-            operation: "INSERT",
-            status: "skipped",
-            message: `User ${authUser.email} already exists, mapped to ${existingUser.id}`,
+        const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+        if (existingUsers?.users) {
+          existingUsers.users.forEach(u => {
+            if (u.email) existingUsersMap.set(u.email.toLowerCase(), u.id);
           });
-        } else {
-          // Create new user
-          const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
-            email: authUser.email,
-            email_confirm: true,
-            password: crypto.randomUUID(), // Temporary password - user should reset
-            user_metadata: authUser.raw_user_meta_data || {},
-          });
+        }
+        console.log(`[import-sql-backup] Cached ${existingUsersMap.size} existing users`);
+      } catch (e) {
+        console.error("[import-sql-backup] Error loading existing users:", e);
+      }
+    }
 
-          if (createError) {
-            throw createError;
-          }
+    // Process statements using streaming parser
+    let processedCount = 0;
+    const MAX_DETAILS = 200; // Limit details array size
 
-          if (newUser?.user) {
-            console.log(`[import-sql-backup] Created user ${authUser.email} with new ID ${newUser.user.id}`);
-            result.userMapping[authUser.id] = newUser.user.id;
-            result.usersCreated++;
+    for (const stmt of parseStatementsStreaming(sql)) {
+      processedCount++;
+      
+      if (processedCount % 500 === 0) {
+        console.log(`[import-sql-backup] Processed ${processedCount} statements...`);
+      }
+
+      // Handle auth.users
+      if (isAuthUsersStatement(stmt)) {
+        const authUser = parseAuthUserInsert(stmt);
+        if (!authUser) {
+          result.skipped++;
+          continue;
+        }
+
+        if (dryRun) {
+          result.userMapping[authUser.id] = `new-id-for-${authUser.email}`;
+          result.usersCreated++;
+          if (result.details.length < MAX_DETAILS) {
             result.details.push({
               table: "auth.users",
               operation: "INSERT",
               status: "success",
-              message: `Created ${authUser.email}: ${authUser.id} → ${newUser.user.id}`,
+              message: `Would create ${authUser.email}`,
             });
           }
+          continue;
         }
-      } catch (userError) {
-        const errorMsg = userError instanceof Error ? userError.message : String(userError);
-        console.error(`[import-sql-backup] Error creating user ${authUser.email}:`, errorMsg);
-        result.errors.push(`[auth.users] ${authUser.email}: ${errorMsg}`);
-        result.details.push({
-          table: "auth.users",
-          operation: "INSERT",
-          status: "error",
-          message: errorMsg,
-        });
+
+        try {
+          const existingId = existingUsersMap.get(authUser.email.toLowerCase());
+          
+          if (existingId) {
+            result.userMapping[authUser.id] = existingId;
+            result.usersSkipped++;
+            if (result.details.length < MAX_DETAILS) {
+              result.details.push({
+                table: "auth.users",
+                operation: "INSERT",
+                status: "skipped",
+                message: `User ${authUser.email} exists`,
+              });
+            }
+          } else {
+            const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+              email: authUser.email,
+              email_confirm: true,
+              password: crypto.randomUUID(),
+              user_metadata: authUser.raw_user_meta_data || {},
+            });
+
+            if (createError) throw createError;
+
+            if (newUser?.user) {
+              result.userMapping[authUser.id] = newUser.user.id;
+              existingUsersMap.set(authUser.email.toLowerCase(), newUser.user.id);
+              result.usersCreated++;
+              if (result.details.length < MAX_DETAILS) {
+                result.details.push({
+                  table: "auth.users",
+                  operation: "INSERT",
+                  status: "success",
+                  message: `Created ${authUser.email}`,
+                });
+              }
+            }
+          }
+        } catch (userError) {
+          const errorMsg = userError instanceof Error ? userError.message : String(userError);
+          result.errors.push(`[auth.users] ${authUser.email}: ${errorMsg}`);
+        }
+        continue;
       }
-    }
 
-    console.log(`[import-sql-backup] User mapping: ${JSON.stringify(result.userMapping)}`);
-
-    // PHASE 2: Process public schema statements with ID remapping
-    console.log("[import-sql-backup] Phase 2: Processing public schema...");
-
-    for (let i = 0; i < statements.length; i++) {
-      let stmt = statements[i];
-      const tableName = extractTableName(stmt);
-
-      // Skip auth.users (already processed) and other auth tables
-      if (isAuthUsersStatement(stmt)) continue;
+      // Skip other auth tables
       if (/INSERT\s+INTO\s+auth\./i.test(stmt)) {
         result.skipped++;
-        result.details.push({
-          table: tableName,
-          operation: "INSERT",
-          status: "skipped",
-          message: "Auth schema table skipped",
-        });
         continue;
       }
 
@@ -457,184 +489,80 @@ serve(async (req) => {
         continue;
       }
 
+      const tableName = extractTableName(stmt);
+      const upper = stmt.substring(0, 10).toUpperCase().trim();
+
       // Skip user-related tables if requested
       if (skipAuthTables && USER_ID_TABLES.includes(tableName)) {
         result.skipped++;
-        result.details.push({
-          table: tableName,
-          operation: "INSERT",
-          status: "skipped",
-          message: "User-related table skipped by option",
-        });
         continue;
       }
 
-      const operation = stmt.toUpperCase().trim().split(" ")[0];
-      if (!["INSERT", "UPDATE", "DELETE"].includes(operation)) {
+      if (!upper.startsWith("INSERT") && !upper.startsWith("DELETE")) {
         result.skipped++;
         continue;
       }
 
-      // Remap user IDs if this table references users
+      // Remap user IDs
+      let processedStmt = stmt;
       if (USER_ID_TABLES.includes(tableName) && Object.keys(result.userMapping).length > 0) {
-        stmt = remapUserIds(stmt, result.userMapping);
+        processedStmt = remapUserIds(stmt, result.userMapping);
       }
 
       if (dryRun) {
-        result.details.push({
-          table: tableName,
-          operation,
-          status: "success",
-          message: "Would execute (dry run)",
-        });
         result.executed++;
+        if (result.details.length < MAX_DETAILS) {
+          result.details.push({
+            table: tableName,
+            operation: upper.startsWith("INSERT") ? "INSERT" : "DELETE",
+            status: "success",
+            message: "Would execute",
+          });
+        }
         continue;
       }
 
-      try {
-        // Execute via raw SQL - we need to use a different approach
-        // Since we can't use RPC for raw SQL, we'll parse and use the client
-
-        // For now, we'll handle the most common case: INSERT
-        if (operation === "INSERT") {
-          // Parse the INSERT statement to extract data
-          const tableMatch = stmt.match(/INSERT\s+INTO\s+(?:public\.)?["']?(\w+)["']?\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)$/is);
-
-          if (tableMatch) {
-            const table = tableMatch[1];
-            const columns = tableMatch[2].split(",").map(c => c.trim().replace(/"/g, ""));
-            const valuesStr = tableMatch[3];
-
-            // Parse values
-            const values: (string | number | boolean | null | object)[] = [];
-            let current = "";
-            let inQuote = false;
-            let depth = 0;
-
-            for (let j = 0; j < valuesStr.length; j++) {
-              const char = valuesStr[j];
-
-              if (char === "'" && valuesStr[j - 1] !== "\\") {
-                if (inQuote && valuesStr[j + 1] === "'") {
-                  current += "'";
-                  j++;
-                  continue;
-                }
-                inQuote = !inQuote;
-                current += char;
-                continue;
-              }
-
-              if (!inQuote) {
-                if (char === "(") depth++;
-                if (char === ")") depth--;
-                if (char === "," && depth === 0) {
-                  values.push(parseValue(current.trim()));
-                  current = "";
-                  continue;
-                }
-              }
-
-              current += char;
-            }
-            if (current.trim()) {
-              values.push(parseValue(current.trim()));
-            }
-
-            // Build object
-            const record: Record<string, unknown> = {};
-            columns.forEach((col, idx) => {
-              record[col] = values[idx];
-            });
-
-            const { error } = await supabaseAdmin.from(table).insert(record);
-
-            if (error) {
-              if (error.message.includes("duplicate key") || error.code === "23505") {
-                result.skipped++;
-                result.details.push({
-                  table: tableName,
-                  operation,
-                  status: "skipped",
-                  message: "Record already exists",
-                });
-              } else {
-                throw error;
-              }
+      // Execute INSERT
+      if (upper.startsWith("INSERT")) {
+        const parsed = parseInsertToRecord(processedStmt);
+        if (parsed) {
+          const { error } = await supabaseAdmin.from(parsed.table).insert(parsed.record);
+          
+          if (error) {
+            if (error.message.includes("duplicate key") || error.code === "23505") {
+              result.skipped++;
             } else {
-              result.executed++;
-              result.details.push({
-                table: tableName,
-                operation,
-                status: "success",
-              });
+              if (result.errors.length < 50) {
+                result.errors.push(`[${tableName}] ${error.message}`);
+              }
             }
           } else {
-            result.skipped++;
-            result.details.push({
-              table: tableName,
-              operation,
-              status: "skipped",
-              message: "Could not parse INSERT statement",
-            });
-          }
-        } else if (operation === "DELETE") {
-          // Handle DELETE FROM table (without WHERE = delete all)
-          const deleteMatch = stmt.match(/DELETE\s+FROM\s+(?:public\.)?["']?(\w+)["']?/i);
-          if (deleteMatch) {
-            const table = deleteMatch[1];
-            // Check if there's a WHERE clause
-            if (!/WHERE/i.test(stmt)) {
-              // Delete all from table
-              const { error } = await supabaseAdmin.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000");
-              if (error && !error.message.includes("no rows")) {
-                throw error;
-              }
-              result.executed++;
-              result.details.push({
-                table: tableName,
-                operation,
-                status: "success",
-                message: "Cleared table",
-              });
-            } else {
-              result.skipped++;
-              result.details.push({
-                table: tableName,
-                operation,
-                status: "skipped",
-                message: "DELETE with WHERE not supported",
-              });
-            }
+            result.executed++;
           }
         } else {
           result.skipped++;
-          result.details.push({
-            table: tableName,
-            operation,
-            status: "skipped",
-            message: `${operation} not yet supported`,
-          });
         }
-      } catch (stmtError) {
-        const errorMsg = stmtError instanceof Error ? stmtError.message : String(stmtError);
-        result.errors.push(`[${tableName}] ${errorMsg}`);
-        result.details.push({
-          table: tableName,
-          operation,
-          status: "error",
-          message: errorMsg,
-        });
+        continue;
       }
 
-      if ((i + 1) % 100 === 0) {
-        console.log(`[import-sql-backup] Processed ${i + 1}/${statements.length} statements`);
+      // Handle DELETE
+      if (upper.startsWith("DELETE")) {
+        const deleteMatch = stmt.match(/DELETE\s+FROM\s+(?:public\.)?["']?(\w+)["']?/i);
+        if (deleteMatch && !/WHERE/i.test(stmt)) {
+          const table = deleteMatch[1];
+          const { error } = await supabaseAdmin.from(table).delete().neq("id", "00000000-0000-0000-0000-000000000000");
+          if (!error || error.message.includes("no rows")) {
+            result.executed++;
+          }
+        } else {
+          result.skipped++;
+        }
       }
     }
 
     result.success = result.errors.length === 0;
 
-    console.log(`[import-sql-backup] Import complete: ${result.executed} executed, ${result.skipped} skipped, ${result.errors.length} errors`);
+    console.log(`[import-sql-backup] Complete: ${result.executed} executed, ${result.skipped} skipped, ${result.errors.length} errors`);
     console.log(`[import-sql-backup] Users: ${result.usersCreated} created, ${result.usersSkipped} skipped`);
 
     return new Response(JSON.stringify(result), {
@@ -658,33 +586,3 @@ serve(async (req) => {
     );
   }
 });
-
-// Helper to parse SQL value to JS type
-function parseValue(val: string): string | number | boolean | null | object {
-  if (val.toUpperCase() === "NULL") return null;
-  if (val.toUpperCase() === "TRUE") return true;
-  if (val.toUpperCase() === "FALSE") return false;
-
-  // Remove type casts
-  val = val.replace(/::[\w\[\]]+/g, "");
-
-  // String value
-  if (val.startsWith("'") && val.endsWith("'")) {
-    return val.slice(1, -1).replace(/''/g, "'");
-  }
-
-  // JSONB
-  if (val.startsWith("'{") || val.startsWith("'[")) {
-    try {
-      return JSON.parse(val.slice(1, -1).replace(/''/g, "'"));
-    } catch {
-      return val.slice(1, -1);
-    }
-  }
-
-  // Number
-  const num = parseFloat(val);
-  if (!isNaN(num)) return num;
-
-  return val;
-}
