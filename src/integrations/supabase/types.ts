@@ -7895,6 +7895,7 @@ export type Database = {
         Row: {
           avatar_url: string | null
           created_at: string
+          data_criacao: string | null
           email_confirmed: boolean | null
           id: string
           name: string
@@ -7906,6 +7907,7 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           created_at?: string
+          data_criacao?: string | null
           email_confirmed?: boolean | null
           id?: string
           name: string
@@ -7917,6 +7919,7 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           created_at?: string
+          data_criacao?: string | null
           email_confirmed?: boolean | null
           id?: string
           name?: string
@@ -12591,6 +12594,7 @@ export type Database = {
         | "professional"
         | "administrative"
         | "entidade_sindical_admin"
+        | "moderator"
       appointment_status:
         | "scheduled"
         | "confirmed"
@@ -12750,6 +12754,7 @@ export const Constants = {
         "professional",
         "administrative",
         "entidade_sindical_admin",
+        "moderator",
       ],
       appointment_status: [
         "scheduled",
