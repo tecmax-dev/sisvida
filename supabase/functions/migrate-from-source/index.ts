@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const PAGE_SIZE = 1000;
+
 function base64UrlDecode(input: string) {
   const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
   const padded = base64 + "===".slice((base64.length + 3) % 4);
@@ -33,12 +35,10 @@ function getProjectRefFromUrl(url: string): string | null {
   }
 }
 
-// Tables that depend on auth.users and CANNOT be migrated (FK violations)
-const SKIP_USER_DEPENDENT_TABLES = new Set([
-  "profiles",
-  "user_roles",
-  "super_admins",
-]);
+// Tables that depend on auth.users and must be handled WITH user-id remapping
+// (because auth user IDs from the source project cannot be reused here).
+const USER_DEPENDENT_TABLES = ["profiles", "user_roles", "super_admins"] as const;
+const USER_DEPENDENT_TABLES_SET = new Set<string>(USER_DEPENDENT_TABLES);
 
 // Tables to migrate in order (respecting foreign keys)
 const TABLES_TO_MIGRATE = [
@@ -185,6 +185,226 @@ const TABLES_TO_MIGRATE = [
   "contribution_reissue_requests",
 ];
 
+function normalizeEmail(email: string | null | undefined) {
+  return (email ?? "").trim().toLowerCase();
+}
+
+async function listAllAuthUsers(adminClient: any) {
+  const users: any[] = [];
+  let page = 1;
+  const perPage = 1000;
+
+  while (true) {
+    const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+    if (error) throw error;
+    const batch = data?.users ?? [];
+    if (batch.length === 0) break;
+    users.push(...batch);
+    if (batch.length < perPage) break;
+    page += 1;
+  }
+
+  return users;
+}
+
+async function migrateAuthUsersAndUserDependentTables(params: {
+  sourceAdmin: any;
+  destAdmin: any;
+}) {
+  const { sourceAdmin, destAdmin } = params;
+
+  const summary = {
+    users: {
+      created: 0,
+      existing: 0,
+      skipped_no_email: 0,
+      failed: 0,
+    },
+    tables: {
+      profiles: { success: true, count: 0, skipped: false as boolean, error: undefined as string | undefined },
+      user_roles: { success: true, count: 0, skipped: false as boolean, error: undefined as string | undefined },
+      super_admins: { success: true, count: 0, skipped: false as boolean, error: undefined as string | undefined },
+    },
+  };
+
+  // 1) Load auth users from both projects
+  const [sourceUsers, destUsers] = await Promise.all([
+    listAllAuthUsers(sourceAdmin),
+    listAllAuthUsers(destAdmin),
+  ]);
+
+  const destByEmail = new Map<string, any>();
+  for (const u of destUsers) {
+    if (u?.email) destByEmail.set(normalizeEmail(u.email), u);
+  }
+
+  const sourceIdToDestId = new Map<string, string>();
+  const sourceIdToEmail = new Map<string, string>();
+  for (const u of sourceUsers) {
+    if (u?.id && u?.email) sourceIdToEmail.set(u.id, u.email);
+  }
+
+  // 2) Create missing users in destination (IDs will differ; we'll map them)
+  for (const u of sourceUsers) {
+    if (!u?.id) continue;
+
+    if (!u?.email) {
+      summary.users.skipped_no_email += 1;
+      continue;
+    }
+
+    const emailKey = normalizeEmail(u.email);
+    const existing = destByEmail.get(emailKey);
+
+    if (existing?.id) {
+      sourceIdToDestId.set(u.id, existing.id);
+      summary.users.existing += 1;
+      continue;
+    }
+
+    // We cannot migrate passwords (they are not retrievable). Create a temp password.
+    const tempPassword = `Tmp-${crypto.randomUUID()}aA1!`;
+
+    const { data: created, error: createErr } = await destAdmin.auth.admin.createUser({
+      email: u.email,
+      password: tempPassword,
+      email_confirm: true,
+      phone: u.phone ?? undefined,
+      phone_confirm: !!u.phone,
+      user_metadata: u.user_metadata ?? undefined,
+    });
+
+    if (createErr || !created?.user?.id) {
+      summary.users.failed += 1;
+      console.error("[migrate-from-source] Failed creating user", {
+        email: u.email,
+        error: createErr?.message,
+      });
+      continue;
+    }
+
+    sourceIdToDestId.set(u.id, created.user.id);
+    destByEmail.set(emailKey, created.user);
+    summary.users.created += 1;
+  }
+
+  const isMissingRelationError = (message: string) => {
+    const msg = (message ?? "").toLowerCase();
+    return msg.includes("relation") && msg.includes("does not exist");
+  };
+
+  async function migrateTableWithUserIdRemap(opts: {
+    tableName: "profiles" | "user_roles" | "super_admins";
+    onConflict?: string;
+  }) {
+    const { tableName, onConflict } = opts;
+
+    let migrated = 0;
+    let offset = 0;
+
+    while (true) {
+      const { data: pageData, error: sourceError } = await sourceAdmin
+        .from(tableName)
+        .select("*")
+        .range(offset, offset + PAGE_SIZE - 1);
+
+      if (sourceError) {
+        if (isMissingRelationError(sourceError.message)) {
+          summary.tables[tableName] = {
+            success: true,
+            skipped: true,
+            count: 0,
+            error: "Pulado: tabela não existe no projeto de origem",
+          };
+          return;
+        }
+
+        summary.tables[tableName] = {
+          success: false,
+          skipped: false,
+          count: migrated,
+          error: sourceError.message,
+        };
+        return;
+      }
+
+      if (!pageData || pageData.length === 0) {
+        summary.tables[tableName] = {
+          success: true,
+          skipped: false,
+          count: migrated,
+          error: undefined,
+        };
+        return;
+      }
+
+      const transformed: any[] = [];
+
+      for (const row of pageData) {
+        const oldUserId = row?.user_id as string | undefined;
+        if (!oldUserId) continue;
+
+        const newUserId = sourceIdToDestId.get(oldUserId);
+        if (!newUserId) continue;
+
+        const next = { ...row, user_id: newUserId };
+
+        // If profiles has email, ensure it's consistent with auth email when available.
+        if (tableName === "profiles") {
+          const email = (row?.email as string | null | undefined) ?? sourceIdToEmail.get(oldUserId) ?? null;
+          next.email = email;
+        }
+
+        // created_by often references a user too
+        if (row?.created_by && typeof row.created_by === "string") {
+          const mapped = sourceIdToDestId.get(row.created_by);
+          if (mapped) next.created_by = mapped;
+        }
+
+        transformed.push(next);
+      }
+
+      if (transformed.length > 0) {
+        const { error: upsertError } = await destAdmin
+          .from(tableName)
+          .upsert(transformed, onConflict ? { onConflict } : undefined);
+
+        if (upsertError) {
+          console.error(`[migrate-from-source] Error upserting ${tableName}:`, upsertError);
+          summary.tables[tableName] = {
+            success: false,
+            skipped: false,
+            count: migrated,
+            error: upsertError.message,
+          };
+          return;
+        }
+
+        migrated += transformed.length;
+      }
+
+      if (pageData.length < PAGE_SIZE) {
+        summary.tables[tableName] = {
+          success: true,
+          skipped: false,
+          count: migrated,
+          error: undefined,
+        };
+        return;
+      }
+
+      offset += PAGE_SIZE;
+    }
+  }
+
+  // 3) Now migrate dependent tables with ID remapping
+  await migrateTableWithUserIdRemap({ tableName: "profiles", onConflict: "user_id" });
+  await migrateTableWithUserIdRemap({ tableName: "super_admins", onConflict: "user_id" });
+  await migrateTableWithUserIdRemap({ tableName: "user_roles", onConflict: "user_id,clinic_id,role" });
+
+  return summary;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -288,7 +508,6 @@ serve(async (req) => {
       });
     }
 
-    const PAGE_SIZE = 1000;
 
     const isMissingRelationError = (message: string) => {
       const msg = (message ?? "").toLowerCase();
@@ -336,13 +555,13 @@ serve(async (req) => {
     let totalMigrated = 0;
 
     for (const tableName of TABLES_TO_MIGRATE) {
-      // Skip tables that depend on auth.users (cannot be migrated)
-      if (SKIP_USER_DEPENDENT_TABLES.has(tableName)) {
+      // These tables are handled separately after we migrate auth users (ID remapping)
+      if (USER_DEPENDENT_TABLES_SET.has(tableName)) {
         results[tableName] = {
           success: true,
           skipped: true,
           count: 0,
-          error: "Pulado: depende de auth.users (usuários não são migrados)",
+          error: "Pulado aqui: será migrado junto com usuários (remapeamento de IDs)",
         };
         skippedMissingTables.push(tableName);
         continue;
@@ -436,6 +655,32 @@ serve(async (req) => {
           error: tableError instanceof Error ? tableError.message : "Unknown error",
         };
       }
+    }
+
+    // Migrate auth users + user-dependent tables (with ID remapping)
+    const userMigration = await migrateAuthUsersAndUserDependentTables({
+      sourceAdmin,
+      destAdmin,
+    });
+
+    if (userMigration) {
+      // Attach detailed results for these tables
+      results["profiles"] = userMigration.tables.profiles;
+      results["user_roles"] = userMigration.tables.user_roles;
+      results["super_admins"] = userMigration.tables.super_admins;
+
+      // Add user-dependent table counts to total
+      totalMigrated +=
+        (userMigration.tables.profiles.count ?? 0) +
+        (userMigration.tables.user_roles.count ?? 0) +
+        (userMigration.tables.super_admins.count ?? 0);
+
+      // Expose auth user migration summary
+      results["__auth_users__"] = {
+        success: true,
+        count: (userMigration.users.created ?? 0) + (userMigration.users.existing ?? 0),
+        error: `criados=${userMigration.users.created}, existentes=${userMigration.users.existing}, sem_email=${userMigration.users.skipped_no_email}, falhas=${userMigration.users.failed}`,
+      };
     }
 
     console.log(`[migrate-from-source] Complete. Total: ${totalMigrated} rows`);
