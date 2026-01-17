@@ -18,6 +18,7 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { validateSourceCredentials } from "@/components/admin/source-migration/validateSourceCredentials";
 
 interface MigrationResult {
   success: boolean;
@@ -59,6 +60,18 @@ export function SourceMigrationPanel() {
     setMigrating(true);
     setResult(null);
     setErrorDetails(null);
+
+    const validation = validateSourceCredentials({
+      sourceUrl: sourceUrl.trim() || undefined,
+      sourceKey: sourceKey.trim() || undefined,
+    });
+
+    if (!validation.ok) {
+      const msg = "message" in validation ? validation.message : "Dados do projeto origem inválidos";
+      toast.error(msg);
+      setMigrating(false);
+      return;
+    }
 
     try {
       toast.loading("Iniciando migração do projeto origem...", { id: "migration" });
