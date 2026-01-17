@@ -99,15 +99,28 @@ export default function Auth() {
   }, []);
 
   useEffect(() => {
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const url = new URL(window.location.href);
+    const hashParams = new URLSearchParams(url.hash.substring(1));
 
-    // Check for errors in URL (expired/invalid link)
-    const error = hashParams.get("error");
-    const errorCode = hashParams.get("error_code");
+    // Erros podem vir no hash (ex.: recovery) OU na query (ex.: OAuth).
+    const error = hashParams.get("error") ?? url.searchParams.get("error");
+    const errorCode = hashParams.get("error_code") ?? url.searchParams.get("error_code");
+    const errorDescription =
+      hashParams.get("error_description") ?? url.searchParams.get("error_description");
+    const type = hashParams.get("type") ?? url.searchParams.get("type");
 
-    if (error === "access_denied") {
-      // Clear the hash from URL
-      window.history.replaceState(null, '', window.location.pathname);
+    if (!error) return;
+
+    const clearAuthErrorFromUrl = () => {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.hash = "";
+      ["error", "error_code", "error_description", "type"].forEach((k) => cleanUrl.searchParams.delete(k));
+      window.history.replaceState(null, "", `${cleanUrl.pathname}${cleanUrl.search}`);
+    };
+
+    // Só tratar como "link de recuperação" quando for explicitamente recovery.
+    if (error === "access_denied" && type === "recovery") {
+      clearAuthErrorFromUrl();
       isRecoveryFlowRef.current = false;
 
       if (errorCode === "otp_expired") {
@@ -129,6 +142,25 @@ export default function Auth() {
       }
       return;
     }
+
+    // Caso contrário, é erro de autenticação (ex.: Google OAuth) — não confundir com recovery.
+    clearAuthErrorFromUrl();
+    let description =
+      "Não foi possível autenticar. Verifique as configurações do provedor e tente novamente.";
+    if (errorDescription) {
+      try {
+        description = decodeURIComponent(errorDescription);
+      } catch {
+        description = errorDescription;
+      }
+    }
+
+    toast({
+      title: "Erro de autenticação",
+      description,
+      variant: "destructive",
+    });
+    setView("login");
   }, [toast]);
 
   useEffect(() => {
