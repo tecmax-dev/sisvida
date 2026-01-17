@@ -94,7 +94,25 @@ export function ApiMigrationPanel() {
       if (summaryError) throw new Error(summaryError.message);
       if (!summaryData?.success) throw new Error(summaryData?.error || "Erro ao obter resumo");
 
-      const tables = summaryData.summary?.tables || [];
+      console.log("[ApiMigration] Summary response:", summaryData.summary);
+
+      // Handle different response formats - could be array or object with tables property
+      let tables: { table: string; count: number }[] = [];
+      const summary = summaryData.summary;
+      
+      if (Array.isArray(summary)) {
+        tables = summary;
+      } else if (summary?.tables && Array.isArray(summary.tables)) {
+        tables = summary.tables;
+      } else if (summary && typeof summary === "object") {
+        // If it's an object with table names as keys, convert to array
+        tables = Object.entries(summary)
+          .filter(([key]) => key !== "total" && key !== "timestamp")
+          .map(([table, data]: [string, any]) => ({
+            table,
+            count: typeof data === "number" ? data : data?.count || 0,
+          }));
+      }
       setState((s) => ({ ...s, summary: tables, progress: 10 }));
 
       // Phase 2: Import users
