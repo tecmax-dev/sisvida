@@ -8507,12 +8507,53 @@ export type Database = {
           },
         ]
       }
+      sindical_associado_dependentes: {
+        Row: {
+          associado_id: string
+          cpf: string | null
+          created_at: string
+          data_nascimento: string
+          grau_parentesco: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          associado_id: string
+          cpf?: string | null
+          created_at?: string
+          data_nascimento: string
+          grau_parentesco: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          associado_id?: string
+          cpf?: string | null
+          created_at?: string
+          data_nascimento?: string
+          grau_parentesco?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sindical_associado_dependentes_associado_id_fkey"
+            columns: ["associado_id"]
+            isOneToOne: false
+            referencedRelation: "sindical_associados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sindical_associados: {
         Row: {
           aceite_lgpd: boolean
           aceite_lgpd_at: string | null
           aprovado_at: string | null
           aprovado_por: string | null
+          assinatura_aceite_at: string | null
+          assinatura_aceite_desconto: boolean | null
+          assinatura_digital_url: string | null
           bairro: string | null
           cargo: string | null
           categoria_id: string | null
@@ -8521,17 +8562,24 @@ export type Database = {
           complemento: string | null
           cpf: string
           created_at: string
+          data_admissao: string | null
           data_nascimento: string
           documento_comprovante_url: string | null
           documento_foto_url: string | null
           documento_rg_url: string | null
           documento_rg_verso_url: string | null
           email: string
+          employer_id: string | null
           empresa: string | null
+          empresa_cnpj: string | null
+          empresa_endereco: string | null
+          empresa_nome_fantasia: string | null
+          empresa_razao_social: string | null
           estado_civil: string | null
           forma_pagamento: string | null
           id: string
           logradouro: string | null
+          matricula: string | null
           motivo_rejeicao: string | null
           nome: string
           nome_mae: string | null
@@ -8555,6 +8603,9 @@ export type Database = {
           aceite_lgpd_at?: string | null
           aprovado_at?: string | null
           aprovado_por?: string | null
+          assinatura_aceite_at?: string | null
+          assinatura_aceite_desconto?: boolean | null
+          assinatura_digital_url?: string | null
           bairro?: string | null
           cargo?: string | null
           categoria_id?: string | null
@@ -8563,17 +8614,24 @@ export type Database = {
           complemento?: string | null
           cpf: string
           created_at?: string
+          data_admissao?: string | null
           data_nascimento: string
           documento_comprovante_url?: string | null
           documento_foto_url?: string | null
           documento_rg_url?: string | null
           documento_rg_verso_url?: string | null
           email: string
+          employer_id?: string | null
           empresa?: string | null
+          empresa_cnpj?: string | null
+          empresa_endereco?: string | null
+          empresa_nome_fantasia?: string | null
+          empresa_razao_social?: string | null
           estado_civil?: string | null
           forma_pagamento?: string | null
           id?: string
           logradouro?: string | null
+          matricula?: string | null
           motivo_rejeicao?: string | null
           nome: string
           nome_mae?: string | null
@@ -8597,6 +8655,9 @@ export type Database = {
           aceite_lgpd_at?: string | null
           aprovado_at?: string | null
           aprovado_por?: string | null
+          assinatura_aceite_at?: string | null
+          assinatura_aceite_desconto?: boolean | null
+          assinatura_digital_url?: string | null
           bairro?: string | null
           cargo?: string | null
           categoria_id?: string | null
@@ -8605,17 +8666,24 @@ export type Database = {
           complemento?: string | null
           cpf?: string
           created_at?: string
+          data_admissao?: string | null
           data_nascimento?: string
           documento_comprovante_url?: string | null
           documento_foto_url?: string | null
           documento_rg_url?: string | null
           documento_rg_verso_url?: string | null
           email?: string
+          employer_id?: string | null
           empresa?: string | null
+          empresa_cnpj?: string | null
+          empresa_endereco?: string | null
+          empresa_nome_fantasia?: string | null
+          empresa_razao_social?: string | null
           estado_civil?: string | null
           forma_pagamento?: string | null
           id?: string
           logradouro?: string | null
+          matricula?: string | null
           motivo_rejeicao?: string | null
           nome?: string
           nome_mae?: string | null
@@ -8640,6 +8708,13 @@ export type Database = {
             columns: ["categoria_id"]
             isOneToOne: false
             referencedRelation: "sindical_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sindical_associados_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
             referencedColumns: ["id"]
           },
           {
@@ -8688,6 +8763,50 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sindical_categorias_sindicato_id_fkey"
+            columns: ["sindicato_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sindical_payment_methods: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          order_index: number | null
+          sindicato_id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          order_index?: number | null
+          sindicato_id: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          order_index?: number | null
+          sindicato_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sindical_payment_methods_sindicato_id_fkey"
             columns: ["sindicato_id"]
             isOneToOne: false
             referencedRelation: "union_entities"
