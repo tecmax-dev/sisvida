@@ -26,7 +26,7 @@ const COLORS = {
 interface Member {
   id: string;
   name: string;
-  cpf: string;
+  cpf?: string | null;
   email?: string | null;
   phone?: string | null;
   registration_number?: string | null;
@@ -39,7 +39,7 @@ interface ContributionType {
 
 interface PFContribution {
   id: string;
-  member_id: string;
+  member_id?: string | null;
   contribution_type_id: string;
   competence_month: number;
   competence_year: number;
@@ -90,9 +90,10 @@ const formatCurrency = (cents: number): string => {
   }).format(cents / 100);
 };
 
-const formatCPF = (cpf: string): string => {
+const formatCPF = (cpf: string | null | undefined): string => {
   if (!cpf) return "-";
   const cleaned = cpf.replace(/\D/g, "");
+  if (cleaned.length !== 11) return cpf;
   return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
 };
 

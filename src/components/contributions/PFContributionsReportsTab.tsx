@@ -70,7 +70,7 @@ import { formatCompetence } from "@/lib/competence-format";
 interface Member {
   id: string;
   name: string;
-  cpf: string;
+  cpf?: string | null;
   email?: string | null;
   phone?: string | null;
   registration_number?: string | null;
@@ -83,7 +83,7 @@ interface ContributionType {
 
 interface PFContribution {
   id: string;
-  member_id: string;
+  member_id?: string | null;
   contribution_type_id: string;
   competence_month: number;
   competence_year: number;
@@ -141,9 +141,10 @@ export default function PFContributionsReportsTab({
     }).format(cents / 100);
   };
 
-  const formatCPF = (cpf: string) => {
+  const formatCPF = (cpf: string | null | undefined) => {
     if (!cpf) return "-";
     const cleaned = cpf.replace(/\D/g, "");
+    if (cleaned.length !== 11) return cpf;
     return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
   };
 
@@ -151,7 +152,7 @@ export default function PFContributionsReportsTab({
   const members = useMemo(() => {
     const memberMap = new Map<string, Member>();
     contributions.forEach(c => {
-      if (c.patients && !memberMap.has(c.member_id)) {
+      if (c.patients && c.member_id && !memberMap.has(c.member_id)) {
         memberMap.set(c.member_id, c.patients);
       }
     });
@@ -165,7 +166,7 @@ export default function PFContributionsReportsTab({
     const searchClean = memberSearchTerm.replace(/\D/g, "");
     return members.filter(m => 
       m.name.toLowerCase().includes(searchLower) ||
-      m.cpf.includes(searchClean)
+      (m.cpf && m.cpf.includes(searchClean))
     );
   }, [members, memberSearchTerm]);
 
@@ -207,7 +208,7 @@ export default function PFContributionsReportsTab({
     }>();
 
     filteredContributions.forEach((c) => {
-      if (!c.patients) return;
+      if (!c.patients || !c.member_id) return;
       
       const existing = data.get(c.member_id) || {
         member: c.patients,
