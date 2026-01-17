@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { extractFunctionsError } from "@/lib/functionsError";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,6 +45,7 @@ export function ApiMigrationPanel() {
   const [syncKey, setSyncKey] = useState("");
   const [showKey, setShowKey] = useState(false);
   const [migrating, setMigrating] = useState(false);
+  const [debugDetails, setDebugDetails] = useState<string>("");
   const [state, setState] = useState<MigrationState>({
     phase: "idle",
     summary: null,
@@ -57,6 +59,7 @@ export function ApiMigrationPanel() {
   });
 
   const resetState = () => {
+    setDebugDetails("");
     setState({
       phase: "idle",
       summary: null,
@@ -68,6 +71,20 @@ export function ApiMigrationPanel() {
       progress: 0,
       errors: [],
     });
+  };
+
+  const formatInvokeError = (err: unknown): string => {
+    const ex = extractFunctionsError(err);
+    const prefix = ex.status ? `HTTP ${ex.status}: ` : "";
+    return `${prefix}${ex.message}`;
+  };
+
+  const captureDebug = (payload: unknown) => {
+    try {
+      setDebugDetails(JSON.stringify(payload, null, 2).slice(0, 8000));
+    } catch {
+      setDebugDetails(String(payload));
+    }
   };
 
   const handleMigration = async () => {
@@ -91,8 +108,14 @@ export function ApiMigrationPanel() {
         }
       );
 
-      if (summaryError) throw new Error(summaryError.message);
-      if (!summaryData?.success) throw new Error(summaryData?.error || "Erro ao obter resumo");
+      if (summaryError) {
+        captureDebug({ phase: "summary", error: extractFunctionsError(summaryError) });
+        throw new Error(formatInvokeError(summaryError));
+      }
+      if (!summaryData?.success) {
+        captureDebug({ phase: "summary", response: summaryData });
+        throw new Error(summaryData?.error || "Erro ao obter resumo");
+      }
 
       console.log("[ApiMigration] Summary response:", summaryData.summary);
 
@@ -197,15 +220,14 @@ export function ApiMigrationPanel() {
       
       if (tables.length === 0) {
         console.error("[ApiMigration] No valid tables found! Raw summary was:", JSON.stringify(summary));
-        // Show the raw summary in the error to help debug
         const rawSummaryPreview = JSON.stringify(summary).substring(0, 500);
+        const msg = `Nenhuma tabela válida encontrada. Formato recebido: ${rawSummaryPreview}...`;
+        captureDebug({ phase: "summary", summary });
         setState((s) => ({
           ...s,
-          errors: [
-            ...s.errors, 
-            `Nenhuma tabela válida encontrada. Formato recebido: ${rawSummaryPreview}...`
-          ],
+          errors: [...s.errors, msg],
         }));
+        throw new Error(msg);
       }
       
       setState((s) => ({ ...s, summary: tables, progress: 10 }));
@@ -221,8 +243,14 @@ export function ApiMigrationPanel() {
         }
       );
 
-      if (usersError) throw new Error(usersError.message);
-
+      if (usersError) {
+        captureDebug({ phase: "users", error: extractFunctionsError(usersError) });
+        throw new Error(formatInvokeError(usersError));
+      }
+      if (usersData && usersData.success === false) {
+        captureDebug({ phase: "users", response: usersData });
+        throw new Error(usersData?.error || "Erro ao importar usuários");
+      }
       const userMapping = usersData?.userMapping || {};
       const usersCreated = usersData?.usersCreated || 0;
       const usersSkipped = usersData?.usersSkipped || 0;
@@ -287,13 +315,26 @@ export function ApiMigrationPanel() {
           );
 
           if (tableError) {
+            const msg = formatInvokeError(tableError);
+            captureDebug({ phase: "table", table: table.table, error: extractFunctionsError(tableError) });
             setState((s) => ({
               ...s,
               tables: {
                 ...s.tables,
-                [table.table]: { success: false, count: 0, error: tableError.message },
+                [table.table]: { success: false, count: 0, error: msg },
               },
-              errors: [...s.errors, `${table.table}: ${tableError.message}`],
+              errors: [...s.errors, `${table.table}: ${msg}`],
+            }));
+          } else if (tableData && tableData.success === false) {
+            const msg = tableData?.error || "Erro ao importar tabela";
+            captureDebug({ phase: "table", table: table.table, response: tableData });
+            setState((s) => ({
+              ...s,
+              tables: {
+                ...s.tables,
+                [table.table]: { success: false, count: 0, error: msg },
+              },
+              errors: [...s.errors, `${table.table}: ${msg}`],
             }));
           } else {
             const result = tableData?.tables?.[table.table] || { success: true, count: 0 };
@@ -497,6 +538,18 @@ export function ApiMigrationPanel() {
               <pre className="text-xs text-destructive whitespace-pre-wrap">
                 {state.errors.join("\n")}
               </pre>
+            </ScrollArea>
+          </div>
+        )}
+
+        {debugDetails && (
+          <div className="space-y-2">
+            <Badge variant="outline" className="bg-muted">
+              <Database className="mr-1 h-3 w-3" />
+              Detalhes técnicos
+            </Badge>
+            <ScrollArea className="h-[180px] rounded-md border bg-background p-3">
+              <pre className="text-xs whitespace-pre-wrap">{debugDetails}</pre>
             </ScrollArea>
           </div>
         )}
