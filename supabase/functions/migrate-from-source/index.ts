@@ -359,7 +359,10 @@ async function migrateAuthUsersAndUserDependentTables(params: {
           continue;
         }
 
-        const next = { ...row, user_id: newUserId };
+        // Remove original ID to let destination DB generate a new one
+        // This avoids PK conflicts when the same ID exists in dest with different data
+        const { id: _originalId, ...rowWithoutId } = row;
+        const next = { ...rowWithoutId, user_id: newUserId };
 
         // If profiles has email, ensure it's consistent with auth email when available.
         if (tableName === "profiles") {
