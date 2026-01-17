@@ -678,9 +678,25 @@ export function UnionCreateMemberDialog({
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Função/Cargo</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Ex: Vendedor" className="h-9" />
-                          </FormControl>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Selecione a função" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="vendedor">Vendedor(a)</SelectItem>
+                              <SelectItem value="caixa">Operador(a) de Caixa</SelectItem>
+                              <SelectItem value="repositor">Repositor(a)</SelectItem>
+                              <SelectItem value="balconista">Balconista</SelectItem>
+                              <SelectItem value="gerente">Gerente</SelectItem>
+                              <SelectItem value="supervisor">Supervisor(a)</SelectItem>
+                              <SelectItem value="estoquista">Estoquista</SelectItem>
+                              <SelectItem value="atendente">Atendente</SelectItem>
+                              <SelectItem value="fiscal">Fiscal de Loja</SelectItem>
+                              <SelectItem value="outro">Outro</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
