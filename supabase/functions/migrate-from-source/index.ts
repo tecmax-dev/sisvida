@@ -230,6 +230,8 @@ serve(async (req) => {
     const sourceAdmin = createClient(sourceUrl, sourceServiceKey);
 
     // Validate source key early with diagnostics
+    // NOTE: Some source projects might not have the same schema yet.
+    // We only fail early for an invalid API key; missing tables should be handled per-table.
     const sourceRefFromUrl = getProjectRefFromUrl(sourceUrl);
     const sourceClaims = decodeJwtClaims(sourceServiceKey);
     const sourceRefFromKey = typeof sourceClaims?.ref === "string" ? (sourceClaims.ref as string) : null;
@@ -241,29 +243,42 @@ serve(async (req) => {
       .limit(1);
 
     if (sourcePingError) {
-      console.error("[migrate-from-source] Source auth failed", {
+      const msg = (sourcePingError.message ?? "").toLowerCase();
+
+      // Invalid key: stop immediately with clear diagnostics
+      if (msg.includes("invalid api key")) {
+        console.error("[migrate-from-source] Source invalid api key (ping)", {
+          message: sourcePingError.message,
+          sourceRefFromUrl,
+          sourceRefFromKey,
+          sourceRoleFromKey,
+        });
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: `Chave inválida no projeto de origem: ${sourcePingError.message}`,
+            diagnostics: {
+              source_ref_from_url: sourceRefFromUrl,
+              source_ref_from_key: sourceRefFromKey,
+              source_role_from_key: sourceRoleFromKey,
+              hint:
+                sourceRefFromUrl && sourceRefFromKey && sourceRefFromUrl !== sourceRefFromKey
+                  ? "A chave colada parece ser de OUTRO projeto (ref diferente do URL). Copie a service_role do mesmo projeto do URL."
+                  : "Confirme que você colou a chave 'service_role' do projeto de origem (não anon/publishable).",
+            },
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Schema mismatch or table missing: continue and let the per-table loop record what couldn't be migrated.
+      console.warn("[migrate-from-source] Source ping warning; continuing", {
         message: sourcePingError.message,
         sourceRefFromUrl,
         sourceRefFromKey,
         sourceRoleFromKey,
       });
-
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: `Falha ao autenticar no projeto de origem: ${sourcePingError.message}`,
-          diagnostics: {
-            source_ref_from_url: sourceRefFromUrl,
-            source_ref_from_key: sourceRefFromKey,
-            source_role_from_key: sourceRoleFromKey,
-            hint:
-              sourceRefFromUrl && sourceRefFromKey && sourceRefFromUrl !== sourceRefFromKey
-                ? "A chave colada parece ser de OUTRO projeto (ref diferente do URL). Copie a service_role do mesmo projeto do URL."
-                : "Confirme que você colou a chave 'service_role' (não anon/publishable) do projeto de origem.",
-          },
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
     const results: Record<string, { success: boolean; count: number; error?: string }> = {};
