@@ -608,6 +608,29 @@ serve(async (req) => {
     const sourceRefFromKey = typeof sourceClaims?.ref === "string" ? (sourceClaims.ref as string) : null;
     const sourceRoleFromKey = typeof sourceClaims?.role === "string" ? (sourceClaims.role as string) : null;
 
+    // Fast-fail: URL ref and key ref mismatch (most common copy/paste mistake)
+    if (sourceRefFromUrl && sourceRefFromKey && sourceRefFromUrl !== sourceRefFromKey) {
+      console.error("[migrate-from-source] Source ref mismatch", {
+        sourceRefFromUrl,
+        sourceRefFromKey,
+        sourceRoleFromKey,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error:
+            `A service_role colada é de OUTRO projeto (ref '${sourceRefFromKey}'), mas a URL é do projeto '${sourceRefFromUrl}'. Cole a service_role correta do mesmo projeto do URL.`,
+          diagnostics: {
+            source_ref_from_url: sourceRefFromUrl,
+            source_ref_from_key: sourceRefFromKey,
+            source_role_from_key: sourceRoleFromKey,
+          },
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { error: sourcePingError } = await sourceAdmin
       .from("subscription_plans")
       .select("id")
