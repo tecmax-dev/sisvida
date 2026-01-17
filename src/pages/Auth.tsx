@@ -103,13 +103,33 @@ export default function Auth() {
     const hashParams = new URLSearchParams(url.hash.substring(1));
 
     // Erros podem vir no hash (ex.: recovery) OU na query (ex.: OAuth).
-    const error = hashParams.get("error") ?? url.searchParams.get("error");
+    const errorInHash = hashParams.get("error");
+    const errorInQuery = url.searchParams.get("error");
+    const error = errorInHash ?? errorInQuery;
+
     const errorCode = hashParams.get("error_code") ?? url.searchParams.get("error_code");
     const errorDescription =
       hashParams.get("error_description") ?? url.searchParams.get("error_description");
-    const type = hashParams.get("type") ?? url.searchParams.get("type");
+    const typeInHash = hashParams.get("type");
+    const typeInQuery = url.searchParams.get("type");
+    const type = typeInHash ?? typeInQuery;
 
     if (!error) return;
+
+    // Debug seguro: não logar tokens.
+    const hashForLog = url.hash.includes("access_token") ? "#[redacted]" : url.hash;
+    console.info("[Auth] Callback error detected", {
+      hostname: window.location.hostname,
+      path: window.location.pathname,
+      error,
+      errorCode,
+      errorDescription,
+      type,
+      errorSource: errorInHash ? "hash" : "query",
+      typeSource: typeInHash ? "hash" : typeInQuery ? "query" : null,
+      search: url.search,
+      hash: hashForLog,
+    });
 
     const clearAuthErrorFromUrl = () => {
       const cleanUrl = new URL(window.location.href);
