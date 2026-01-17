@@ -55,11 +55,13 @@ function extractTableNames(payload: any): string[] {
   // - { data: [...] }
   // - { data: { tables: [...] } }
   const candidates = [
-    payload,
+    // Prefer explicit table lists first
     payload?.tables,
-    payload?.data,
     payload?.data?.tables,
+    payload?.data,
     payload?.summary,
+    // Fallback to the full payload last
+    payload,
   ].filter(Boolean);
 
   for (const c of candidates) {
@@ -79,12 +81,15 @@ function extractTableNames(payload: any): string[] {
       }
     }
 
-    // Some APIs return a dictionary of table->count
+    // Some APIs return a dictionary of table->count (avoid metadata objects like { success, tables, total })
     if (c && typeof c === "object" && !Array.isArray(c)) {
       const keys = Object.keys(c).filter((k) => typeof k === "string" && k.trim().length > 0);
-      // Heuristic: if values look numeric, treat keys as table names
+      const lowerKeys = keys.map((k) => k.toLowerCase());
+      const metaKeys = new Set(["success", "total", "tables", "message", "error", "timestamp", "count"]);
+      if (lowerKeys.some((k) => metaKeys.has(k))) continue;
+
       const numericLike = keys.filter((k) => typeof (c as any)[k] === "number");
-      if (numericLike.length > 0) return keys;
+      if (numericLike.length > 0 && numericLike.length / keys.length >= 0.8) return keys;
     }
   }
 
