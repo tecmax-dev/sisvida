@@ -400,7 +400,7 @@ async function migrateAuthUsersAndUserDependentTables(params: {
   // 3) Now migrate dependent tables with ID remapping
   await migrateTableWithUserIdRemap({ tableName: "profiles", onConflict: "user_id" });
   await migrateTableWithUserIdRemap({ tableName: "super_admins", onConflict: "user_id" });
-  await migrateTableWithUserIdRemap({ tableName: "user_roles", onConflict: "user_id,clinic_id,role" });
+  await migrateTableWithUserIdRemap({ tableName: "user_roles", onConflict: "user_id,clinic_id" });
 
   return summary;
 }
