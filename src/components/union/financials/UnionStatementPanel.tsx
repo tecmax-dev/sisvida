@@ -150,14 +150,21 @@ export function UnionStatementPanel() {
     enabled: !!clinicId && !!cashRegisterId,
   });
 
-  // Calculate initial balance (saldo anterior)
+  // Calculate initial balance (saldo anterior) - fetch register data directly to avoid cache issues
   const { data: previousBalance } = useQuery({
-    queryKey: ["union-statement-previous-balance", clinicId, cashRegisterId, startDate, selectedRegister?.id],
+    queryKey: ["union-statement-previous-balance", clinicId, cashRegisterId, startDate],
     queryFn: async () => {
-      // Base balance comes from the register initial balance, but only if startDate is AFTER the initial balance date.
-      // This prevents double-counting historical transactions that happened before the initial balance snapshot.
-      const initialBalanceDate = (selectedRegister as any)?.initial_balance_date as string | null | undefined;
-      const initialBalanceValue = Number((selectedRegister as any)?.initial_balance) || 0;
+      // Fetch register data directly to get initial_balance and initial_balance_date
+      const { data: registerData, error: regError } = await supabase
+        .from("union_cash_registers")
+        .select("initial_balance, initial_balance_date")
+        .eq("id", cashRegisterId)
+        .single();
+
+      if (regError) throw regError;
+
+      const initialBalanceDate = registerData?.initial_balance_date as string | null;
+      const initialBalanceValue = Number(registerData?.initial_balance) || 0;
 
       const startDateOnly = format(startDate, "yyyy-MM-dd");
 
@@ -167,8 +174,9 @@ export function UnionStatementPanel() {
       if (initialBalanceDate) {
         const initDateLocalNoon = parseDateOnlyToLocalNoon(initialBalanceDate);
         if (startDate.getTime() > initDateLocalNoon.getTime()) {
+          // Start date is after initial balance date - use initial balance as base
           base = initialBalanceValue;
-          // Only sum transactions strictly AFTER the initial balance date to avoid double count.
+          // Only sum transactions strictly AFTER the initial balance date
           lowerBoundDate = initialBalanceDate;
         }
       }
@@ -192,8 +200,8 @@ export function UnionStatementPanel() {
       // Sum (income - expense)
       let delta = 0;
       data?.forEach((t) => {
-        const amount = Number((t as any).amount) || 0;
-        if ((t as any).type === "income") {
+        const amount = Number(t.amount) || 0;
+        if (t.type === "income") {
           delta += amount;
         } else {
           delta -= amount;
