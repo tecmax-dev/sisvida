@@ -116,7 +116,8 @@ const unionNavTree: NavCategory[] = [
     color: "socios",
     items: [
       { href: "/union/socios", icon: Users, label: "Gestão de Sócios", permission: "union_view_members" },
-      { href: "/union/associados", icon: UserPlus, label: "Filiações", permission: "union_view_members" },
+      { href: "/union/associados", icon: UserPlus, label: "Filiações Públicas", permission: "union_view_members" },
+      { href: "/union/filiacoes", icon: ClipboardList, label: "Aprovação de Filiações", permission: "union_view_members" },
     ]
   },
   {

@@ -151,6 +151,7 @@ import UnionChartOfAccountsPage from "./pages/union/UnionChartOfAccountsPage";
 import UnionAssociadosPage from "./pages/union/UnionAssociadosPage";
 import UnionPaymentHistoryPage from "./pages/union/UnionPaymentHistoryPage";
 import UnionAppContentPage from "./pages/union/UnionAppContentPage";
+import UnionFiliacoesPage from "./pages/union/UnionFiliacoesPage";
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -488,6 +489,7 @@ const App = () => (
                   <Route path="negociacoes/parcelamentos" element={<UnionNegotiationsPage />} />
                   <Route path="negociacoes/historico" element={<UnionNegotiationsPage />} />
                   <Route path="associados" element={<UnionAssociadosPage />} />
+                  <Route path="filiacoes" element={<UnionFiliacoesPage />} />
                   {/* Homologação module routes - movido do dashboard */}
                   <Route path="homologacao" element={<HomologacaoAgendaPage />} />
                   <Route path="homologacao/profissionais" element={<HomologacaoProfissionaisPage />} />
