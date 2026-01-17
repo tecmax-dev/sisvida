@@ -20,7 +20,15 @@ interface MigrationResult {
   message?: string;
   error?: string;
   diagnostics?: unknown;
-  tables?: Record<string, { success: boolean; count: number; error?: string }>;
+  tables?: Record<
+    string,
+    {
+      success: boolean;
+      count: number;
+      error?: string;
+      skipped?: boolean;
+    }
+  >;
   migrated_by?: string;
   migrated_at?: string;
 }
@@ -99,6 +107,12 @@ export function SourceMigrationPanel() {
   const tables = result?.tables ?? {};
   const successCount = Object.values(tables).filter((t) => t.success && t.count > 0).length;
   const errorCount = Object.values(tables).filter((t) => !t.success).length;
+  const skippedCount = Object.values(tables).filter(
+    (t) =>
+      t.success &&
+      t.count === 0 &&
+      (((t as any)?.skipped as boolean | undefined) || (t.error ?? "").startsWith("Pulado:"))
+  ).length;
   const totalRecords = Object.values(tables).reduce((sum, t) => sum + (t.count || 0), 0);
 
   return (
@@ -167,6 +181,13 @@ export function SourceMigrationPanel() {
                 {successCount} tabelas migradas
               </Badge>
 
+              {skippedCount > 0 && (
+                <Badge variant="outline" className="bg-muted">
+                  <AlertTriangle className="mr-1 h-3 w-3" />
+                  {skippedCount} puladas
+                </Badge>
+              )}
+
               {errorCount > 0 && (
                 <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
                   <XCircle className="mr-1 h-3 w-3" />
@@ -181,37 +202,47 @@ export function SourceMigrationPanel() {
 
             <ScrollArea className="h-[300px] rounded-md border bg-background p-4">
               <div className="space-y-2">
-                {Object.entries(result.tables).map(([table, info]) => (
-                  <div
-                    key={table}
-                    className="flex items-center justify-between py-1 border-b last:border-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      {info.success ? (
-                        info.count > 0 ? (
+                {Object.entries(result.tables).map(([table, info]) => {
+                  const isSkipped =
+                    ((info as any)?.skipped as boolean | undefined) || (info.error ?? "").startsWith("Pulado:");
+
+                  return (
+                    <div
+                      key={table}
+                      className="flex items-center justify-between py-1 border-b last:border-0"
+                    >
+                      <div className="flex items-center gap-2">
+                        {!info.success ? (
+                          <XCircle className="h-4 w-4 text-destructive" />
+                        ) : isSkipped ? (
+                          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                        ) : info.count > 0 ? (
                           <CheckCircle2 className="h-4 w-4 text-success" />
                         ) : (
                           <AlertTriangle className="h-4 w-4 text-muted-foreground" />
-                        )
-                      ) : (
-                        <XCircle className="h-4 w-4 text-destructive" />
-                      )}
-                      <span className="font-mono text-sm">{table}</span>
+                        )}
+                        <span className="font-mono text-sm">{table}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {info.count > 0 && (
+                          <Badge variant="secondary" className="text-xs">
+                            {info.count} rows
+                          </Badge>
+                        )}
+                        {info.error && (
+                          <span
+                            className={`text-xs max-w-[240px] truncate ${
+                              isSkipped ? "text-muted-foreground" : "text-destructive"
+                            }`}
+                            title={info.error}
+                          >
+                            {info.error}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {info.count > 0 && (
-                        <Badge variant="secondary" className="text-xs">
-                          {info.count} rows
-                        </Badge>
-                      )}
-                      {info.error && (
-                        <span className="text-xs text-destructive max-w-[240px] truncate" title={info.error}>
-                          {info.error}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
 
