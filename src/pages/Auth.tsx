@@ -933,14 +933,28 @@ export default function Auth() {
                       onErrored={() => {
                         setRecaptchaToken(null);
                         const hostname = window.location.hostname;
+                        const isPreviewHost =
+                          hostname.startsWith("id-preview--") || hostname.endsWith(".lovableproject.com");
+
                         toast({
                           title: "Erro no reCAPTCHA",
-                          description: `Domínio atual: ${hostname}. Verifique se este domínio está autorizado na chave do site.`,
+                          description: isPreviewHost
+                            ? `Este domínio de preview (${hostname}) não pode ser cadastrado no Google reCAPTCHA (limitação do formato do hostname). Teste na versão publicada ou em um domínio curto personalizado.`
+                            : `Domínio atual: ${hostname}. Verifique se este domínio está autorizado na chave do site.`,
                           variant: "destructive",
                         });
                       }}
                       hl="pt-BR"
                     />
+
+                    {(window.location.hostname.startsWith("id-preview--") ||
+                      window.location.hostname.endsWith(".lovableproject.com")) && (
+                      <p className="mt-2 text-xs text-muted-foreground text-center max-w-[28rem]">
+                        Observação: o Google reCAPTCHA pode falhar no <span className="font-medium">preview</span>
+                        por causa do formato do domínio. Se acontecer, teste na versão publicada ou conecte um domínio
+                        personalizado curto.
+                      </p>
+                    )}
 
                     {new URLSearchParams(window.location.search).has("debug") && (
                       <p className="mt-2 text-xs text-muted-foreground">
