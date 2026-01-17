@@ -1,5 +1,4 @@
-import { createClient } from "npm:@supabase/supabase-js@2";
-import { createHmac } from "https://deno.land/std@0.177.0/node/crypto.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -82,10 +81,17 @@ function mapToContributionStatus(payload: LytexWebhookPayload): "paid" | "proces
   return "pending";
 }
 
-function verifySignature(data: object, signature: string, secret: string): boolean {
-  const expectedSignature = createHmac("sha256", secret)
-    .update(JSON.stringify(data))
-    .digest("base64");
+async function verifySignature(data: object, signature: string, secret: string): Promise<boolean> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const signatureBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(JSON.stringify(data)));
+  const expectedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
   return expectedSignature === signature;
 }
 
