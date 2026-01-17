@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -19,6 +18,8 @@ import {
   Play,
   Eye,
   Trash2,
+  Users,
+  ArrowRight,
 } from "lucide-react";
 
 interface ImportDetail {
@@ -34,6 +35,9 @@ interface ImportResult {
   errors: string[];
   skipped: number;
   details: ImportDetail[];
+  userMapping?: Record<string, string>;
+  usersCreated?: number;
+  usersSkipped?: number;
 }
 
 export function SqlImportPanel() {
@@ -41,8 +45,14 @@ export function SqlImportPanel() {
   const [fileName, setFileName] = useState<string>("");
   const [importing, setImporting] = useState(false);
   const [dryRun, setDryRun] = useState(true);
+  const [skipAuthTables, setSkipAuthTables] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
-  const [preview, setPreview] = useState<{tables: Record<string, number>, totalStatements: number} | null>(null);
+  const [preview, setPreview] = useState<{
+    tables: Record<string, number>;
+    totalStatements: number;
+    hasAuthUsers: boolean;
+    authUsersCount: number;
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,15 +73,23 @@ export function SqlImportPanel() {
       // Preview analysis
       const tables: Record<string, number> = {};
       let totalStatements = 0;
+      let authUsersCount = 0;
       
       const lines = content.split("\n");
       for (const line of lines) {
         const trimmed = line.trim().toUpperCase();
         if (trimmed.startsWith("INSERT INTO")) {
           totalStatements++;
-          const match = line.match(/INSERT\s+INTO\s+(?:public\.)?["']?(\w+)["']?/i);
-          if (match) {
-            tables[match[1]] = (tables[match[1]] || 0) + 1;
+          
+          // Check for auth.users
+          if (/INSERT\s+INTO\s+auth\.users/i.test(line)) {
+            authUsersCount++;
+            tables["auth.users"] = (tables["auth.users"] || 0) + 1;
+          } else {
+            const match = line.match(/INSERT\s+INTO\s+(?:public\.)?["']?(\w+)["']?/i);
+            if (match) {
+              tables[match[1]] = (tables[match[1]] || 0) + 1;
+            }
           }
         } else if (trimmed.startsWith("UPDATE ")) {
           totalStatements++;
@@ -88,14 +106,23 @@ export function SqlImportPanel() {
         }
       }
       
-      setPreview({ tables, totalStatements });
-      toast.success(`Arquivo carregado: ${totalStatements} comandos detectados`);
+      setPreview({ 
+        tables, 
+        totalStatements, 
+        hasAuthUsers: authUsersCount > 0,
+        authUsersCount 
+      });
+      
+      if (authUsersCount > 0) {
+        toast.success(`Arquivo carregado: ${totalStatements} comandos, ${authUsersCount} usuários auth detectados`);
+      } else {
+        toast.success(`Arquivo carregado: ${totalStatements} comandos detectados`);
+      }
     } catch (error) {
       toast.error("Erro ao ler arquivo");
       console.error(error);
     }
 
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -114,18 +141,22 @@ export function SqlImportPanel() {
       toast.loading(dryRun ? "Analisando SQL (dry run)..." : "Executando importação...", { id: "sql-import" });
 
       const { data, error } = await supabase.functions.invoke("import-sql-backup", {
-        body: { sql: sqlContent, dryRun },
+        body: { sql: sqlContent, dryRun, skipAuthTables },
       });
 
       if (error) throw error;
 
       setResult(data);
 
+      const usersInfo = data.usersCreated || data.usersSkipped 
+        ? ` | ${data.usersCreated || 0} usuários criados, ${data.usersSkipped || 0} já existiam`
+        : "";
+
       if (data.success) {
         toast.success(
           dryRun 
-            ? `Análise concluída: ${data.executed} comandos seriam executados`
-            : `Importação concluída: ${data.executed} comandos executados`,
+            ? `Análise concluída: ${data.executed} comandos seriam executados${usersInfo}`
+            : `Importação concluída: ${data.executed} comandos executados${usersInfo}`,
           { id: "sql-import" }
         );
       } else {
@@ -159,10 +190,10 @@ export function SqlImportPanel() {
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
           <Database className="h-5 w-5" />
-          Importar Backup SQL
+          Importar Backup SQL Completo
         </CardTitle>
         <CardDescription>
-          Importe dados de um arquivo SQL (backup gerado pelo sistema ou pg_dump)
+          Importe dados de um arquivo SQL incluindo usuários do auth schema. Os IDs de usuários serão remapeados automaticamente.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -211,21 +242,38 @@ export function SqlImportPanel() {
                 <Eye className="h-4 w-4 text-muted-foreground" />
                 <span className="font-medium text-sm">Preview</span>
                 <Badge variant="outline">{preview.totalStatements} comandos</Badge>
+                {preview.hasAuthUsers && (
+                  <Badge variant="default" className="gap-1 bg-blue-600">
+                    <Users className="h-3 w-3" />
+                    {preview.authUsersCount} usuários auth
+                  </Badge>
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(preview.tables).map(([table, count]) => (
-                  <Badge key={table} variant="secondary" className="text-xs">
+                  <Badge 
+                    key={table} 
+                    variant={table === "auth.users" ? "default" : "secondary"} 
+                    className={`text-xs ${table === "auth.users" ? "bg-blue-600" : ""}`}
+                  >
                     {table}: {count}
                   </Badge>
                 ))}
               </div>
+              
+              {preview.hasAuthUsers && (
+                <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950/30 rounded text-xs text-blue-700 dark:text-blue-300">
+                  <strong>Usuários detectados:</strong> Os usuários do auth.users serão criados via Admin API 
+                  e os IDs serão remapeados em profiles, user_roles, super_admins, etc.
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
 
         {/* Options */}
         {sqlContent && (
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <Switch
                 id="dry-run"
@@ -235,6 +283,18 @@ export function SqlImportPanel() {
               />
               <Label htmlFor="dry-run" className="text-sm">
                 Modo simulação (dry run)
+              </Label>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Switch
+                id="skip-auth"
+                checked={skipAuthTables}
+                onCheckedChange={setSkipAuthTables}
+                disabled={importing}
+              />
+              <Label htmlFor="skip-auth" className="text-sm text-muted-foreground">
+                Pular tabelas de auth (profiles, user_roles, super_admins)
               </Label>
             </div>
             
@@ -286,6 +346,32 @@ export function SqlImportPanel() {
                 )}
               </div>
 
+              {/* User Mapping */}
+              {result.userMapping && Object.keys(result.userMapping).length > 0 && (
+                <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-sm text-blue-700 dark:text-blue-300">
+                      Mapeamento de Usuários
+                    </span>
+                    <Badge variant="outline" className="text-xs">
+                      {result.usersCreated || 0} criados, {result.usersSkipped || 0} já existiam
+                    </Badge>
+                  </div>
+                  <ScrollArea className="h-32">
+                    <div className="space-y-1 text-xs font-mono">
+                      {Object.entries(result.userMapping).map(([oldId, newId]) => (
+                        <div key={oldId} className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                          <span className="truncate max-w-[140px]" title={oldId}>{oldId.slice(0, 8)}...</span>
+                          <ArrowRight className="h-3 w-3" />
+                          <span className="truncate max-w-[140px]" title={newId}>{newId.slice(0, 8)}...</span>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </div>
+              )}
+
               {/* Table Stats */}
               {tableStats && Object.keys(tableStats).length > 0 && (
                 <ScrollArea className="h-48">
@@ -334,6 +420,15 @@ export function SqlImportPanel() {
                 <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded text-sm">
                   <p className="text-blue-600">
                     ✓ Simulação bem-sucedida! Desative o "Modo simulação" e clique em "Executar Importação" para aplicar as mudanças.
+                  </p>
+                </div>
+              )}
+
+              {!dryRun && result.success && result.usersCreated && result.usersCreated > 0 && (
+                <div className="bg-amber-50 dark:bg-amber-950/20 p-3 rounded text-sm">
+                  <p className="text-amber-700 dark:text-amber-300">
+                    ⚠️ <strong>Importante:</strong> Os usuários criados receberam senhas temporárias aleatórias. 
+                    Eles precisarão usar "Esqueci minha senha" para definir uma nova senha.
                   </p>
                 </div>
               )}
