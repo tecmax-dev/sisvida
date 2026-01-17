@@ -140,7 +140,16 @@ export function ApiMigrationPanel() {
       // Phase 3: Import tables
       setState((s) => ({ ...s, phase: "tables" }));
 
-      const tablesToImport = tables.filter((t: any) => t.count > 0);
+      const safeTables: { table: string; count: number }[] = Array.isArray(tables) ? tables : [];
+      if (!Array.isArray(tables)) {
+        console.warn("[ApiMigration] Unexpected tables shape:", tables);
+        setState((s) => ({
+          ...s,
+          errors: [...s.errors, "Resumo do projeto origem veio em formato inesperado (sem lista de tabelas)."],
+        }));
+      }
+
+      const tablesToImport = safeTables.filter((t) => Number(t?.count || 0) > 0);
       const totalTables = tablesToImport.length;
 
       for (let i = 0; i < tablesToImport.length; i++) {
