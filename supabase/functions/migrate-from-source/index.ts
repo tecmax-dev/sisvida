@@ -549,17 +549,28 @@ serve(async (req) => {
       throw new Error("Authorization header required");
     }
 
+    // Parse optional body params for source credentials
+    let bodySourceUrl: string | undefined;
+    let bodySourceKey: string | undefined;
+    try {
+      const body = await req.json();
+      bodySourceUrl = body?.sourceUrl;
+      bodySourceKey = body?.sourceKey;
+    } catch {
+      // No body or invalid JSON – that's fine, we'll use env vars
+    }
+
     // Destination (this project)
     const destUrl = Deno.env.get("SUPABASE_URL")!;
     const destServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const destAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Source project
-    const sourceUrl = Deno.env.get("SOURCE_SUPABASE_URL");
-    const sourceServiceKey = Deno.env.get("SOURCE_SERVICE_ROLE_KEY");
+    // Source project – prefer body params, fallback to env secrets
+    const sourceUrl = bodySourceUrl || Deno.env.get("SOURCE_SUPABASE_URL");
+    const sourceServiceKey = bodySourceKey || Deno.env.get("SOURCE_SERVICE_ROLE_KEY");
 
     if (!sourceUrl || !sourceServiceKey) {
-      throw new Error("SOURCE_SUPABASE_URL and SOURCE_SERVICE_ROLE_KEY must be configured");
+      throw new Error("SOURCE_SUPABASE_URL and SOURCE_SERVICE_ROLE_KEY must be configured (via form or secrets)");
     }
 
     // Verify super admin
