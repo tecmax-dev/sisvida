@@ -46,7 +46,7 @@ const FK_REMAP_TABLES: Record<string, string[]> = {
   "attachment_access_logs": ["user_id"],
   
   // Union entity related tables
-  "union_entities": ["clinic_id", "plan_id", "user_id"],
+  "union_entities": ["clinic_id", "plan_id", "user_id", "created_by"],
   "employers": ["clinic_id", "union_entity_id", "category_id"],
   "accounting_offices": ["clinic_id", "union_entity_id"],
   "patients": ["clinic_id"],
