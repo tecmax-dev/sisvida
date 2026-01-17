@@ -8,22 +8,147 @@ const corsHeaders = {
 
 // Tables to migrate in order (respecting foreign keys)
 const TABLES_TO_MIGRATE = [
+  // Core system config (no dependencies)
   "subscription_plans",
   "system_features",
   "plan_features",
   "subscription_addons",
   "permission_definitions",
   "feature_permissions",
-  "hero_settings",
-  "carousel_banners",
-  "global_config",
+  
+  // Clinics (base for most other tables)
+  "clinics",
+  "subscriptions",
+  "clinic_addons",
+  "access_groups",
+  "access_group_permissions",
+  
+  // Users and roles
+  "profiles",
+  "user_roles",
+  "super_admins",
+  
+  // Professionals
+  "professionals",
+  "professional_schedules",
+  
+  // Patients
+  "patients",
+  "patient_dependents",
+  "patient_cards",
+  
+  // Procedures
+  "procedures",
+  
+  // Appointments
+  "appointments",
+  
+  // Medical records
+  "medical_records",
+  "prescriptions",
+  "anamnesis",
+  "anamnese_templates",
+  "anamnese_questions",
+  "anamnese_question_options",
+  "anamnese_responses",
+  "anamnese_answers",
+  "patient_attachments",
+  "attachment_access_logs",
+  
+  // Insurance
+  "insurance_plans",
+  "patient_insurance",
+  
+  // Financial
+  "cash_registers",
+  "cash_transfers",
+  "financial_categories",
+  "financial_transactions",
+  "chart_of_accounts",
+  "cost_centers",
+  "medical_repass_rules",
+  "medical_repass_periods",
+  
+  // TISS
+  "tiss_settings",
+  "tiss_guides",
+  "tiss_guide_items",
+  "tiss_glosses",
+  "tiss_submissions",
+  "tiss_status_history",
+  
+  // Packages
+  "patient_packages",
+  "package_sessions",
+  "package_templates",
+  
+  // Quotes
+  "quotes",
+  "quote_items",
+  
+  // Stock
+  "stock_products",
+  "stock_suppliers",
+  "stock_categories",
+  "stock_movements",
+  
+  // Queues
+  "queues",
+  "queue_entries",
+  "queue_calls",
+  "waiting_list",
+  
+  // Marketing
+  "patient_segments",
+  "campaigns",
+  "automation_flows",
+  "message_logs",
+  "birthday_message_logs",
+  "card_expiry_notifications",
+  
+  // Holidays
+  "clinic_holidays",
   "national_holidays",
   "state_holidays",
   "municipal_holidays",
+  
+  // API & Webhooks
+  "webhooks",
+  "api_keys",
+  "api_logs",
+  "audit_logs",
+  
+  // Notifications
+  "system_notifications",
+  "clinic_notification_reads",
+  "upgrade_requests",
+  "addon_requests",
+  
+  // Chat
   "chat_sectors",
   "chat_settings",
   "chat_working_hours",
   "chat_quick_responses",
+  "chat_conversations",
+  "chat_messages",
+  
+  // CMS
+  "carousel_banners",
+  "panel_banners",
+  "hero_settings",
+  "global_config",
+  
+  // HR
+  "payslip_requests",
+  "employers",
+  "contribution_types",
+  "employer_contributions",
+  "union_entities",
+  "accounting_offices",
+  "accounting_office_employers",
+  "accounting_office_portal_logs",
+  "contribution_audit_logs",
+  "contribution_reissue_requests",
 ];
 
 serve(async (req) => {
