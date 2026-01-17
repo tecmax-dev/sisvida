@@ -279,6 +279,33 @@ serve(async (req) => {
           .select("*");
 
         if (sourceError) {
+          // If the key is wrong, stop early and return clear diagnostics
+          if (sourceError.message?.toLowerCase().includes("invalid api key")) {
+            console.error("[migrate-from-source] Source invalid api key", {
+              message: sourceError.message,
+              sourceRefFromUrl,
+              sourceRefFromKey,
+              sourceRoleFromKey,
+            });
+
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: `Chave inválida no projeto de origem: ${sourceError.message}`,
+                diagnostics: {
+                  source_ref_from_url: sourceRefFromUrl,
+                  source_ref_from_key: sourceRefFromKey,
+                  source_role_from_key: sourceRoleFromKey,
+                  hint:
+                    sourceRefFromUrl && sourceRefFromKey && sourceRefFromUrl !== sourceRefFromKey
+                      ? "A chave colada parece ser de OUTRO projeto (ref diferente do URL). Copie a service_role do mesmo projeto do URL."
+                      : "Confirme que você colou a chave 'service_role' do projeto de origem (não anon/publishable).",
+                },
+              }),
+              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+
           console.log(`[migrate-from-source] Skipping ${tableName}: ${sourceError.message}`);
           results[tableName] = { success: false, count: 0, error: sourceError.message };
           continue;

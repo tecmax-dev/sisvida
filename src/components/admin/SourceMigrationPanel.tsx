@@ -3,14 +3,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { 
-  Database, 
-  Loader2, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Database,
+  Loader2,
+  CheckCircle2,
+  XCircle,
   AlertTriangle,
   Download,
   RefreshCw,
@@ -18,19 +17,31 @@ import {
 
 interface MigrationResult {
   success: boolean;
-  message: string;
-  tables: Record<string, { success: boolean; count: number; error?: string }>;
-  migrated_by: string;
-  migrated_at: string;
+  message?: string;
+  error?: string;
+  diagnostics?: unknown;
+  tables?: Record<string, { success: boolean; count: number; error?: string }>;
+  migrated_by?: string;
+  migrated_at?: string;
+}
+
+function safePrettyJson(value: unknown) {
+  try {
+    return JSON.stringify(value, null, 2);
+  } catch {
+    return String(value);
+  }
 }
 
 export function SourceMigrationPanel() {
   const [migrating, setMigrating] = useState(false);
   const [result, setResult] = useState<MigrationResult | null>(null);
+  const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
   const handleMigration = async () => {
     setMigrating(true);
     setResult(null);
+    setErrorDetails(null);
 
     try {
       toast.loading("Iniciando migração do projeto origem...", { id: "migration" });
@@ -40,56 +51,71 @@ export function SourceMigrationPanel() {
       toast.dismiss("migration");
 
       if (error) {
-        console.error("Migration error:", error);
-        toast.error(`Erro na migração: ${error.message}`);
+        // Supabase Functions errors usually carry a response body in error.context.body
+        const anyErr = error as any;
+        const body = anyErr?.context?.body;
+
+        let parsedBody: unknown = null;
+        if (body) {
+          try {
+            parsedBody = typeof body === "string" ? JSON.parse(body) : body;
+          } catch {
+            parsedBody = body;
+          }
+        }
+
+        if (parsedBody) setErrorDetails(safePrettyJson(parsedBody));
+
+        const msg =
+          (parsedBody as any)?.error ||
+          (parsedBody as any)?.message ||
+          error.message ||
+          "Erro na migração";
+
+        toast.error(msg);
         return;
       }
 
-      if (data?.success) {
-        setResult(data);
-        toast.success(data.message);
+      // data can be success=false with diagnostics
+      const payload = (data ?? {}) as MigrationResult;
+      if (payload.success) {
+        setResult(payload);
+        toast.success(payload.message || "Migração concluída");
       } else {
-        toast.error(data?.error || "Erro desconhecido na migração");
+        setResult(payload);
+        setErrorDetails(safePrettyJson(payload));
+        toast.error(payload.error || "Erro na migração");
       }
     } catch (err) {
       toast.dismiss("migration");
       console.error("Migration exception:", err);
+      setErrorDetails(safePrettyJson(err));
       toast.error("Erro ao executar migração");
     } finally {
       setMigrating(false);
     }
   };
 
-  const successCount = result
-    ? Object.values(result.tables).filter((t) => t.success && t.count > 0).length
-    : 0;
-  const errorCount = result
-    ? Object.values(result.tables).filter((t) => !t.success).length
-    : 0;
-  const totalRecords = result
-    ? Object.values(result.tables).reduce((sum, t) => sum + (t.count || 0), 0)
-    : 0;
+  const tables = result?.tables ?? {};
+  const successCount = Object.values(tables).filter((t) => t.success && t.count > 0).length;
+  const errorCount = Object.values(tables).filter((t) => !t.success).length;
+  const totalRecords = Object.values(tables).reduce((sum, t) => sum + (t.count || 0), 0);
 
   return (
-    <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
+    <Card className="border-primary/20 bg-primary/5">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Database className="h-5 w-5 text-amber-600" />
+          <Database className="h-5 w-5 text-primary" />
           Migração do Projeto Origem
         </CardTitle>
         <CardDescription>
-          Migrar todos os dados do projeto Lovable Cloud de origem (8431f322...) para este projeto.
-          Esta operação usa UPSERT e pode ser executada múltiplas vezes.
+          Migra dados do projeto origem para este projeto via UPSERT (pode executar várias vezes).
         </CardDescription>
       </CardHeader>
+
       <CardContent className="space-y-4">
         <div className="flex items-center gap-4">
-          <Button
-            onClick={handleMigration}
-            disabled={migrating}
-            variant="default"
-            className="bg-amber-600 hover:bg-amber-700"
-          >
+          <Button onClick={handleMigration} disabled={migrating} variant="default">
             {migrating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -103,9 +129,12 @@ export function SourceMigrationPanel() {
             )}
           </Button>
 
-          {result && (
+          {(result || errorDetails) && (
             <Button
-              onClick={() => setResult(null)}
+              onClick={() => {
+                setResult(null);
+                setErrorDetails(null);
+              }}
               variant="outline"
               size="sm"
             >
@@ -115,25 +144,42 @@ export function SourceMigrationPanel() {
           )}
         </div>
 
-        {result && (
+        {errorDetails && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+                <XCircle className="mr-1 h-3 w-3" />
+                Diagnóstico
+              </Badge>
+              <span className="text-sm text-muted-foreground">(copie e me envie se precisar)</span>
+            </div>
+            <ScrollArea className="h-[220px] rounded-md border bg-background p-3">
+              <pre className="text-xs whitespace-pre-wrap">{errorDetails}</pre>
+            </ScrollArea>
+          </div>
+        )}
+
+        {result?.tables && (
           <div className="space-y-4">
-            <div className="flex gap-4">
-              <Badge variant="outline" className="bg-green-100 text-green-800">
+            <div className="flex flex-wrap gap-3">
+              <Badge variant="outline" className="bg-success/10 text-success border-success/20">
                 <CheckCircle2 className="mr-1 h-3 w-3" />
                 {successCount} tabelas migradas
               </Badge>
+
               {errorCount > 0 && (
-                <Badge variant="outline" className="bg-red-100 text-red-800">
+                <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
                   <XCircle className="mr-1 h-3 w-3" />
                   {errorCount} erros
                 </Badge>
               )}
-              <Badge variant="outline" className="bg-blue-100 text-blue-800">
+
+              <Badge variant="outline" className="bg-muted">
                 {totalRecords.toLocaleString()} registros totais
               </Badge>
             </div>
 
-            <ScrollArea className="h-[300px] rounded-md border p-4">
+            <ScrollArea className="h-[300px] rounded-md border bg-background p-4">
               <div className="space-y-2">
                 {Object.entries(result.tables).map(([table, info]) => (
                   <div
@@ -143,12 +189,12 @@ export function SourceMigrationPanel() {
                     <div className="flex items-center gap-2">
                       {info.success ? (
                         info.count > 0 ? (
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
+                          <CheckCircle2 className="h-4 w-4 text-success" />
                         ) : (
-                          <AlertTriangle className="h-4 w-4 text-gray-400" />
+                          <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                         )
                       ) : (
-                        <XCircle className="h-4 w-4 text-red-600" />
+                        <XCircle className="h-4 w-4 text-destructive" />
                       )}
                       <span className="font-mono text-sm">{table}</span>
                     </div>
@@ -159,7 +205,7 @@ export function SourceMigrationPanel() {
                         </Badge>
                       )}
                       {info.error && (
-                        <span className="text-xs text-red-600 max-w-[200px] truncate">
+                        <span className="text-xs text-destructive max-w-[240px] truncate" title={info.error}>
                           {info.error}
                         </span>
                       )}
@@ -169,10 +215,11 @@ export function SourceMigrationPanel() {
               </div>
             </ScrollArea>
 
-            <p className="text-xs text-muted-foreground">
-              Migrado por: {result.migrated_by} em{" "}
-              {new Date(result.migrated_at).toLocaleString("pt-BR")}
-            </p>
+            {result.migrated_by && result.migrated_at && (
+              <p className="text-xs text-muted-foreground">
+                Migrado por: {result.migrated_by} em {new Date(result.migrated_at).toLocaleString("pt-BR")}
+              </p>
+            )}
           </div>
         )}
       </CardContent>
