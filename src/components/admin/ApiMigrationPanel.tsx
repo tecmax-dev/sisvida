@@ -234,9 +234,9 @@ export function ApiMigrationPanel() {
       const preferredOrder = [
         // Level 0 - Standalone base tables (no FKs or only self-referencing)
         "clinics",
-        "union_entities",
         "subscription_addons",
         "subscription_plans",
+        "union_entities",
         "system_notifications",
         "system_features",
         "permission_definitions",
