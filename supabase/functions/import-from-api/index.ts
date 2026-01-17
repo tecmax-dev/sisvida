@@ -20,6 +20,9 @@ interface ImportResult {
   usersSkipped?: number;
   userMapping?: Record<string, string>;
   idMapping?: Record<string, string>; // Global ID mapping for all entities
+  page?: number;
+  nextPage?: number;
+  hasMore?: boolean;
 }
 
 const USER_ID_TABLES = new Set([
@@ -326,31 +329,84 @@ serve(async (req) => {
 
     // Phase 3: Import a specific table
     if (phase === "table") {
-      const { tableName, userMapping, idMapping: existingIdMapping } = body;
+      const {
+        tableName,
+        userMapping,
+        idMapping: existingIdMapping,
+        page: requestedPage,
+        limit: requestedLimit,
+        maxPages,
+      } = body;
       if (!tableName) throw new Error("tableName required for table phase");
 
-      console.log(`[import-from-api] Importing table: ${tableName}`);
-      
+      const startPage = Number.isFinite(Number(requestedPage)) ? Math.max(0, Number(requestedPage)) : 0;
+      const limit = Number.isFinite(Number(requestedLimit)) ? Math.max(1, Number(requestedLimit)) : 500;
+      const pagesToProcess = Number.isFinite(Number(maxPages)) ? Math.min(5, Math.max(1, Number(maxPages))) : 1;
+
+      console.log(
+        `[import-from-api] Importing table: ${tableName} (page ${startPage}, limit ${limit}, maxPages ${pagesToProcess})`
+      );
+
       // Merge userMapping into idMapping for unified FK remapping
       const idMapping: Record<string, string> = {
         ...(existingIdMapping || {}),
         ...(userMapping || {}),
       };
-      
-      let page = 0;
-      let hasMore = true;
+
+      let page = startPage;
+      let processedPages = 0;
       let totalImported = 0;
-      let errors: string[] = [];
+      let hasMore = true;
+      const errors: string[] = [];
+
+      // Only store *non-identity* mappings to avoid huge in-memory maps.
       const newIdMappings: Record<string, string> = {};
 
-      // Log only once per table start
-      console.log(`[import-from-api] Starting import for table: ${tableName}`);
-      
-      while (hasMore) {
+      const stripMissingColumn = (message: string): string | null => {
+        // Examples:
+        // - Could not find the 'logo_url' column of 'union_entities' in the schema cache
+        // - column "foo" of relation "bar" does not exist
+        const m1 = message.match(/Could not find the '([^']+)' column/i);
+        if (m1?.[1]) return m1[1];
+        const m2 = message.match(/column\s+"([^"]+)"\s+of\s+relation/i);
+        if (m2?.[1]) return m2[1];
+        return null;
+      };
+
+      const upsertWithSchemaRetry = async (records: Record<string, unknown>[]) => {
+        let attempt = 0;
+        let current = records;
+
+        while (attempt < 6) {
+          const { error } = await supabaseAdmin
+            .from(tableName)
+            .upsert(current, { onConflict: "id", ignoreDuplicates: false });
+
+          if (!error) return { ok: true as const, records: current };
+
+          const missingCol = stripMissingColumn(error.message || "");
+          if (missingCol) {
+            console.warn(`[import-from-api] ${tableName}: removing missing column '${missingCol}' and retrying`);
+            current = current.map((r) => {
+              const out = { ...r } as Record<string, unknown>;
+              delete out[missingCol];
+              return out;
+            });
+            attempt++;
+            continue;
+          }
+
+          return { ok: false as const, error };
+        }
+
+        return { ok: false as const, error: { message: "Too many schema-retry attempts" } };
+      };
+
+      while (processedPages < pagesToProcess && hasMore) {
         const tableData = await fetchFromSourceApi(sourceApiUrl, syncKey, "export", {
           table: tableName,
           page: String(page),
-          limit: "500",
+          limit: String(limit),
         });
 
         const rows = tableData.data || [];
@@ -361,83 +417,93 @@ serve(async (req) => {
 
         console.log(`[import-from-api] Processing ${rows.length} rows for ${tableName} (page ${page})`);
 
-        // Prepare batch of records
+        if (dryRun) {
+          for (const row of rows) {
+            if (row?.id) newIdMappings[row.id] = crypto.randomUUID();
+          }
+          totalImported += rows.length;
+          processedPages++;
+          page++;
+          hasMore = rows.length === limit;
+          continue;
+        }
+
         const recordsToInsert: Record<string, unknown>[] = [];
         const sourceIds: string[] = [];
-        
-        for (const row of rows) {
-          const sourceId = row.id;
-          
-          if (dryRun) {
-            if (sourceId) {
-              newIdMappings[sourceId] = crypto.randomUUID();
-            }
-            totalImported++;
-            continue;
-          }
 
-          // Remap foreign keys (no logging per row to avoid timeout)
+        for (const row of rows) {
+          const sourceId = row?.id;
           const recordToInsert = remapForeignKeys(row, tableName, idMapping, false);
           recordsToInsert.push(recordToInsert);
-          if (sourceId) {
-            sourceIds.push(sourceId);
-          }
+          if (typeof sourceId === "string") sourceIds.push(sourceId);
         }
 
-        if (!dryRun && recordsToInsert.length > 0) {
-          try {
-            // Batch upsert for better performance
-            const { data: inserted, error } = await supabaseAdmin
+        // Fast path: batch upsert, with auto-removal of missing columns
+        const batch = await upsertWithSchemaRetry(recordsToInsert);
+
+        if (!batch.ok) {
+          const errMsg = batch.error?.message || "Unknown upsert error";
+          errors.push(`Batch error: ${errMsg}`);
+
+          // Fallback: try row-by-row to salvage what we can and surface precise errors.
+          let rowOk = 0;
+          let rowFail = 0;
+          for (let i = 0; i < recordsToInsert.length; i++) {
+            const rec = recordsToInsert[i];
+            const { error } = await supabaseAdmin
               .from(tableName)
-              .upsert(recordsToInsert, {
-                onConflict: "id",
-                ignoreDuplicates: false,
-              })
-              .select("id");
+              .upsert(rec, { onConflict: "id", ignoreDuplicates: false });
 
             if (error) {
-              if (error.code !== "23505") {
-                errors.push(`Batch error: ${error.message}`);
+              rowFail++;
+              if (errors.length < 10) {
+                errors.push(`Row ${String((rec as any)?.id ?? "?")}: ${error.message}`);
               }
-              // On batch error, still count as imported for mapping
-              for (let i = 0; i < recordsToInsert.length; i++) {
-                const rec = recordsToInsert[i];
-                if (sourceIds[i]) {
-                  newIdMappings[sourceIds[i]] = rec.id as string || sourceIds[i];
-                }
-              }
-              totalImported += recordsToInsert.length;
-            } else {
-              // Track all new ID mappings
-              if (inserted) {
-                for (let i = 0; i < inserted.length; i++) {
-                  if (sourceIds[i] && inserted[i]?.id) {
-                    newIdMappings[sourceIds[i]] = inserted[i].id;
-                  }
-                }
-              }
-              totalImported += recordsToInsert.length;
+              continue;
             }
-          } catch (e) {
-            errors.push(`Batch exception: ${e instanceof Error ? e.message : String(e)}`);
+
+            rowOk++;
+            // Only store non-identity mappings (rare)
+            const sid = sourceIds[i];
+            const did = (rec as any)?.id;
+            if (typeof sid === "string" && typeof did === "string" && sid !== did) {
+              newIdMappings[sid] = did;
+            }
+          }
+
+          totalImported += rowOk;
+          console.log(`[import-from-api] ${tableName} page ${page}: row fallback ok=${rowOk} fail=${rowFail}`);
+        } else {
+          totalImported += recordsToInsert.length;
+          // Keep mappings small: only store non-identity mappings.
+          for (let i = 0; i < recordsToInsert.length; i++) {
+            const sid = sourceIds[i];
+            const did = (recordsToInsert[i] as any)?.id;
+            if (typeof sid === "string" && typeof did === "string" && sid !== did) {
+              newIdMappings[sid] = did;
+            }
           }
         }
 
+        processedPages++;
         page++;
-        if (rows.length < 500) hasMore = false;
+        hasMore = rows.length === limit;
       }
-      
-      console.log(`[import-from-api] Completed ${tableName}: ${totalImported} records, ${errors.length} errors`);
 
-      // Return the new ID mappings so they can be used for dependent tables
+      console.log(
+        `[import-from-api] Completed chunk for ${tableName}: imported=${totalImported}, errors=${errors.length}, nextPage=${page}, hasMore=${hasMore}`
+      );
+
       result.tables![tableName] = {
         success: errors.length === 0,
         count: totalImported,
         error: errors.length > 0 ? errors.slice(0, 5).join("; ") : undefined,
       };
-      
-      // Include the accumulated ID mappings in the result
-      result.idMapping = { ...idMapping, ...newIdMappings };
+
+      result.idMapping = Object.keys(newIdMappings).length > 0 ? { ...idMapping, ...newIdMappings } : idMapping;
+      result.page = startPage;
+      result.nextPage = page;
+      result.hasMore = hasMore;
 
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
