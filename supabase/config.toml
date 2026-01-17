@@ -1,1 +1,4 @@
 project_id = "czmnkrurkzuerrcjzbkp"
+
+[functions.import-from-api]
+verify_jwt = false
