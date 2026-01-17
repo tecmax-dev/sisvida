@@ -42,6 +42,7 @@ import {
   CreditCard,
   RefreshCw,
   Building2,
+  Database,
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import DataExportPanel from "@/components/admin/DataExportPanel";
@@ -53,6 +54,7 @@ import { LegacyDataTransform } from "@/components/admin/LegacyDataTransform";
 import { HomologacaoImportPanel } from "@/components/admin/HomologacaoImportPanel";
 import { EmployerImportPanel } from "@/components/admin/EmployerImportPanel";
 import { JsonImportPanel } from "@/components/admin/JsonImportPanel";
+import { SqlImportPanel } from "@/components/admin/SqlImportPanel";
 import { SpreadsheetConverter } from "@/components/admin/spreadsheet-converter";
 import {
   PatientImportRow,
@@ -90,7 +92,7 @@ export default function DataImportPage() {
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [selectedClinicId, setSelectedClinicId] = useState<string>("");
   const [loadingClinics, setLoadingClinics] = useState(false);
-  const [activeTab, setActiveTab] = useState<"export" | "json" | "homologacao" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards" | "converter">("export");
+  const [activeTab, setActiveTab] = useState<"export" | "json" | "sql" | "homologacao" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards" | "converter">("export");
   
   // Auto-detection state
   const [detectedSheets, setDetectedSheets] = useState<DetectedSheet[]>([]);
@@ -2168,7 +2170,7 @@ export default function DataImportPage() {
       </Collapsible>
 
       {/* Import/Export Tabs */}
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "json" | "homologacao" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards" | "converter")}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "export" | "json" | "sql" | "homologacao" | "combined" | "legacy" | "patients" | "records" | "contacts" | "dependents" | "employers" | "history" | "cards" | "converter")}>
         <TabsList className="flex-wrap h-auto gap-1">
           <TabsTrigger value="export" className="gap-2">
             <ArrowDownToLine className="h-4 w-4" />
@@ -2177,6 +2179,10 @@ export default function DataImportPage() {
           <TabsTrigger value="json" className="gap-2">
             <FileText className="h-4 w-4" />
             Importar JSON
+          </TabsTrigger>
+          <TabsTrigger value="sql" className="gap-2">
+            <Database className="h-4 w-4" />
+            Importar SQL
           </TabsTrigger>
           <TabsTrigger value="homologacao" className="gap-2">
             <Stethoscope className="h-4 w-4" />
@@ -2251,6 +2257,11 @@ export default function DataImportPage() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        {/* SQL Import Tab */}
+        <TabsContent value="sql" className="space-y-4">
+          <SqlImportPanel />
         </TabsContent>
 
         {/* Homologação Import Tab */}
