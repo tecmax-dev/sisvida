@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { runSqlImportBatched } from "@/lib/sqlImport/batchedSqlImport";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,12 +8,12 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { 
-  Upload, 
-  Database, 
-  FileText, 
-  CheckCircle2, 
-  XCircle, 
+import {
+  Upload,
+  Database,
+  FileText,
+  CheckCircle2,
+  XCircle,
   AlertTriangle,
   Loader2,
   Play,
@@ -140,21 +141,26 @@ export function SqlImportPanel() {
     try {
       toast.loading(dryRun ? "Analisando SQL (dry run)..." : "Executando importação...", { id: "sql-import" });
 
-      const { data, error } = await supabase.functions.invoke("import-sql-backup", {
-        body: { sql: sqlContent, dryRun, skipAuthTables },
+      const data = await runSqlImportBatched({
+        sql: sqlContent,
+        dryRun,
+        skipAuthTables,
+        totalStatements: preview?.totalStatements,
+        onProgress: (p) => {
+          const label = p.message || (dryRun ? "Analisando SQL (dry run)..." : "Executando importação...");
+          toast.loading(label, { id: "sql-import" });
+        },
       });
-
-      if (error) throw error;
 
       setResult(data);
 
-      const usersInfo = data.usersCreated || data.usersSkipped 
+      const usersInfo = data.usersCreated || data.usersSkipped
         ? ` | ${data.usersCreated || 0} usuários criados, ${data.usersSkipped || 0} já existiam`
         : "";
 
       if (data.success) {
         toast.success(
-          dryRun 
+          dryRun
             ? `Análise concluída: ${data.executed} comandos seriam executados${usersInfo}`
             : `Importação concluída: ${data.executed} comandos executados${usersInfo}`,
           { id: "sql-import" }
