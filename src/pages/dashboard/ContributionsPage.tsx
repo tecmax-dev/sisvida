@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown, RefreshCw, FileX, CloudDownload, Zap } from "lucide-react";
+import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown, RefreshCw, FileX, CloudDownload, Zap, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
@@ -13,6 +13,7 @@ import ContributionsOverviewTab from "@/components/contributions/ContributionsOv
 import ContributionsListTab from "@/components/contributions/ContributionsListTab";
 import ContributionTypesTab from "@/components/contributions/ContributionTypesTab";
 import ContributionsReportsTab from "@/components/contributions/ContributionsReportsTab";
+import PFContributionsReportsTab from "@/components/contributions/PFContributionsReportsTab";
 import ContributionDialogs from "@/components/contributions/ContributionDialogs";
 import PFContributionDialog from "@/components/contributions/PFContributionDialog";
 import PFBatchContributionDialog from "@/components/contributions/PFBatchContributionDialog";
@@ -744,7 +745,7 @@ export default function ContributionsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5 lg:w-auto lg:inline-grid">
+        <TabsList className="grid w-full grid-cols-6 lg:w-auto lg:inline-grid">
           <TabsTrigger value="overview" className="gap-2">
             <LayoutDashboard className="h-4 w-4" />
             <span className="hidden sm:inline">Visão Geral</span>
@@ -763,7 +764,11 @@ export default function ContributionsPage() {
           </TabsTrigger>
           <TabsTrigger value="reports" className="gap-2">
             <FileBarChart className="h-4 w-4" />
-            <span className="hidden sm:inline">Relatórios</span>
+            <span className="hidden sm:inline">Relatórios PJ</span>
+          </TabsTrigger>
+          <TabsTrigger value="reports-pf" className="gap-2">
+            <Users className="h-4 w-4" />
+            <span className="hidden sm:inline">Relatórios PF</span>
           </TabsTrigger>
         </TabsList>
 
@@ -810,8 +815,19 @@ export default function ContributionsPage() {
 
         <TabsContent value="reports">
           <ContributionsReportsTab
-            contributions={contributions}
+            contributions={contributions.filter(c => !c.member_id)}
             employers={employers}
+            contributionTypes={contributionTypes}
+            clinicName={currentClinic?.name}
+            clinicLogo={currentClinic?.logo_url || undefined}
+            yearFilter={yearFilter}
+            onYearFilterChange={setYearFilter}
+          />
+        </TabsContent>
+
+        <TabsContent value="reports-pf">
+          <PFContributionsReportsTab
+            contributions={contributions.filter(c => !!c.member_id)}
             contributionTypes={contributionTypes}
             clinicName={currentClinic?.name}
             clinicLogo={currentClinic?.logo_url || undefined}
