@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import {
   Database,
@@ -13,6 +15,8 @@ import {
   AlertTriangle,
   Download,
   RefreshCw,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 interface MigrationResult {
@@ -46,6 +50,11 @@ export function SourceMigrationPanel() {
   const [result, setResult] = useState<MigrationResult | null>(null);
   const [errorDetails, setErrorDetails] = useState<string | null>(null);
 
+  // Form state for source credentials
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [sourceKey, setSourceKey] = useState("");
+  const [showKey, setShowKey] = useState(false);
+
   const handleMigration = async () => {
     setMigrating(true);
     setResult(null);
@@ -54,7 +63,12 @@ export function SourceMigrationPanel() {
     try {
       toast.loading("Iniciando migração do projeto origem...", { id: "migration" });
 
-      const { data, error } = await supabase.functions.invoke("migrate-from-source");
+      const { data, error } = await supabase.functions.invoke("migrate-from-source", {
+        body: {
+          sourceUrl: sourceUrl.trim() || undefined,
+          sourceKey: sourceKey.trim() || undefined,
+        },
+      });
 
       toast.dismiss("migration");
 
@@ -127,7 +141,52 @@ export function SourceMigrationPanel() {
         </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-6">
+        {/* Source credentials form */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="source-url">URL do Supabase Origem</Label>
+            <Input
+              id="source-url"
+              type="url"
+              placeholder="https://xxxxx.supabase.co"
+              value={sourceUrl}
+              onChange={(e) => setSourceUrl(e.target.value)}
+              disabled={migrating}
+            />
+            <p className="text-xs text-muted-foreground">
+              Deixe em branco para usar o secret configurado
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="source-key">Service Role Key do Origem</Label>
+            <div className="relative">
+              <Input
+                id="source-key"
+                type={showKey ? "text" : "password"}
+                placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                value={sourceKey}
+                onChange={(e) => setSourceKey(e.target.value)}
+                disabled={migrating}
+                className="pr-10"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                onClick={() => setShowKey(!showKey)}
+                tabIndex={-1}
+              >
+                {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Deixe em branco para usar o secret configurado
+            </p>
+          </div>
+        </div>
+
         <div className="flex items-center gap-4">
           <Button onClick={handleMigration} disabled={migrating} variant="default">
             {migrating ? (
