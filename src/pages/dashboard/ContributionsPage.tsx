@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown, RefreshCw, FileX, CloudDownload } from "lucide-react";
+import { Receipt, LayoutDashboard, List, Tag, FileBarChart, Loader2, Download, FileStack, Handshake, Hash, ChevronDown, RefreshCw, FileX, CloudDownload, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
@@ -24,6 +24,7 @@ import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationIns
 import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
 import { LytexSyncProgress, LytexActionType } from "@/components/contributions/LytexSyncProgress";
 import { LytexConciliationHistoryDialog } from "@/components/contributions/LytexConciliationHistoryDialog";
+import { BatchGenerateLytexDialog } from "@/components/contributions/BatchGenerateLytexDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -118,6 +119,7 @@ export default function ContributionsPage() {
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
   const [offlineDialogOpen, setOfflineDialogOpen] = useState(false);
   const [createWithoutValueDialogOpen, setCreateWithoutValueDialogOpen] = useState(false);
+  const [batchGenerateLytexOpen, setBatchGenerateLytexOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedContribution, setSelectedContribution] = useState<Contribution | null>(null);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
@@ -710,6 +712,10 @@ export default function ContributionsPage() {
                 Corrigir Tipos de Contribuição
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setBatchGenerateLytexOpen(true)} className="text-amber-600">
+                <Zap className="h-4 w-4 mr-2" />
+                Gerar Boletos Pendentes
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={handleFetchPaidInvoices} disabled={fetchingPaid} className="text-green-600">
                 <Receipt className="h-4 w-4 mr-2" />
                 Buscar Pagamentos (Conciliação)
@@ -909,6 +915,13 @@ export default function ContributionsPage() {
           clinicId={currentClinic.id}
         />
       )}
+
+      <BatchGenerateLytexDialog
+        open={batchGenerateLytexOpen}
+        onOpenChange={setBatchGenerateLytexOpen}
+        onSuccess={fetchData}
+        yearFilter={yearFilter}
+      />
     </div>
   );
 }
