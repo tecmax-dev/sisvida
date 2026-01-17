@@ -13,11 +13,18 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
 import { toast } from "sonner";
-import { Loader2, FileWarning, Receipt, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { Loader2, FileWarning, Receipt, CheckCircle2, XCircle, AlertTriangle, Filter } from "lucide-react";
 import { formatCompetence } from "@/lib/competence-format";
 
 interface ContributionWithoutInvoice {
@@ -29,6 +36,7 @@ interface ContributionWithoutInvoice {
   status: string;
   employer_id: string | null;
   member_id: string | null;
+  contribution_type_id: string;
   employers?: {
     id: string;
     name: string;
@@ -48,6 +56,11 @@ interface ContributionWithoutInvoice {
     id: string;
     name: string;
   } | null;
+}
+
+interface ContributionType {
+  id: string;
+  name: string;
 }
 
 interface BatchGenerateLytexDialogProps {
@@ -71,6 +84,7 @@ export function BatchGenerateLytexDialog({
   const { currentClinic } = useAuth();
   const { validateSession } = useSessionValidator();
   const [contributions, setContributions] = useState<ContributionWithoutInvoice[]>([]);
+  const [contributionTypes, setContributionTypes] = useState<ContributionType[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState(false);
@@ -78,11 +92,29 @@ export function BatchGenerateLytexDialog({
   const [results, setResults] = useState<{ success: number; errors: string[] }>({ success: 0, errors: [] });
   const [showResults, setShowResults] = useState(false);
 
+  // Filtros
+  const [personTypeFilter, setPersonTypeFilter] = useState<"all" | "pf" | "pj">("all");
+  const [competenceFilter, setCompetenceFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "overdue">("all");
+
   useEffect(() => {
     if (open && currentClinic) {
       fetchContributionsWithoutInvoice();
+      fetchContributionTypes();
     }
   }, [open, currentClinic, yearFilter]);
+
+  const fetchContributionTypes = async () => {
+    if (!currentClinic) return;
+    const { data } = await supabase
+      .from("contribution_types")
+      .select("id, name")
+      .eq("clinic_id", currentClinic.id)
+      .eq("is_active", true)
+      .order("name");
+    setContributionTypes(data || []);
+  };
 
   const fetchContributionsWithoutInvoice = async () => {
     if (!currentClinic) return;
@@ -92,7 +124,7 @@ export function BatchGenerateLytexDialog({
       let query = supabase
         .from("employer_contributions")
         .select(`
-          id, value, due_date, competence_month, competence_year, status, employer_id, member_id,
+          id, value, due_date, competence_month, competence_year, status, employer_id, member_id, contribution_type_id,
           employers(id, name, cnpj, email, phone, registration_number),
           patients(id, name, cpf, email, phone),
           contribution_types(id, name)
@@ -108,11 +140,10 @@ export function BatchGenerateLytexDialog({
         query = query.eq("competence_year", yearFilter);
       }
 
-      const { data, error } = await query.limit(500);
+      const { data, error } = await query.limit(1000);
 
       if (error) throw error;
       setContributions(data || []);
-      setSelectedIds(new Set((data || []).map((c) => c.id)));
     } catch (error) {
       console.error("Erro ao buscar contribuições:", error);
       toast.error("Erro ao carregar contribuições sem boleto");
@@ -121,19 +152,68 @@ export function BatchGenerateLytexDialog({
     }
   };
 
+  // Competências disponíveis para filtro
+  const availableCompetences = useMemo(() => {
+    const set = new Set<string>();
+    contributions.forEach((c) => {
+      set.add(`${c.competence_month}-${c.competence_year}`);
+    });
+    return Array.from(set)
+      .map((key) => {
+        const [month, year] = key.split("-").map(Number);
+        return { key, month, year, label: formatCompetence(month, year) };
+      })
+      .sort((a, b) => b.year - a.year || b.month - a.month);
+  }, [contributions]);
+
+  // Aplicar filtros
+  const filteredContributions = useMemo(() => {
+    return contributions.filter((c) => {
+      // Filtro PF/PJ
+      if (personTypeFilter === "pf" && !c.member_id) return false;
+      if (personTypeFilter === "pj" && c.member_id) return false;
+
+      // Filtro de competência
+      if (competenceFilter !== "all") {
+        const key = `${c.competence_month}-${c.competence_year}`;
+        if (key !== competenceFilter) return false;
+      }
+
+      // Filtro de tipo
+      if (typeFilter !== "all" && c.contribution_type_id !== typeFilter) return false;
+
+      // Filtro de status
+      if (statusFilter !== "all" && c.status !== statusFilter) return false;
+
+      return true;
+    });
+  }, [contributions, personTypeFilter, competenceFilter, typeFilter, statusFilter]);
+
+  // Atualizar seleção quando filtros mudarem
+  useEffect(() => {
+    const filteredIds = new Set(filteredContributions.map((c) => c.id));
+    setSelectedIds((prev) => {
+      const next = new Set<string>();
+      prev.forEach((id) => {
+        if (filteredIds.has(id)) next.add(id);
+      });
+      return next;
+    });
+  }, [filteredContributions]);
+
   const groupedContributions = useMemo(() => {
     const grouped: Record<string, ContributionWithoutInvoice[]> = {};
-    contributions.forEach((c) => {
+    filteredContributions.forEach((c) => {
       const key = formatCompetence(c.competence_month, c.competence_year);
       if (!grouped[key]) grouped[key] = [];
       grouped[key].push(c);
     });
     return grouped;
-  }, [contributions]);
+  }, [filteredContributions]);
 
   const toggleAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(new Set(contributions.map((c) => c.id)));
+      setSelectedIds(new Set(filteredContributions.map((c) => c.id)));
     } else {
       setSelectedIds(new Set());
     }
@@ -164,7 +244,7 @@ export function BatchGenerateLytexDialog({
     setProgress(0);
     setResults({ success: 0, errors: [] });
 
-    const selected = contributions.filter((c) => selectedIds.has(c.id));
+    const selected = filteredContributions.filter((c) => selectedIds.has(c.id));
     const total = selected.length;
     let successCount = 0;
     const errors: string[] = [];
@@ -256,6 +336,10 @@ export function BatchGenerateLytexDialog({
     if (!processing) {
       setShowResults(false);
       setResults({ success: 0, errors: [] });
+      setPersonTypeFilter("all");
+      setCompetenceFilter("all");
+      setTypeFilter("all");
+      setStatusFilter("all");
       onOpenChange(false);
     }
   };
@@ -264,12 +348,16 @@ export function BatchGenerateLytexDialog({
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(cents / 100);
   };
 
-  const allSelected = contributions.length > 0 && selectedIds.size === contributions.length;
-  const someSelected = selectedIds.size > 0 && selectedIds.size < contributions.length;
+  const allSelected = filteredContributions.length > 0 && selectedIds.size === filteredContributions.length;
+  const someSelected = selectedIds.size > 0 && selectedIds.size < filteredContributions.length;
+
+  const totalValue = filteredContributions
+    .filter((c) => selectedIds.has(c.id))
+    .reduce((sum, c) => sum + c.value, 0);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Receipt className="h-5 w-5 text-primary" />
@@ -277,7 +365,7 @@ export function BatchGenerateLytexDialog({
           </DialogTitle>
           <DialogDescription>
             Selecione as contribuições que deseja gerar boletos na Lytex.
-            {yearFilter && ` Filtrando por ano: ${yearFilter}`}
+            {yearFilter && ` Ano: ${yearFilter}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -329,6 +417,61 @@ export function BatchGenerateLytexDialog({
               </div>
             ) : (
               <>
+                {/* Barra de Filtros */}
+                <div className="flex flex-wrap items-center gap-2 py-2 border-b">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  
+                  <Select value={personTypeFilter} onValueChange={(v) => setPersonTypeFilter(v as "all" | "pf" | "pj")}>
+                    <SelectTrigger className="w-[100px] h-8 text-xs">
+                      <SelectValue placeholder="Tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="pj">PJ</SelectItem>
+                      <SelectItem value="pf">PF</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={competenceFilter} onValueChange={setCompetenceFilter}>
+                    <SelectTrigger className="w-[120px] h-8 text-xs">
+                      <SelectValue placeholder="Competência" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {availableCompetences.map((c) => (
+                        <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="w-[140px] h-8 text-xs">
+                      <SelectValue placeholder="Tipo Contrib." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos Tipos</SelectItem>
+                      {contributionTypes.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "pending" | "overdue")}>
+                    <SelectTrigger className="w-[110px] h-8 text-xs">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="pending">Pendente</SelectItem>
+                      <SelectItem value="overdue">Atrasado</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Badge variant="outline" className="ml-auto text-xs">
+                    {filteredContributions.length} de {contributions.length}
+                  </Badge>
+                </div>
+
                 {processing && (
                   <div className="space-y-2 py-4">
                     <div className="flex justify-between text-sm">
@@ -344,21 +487,26 @@ export function BatchGenerateLytexDialog({
                     id="select-all"
                     checked={allSelected}
                     onCheckedChange={(checked) => toggleAll(!!checked)}
-                    disabled={processing}
+                    disabled={processing || filteredContributions.length === 0}
                   />
                   <Label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
-                    Selecionar todos ({contributions.length})
+                    Selecionar todos ({filteredContributions.length})
                   </Label>
                   {someSelected && (
                     <Badge variant="secondary">{selectedIds.size} selecionado(s)</Badge>
                   )}
+                  {selectedIds.size > 0 && (
+                    <Badge variant="default" className="ml-auto">
+                      Total: {formatCurrency(totalValue)}
+                    </Badge>
+                  )}
                 </div>
 
-                <ScrollArea className="flex-1 max-h-[400px]">
+                <ScrollArea className="flex-1 h-[350px]">
                   <div className="space-y-4 pr-4">
                     {Object.entries(groupedContributions).map(([competence, items]) => (
                       <div key={competence} className="space-y-2">
-                        <h4 className="font-medium text-sm text-muted-foreground sticky top-0 bg-background py-1">
+                        <h4 className="font-medium text-sm text-muted-foreground sticky top-0 bg-background py-1 z-10">
                           Competência {competence} ({items.length})
                         </h4>
                         <div className="space-y-1">
@@ -385,11 +533,16 @@ export function BatchGenerateLytexDialog({
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2">
                                     <span className="font-medium text-sm truncate">{name}</span>
-                                    <Badge variant={isPF ? "secondary" : "outline"} className="text-xs">
+                                    <Badge variant={isPF ? "secondary" : "outline"} className="text-xs shrink-0">
                                       {isPF ? "PF" : "PJ"}
                                     </Badge>
+                                    {contribution.status === "overdue" && (
+                                      <Badge variant="destructive" className="text-xs shrink-0">
+                                        Atrasado
+                                      </Badge>
+                                    )}
                                   </div>
-                                  <div className="text-xs text-muted-foreground flex gap-2">
+                                  <div className="text-xs text-muted-foreground flex gap-2 flex-wrap">
                                     <span>{doc}</span>
                                     <span>•</span>
                                     <span>{formatCurrency(contribution.value)}</span>
@@ -403,6 +556,12 @@ export function BatchGenerateLytexDialog({
                         </div>
                       </div>
                     ))}
+
+                    {filteredContributions.length === 0 && (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>Nenhuma contribuição encontrada com os filtros aplicados</p>
+                      </div>
+                    )}
                   </div>
                 </ScrollArea>
 
