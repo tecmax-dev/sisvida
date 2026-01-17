@@ -626,8 +626,9 @@ export default function PFBatchContributionDialog({
                       <p className="text-xs">Clique em "Adicionar" para incluir competências</p>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      {installments.map((installment, index) => (
+                    <ScrollArea className="max-h-[200px] pr-3">
+                      <div className="space-y-2">
+                        {installments.map((installment, index) => (
                         <div
                           key={installment.id}
                           className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg border"
@@ -679,8 +680,9 @@ export default function PFBatchContributionDialog({
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   )}
                 </div>
 
