@@ -353,7 +353,44 @@ async function migrateAuthUsersAndUserDependentTables(params: {
           continue;
         }
 
-        const newUserId = sourceIdToDestId.get(oldUserId);
+        let newUserId = sourceIdToDestId.get(oldUserId);
+
+        // Fallback: some legacy sources have profiles.user_id that doesn't exist in auth.users,
+        // but profiles.email is still usable to map/create the auth user in the destination.
+        if (!newUserId && tableName === "profiles") {
+          const email = (row?.email as string | null | undefined) ?? null;
+          const emailKey = normalizeEmail(email);
+
+          if (emailKey) {
+            let destUser = destByEmail.get(emailKey);
+
+            if (!destUser) {
+              const tempPassword = `Tmp-${crypto.randomUUID()}aA1!`;
+              const { data: created, error: createErr } = await destAdmin.auth.admin.createUser({
+                email: emailKey,
+                password: tempPassword,
+                email_confirm: true,
+              });
+
+              if (!createErr && created?.user?.id) {
+                destUser = created.user;
+                destByEmail.set(emailKey, destUser);
+              } else {
+                console.error("[migrate-from-source] Failed creating user from profile email", {
+                  email: emailKey,
+                  error: createErr?.message,
+                });
+              }
+            }
+
+            if (destUser?.id) {
+              const resolvedUserId = String(destUser.id);
+              newUserId = resolvedUserId;
+              sourceIdToDestId.set(oldUserId, resolvedUserId);
+            }
+          }
+        }
+
         if (!newUserId) {
           unmappedUserIds.push(oldUserId);
           continue;
@@ -394,22 +431,89 @@ async function migrateAuthUsersAndUserDependentTables(params: {
       });
 
       if (transformed.length > 0) {
-        const { error: upsertError } = await destAdmin
-          .from(tableName)
-          .upsert(transformed, onConflict ? { onConflict } : undefined);
+        // Special case: user_roles can have clinic_id NULL, and UNIQUE constraints don't treat NULLs as equal.
+        // So "upsert" by (user_id, clinic_id) won't be idempotent. We do a manual merge instead.
+        if (tableName === "user_roles") {
+          for (const r of transformed) {
+            let q = destAdmin
+              .from("user_roles")
+              .select("id")
+              .eq("user_id", r.user_id)
+              .eq("role", r.role);
 
-        if (upsertError) {
-          console.error(`[migrate-from-source] Error upserting ${tableName}:`, upsertError);
-          summary.tables[tableName] = {
-            success: false,
-            skipped: false,
-            count: migrated,
-            error: upsertError.message,
-          };
-          return;
+            q = r.clinic_id == null ? q.is("clinic_id", null) : q.eq("clinic_id", r.clinic_id);
+            q = r.access_group_id == null ? q.is("access_group_id", null) : q.eq("access_group_id", r.access_group_id);
+
+            const { data: existingRows, error: findErr } = await q;
+            if (findErr) {
+              console.error("[migrate-from-source] Error finding existing user_roles", findErr);
+              summary.tables[tableName] = {
+                success: false,
+                skipped: false,
+                count: migrated,
+                error: findErr.message,
+              };
+              return;
+            }
+
+            const ids = (existingRows ?? []).map((x: any) => x.id).filter(Boolean);
+
+            if (ids.length > 0) {
+              const keepId = ids[0];
+
+              // Clean duplicates if any already exist
+              if (ids.length > 1) {
+                const { error: delErr } = await destAdmin.from("user_roles").delete().in("id", ids.slice(1));
+                if (delErr) {
+                  console.error("[migrate-from-source] Error deleting duplicate user_roles", delErr);
+                }
+              }
+
+              const { error: updErr } = await destAdmin.from("user_roles").update(r).eq("id", keepId);
+              if (updErr) {
+                console.error("[migrate-from-source] Error updating user_roles", updErr);
+                summary.tables[tableName] = {
+                  success: false,
+                  skipped: false,
+                  count: migrated,
+                  error: updErr.message,
+                };
+                return;
+              }
+            } else {
+              const { error: insErr } = await destAdmin.from("user_roles").insert(r);
+              if (insErr) {
+                console.error("[migrate-from-source] Error inserting user_roles", insErr);
+                summary.tables[tableName] = {
+                  success: false,
+                  skipped: false,
+                  count: migrated,
+                  error: insErr.message,
+                };
+                return;
+              }
+            }
+          }
+
+          migrated += transformed.length;
+        } else {
+          const { error: upsertError } = await destAdmin
+            .from(tableName)
+            .upsert(transformed, onConflict ? { onConflict } : undefined);
+
+          if (upsertError) {
+            console.error(`[migrate-from-source] Error upserting ${tableName}:`, upsertError);
+            summary.tables[tableName] = {
+              success: false,
+              skipped: false,
+              count: migrated,
+              error: upsertError.message,
+            };
+            return;
+          }
+
+          migrated += transformed.length;
         }
-
-        migrated += transformed.length;
       }
 
       if (pageData.length < PAGE_SIZE) {
