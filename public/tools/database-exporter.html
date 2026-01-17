@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exportador de Banco de Dados - Eclini</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      min-height: 100vh;
+      padding: 2rem;
+      color: #e4e4e7;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 0.5rem;
+      font-size: 1.75rem;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .subtitle {
+      text-align: center;
+      color: #a1a1aa;
+      margin-bottom: 2rem;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .card-title {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .card-title .step {
+      background: #3b82f6;
+      color: white;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-size: 0.875rem;
+      color: #a1a1aa;
+    }
+    input, select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      background: rgba(0, 0, 0, 0.3);
+      color: #e4e4e7;
+      font-size: 0.875rem;
+      margin-bottom: 1rem;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+    input::placeholder {
+      color: #71717a;
+    }
+    button {
+      width: 100%;
+      padding: 1rem;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .btn-primary {
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      color: white;
+    }
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #e4e4e7;
+      margin-top: 0.5rem;
+    }
+    .progress-container {
+      display: none;
+    }
+    .progress-container.active {
+      display: block;
+    }
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      transition: width 0.3s;
+    }
+    .progress-text {
+      font-size: 0.875rem;
+      color: #a1a1aa;
+    }
+    .log-container {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 0.75rem;
+      margin-top: 1rem;
+    }
+    .log-entry {
+      padding: 0.25rem 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    .log-entry.success { color: #4ade80; }
+    .log-entry.error { color: #f87171; }
+    .log-entry.info { color: #60a5fa; }
+    .log-entry.warn { color: #fbbf24; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    .stat {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 1rem;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #3b82f6;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: #a1a1aa;
+    }
+    .alert {
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+      font-size: 0.875rem;
+    }
+    .alert-info {
+      background: rgba(59, 130, 246, 0.2);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+    .alert-success {
+      background: rgba(74, 222, 128, 0.2);
+      border: 1px solid rgba(74, 222, 128, 0.3);
+    }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🗄️ Exportador de Banco de Dados</h1>
+    <p class="subtitle">Exporte todos os dados do seu projeto Supabase para JSON</p>
+
+    <div class="card">
+      <div class="card-title">
+        <span class="step">1</span>
+        Credenciais do Projeto Origem
+      </div>
+      <div class="alert alert-info">
+        ⚠️ Esta ferramenta roda 100% no seu navegador. Suas credenciais NÃO são enviadas para nenhum servidor.
+      </div>
+      <label for="sourceUrl">URL do Projeto Supabase</label>
+      <input type="text" id="sourceUrl" placeholder="https://seu-projeto.supabase.co">
+      
+      <label for="sourceKey">Service Role Key (chave secreta)</label>
+      <input type="password" id="sourceKey" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+      
+      <button class="btn-primary" id="btnConnect">Conectar e Listar Tabelas</button>
+    </div>
+
+    <div class="card hidden" id="tablesCard">
+      <div class="card-title">
+        <span class="step">2</span>
+        Selecionar Tabelas para Exportar
+      </div>
+      <div id="tablesList"></div>
+      <button class="btn-primary" id="btnExport">Exportar Dados Selecionados</button>
+      <button class="btn-secondary" id="btnSelectAll">Selecionar Todas</button>
+    </div>
+
+    <div class="card hidden" id="progressCard">
+      <div class="card-title">
+        <span class="step">3</span>
+        Progresso da Exportação
+      </div>
+      <div class="progress-container active">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+        </div>
+        <div class="progress-text" id="progressText">Iniciando...</div>
+      </div>
+      <div class="stats" id="stats">
+        <div class="stat">
+          <div class="stat-value" id="statTables">0</div>
+          <div class="stat-label">Tabelas</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="statRows">0</div>
+          <div class="stat-label">Registros</div>
+        </div>
+        <div class="stat">
+          <div class="stat-value" id="statSize">0 KB</div>
+          <div class="stat-label">Tamanho</div>
+        </div>
+      </div>
+      <div class="log-container" id="logContainer"></div>
+    </div>
+
+    <div class="card hidden" id="downloadCard">
+      <div class="card-title">
+        <span class="step">4</span>
+        Download
+      </div>
+      <div class="alert alert-success">
+        ✅ Exportação concluída com sucesso!
+      </div>
+      <button class="btn-primary" id="btnDownload">Baixar Arquivo JSON</button>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let supabaseClient = null;
+    let tables = [];
+    let exportedData = null;
+
+    // DOM elements
+    const btnConnect = document.getElementById('btnConnect');
+    const btnExport = document.getElementById('btnExport');
+    const btnSelectAll = document.getElementById('btnSelectAll');
+    const btnDownload = document.getElementById('btnDownload');
+    const tablesCard = document.getElementById('tablesCard');
+    const progressCard = document.getElementById('progressCard');
+    const downloadCard = document.getElementById('downloadCard');
+    const tablesList = document.getElementById('tablesList');
+    const logContainer = document.getElementById('logContainer');
+    const progressFill = document.getElementById('progressFill');
+    const progressText = document.getElementById('progressText');
+
+    // Tables to ignore (system tables)
+    const IGNORED_TABLES = [
+      'schema_migrations',
+      'supabase_functions',
+      'secrets',
+      'hooks',
+      'http_request_queue',
+      'mfa_factors',
+      'mfa_challenges',
+      'mfa_amr_claims',
+      'sso_providers',
+      'sso_domains',
+      'saml_providers',
+      'saml_relay_states',
+      'flow_state',
+      'identities',
+      'instances',
+      'sessions',
+      'refresh_tokens',
+      'audit_log_entries',
+      'key',
+      'buckets',
+      'objects',
+      's3_multipart_uploads',
+      's3_multipart_uploads_parts',
+      'extensions',
+      'migrations',
+    ];
+
+    function log(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function updateProgress(percent, text) {
+      progressFill.style.width = `${percent}%`;
+      progressText.textContent = text;
+    }
+
+    function updateStats(tablesCount, rowsCount, sizeBytes) {
+      document.getElementById('statTables').textContent = tablesCount;
+      document.getElementById('statRows').textContent = rowsCount.toLocaleString();
+      const sizeKB = (sizeBytes / 1024).toFixed(1);
+      document.getElementById('statSize').textContent = sizeBytes > 1024 * 1024 
+        ? `${(sizeBytes / 1024 / 1024).toFixed(1)} MB`
+        : `${sizeKB} KB`;
+    }
+
+    // Connect to Supabase
+    btnConnect.addEventListener('click', async () => {
+      const url = document.getElementById('sourceUrl').value.trim();
+      const key = document.getElementById('sourceKey').value.trim();
+
+      if (!url || !key) {
+        alert('Por favor, preencha a URL e a Service Role Key');
+        return;
+      }
+
+      btnConnect.disabled = true;
+      btnConnect.textContent = 'Conectando...';
+
+      try {
+        // Create Supabase client
+        supabaseClient = supabase.createClient(url, key, {
+          auth: { persistSession: false, autoRefreshToken: false }
+        });
+
+        // List all tables in public schema
+        const { data, error } = await supabaseClient.rpc('get_table_names').catch(() => ({ data: null, error: true }));
+        
+        // If RPC doesn't exist, try direct query
+        let tableNames = [];
+        if (error || !data) {
+          // Fallback: query information_schema
+          const { data: schemaData, error: schemaError } = await supabaseClient
+            .from('information_schema.tables')
+            .select('table_name')
+            .eq('table_schema', 'public')
+            .eq('table_type', 'BASE TABLE');
+          
+          if (schemaError) {
+            // Another fallback: try common table names
+            log('Tentando detectar tabelas automaticamente...', 'warn');
+            const commonTables = [
+              'clinics', 'patients', 'professionals', 'appointments', 'procedures',
+              'medical_records', 'prescriptions', 'employers', 'accounting_offices',
+              'profiles', 'user_roles', 'settings', 'anamnesis', 'patient_attachments',
+              'cash_registers', 'cash_flow_history', 'financial_transactions',
+              'invoices', 'invoice_items', 'patient_cards', 'patient_dependents',
+              'chart_of_accounts', 'automation_flows', 'campaigns', 'whatsapp_templates',
+              'access_groups', 'access_group_permissions', 'union_entities',
+              'contribution_types', 'patient_contributions', 'patient_segments',
+              'professional_schedules', 'clinic_holidays', 'anamnese_templates',
+              'anamnese_questions', 'anamnese_responses', 'anamnese_answers',
+              'exam_requests', 'exam_request_items', 'procedure_groups'
+            ];
+            
+            for (const tableName of commonTables) {
+              try {
+                const { count } = await supabaseClient.from(tableName).select('*', { count: 'exact', head: true });
+                if (count !== null) {
+                  tableNames.push(tableName);
+                }
+              } catch (e) {
+                // Table doesn't exist, skip
+              }
+            }
+          } else {
+            tableNames = schemaData.map(t => t.table_name);
+          }
+        } else {
+          tableNames = data;
+        }
+
+        // Filter out system tables
+        tables = tableNames.filter(t => !IGNORED_TABLES.includes(t));
+        
+        if (tables.length === 0) {
+          throw new Error('Nenhuma tabela encontrada no schema public');
+        }
+
+        log(`Encontradas ${tables.length} tabelas`, 'success');
+
+        // Render table checkboxes
+        tablesList.innerHTML = tables.map(t => `
+          <label style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem; cursor: pointer;">
+            <input type="checkbox" name="table" value="${t}" checked>
+            <span>${t}</span>
+          </label>
+        `).join('');
+
+        tablesCard.classList.remove('hidden');
+        btnConnect.textContent = 'Conectado ✓';
+      } catch (err) {
+        console.error(err);
+        alert('Erro ao conectar: ' + (err.message || 'Verifique as credenciais'));
+        btnConnect.disabled = false;
+        btnConnect.textContent = 'Conectar e Listar Tabelas';
+      }
+    });
+
+    // Select all tables
+    btnSelectAll.addEventListener('click', () => {
+      const checkboxes = tablesList.querySelectorAll('input[type="checkbox"]');
+      const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+      checkboxes.forEach(cb => cb.checked = !allChecked);
+      btnSelectAll.textContent = allChecked ? 'Selecionar Todas' : 'Desmarcar Todas';
+    });
+
+    // Export data
+    btnExport.addEventListener('click', async () => {
+      const selectedTables = Array.from(tablesList.querySelectorAll('input[type="checkbox"]:checked'))
+        .map(cb => cb.value);
+
+      if (selectedTables.length === 0) {
+        alert('Selecione pelo menos uma tabela');
+        return;
+      }
+
+      btnExport.disabled = true;
+      progressCard.classList.remove('hidden');
+      logContainer.innerHTML = '';
+
+      const exportData = {
+        version: '1.0',
+        exported_at: new Date().toISOString(),
+        source_url: document.getElementById('sourceUrl').value.trim().replace(/\/+$/, ''),
+        tables: {},
+        record_counts: {},
+        errors: []
+      };
+
+      let totalRows = 0;
+      let processedTables = 0;
+
+      for (const tableName of selectedTables) {
+        try {
+          log(`Exportando ${tableName}...`, 'info');
+          updateProgress(
+            Math.round((processedTables / selectedTables.length) * 100),
+            `Exportando ${tableName}...`
+          );
+
+          // Fetch all rows with pagination
+          let allRows = [];
+          let from = 0;
+          const pageSize = 1000;
+          let hasMore = true;
+
+          while (hasMore) {
+            const { data, error } = await supabaseClient
+              .from(tableName)
+              .select('*')
+              .range(from, from + pageSize - 1);
+
+            if (error) {
+              throw error;
+            }
+
+            if (data && data.length > 0) {
+              allRows = allRows.concat(data);
+              from += pageSize;
+              hasMore = data.length === pageSize;
+            } else {
+              hasMore = false;
+            }
+          }
+
+          exportData.tables[tableName] = allRows;
+          exportData.record_counts[tableName] = allRows.length;
+          totalRows += allRows.length;
+          
+          log(`✓ ${tableName}: ${allRows.length} registros`, 'success');
+        } catch (err) {
+          log(`✗ ${tableName}: ${err.message}`, 'error');
+          exportData.errors.push({ table: tableName, error: err.message });
+        }
+
+        processedTables++;
+        updateStats(processedTables, totalRows, JSON.stringify(exportData).length);
+      }
+
+      updateProgress(100, 'Exportação concluída!');
+      exportedData = exportData;
+      downloadCard.classList.remove('hidden');
+      
+      log(`\nExportação finalizada: ${processedTables} tabelas, ${totalRows} registros`, 'success');
+    });
+
+    // Download JSON
+    btnDownload.addEventListener('click', () => {
+      if (!exportedData) return;
+
+      const json = JSON.stringify(exportedData, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
