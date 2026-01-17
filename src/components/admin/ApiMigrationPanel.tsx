@@ -106,12 +106,19 @@ export function ApiMigrationPanel() {
         tables = summary.tables;
       } else if (summary && typeof summary === "object") {
         // If it's an object with table names as keys, convert to array
+        // Filter out metadata keys that are not actual tables
+        const metadataKeys = new Set([
+          "total", "timestamp", "tableCount", "authUsersCount", 
+          "tables", "error", "success", "message"
+        ]);
+        
         tables = Object.entries(summary)
-          .filter(([key]) => key !== "total" && key !== "timestamp")
+          .filter(([key]) => !metadataKeys.has(key))
           .map(([table, data]: [string, any]) => ({
             table,
             count: typeof data === "number" ? data : data?.count || 0,
-          }));
+          }))
+          .filter((t) => t.count > 0); // Only include tables with data
       }
       setState((s) => ({ ...s, summary: tables, progress: 10 }));
 
