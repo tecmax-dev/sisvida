@@ -233,6 +233,11 @@ async function migrateAuthUsersAndUserDependentTables(params: {
     listAllAuthUsers(destAdmin),
   ]);
 
+  console.log("[migrate-from-source] Auth users loaded", {
+    source_users: sourceUsers.length,
+    dest_users: destUsers.length,
+  });
+
   const destByEmail = new Map<string, any>();
   for (const u of destUsers) {
     if (u?.email) destByEmail.set(normalizeEmail(u.email), u);
@@ -363,6 +368,13 @@ async function migrateAuthUsersAndUserDependentTables(params: {
 
         transformed.push(next);
       }
+
+      console.log("[migrate-from-source] User-dependent page", {
+        table: tableName,
+        offset,
+        source_rows: pageData.length,
+        mapped_rows: transformed.length,
+      });
 
       if (transformed.length > 0) {
         const { error: upsertError } = await destAdmin
