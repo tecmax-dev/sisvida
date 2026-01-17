@@ -220,29 +220,215 @@ export function ApiMigrationPanel() {
       }
       
       // Order tables to reduce FK issues (dependencies first)
+      // Level 0: No FK dependencies (standalone tables)
+      // Level 1: Only depends on Level 0
+      // Level 2: Depends on Level 1, etc.
       const preferredOrder = [
+        // Level 0 - Standalone base tables (no FKs or only self-referencing)
         "clinics",
         "union_entities",
         "subscription_addons",
+        "subscription_plans",
         "system_notifications",
         "system_features",
         "permission_definitions",
-        "profiles",
-        "user_roles",
-        "super_admins",
-        "insurance_plans",
-        "procedures",
-        "patients",
-        "patient_cards",
-        "patient_folders",
-        "patient_dependents",
-        "employers",
-        "accounting_offices",
-        "accounting_office_employers",
-        "patient_employers",
-        "professionals",
-        "appointments",
-        "employer_contributions",
+        "specialties",
+        "tuss_codes",
+        "icd10_codes",
+        "medications",
+        "national_holidays",
+        "municipal_holidays",
+        "state_holidays",
+        "carousel_banners",
+        "hero_settings",
+        "global_config",
+        "chat_settings",
+        "chat_working_hours",
+        "chat_quick_responses",
+        "chat_sectors",
+        "negotiation_settings",
+        "document_settings",
+        "nps_settings",
+        "panel_banners",
+        "panels",
+        "contribution_types",
+        "employer_categories",
+        "mobile_app_tabs",
+        
+        // Level 1 - Depends on clinics/union_entities
+        "profiles", // depends on auth.users (handled by userMapping)
+        "user_roles", // depends on auth.users
+        "super_admins", // depends on auth.users
+        "insurance_plans", // may depend on clinics
+        "procedures", // depends on clinics
+        "suppliers", // depends on clinics
+        "union_suppliers", // depends on union_entities
+        "chart_of_accounts", // depends on clinics
+        "union_chart_of_accounts", // depends on union_entities
+        "cash_registers", // depends on clinics
+        "union_cash_registers", // depends on union_entities
+        "financial_categories", // depends on clinics
+        "union_financial_categories", // depends on union_entities
+        "cost_centers", // depends on clinics
+        "union_cost_centers", // depends on union_entities
+        "access_groups", // depends on clinics
+        "clinic_holidays", // depends on clinics
+        "totems", // depends on clinics
+        "queues", // depends on clinics
+        "anamnese_templates", // depends on clinics
+        "patient_segments", // depends on clinics
+        "automation_flows", // depends on clinics
+        "campaigns", // depends on clinics
+        "webhooks", // depends on clinics
+        "api_keys", // depends on clinics
+        "smtp_settings", // depends on auth.users
+        "evolution_configs", // depends on clinics
+        "twilio_configs", // depends on clinics
+        "lytex_sync_logs", // depends on clinics
+        "whatsapp_sectors", // standalone
+        "whatsapp_operators", // may depend on auth.users
+        "whatsapp_contacts", // standalone
+        "whatsapp_quick_replies", // standalone
+        "whatsapp_module_settings", // depends on clinics
+        "homologacao_settings", // depends on clinics
+        "homologacao_service_types", // depends on clinics
+        "homologacao_schedules", // depends on clinics
+        "homologacao_professionals", // depends on clinics
+        "homologacao_blocks", // depends on schedules
+        "union_convenio_categories", // depends on union_entities
+        "union_convenios", // depends on union_entities
+        "sindical_categorias", // standalone
+        
+        // Level 2 - Depends on Level 1
+        "access_group_permissions", // depends on access_groups
+        "patients", // depends on clinics
+        "union_suppliers", // depends on union_entities
+        "professionals", // depends on clinics, auth.users
+        "employers", // depends on clinics, union_entities
+        "accounting_offices", // depends on clinics, union_entities
+        "anamnese_questions", // depends on anamnese_templates
+        "exams", // depends on clinics
+        "feature_permissions", // depends on system_features
+        "plan_features", // depends on system_features
+        "subscriptions", // depends on clinics, subscription_plans
+        "clinic_addons", // depends on clinics, subscription_addons
+        "addon_requests", // depends on clinics, subscription_addons
+        "upgrade_requests", // depends on auth.users
+        "import_logs", // depends on clinics
+        "whatsapp_operator_sectors", // depends on operators, sectors
+        "whatsapp_ai_conversations", // standalone
+        "sindical_payment_methods", // depends on sindicatos
+        "member_categories", // depends on union_entities
+        
+        // Level 3 - Depends on Level 2
+        "patient_cards", // depends on patients
+        "patient_folders", // depends on patients
+        "patient_dependents", // depends on patients
+        "patient_attachments", // depends on patients, folders
+        "patient_first_access_tokens", // depends on patients
+        "patient_password_resets", // depends on patients
+        "marketing_consents", // depends on patients
+        "medical_records", // depends on patients, clinics
+        "anamnesis", // depends on patients, clinics
+        "anamnese_responses", // depends on patients, templates, professionals
+        "anamnese_question_options", // depends on anamnese_questions
+        "anamnese_answers", // depends on anamnese_responses, questions
+        "odontogram_records", // depends on patients
+        "prescriptions", // depends on patients
+        "exam_results", // depends on exams, patients
+        "professional_procedures", // depends on professionals, procedures
+        "professional_specialties", // depends on professionals, specialties
+        "professional_insurance_plans", // depends on professionals, insurance_plans
+        "professional_commissions", // depends on professionals
+        "professional_schedule_exceptions", // depends on professionals
+        "accounting_office_employers", // depends on accounting_offices, employers
+        "patient_employers", // depends on patients, employers
+        "procedure_insurance_prices", // depends on procedures, insurance_plans
+        "employer_contributions", // depends on employers, clinics
+        "cash_transfers", // depends on cash_registers
+        "union_cash_transfers", // depends on union_cash_registers
+        "financial_transactions", // depends on clinics, categories, cash_registers
+        "union_financial_transactions", // depends on union_entities, categories, cash_registers, suppliers
+        "cash_flow_history", // depends on clinics, cash_registers
+        "union_cash_flow_history", // depends on union_entities, cash_registers
+        "whatsapp_tickets", // depends on contacts
+        "sindical_associados", // depends on sindicatos
+        "members", // depends on union_entities
+        
+        // Level 4 - Depends on Level 3
+        "appointments", // depends on patients, professionals, procedures, clinics
+        "medical_documents", // depends on medical_records
+        "tiss_guides", // depends on patients
+        "tiss_guide_items", // depends on tiss_guides
+        "tiss_status_history", // depends on tiss_guides
+        "tiss_xml_files", // depends on tiss_guides
+        "contribution_audit_logs", // depends on employer_contributions
+        "lytex_conciliation_logs", // depends on employer_contributions
+        "debt_negotiations", // depends on employers
+        "negotiation_items", // depends on negotiations, contributions
+        "negotiation_installments", // depends on negotiations
+        "card_expiry_notifications", // depends on patient_cards
+        "payslip_requests", // depends on patient_cards
+        "whatsapp_ticket_messages", // depends on tickets
+        "whatsapp_booking_sessions", // depends on patients
+        "sindical_associado_dependentes", // depends on associados
+        "member_contributions", // depends on members
+        "union_member_audit_logs", // depends on patients/members
+        "union_supplier_defaults", // depends on union_suppliers
+        
+        // Level 5 - Depends on Level 4
+        "pending_confirmations", // depends on appointments
+        "pre_attendance", // depends on appointments
+        "queue_calls", // depends on queues, patients
+        "audit_logs", // depends on auth.users
+        "attachment_access_logs", // depends on attachments, auth.users
+        "birthday_message_logs", // depends on patients, clinics
+        "message_logs", // depends on patients
+        "accounting_office_portal_logs", // depends on accounting_offices
+        "employer_portal_logs", // depends on employers
+        "chat_conversations", // depends on clinics, auth.users
+        "chat_messages", // depends on conversations
+        "push_notification_tokens", // depends on patients
+        "push_notification_history", // depends on clinics
+        "homologacao_appointments", // depends on schedules, professionals
+        "homologacao_notification_logs", // depends on appointments
+        "homologacao_notifications", // depends on appointments
+        "homologacao_professional_services", // depends on professionals, services
+        "telemedicine_sessions", // depends on appointments
+        "segment_patients", // depends on segments, patients
+        "scheduled_automations", // depends on automations
+        "clinic_notification_reads", // depends on notifications, clinics
+        "api_logs", // depends on api_keys
+        "whatsapp_incoming_logs", // depends on various
+        "webhook_logs", // depends on webhooks
+        "lytex_webhook_logs", // standalone logs
+        "email_confirmations", // depends on auth.users
+        "pending_dependent_approvals", // depends on patients
+        "mercado_pago_payments", // depends on clinics
+        "package_templates", // depends on clinics
+        "package_payments", // depends on packages
+        "package_sessions", // depends on packages
+        "patient_packages", // depends on patients, packages
+        "quotes", // depends on clinics
+        "quote_items", // depends on quotes
+        "recurring_transactions", // depends on financial
+        "expense_liquidation_history", // depends on transactions
+        "transaction_cost_centers", // depends on transactions
+        "stock_categories", // depends on clinics
+        "stock_products", // depends on clinics
+        "stock_movements", // depends on products
+        "stock_alerts", // depends on products
+        "medical_repass_rules", // depends on clinics
+        "medical_repass_periods", // depends on clinics
+        "medical_repass_items", // depends on periods
+        "medical_repass_payments", // depends on periods
+        "waiting_list", // depends on clinics
+        "union_payment_history", // depends on union_entities
+        "union_share_logs", // depends on union_entities
+        "union_audit_logs", // depends on union_entities
+        "union_app_content", // depends on union_entities
+        "member_portal_logs", // depends on members
+        "user_settings_widgets", // depends on auth.users
       ];
       const orderIndex = new Map(preferredOrder.map((t, i) => [t, i] as const));
       tables.sort((a, b) => {
