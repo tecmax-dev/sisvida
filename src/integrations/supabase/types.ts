@@ -10132,6 +10132,7 @@ export type Database = {
           current_balance: number | null
           id: string
           initial_balance: number | null
+          initial_balance_date: string | null
           is_active: boolean | null
           name: string
           type: string
@@ -10146,6 +10147,7 @@ export type Database = {
           current_balance?: number | null
           id?: string
           initial_balance?: number | null
+          initial_balance_date?: string | null
           is_active?: boolean | null
           name: string
           type: string
@@ -10160,6 +10162,7 @@ export type Database = {
           current_balance?: number | null
           id?: string
           initial_balance?: number | null
+          initial_balance_date?: string | null
           is_active?: boolean | null
           name?: string
           type?: string

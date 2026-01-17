@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +21,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Wallet, Building2, TrendingUp } from "lucide-react";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Wallet, Building2, TrendingUp, CalendarIcon } from "lucide-react";
 
 interface UnionCashRegisterDialogProps {
   open: boolean;
@@ -47,6 +56,7 @@ export function UnionCashRegisterDialog({
     name: "",
     type: "bank_account",
     initial_balance: "0",
+    initial_balance_date: new Date(),
     bank_name: "",
     agency: "",
     account_number: "",
@@ -58,6 +68,9 @@ export function UnionCashRegisterDialog({
         name: register.name || "",
         type: register.type || "bank_account",
         initial_balance: register.initial_balance?.toString() || "0",
+        initial_balance_date: register.initial_balance_date 
+          ? new Date(register.initial_balance_date + "T12:00:00") 
+          : new Date(),
         bank_name: register.bank_name || "",
         agency: register.agency || "",
         account_number: register.account_number || "",
@@ -67,6 +80,7 @@ export function UnionCashRegisterDialog({
         name: "",
         type: "bank_account",
         initial_balance: "0",
+        initial_balance_date: new Date(),
         bank_name: "",
         agency: "",
         account_number: "",
@@ -82,11 +96,16 @@ export function UnionCashRegisterDialog({
     try {
       const balance = parseFloat(formData.initial_balance.replace(",", ".") || "0");
       
+      const balanceDate = formData.initial_balance_date 
+        ? format(formData.initial_balance_date, "yyyy-MM-dd")
+        : format(new Date(), "yyyy-MM-dd");
+
       const data = {
         clinic_id: clinicId,
         name: formData.name,
         type: formData.type,
         initial_balance: balance,
+        initial_balance_date: balanceDate,
         current_balance: register ? undefined : balance,
         bank_name: formData.bank_name || null,
         agency: formData.agency || null,
@@ -201,14 +220,46 @@ export function UnionCashRegisterDialog({
               </>
             )}
 
-            <div>
-              <Label htmlFor="initial_balance">Saldo Inicial (R$)</Label>
-              <Input
-                id="initial_balance"
-                value={formData.initial_balance}
-                onChange={(e) => setFormData({ ...formData, initial_balance: e.target.value })}
-                placeholder="0,00"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="initial_balance">Saldo Inicial (R$)</Label>
+                <Input
+                  id="initial_balance"
+                  value={formData.initial_balance}
+                  onChange={(e) => setFormData({ ...formData, initial_balance: e.target.value })}
+                  placeholder="0,00"
+                />
+              </div>
+
+              <div>
+                <Label>Data do Saldo</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start text-left font-normal",
+                        !formData.initial_balance_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.initial_balance_date 
+                        ? format(formData.initial_balance_date, "dd/MM/yyyy", { locale: ptBR })
+                        : "Selecione a data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.initial_balance_date}
+                      onSelect={(date) => date && setFormData({ ...formData, initial_balance_date: date })}
+                      initialFocus
+                      className="pointer-events-auto"
+                      locale={ptBR}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
           </div>
 
