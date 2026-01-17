@@ -129,15 +129,34 @@ export default function PFContributionDialog({
   const fetchMembers = async () => {
     setLoadingMembers(true);
     try {
-      const { data, error } = await supabase
-        .from("patients")
-        .select("id, name, cpf, email, phone")
-        .eq("clinic_id", clinicId)
-        .not("cpf", "is", null)
-        .order("name");
+      // Fetch all members with pagination to overcome 1000 row limit
+      let allMembers: Member[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
-      setMembers(data || []);
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("patients")
+          .select("id, name, cpf, email, phone")
+          .eq("clinic_id", clinicId)
+          .not("cpf", "is", null)
+          .order("name")
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allMembers = [...allMembers, ...data];
+          hasMore = data.length === pageSize;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setMembers(allMembers);
+      console.log(`[PFContributionDialog] Loaded ${allMembers.length} members`);
     } catch (error) {
       console.error("Error fetching members:", error);
       toast.error("Erro ao carregar sócios");
