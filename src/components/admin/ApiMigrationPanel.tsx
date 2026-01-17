@@ -102,48 +102,81 @@ export function ApiMigrationPanel() {
       
       console.log("[ApiMigration] Raw summary received:", JSON.stringify(summary, null, 2));
       
-      // Metadata keys that should NOT be treated as table names
+      // Metadata keys that should NOT be treated as table names (exact match, case-insensitive check)
       const metadataKeys = new Set([
-        "total", "timestamp", "tableCount", "authUsersCount", 
+        "total", "timestamp", "tablecount", "authuserscount", 
         "tables", "error", "success", "message", "count", "version"
       ]);
       
       // Helper to check if a key looks like a valid table name
       const isValidTableName = (key: string): boolean => {
-        if (metadataKeys.has(key)) return false;
-        // Table names should be snake_case and not contain numbers at the end like "Count"
-        if (/Count$/.test(key)) return false;
-        if (/^[a-z][a-z0-9_]*$/.test(key)) return true;
+        const lowerKey = key.toLowerCase();
+        if (metadataKeys.has(lowerKey)) return false;
+        // Exclude keys that end with "Count" (metadata fields)
+        if (/count$/i.test(key)) return false;
+        // Accept any key that looks like a table name (letters, numbers, underscores)
+        // More permissive: just needs to start with a letter and contain valid chars
+        if (/^[a-zA-Z][a-zA-Z0-9_]*$/.test(key)) return true;
         return false;
       };
       
       if (Array.isArray(summary)) {
-        // Filter out any entries that look like metadata
-        tables = summary.filter((item) => {
-          if (typeof item === "object" && item.table) {
-            return isValidTableName(item.table);
-          }
-          return false;
-        });
+        console.log("[ApiMigration] Summary is array with", summary.length, "items");
+        // If array of objects with table property
+        tables = summary
+          .filter((item) => {
+            if (typeof item === "object" && item.table) {
+              const valid = isValidTableName(item.table);
+              if (!valid) console.log("[ApiMigration] Excluded table:", item.table);
+              return valid;
+            }
+            return false;
+          })
+          .map((item) => ({
+            table: item.table,
+            count: Number(item.count) || 0,
+          }));
       } else if (summary?.tables && Array.isArray(summary.tables)) {
-        tables = summary.tables.filter((item: any) => {
-          if (typeof item === "object" && item.table) {
-            return isValidTableName(item.table);
-          }
-          return false;
-        });
+        console.log("[ApiMigration] Summary has tables array with", summary.tables.length, "items");
+        tables = summary.tables
+          .filter((item: any) => {
+            if (typeof item === "object" && item.table) {
+              const valid = isValidTableName(item.table);
+              if (!valid) console.log("[ApiMigration] Excluded table:", item.table);
+              return valid;
+            }
+            return false;
+          })
+          .map((item: any) => ({
+            table: item.table,
+            count: Number(item.count) || 0,
+          }));
       } else if (summary && typeof summary === "object") {
+        console.log("[ApiMigration] Summary is object with keys:", Object.keys(summary));
         // If it's an object with table names as keys, convert to array
         tables = Object.entries(summary)
-          .filter(([key]) => isValidTableName(key))
+          .filter(([key]) => {
+            const valid = isValidTableName(key);
+            if (!valid) console.log("[ApiMigration] Excluded key:", key);
+            return valid;
+          })
           .map(([table, data]: [string, any]) => ({
             table,
-            count: typeof data === "number" ? data : data?.count || 0,
+            count: typeof data === "number" ? data : Number(data?.count) || 0,
           }))
           .filter((t) => t.count > 0); // Only include tables with data
       }
       
-      console.log("[ApiMigration] Filtered tables to import:", tables.map(t => t.table));
+      console.log("[ApiMigration] Tables to import:", tables.length, tables.map(t => `${t.table}(${t.count})`));
+      
+      if (tables.length === 0) {
+        console.warn("[ApiMigration] No valid tables found in summary!");
+        setState((s) => ({
+          ...s,
+          errors: [...s.errors, "Nenhuma tabela válida encontrada no projeto origem. Verifique se a API de exportação está configurada corretamente."],
+        }));
+      }
+      
       setState((s) => ({ ...s, summary: tables, progress: 10 }));
 
       // Phase 2: Import users
