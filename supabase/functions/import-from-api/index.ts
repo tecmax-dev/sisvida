@@ -45,9 +45,10 @@ const FK_REMAP_TABLES: Record<string, string[]> = {
   "audit_logs": ["user_id"],
   "attachment_access_logs": ["user_id"],
   
-  // Clinic-related tables
-  "employers": ["clinic_id"],
-  "accounting_offices": ["clinic_id"],
+  // Union entity related tables
+  "union_entities": ["clinic_id", "plan_id", "user_id"],
+  "employers": ["clinic_id", "union_entity_id", "category_id"],
+  "accounting_offices": ["clinic_id", "union_entity_id"],
   "patients": ["clinic_id"],
   
   // Relationship/junction tables
@@ -57,7 +58,7 @@ const FK_REMAP_TABLES: Record<string, string[]> = {
   
   // Transactions with multiple FKs
   "appointments": ["clinic_id", "patient_id", "professional_id", "procedure_id"],
-  "employer_contributions": ["employer_id", "clinic_id"],
+  "employer_contributions": ["employer_id", "clinic_id", "union_entity_id"],
   "financial_transactions": ["clinic_id", "category_id", "cash_register_id"],
 };
 
