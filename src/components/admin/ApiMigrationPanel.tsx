@@ -100,26 +100,50 @@ export function ApiMigrationPanel() {
       let tables: { table: string; count: number }[] = [];
       const summary = summaryData.summary;
       
+      console.log("[ApiMigration] Raw summary received:", JSON.stringify(summary, null, 2));
+      
+      // Metadata keys that should NOT be treated as table names
+      const metadataKeys = new Set([
+        "total", "timestamp", "tableCount", "authUsersCount", 
+        "tables", "error", "success", "message", "count", "version"
+      ]);
+      
+      // Helper to check if a key looks like a valid table name
+      const isValidTableName = (key: string): boolean => {
+        if (metadataKeys.has(key)) return false;
+        // Table names should be snake_case and not contain numbers at the end like "Count"
+        if (/Count$/.test(key)) return false;
+        if (/^[a-z][a-z0-9_]*$/.test(key)) return true;
+        return false;
+      };
+      
       if (Array.isArray(summary)) {
-        tables = summary;
+        // Filter out any entries that look like metadata
+        tables = summary.filter((item) => {
+          if (typeof item === "object" && item.table) {
+            return isValidTableName(item.table);
+          }
+          return false;
+        });
       } else if (summary?.tables && Array.isArray(summary.tables)) {
-        tables = summary.tables;
+        tables = summary.tables.filter((item: any) => {
+          if (typeof item === "object" && item.table) {
+            return isValidTableName(item.table);
+          }
+          return false;
+        });
       } else if (summary && typeof summary === "object") {
         // If it's an object with table names as keys, convert to array
-        // Filter out metadata keys that are not actual tables
-        const metadataKeys = new Set([
-          "total", "timestamp", "tableCount", "authUsersCount", 
-          "tables", "error", "success", "message"
-        ]);
-        
         tables = Object.entries(summary)
-          .filter(([key]) => !metadataKeys.has(key))
+          .filter(([key]) => isValidTableName(key))
           .map(([table, data]: [string, any]) => ({
             table,
             count: typeof data === "number" ? data : data?.count || 0,
           }))
           .filter((t) => t.count > 0); // Only include tables with data
       }
+      
+      console.log("[ApiMigration] Filtered tables to import:", tables.map(t => t.table));
       setState((s) => ({ ...s, summary: tables, progress: 10 }));
 
       // Phase 2: Import users
