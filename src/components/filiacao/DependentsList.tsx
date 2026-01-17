@@ -13,12 +13,19 @@ export interface Dependent {
   cpf?: string;
 }
 
+interface ParentescoOption {
+  value: string;
+  label: string;
+}
+
 interface DependentsListProps {
   dependents: Dependent[];
   onChange: (dependents: Dependent[]) => void;
+  allowedRelationshipTypes?: string[] | null;
 }
 
-const PARENTESCO_OPTIONS = [
+// Lista completa de opções de parentesco
+const ALL_PARENTESCO_OPTIONS: ParentescoOption[] = [
   { value: "conjuge", label: "Cônjuge" },
   { value: "filho", label: "Filho(a)" },
   { value: "pai", label: "Pai" },
@@ -26,6 +33,10 @@ const PARENTESCO_OPTIONS = [
   { value: "irmao", label: "Irmão(ã)" },
   { value: "neto", label: "Neto(a)" },
   { value: "enteado", label: "Enteado(a)" },
+  { value: "sobrinho", label: "Sobrinho(a)" },
+  { value: "avo", label: "Avô/Avó" },
+  { value: "tio", label: "Tio(a)" },
+  { value: "primo", label: "Primo(a)" },
   { value: "outro", label: "Outro" },
 ];
 
@@ -37,7 +48,7 @@ const formatCpf = (value: string) => {
     .replace(/(\d{3})(\d{1,2})/, "$1-$2");
 };
 
-export function DependentsList({ dependents, onChange }: DependentsListProps) {
+export function DependentsList({ dependents, onChange, allowedRelationshipTypes }: DependentsListProps) {
   const [showForm, setShowForm] = useState(false);
   const [newDependent, setNewDependent] = useState<Partial<Dependent>>({
     nome: "",
@@ -45,6 +56,11 @@ export function DependentsList({ dependents, onChange }: DependentsListProps) {
     data_nascimento: "",
     cpf: "",
   });
+
+  // Filtrar opções de parentesco com base na configuração da entidade
+  const parentescoOptions = allowedRelationshipTypes && allowedRelationshipTypes.length > 0
+    ? ALL_PARENTESCO_OPTIONS.filter(opt => allowedRelationshipTypes.includes(opt.value))
+    : ALL_PARENTESCO_OPTIONS;
 
   const addDependent = () => {
     if (!newDependent.nome || !newDependent.grau_parentesco || !newDependent.data_nascimento) {
@@ -69,7 +85,7 @@ export function DependentsList({ dependents, onChange }: DependentsListProps) {
   };
 
   const getParentescoLabel = (value: string) => {
-    return PARENTESCO_OPTIONS.find((opt) => opt.value === value)?.label || value;
+    return ALL_PARENTESCO_OPTIONS.find((opt) => opt.value === value)?.label || value;
   };
 
   return (
@@ -140,7 +156,7 @@ export function DependentsList({ dependents, onChange }: DependentsListProps) {
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {PARENTESCO_OPTIONS.map((opt) => (
+                    {parentescoOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>
                         {opt.label}
                       </SelectItem>
