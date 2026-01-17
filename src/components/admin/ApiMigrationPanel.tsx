@@ -193,11 +193,14 @@ export function ApiMigrationPanel() {
       if (usersError) throw new Error(usersError.message);
 
       const userMapping = usersData?.userMapping || {};
+      const usersCreated = usersData?.usersCreated || 0;
+      const usersSkipped = usersData?.usersSkipped || 0;
+
       setState((s) => ({
         ...s,
         userMapping,
-        usersCreated: usersData?.usersCreated || 0,
-        usersSkipped: usersData?.usersSkipped || 0,
+        usersCreated,
+        usersSkipped,
         progress: 25,
       }));
 
@@ -215,6 +218,18 @@ export function ApiMigrationPanel() {
 
       const tablesToImport = safeTables.filter((t) => Number(t?.count || 0) > 0);
       const totalTables = tablesToImport.length;
+
+      // If there are no tables to import, do not show a misleading "success".
+      if (totalTables === 0) {
+        setState((s) => ({ ...s, phase: "done", currentTable: null, progress: 100 }));
+        toast.dismiss("migration");
+        toast.warning(
+          usersCreated > 0 || usersSkipped > 0
+            ? `Nenhuma tabela para importar. Usuários: ${usersCreated} criados, ${usersSkipped} já existiam.`
+            : "Nenhuma tabela para importar. Verifique o resumo retornado pela API de origem."
+        );
+        return;
+      }
 
       for (let i = 0; i < tablesToImport.length; i++) {
         const table = tablesToImport[i];
