@@ -75,11 +75,6 @@ interface Employer {
   category_id?: string | null;
 }
 
-interface Category {
-  id: string;
-  name: string;
-  color?: string | null;
-}
 
 interface Member {
   id: string;
@@ -128,7 +123,6 @@ interface Contribution {
 
 interface ContributionsListTabProps {
   contributions: Contribution[];
-  categories?: Category[];
   onViewContribution: (contribution: Contribution) => void;
   onGenerateInvoice: (contribution: Contribution) => void;
   onOpenCreate: () => void;
@@ -187,7 +181,6 @@ import { formatCompetence } from "@/lib/competence-format";
 
 export default function ContributionsListTab({
   contributions,
-  categories = [],
   onViewContribution,
   onGenerateInvoice,
   onOpenCreate,
@@ -203,7 +196,18 @@ export default function ContributionsListTab({
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("hide_cancelled");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [contributionTypeFilter, setContributionTypeFilter] = useState<string>("all");
+
+  // Extract unique contribution types from contributions
+  const availableContributionTypes = useMemo(() => {
+    const typesMap = new Map<string, { id: string; name: string }>();
+    contributions.forEach(c => {
+      if (c.contribution_types?.id && c.contribution_types?.name) {
+        typesMap.set(c.contribution_types.id, { id: c.contribution_types.id, name: c.contribution_types.name });
+      }
+    });
+    return Array.from(typesMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [contributions]);
   // Competence filter: always starts with previous month (MM/YYYY)
   const getInitialCompetence = () => {
     const now = new Date();
@@ -306,15 +310,15 @@ export default function ContributionsListTab({
         matchesCompetence = c.competence_month === filterMonth && c.competence_year === filterYear;
       }
 
-      // Category filter - only applies to PJ contributions
-      let matchesCategory = true;
-      if (categoryFilter !== "all" && documentTypeTab === "pj") {
-        matchesCategory = c.employers?.category_id === categoryFilter;
+      // Contribution type filter
+      let matchesContributionType = true;
+      if (contributionTypeFilter !== "all") {
+        matchesContributionType = c.contribution_type_id === contributionTypeFilter;
       }
 
-      return matchesSearchTerm && matchesStatus && matchesCompetence && matchesCategory;
+      return matchesSearchTerm && matchesStatus && matchesCompetence && matchesContributionType;
     });
-  }, [activeContributions, searchTerm, statusFilter, competenceFilter, categoryFilter, documentTypeTab]);
+  }, [activeContributions, searchTerm, statusFilter, competenceFilter, contributionTypeFilter, documentTypeTab]);
 
   useEffect(() => {
     console.debug("[ContributionsListTab] state", {
@@ -508,17 +512,17 @@ export default function ContributionsListTab({
 
             {/* Filters */}
             <div className="flex flex-wrap items-center gap-2">
-              {/* Category filter - only visible for PJ tab */}
-              {documentTypeTab === "pj" && categories.length > 0 && (
-                <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setCurrentPage(1); }}>
-                  <SelectTrigger className="w-[160px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
-                    <SelectValue placeholder="Categoria" />
+              {/* Contribution Type filter */}
+              {availableContributionTypes.length > 0 && (
+                <Select value={contributionTypeFilter} onValueChange={(v) => { setContributionTypeFilter(v); setCurrentPage(1); }}>
+                  <SelectTrigger className="w-[180px] h-10 border-amber-200 dark:border-amber-700 bg-white/80 dark:bg-amber-950/20">
+                    <SelectValue placeholder="Tipo Contribuição" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todas categorias</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    {availableContributionTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id}>
+                        {type.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
