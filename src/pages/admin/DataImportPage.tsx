@@ -45,6 +45,7 @@ import {
 } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import DataExportPanel from "@/components/admin/DataExportPanel";
+import { SourceMigrationPanel } from "@/components/admin/SourceMigrationPanel";
 import { ImportProgressCard } from "@/components/admin/ImportProgressCard";
 import { ImportHistoryPanel } from "@/components/admin/ImportHistoryPanel";
 import { BulkCardExpiryUpdate } from "@/components/admin/BulkCardExpiryUpdate";
@@ -2225,6 +2226,9 @@ export default function DataImportPage() {
 
         {/* Export Tab */}
         <TabsContent value="export" className="space-y-4">
+          {/* Source Migration Panel - Super Admin only */}
+          <SourceMigrationPanel />
+
           {selectedClinicId && selectedClinic ? (
             <DataExportPanel clinicId={selectedClinicId} clinicName={selectedClinic.name} />
           ) : (
