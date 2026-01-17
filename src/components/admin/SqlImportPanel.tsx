@@ -1,0 +1,346 @@
+import { useState, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { 
+  Upload, 
+  Database, 
+  FileText, 
+  CheckCircle2, 
+  XCircle, 
+  AlertTriangle,
+  Loader2,
+  Play,
+  Eye,
+  Trash2,
+} from "lucide-react";
+
+interface ImportDetail {
+  table: string;
+  operation: string;
+  status: "success" | "error" | "skipped";
+  message?: string;
+}
+
+interface ImportResult {
+  success: boolean;
+  executed: number;
+  errors: string[];
+  skipped: number;
+  details: ImportDetail[];
+}
+
+export function SqlImportPanel() {
+  const [sqlContent, setSqlContent] = useState<string>("");
+  const [fileName, setFileName] = useState<string>("");
+  const [importing, setImporting] = useState(false);
+  const [dryRun, setDryRun] = useState(true);
+  const [result, setResult] = useState<ImportResult | null>(null);
+  const [preview, setPreview] = useState<{tables: Record<string, number>, totalStatements: number} | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.endsWith(".sql")) {
+      toast.error("Arquivo deve ser .sql");
+      return;
+    }
+
+    try {
+      const content = await file.text();
+      setSqlContent(content);
+      setFileName(file.name);
+      setResult(null);
+      
+      // Preview analysis
+      const tables: Record<string, number> = {};
+      let totalStatements = 0;
+      
+      const lines = content.split("\n");
+      for (const line of lines) {
+        const trimmed = line.trim().toUpperCase();
+        if (trimmed.startsWith("INSERT INTO")) {
+          totalStatements++;
+          const match = line.match(/INSERT\s+INTO\s+(?:public\.)?["']?(\w+)["']?/i);
+          if (match) {
+            tables[match[1]] = (tables[match[1]] || 0) + 1;
+          }
+        } else if (trimmed.startsWith("UPDATE ")) {
+          totalStatements++;
+          const match = line.match(/UPDATE\s+(?:public\.)?["']?(\w+)["']?/i);
+          if (match) {
+            tables[match[1]] = (tables[match[1]] || 0) + 1;
+          }
+        } else if (trimmed.startsWith("DELETE FROM")) {
+          totalStatements++;
+          const match = line.match(/DELETE\s+FROM\s+(?:public\.)?["']?(\w+)["']?/i);
+          if (match) {
+            tables[match[1]] = (tables[match[1]] || 0) + 1;
+          }
+        }
+      }
+      
+      setPreview({ tables, totalStatements });
+      toast.success(`Arquivo carregado: ${totalStatements} comandos detectados`);
+    } catch (error) {
+      toast.error("Erro ao ler arquivo");
+      console.error(error);
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleImport = async () => {
+    if (!sqlContent) {
+      toast.error("Nenhum arquivo SQL carregado");
+      return;
+    }
+
+    setImporting(true);
+    setResult(null);
+
+    try {
+      toast.loading(dryRun ? "Analisando SQL (dry run)..." : "Executando importação...", { id: "sql-import" });
+
+      const { data, error } = await supabase.functions.invoke("import-sql-backup", {
+        body: { sql: sqlContent, dryRun },
+      });
+
+      if (error) throw error;
+
+      setResult(data);
+
+      if (data.success) {
+        toast.success(
+          dryRun 
+            ? `Análise concluída: ${data.executed} comandos seriam executados`
+            : `Importação concluída: ${data.executed} comandos executados`,
+          { id: "sql-import" }
+        );
+      } else {
+        toast.error(`Importação com erros: ${data.errors.length} falhas`, { id: "sql-import" });
+      }
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error(error instanceof Error ? error.message : "Erro na importação", { id: "sql-import" });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const clearFile = () => {
+    setSqlContent("");
+    setFileName("");
+    setPreview(null);
+    setResult(null);
+  };
+
+  const tableStats = result?.details.reduce((acc, d) => {
+    if (!acc[d.table]) {
+      acc[d.table] = { success: 0, error: 0, skipped: 0 };
+    }
+    acc[d.table][d.status]++;
+    return acc;
+  }, {} as Record<string, { success: number; error: number; skipped: number }>);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Database className="h-5 w-5" />
+          Importar Backup SQL
+        </CardTitle>
+        <CardDescription>
+          Importe dados de um arquivo SQL (backup gerado pelo sistema ou pg_dump)
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* File Upload */}
+        <div className="flex flex-wrap gap-3 items-center">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".sql"
+            onChange={handleFileUpload}
+            className="hidden"
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            className="gap-2"
+            disabled={importing}
+          >
+            <Upload className="h-4 w-4" />
+            Selecionar Arquivo SQL
+          </Button>
+
+          {fileName && (
+            <>
+              <Badge variant="secondary" className="gap-2">
+                <FileText className="h-3 w-3" />
+                {fileName}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={clearFile}
+                disabled={importing}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
+
+        {/* Preview */}
+        {preview && (
+          <Card className="bg-muted/50">
+            <CardContent className="py-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Eye className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-sm">Preview</span>
+                <Badge variant="outline">{preview.totalStatements} comandos</Badge>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(preview.tables).map(([table, count]) => (
+                  <Badge key={table} variant="secondary" className="text-xs">
+                    {table}: {count}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Options */}
+        {sqlContent && (
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="dry-run"
+                checked={dryRun}
+                onCheckedChange={setDryRun}
+                disabled={importing}
+              />
+              <Label htmlFor="dry-run" className="text-sm">
+                Modo simulação (dry run)
+              </Label>
+            </div>
+            
+            <Button
+              onClick={handleImport}
+              disabled={importing}
+              className="gap-2"
+              variant={dryRun ? "outline" : "default"}
+            >
+              {importing ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+              {dryRun ? "Simular Importação" : "Executar Importação"}
+            </Button>
+          </div>
+        )}
+
+        {/* Results */}
+        {result && (
+          <Card className={result.success ? "border-green-500/50" : "border-red-500/50"}>
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                {result.success ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                ) : (
+                  <XCircle className="h-4 w-4 text-red-500" />
+                )}
+                {dryRun ? "Resultado da Simulação" : "Resultado da Importação"}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {/* Summary */}
+              <div className="flex flex-wrap gap-3">
+                <Badge variant="default" className="gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {result.executed} {dryRun ? "seriam executados" : "executados"}
+                </Badge>
+                <Badge variant="secondary" className="gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  {result.skipped} ignorados
+                </Badge>
+                {result.errors.length > 0 && (
+                  <Badge variant="destructive" className="gap-1">
+                    <XCircle className="h-3 w-3" />
+                    {result.errors.length} erros
+                  </Badge>
+                )}
+              </div>
+
+              {/* Table Stats */}
+              {tableStats && Object.keys(tableStats).length > 0 && (
+                <ScrollArea className="h-48">
+                  <div className="space-y-1">
+                    {Object.entries(tableStats).map(([table, stats]) => (
+                      <div key={table} className="flex items-center gap-2 text-sm py-1">
+                        <span className="font-mono text-xs w-40 truncate">{table}</span>
+                        <div className="flex gap-2 text-xs">
+                          {stats.success > 0 && (
+                            <span className="text-green-600">✓ {stats.success}</span>
+                          )}
+                          {stats.skipped > 0 && (
+                            <span className="text-yellow-600">⊘ {stats.skipped}</span>
+                          )}
+                          {stats.error > 0 && (
+                            <span className="text-red-600">✗ {stats.error}</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+
+              {/* Errors */}
+              {result.errors.length > 0 && (
+                <div className="bg-red-50 dark:bg-red-950/20 p-3 rounded text-sm">
+                  <p className="font-medium text-red-600 mb-2">Erros:</p>
+                  <ScrollArea className="h-32">
+                    <ul className="space-y-1 text-xs text-red-600">
+                      {result.errors.slice(0, 20).map((err, i) => (
+                        <li key={i} className="font-mono">{err}</li>
+                      ))}
+                      {result.errors.length > 20 && (
+                        <li className="text-muted-foreground">
+                          ... e mais {result.errors.length - 20} erros
+                        </li>
+                      )}
+                    </ul>
+                  </ScrollArea>
+                </div>
+              )}
+
+              {/* Next Steps */}
+              {dryRun && result.success && (
+                <div className="bg-blue-50 dark:bg-blue-950/20 p-3 rounded text-sm">
+                  <p className="text-blue-600">
+                    ✓ Simulação bem-sucedida! Desative o "Modo simulação" e clique em "Executar Importação" para aplicar as mudanças.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
