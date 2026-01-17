@@ -33,6 +33,13 @@ function getProjectRefFromUrl(url: string): string | null {
   }
 }
 
+// Tables that depend on auth.users and CANNOT be migrated (FK violations)
+const SKIP_USER_DEPENDENT_TABLES = new Set([
+  "profiles",
+  "user_roles",
+  "super_admins",
+]);
+
 // Tables to migrate in order (respecting foreign keys)
 const TABLES_TO_MIGRATE = [
   // Core system config (no dependencies)
@@ -50,10 +57,10 @@ const TABLES_TO_MIGRATE = [
   "access_groups",
   "access_group_permissions",
   
-  // Users and roles
-  "profiles",
-  "user_roles",
-  "super_admins",
+  // Users and roles - SKIPPED AT RUNTIME (depend on auth.users)
+  // "profiles",
+  // "user_roles",
+  // "super_admins",
   
   // Professionals
   "professionals",
@@ -329,6 +336,18 @@ serve(async (req) => {
     let totalMigrated = 0;
 
     for (const tableName of TABLES_TO_MIGRATE) {
+      // Skip tables that depend on auth.users (cannot be migrated)
+      if (SKIP_USER_DEPENDENT_TABLES.has(tableName)) {
+        results[tableName] = {
+          success: true,
+          skipped: true,
+          count: 0,
+          error: "Pulado: depende de auth.users (usuários não são migrados)",
+        };
+        skippedMissingTables.push(tableName);
+        continue;
+      }
+
       try {
         let tableMigrated = 0;
         let offset = 0;

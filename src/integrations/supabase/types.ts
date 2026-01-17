@@ -7896,6 +7896,7 @@ export type Database = {
           avatar_url: string | null
           created_at: string
           data_criacao: string | null
+          email: string | null
           email_confirmed: boolean | null
           id: string
           name: string
@@ -7908,6 +7909,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           data_criacao?: string | null
+          email?: string | null
           email_confirmed?: boolean | null
           id?: string
           name: string
@@ -7920,6 +7922,7 @@ export type Database = {
           avatar_url?: string | null
           created_at?: string
           data_criacao?: string | null
+          email?: string | null
           email_confirmed?: boolean | null
           id?: string
           name?: string
