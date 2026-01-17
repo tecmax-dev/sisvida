@@ -67,12 +67,21 @@ export async function runSqlImportBatched(opts: RunSqlImportBatchedOptions): Pro
     usersSkipped: 0,
   };
 
+  // Yield control back to the browser occasionally to avoid UI freezes.
+  const yieldToMain = () => new Promise<void>((r) => setTimeout(r, 0));
+  const YIELD_EVERY_STATEMENTS = 250;
+
   // Pass 1: collect auth.users
   const users: UsersPayloadUser[] = [];
   let seenStatements = 0;
 
   for (const stmt of parseStatements(sql)) {
     seenStatements++;
+
+    if (seenStatements % YIELD_EVERY_STATEMENTS === 0) {
+      await yieldToMain();
+    }
+
     if (seenStatements % 1500 === 0) {
       onProgress?.({
         phase: "users",
@@ -93,6 +102,7 @@ export async function runSqlImportBatched(opts: RunSqlImportBatchedOptions): Pro
   if (users.length > 0) {
     for (let i = 0; i < users.length; i += usersBatchSize) {
       const chunk = users.slice(i, i + usersBatchSize);
+
       onProgress?.({
         phase: "users",
         processed: i + chunk.length,
@@ -116,6 +126,9 @@ export async function runSqlImportBatched(opts: RunSqlImportBatchedOptions): Pro
       }
 
       aggregated = mergeResults(aggregated, data as ImportResult);
+
+      // allow UI to breathe between network batches
+      await yieldToMain();
     }
   }
 
@@ -127,6 +140,10 @@ export async function runSqlImportBatched(opts: RunSqlImportBatchedOptions): Pro
 
   for (const stmt of parseStatements(sql)) {
     processed++;
+
+    if (processed % YIELD_EVERY_STATEMENTS === 0) {
+      await yieldToMain();
+    }
 
     if (processed % 1500 === 0) {
       const basePct = 40;
@@ -168,6 +185,7 @@ export async function runSqlImportBatched(opts: RunSqlImportBatchedOptions): Pro
     if (ops.length >= opsBatchSize) {
       aggregated = mergeResults(aggregated, await flushOps(ops, mapping, dryRun, skipAuthTables));
       ops = [];
+      await yieldToMain();
     }
   }
 
@@ -180,6 +198,7 @@ export async function runSqlImportBatched(opts: RunSqlImportBatchedOptions): Pro
 
   return aggregated;
 }
+
 
 async function flushOps(
   ops: BatchOperation[],

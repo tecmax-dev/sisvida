@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { runSqlImportBatched } from "@/lib/sqlImport/batchedSqlImport";
+import { analyzeSqlDump } from "@/lib/sqlImport/analyzeSqlDump";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import {
   Users,
   ArrowRight,
 } from "lucide-react";
+
 
 interface ImportDetail {
   table: string;
@@ -70,54 +71,25 @@ export function SqlImportPanel() {
       setSqlContent(content);
       setFileName(file.name);
       setResult(null);
-      
-      // Preview analysis
-      const tables: Record<string, number> = {};
-      let totalStatements = 0;
-      let authUsersCount = 0;
-      
-      const lines = content.split("\n");
-      for (const line of lines) {
-        const trimmed = line.trim().toUpperCase();
-        if (trimmed.startsWith("INSERT INTO")) {
-          totalStatements++;
-          
-          // Check for auth.users
-          if (/INSERT\s+INTO\s+auth\.users/i.test(line)) {
-            authUsersCount++;
-            tables["auth.users"] = (tables["auth.users"] || 0) + 1;
-          } else {
-            const match = line.match(/INSERT\s+INTO\s+(?:public\.)?["']?(\w+)["']?/i);
-            if (match) {
-              tables[match[1]] = (tables[match[1]] || 0) + 1;
-            }
-          }
-        } else if (trimmed.startsWith("UPDATE ")) {
-          totalStatements++;
-          const match = line.match(/UPDATE\s+(?:public\.)?["']?(\w+)["']?/i);
-          if (match) {
-            tables[match[1]] = (tables[match[1]] || 0) + 1;
-          }
-        } else if (trimmed.startsWith("DELETE FROM")) {
-          totalStatements++;
-          const match = line.match(/DELETE\s+FROM\s+(?:public\.)?["']?(\w+)["']?/i);
-          if (match) {
-            tables[match[1]] = (tables[match[1]] || 0) + 1;
-          }
-        }
-      }
-      
-      setPreview({ 
-        tables, 
-        totalStatements, 
-        hasAuthUsers: authUsersCount > 0,
-        authUsersCount 
+
+      toast.loading("Analisando arquivo SQL...", { id: "sql-preview" });
+
+      const previewData = await analyzeSqlDump(content, {
+        onProgress: (n) => {
+          // evita spam de UI: só atualiza a cada ~3k comandos
+          if (n % 3000 === 0) toast.loading(`Analisando arquivo SQL... (${n} comandos)`, { id: "sql-preview" });
+        },
       });
-      
-      if (authUsersCount > 0) {
-        toast.success(`Arquivo carregado: ${totalStatements} comandos, ${authUsersCount} usuários auth detectados`);
+
+      setPreview(previewData);
+
+      if (previewData.authUsersCount > 0) {
+        toast.success(
+          `Arquivo carregado: ${previewData.totalStatements} comandos, ${previewData.authUsersCount} usuários auth detectados`,
+          { id: "sql-preview" }
+        );
       } else {
-        toast.success(`Arquivo carregado: ${totalStatements} comandos detectados`);
+        toast.success(`Arquivo carregado: ${previewData.totalStatements} comandos detectados`, { id: "sql-preview" });
       }
     } catch (error) {
       toast.error("Erro ao ler arquivo");

@@ -16,11 +16,28 @@ export type ParsedOperation =
     };
 
 export function* parseStatements(sql: string): Generator<string> {
-  let current = "";
+  // Performance note:
+  // Avoid building strings char-by-char (can be O(n^2) on big dumps).
+  // We instead keep a moving window (chunkStart) and only slice the source SQL
+  // when we need to (comments/delimiters/dollar quote boundaries).
+  const stmtChunks: string[] = [];
+
+  let chunkStart = 0;
   let inString = false;
   let stringChar = "";
   let inDollarQuote = false;
   let dollarTag = "";
+
+  const flushSlice = (endExclusive: number) => {
+    if (endExclusive > chunkStart) stmtChunks.push(sql.slice(chunkStart, endExclusive));
+  };
+
+  const flushStatement = () => {
+    const stmt = stmtChunks.join("").trim();
+    stmtChunks.length = 0;
+    if (stmt) return stmt;
+    return null;
+  };
 
   for (let i = 0; i < sql.length; i++) {
     const char = sql[i];
@@ -31,77 +48,83 @@ export function* parseStatements(sql: string): Generator<string> {
       const remaining = sql.slice(i, Math.min(i + 64, sql.length));
       const match = remaining.match(/^\$([a-zA-Z0-9_]*)\$/);
       if (match) {
+        const tag = match[0];
+
         if (!inDollarQuote) {
+          flushSlice(i);
+          stmtChunks.push(tag);
           inDollarQuote = true;
-          dollarTag = match[0];
-          current += match[0];
-          i += match[0].length - 1;
+          dollarTag = tag;
+          i += tag.length - 1;
+          chunkStart = i + 1;
           continue;
-        } else if (sql.slice(i, i + dollarTag.length) === dollarTag) {
+        }
+
+        if (sql.slice(i, i + dollarTag.length) === dollarTag) {
+          flushSlice(i);
+          stmtChunks.push(dollarTag);
           inDollarQuote = false;
-          current += dollarTag;
           i += dollarTag.length - 1;
+          chunkStart = i + 1;
           continue;
         }
       }
     }
 
-    if (inDollarQuote) {
-      current += char;
-      continue;
-    }
+    if (inDollarQuote) continue;
 
     // regular strings
-    if ((char === "'" || char === '"') && !inString) {
+    if (!inString && (char === "'" || char === '"')) {
       inString = true;
       stringChar = char;
-      current += char;
       continue;
     }
 
-    if (char === stringChar && inString) {
+    if (inString && char === stringChar) {
+      // doubled quote escapes, e.g. '' inside a string
       if (nextChar === stringChar) {
-        current += char + nextChar;
         i++;
         continue;
       }
       inString = false;
-      current += char;
       continue;
     }
 
-    if (inString) {
-      current += char;
-      continue;
-    }
+    if (inString) continue;
 
     // single-line comments
     if (char === "-" && nextChar === "-") {
+      flushSlice(i);
+      i += 2;
       while (i < sql.length && sql[i] !== "\n") i++;
+      chunkStart = i;
       continue;
     }
 
     // multi-line comments
     if (char === "/" && nextChar === "*") {
+      flushSlice(i);
       i += 2;
       while (i < sql.length - 1 && !(sql[i] === "*" && sql[i + 1] === "/")) i++;
-      i++;
+      i++; // move to '/'
+      chunkStart = i + 1;
       continue;
     }
 
     if (char === ";") {
-      const stmt = current.trim();
+      flushSlice(i);
+      const stmt = flushStatement();
       if (stmt) yield stmt;
-      current = "";
+      chunkStart = i + 1;
       continue;
     }
-
-    current += char;
   }
 
-  const lastStmt = current.trim();
+  flushSlice(sql.length);
+  const lastStmt = flushStatement();
   if (lastStmt) yield lastStmt;
 }
+
 
 export function extractTableName(sql: string): string {
   const insertMatch = sql.match(/INSERT\s+INTO\s+(?:public\.|auth\.)?["']?(\w+)["']?/i);
