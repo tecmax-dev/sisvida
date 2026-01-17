@@ -32,6 +32,7 @@ interface MigrationState {
   phase: "idle" | "summary" | "users" | "tables" | "done";
   summary: { table: string; count: number }[] | null;
   userMapping: Record<string, string>;
+  idMapping: Record<string, string>; // Global ID mapping for all entities
   usersCreated: number;
   usersSkipped: number;
   tables: Record<string, TableResult>;
@@ -50,6 +51,7 @@ export function ApiMigrationPanel() {
     phase: "idle",
     summary: null,
     userMapping: {},
+    idMapping: {},
     usersCreated: 0,
     usersSkipped: 0,
     tables: {},
@@ -64,6 +66,7 @@ export function ApiMigrationPanel() {
       phase: "idle",
       summary: null,
       userMapping: {},
+      idMapping: {},
       usersCreated: 0,
       usersSkipped: 0,
       tables: {},
@@ -290,11 +293,15 @@ export function ApiMigrationPanel() {
         return;
       }
 
+      // Keep track of accumulated ID mappings across all tables
+      let accumulatedIdMapping: Record<string, string> = { ...userMapping };
+
       for (let i = 0; i < tablesToImport.length; i++) {
         const table = tablesToImport[i];
         setState((s) => ({
           ...s,
           currentTable: table.table,
+          idMapping: accumulatedIdMapping,
           progress: 25 + Math.round((i / totalTables) * 70),
         }));
 
@@ -310,6 +317,7 @@ export function ApiMigrationPanel() {
                 phase: "table",
                 tableName: table.table,
                 userMapping,
+                idMapping: accumulatedIdMapping, // Pass accumulated ID mappings
               },
             }
           );
@@ -338,9 +346,16 @@ export function ApiMigrationPanel() {
             }));
           } else {
             const result = tableData?.tables?.[table.table] || { success: true, count: 0 };
+            
+            // Accumulate ID mappings from this table for use in subsequent tables
+            if (tableData?.idMapping) {
+              accumulatedIdMapping = { ...accumulatedIdMapping, ...tableData.idMapping };
+            }
+            
             setState((s) => ({
               ...s,
               tables: { ...s.tables, [table.table]: result },
+              idMapping: accumulatedIdMapping,
             }));
           }
         } catch (e) {

@@ -19,6 +19,7 @@ interface ImportResult {
   usersCreated?: number;
   usersSkipped?: number;
   userMapping?: Record<string, string>;
+  idMapping?: Record<string, string>; // Global ID mapping for all entities
 }
 
 const USER_ID_TABLES = new Set([
@@ -30,16 +31,46 @@ const USER_ID_TABLES = new Set([
   "attachment_access_logs",
 ]);
 
+// Tables with foreign keys that need ID remapping (source ID -> destination ID)
+// Format: table_name -> array of FK column names that need remapping
+const FK_REMAP_TABLES: Record<string, string[]> = {
+  // User-related tables (remap user_id)
+  "profiles": ["user_id"],
+  "user_roles": ["user_id"],
+  "super_admins": ["user_id"],
+  "professionals": ["clinic_id", "user_id"],
+  "audit_logs": ["user_id"],
+  "attachment_access_logs": ["user_id"],
+  
+  // Clinic-related tables
+  "employers": ["clinic_id"],
+  "accounting_offices": ["clinic_id"],
+  "patients": ["clinic_id"],
+  
+  // Relationship/junction tables
+  "accounting_office_employers": ["accounting_office_id", "employer_id"],
+  "patient_employers": ["patient_id", "employer_id"],
+  "professional_procedures": ["professional_id", "procedure_id"],
+  
+  // Transactions with multiple FKs
+  "appointments": ["clinic_id", "patient_id", "professional_id", "procedure_id"],
+  "employer_contributions": ["employer_id", "clinic_id"],
+  "financial_transactions": ["clinic_id", "category_id", "cash_register_id"],
+};
+
 // Tables that should be imported in order (dependencies first)
 const TABLE_ORDER = [
   "clinics",
   "profiles",
   "user_roles",
   "super_admins",
-  "professionals",
   "insurance_plans",
   "procedures",
+  "professionals",
   "patients",
+  "employers",
+  "accounting_offices",
+  "accounting_office_employers", // After employers and accounting_offices
   "patient_dependents",
   "appointments",
   // ... other tables will be imported after these
@@ -96,12 +127,32 @@ function extractTableNames(payload: any): string[] {
   return [];
 }
 
-function remapUserIds(record: Record<string, unknown>, mapping: Record<string, string>): Record<string, unknown> {
-  if (!mapping || Object.keys(mapping).length === 0) return record;
+// Remap foreign key IDs based on FK_REMAP_TABLES config and global ID mapping
+function remapForeignKeys(
+  record: Record<string, unknown>, 
+  tableName: string,
+  idMapping: Record<string, string>
+): Record<string, unknown> {
+  if (!idMapping || Object.keys(idMapping).length === 0) return record;
+  
+  const fkColumns = FK_REMAP_TABLES[tableName];
+  if (!fkColumns || fkColumns.length === 0) {
+    // Fallback: try to remap any UUID that matches our mapping
+    const out: Record<string, unknown> = { ...record };
+    for (const [k, v] of Object.entries(out)) {
+      if (typeof v === "string" && idMapping[v]) {
+        out[k] = idMapping[v];
+      }
+    }
+    return out;
+  }
+  
   const out: Record<string, unknown> = { ...record };
-  for (const [k, v] of Object.entries(out)) {
-    if (typeof v === "string" && mapping[v]) {
-      out[k] = mapping[v];
+  for (const fkCol of fkColumns) {
+    const oldId = out[fkCol];
+    if (typeof oldId === "string" && idMapping[oldId]) {
+      console.log(`[import-from-api] Remapping ${tableName}.${fkCol}: ${oldId} -> ${idMapping[oldId]}`);
+      out[fkCol] = idMapping[oldId];
     }
   }
   return out;
@@ -272,15 +323,22 @@ serve(async (req) => {
 
     // Phase 3: Import a specific table
     if (phase === "table") {
-      const { tableName, userMapping } = body;
+      const { tableName, userMapping, idMapping: existingIdMapping } = body;
       if (!tableName) throw new Error("tableName required for table phase");
 
       console.log(`[import-from-api] Importing table: ${tableName}`);
+      
+      // Merge userMapping into idMapping for unified FK remapping
+      const idMapping: Record<string, string> = {
+        ...(existingIdMapping || {}),
+        ...(userMapping || {}),
+      };
       
       let page = 0;
       let hasMore = true;
       let totalImported = 0;
       let errors: string[] = [];
+      const newIdMappings: Record<string, string> = {};
 
       while (hasMore) {
         const tableData = await fetchFromSourceApi(sourceApiUrl, syncKey, "export", {
@@ -296,27 +354,45 @@ serve(async (req) => {
         }
 
         for (const row of rows) {
+          const sourceId = row.id;
+          
           if (dryRun) {
+            // In dry run, create a fake mapping
+            if (sourceId) {
+              newIdMappings[sourceId] = crypto.randomUUID();
+            }
             totalImported++;
             continue;
           }
 
           try {
-            // Remap user IDs if this table has user references
-            const recordToInsert = USER_ID_TABLES.has(tableName)
-              ? remapUserIds(row, userMapping || {})
-              : row;
+            // Remap foreign keys using the global ID mapping
+            const recordToInsert = remapForeignKeys(row, tableName, idMapping);
 
-            const { error } = await supabaseAdmin.from(tableName).upsert(recordToInsert, {
-              onConflict: "id",
-              ignoreDuplicates: false,
-            });
+            const { data: inserted, error } = await supabaseAdmin
+              .from(tableName)
+              .upsert(recordToInsert, {
+                onConflict: "id",
+                ignoreDuplicates: false,
+              })
+              .select("id")
+              .single();
 
             if (error) {
               if (error.code !== "23505") {
                 errors.push(`Row ${row.id}: ${error.message}`);
+              } else {
+                // Duplicate - still map the ID
+                if (sourceId) {
+                  newIdMappings[sourceId] = recordToInsert.id as string || sourceId;
+                }
+                totalImported++;
               }
             } else {
+              // Track the new ID mapping (source -> destination)
+              if (sourceId && inserted?.id) {
+                newIdMappings[sourceId] = inserted.id;
+              }
               totalImported++;
             }
           } catch (e) {
@@ -328,11 +404,15 @@ serve(async (req) => {
         if (rows.length < 500) hasMore = false;
       }
 
+      // Return the new ID mappings so they can be used for dependent tables
       result.tables![tableName] = {
         success: errors.length === 0,
         count: totalImported,
         error: errors.length > 0 ? errors.slice(0, 5).join("; ") : undefined,
       };
+      
+      // Include the accumulated ID mappings in the result
+      result.idMapping = { ...idMapping, ...newIdMappings };
 
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
