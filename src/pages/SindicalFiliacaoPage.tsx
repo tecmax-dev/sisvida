@@ -419,18 +419,31 @@ export default function SindicalFiliacaoPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <Card className="max-w-lg p-8 text-center">
-          <div className="mx-auto w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
-            <CheckCircle2 className="h-12 w-12 text-green-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-gray-50 p-4">
+        <Card className="max-w-lg p-6 sm:p-8 text-center shadow-lg">
+          {/* Logo da Entidade */}
+          {sindicato.logo_url ? (
+            <img 
+              src={sindicato.logo_url} 
+              alt={sindicato.razao_social} 
+              className="h-16 sm:h-20 w-auto object-contain mx-auto mb-4"
+            />
+          ) : (
+            <div className="h-14 w-14 sm:h-16 sm:w-16 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-4">
+              <Building2 className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
+            </div>
+          )}
+          
+          <div className="mx-auto w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-green-100 flex items-center justify-center mb-4 sm:mb-6">
+            <CheckCircle2 className="h-10 w-10 sm:h-12 sm:w-12 text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-green-700 mb-3">
+          <h2 className="text-xl sm:text-2xl font-bold text-green-700 mb-3">
             Solicitação Enviada com Sucesso!
           </h2>
-          <p className="text-gray-600 mb-4">
-            Sua filiação ao <strong>{sindicato.razao_social}</strong> foi registrada.
+          <p className="text-sm sm:text-base text-gray-600 mb-4">
+            Sua filiação ao <strong>{sindicato.nome_fantasia || sindicato.razao_social}</strong> foi registrada.
           </p>
-          <p className="text-sm text-gray-500 mb-6">
+          <p className="text-xs sm:text-sm text-gray-500 mb-6">
             Nossa equipe irá analisar sua solicitação e entrar em contato através do e-mail ou WhatsApp informados.
             Você receberá a <strong>Ficha de Filiação Digital</strong> após a aprovação.
           </p>
@@ -444,26 +457,26 @@ export default function SindicalFiliacaoPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header Institucional */}
-      <header className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
+      {/* Header Institucional - Responsivo */}
+      <header className="bg-gradient-to-r from-blue-700 to-blue-600 border-b border-blue-800 shadow-md sticky top-0 z-50">
+        <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             {sindicato.logo_url ? (
               <img 
                 src={sindicato.logo_url} 
                 alt={sindicato.razao_social} 
-                className="h-12 w-auto object-contain"
+                className="h-10 sm:h-14 w-auto object-contain bg-white rounded-lg p-1 shadow"
               />
             ) : (
-              <div className="h-12 w-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Building2 className="h-6 w-6 text-white" />
+              <div className="h-10 w-10 sm:h-14 sm:w-14 bg-white/20 rounded-lg flex items-center justify-center">
+                <Building2 className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
               </div>
             )}
-            <div>
-              <h1 className="text-lg font-semibold text-gray-800">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-sm sm:text-lg font-semibold text-white truncate">
                 Formulário de Filiação
               </h1>
-              <p className="text-sm text-blue-600">
+              <p className="text-xs sm:text-sm text-blue-100 truncate">
                 {sindicato.nome_fantasia || sindicato.razao_social}
               </p>
             </div>
@@ -472,13 +485,13 @@ export default function SindicalFiliacaoPage() {
       </header>
 
       {/* Formulário */}
-      <main className="max-w-4xl mx-auto px-4 py-6">
+      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
             
             {/* Card Principal */}
             <Card className="shadow-sm">
-              <CardContent className="p-6 space-y-8">
+              <CardContent className="p-4 sm:p-6 space-y-6 sm:space-y-8">
                 
                 {/* DADOS PESSOAIS */}
                 <FormSection icon={User} title="Dados Pessoais">
@@ -880,9 +893,10 @@ export default function SindicalFiliacaoPage() {
 
             {/* Card de Documentos */}
             <Card className="shadow-sm">
-              <CardContent className="p-6">
+              <CardContent className="p-4 sm:p-6">
                 <FormSection icon={FileText} title="Documentos">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {/* Mobile: 2 colunas / Desktop: 4 colunas */}
+                  <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                     <PhotoUploadWithCamera
                       sindicatoId={sindicato.id}
                       photoUrl={fotoUrl}
@@ -896,7 +910,7 @@ export default function SindicalFiliacaoPage() {
                       documentUrl={docFrenteUrl}
                       onUpload={setDocFrenteUrl}
                       onClear={() => setDocFrenteUrl(null)}
-                      label="Documento (Frente)"
+                      label="Doc. Frente"
                       description="RG ou CNH"
                       type="doc_frente"
                     />
@@ -906,7 +920,7 @@ export default function SindicalFiliacaoPage() {
                       documentUrl={docVersoUrl}
                       onUpload={setDocVersoUrl}
                       onClear={() => setDocVersoUrl(null)}
-                      label="Documento (Verso)"
+                      label="Doc. Verso"
                       description="Verso do RG"
                       type="doc_verso"
                     />
@@ -916,7 +930,7 @@ export default function SindicalFiliacaoPage() {
                       documentUrl={comprovanteUrl}
                       onUpload={setComprovanteUrl}
                       onClear={() => setComprovanteUrl(null)}
-                      label="Comprovante de Vínculo"
+                      label="Comprovante"
                       description="CTPS ou Holerite"
                       type="comprovante"
                     />

@@ -89,57 +89,58 @@ export function DocumentUpload({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <label className="text-xs font-medium text-gray-600">{label}</label>
+      <label className="text-xs font-medium text-gray-600 block text-center">{label}</label>
       
       <div
         className={cn(
-          "border-2 border-dashed rounded-lg transition-colors h-[120px] flex items-center justify-center",
+          "border-2 border-dashed rounded-xl transition-all min-h-[130px] sm:min-h-[140px] flex items-center justify-center",
           documentUrl
             ? "border-green-400 bg-green-50"
-            : "border-gray-300 hover:border-blue-400 hover:bg-blue-50"
+            : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/50"
         )}
       >
         {documentUrl ? (
-          <div className="flex flex-col items-center gap-2 p-4">
+          <div className="flex flex-col items-center gap-2 p-3">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-6 w-6 text-green-500" />
-              <span className="text-sm font-medium text-green-700">Enviado</span>
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <span className="text-xs sm:text-sm font-medium text-green-700">Enviado</span>
             </div>
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={handleClear}
-              className="text-gray-500 hover:text-red-600"
+              className="text-gray-500 hover:text-red-600 h-7 text-xs"
             >
-              <X className="h-4 w-4 mr-1" />
+              <X className="h-3.5 w-3.5 mr-1" />
               Remover
             </Button>
           </div>
         ) : uploading ? (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+          <div className="flex flex-col items-center gap-2 p-3">
+            <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
             <span className="text-xs text-gray-500">Enviando...</span>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-3 p-4">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-gray-400" />
+          <div className="flex flex-col items-center gap-2 p-3">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gray-100 flex items-center justify-center">
+              <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400" />
             </div>
             
             {description && (
-              <p className="text-xs text-gray-500 text-center">{description}</p>
+              <p className="text-[10px] sm:text-xs text-gray-500 text-center leading-tight">{description}</p>
             )}
             
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-1.5 w-full max-w-[100px] sm:max-w-none">
               {isMobile && accept.includes("image") && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   onClick={() => cameraInputRef.current?.click()}
+                  className="h-7 text-xs bg-blue-600 hover:bg-blue-700 px-2"
                 >
-                  <Camera className="h-4 w-4 mr-1" />
+                  <Camera className="h-3 w-3 mr-1" />
                   Câmera
                 </Button>
               )}
@@ -148,8 +149,9 @@ export function DocumentUpload({
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
+                className="h-7 text-xs px-2"
               >
-                <Upload className="h-4 w-4 mr-1" />
+                <Upload className="h-3 w-3 mr-1" />
                 {isMobile ? "Arquivo" : "Enviar"}
               </Button>
             </div>

@@ -95,14 +95,15 @@ export function PhotoUploadWithCamera({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <label className="text-xs font-medium text-gray-600">{label}</label>
+      <label className="text-xs font-medium text-gray-600 block text-center">{label}</label>
       
       <div
         className={cn(
-          "relative border-2 border-dashed rounded-lg overflow-hidden transition-colors",
+          "relative border-2 border-dashed rounded-xl overflow-hidden transition-all",
+          "min-h-[140px] sm:min-h-[160px]",
           photoUrl 
             ? "border-green-400 bg-green-50" 
-            : "border-gray-300 hover:border-blue-400 hover:bg-blue-50",
+            : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/50",
           aspectRatio === "portrait" ? "aspect-[3/4]" : "aspect-square"
         )}
       >
@@ -113,43 +114,44 @@ export function PhotoUploadWithCamera({
               alt="Foto"
               className="w-full h-full object-cover"
             />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 active:opacity-100 transition-opacity flex items-center justify-center">
               <Button
                 type="button"
                 variant="destructive"
                 size="sm"
                 onClick={handleClear}
+                className="shadow-lg"
               >
                 <X className="h-4 w-4 mr-1" />
                 Remover
               </Button>
             </div>
             <div className="absolute bottom-2 right-2">
-              <CheckCircle2 className="h-6 w-6 text-green-500 bg-white rounded-full" />
+              <CheckCircle2 className="h-6 w-6 text-green-500 bg-white rounded-full shadow" />
             </div>
           </div>
         ) : uploading ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-50/50">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-2" />
             <p className="text-xs text-gray-500">Enviando...</p>
           </div>
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-              <User className="h-8 w-8 text-gray-400" />
+          <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100 flex items-center justify-center mb-2">
+              <User className="h-6 w-6 sm:h-7 sm:w-7 text-gray-400" />
             </div>
             
-            <div className="flex flex-col gap-2 w-full max-w-[160px]">
+            <div className="flex flex-col gap-1.5 w-full max-w-[120px] sm:max-w-[140px]">
               {isMobile && (
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   onClick={() => cameraInputRef.current?.click()}
-                  className="w-full"
+                  className="w-full h-8 text-xs bg-blue-600 hover:bg-blue-700"
                 >
-                  <Camera className="h-4 w-4 mr-2" />
-                  Tirar Foto
+                  <Camera className="h-3.5 w-3.5 mr-1.5" />
+                  Câmera
                 </Button>
               )}
               <Button
@@ -157,9 +159,9 @@ export function PhotoUploadWithCamera({
                 variant="outline"
                 size="sm"
                 onClick={() => fileInputRef.current?.click()}
-                className="w-full"
+                className="w-full h-8 text-xs"
               >
-                <Upload className="h-4 w-4 mr-2" />
+                <Upload className="h-3.5 w-3.5 mr-1.5" />
                 {isMobile ? "Galeria" : "Enviar"}
               </Button>
             </div>
