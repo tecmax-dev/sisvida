@@ -281,92 +281,160 @@ serve(async (req) => {
       });
     }
 
-    const results: Record<string, { success: boolean; count: number; error?: string }> = {};
+    const PAGE_SIZE = 1000;
+
+    const isMissingRelationError = (message: string) => {
+      const msg = (message ?? "").toLowerCase();
+      return msg.includes("relation") && msg.includes("does not exist");
+    };
+
+    // Quick schema compatibility check to avoid a noisy "skip everything" run.
+    const CORE_SCHEMA_PROBES = ["clinics", "profiles", "patients", "appointments"];
+    let probeOk = 0;
+    const probeResults: Record<string, { ok: boolean; error?: string }> = {};
+
+    for (const t of CORE_SCHEMA_PROBES) {
+      const { error } = await sourceAdmin.from(t).select("id").limit(1);
+      if (!error) {
+        probeOk += 1;
+        probeResults[t] = { ok: true };
+      } else {
+        probeResults[t] = { ok: false, error: error.message };
+      }
+    }
+
+    if (probeOk === 0) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error:
+            "O projeto de origem não parece ter as tabelas deste sistema. Verifique se você selecionou o projeto correto (ou se o schema ainda não foi criado lá).",
+          diagnostics: {
+            source_ref_from_url: sourceRefFromUrl,
+            source_ref_from_key: sourceRefFromKey,
+            source_role_from_key: sourceRoleFromKey,
+            schema_probe: probeResults,
+          },
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const results: Record<
+      string,
+      { success: boolean; count: number; error?: string; skipped?: boolean }
+    > = {};
+
+    const skippedMissingTables: string[] = [];
     let totalMigrated = 0;
 
     for (const tableName of TABLES_TO_MIGRATE) {
       try {
-        console.log(`[migrate-from-source] Fetching ${tableName} from source...`);
+        let tableMigrated = 0;
+        let offset = 0;
 
-        // Fetch from source
-        const { data: sourceData, error: sourceError } = await sourceAdmin
-          .from(tableName)
-          .select("*");
+        while (true) {
+          const { data: pageData, error: sourceError } = await sourceAdmin
+            .from(tableName)
+            .select("*")
+            .range(offset, offset + PAGE_SIZE - 1);
 
-        if (sourceError) {
-          // If the key is wrong, stop early and return clear diagnostics
-          if (sourceError.message?.toLowerCase().includes("invalid api key")) {
-            console.error("[migrate-from-source] Source invalid api key", {
-              message: sourceError.message,
-              sourceRefFromUrl,
-              sourceRefFromKey,
-              sourceRoleFromKey,
-            });
+          if (sourceError) {
+            const msg = (sourceError.message ?? "").toLowerCase();
 
-            return new Response(
-              JSON.stringify({
-                success: false,
-                error: `Chave inválida no projeto de origem: ${sourceError.message}`,
-                diagnostics: {
-                  source_ref_from_url: sourceRefFromUrl,
-                  source_ref_from_key: sourceRefFromKey,
-                  source_role_from_key: sourceRoleFromKey,
-                  hint:
-                    sourceRefFromUrl && sourceRefFromKey && sourceRefFromUrl !== sourceRefFromKey
-                      ? "A chave colada parece ser de OUTRO projeto (ref diferente do URL). Copie a service_role do mesmo projeto do URL."
-                      : "Confirme que você colou a chave 'service_role' do projeto de origem (não anon/publishable).",
-                },
-              }),
-              { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-            );
+            // If the key is wrong, stop early and return clear diagnostics
+            if (msg.includes("invalid api key")) {
+              console.error("[migrate-from-source] Source invalid api key", {
+                message: sourceError.message,
+                sourceRefFromUrl,
+                sourceRefFromKey,
+                sourceRoleFromKey,
+              });
+
+              return new Response(
+                JSON.stringify({
+                  success: false,
+                  error: `Chave inválida no projeto de origem: ${sourceError.message}`,
+                  diagnostics: {
+                    source_ref_from_url: sourceRefFromUrl,
+                    source_ref_from_key: sourceRefFromKey,
+                    source_role_from_key: sourceRoleFromKey,
+                    hint:
+                      sourceRefFromUrl && sourceRefFromKey && sourceRefFromUrl !== sourceRefFromKey
+                        ? "A chave colada parece ser de OUTRO projeto (ref diferente do URL). Copie a service_role do mesmo projeto do URL."
+                        : "Confirme que você colou a chave 'service_role' do projeto de origem (não anon/publishable).",
+                  },
+                }),
+                { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              );
+            }
+
+            // Missing table in source: mark as skipped (not an error)
+            if (isMissingRelationError(sourceError.message)) {
+              skippedMissingTables.push(tableName);
+              results[tableName] = {
+                success: true,
+                skipped: true,
+                count: 0,
+                error: "Pulado: tabela não existe no projeto de origem",
+              };
+              break;
+            }
+
+            results[tableName] = { success: false, count: 0, error: sourceError.message };
+            break;
           }
 
-          console.log(`[migrate-from-source] Skipping ${tableName}: ${sourceError.message}`);
-          results[tableName] = { success: false, count: 0, error: sourceError.message };
-          continue;
-        }
+          if (!pageData || pageData.length === 0) {
+            results[tableName] = { success: true, count: tableMigrated };
+            if (tableMigrated > 0) totalMigrated += tableMigrated;
+            break;
+          }
 
-        if (!sourceData || sourceData.length === 0) {
-          console.log(`[migrate-from-source] ${tableName}: empty`);
-          results[tableName] = { success: true, count: 0 };
-          continue;
-        }
+          const { error: upsertError } = await destAdmin.from(tableName).upsert(pageData);
 
-        console.log(`[migrate-from-source] Upserting ${sourceData.length} rows to ${tableName}...`);
+          if (upsertError) {
+            console.error(`[migrate-from-source] Error upserting ${tableName}:`, upsertError);
+            results[tableName] = { success: false, count: tableMigrated, error: upsertError.message };
+            break;
+          }
 
-        // Upsert to destination
-        const { error: upsertError } = await destAdmin
-          .from(tableName)
-          .upsert(sourceData, { 
-            onConflict: "id",
-            ignoreDuplicates: false 
-          });
+          tableMigrated += pageData.length;
 
-        if (upsertError) {
-          console.error(`[migrate-from-source] Error upserting ${tableName}:`, upsertError);
-          results[tableName] = { success: false, count: 0, error: upsertError.message };
-        } else {
-          console.log(`[migrate-from-source] ${tableName}: ${sourceData.length} rows migrated`);
-          results[tableName] = { success: true, count: sourceData.length };
-          totalMigrated += sourceData.length;
+          if (pageData.length < PAGE_SIZE) {
+            results[tableName] = { success: true, count: tableMigrated };
+            totalMigrated += tableMigrated;
+            break;
+          }
+
+          offset += PAGE_SIZE;
         }
       } catch (tableError) {
         console.error(`[migrate-from-source] Exception with ${tableName}:`, tableError);
-        results[tableName] = { 
-          success: false, 
-          count: 0, 
-          error: tableError instanceof Error ? tableError.message : "Unknown error" 
+        results[tableName] = {
+          success: false,
+          count: 0,
+          error: tableError instanceof Error ? tableError.message : "Unknown error",
         };
       }
     }
 
     console.log(`[migrate-from-source] Complete. Total: ${totalMigrated} rows`);
 
+    const skippedCount = skippedMissingTables.length;
+    const message =
+      `Migração concluída. ${totalMigrated} registros migrados.` +
+      (skippedCount > 0
+        ? ` ${skippedCount} tabelas não existem no projeto de origem e foram puladas.`
+        : "");
+
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Migration complete. ${totalMigrated} rows migrated.`,
+        message,
         tables: results,
+        skipped_missing_tables: skippedMissingTables,
+        skipped_missing_tables_count: skippedCount,
         migrated_by: user.email,
         migrated_at: new Date().toISOString(),
       }),
