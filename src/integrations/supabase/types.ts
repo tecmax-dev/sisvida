@@ -10627,6 +10627,7 @@ export type Database = {
             | Database["public"]["Enums"]["union_entity_coverage"]
             | null
           allow_duplicate_competence: boolean
+          allowed_relationship_types: Json | null
           categoria_laboral: string | null
           cep: string | null
           cidade: string | null
@@ -10656,6 +10657,7 @@ export type Database = {
             | Database["public"]["Enums"]["union_entity_coverage"]
             | null
           allow_duplicate_competence?: boolean
+          allowed_relationship_types?: Json | null
           categoria_laboral?: string | null
           cep?: string | null
           cidade?: string | null
@@ -10685,6 +10687,7 @@ export type Database = {
             | Database["public"]["Enums"]["union_entity_coverage"]
             | null
           allow_duplicate_competence?: boolean
+          allowed_relationship_types?: Json | null
           categoria_laboral?: string | null
           cep?: string | null
           cidade?: string | null

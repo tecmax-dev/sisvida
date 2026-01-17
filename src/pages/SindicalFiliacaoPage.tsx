@@ -60,6 +60,7 @@ interface UnionEntity {
   logo_url?: string | null;
   entity_type: string;
   clinic_id?: string | null;
+  allowed_relationship_types?: unknown;
 }
 
 interface PaymentMethod {
@@ -833,6 +834,11 @@ export default function SindicalFiliacaoPage() {
                   <DependentsList
                     dependents={dependents}
                     onChange={setDependents}
+                    allowedRelationshipTypes={
+                      Array.isArray(sindicato?.allowed_relationship_types) 
+                        ? sindicato.allowed_relationship_types as string[]
+                        : null
+                    }
                   />
                 </FormSection>
 
