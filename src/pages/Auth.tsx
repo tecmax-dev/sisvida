@@ -263,21 +263,37 @@ export default function Auth() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const verifyRecaptcha = async (token: string): Promise<boolean> => {
+  const verifyRecaptcha = async (
+    token: string
+  ): Promise<{ ok: boolean; codes?: string[]; error?: string }> => {
     try {
       const { data, error } = await supabase.functions.invoke("verify-recaptcha", {
         body: { token },
       });
-      
+
       if (error) {
-        console.error("Erro ao verificar reCAPTCHA:", error);
-        return false;
+        console.error("Erro ao verificar reCAPTCHA (invoke):", {
+          message: error.message,
+          name: (error as any)?.name,
+          status: (error as any)?.status,
+          details: (error as any)?.details,
+          hint: (error as any)?.hint,
+        });
+        return { ok: false, error: error.message };
       }
-      
-      return data?.success === true;
-    } catch (err) {
-      console.error("Erro ao verificar reCAPTCHA:", err);
-      return false;
+
+      if (data?.success === true) return { ok: true };
+
+      const codes = (data?.codes ?? []) as string[];
+      console.error("Erro ao verificar reCAPTCHA (server):", { codes, data });
+      return {
+        ok: false,
+        codes,
+        error: data?.error || "Verificação do reCAPTCHA falhou",
+      };
+    } catch (err: any) {
+      console.error("Erro ao verificar reCAPTCHA (exception):", err);
+      return { ok: false, error: err?.message || "Erro inesperado" };
     }
   };
 
@@ -368,20 +384,25 @@ export default function Auth() {
 
     try {
       // Verificar reCAPTCHA no servidor para login e signup
-      if ((view === "login" || view === "signup")) {
+      if (view === "login" || view === "signup") {
         if (!recaptchaToken) {
           setErrors({ recaptcha: "Complete o reCAPTCHA para continuar" });
           setLoading(false);
           return;
         }
-        
-        const isValid = await verifyRecaptcha(recaptchaToken);
-        if (!isValid) {
+
+        const verification = await verifyRecaptcha(recaptchaToken);
+        if (!verification.ok) {
+          const codesText = verification.codes?.length
+            ? ` (códigos: ${verification.codes.join(", ")})`
+            : "";
+
           toast({
             title: "Verificação falhou",
-            description: "O reCAPTCHA não pôde ser verificado. Complete novamente.",
+            description: `${verification.error || "O reCAPTCHA não pôde ser verificado"}${codesText}`,
             variant: "destructive",
           });
+
           recaptchaRef.current?.reset();
           setRecaptchaToken(null);
           setLoading(false);
