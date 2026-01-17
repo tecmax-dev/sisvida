@@ -97,13 +97,24 @@ export function BatchGenerateLytexDialog({
   const [competenceFilter, setCompetenceFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "overdue">("all");
+  const [internalYearFilter, setInternalYearFilter] = useState<number | null>(yearFilter ?? null);
+
+  // Anos disponíveis para seleção
+  const currentYear = new Date().getFullYear();
+  const availableYears = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i);
+
+  useEffect(() => {
+    if (open) {
+      setInternalYearFilter(yearFilter ?? null);
+    }
+  }, [open, yearFilter]);
 
   useEffect(() => {
     if (open && currentClinic) {
       fetchContributionsWithoutInvoice();
       fetchContributionTypes();
     }
-  }, [open, currentClinic, yearFilter]);
+  }, [open, currentClinic, internalYearFilter]);
 
   const fetchContributionTypes = async () => {
     if (!currentClinic) return;
@@ -136,8 +147,8 @@ export function BatchGenerateLytexDialog({
         .order("competence_year", { ascending: false })
         .order("competence_month", { ascending: false });
 
-      if (yearFilter) {
-        query = query.eq("competence_year", yearFilter);
+      if (internalYearFilter) {
+        query = query.eq("competence_year", internalYearFilter);
       }
 
       const { data, error } = await query.limit(1000);
@@ -364,8 +375,7 @@ export function BatchGenerateLytexDialog({
             Gerar Boletos na Lytex em Lote
           </DialogTitle>
           <DialogDescription>
-            Selecione as contribuições que deseja gerar boletos na Lytex.
-            {yearFilter && ` Ano: ${yearFilter}`}
+            Selecione as contribuições sem boleto. Use os filtros para localizar registros específicos.
           </DialogDescription>
         </DialogHeader>
 
@@ -420,9 +430,24 @@ export function BatchGenerateLytexDialog({
                 {/* Barra de Filtros */}
                 <div className="flex flex-wrap items-center gap-2 py-2 border-b">
                   <Filter className="h-4 w-4 text-muted-foreground" />
+
+                  <Select 
+                    value={internalYearFilter?.toString() ?? "all"} 
+                    onValueChange={(v) => setInternalYearFilter(v === "all" ? null : Number(v))}
+                  >
+                    <SelectTrigger className="w-[90px] h-8 text-xs">
+                      <SelectValue placeholder="Ano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {availableYears.map((y) => (
+                        <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   
                   <Select value={personTypeFilter} onValueChange={(v) => setPersonTypeFilter(v as "all" | "pf" | "pj")}>
-                    <SelectTrigger className="w-[100px] h-8 text-xs">
+                    <SelectTrigger className="w-[80px] h-8 text-xs">
                       <SelectValue placeholder="Tipo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -433,7 +458,7 @@ export function BatchGenerateLytexDialog({
                   </Select>
 
                   <Select value={competenceFilter} onValueChange={setCompetenceFilter}>
-                    <SelectTrigger className="w-[120px] h-8 text-xs">
+                    <SelectTrigger className="w-[110px] h-8 text-xs">
                       <SelectValue placeholder="Competência" />
                     </SelectTrigger>
                     <SelectContent>
@@ -445,7 +470,7 @@ export function BatchGenerateLytexDialog({
                   </Select>
 
                   <Select value={typeFilter} onValueChange={setTypeFilter}>
-                    <SelectTrigger className="w-[140px] h-8 text-xs">
+                    <SelectTrigger className="w-[130px] h-8 text-xs">
                       <SelectValue placeholder="Tipo Contrib." />
                     </SelectTrigger>
                     <SelectContent>
@@ -457,7 +482,7 @@ export function BatchGenerateLytexDialog({
                   </Select>
 
                   <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as "all" | "pending" | "overdue")}>
-                    <SelectTrigger className="w-[110px] h-8 text-xs">
+                    <SelectTrigger className="w-[100px] h-8 text-xs">
                       <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
