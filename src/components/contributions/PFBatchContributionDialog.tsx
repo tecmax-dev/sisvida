@@ -458,7 +458,7 @@ export default function PFBatchContributionDialog({
 
         {step === "config" && (
           <>
-            <ScrollArea className="flex-1 pr-4">
+            <div className="flex-1 overflow-y-auto pr-4">
               <div className="space-y-4 py-4">
                 {/* Sócio/Associado */}
                 <div className="space-y-2">
@@ -626,60 +626,60 @@ export default function PFBatchContributionDialog({
                       <p className="text-xs">Clique em "Adicionar" para incluir competências</p>
                     </div>
                   ) : (
-                    <ScrollArea className="max-h-[200px] pr-3">
+                    <ScrollArea className="h-[200px] pr-3">
                       <div className="space-y-2">
                         {installments.map((installment, index) => (
-                        <div
-                          key={installment.id}
-                          className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg border"
-                        >
-                          <Badge variant="outline" className="shrink-0">
-                            {index + 1}
-                          </Badge>
-                          <div className="flex-1 grid grid-cols-3 gap-2">
-                            <div className="flex items-center gap-1 text-sm">
-                              <span className="text-muted-foreground">Comp:</span>
-                              <span className="font-medium">
-                                {String(installment.month).padStart(2, "0")}/{installment.year}
-                              </span>
-                            </div>
-                            <div className="col-span-2 flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground">Venc:</span>
-                              <Input
-                                type="date"
-                                className="h-8 flex-1"
-                                value={installment.dueDate}
-                                onChange={(e) => updateInstallmentDueDate(installment.id, e.target.value)}
-                              />
-                              {installment.isCustomDate && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 shrink-0"
-                                  onClick={() => resetInstallmentDate(installment.id, index)}
-                                  title="Restaurar data automática"
-                                >
-                                  <RotateCcw className="h-3 w-3" />
-                                </Button>
-                              )}
-                            </div>
-                          </div>
-                          {installment.isCustomDate && (
-                            <Badge variant="secondary" className="text-xs shrink-0">
-                              editado
-                            </Badge>
-                          )}
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
-                            onClick={() => removeInstallment(installment.id)}
+                          <div
+                            key={installment.id}
+                            className="flex items-center gap-2 p-2 bg-muted/30 rounded-lg border"
                           >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
+                            <Badge variant="outline" className="shrink-0">
+                              {index + 1}
+                            </Badge>
+                            <div className="flex-1 grid grid-cols-3 gap-2">
+                              <div className="flex items-center gap-1 text-sm">
+                                <span className="text-muted-foreground">Comp:</span>
+                                <span className="font-medium">
+                                  {String(installment.month).padStart(2, "0")}/{installment.year}
+                                </span>
+                              </div>
+                              <div className="col-span-2 flex items-center gap-2">
+                                <span className="text-sm text-muted-foreground">Venc:</span>
+                                <Input
+                                  type="date"
+                                  className="h-8 flex-1"
+                                  value={installment.dueDate}
+                                  onChange={(e) => updateInstallmentDueDate(installment.id, e.target.value)}
+                                />
+                                {installment.isCustomDate && (
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 shrink-0"
+                                    onClick={() => resetInstallmentDate(installment.id, index)}
+                                    title="Restaurar data automática"
+                                  >
+                                    <RotateCcw className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                            {installment.isCustomDate && (
+                              <Badge variant="secondary" className="text-xs shrink-0">
+                                editado
+                              </Badge>
+                            )}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+                              onClick={() => removeInstallment(installment.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         ))}
                       </div>
                     </ScrollArea>
@@ -697,7 +697,7 @@ export default function PFBatchContributionDialog({
                   />
                 </div>
               </div>
-            </ScrollArea>
+            </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => onOpenChange(false)}>
