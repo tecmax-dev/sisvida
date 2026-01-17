@@ -219,6 +219,39 @@ export function ApiMigrationPanel() {
         console.log("[ApiMigration] Parsed as object keys:", tables.length, "tables");
       }
       
+      // Order tables to reduce FK issues (dependencies first)
+      const preferredOrder = [
+        "clinics",
+        "union_entities",
+        "subscription_addons",
+        "system_notifications",
+        "system_features",
+        "permission_definitions",
+        "profiles",
+        "user_roles",
+        "super_admins",
+        "insurance_plans",
+        "procedures",
+        "patients",
+        "patient_cards",
+        "patient_folders",
+        "patient_dependents",
+        "employers",
+        "accounting_offices",
+        "accounting_office_employers",
+        "patient_employers",
+        "professionals",
+        "appointments",
+        "employer_contributions",
+      ];
+      const orderIndex = new Map(preferredOrder.map((t, i) => [t, i] as const));
+      tables.sort((a, b) => {
+        const ai = orderIndex.get(a.table) ?? 9999;
+        const bi = orderIndex.get(b.table) ?? 9999;
+        if (ai !== bi) return ai - bi;
+        return a.table.localeCompare(b.table);
+      });
+
       console.log("[ApiMigration] Final tables to import:", tables.length, tables.map(t => `${t.table}(${t.count})`));
       
       if (tables.length === 0) {
@@ -298,6 +331,7 @@ export function ApiMigrationPanel() {
 
       for (let i = 0; i < tablesToImport.length; i++) {
         const table = tablesToImport[i];
+
         setState((s) => ({
           ...s,
           currentTable: table.table,
@@ -305,68 +339,105 @@ export function ApiMigrationPanel() {
           progress: 25 + Math.round((i / totalTables) * 70),
         }));
 
+        // Page size tuning to avoid CPU limits
+        const limit = table.count > 20000 ? 100 : table.count > 5000 ? 200 : 500;
+        let page = 0;
+        let hasMore = true;
+        let imported = 0;
+        const tableErrors: string[] = [];
+        let safety = 0;
+
         toast.loading(`Importando ${table.table} (${table.count} registros)...`, { id: "migration" });
 
-        try {
-          const { data: tableData, error: tableError } = await supabase.functions.invoke(
-            "import-from-api",
-            {
-              body: {
-                sourceApiUrl: sourceApiUrl.trim(),
-                syncKey: syncKey.trim(),
-                phase: "table",
-                tableName: table.table,
-                userMapping,
-                idMapping: accumulatedIdMapping, // Pass accumulated ID mappings
-              },
-            }
-          );
+        while (hasMore) {
+          safety++;
+          if (safety > 5000) {
+            tableErrors.push("Limite de páginas excedido (proteção contra loop infinito)");
+            break;
+          }
 
-          if (tableError) {
-            const msg = formatInvokeError(tableError);
-            captureDebug({ phase: "table", table: table.table, error: extractFunctionsError(tableError) });
-            setState((s) => ({
-              ...s,
-              tables: {
-                ...s.tables,
-                [table.table]: { success: false, count: 0, error: msg },
-              },
-              errors: [...s.errors, `${table.table}: ${msg}`],
-            }));
-          } else if (tableData && tableData.success === false) {
-            const msg = tableData?.error || "Erro ao importar tabela";
-            captureDebug({ phase: "table", table: table.table, response: tableData });
-            setState((s) => ({
-              ...s,
-              tables: {
-                ...s.tables,
-                [table.table]: { success: false, count: 0, error: msg },
-              },
-              errors: [...s.errors, `${table.table}: ${msg}`],
-            }));
-          } else {
-            const result = tableData?.tables?.[table.table] || { success: true, count: 0 };
-            
-            // Accumulate ID mappings from this table for use in subsequent tables
+          try {
+            const { data: tableData, error: tableError } = await supabase.functions.invoke(
+              "import-from-api",
+              {
+                body: {
+                  sourceApiUrl: sourceApiUrl.trim(),
+                  syncKey: syncKey.trim(),
+                  phase: "table",
+                  tableName: table.table,
+                  userMapping,
+                  idMapping: accumulatedIdMapping,
+                  page,
+                  limit,
+                  maxPages: 1,
+                },
+              }
+            );
+
+            if (tableError) {
+              const msg = formatInvokeError(tableError);
+              captureDebug({ phase: "table", table: table.table, page, limit, error: extractFunctionsError(tableError) });
+              tableErrors.push(msg);
+              break;
+            }
+
+            if (tableData && tableData.success === false) {
+              const msg = tableData?.error || "Erro ao importar tabela";
+              captureDebug({ phase: "table", table: table.table, page, limit, response: tableData });
+              tableErrors.push(msg);
+              break;
+            }
+
+            const chunk = tableData?.tables?.[table.table];
+            if (chunk?.count) imported += chunk.count;
+            if (chunk?.error) tableErrors.push(chunk.error);
+
             if (tableData?.idMapping) {
               accumulatedIdMapping = { ...accumulatedIdMapping, ...tableData.idMapping };
             }
-            
+
+            hasMore = Boolean(tableData?.hasMore);
+            page = Number.isFinite(Number(tableData?.nextPage)) ? Number(tableData.nextPage) : page + 1;
+
+            // Update UI progressively
             setState((s) => ({
               ...s,
-              tables: { ...s.tables, [table.table]: result },
               idMapping: accumulatedIdMapping,
+              tables: {
+                ...s.tables,
+                [table.table]: {
+                  success: tableErrors.length === 0 && (chunk?.success ?? true),
+                  count: imported,
+                  error: tableErrors.length > 0 ? tableErrors[0] : undefined,
+                },
+              },
             }));
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            tableErrors.push(msg);
+            break;
           }
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          setState((s) => ({
-            ...s,
-            tables: { ...s.tables, [table.table]: { success: false, count: 0, error: msg } },
-            errors: [...s.errors, `${table.table}: ${msg}`],
-          }));
         }
+
+        // Finalize table result
+        setState((s) => ({
+          ...s,
+          idMapping: accumulatedIdMapping,
+          tables: {
+            ...s.tables,
+            [table.table]: {
+              success: tableErrors.length === 0,
+              count: imported,
+              error: tableErrors.length > 0 ? tableErrors.slice(0, 2).join(" | ") : undefined,
+            },
+          },
+          errors: tableErrors.length > 0 ? [...s.errors, `${table.table}: ${tableErrors[0]}`] : s.errors,
+        }));
       }
+
+      setState((s) => ({ ...s, phase: "done", currentTable: null, progress: 100 }));
+      toast.dismiss("migration");
+      toast.success("Migração concluída!");
 
       setState((s) => ({ ...s, phase: "done", currentTable: null, progress: 100 }));
       toast.dismiss("migration");
