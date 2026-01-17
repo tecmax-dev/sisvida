@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { extractFunctionsError } from "@/lib/functionsError";
 import { Button } from "@/components/ui/button";
@@ -20,6 +20,7 @@ import {
   Eye,
   EyeOff,
   Zap,
+  StopCircle,
 } from "lucide-react";
 
 interface TableResult {
@@ -29,7 +30,7 @@ interface TableResult {
 }
 
 interface MigrationState {
-  phase: "idle" | "summary" | "users" | "tables" | "done";
+  phase: "idle" | "summary" | "users" | "tables" | "done" | "stopped";
   summary: { table: string; count: number }[] | null;
   userMapping: Record<string, string>;
   idMapping: Record<string, string>; // Global ID mapping for all entities
@@ -47,6 +48,7 @@ export function ApiMigrationPanel() {
   const [showKey, setShowKey] = useState(false);
   const [migrating, setMigrating] = useState(false);
   const [debugDetails, setDebugDetails] = useState<string>("");
+  const stopRequestedRef = useRef(false);
   const [state, setState] = useState<MigrationState>({
     phase: "idle",
     summary: null,
@@ -62,6 +64,7 @@ export function ApiMigrationPanel() {
 
   const resetState = () => {
     setDebugDetails("");
+    stopRequestedRef.current = false;
     setState({
       phase: "idle",
       summary: null,
@@ -74,6 +77,11 @@ export function ApiMigrationPanel() {
       progress: 0,
       errors: [],
     });
+  };
+
+  const handleStopMigration = () => {
+    stopRequestedRef.current = true;
+    toast.warning("Parando importação... aguarde a requisição atual finalizar.");
   };
 
   const formatInvokeError = (err: unknown): string => {
@@ -516,6 +524,14 @@ export function ApiMigrationPanel() {
       let accumulatedIdMapping: Record<string, string> = { ...userMapping };
 
       for (let i = 0; i < tablesToImport.length; i++) {
+        // Check if stop was requested
+        if (stopRequestedRef.current) {
+          toast.dismiss("migration");
+          toast.info("Importação interrompida pelo usuário.");
+          setState((s) => ({ ...s, phase: "stopped", currentTable: null }));
+          return;
+        }
+
         const table = tablesToImport[i];
 
         setState((s) => ({
@@ -536,6 +552,14 @@ export function ApiMigrationPanel() {
         toast.loading(`Importando ${table.table} (${table.count} registros)...`, { id: "migration" });
 
         while (hasMore) {
+          // Check if stop was requested inside the pagination loop
+          if (stopRequestedRef.current) {
+            toast.dismiss("migration");
+            toast.info("Importação interrompida pelo usuário.");
+            setState((s) => ({ ...s, phase: "stopped", currentTable: null }));
+            return;
+          }
+
           safety++;
           if (safety > 5000) {
             tableErrors.push("Limite de páginas excedido (proteção contra loop infinito)");
@@ -701,6 +725,7 @@ export function ApiMigrationPanel() {
                 {state.phase === "users" && "Importando usuários..."}
                 {state.phase === "tables" && state.currentTable && `Importando ${state.currentTable}...`}
                 {state.phase === "done" && "Migração concluída!"}
+                {state.phase === "stopped" && "Importação interrompida"}
               </span>
               <span className="font-medium">{state.progress}%</span>
             </div>
@@ -723,8 +748,15 @@ export function ApiMigrationPanel() {
             )}
           </Button>
 
-          {state.phase !== "idle" && (
-            <Button onClick={resetState} variant="outline" size="sm" disabled={migrating}>
+          {migrating && (
+            <Button onClick={handleStopMigration} variant="destructive" size="sm">
+              <StopCircle className="mr-2 h-4 w-4" />
+              Parar Importação
+            </Button>
+          )}
+
+          {state.phase !== "idle" && !migrating && (
+            <Button onClick={resetState} variant="outline" size="sm">
               <RefreshCw className="mr-2 h-4 w-4" />
               Limpar
             </Button>
