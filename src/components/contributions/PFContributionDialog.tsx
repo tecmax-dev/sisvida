@@ -362,31 +362,34 @@ export default function PFContributionDialog({
                   <CommandList>
                     <CommandEmpty>Nenhum sócio encontrado.</CommandEmpty>
                     <CommandGroup>
-                      {members.map((member) => (
-                        <CommandItem
-                          key={member.id}
-                          value={`${member.name} ${member.cpf || ""}`}
-                          onSelect={() => {
-                            setFormMemberId(member.id);
-                            setMemberPopoverOpen(false);
-                          }}
-                        >
-                          <Check
-                            className={cn(
-                              "mr-2 h-4 w-4",
-                              formMemberId === member.id ? "opacity-100" : "opacity-0"
-                            )}
-                          />
-                          <div className="flex flex-col">
-                            <span>{member.name}</span>
-                            {member.cpf && (
-                              <span className="text-xs text-emerald-600">
-                                {formatCPF(member.cpf)}
-                              </span>
-                            )}
-                          </div>
-                        </CommandItem>
-                      ))}
+                      {members.map((member) => {
+                        const formattedCpf = member.cpf ? formatCPF(member.cpf) : "";
+                        return (
+                          <CommandItem
+                            key={member.id}
+                            value={`${member.name} ${member.cpf || ""} ${formattedCpf}`}
+                            onSelect={() => {
+                              setFormMemberId(member.id);
+                              setMemberPopoverOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                formMemberId === member.id ? "opacity-100" : "opacity-0"
+                              )}
+                            />
+                            <div className="flex flex-col">
+                              <span>{member.name}</span>
+                              {member.cpf && (
+                                <span className="text-xs text-emerald-600">
+                                  {formatCPF(member.cpf)}
+                                </span>
+                              )}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
                     </CommandGroup>
                   </CommandList>
                 </Command>
