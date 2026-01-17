@@ -6,6 +6,33 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+function base64UrlDecode(input: string) {
+  const base64 = input.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = base64 + "===".slice((base64.length + 3) % 4);
+  return atob(padded);
+}
+
+function decodeJwtClaims(token: string): Record<string, unknown> | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+  try {
+    const payload = JSON.parse(base64UrlDecode(parts[1]));
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+function getProjectRefFromUrl(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname;
+    const sub = hostname.split(".")[0];
+    return sub || null;
+  } catch {
+    return null;
+  }
+}
+
 // Tables to migrate in order (respecting foreign keys)
 const TABLES_TO_MIGRATE = [
   // Core system config (no dependencies)
@@ -201,6 +228,43 @@ serve(async (req) => {
 
     // Create source client
     const sourceAdmin = createClient(sourceUrl, sourceServiceKey);
+
+    // Validate source key early with diagnostics
+    const sourceRefFromUrl = getProjectRefFromUrl(sourceUrl);
+    const sourceClaims = decodeJwtClaims(sourceServiceKey);
+    const sourceRefFromKey = typeof sourceClaims?.ref === "string" ? (sourceClaims.ref as string) : null;
+    const sourceRoleFromKey = typeof sourceClaims?.role === "string" ? (sourceClaims.role as string) : null;
+
+    const { error: sourcePingError } = await sourceAdmin
+      .from("subscription_plans")
+      .select("id")
+      .limit(1);
+
+    if (sourcePingError) {
+      console.error("[migrate-from-source] Source auth failed", {
+        message: sourcePingError.message,
+        sourceRefFromUrl,
+        sourceRefFromKey,
+        sourceRoleFromKey,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: `Falha ao autenticar no projeto de origem: ${sourcePingError.message}`,
+          diagnostics: {
+            source_ref_from_url: sourceRefFromUrl,
+            source_ref_from_key: sourceRefFromKey,
+            source_role_from_key: sourceRoleFromKey,
+            hint:
+              sourceRefFromUrl && sourceRefFromKey && sourceRefFromUrl !== sourceRefFromKey
+                ? "A chave colada parece ser de OUTRO projeto (ref diferente do URL). Copie a service_role do mesmo projeto do URL."
+                : "Confirme que você colou a chave 'service_role' (não anon/publishable) do projeto de origem.",
+          },
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const results: Record<string, { success: boolean; count: number; error?: string }> = {};
     let totalMigrated = 0;
