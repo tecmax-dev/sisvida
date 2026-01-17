@@ -344,13 +344,20 @@ async function migrateAuthUsersAndUserDependentTables(params: {
       }
 
       const transformed: any[] = [];
+      const unmappedUserIds: string[] = [];
 
       for (const row of pageData) {
         const oldUserId = row?.user_id as string | undefined;
-        if (!oldUserId) continue;
+        if (!oldUserId) {
+          console.log(`[migrate-from-source] ${tableName}: row skipped (no user_id)`, row);
+          continue;
+        }
 
         const newUserId = sourceIdToDestId.get(oldUserId);
-        if (!newUserId) continue;
+        if (!newUserId) {
+          unmappedUserIds.push(oldUserId);
+          continue;
+        }
 
         const next = { ...row, user_id: newUserId };
 
@@ -367,6 +374,13 @@ async function migrateAuthUsersAndUserDependentTables(params: {
         }
 
         transformed.push(next);
+      }
+
+      if (unmappedUserIds.length > 0) {
+        console.warn(`[migrate-from-source] ${tableName}: ${unmappedUserIds.length} rows skipped (user_id not mapped)`, {
+          unmapped_user_ids: unmappedUserIds,
+          available_mappings: Array.from(sourceIdToDestId.keys()),
+        });
       }
 
       console.log("[migrate-from-source] User-dependent page", {
