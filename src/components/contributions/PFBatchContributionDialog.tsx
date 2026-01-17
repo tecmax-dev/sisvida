@@ -156,15 +156,34 @@ export default function PFBatchContributionDialog({
   const fetchMembers = async () => {
     setLoadingMembers(true);
     try {
-      const { data, error } = await supabase
-        .from("patients")
-        .select("id, name, cpf, email, phone")
-        .eq("clinic_id", clinicId)
-        .not("cpf", "is", null)
-        .order("name");
+      // Fetch all members with pagination to overcome 1000 row limit
+      let allMembers: Member[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
-      setMembers(data || []);
+      while (hasMore) {
+        const { data, error } = await supabase
+          .from("patients")
+          .select("id, name, cpf, email, phone")
+          .eq("clinic_id", clinicId)
+          .not("cpf", "is", null)
+          .order("name")
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          allMembers = [...allMembers, ...data];
+          hasMore = data.length === pageSize;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setMembers(allMembers);
+      console.log(`[PFBatchContributionDialog] Loaded ${allMembers.length} members`);
     } catch (error) {
       console.error("Error fetching members:", error);
       toast.error("Erro ao carregar sócios");
@@ -472,31 +491,34 @@ export default function PFBatchContributionDialog({
                         <CommandList>
                           <CommandEmpty>Nenhum sócio encontrado.</CommandEmpty>
                           <CommandGroup>
-                            {members.map((member) => (
-                              <CommandItem
-                                key={member.id}
-                                value={`${member.name} ${member.cpf || ""}`}
-                                onSelect={() => {
-                                  setFormMemberId(member.id);
-                                  setMemberPopoverOpen(false);
-                                }}
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formMemberId === member.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <span>{member.name}</span>
-                                  {member.cpf && (
-                                    <span className="text-xs text-emerald-600">
-                                      {formatCPF(member.cpf)}
-                                    </span>
-                                  )}
-                                </div>
-                              </CommandItem>
-                            ))}
+                            {members.map((member) => {
+                              const formattedCpf = member.cpf ? formatCPF(member.cpf) : "";
+                              return (
+                                <CommandItem
+                                  key={member.id}
+                                  value={`${member.name} ${member.cpf || ""} ${formattedCpf}`}
+                                  onSelect={() => {
+                                    setFormMemberId(member.id);
+                                    setMemberPopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      formMemberId === member.id ? "opacity-100" : "opacity-0"
+                                    )}
+                                  />
+                                  <div className="flex flex-col">
+                                    <span>{member.name}</span>
+                                    {member.cpf && (
+                                      <span className="text-xs text-emerald-600">
+                                        {formatCPF(member.cpf)}
+                                      </span>
+                                    )}
+                                  </div>
+                                </CommandItem>
+                              );
+                            })}
                           </CommandGroup>
                         </CommandList>
                       </Command>
