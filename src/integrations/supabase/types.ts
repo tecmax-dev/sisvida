@@ -8525,6 +8525,7 @@ export type Database = {
           documento_comprovante_url: string | null
           documento_foto_url: string | null
           documento_rg_url: string | null
+          documento_rg_verso_url: string | null
           email: string
           empresa: string | null
           estado_civil: string | null
@@ -8533,6 +8534,8 @@ export type Database = {
           logradouro: string | null
           motivo_rejeicao: string | null
           nome: string
+          nome_mae: string | null
+          nome_pai: string | null
           numero: string | null
           observacoes: string | null
           rejeitado_at: string | null
@@ -8564,6 +8567,7 @@ export type Database = {
           documento_comprovante_url?: string | null
           documento_foto_url?: string | null
           documento_rg_url?: string | null
+          documento_rg_verso_url?: string | null
           email: string
           empresa?: string | null
           estado_civil?: string | null
@@ -8572,6 +8576,8 @@ export type Database = {
           logradouro?: string | null
           motivo_rejeicao?: string | null
           nome: string
+          nome_mae?: string | null
+          nome_pai?: string | null
           numero?: string | null
           observacoes?: string | null
           rejeitado_at?: string | null
@@ -8603,6 +8609,7 @@ export type Database = {
           documento_comprovante_url?: string | null
           documento_foto_url?: string | null
           documento_rg_url?: string | null
+          documento_rg_verso_url?: string | null
           email?: string
           empresa?: string | null
           estado_civil?: string | null
@@ -8611,6 +8618,8 @@ export type Database = {
           logradouro?: string | null
           motivo_rejeicao?: string | null
           nome?: string
+          nome_mae?: string | null
+          nome_pai?: string | null
           numero?: string | null
           observacoes?: string | null
           rejeitado_at?: string | null
