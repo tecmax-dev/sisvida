@@ -23,6 +23,7 @@ import { format, parseISO, startOfMonth, endOfMonth, subDays, isValid } from "da
 import { ptBR } from "date-fns/locale";
 import { FileText, Download, Building2, Calendar as CalendarIcon, AlertCircle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
@@ -76,7 +77,7 @@ export function UnionStatementPanel() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("union_cash_registers")
-        .select("id, name, current_balance, type")
+        .select("id, name, current_balance, type, initial_balance, initial_balance_date")
         .eq("clinic_id", clinicId!)
         .eq("is_active", true)
         .order("name");
@@ -151,33 +152,57 @@ export function UnionStatementPanel() {
 
   // Calculate initial balance (saldo anterior)
   const { data: previousBalance } = useQuery({
-    queryKey: ["union-statement-previous-balance", clinicId, cashRegisterId, startDate],
+    queryKey: ["union-statement-previous-balance", clinicId, cashRegisterId, startDate, selectedRegister?.id],
     queryFn: async () => {
-      // Get all transactions before startDate for this register
-      const { data, error } = await supabase
+      // Base balance comes from the register initial balance, but only if startDate is AFTER the initial balance date.
+      // This prevents double-counting historical transactions that happened before the initial balance snapshot.
+      const initialBalanceDate = (selectedRegister as any)?.initial_balance_date as string | null | undefined;
+      const initialBalanceValue = Number((selectedRegister as any)?.initial_balance) || 0;
+
+      const startDateOnly = format(startDate, "yyyy-MM-dd");
+
+      let base = 0;
+      let lowerBoundDate: string | undefined;
+
+      if (initialBalanceDate) {
+        const initDateLocalNoon = parseDateOnlyToLocalNoon(initialBalanceDate);
+        if (startDate.getTime() > initDateLocalNoon.getTime()) {
+          base = initialBalanceValue;
+          // Only sum transactions strictly AFTER the initial balance date to avoid double count.
+          lowerBoundDate = initialBalanceDate;
+        }
+      }
+
+      // Get paid transactions before startDate for this register
+      let query = supabase
         .from("union_financial_transactions")
-        .select("type, amount")
+        .select("type, amount, paid_date")
         .eq("clinic_id", clinicId!)
         .eq("cash_register_id", cashRegisterId)
         .eq("status", "paid")
-        .lt("paid_date", format(startDate, "yyyy-MM-dd"));
+        .lt("paid_date", startDateOnly);
 
+      if (lowerBoundDate) {
+        query = query.gt("paid_date", lowerBoundDate);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
 
-      // Calculate the sum (income - expense)
-      let balance = 0;
+      // Sum (income - expense)
+      let delta = 0;
       data?.forEach((t) => {
-        const amount = Number(t.amount) || 0;
-        if (t.type === "income") {
-          balance += amount;
+        const amount = Number((t as any).amount) || 0;
+        if ((t as any).type === "income") {
+          delta += amount;
         } else {
-          balance -= amount;
+          delta -= amount;
         }
       });
-      
-      return balance;
+
+      return base + delta;
     },
-    enabled: !!clinicId && !!cashRegisterId && !!cashRegisters,
+    enabled: !!clinicId && !!cashRegisterId,
   });
 
   // Group transactions by day and calculate running balance
