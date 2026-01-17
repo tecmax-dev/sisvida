@@ -457,8 +457,10 @@ serve(async (req) => {
 
             if (error) {
               rowFail++;
+              const errMsg = `Row ${String((rec as any)?.id ?? "?")}: ${error.message}`;
+              console.error(`[import-from-api] ${tableName} row error:`, errMsg, "Data:", JSON.stringify(rec).slice(0, 500));
               if (errors.length < 10) {
-                errors.push(`Row ${String((rec as any)?.id ?? "?")}: ${error.message}`);
+                errors.push(errMsg);
               }
               continue;
             }
