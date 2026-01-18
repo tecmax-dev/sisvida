@@ -132,14 +132,15 @@ function extractTableNames(payload: any): string[] {
 }
 
 // Remap foreign key IDs based on FK_REMAP_TABLES config and global ID mapping
+// If a FK points to a source ID that we *don't* have mapped, we null it out to avoid FK violations.
 function remapForeignKeys(
-  record: Record<string, unknown>, 
+  record: Record<string, unknown>,
   tableName: string,
   idMapping: Record<string, string>,
   logRemaps = false
 ): Record<string, unknown> {
   if (!idMapping || Object.keys(idMapping).length === 0) return record;
-  
+
   const fkColumns = FK_REMAP_TABLES[tableName];
   if (!fkColumns || fkColumns.length === 0) {
     // Fallback: try to remap any UUID that matches our mapping
@@ -151,16 +152,23 @@ function remapForeignKeys(
     }
     return out;
   }
-  
+
   const out: Record<string, unknown> = { ...record };
   for (const fkCol of fkColumns) {
     const oldId = out[fkCol];
-    if (typeof oldId === "string" && idMapping[oldId]) {
+    if (typeof oldId !== "string" || oldId.length === 0) continue;
+
+    if (idMapping[oldId]) {
       if (logRemaps) {
         console.log(`[import-from-api] Remapping ${tableName}.${fkCol}: ${oldId} -> ${idMapping[oldId]}`);
       }
       out[fkCol] = idMapping[oldId];
+      continue;
     }
+
+    // If we know this column is a FK, but we don't have a mapping, it's safer to null it.
+    // This commonly happens with audit columns like created_by from users that weren't migrated.
+    out[fkCol] = null;
   }
   return out;
 }
