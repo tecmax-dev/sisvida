@@ -450,6 +450,11 @@ serve(async (req) => {
         }
       };
 
+      // Check if error is a subscription limit violation - skip these records
+      const isSubscriptionLimitError = (message: string): boolean => {
+        return /LIMITE_PROFISSIONAIS|LIMITE_USUARIOS|LIMITE_PACIENTES|limite.*plano/i.test(message);
+      };
+
       const stripMissingColumn = (message: string): string | null => {
         // Examples:
         // - Could not find the 'logo_url' column of 'union_entities' in the schema cache
@@ -528,14 +533,51 @@ serve(async (req) => {
 
         const recordsToInsert: Record<string, unknown>[] = [];
         const sourceIds: string[] = [];
+        let skippedDueToNoUser = 0;
+
+        // For user-dependent tables (profiles, user_roles), we must skip records
+        // whose user_id doesn't exist in auth (since we can't create users on the fly)
+        const requiresValidUser = ["profiles", "user_roles", "super_admins"].includes(tableName);
+        
+        // Build a set of known valid auth users in destination
+        const validAuthUsers = new Set<string>();
+        if (requiresValidUser) {
+          // Get user IDs from userMapping (source->dest mapping)
+          for (const destUserId of Object.values(userMapping || {})) {
+            if (typeof destUserId === "string") validAuthUsers.add(destUserId);
+          }
+          console.log(`[import-from-api] ${tableName}: ${validAuthUsers.size} valid auth users available`);
+        }
 
         for (const row of rows) {
           const sourceId = row?.id;
           const recordToInsert = remapForeignKeys(row, tableName, idMapping, false);
+          
+          // For user-dependent tables, skip if user_id is not in our valid set
+          if (requiresValidUser) {
+            const userId = recordToInsert.user_id;
+            if (typeof userId !== "string" || !validAuthUsers.has(userId)) {
+              skippedDueToNoUser++;
+              continue; // Skip this record entirely
+            }
+          }
+          
           // Pre-validate entity FKs to avoid row-by-row fallback
           await nullInvalidEntityFks(recordToInsert);
           recordsToInsert.push(recordToInsert);
           if (typeof sourceId === "string") sourceIds.push(sourceId);
+        }
+        
+        if (skippedDueToNoUser > 0) {
+          console.log(`[import-from-api] ${tableName}: skipped ${skippedDueToNoUser} rows (user_id not in destination)`);
+        }
+        
+        // If all records were filtered out, continue to next page
+        if (recordsToInsert.length === 0) {
+          processedPages++;
+          page++;
+          hasMore = rows.length === limit;
+          continue;
         }
 
         // Fast path: batch upsert, with auto-removal of missing columns
@@ -603,6 +645,12 @@ serve(async (req) => {
 
               const msg = error.message || "";
 
+              // Handle subscription limit errors - skip these records entirely (not an FK issue)
+              if (isSubscriptionLimitError(msg)) {
+                console.warn(`[import-from-api] ${tableName}: subscription limit reached, skipping record`);
+                return { ok: false as const, error: { message: "SKIPPED_LIMIT" }, record: current, skipped: true };
+              }
+
               const missingCol = stripMissingColumn(msg);
               if (missingCol) {
                 console.warn(`[import-from-api] ${tableName}: row missing column '${missingCol}', removing and retrying`);
@@ -655,11 +703,18 @@ serve(async (req) => {
 
           let rowOk = 0;
           let rowFail = 0;
+          let rowSkipped = 0;
           for (let i = 0; i < cleanedRecords.length; i++) {
             const rec = cleanedRecords[i];
             const res = await upsertOneWithRowRetry(rec);
 
             if (!res.ok) {
+              // Check if this was a "skipped due to limit" case - don't count as error
+              if ((res as any).skipped) {
+                rowSkipped++;
+                continue;
+              }
+              
               rowFail++;
               const errMsg = `Row ${String((rec as any)?.id ?? "?")}: ${res.error?.message || "Unknown error"}`;
               console.error(
@@ -688,8 +743,12 @@ serve(async (req) => {
             errors.push(`Batch error: ${batchErrMsg}`);
           }
 
+          if (rowSkipped > 0) {
+            console.log(`[import-from-api] ${tableName}: ${rowSkipped} rows skipped (subscription limits)`);
+          }
+
           totalImported += rowOk;
-          console.log(`[import-from-api] ${tableName} page ${page}: row fallback ok=${rowOk} fail=${rowFail}`);
+          console.log(`[import-from-api] ${tableName} page ${page}: row fallback ok=${rowOk} fail=${rowFail} skipped=${rowSkipped}`);
         } else {
           // Use batch.records since they have columns stripped if needed
           const finalRecords = batch.records || recordsToInsert;
