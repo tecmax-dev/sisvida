@@ -57,7 +57,7 @@ export default function MobileProfilePage() {
 
   const loadPatientData = async () => {
     try {
-      const patientId = sessionStorage.getItem('mobile_patient_id');
+      const patientId = localStorage.getItem('mobile_patient_id');
 
       if (!patientId) {
         navigate("/app/login");
@@ -95,8 +95,9 @@ export default function MobileProfilePage() {
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
-      sessionStorage.removeItem('mobile_patient_id');
-      sessionStorage.removeItem('mobile_clinic_id');
+      localStorage.removeItem('mobile_patient_id');
+      localStorage.removeItem('mobile_clinic_id');
+      localStorage.removeItem('mobile_patient_name');
       navigate("/app/login");
     } catch (err) {
       console.error("Error signing out:", err);

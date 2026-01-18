@@ -30,8 +30,8 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
   const [clinic, setClinic] = useState<ClinicData | null>(null);
 
   // Get session data for push notifications
-  const patientId = sessionStorage.getItem('mobile_patient_id');
-  const clinicId = sessionStorage.getItem('mobile_clinic_id');
+  const patientId = localStorage.getItem('mobile_patient_id');
+  const clinicId = localStorage.getItem('mobile_clinic_id');
 
   // Initialize push notifications
   usePushNotifications({ patientId, clinicId });
@@ -42,7 +42,7 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
   }, []);
 
   const loadPatientData = async () => {
-    const patientId = sessionStorage.getItem('mobile_patient_id');
+    const patientId = localStorage.getItem('mobile_patient_id');
     if (!patientId) return;
 
     const { data } = await supabase
@@ -57,7 +57,7 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
   };
 
   const loadClinicData = async () => {
-    const clinicId = sessionStorage.getItem('mobile_clinic_id');
+    const clinicId = localStorage.getItem('mobile_clinic_id');
     if (!clinicId) return;
 
     const { data } = await supabase

@@ -155,10 +155,10 @@ export default function MobileAuthPage() {
         return;
       }
 
-      // Store patient info for the mobile app
-      sessionStorage.setItem('mobile_patient_id', patient.patient_id);
-      sessionStorage.setItem('mobile_clinic_id', patient.clinic_id);
-      sessionStorage.setItem('mobile_patient_name', patient.patient_name);
+      // Store patient info for the mobile app (localStorage for session persistence)
+      localStorage.setItem('mobile_patient_id', patient.patient_id);
+      localStorage.setItem('mobile_clinic_id', patient.clinic_id);
+      localStorage.setItem('mobile_patient_name', patient.patient_name);
       toast({
         title: "Bem-vindo!",
         description: `Olá, ${patient.patient_name.split(' ')[0]}!`,

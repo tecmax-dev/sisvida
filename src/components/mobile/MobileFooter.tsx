@@ -13,7 +13,7 @@ export function MobileFooter() {
 
   useEffect(() => {
     const loadClinic = async () => {
-      const clinicId = sessionStorage.getItem('mobile_clinic_id');
+      const clinicId = localStorage.getItem('mobile_clinic_id');
       if (!clinicId) return;
 
       const { data } = await supabase

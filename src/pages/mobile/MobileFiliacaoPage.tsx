@@ -57,7 +57,7 @@ interface UnionEntity {
   logo_url?: string | null;
   entity_type: string;
   clinic_id?: string | null;
-  allowed_relationship_types?: unknown;
+  allowed_relationship_types?: string[] | null;
 }
 
 interface PaymentMethod {
@@ -178,7 +178,12 @@ export default function MobileFiliacaoPage() {
           .single();
 
         if (sindicatoData) {
-          setSindicato(sindicatoData);
+          setSindicato({
+            ...sindicatoData,
+            allowed_relationship_types: Array.isArray(sindicatoData.allowed_relationship_types)
+              ? sindicatoData.allowed_relationship_types as string[]
+              : null
+          });
 
           const { data: methodsData } = await supabase
             .from("sindical_payment_methods")

@@ -554,9 +554,9 @@ function OuvidoriaContent() {
     setEnviando(true);
     
     try {
-      const patientId = sessionStorage.getItem('mobile_patient_id');
-      const clinicId = sessionStorage.getItem('mobile_clinic_id');
-      const patientName = sessionStorage.getItem('mobile_patient_name');
+      const patientId = localStorage.getItem('mobile_patient_id');
+      const clinicId = localStorage.getItem('mobile_clinic_id');
+      const patientName = localStorage.getItem('mobile_patient_name');
 
       if (!clinicId) {
         toast({ 
