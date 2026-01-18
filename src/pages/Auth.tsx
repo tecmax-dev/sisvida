@@ -431,16 +431,39 @@ export default function Auth() {
 
     try {
       // Verificar reCAPTCHA no servidor para login e signup (se configurado)
-      if ((view === "login" || view === "signup") && RECAPTCHA_SITE_KEY && recaptchaToken) {
-        const verification = await verifyRecaptcha(recaptchaToken);
-        if (!verification.ok) {
-          const codesText = verification.codes?.length
-            ? ` (códigos: ${verification.codes.join(", ")})`
-            : "";
+      if ((view === "login" || view === "signup") && RECAPTCHA_SITE_KEY) {
+        // Obter token fresco diretamente do componente
+        let tokenToVerify = recaptchaToken;
+        
+        // Se não tem token, tentar executar novamente
+        if (!tokenToVerify) {
+          try {
+            tokenToVerify = await recaptchaRef.current?.executeAsync?.() || null;
+          } catch {
+            // Se falhar, resetar e pedir ao usuário
+            recaptchaRef.current?.reset();
+            setRecaptchaToken(null);
+            setErrors({ recaptcha: "Complete o reCAPTCHA novamente" });
+            setLoading(false);
+            return;
+          }
+        }
 
+        if (!tokenToVerify) {
+          setErrors({ recaptcha: "Complete o reCAPTCHA" });
+          setLoading(false);
+          return;
+        }
+
+        const verification = await verifyRecaptcha(tokenToVerify);
+        if (!verification.ok) {
+          const isExpired = verification.codes?.includes("timeout-or-duplicate");
+          
           toast({
-            title: "Verificação falhou",
-            description: `${verification.error || "O reCAPTCHA não pôde ser verificado"}${codesText}`,
+            title: isExpired ? "reCAPTCHA expirado" : "Verificação falhou",
+            description: isExpired 
+              ? "O reCAPTCHA expirou. Complete novamente e tente rapidamente."
+              : (verification.error || "O reCAPTCHA não pôde ser verificado"),
             variant: "destructive",
           });
 
@@ -449,6 +472,10 @@ export default function Auth() {
           setLoading(false);
           return;
         }
+
+        // Resetar após uso bem-sucedido (token é single-use)
+        recaptchaRef.current?.reset();
+        setRecaptchaToken(null);
       }
 
       if (view === "login") {
