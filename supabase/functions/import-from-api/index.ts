@@ -378,6 +378,7 @@ serve(async (req) => {
       const MAX_LIMIT_BY_TABLE: Record<string, number> = {
         patients: 200,
         medical_records: 100,
+        employer_contributions: 200,
       };
 
       const maxLimit = MAX_LIMIT_BY_TABLE[String(tableName)] ?? 500;

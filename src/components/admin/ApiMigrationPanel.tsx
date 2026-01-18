@@ -149,6 +149,7 @@ export function ApiMigrationPanel() {
     const byTable: Record<string, number> = {
       patients: 200,
       medical_records: 100,
+      employer_contributions: 200,
     };
 
     const override = byTable[tableName];
