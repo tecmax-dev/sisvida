@@ -146,15 +146,23 @@ export default function ContributionsPage() {
   const detectBestYear = async () => {
     if (!currentClinic?.id) return;
 
+    console.debug("[ContributionsPage] detectBestYear called", { clinicId: currentClinic.id });
+
     // Default behavior: start on the previous month's year (e.g. January => previous year)
     // but if that year has no data, fall back to the most recent year available.
     const targetYear = getInitialYear();
 
-    const { count: targetCount } = await supabase
+    const { count: targetCount, error: countError } = await supabase
       .from("employer_contributions")
       .select("*", { count: "exact", head: true })
       .eq("clinic_id", currentClinic.id)
       .eq("competence_year", targetYear);
+
+    console.debug("[ContributionsPage] targetYear check", { 
+      targetYear, 
+      targetCount, 
+      countError: countError?.message 
+    });
 
     if (targetCount && targetCount > 0) {
       setYearFilter(targetYear);
@@ -163,12 +171,17 @@ export default function ContributionsPage() {
     }
 
     // Fallback: buscar o ano mais recente com dados
-    const { data } = await supabase
+    const { data, error: fallbackError } = await supabase
       .from("employer_contributions")
       .select("competence_year")
       .eq("clinic_id", currentClinic.id)
       .order("competence_year", { ascending: false })
       .limit(1);
+
+    console.debug("[ContributionsPage] fallback year", { 
+      data, 
+      fallbackError: fallbackError?.message 
+    });
 
     if (data && data.length > 0) {
       const bestYear = data[0].competence_year;
