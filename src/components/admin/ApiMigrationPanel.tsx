@@ -102,13 +102,35 @@ export function ApiMigrationPanel() {
 
   const persistCheckpoint = (cp: ApiMigrationCheckpoint | null) => {
     if (!cp) {
+      console.log("[Checkpoint] Clearing checkpoint");
       clearApiMigrationCheckpoint();
       setCheckpoint(null);
       return;
     }
+    console.log("[Checkpoint] Saving checkpoint:", {
+      sourceApiUrl: cp.sourceApiUrl,
+      tablesCount: Object.keys(cp.tables).length,
+      successTables: Object.entries(cp.tables).filter(([, v]) => v.success).map(([k]) => k),
+      failedTables: Object.entries(cp.tables).filter(([, v]) => !v.success && v.error).map(([k]) => k),
+      currentIndex: cp.currentIndex,
+      page: cp.page,
+    });
     saveApiMigrationCheckpoint(cp);
     setCheckpoint(cp);
   };
+
+  // Debug: Log checkpoint status on mount and changes
+  useEffect(() => {
+    console.log("[Checkpoint] Current state:", checkpoint ? {
+      url: checkpoint.sourceApiUrl,
+      totalTables: Object.keys(checkpoint.tables).length,
+      successCount: Object.values(checkpoint.tables).filter(t => t.success).length,
+      errorCount: Object.values(checkpoint.tables).filter(t => !t.success && t.error).length,
+      canResume,
+      canRetryErrors,
+      urlMatch: checkpoint.sourceApiUrl === sourceApiUrl.trim(),
+    } : "No checkpoint");
+  }, [checkpoint, canResume, canRetryErrors, sourceApiUrl]);
 
   const resetState = () => {
     persistCheckpoint(null);
@@ -1110,6 +1132,28 @@ export function ApiMigrationPanel() {
       </CardHeader>
 
       <CardContent className="space-y-6">
+        {/* Debug: Checkpoint status indicator */}
+        {checkpoint && (
+          <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm">
+            <div className="flex items-center gap-2 font-medium text-blue-800">
+              <Database className="h-4 w-4" />
+              Checkpoint salvo
+            </div>
+            <div className="mt-1 text-blue-600 text-xs space-y-1">
+              <div>URL: {checkpoint.sourceApiUrl.substring(0, 50)}...</div>
+              <div>
+                Tabelas: {Object.values(checkpoint.tables).filter(t => t.success).length} sucesso, 
+                {" "}{Object.values(checkpoint.tables).filter(t => !t.success && t.error).length} com erro
+              </div>
+              <div>
+                URL corresponde: {checkpoint.sourceApiUrl === sourceApiUrl.trim() ? "✅ Sim" : "❌ Não"}
+              </div>
+              <div>
+                canResume: {canResume ? "✅" : "❌"} | canRetryErrors: {canRetryErrors ? "✅" : "❌"}
+              </div>
+            </div>
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="api-url">URL da API de Sincronização</Label>
