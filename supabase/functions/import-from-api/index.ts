@@ -496,12 +496,23 @@ serve(async (req) => {
 
           const missingCol = stripMissingColumn(error.message || "");
           if (missingCol) {
+            let removedAny = false;
             console.warn(`[import-from-api] ${tableName}: removing missing column '${missingCol}' and retrying`);
             current = current.map((r) => {
               const out = { ...r } as Record<string, unknown>;
-              delete out[missingCol];
+              if (missingCol in out) {
+                delete out[missingCol];
+                removedAny = true;
+              }
               return out;
             });
+
+            // If none of the records actually had this column, we would loop forever.
+            // Treat as unrecoverable for this batch and let the caller fallback/skip.
+            if (!removedAny) {
+              return { ok: false as const, error, records: current };
+            }
+
             attempt++;
             continue;
           }
@@ -660,10 +671,20 @@ serve(async (req) => {
 
               const missingCol = stripMissingColumn(msg);
               if (missingCol) {
-                console.warn(`[import-from-api] ${tableName}: row missing column '${missingCol}', removing and retrying`);
-                delete current[missingCol];
-                attempt++;
-                continue;
+                // If the column is actually present, strip it and retry.
+                if (missingCol in current) {
+                  console.warn(`[import-from-api] ${tableName}: row missing column '${missingCol}', removing and retrying`);
+                  delete current[missingCol];
+                  attempt++;
+                  continue;
+                }
+
+                // If it isn't present in the payload, this is likely a persistent schema-cache mismatch.
+                // Don't get stuck retrying forever; skip this record.
+                if (/schema cache/i.test(msg)) {
+                  console.warn(`[import-from-api] ${tableName}: schema-cache mismatch (${missingCol}) but field not in payload; skipping record`);
+                  return { ok: false as const, error: { message: "SKIPPED_SCHEMA_CACHE" }, record: current, skipped: true };
+                }
               }
 
               // If any FK field causes a violation, null it out reactively
