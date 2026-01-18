@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Logo } from "@/components/layout/Logo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { 
   LayoutDashboard, 
   Building2, 
@@ -232,15 +233,22 @@ export function AdminLayout() {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto p-6">
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          }>
-            <Outlet />
-          </Suspense>
-        </main>
+        <div className="flex-1 flex flex-col overflow-auto">
+          {/* Top bar with theme toggle */}
+          <header className="sticky top-0 z-30 flex items-center justify-end gap-4 px-6 h-14 bg-background/95 backdrop-blur-md supports-[backdrop-filter]:bg-background/80 border-b border-border/50">
+            <ThemeToggle />
+          </header>
+          
+          <main className="flex-1 p-6">
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            }>
+              <Outlet />
+            </Suspense>
+          </main>
+        </div>
       </div>
 
       {/* Footer */}

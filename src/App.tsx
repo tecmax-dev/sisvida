@@ -10,6 +10,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { LoadingFallback } from "@/components/ui/loading-fallback";
 import { Button } from "./components/ui/button";
 import { RedirectDoubleDashboard } from "@/components/routing/RedirectDoubleDashboard";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 
 // Layouts (carregamento imediato - necessários para estrutura)
 import { DashboardLayout } from "./components/dashboard/DashboardLayout";
@@ -273,14 +274,15 @@ class ErrorBoundary extends React.Component<
 
 const App = () => (
   <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <ModalProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <AuthProvider>
-              <Suspense fallback={<LoadingFallback />}>
+    <ThemeProvider defaultTheme="system" storageKey="eclini-theme">
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <ModalProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <AuthProvider>
+                <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/sindical" element={<SindicalLandingPage />} />
@@ -524,12 +526,13 @@ const App = () => (
                 <Route path="/app/filiacao" element={<MobileFiliacaoPage />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </Suspense>
-          </AuthProvider>
-        </BrowserRouter>
-        </ModalProvider>
-      </TooltipProvider>
-    </QueryClientProvider>
+              </Suspense>
+            </AuthProvider>
+          </BrowserRouter>
+          </ModalProvider>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   </ErrorBoundary>
 );
 
