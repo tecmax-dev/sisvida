@@ -9,7 +9,11 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2, ArrowLeft, Mail, KeyRound } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { z } from "zod";
+import ReCAPTCHA from "react-google-recaptcha";
 import authDashboardMockup from "@/assets/auth-dashboard-mockup.png";
+
+// Site key from Cloud secrets - must match the one configured in Google reCAPTCHA Console
+const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "";
 
 // OAuth redirects MUST stay on the same origin to preserve PKCE state.
 // Using a different domain between the auth start and the callback will cause:
@@ -57,6 +61,8 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [fromExpiredLink, setFromExpiredLink] = useState(false);
   const [isFirstAccess, setIsFirstAccess] = useState(false);
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   // useRef para controlar o fluxo de primeiro acesso - atualizado imediatamente sem re-render
   const isFirstAccessFlowRef = useRef(false);
@@ -65,6 +71,7 @@ export default function Auth() {
     password?: string; 
     confirmPassword?: string;
     name?: string;
+    recaptcha?: string;
   }>({});
 
   // useRef para controlar o fluxo de recuperação - atualizado imediatamente sem re-render
@@ -300,8 +307,41 @@ export default function Auth() {
       newErrors.name = "Nome é obrigatório";
     }
 
+    // Validar reCAPTCHA para login e signup (apenas se a chave estiver configurada)
+    if ((view === "login" || view === "signup") && RECAPTCHA_SITE_KEY && !recaptchaToken) {
+      newErrors.recaptcha = "Complete o reCAPTCHA";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
+  };
+
+  const verifyRecaptcha = async (
+    token: string
+  ): Promise<{ ok: boolean; codes?: string[]; error?: string }> => {
+    try {
+      const { data, error } = await supabase.functions.invoke("verify-recaptcha", {
+        body: { token },
+      });
+
+      if (error) {
+        console.error("Erro ao verificar reCAPTCHA (invoke):", error.message);
+        return { ok: false, error: error.message };
+      }
+
+      if (data?.success === true) return { ok: true };
+
+      const codes = (data?.codes ?? []) as string[];
+      console.error("Erro ao verificar reCAPTCHA (server):", { codes, data });
+      return {
+        ok: false,
+        codes,
+        error: data?.error || "Verificação do reCAPTCHA falhou",
+      };
+    } catch (err: any) {
+      console.error("Erro ao verificar reCAPTCHA (exception):", err);
+      return { ok: false, error: err?.message || "Erro inesperado" };
+    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -390,6 +430,27 @@ export default function Auth() {
     setLoading(true);
 
     try {
+      // Verificar reCAPTCHA no servidor para login e signup (se configurado)
+      if ((view === "login" || view === "signup") && RECAPTCHA_SITE_KEY && recaptchaToken) {
+        const verification = await verifyRecaptcha(recaptchaToken);
+        if (!verification.ok) {
+          const codesText = verification.codes?.length
+            ? ` (códigos: ${verification.codes.join(", ")})`
+            : "";
+
+          toast({
+            title: "Verificação falhou",
+            description: `${verification.error || "O reCAPTCHA não pôde ser verificado"}${codesText}`,
+            variant: "destructive",
+          });
+
+          recaptchaRef.current?.reset();
+          setRecaptchaToken(null);
+          setLoading(false);
+          return;
+        }
+      }
+
       if (view === "login") {
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
@@ -890,8 +951,44 @@ export default function Auth() {
                     </div>
                   )}
 
+                  {/* reCAPTCHA - só exibe se a chave estiver configurada */}
+                  {RECAPTCHA_SITE_KEY && (
+                    <div className="flex flex-col items-center">
+                      <ReCAPTCHA
+                        key={`recaptcha-${view}`}
+                        ref={recaptchaRef}
+                        sitekey={RECAPTCHA_SITE_KEY}
+                        onChange={(token) => {
+                          setRecaptchaToken(token);
+                          if (errors.recaptcha) {
+                            setErrors((prev) => ({ ...prev, recaptcha: undefined }));
+                          }
+                        }}
+                        onExpired={() => {
+                          setRecaptchaToken(null);
+                          toast({
+                            title: "reCAPTCHA expirou",
+                            description: "Por favor, complete o reCAPTCHA novamente.",
+                            variant: "destructive",
+                          });
+                        }}
+                        onErrored={() => {
+                          setRecaptchaToken(null);
+                          toast({
+                            title: "Erro no reCAPTCHA",
+                            description: `Verifique se o domínio ${window.location.hostname} está autorizado no Google reCAPTCHA Console.`,
+                            variant: "destructive",
+                          });
+                        }}
+                        hl="pt-BR"
+                      />
+                      {errors.recaptcha && (
+                        <p className="mt-1 text-sm text-destructive">{errors.recaptcha}</p>
+                      )}
+                    </div>
+                  )}
 
-                  <Button type="submit" className="w-full h-10 gap-2" disabled={loading}>
+                  <Button type="submit" className="w-full h-10 gap-2" disabled={loading || (RECAPTCHA_SITE_KEY ? !recaptchaToken : false)}>
                     {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                     {view === "login" ? "Entrar" : "Criar conta"}
                     {!loading && <ArrowLeft className="h-3.5 w-3.5 rotate-180" />}
