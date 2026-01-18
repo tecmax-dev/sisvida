@@ -435,6 +435,13 @@ serve(async (req) => {
         "addon_id": "subscription_addons",
         "medical_record_id": "medical_records",
         "no_show_blocked_professional_id": "professionals",
+        "employer_id": "employers",
+        "insurance_plan_id": "insurance_plans",
+        "specialty_id": "specialties",
+        "procedure_id": "procedures",
+        "category_id": "employer_categories",
+        "access_group_id": "access_groups",
+        "clinic_id": "clinics",
       };
 
       // Function to null out invalid entity FK references (not user FKs)
@@ -450,9 +457,9 @@ serve(async (req) => {
         }
       };
 
-      // Check if error is a subscription limit violation - skip these records
-      const isSubscriptionLimitError = (message: string): boolean => {
-        return /LIMITE_PROFISSIONAIS|LIMITE_USUARIOS|LIMITE_PACIENTES|limite.*plano/i.test(message);
+      // Check if error is a subscription limit or RLS/access control violation - skip these records
+      const isSkippableBusinessError = (message: string): boolean => {
+        return /LIMITE_PROFISSIONAIS|LIMITE_USUARIOS|LIMITE_PACIENTES|limite.*plano|ACESSO_NEGADO|row.level.security|policy.*violated|permission denied/i.test(message);
       };
 
       const stripMissingColumn = (message: string): string | null => {
@@ -645,10 +652,10 @@ serve(async (req) => {
 
               const msg = error.message || "";
 
-              // Handle subscription limit errors - skip these records entirely (not an FK issue)
-              if (isSubscriptionLimitError(msg)) {
-                console.warn(`[import-from-api] ${tableName}: subscription limit reached, skipping record`);
-                return { ok: false as const, error: { message: "SKIPPED_LIMIT" }, record: current, skipped: true };
+              // Handle subscription limit and RLS/access errors - skip these records entirely
+              if (isSkippableBusinessError(msg)) {
+                console.warn(`[import-from-api] ${tableName}: business rule violation, skipping record: ${msg.substring(0, 80)}`);
+                return { ok: false as const, error: { message: "SKIPPED_BUSINESS_RULE" }, record: current, skipped: true };
               }
 
               const missingCol = stripMissingColumn(msg);
