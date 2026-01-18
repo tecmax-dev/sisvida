@@ -12,6 +12,7 @@ import { Logo } from "@/components/layout/Logo";
 import { UserMenu } from "@/components/layout/UserMenu";
 import ecliniDashboardLogo from "@/assets/eclini-dashboard-logo.png";
 import { UserAvatar } from "@/components/users/UserAvatar";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -665,6 +666,7 @@ export function DashboardLayout() {
           <div className="flex-1" />
 
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <NotificationBell />
             <UserMenu compact showName={false} />
           </div>
