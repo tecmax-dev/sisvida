@@ -4,6 +4,7 @@ import { Home, Calendar, User, Bell, Menu } from "lucide-react";
 import { MobileDrawer } from "./MobileDrawer";
 import { supabase } from "@/integrations/supabase/client";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useDynamicFavicon } from "@/hooks/useDynamicFavicon";
 
 interface MobileLayoutProps {
   children: ReactNode;
@@ -35,6 +36,9 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
 
   // Initialize push notifications
   usePushNotifications({ patientId, clinicId });
+
+  // Update favicon/icons to clinic logo
+  useDynamicFavicon(clinic?.logo_url);
 
   useEffect(() => {
     loadPatientData();
