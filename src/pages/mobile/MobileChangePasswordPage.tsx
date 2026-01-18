@@ -64,7 +64,7 @@ export default function MobileChangePasswordPage() {
     setLoading(true);
 
     try {
-      const patientId = sessionStorage.getItem("mobile_patient_id");
+      const patientId = localStorage.getItem("mobile_patient_id");
 
       if (!patientId) {
         navigate("/app/login");

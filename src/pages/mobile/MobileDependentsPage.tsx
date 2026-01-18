@@ -74,7 +74,7 @@ export default function MobileDependentsPage() {
 
   const loadData = async () => {
     try {
-      const storedPatientId = sessionStorage.getItem("mobile_patient_id");
+      const storedPatientId = localStorage.getItem("mobile_patient_id");
 
       if (!storedPatientId) {
         navigate("/app/login");

@@ -100,8 +100,8 @@ export default function MobileBookingPage() {
 
   const loadInitialData = async () => {
     try {
-      const patientId = sessionStorage.getItem('mobile_patient_id');
-      const clinicId = sessionStorage.getItem('mobile_clinic_id');
+      const patientId = localStorage.getItem('mobile_patient_id');
+      const clinicId = localStorage.getItem('mobile_clinic_id');
 
       if (!patientId || !clinicId) {
         navigate("/app/login");
@@ -298,8 +298,8 @@ export default function MobileBookingPage() {
     setSubmitting(true);
 
     try {
-      const patientId = sessionStorage.getItem('mobile_patient_id');
-      const clinicId = sessionStorage.getItem('mobile_clinic_id');
+      const patientId = localStorage.getItem('mobile_patient_id');
+      const clinicId = localStorage.getItem('mobile_clinic_id');
       const professional = professionals.find(p => p.id === selectedProfessionalId);
       
       // Get the duration from the applicable block for this date

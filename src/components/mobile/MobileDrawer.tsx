@@ -25,8 +25,9 @@ export function MobileDrawer({ open, onOpenChange, patient }: MobileDrawerProps)
   };
 
   const handleSignOut = () => {
-    sessionStorage.removeItem("mobile_patient_id");
-    sessionStorage.removeItem("mobile_clinic_id");
+    localStorage.removeItem("mobile_patient_id");
+    localStorage.removeItem("mobile_clinic_id");
+    localStorage.removeItem("mobile_patient_name");
     onOpenChange(false);
     navigate("/app/login");
     toast({

@@ -94,8 +94,8 @@ export default function MobileAppointmentsPage() {
 
   const loadAppointments = async () => {
     try {
-      const patientId = sessionStorage.getItem('mobile_patient_id');
-      const clinicId = sessionStorage.getItem('mobile_clinic_id');
+      const patientId = localStorage.getItem('mobile_patient_id');
+      const clinicId = localStorage.getItem('mobile_clinic_id');
 
       if (!patientId || !clinicId) {
         navigate("/app/login");
