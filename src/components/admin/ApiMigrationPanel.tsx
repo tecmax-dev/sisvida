@@ -1,6 +1,12 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { extractFunctionsError } from "@/lib/functionsError";
+import {
+  clearApiMigrationCheckpoint,
+  loadApiMigrationCheckpoint,
+  saveApiMigrationCheckpoint,
+  type ApiMigrationCheckpoint,
+} from "@/lib/apiMigrationCheckpoint";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,7 +68,35 @@ export function ApiMigrationPanel() {
     errors: [],
   });
 
+  const [checkpoint, setCheckpoint] = useState<ApiMigrationCheckpoint | null>(() => loadApiMigrationCheckpoint());
+
+  useEffect(() => {
+    if (!checkpoint) return;
+    if (!sourceApiUrl.trim() && checkpoint.sourceApiUrl) {
+      setSourceApiUrl(checkpoint.sourceApiUrl);
+    }
+  }, [checkpoint, sourceApiUrl]);
+
+  const canResume =
+    Boolean(
+      checkpoint &&
+        checkpoint.sourceApiUrl === sourceApiUrl.trim() &&
+        Array.isArray(checkpoint.summary) &&
+        checkpoint.summary.length > 0
+    );
+
+  const persistCheckpoint = (cp: ApiMigrationCheckpoint | null) => {
+    if (!cp) {
+      clearApiMigrationCheckpoint();
+      setCheckpoint(null);
+      return;
+    }
+    saveApiMigrationCheckpoint(cp);
+    setCheckpoint(cp);
+  };
+
   const resetState = () => {
+    persistCheckpoint(null);
     setDebugDetails("");
     stopRequestedRef.current = false;
     setState({
@@ -122,6 +156,312 @@ export function ApiMigrationPanel() {
 
     // Default heuristic
     return count > 20000 ? 100 : count > 5000 ? 200 : 500;
+  };
+
+  const runTables = async (args: {
+    tablesToImport: { table: string; count: number }[];
+    userMapping: Record<string, string>;
+    usersCreated: number;
+    usersSkipped: number;
+    startIndex: number;
+    startPage: number;
+    startLimit: number | null;
+    accumulatedIdMapping: Record<string, string>;
+    existingTables: Record<string, TableResult>;
+  }): Promise<{ stopped: boolean; accumulatedIdMapping: Record<string, string> }> => {
+    const totalTables = args.tablesToImport.length || 1;
+    let accumulatedIdMapping: Record<string, string> = { ...args.accumulatedIdMapping };
+
+    // Local mutable copy (easier to persist to checkpoint)
+    const tablesState: Record<string, TableResult> = { ...args.existingTables };
+
+    // Save an initial checkpoint so "Continuar" works even before the first chunk finishes
+    persistCheckpoint({
+      v: 1,
+      sourceApiUrl: sourceApiUrl.trim(),
+      summary: args.tablesToImport,
+      userMapping: args.userMapping,
+      usersCreated: args.usersCreated,
+      usersSkipped: args.usersSkipped,
+      tables: tablesState,
+      currentIndex: Math.max(0, args.startIndex),
+      page: Math.max(0, args.startPage),
+      limit: Math.max(1, args.startLimit ?? 200),
+      accumulatedIdMapping,
+      timestamp: Date.now(),
+    });
+
+    for (let i = args.startIndex; i < args.tablesToImport.length; i++) {
+      if (stopRequestedRef.current) {
+        toast.dismiss("migration");
+        toast.info("Importação interrompida pelo usuário.");
+        setState((s) => ({ ...s, phase: "stopped", currentTable: null }));
+        return { stopped: true, accumulatedIdMapping };
+      }
+
+      const table = args.tablesToImport[i];
+      const tableName = table.table;
+
+      const isResumeTable = i === args.startIndex;
+      let limit = isResumeTable
+        ? (args.startLimit ?? getLimitForTable(tableName, table.count))
+        : getLimitForTable(tableName, table.count);
+      let page = isResumeTable ? args.startPage : 0;
+      let hasMore = true;
+      let imported = tablesState[tableName]?.count ?? 0;
+      const tableErrors: string[] = [];
+      let safety = 0;
+
+      setState((s) => ({
+        ...s,
+        phase: "tables",
+        currentTable: tableName,
+        idMapping: accumulatedIdMapping,
+        progress: 25 + Math.round((i / totalTables) * 70),
+        // Keep already-imported results visible while continuing
+        tables: { ...tablesState },
+      }));
+
+      toast.loading(`Importando ${tableName} (${table.count} registros)...`, { id: "migration" });
+
+      // Persist that we're starting (or resuming) this table
+      persistCheckpoint({
+        v: 1,
+        sourceApiUrl: sourceApiUrl.trim(),
+        summary: args.tablesToImport,
+        userMapping: args.userMapping,
+        usersCreated: args.usersCreated,
+        usersSkipped: args.usersSkipped,
+        tables: tablesState,
+        currentIndex: i,
+        page,
+        limit,
+        accumulatedIdMapping,
+        timestamp: Date.now(),
+      });
+
+      while (hasMore) {
+        if (stopRequestedRef.current) {
+          toast.dismiss("migration");
+          toast.info("Importação interrompida pelo usuário.");
+          setState((s) => ({ ...s, phase: "stopped", currentTable: null }));
+
+          persistCheckpoint({
+            v: 1,
+            sourceApiUrl: sourceApiUrl.trim(),
+            summary: args.tablesToImport,
+            userMapping: args.userMapping,
+            usersCreated: args.usersCreated,
+            usersSkipped: args.usersSkipped,
+            tables: tablesState,
+            currentIndex: i,
+            page,
+            limit,
+            accumulatedIdMapping,
+            timestamp: Date.now(),
+          });
+
+          return { stopped: true, accumulatedIdMapping };
+        }
+
+        safety++;
+        if (safety > 5000) {
+          tableErrors.push("Limite de páginas excedido (proteção contra loop infinito)");
+          break;
+        }
+
+        try {
+          let tableData: any = null;
+          let tableError: unknown = null;
+          let retries = 0;
+
+          while (true) {
+            const res = await supabase.functions.invoke("import-from-api", {
+              body: {
+                sourceApiUrl: sourceApiUrl.trim(),
+                syncKey: syncKey.trim(),
+                phase: "table",
+                tableName,
+                userMapping: args.userMapping,
+                idMapping: accumulatedIdMapping,
+                page,
+                limit,
+                maxPages: 1,
+              },
+            });
+
+            tableData = res.data;
+            tableError = res.error;
+
+            if (!tableError) break;
+
+            // Retry by reducing payload size (common for big tables like patients)
+            if (shouldRetryInvokeError(tableError) && retries < 3 && limit > 50) {
+              retries++;
+              const nextLimit = Math.max(50, Math.floor(limit / 2));
+              console.warn(`[ApiMigration] ${tableName}: retry ${retries} (limit ${limit} -> ${nextLimit})`);
+              limit = nextLimit;
+              await sleep(900 * retries);
+              continue;
+            }
+
+            break;
+          }
+
+          if (tableError) {
+            const msg = formatInvokeError(tableError);
+            captureDebug({ phase: "table", table: tableName, page, limit, error: extractFunctionsError(tableError) });
+            tableErrors.push(msg);
+            break;
+          }
+
+          if (tableData && tableData.success === false) {
+            const msg = tableData?.error || "Erro ao importar tabela";
+            captureDebug({ phase: "table", table: tableName, page, limit, response: tableData });
+            tableErrors.push(msg);
+            break;
+          }
+
+          const chunk = tableData?.tables?.[tableName];
+          if (chunk?.count) imported += chunk.count;
+          if (chunk?.error) tableErrors.push(chunk.error);
+
+          if (tableData?.idMapping) {
+            accumulatedIdMapping = { ...accumulatedIdMapping, ...tableData.idMapping };
+          }
+
+          hasMore = Boolean(tableData?.hasMore);
+          page = Number.isFinite(Number(tableData?.nextPage)) ? Number(tableData.nextPage) : page + 1;
+
+          tablesState[tableName] = {
+            success: tableErrors.length === 0 && (chunk?.success ?? true),
+            count: imported,
+            error: tableErrors.length > 0 ? tableErrors[0] : undefined,
+          };
+
+          setState((s) => ({
+            ...s,
+            idMapping: accumulatedIdMapping,
+            tables: { ...tablesState },
+          }));
+
+          // Persist progress after each chunk
+          persistCheckpoint({
+            v: 1,
+            sourceApiUrl: sourceApiUrl.trim(),
+            summary: args.tablesToImport,
+            userMapping: args.userMapping,
+            usersCreated: args.usersCreated,
+            usersSkipped: args.usersUsersSkipped,
+            tables: tablesState,
+            currentIndex: i,
+            page,
+            limit,
+            accumulatedIdMapping,
+            timestamp: Date.now(),
+          } as any);
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          tableErrors.push(msg);
+          break;
+        }
+      }
+
+      // Finalize table result
+      tablesState[tableName] = {
+        success: tableErrors.length === 0,
+        count: imported,
+        error: tableErrors.length > 0 ? tableErrors.slice(0, 2).join(" | ") : undefined,
+      };
+
+      setState((s) => ({
+        ...s,
+        idMapping: accumulatedIdMapping,
+        tables: { ...tablesState },
+        errors:
+          tableErrors.length > 0 ? [...s.errors, `${tableName}: ${tableErrors[0]}`] : s.errors,
+      }));
+
+      // After finishing a table, checkpoint the start of the next one
+      persistCheckpoint({
+        v: 1,
+        sourceApiUrl: sourceApiUrl.trim(),
+        summary: args.tablesToImport,
+        userMapping: args.userMapping,
+        usersCreated: args.usersCreated,
+        usersSkipped: args.usersSkipped,
+        tables: tablesState,
+        currentIndex: i + 1,
+        page: 0,
+        limit: 200,
+        accumulatedIdMapping,
+        timestamp: Date.now(),
+      });
+    }
+
+    return { stopped: false, accumulatedIdMapping };
+  };
+
+  const handleResume = async () => {
+    if (!checkpoint) return;
+    if (!sourceApiUrl.trim() || !syncKey.trim()) {
+      toast.error("Preencha a URL da API e a chave de sincronização");
+      return;
+    }
+
+    if (checkpoint.sourceApiUrl !== sourceApiUrl.trim()) {
+      toast.error("A URL atual é diferente da migração salva");
+      return;
+    }
+
+    stopRequestedRef.current = false;
+    setMigrating(true);
+
+    try {
+      const tablesToImport = checkpoint.summary;
+      const safeIndex = Math.min(Math.max(0, checkpoint.currentIndex), Math.max(0, tablesToImport.length - 1));
+
+      setState((s) => ({
+        ...s,
+        phase: "tables",
+        summary: tablesToImport,
+        userMapping: checkpoint.userMapping,
+        idMapping: checkpoint.accumulatedIdMapping,
+        usersCreated: checkpoint.usersCreated,
+        usersSkipped: checkpoint.usersSkipped,
+        tables: checkpoint.tables as any,
+        currentTable: tablesToImport[safeIndex]?.table ?? null,
+        progress: 25 + Math.round((safeIndex / Math.max(1, tablesToImport.length)) * 70),
+      }));
+
+      toast.loading(`Continuando importação...`, { id: "migration" });
+
+      const { stopped } = await runTables({
+        tablesToImport,
+        userMapping: checkpoint.userMapping,
+        usersCreated: checkpoint.usersCreated,
+        usersSkipped: checkpoint.usersSkipped,
+        startIndex: safeIndex,
+        startPage: checkpoint.page,
+        startLimit: checkpoint.limit,
+        accumulatedIdMapping: checkpoint.accumulatedIdMapping,
+        existingTables: checkpoint.tables as any,
+      });
+
+      if (stopped) return;
+
+      setState((s) => ({ ...s, phase: "done", currentTable: null, progress: 100 }));
+      toast.dismiss("migration");
+      toast.success("Migração concluída!");
+      persistCheckpoint(null);
+    } catch (error) {
+      toast.dismiss("migration");
+      const msg = error instanceof Error ? error.message : "Erro na migração";
+      toast.error(msg);
+      setState((s) => ({ ...s, errors: [...s.errors, msg] }));
+    } finally {
+      setMigrating(false);
+    }
   };
 
   const handleMigration = async () => {
@@ -546,165 +886,27 @@ export function ApiMigrationPanel() {
         return;
       }
 
-      // Keep track of accumulated ID mappings across all tables
-      let accumulatedIdMapping: Record<string, string> = { ...userMapping };
+      // Execute table import loop (persisting checkpoints for resume)
+      const tablesToImport = tables;
 
-      for (let i = 0; i < tablesToImport.length; i++) {
-        // Check if stop was requested
-        if (stopRequestedRef.current) {
-          toast.dismiss("migration");
-          toast.info("Importação interrompida pelo usuário.");
-          setState((s) => ({ ...s, phase: "stopped", currentTable: null }));
-          return;
-        }
+      const { stopped } = await runTables({
+        tablesToImport,
+        userMapping,
+        usersCreated,
+        usersSkipped,
+        startIndex: 0,
+        startPage: 0,
+        startLimit: null,
+        accumulatedIdMapping: { ...userMapping },
+        existingTables: {},
+      });
 
-        const table = tablesToImport[i];
-
-        setState((s) => ({
-          ...s,
-          currentTable: table.table,
-          idMapping: accumulatedIdMapping,
-          progress: 25 + Math.round((i / totalTables) * 70),
-        }));
-
-        // Page size tuning to avoid CPU limits
-        let limit = getLimitForTable(table.table, table.count);
-        let page = 0;
-        let hasMore = true;
-        let imported = 0;
-        const tableErrors: string[] = [];
-        let safety = 0;
-
-        toast.loading(`Importando ${table.table} (${table.count} registros)...`, { id: "migration" });
-
-        while (hasMore) {
-          // Check if stop was requested inside the pagination loop
-          if (stopRequestedRef.current) {
-            toast.dismiss("migration");
-            toast.info("Importação interrompida pelo usuário.");
-            setState((s) => ({ ...s, phase: "stopped", currentTable: null }));
-            return;
-          }
-
-          safety++;
-          if (safety > 5000) {
-            tableErrors.push("Limite de páginas excedido (proteção contra loop infinito)");
-            break;
-          }
-
-          try {
-            let tableData: any = null;
-            let tableError: unknown = null;
-            let retries = 0;
-
-            while (true) {
-              const res = await supabase.functions.invoke("import-from-api", {
-                body: {
-                  sourceApiUrl: sourceApiUrl.trim(),
-                  syncKey: syncKey.trim(),
-                  phase: "table",
-                  tableName: table.table,
-                  userMapping,
-                  idMapping: accumulatedIdMapping,
-                  page,
-                  limit,
-                  maxPages: 1,
-                },
-              });
-
-              tableData = res.data;
-              tableError = res.error;
-
-              if (!tableError) break;
-
-              if (shouldRetryInvokeError(tableError) && retries < 3 && limit > 50) {
-                retries++;
-                const nextLimit = Math.max(50, Math.floor(limit / 2));
-                console.warn(
-                  `[ApiMigration] ${table.table}: FunctionsFetchError, retry ${retries} (limit ${limit} -> ${nextLimit})`
-                );
-                limit = nextLimit;
-                await sleep(900 * retries);
-                continue;
-              }
-
-              break;
-            }
-
-            if (tableError) {
-              const msg = formatInvokeError(tableError);
-              captureDebug({
-                phase: "table",
-                table: table.table,
-                page,
-                limit,
-                error: extractFunctionsError(tableError),
-              });
-              tableErrors.push(msg);
-              break;
-            }
-
-            if (tableData && tableData.success === false) {
-              const msg = tableData?.error || "Erro ao importar tabela";
-              captureDebug({ phase: "table", table: table.table, page, limit, response: tableData });
-              tableErrors.push(msg);
-              break;
-            }
-
-            const chunk = tableData?.tables?.[table.table];
-            if (chunk?.count) imported += chunk.count;
-            if (chunk?.error) tableErrors.push(chunk.error);
-
-            if (tableData?.idMapping) {
-              accumulatedIdMapping = { ...accumulatedIdMapping, ...tableData.idMapping };
-            }
-
-            hasMore = Boolean(tableData?.hasMore);
-            page = Number.isFinite(Number(tableData?.nextPage)) ? Number(tableData.nextPage) : page + 1;
-
-            // Update UI progressively
-            setState((s) => ({
-              ...s,
-              idMapping: accumulatedIdMapping,
-              tables: {
-                ...s.tables,
-                [table.table]: {
-                  success: tableErrors.length === 0 && (chunk?.success ?? true),
-                  count: imported,
-                  error: tableErrors.length > 0 ? tableErrors[0] : undefined,
-                },
-              },
-            }));
-          } catch (e) {
-            const msg = e instanceof Error ? e.message : String(e);
-            tableErrors.push(msg);
-            break;
-          }
-        }
-
-        // Finalize table result
-        setState((s) => ({
-          ...s,
-          idMapping: accumulatedIdMapping,
-          tables: {
-            ...s.tables,
-            [table.table]: {
-              success: tableErrors.length === 0,
-              count: imported,
-              error: tableErrors.length > 0 ? tableErrors.slice(0, 2).join(" | ") : undefined,
-            },
-          },
-          errors: tableErrors.length > 0 ? [...s.errors, `${table.table}: ${tableErrors[0]}`] : s.errors,
-        }));
-      }
+      if (stopped) return;
 
       setState((s) => ({ ...s, phase: "done", currentTable: null, progress: 100 }));
       toast.dismiss("migration");
       toast.success("Migração concluída!");
-
-      setState((s) => ({ ...s, phase: "done", currentTable: null, progress: 100 }));
-      toast.dismiss("migration");
-      toast.success("Migração concluída!");
+      persistCheckpoint(null);
     } catch (error) {
       toast.dismiss("migration");
       const msg = error instanceof Error ? error.message : "Erro na migração";
@@ -800,6 +1002,13 @@ export function ApiMigrationPanel() {
               </>
             )}
           </Button>
+
+          {!migrating && canResume && (
+            <Button onClick={handleResume} variant="secondary">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Continuar de onde parou
+            </Button>
+          )}
 
           {migrating && (
             <Button onClick={handleStopMigration} variant="destructive" size="sm">
