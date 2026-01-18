@@ -492,17 +492,23 @@ serve(async (req) => {
                 continue;
               }
 
-              // If created_by is a FK to auth.users and the source user wasn't migrated, null it out.
-              if (
-                tableName === "union_entities" &&
-                isFkError(msg) &&
-                /created_by/i.test(msg)
-              ) {
+              // If created_by/user_id are FKs to users and the source user wasn't migrated, null them out.
+              // The Postgres error message usually includes the constraint name (e.g. union_entities_user_id_fkey),
+              // so a simple /user_id/ regex is enough.
+              if (tableName === "union_entities" && isFkError(msg) && /created_by/i.test(msg)) {
                 console.warn(`[import-from-api] union_entities: row FK on created_by, nulling and retrying`);
                 current.created_by = null;
                 attempt++;
                 continue;
               }
+
+              if (tableName === "union_entities" && isFkError(msg) && /user_id/i.test(msg)) {
+                console.warn(`[import-from-api] union_entities: row FK on user_id, nulling and retrying`);
+                current.user_id = null;
+                attempt++;
+                continue;
+              }
+              
 
               return { ok: false as const, error, record: current };
             }
