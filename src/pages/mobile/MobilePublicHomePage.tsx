@@ -84,7 +84,7 @@ export default function MobilePublicHomePage() {
             Entrar
           </Button>
           <Button
-            onClick={() => navigate("/filiacao/comerciarios")}
+            onClick={() => navigate("/sindical/filiacao/comerciarios")}
             className="flex-1 bg-white text-emerald-700 hover:bg-gray-100"
           >
             <UserPlus className="h-4 w-4 mr-2" />
