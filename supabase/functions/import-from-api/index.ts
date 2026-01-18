@@ -476,9 +476,21 @@ serve(async (req) => {
         }
       };
 
-      // Check if error is a subscription limit, RLS/access control, or NOT NULL violation - skip these records
+      // Check if error is a subscription limit, RLS/access control, business validation, or other skippable error
       const isSkippableBusinessError = (message: string): boolean => {
-        return /LIMITE_PROFISSIONAIS|LIMITE_USUARIOS|LIMITE_PACIENTES|limite.*plano|ACESSO_NEGADO|row.level.security|policy.*violated|permission denied/i.test(message);
+        const patterns = [
+          // Subscription limits
+          /LIMITE_PROFISSIONAIS|LIMITE_USUARIOS|LIMITE_PACIENTES|limite.*plano/i,
+          // Access control
+          /ACESSO_NEGADO|row.level.security|policy.*violated|permission denied/i,
+          // Business validations for financial_transactions
+          /Fornecedor.*obrigat[óo]rio|supplier.*required/i,
+          // Business validations for appointments
+          /DEPENDENTE_INVALIDO|CARTEIRINHA_VENCIDA|dependente.*n[ãa]o.*ativo|carteirinha.*expir/i,
+          // Patient/card validations
+          /paciente.*n[ãa]o.*encontrado|patient.*not.*found|cart[ãa]o.*inv[áa]lido/i,
+        ];
+        return patterns.some(p => p.test(message));
       };
 
       // Check if error is a NOT NULL constraint violation - skip these records (required field missing)
