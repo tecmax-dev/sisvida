@@ -9,10 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff, Loader2, ArrowLeft, Mail, KeyRound } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { z } from "zod";
-import ReCAPTCHA from "react-google-recaptcha";
 import authDashboardMockup from "@/assets/auth-dashboard-mockup.png";
-
-const RECAPTCHA_SITE_KEY = "6Ld57z0sAAAAALhKQGqzGspRkCr8iYbNOvWcbLDW";
 
 // OAuth redirects MUST stay on the same origin to preserve PKCE state.
 // Using a different domain between the auth start and the callback will cause:
@@ -60,8 +57,6 @@ export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [fromExpiredLink, setFromExpiredLink] = useState(false);
   const [isFirstAccess, setIsFirstAccess] = useState(false);
-  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
-  const recaptchaRef = useRef<ReCAPTCHA>(null);
 
   // useRef para controlar o fluxo de primeiro acesso - atualizado imediatamente sem re-render
   const isFirstAccessFlowRef = useRef(false);
@@ -70,7 +65,6 @@ export default function Auth() {
     password?: string; 
     confirmPassword?: string;
     name?: string;
-    recaptcha?: string;
   }>({});
 
   // useRef para controlar o fluxo de recuperação - atualizado imediatamente sem re-render
@@ -306,47 +300,8 @@ export default function Auth() {
       newErrors.name = "Nome é obrigatório";
     }
 
-    // Validar reCAPTCHA para login e signup
-    if ((view === "login" || view === "signup") && !recaptchaToken) {
-      newErrors.recaptcha = "Complete o reCAPTCHA";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const verifyRecaptcha = async (
-    token: string
-  ): Promise<{ ok: boolean; codes?: string[]; error?: string }> => {
-    try {
-      const { data, error } = await supabase.functions.invoke("verify-recaptcha", {
-        body: { token },
-      });
-
-      if (error) {
-        console.error("Erro ao verificar reCAPTCHA (invoke):", {
-          message: error.message,
-          name: (error as any)?.name,
-          status: (error as any)?.status,
-          details: (error as any)?.details,
-          hint: (error as any)?.hint,
-        });
-        return { ok: false, error: error.message };
-      }
-
-      if (data?.success === true) return { ok: true };
-
-      const codes = (data?.codes ?? []) as string[];
-      console.error("Erro ao verificar reCAPTCHA (server):", { codes, data });
-      return {
-        ok: false,
-        codes,
-        error: data?.error || "Verificação do reCAPTCHA falhou",
-      };
-    } catch (err: any) {
-      console.error("Erro ao verificar reCAPTCHA (exception):", err);
-      return { ok: false, error: err?.message || "Erro inesperado" };
-    }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
@@ -435,33 +390,6 @@ export default function Auth() {
     setLoading(true);
 
     try {
-      // Verificar reCAPTCHA no servidor para login e signup
-      if (view === "login" || view === "signup") {
-        if (!recaptchaToken) {
-          setErrors({ recaptcha: "Complete o reCAPTCHA para continuar" });
-          setLoading(false);
-          return;
-        }
-
-        const verification = await verifyRecaptcha(recaptchaToken);
-        if (!verification.ok) {
-          const codesText = verification.codes?.length
-            ? ` (códigos: ${verification.codes.join(", ")})`
-            : "";
-
-          toast({
-            title: "Verificação falhou",
-            description: `${verification.error || "O reCAPTCHA não pôde ser verificado"}${codesText}`,
-            variant: "destructive",
-          });
-
-          recaptchaRef.current?.reset();
-          setRecaptchaToken(null);
-          setLoading(false);
-          return;
-        }
-      }
-
       if (view === "login") {
         const { data: signInData, error } = await supabase.auth.signInWithPassword({
           email,
@@ -962,64 +890,8 @@ export default function Auth() {
                     </div>
                   )}
 
-                  {/* reCAPTCHA */}
-                  <div className="flex flex-col items-center">
-                    <ReCAPTCHA
-                      key={`recaptcha-${view}`}
-                      ref={recaptchaRef}
-                      sitekey={RECAPTCHA_SITE_KEY}
-                      onChange={(token) => {
-                        setRecaptchaToken(token);
-                        if (errors.recaptcha) {
-                          setErrors((prev) => ({ ...prev, recaptcha: undefined }));
-                        }
-                      }}
-                      onExpired={() => {
-                        setRecaptchaToken(null);
-                        toast({
-                          title: "reCAPTCHA expirou",
-                          description: "Por favor, complete o reCAPTCHA novamente.",
-                          variant: "destructive",
-                        });
-                      }}
-                      onErrored={() => {
-                        setRecaptchaToken(null);
-                        const hostname = window.location.hostname;
-                        const isPreviewHost =
-                          hostname.startsWith("id-preview--") || hostname.endsWith(".lovableproject.com");
 
-                        toast({
-                          title: "Erro no reCAPTCHA",
-                          description: isPreviewHost
-                            ? `Este domínio de preview (${hostname}) não pode ser cadastrado no Google reCAPTCHA (limitação do formato do hostname). Teste na versão publicada ou em um domínio curto personalizado.`
-                            : `Domínio atual: ${hostname}. Verifique se este domínio está autorizado na chave do site.`,
-                          variant: "destructive",
-                        });
-                      }}
-                      hl="pt-BR"
-                    />
-
-                    {(window.location.hostname.startsWith("id-preview--") ||
-                      window.location.hostname.endsWith(".lovableproject.com")) && (
-                      <p className="mt-2 text-xs text-muted-foreground text-center max-w-[28rem]">
-                        Observação: o Google reCAPTCHA pode falhar no <span className="font-medium">preview</span>
-                        por causa do formato do domínio. Se acontecer, teste na versão publicada ou conecte um domínio
-                        personalizado curto.
-                      </p>
-                    )}
-
-                    {new URLSearchParams(window.location.search).has("debug") && (
-                      <p className="mt-2 text-xs text-muted-foreground">
-                        Diagnóstico: domínio detectado <span className="font-medium">{window.location.hostname}</span>
-                      </p>
-                    )}
-
-                    {errors.recaptcha && (
-                      <p className="mt-1 text-sm text-destructive">{errors.recaptcha}</p>
-                    )}
-                  </div>
-
-                  <Button type="submit" className="w-full h-10 gap-2" disabled={loading || !recaptchaToken}>
+                  <Button type="submit" className="w-full h-10 gap-2" disabled={loading}>
                     {loading && <Loader2 className="h-4 w-4 animate-spin" />}
                     {view === "login" ? "Entrar" : "Criar conta"}
                     {!loading && <ArrowLeft className="h-3.5 w-3.5 rotate-180" />}
