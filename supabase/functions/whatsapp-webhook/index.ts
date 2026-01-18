@@ -5664,17 +5664,40 @@ async function checkSlotAvailability(
   date: string,
   time: string
 ): Promise<boolean> {
+  // Get professional's appointment duration to calculate end time
+  const { data: professional } = await supabase
+    .from('professionals')
+    .select('appointment_duration')
+    .eq('id', professionalId)
+    .single();
+  
+  const duration = (professional as { appointment_duration?: number } | null)?.appointment_duration || 30;
+  
+  // Calculate proposed end time
+  const [hours, minutes] = time.split(':').map(Number);
+  const endMinutes = hours * 60 + minutes + duration;
+  const endHours = Math.floor(endMinutes / 60);
+  const endMins = endMinutes % 60;
+  const endTime = `${String(endHours).padStart(2, '0')}:${String(endMins).padStart(2, '0')}`;
+  
+  // Check for overlapping appointments using time range overlap logic:
+  // Two ranges overlap if: start1 < end2 AND start2 < end1
   const { data: existing } = await supabase
     .from('appointments')
-    .select('id')
+    .select('id, start_time, end_time')
     .eq('clinic_id', clinicId)
     .eq('professional_id', professionalId)
     .eq('appointment_date', date)
-    .eq('start_time', time)
-    .in('status', ['scheduled', 'confirmed'])
-    .maybeSingle();
+    .in('status', ['scheduled', 'confirmed', 'in_progress'])
+    .lt('start_time', endTime)  // existing start < new end
+    .gt('end_time', time);       // existing end > new start
 
-  return !existing;
+  if (existing && existing.length > 0) {
+    console.log(`[booking] Slot conflict detected: ${time}-${endTime} overlaps with existing appointment ${existing[0].start_time}-${existing[0].end_time}`);
+    return false;
+  }
+
+  return true;
 }
 
 // ==========================================
