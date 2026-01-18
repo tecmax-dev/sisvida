@@ -382,6 +382,11 @@ serve(async (req) => {
         return null;
       };
 
+      // Check if error is a FK constraint violation - we skip batch retry for these
+      const isFkError = (message: string): boolean => {
+        return /violates foreign key constraint/i.test(message);
+      };
+
       const upsertWithSchemaRetry = async (records: Record<string, unknown>[]) => {
         let attempt = 0;
         let current = records;
@@ -392,6 +397,11 @@ serve(async (req) => {
             .upsert(current, { onConflict: "id", ignoreDuplicates: false });
 
           if (!error) return { ok: true as const, records: current };
+
+          // FK errors should go to row-by-row fallback immediately
+          if (isFkError(error.message || "")) {
+            return { ok: false as const, error, records: current };
+          }
 
           const missingCol = stripMissingColumn(error.message || "");
           if (missingCol) {
@@ -405,10 +415,10 @@ serve(async (req) => {
             continue;
           }
 
-          return { ok: false as const, error };
+          return { ok: false as const, error, records: current };
         }
 
-        return { ok: false as const, error: { message: "Too many schema-retry attempts" } };
+        return { ok: false as const, error: { message: "Too many schema-retry attempts" }, records: current };
       };
 
       while (processedPages < pagesToProcess && hasMore) {
@@ -454,11 +464,14 @@ serve(async (req) => {
           const errMsg = batch.error?.message || "Unknown upsert error";
           errors.push(`Batch error: ${errMsg}`);
 
+          // Use the cleaned records from batch retry (columns may have been removed)
+          const cleanedRecords = batch.records || recordsToInsert;
+
           // Fallback: try row-by-row to salvage what we can and surface precise errors.
           let rowOk = 0;
           let rowFail = 0;
-          for (let i = 0; i < recordsToInsert.length; i++) {
-            const rec = recordsToInsert[i];
+          for (let i = 0; i < cleanedRecords.length; i++) {
+            const rec = cleanedRecords[i];
             const { error } = await supabaseAdmin
               .from(tableName)
               .upsert(rec, { onConflict: "id", ignoreDuplicates: false });
@@ -485,11 +498,13 @@ serve(async (req) => {
           totalImported += rowOk;
           console.log(`[import-from-api] ${tableName} page ${page}: row fallback ok=${rowOk} fail=${rowFail}`);
         } else {
-          totalImported += recordsToInsert.length;
+          // Use batch.records since they have columns stripped if needed
+          const finalRecords = batch.records || recordsToInsert;
+          totalImported += finalRecords.length;
           // Keep mappings small: only store non-identity mappings.
-          for (let i = 0; i < recordsToInsert.length; i++) {
+          for (let i = 0; i < finalRecords.length; i++) {
             const sid = sourceIds[i];
-            const did = (recordsToInsert[i] as any)?.id;
+            const did = (finalRecords[i] as any)?.id;
             if (typeof sid === "string" && typeof did === "string" && sid !== did) {
               newIdMappings[sid] = did;
             }
