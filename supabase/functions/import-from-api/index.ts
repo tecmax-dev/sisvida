@@ -457,9 +457,14 @@ serve(async (req) => {
         }
       };
 
-      // Check if error is a subscription limit or RLS/access control violation - skip these records
+      // Check if error is a subscription limit, RLS/access control, or NOT NULL violation - skip these records
       const isSkippableBusinessError = (message: string): boolean => {
         return /LIMITE_PROFISSIONAIS|LIMITE_USUARIOS|LIMITE_PACIENTES|limite.*plano|ACESSO_NEGADO|row.level.security|policy.*violated|permission denied/i.test(message);
+      };
+
+      // Check if error is a NOT NULL constraint violation - skip these records (required field missing)
+      const isNotNullViolation = (message: string): boolean => {
+        return /null value in column .* violates not-null constraint/i.test(message);
       };
 
       const stripMissingColumn = (message: string): string | null => {
@@ -667,6 +672,12 @@ serve(async (req) => {
               if (isSkippableBusinessError(msg)) {
                 console.warn(`[import-from-api] ${tableName}: business rule violation, skipping record: ${msg.substring(0, 80)}`);
                 return { ok: false as const, error: { message: "SKIPPED_BUSINESS_RULE" }, record: current, skipped: true };
+              }
+
+              // Handle NOT NULL constraint violations - skip these records (required field missing/null)
+              if (isNotNullViolation(msg)) {
+                console.warn(`[import-from-api] ${tableName}: NOT NULL violation, skipping record: ${msg.substring(0, 80)}`);
+                return { ok: false as const, error: { message: "SKIPPED_NOT_NULL" }, record: current, skipped: true };
               }
 
               const missingCol = stripMissingColumn(msg);
