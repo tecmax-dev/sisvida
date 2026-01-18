@@ -11,6 +11,8 @@ export type ApiMigrationCheckpoint = {
   limit: number;
   accumulatedIdMapping: Record<string, string>;
   timestamp: number;
+  // Track which tables had errors for retry-only mode
+  failedTables?: string[];
 };
 
 const STORAGE_KEY = "api_migration_checkpoint_v1";
@@ -58,6 +60,7 @@ export function loadApiMigrationCheckpoint(): ApiMigrationCheckpoint | null {
       ? anyRaw.accumulatedIdMapping
       : {}) as Record<string, string>,
     timestamp: Number(anyRaw.timestamp) || Date.now(),
+    failedTables: Array.isArray(anyRaw.failedTables) ? anyRaw.failedTables : undefined,
   };
 }
 

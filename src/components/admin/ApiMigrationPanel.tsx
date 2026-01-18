@@ -27,6 +27,7 @@ import {
   EyeOff,
   Zap,
   StopCircle,
+  RotateCcw,
 } from "lucide-react";
 
 interface TableResult {
@@ -83,6 +84,20 @@ export function ApiMigrationPanel() {
         checkpoint.sourceApiUrl === sourceApiUrl.trim() &&
         Array.isArray(checkpoint.summary) &&
         checkpoint.summary.length > 0
+    );
+
+  // Check if we have failed tables to retry
+  const failedTablesFromCheckpoint = checkpoint?.tables
+    ? Object.entries(checkpoint.tables)
+        .filter(([, info]) => !info.success && info.error)
+        .map(([table]) => table)
+    : [];
+  
+  const canRetryErrors = 
+    Boolean(
+      checkpoint &&
+        checkpoint.sourceApiUrl === sourceApiUrl.trim() &&
+        failedTablesFromCheckpoint.length > 0
     );
 
   const persistCheckpoint = (cp: ApiMigrationCheckpoint | null) => {
@@ -455,6 +470,109 @@ export function ApiMigrationPanel() {
       toast.dismiss("migration");
       toast.success("Migração concluída!");
       persistCheckpoint(null);
+    } catch (error) {
+      toast.dismiss("migration");
+      const msg = error instanceof Error ? error.message : "Erro na migração";
+      toast.error(msg);
+      setState((s) => ({ ...s, errors: [...s.errors, msg] }));
+    } finally {
+      setMigrating(false);
+    }
+  };
+
+  // Retry only failed tables (skip successful ones)
+  const handleRetryErrors = async () => {
+    if (!checkpoint) return;
+    if (!sourceApiUrl.trim() || !syncKey.trim()) {
+      toast.error("Preencha a URL da API e a chave de sincronização");
+      return;
+    }
+
+    if (checkpoint.sourceApiUrl !== sourceApiUrl.trim()) {
+      toast.error("A URL atual é diferente da migração salva");
+      return;
+    }
+
+    // Get list of failed tables
+    const failedTables = Object.entries(checkpoint.tables)
+      .filter(([, info]) => !info.success && info.error)
+      .map(([table]) => table);
+
+    if (failedTables.length === 0) {
+      toast.info("Não há tabelas com erro para reprocessar");
+      return;
+    }
+
+    stopRequestedRef.current = false;
+    setMigrating(true);
+
+    try {
+      // Filter summary to only include failed tables
+      const tablesToRetry = checkpoint.summary.filter((t) => failedTables.includes(t.table));
+      
+      // Keep successful tables in the state, reset failed ones
+      const existingTablesWithoutFailed: Record<string, TableResult> = {};
+      for (const [table, info] of Object.entries(checkpoint.tables)) {
+        if (info.success) {
+          existingTablesWithoutFailed[table] = info;
+        }
+      }
+
+      setState((s) => ({
+        ...s,
+        phase: "tables",
+        summary: checkpoint.summary,
+        userMapping: checkpoint.userMapping,
+        idMapping: checkpoint.accumulatedIdMapping,
+        usersCreated: checkpoint.usersCreated,
+        usersSkipped: checkpoint.usersSkipped,
+        tables: existingTablesWithoutFailed,
+        currentTable: tablesToRetry[0]?.table ?? null,
+        progress: 25,
+      }));
+
+      toast.loading(`Reprocessando ${tablesToRetry.length} tabelas com erro...`, { id: "migration" });
+
+      const { stopped, accumulatedIdMapping } = await runTables({
+        tablesToImport: tablesToRetry,
+        userMapping: checkpoint.userMapping,
+        usersCreated: checkpoint.usersCreated,
+        usersSkipped: checkpoint.usersSkipped,
+        startIndex: 0,
+        startPage: 0,
+        startLimit: null,
+        accumulatedIdMapping: checkpoint.accumulatedIdMapping,
+        existingTables: existingTablesWithoutFailed,
+      });
+
+      if (stopped) return;
+
+      // Update checkpoint with new results
+      const updatedTables = { ...existingTablesWithoutFailed };
+      setState((s) => {
+        for (const [table, info] of Object.entries(s.tables)) {
+          updatedTables[table] = info;
+        }
+        return { ...s, phase: "done", currentTable: null, progress: 100, tables: updatedTables };
+      });
+
+      // Check if there are still errors
+      const stillFailed = Object.values(updatedTables).filter((t) => !t.success && t.error).length;
+      
+      toast.dismiss("migration");
+      if (stillFailed > 0) {
+        toast.warning(`Reprocessamento concluído. ${stillFailed} tabelas ainda com erro.`);
+        // Update checkpoint with new state for another retry if needed
+        persistCheckpoint({
+          ...checkpoint,
+          tables: updatedTables,
+          accumulatedIdMapping,
+          timestamp: Date.now(),
+        });
+      } else {
+        toast.success("Todas as tabelas reprocessadas com sucesso!");
+        persistCheckpoint(null);
+      }
     } catch (error) {
       toast.dismiss("migration");
       const msg = error instanceof Error ? error.message : "Erro na migração";
@@ -1007,6 +1125,13 @@ export function ApiMigrationPanel() {
             <Button onClick={handleResume} variant="secondary">
               <RefreshCw className="mr-2 h-4 w-4" />
               Continuar de onde parou
+            </Button>
+          )}
+
+          {!migrating && canRetryErrors && (
+            <Button onClick={handleRetryErrors} variant="outline" className="border-amber-500 text-amber-600 hover:bg-amber-50">
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reprocessar {failedTablesFromCheckpoint.length} tabelas com erro
             </Button>
           )}
 
