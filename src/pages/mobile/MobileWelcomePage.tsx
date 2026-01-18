@@ -61,7 +61,7 @@ export default function MobileWelcomePage() {
         {/* Buttons */}
         <div className="space-y-3">
           <Button
-            onClick={() => navigate("/filiacao/comerciarios")}
+            onClick={() => navigate("/sindical/filiacao/comerciarios")}
             className="w-full py-6 text-lg font-semibold bg-white text-emerald-700 hover:bg-gray-100 rounded-full shadow-lg"
           >
             Cadastrar-se agora
