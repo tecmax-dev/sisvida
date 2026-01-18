@@ -470,6 +470,7 @@ serve(async (req) => {
       // Columns that are generated/computed and cannot be inserted
       const GENERATED_COLUMNS: Record<string, string[]> = {
         "employer_contributions": ["active_competence_key"],
+        "patient_packages": ["remaining_sessions"],
       };
 
       // Remove generated columns from a record before insertion
