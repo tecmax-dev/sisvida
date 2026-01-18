@@ -467,14 +467,36 @@ serve(async (req) => {
         return /null value in column .* violates not-null constraint/i.test(message);
       };
 
+      // Columns that are generated/computed and cannot be inserted
+      const GENERATED_COLUMNS: Record<string, string[]> = {
+        "employer_contributions": ["active_competence_key"],
+      };
+
+      // Remove generated columns from a record before insertion
+      const stripGeneratedColumns = (record: Record<string, unknown>, table: string): Record<string, unknown> => {
+        const cols = GENERATED_COLUMNS[table];
+        if (!cols || cols.length === 0) return record;
+        
+        const out = { ...record };
+        for (const col of cols) {
+          if (col in out) {
+            delete out[col];
+          }
+        }
+        return out;
+      };
+
       const stripMissingColumn = (message: string): string | null => {
         // Examples:
         // - Could not find the 'logo_url' column of 'union_entities' in the schema cache
         // - column "foo" of relation "bar" does not exist
+        // - cannot insert a non-DEFAULT value into column "active_competence_key"
         const m1 = message.match(/Could not find the '([^']+)' column/i);
         if (m1?.[1]) return m1[1];
         const m2 = message.match(/column\s+"([^"]+)"\s+of\s+relation/i);
         if (m2?.[1]) return m2[1];
+        const m3 = message.match(/cannot insert a non-DEFAULT value into column "([^"]+)"/i);
+        if (m3?.[1]) return m3[1];
         return null;
       };
 
@@ -574,7 +596,10 @@ serve(async (req) => {
 
         for (const row of rows) {
           const sourceId = row?.id;
-          const recordToInsert = remapForeignKeys(row, tableName, idMapping, false);
+          let recordToInsert = remapForeignKeys(row, tableName, idMapping, false);
+          
+          // Strip generated/computed columns that cannot be inserted
+          recordToInsert = stripGeneratedColumns(recordToInsert, tableName);
           
           // For user-dependent tables, skip if user_id is not in our valid set
           if (requiresValidUser) {
