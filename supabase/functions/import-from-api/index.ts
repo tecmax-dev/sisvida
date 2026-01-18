@@ -469,16 +469,19 @@ serve(async (req) => {
           // Fallback: try row-by-row to salvage what we can and surface precise errors.
           // Row-level resilience:
           // - Strip missing columns (schema cache mismatch)
-          // - For union_entities, if created_by/user_id references a user that doesn't exist in destination auth, null it
+          // - For any table with user FK fields, null out references to non-existent auth users
           const knownAuthUsers = new Set<string>();
           const missingAuthUsers = new Set<string>();
 
-          const ensureAuthUserOrNull = async (record: Record<string, unknown>, field: "created_by" | "user_id") => {
-            if (tableName !== "union_entities") return;
+          // User FK fields that reference auth.users across various tables
+          const userFkFields = ["user_id", "created_by", "activated_by", "requested_by", "reviewed_by", "suspended_by"];
+
+          const ensureAuthUserOrNull = async (record: Record<string, unknown>, field: string) => {
             const v = record[field];
             if (typeof v !== "string" || v.length === 0) return;
-            if (knownAuthUsers.has(v) || missingAuthUsers.has(v)) {
-              if (missingAuthUsers.has(v)) record[field] = null;
+            if (knownAuthUsers.has(v)) return;
+            if (missingAuthUsers.has(v)) {
+              record[field] = null;
               return;
             }
 
@@ -502,8 +505,11 @@ serve(async (req) => {
 
             while (attempt < 4) {
               // Proactively null out invalid auth user references to avoid FK violations.
-              await ensureAuthUserOrNull(current, "created_by");
-              await ensureAuthUserOrNull(current, "user_id");
+              for (const field of userFkFields) {
+                if (field in current) {
+                  await ensureAuthUserOrNull(current, field);
+                }
+              }
 
               const { error } = await supabaseAdmin
                 .from(tableName)
@@ -521,23 +527,22 @@ serve(async (req) => {
                 continue;
               }
 
-              // If created_by/user_id are FKs to users and the source user wasn't migrated, null them out.
-              // The Postgres error message usually includes the constraint name (e.g. union_entities_user_id_fkey),
-              // so a simple /user_id/ regex is enough.
-              if (tableName === "union_entities" && isFkError(msg) && /created_by/i.test(msg)) {
-                console.warn(`[import-from-api] union_entities: row FK on created_by, nulling and retrying`);
-                current.created_by = null;
-                attempt++;
-                continue;
+              // If any user FK field causes a violation, null it out reactively
+              if (isFkError(msg)) {
+                let handled = false;
+                for (const field of userFkFields) {
+                  if (new RegExp(field, "i").test(msg) && current[field] != null) {
+                    console.warn(`[import-from-api] ${tableName}: FK violation on ${field}, nulling and retrying`);
+                    current[field] = null;
+                    handled = true;
+                    break;
+                  }
+                }
+                if (handled) {
+                  attempt++;
+                  continue;
+                }
               }
-
-              if (tableName === "union_entities" && isFkError(msg) && /user_id/i.test(msg)) {
-                console.warn(`[import-from-api] union_entities: row FK on user_id, nulling and retrying`);
-                current.user_id = null;
-                attempt++;
-                continue;
-              }
-              
 
               return { ok: false as const, error, record: current };
             }
