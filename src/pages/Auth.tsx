@@ -12,8 +12,8 @@ import { z } from "zod";
 import ReCAPTCHA from "react-google-recaptcha";
 import authDashboardMockup from "@/assets/auth-dashboard-mockup.png";
 
-// Site key from Cloud secrets - must match the one configured in Google reCAPTCHA Console
-const RECAPTCHA_SITE_KEY = import.meta.env.VITE_RECAPTCHA_SITE_KEY || "";
+// Site key pública - deve corresponder à configurada no Google reCAPTCHA Console
+const RECAPTCHA_SITE_KEY = "6LfVluASAAAAAJwhu_mrnueliUH7IVMo40JClOt1";
 
 // OAuth redirects MUST stay on the same origin to preserve PKCE state.
 // Using a different domain between the auth start and the callback will cause:
