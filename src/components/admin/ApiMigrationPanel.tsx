@@ -352,7 +352,7 @@ export function ApiMigrationPanel() {
             summary: args.tablesToImport,
             userMapping: args.userMapping,
             usersCreated: args.usersCreated,
-            usersSkipped: args.usersUsersSkipped,
+            usersSkipped: args.usersSkipped,
             tables: tablesState,
             currentIndex: i,
             page,
@@ -887,7 +887,6 @@ export function ApiMigrationPanel() {
       }
 
       // Execute table import loop (persisting checkpoints for resume)
-      const tablesToImport = tables;
 
       const { stopped } = await runTables({
         tablesToImport,
