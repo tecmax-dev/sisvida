@@ -7,6 +7,7 @@ import { usePushNotifications } from "@/hooks/usePushNotifications";
 
 interface MobileLayoutProps {
   children: ReactNode;
+  showBottomNav?: boolean;
 }
 
 interface PatientData {
@@ -21,7 +22,7 @@ interface ClinicData {
   entity_nomenclature: string | null;
 }
 
-export function MobileLayout({ children }: MobileLayoutProps) {
+export function MobileLayout({ children, showBottomNav = true }: MobileLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -123,31 +124,33 @@ export function MobileLayout({ children }: MobileLayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 pb-24">{children}</main>
+      <main className={`flex-1 ${showBottomNav ? 'pb-24' : ''}`}>{children}</main>
 
       {/* Bottom Navigation - Simple clean design */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-2 flex justify-around z-50">
-        {navItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-            (item.path === "/app" && location.pathname === "/app/home");
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center gap-1 py-2 px-4 transition-all duration-200 ${
-                isActive 
-                  ? "text-emerald-600" 
-                  : "text-gray-400"
-              }`}
-            >
-              <item.icon className="h-6 w-6" />
-              <span className="text-[10px] font-medium">
-                {item.label}
-              </span>
-            </button>
-          );
-        })}
-      </nav>
+      {showBottomNav && (
+        <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-6 py-2 flex justify-around z-50">
+          {navItems.map((item) => {
+            const isActive = location.pathname === item.path || 
+              (item.path === "/app" && location.pathname === "/app/home");
+            return (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`flex flex-col items-center gap-1 py-2 px-4 transition-all duration-200 ${
+                  isActive 
+                    ? "text-emerald-600" 
+                    : "text-gray-400"
+                }`}
+              >
+                <item.icon className="h-6 w-6" />
+                <span className="text-[10px] font-medium">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }

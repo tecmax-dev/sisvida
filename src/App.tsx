@@ -177,8 +177,10 @@ import UnionEntitiesPage from "./pages/admin/UnionEntitiesPage";
 const UnionEntityLoginPage = lazy(() => import("./pages/UnionEntityLoginPage"));
 
 // Mobile App Pages
+const MobileWelcomePage = lazy(() => import("./pages/mobile/MobileWelcomePage"));
 const MobileAuthPage = lazy(() => import("./pages/mobile/MobileAuthPage"));
 const MobileHomePage = lazy(() => import("./pages/mobile/MobileHomePage"));
+const MobilePublicHomePage = lazy(() => import("./pages/mobile/MobilePublicHomePage"));
 const MobileAppointmentsPage = lazy(() => import("./pages/mobile/MobileAppointmentsPage"));
 const MobileProfilePage = lazy(() => import("./pages/mobile/MobileProfilePage"));
 const MobileBookingPage = lazy(() => import("./pages/mobile/MobileBookingPage"));
@@ -499,9 +501,10 @@ const App = () => (
                   <Route path="conteudo-app" element={<UnionAppContentPage />} />
                 </Route>
                 {/* Mobile App Routes */}
-                <Route path="/app" element={<MobileAuthPage />} />
+                <Route path="/app" element={<MobileWelcomePage />} />
                 <Route path="/app/login" element={<MobileAuthPage />} />
                 <Route path="/app/home" element={<MobileHomePage />} />
+                <Route path="/app/home-publico" element={<MobilePublicHomePage />} />
                 <Route path="/app/agendamentos" element={<MobileAppointmentsPage />} />
                 <Route path="/app/agendar" element={<MobileBookingPage />} />
                 <Route path="/app/perfil" element={<MobileProfilePage />} />
