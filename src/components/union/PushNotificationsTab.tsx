@@ -55,6 +55,7 @@ export function PushNotificationsTab() {
 
   // Add test token for development
   const handleAddTestToken = async () => {
+    alert("Botão clicado! Clinic ID: " + (currentClinic?.id || "NÃO DEFINIDO"));
     console.log("handleAddTestToken called, clinicId:", currentClinic?.id);
     
     if (!currentClinic?.id) {
