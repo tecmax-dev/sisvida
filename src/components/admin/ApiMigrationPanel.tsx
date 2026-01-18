@@ -583,14 +583,50 @@ export function ApiMigrationPanel() {
     }
   };
 
-  const handleMigration = async () => {
+  const handleMigration = async (skipAlreadySuccessful = false) => {
     if (!sourceApiUrl.trim() || !syncKey.trim()) {
       toast.error("Preencha a URL da API e a chave de sincronização");
       return;
     }
 
+    // Check if we have a valid checkpoint with successful tables to skip
+    const useExistingCheckpoint = skipAlreadySuccessful && 
+      checkpoint && 
+      checkpoint.sourceApiUrl === sourceApiUrl.trim() &&
+      Object.keys(checkpoint.tables).length > 0;
+
+    const successfulTablesFromPrevious = useExistingCheckpoint
+      ? new Set(
+          Object.entries(checkpoint!.tables)
+            .filter(([, info]) => info.success && info.count > 0)
+            .map(([table]) => table)
+        )
+      : new Set<string>();
+
+    const previousIdMapping = useExistingCheckpoint ? checkpoint!.accumulatedIdMapping : {};
+    const previousUserMapping = useExistingCheckpoint ? checkpoint!.userMapping : {};
+    const previousTables = useExistingCheckpoint 
+      ? Object.fromEntries(
+          Object.entries(checkpoint!.tables).filter(([, info]) => info.success)
+        ) as Record<string, TableResult>
+      : {};
+
     setMigrating(true);
-    resetState();
+    
+    if (!useExistingCheckpoint) {
+      resetState();
+    } else {
+      // Preserve successful tables in state
+      stopRequestedRef.current = false;
+      setState((s) => ({
+        ...s,
+        phase: "idle",
+        tables: previousTables,
+        userMapping: previousUserMapping,
+        idMapping: previousIdMapping,
+        errors: [],
+      }));
+    }
 
     try {
       // Phase 1: Get summary
@@ -990,33 +1026,55 @@ export function ApiMigrationPanel() {
         }));
       }
 
-      const tablesToImport = safeTables.filter((t) => Number(t?.count || 0) > 0);
+      // Filter tables: skip already successful ones if we're using checkpoint
+      const tablesToImport = safeTables.filter((t) => {
+        if (Number(t?.count || 0) <= 0) return false;
+        // Skip tables that were already successfully migrated
+        if (successfulTablesFromPrevious.has(t.table)) {
+          console.log(`[ApiMigration] Skipping already successful table: ${t.table}`);
+          return false;
+        }
+        return true;
+      });
+
+      const skippedCount = successfulTablesFromPrevious.size;
+      if (skippedCount > 0) {
+        console.log(`[ApiMigration] Skipping ${skippedCount} already successful tables`);
+        toast.info(`Pulando ${skippedCount} tabelas já migradas com sucesso`);
+      }
+
       const totalTables = tablesToImport.length;
 
       // If there are no tables to import, do not show a misleading "success".
       if (totalTables === 0) {
         setState((s) => ({ ...s, phase: "done", currentTable: null, progress: 100 }));
         toast.dismiss("migration");
-        toast.warning(
-          usersCreated > 0 || usersSkipped > 0
-            ? `Nenhuma tabela para importar. Usuários: ${usersCreated} criados, ${usersSkipped} já existiam.`
-            : "Nenhuma tabela para importar. Verifique o resumo retornado pela API de origem."
-        );
+        if (skippedCount > 0) {
+          toast.success(`Todas as ${skippedCount} tabelas já foram migradas anteriormente!`);
+        } else {
+          toast.warning(
+            usersCreated > 0 || usersSkipped > 0
+              ? `Nenhuma tabela para importar. Usuários: ${usersCreated} criados, ${usersSkipped} já existiam.`
+              : "Nenhuma tabela para importar. Verifique o resumo retornado pela API de origem."
+          );
+        }
         return;
       }
 
       // Execute table import loop (persisting checkpoints for resume)
+      const mergedUserMapping = { ...previousUserMapping, ...userMapping };
+      const mergedIdMapping = { ...previousIdMapping, ...mergedUserMapping };
 
       const { stopped } = await runTables({
         tablesToImport,
-        userMapping,
+        userMapping: mergedUserMapping,
         usersCreated,
         usersSkipped,
         startIndex: 0,
         startPage: 0,
         startLimit: null,
-        accumulatedIdMapping: { ...userMapping },
-        existingTables: {},
+        accumulatedIdMapping: mergedIdMapping,
+        existingTables: previousTables,
       });
 
       if (stopped) return;
@@ -1106,12 +1164,22 @@ export function ApiMigrationPanel() {
           </div>
         )}
 
-        <div className="flex items-center gap-4">
-          <Button onClick={handleMigration} disabled={migrating} variant="default">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Main migration button - uses smart skip if checkpoint exists */}
+          <Button 
+            onClick={() => handleMigration(canRetryErrors || canResume)} 
+            disabled={migrating} 
+            variant="default"
+          >
             {migrating ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Migrando...
+              </>
+            ) : (canRetryErrors || canResume) ? (
+              <>
+                <Download className="mr-2 h-4 w-4" />
+                Continuar Migração (pula já migradas)
               </>
             ) : (
               <>
