@@ -334,17 +334,19 @@ serve(async (req) => {
     const endTime = `${String(endDate.getHours()).padStart(2, '0')}:${String(endDate.getMinutes()).padStart(2, '0')}`;
 
     // Check for existing appointment at this slot (race condition protection)
-    const { data: existingAppt } = await supabase
+    // Use overlap detection instead of exact match
+    const { data: existingAppts } = await supabase
       .from('appointments')
-      .select('id')
+      .select('id, start_time, end_time')
       .eq('professional_id', professionalId)
       .eq('appointment_date', date)
-      .eq('start_time', time)
-      .in('status', ['scheduled', 'confirmed'])
-      .limit(1);
+      .in('status', ['scheduled', 'confirmed', 'in_progress'])
+      .lt('start_time', endTime)  // existing start < new end
+      .gt('end_time', time);       // existing end > new start
 
-    if (existingAppt && existingAppt.length > 0) {
-      return errorResponse('Este horário já está ocupado. Por favor, escolha outro horário.');
+    if (existingAppts && existingAppts.length > 0) {
+      console.log(`[create-public-booking] Conflict detected with appointment ${existingAppts[0].id} (${existingAppts[0].start_time} - ${existingAppts[0].end_time})`);
+      return errorResponse('HORARIO_INVALIDO: Este horário já está ocupado. Por favor, escolha outro horário.');
     }
 
     // Find or create patient
