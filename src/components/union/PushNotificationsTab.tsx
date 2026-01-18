@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,7 +44,7 @@ interface TokenStats {
 }
 
 export function PushNotificationsTab() {
-  const { currentClinic } = useAuth();
+  const { currentClinic, userRoles, isSuperAdmin } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -52,16 +52,37 @@ export function PushNotificationsTab() {
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [addingTestToken, setAddingTestToken] = useState(false);
+  const [selectedClinicId, setSelectedClinicId] = useState<string | null>(null);
+
+  // Get the clinic ID to use - prioritize currentClinic, then first available from roles
+  const effectiveClinicId = currentClinic?.id || selectedClinicId || userRoles[0]?.clinic?.id || null;
+
+  // For super admins without a clinic, fetch one
+  useEffect(() => {
+    const fetchClinicForSuperAdmin = async () => {
+      if (isSuperAdmin && !currentClinic?.id && !selectedClinicId && userRoles.length === 0) {
+        const { data: clinics } = await supabase
+          .from("clinics")
+          .select("id")
+          .limit(1);
+        
+        if (clinics?.[0]?.id) {
+          setSelectedClinicId(clinics[0].id);
+          console.log("Super admin: Using clinic", clinics[0].id);
+        }
+      }
+    };
+    fetchClinicForSuperAdmin();
+  }, [isSuperAdmin, currentClinic?.id, selectedClinicId, userRoles.length]);
 
   // Add test token for development
   const handleAddTestToken = async () => {
-    alert("Botão clicado! Clinic ID: " + (currentClinic?.id || "NÃO DEFINIDO"));
-    console.log("handleAddTestToken called, clinicId:", currentClinic?.id);
+    console.log("handleAddTestToken called, effectiveClinicId:", effectiveClinicId);
     
-    if (!currentClinic?.id) {
+    if (!effectiveClinicId) {
       toast({
         title: "Erro",
-        description: "Clínica não identificada.",
+        description: "Clínica não identificada. Selecione uma clínica primeiro.",
         variant: "destructive",
       });
       return;
@@ -70,11 +91,11 @@ export function PushNotificationsTab() {
     setAddingTestToken(true);
     try {
       // Get a random patient from the clinic
-      console.log("Fetching patients for clinic:", currentClinic.id);
+      console.log("Fetching patients for clinic:", effectiveClinicId);
       const { data: patients, error: patientsError } = await supabase
         .from("patients")
         .select("id")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", effectiveClinicId)
         .limit(1);
 
       console.log("Patients result:", patients, "Error:", patientsError);
@@ -102,7 +123,7 @@ export function PushNotificationsTab() {
         .from("push_notification_tokens")
         .insert({
           patient_id: patientId,
-          clinic_id: currentClinic.id,
+          clinic_id: effectiveClinicId,
           token: testToken,
           platform: "android",
           is_active: true,
@@ -135,14 +156,14 @@ export function PushNotificationsTab() {
 
   // Fetch token statistics
   const { data: tokenStats, isLoading: loadingStats } = useQuery({
-    queryKey: ["push-token-stats", currentClinic?.id],
+    queryKey: ["push-token-stats", effectiveClinicId],
     queryFn: async (): Promise<TokenStats> => {
-      if (!currentClinic?.id) return { total: 0, ios: 0, android: 0, web: 0 };
+      if (!effectiveClinicId) return { total: 0, ios: 0, android: 0, web: 0 };
 
       const { data, error } = await supabase
         .from("push_notification_tokens")
         .select("platform")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", effectiveClinicId)
         .eq("is_active", true);
 
       if (error) throw error;
@@ -157,26 +178,26 @@ export function PushNotificationsTab() {
 
       return stats;
     },
-    enabled: !!currentClinic?.id,
+    enabled: !!effectiveClinicId,
   });
 
   // Fetch notification history
   const { data: history, isLoading: loadingHistory, refetch: refetchHistory } = useQuery({
-    queryKey: ["push-notification-history", currentClinic?.id],
+    queryKey: ["push-notification-history", effectiveClinicId],
     queryFn: async () => {
-      if (!currentClinic?.id) return [];
+      if (!effectiveClinicId) return [];
 
       const { data, error } = await supabase
         .from("push_notification_history")
         .select("*")
-        .eq("clinic_id", currentClinic.id)
+        .eq("clinic_id", effectiveClinicId)
         .order("sent_at", { ascending: false })
         .limit(20);
 
       if (error) throw error;
       return data as PushNotificationHistory[];
     },
-    enabled: !!currentClinic?.id,
+    enabled: !!effectiveClinicId,
   });
 
   const handleSendNotification = async () => {
@@ -189,7 +210,7 @@ export function PushNotificationsTab() {
       return;
     }
 
-    if (!currentClinic?.id) {
+    if (!effectiveClinicId) {
       toast({
         title: "Erro",
         description: "Clínica não identificada.",
@@ -203,7 +224,7 @@ export function PushNotificationsTab() {
     try {
       const { data, error } = await supabase.functions.invoke("send-push-notification", {
         body: {
-          clinic_id: currentClinic.id,
+          clinic_id: effectiveClinicId,
           title: title.trim(),
           body: body.trim(),
           target_type: "all",
