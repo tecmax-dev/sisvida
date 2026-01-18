@@ -1,8 +1,56 @@
 import { useNavigate } from "react-router-dom";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
+
+// ID do sindicato comerciários (hardcoded para este app)
+const TARGET_UNION_ENTITY_ID = "74f74e75-6b09-43d5-bf75-41225e085e28";
 
 export default function MobileWelcomePage() {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [unionEntityId, setUnionEntityId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Buscar a entidade sindical ativa
+    const fetchUnionEntity = async () => {
+      try {
+        const { data } = await supabase
+          .from("union_entities")
+          .select("id")
+          .eq("id", TARGET_UNION_ENTITY_ID)
+          .eq("status", "ativa")
+          .single();
+        
+        if (data) {
+          setUnionEntityId(data.id);
+        }
+      } catch (err) {
+        console.error("Erro ao buscar entidade sindical:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUnionEntity();
+  }, []);
+
+  const handleCadastro = () => {
+    if (unionEntityId) {
+      navigate(`/sindical/filiacao/${unionEntityId}`);
+    } else {
+      navigate("/sindical/filiacao/comerciarios");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-emerald-600 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-emerald-600 flex flex-col relative overflow-hidden">
@@ -61,7 +109,7 @@ export default function MobileWelcomePage() {
         {/* Buttons */}
         <div className="space-y-3">
           <Button
-            onClick={() => navigate("/sindical/filiacao/comerciarios")}
+            onClick={handleCadastro}
             className="w-full py-6 text-lg font-semibold bg-white text-emerald-700 hover:bg-gray-100 rounded-full shadow-lg"
           >
             Cadastrar-se agora

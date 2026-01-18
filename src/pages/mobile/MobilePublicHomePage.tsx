@@ -18,6 +18,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
+// ID do sindicato comerciários (hardcoded para este app)
+const TARGET_UNION_ENTITY_ID = "74f74e75-6b09-43d5-bf75-41225e085e28";
+
 export default function MobilePublicHomePage() {
   const navigate = useNavigate();
 
@@ -84,7 +87,7 @@ export default function MobilePublicHomePage() {
             Entrar
           </Button>
           <Button
-            onClick={() => navigate("/sindical/filiacao/comerciarios")}
+            onClick={() => navigate(`/sindical/filiacao/${TARGET_UNION_ENTITY_ID}`)}
             className="flex-1 bg-white text-emerald-700 hover:bg-gray-100"
           >
             <UserPlus className="h-4 w-4 mr-2" />
