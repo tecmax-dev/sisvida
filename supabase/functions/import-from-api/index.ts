@@ -49,7 +49,7 @@ const FK_REMAP_TABLES: Record<string, string[]> = {
   "union_entities": ["clinic_id", "plan_id", "user_id", "created_by"],
   "employers": ["clinic_id", "union_entity_id", "category_id"],
   "accounting_offices": ["clinic_id", "union_entity_id"],
-  "patients": ["clinic_id"],
+  "patients": ["clinic_id", "no_show_blocked_professional_id"],
   
   // Relationship/junction tables
   "accounting_office_employers": ["accounting_office_id", "employer_id"],
@@ -60,6 +60,29 @@ const FK_REMAP_TABLES: Record<string, string[]> = {
   "appointments": ["clinic_id", "patient_id", "professional_id", "procedure_id"],
   "employer_contributions": ["employer_id", "clinic_id", "union_entity_id"],
   "financial_transactions": ["clinic_id", "category_id", "cash_register_id"],
+  
+  // Medical records
+  "medical_records": ["clinic_id", "patient_id", "professional_id", "appointment_id"],
+  "medical_record_attachments": ["medical_record_id"],
+  
+  // Homologation
+  "homologacao_schedules": ["clinic_id", "professional_id"],
+  
+  // Totems/queues
+  "totems": ["clinic_id", "queue_id"],
+  
+  // SMTP settings
+  "smtp_settings": ["clinic_id", "created_by"],
+  
+  // Clinic addons
+  "clinic_addons": ["clinic_id", "addon_id", "activated_by", "suspended_by"],
+  "addon_requests": ["clinic_id", "addon_id", "requested_by", "reviewed_by"],
+  "upgrade_requests": ["clinic_id", "requested_by", "reviewed_by"],
+  
+  // Patient related
+  "patient_cards": ["patient_id", "clinic_id"],
+  "patient_dependents": ["patient_id", "clinic_id"],
+  "patient_first_access_tokens": ["patient_id"],
 };
 
 // Tables that should be imported in order (dependencies first)
@@ -371,6 +394,62 @@ serve(async (req) => {
       // Only store *non-identity* mappings to avoid huge in-memory maps.
       const newIdMappings: Record<string, string> = {};
 
+      // Pre-load valid IDs from destination tables to avoid per-row FK lookups
+      // This dramatically speeds up tables with FK references
+      const validEntityIds: Record<string, Set<string>> = {};
+
+      const loadValidIds = async (entityTable: string) => {
+        if (validEntityIds[entityTable]) return validEntityIds[entityTable];
+        
+        const ids = new Set<string>();
+        let offset = 0;
+        const batchSize = 1000;
+        
+        while (true) {
+          const { data, error } = await supabaseAdmin
+            .from(entityTable)
+            .select("id")
+            .range(offset, offset + batchSize - 1);
+          
+          if (error || !data || data.length === 0) break;
+          
+          for (const row of data) {
+            if (row?.id) ids.add(row.id);
+          }
+          
+          if (data.length < batchSize) break;
+          offset += batchSize;
+        }
+        
+        validEntityIds[entityTable] = ids;
+        console.log(`[import-from-api] Cached ${ids.size} valid IDs for ${entityTable}`);
+        return ids;
+      };
+
+      // Preload commonly needed entity IDs based on table FK requirements
+      const fkEntityTables: Record<string, string> = {
+        "professional_id": "professionals",
+        "patient_id": "patients",
+        "appointment_id": "appointments",
+        "queue_id": "queues",
+        "addon_id": "subscription_addons",
+        "medical_record_id": "medical_records",
+        "no_show_blocked_professional_id": "professionals",
+      };
+
+      // Function to null out invalid entity FK references (not user FKs)
+      const nullInvalidEntityFks = async (record: Record<string, unknown>) => {
+        for (const [fkField, entityTable] of Object.entries(fkEntityTables)) {
+          const val = record[fkField];
+          if (typeof val !== "string" || val.length === 0) continue;
+          
+          const validIds = await loadValidIds(entityTable);
+          if (!validIds.has(val)) {
+            record[fkField] = null;
+          }
+        }
+      };
+
       const stripMissingColumn = (message: string): string | null => {
         // Examples:
         // - Could not find the 'logo_url' column of 'union_entities' in the schema cache
@@ -453,6 +532,8 @@ serve(async (req) => {
         for (const row of rows) {
           const sourceId = row?.id;
           const recordToInsert = remapForeignKeys(row, tableName, idMapping, false);
+          // Pre-validate entity FKs to avoid row-by-row fallback
+          await nullInvalidEntityFks(recordToInsert);
           recordsToInsert.push(recordToInsert);
           if (typeof sourceId === "string") sourceIds.push(sourceId);
         }
@@ -510,6 +591,9 @@ serve(async (req) => {
                   await ensureAuthUserOrNull(current, field);
                 }
               }
+              
+              // Also null out invalid entity FK references
+              await nullInvalidEntityFks(current);
 
               const { error } = await supabaseAdmin
                 .from(tableName)
@@ -527,9 +611,11 @@ serve(async (req) => {
                 continue;
               }
 
-              // If any user FK field causes a violation, null it out reactively
+              // If any FK field causes a violation, null it out reactively
               if (isFkError(msg)) {
                 let handled = false;
+                
+                // First check user FK fields
                 for (const field of userFkFields) {
                   if (new RegExp(field, "i").test(msg) && current[field] != null) {
                     console.warn(`[import-from-api] ${tableName}: FK violation on ${field}, nulling and retrying`);
@@ -538,6 +624,19 @@ serve(async (req) => {
                     break;
                   }
                 }
+                
+                // Then check entity FK fields
+                if (!handled) {
+                  for (const fkField of Object.keys(fkEntityTables)) {
+                    if (new RegExp(fkField, "i").test(msg) && current[fkField] != null) {
+                      console.warn(`[import-from-api] ${tableName}: FK violation on ${fkField}, nulling and retrying`);
+                      current[fkField] = null;
+                      handled = true;
+                      break;
+                    }
+                  }
+                }
+                
                 if (handled) {
                   attempt++;
                   continue;
