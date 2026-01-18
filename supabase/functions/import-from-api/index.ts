@@ -468,18 +468,67 @@ serve(async (req) => {
           const cleanedRecords = batch.records || recordsToInsert;
 
           // Fallback: try row-by-row to salvage what we can and surface precise errors.
+          // Row-level resilience:
+          // - Strip missing columns (schema cache mismatch)
+          // - For union_entities, if created_by references a user that doesn't exist in destination auth, null it
+          const upsertOneWithRowRetry = async (rec: Record<string, unknown>) => {
+            let attempt = 0;
+            let current = { ...rec } as Record<string, unknown>;
+
+            while (attempt < 4) {
+              const { error } = await supabaseAdmin
+                .from(tableName)
+                .upsert(current, { onConflict: "id", ignoreDuplicates: false });
+
+              if (!error) return { ok: true as const, record: current };
+
+              const msg = error.message || "";
+
+              const missingCol = stripMissingColumn(msg);
+              if (missingCol) {
+                console.warn(`[import-from-api] ${tableName}: row missing column '${missingCol}', removing and retrying`);
+                delete current[missingCol];
+                attempt++;
+                continue;
+              }
+
+              // If created_by is a FK to auth.users and the source user wasn't migrated, null it out.
+              if (
+                tableName === "union_entities" &&
+                isFkError(msg) &&
+                /created_by/i.test(msg)
+              ) {
+                console.warn(`[import-from-api] union_entities: row FK on created_by, nulling and retrying`);
+                current.created_by = null;
+                attempt++;
+                continue;
+              }
+
+              return { ok: false as const, error, record: current };
+            }
+
+            return {
+              ok: false as const,
+              error: { message: "Too many row-retry attempts" },
+              record: current,
+            };
+          };
+
           let rowOk = 0;
           let rowFail = 0;
           for (let i = 0; i < cleanedRecords.length; i++) {
             const rec = cleanedRecords[i];
-            const { error } = await supabaseAdmin
-              .from(tableName)
-              .upsert(rec, { onConflict: "id", ignoreDuplicates: false });
+            const res = await upsertOneWithRowRetry(rec);
 
-            if (error) {
+            if (!res.ok) {
               rowFail++;
-              const errMsg = `Row ${String((rec as any)?.id ?? "?")}: ${error.message}`;
-              console.error(`[import-from-api] ${tableName} row error:`, errMsg, "Data:", JSON.stringify(rec).slice(0, 500));
+              const errMsg = `Row ${String((rec as any)?.id ?? "?")}: ${res.error?.message || "Unknown error"}`;
+              console.error(
+                `[import-from-api] ${tableName} row error:`,
+                errMsg,
+                "Data:",
+                JSON.stringify(res.record ?? rec).slice(0, 500)
+              );
               if (errors.length < 10) {
                 errors.push(errMsg);
               }
@@ -489,7 +538,7 @@ serve(async (req) => {
             rowOk++;
             // Only store non-identity mappings (rare)
             const sid = sourceIds[i];
-            const did = (rec as any)?.id;
+            const did = (res.record as any)?.id;
             if (typeof sid === "string" && typeof did === "string" && sid !== did) {
               newIdMappings[sid] = did;
             }
