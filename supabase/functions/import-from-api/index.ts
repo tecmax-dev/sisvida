@@ -461,8 +461,7 @@ serve(async (req) => {
         const batch = await upsertWithSchemaRetry(recordsToInsert);
 
         if (!batch.ok) {
-          const errMsg = batch.error?.message || "Unknown upsert error";
-          errors.push(`Batch error: ${errMsg}`);
+          const batchErrMsg = batch.error?.message || "Unknown upsert error";
 
           // Use the cleaned records from batch retry (columns may have been removed)
           const cleanedRecords = batch.records || recordsToInsert;
@@ -470,12 +469,42 @@ serve(async (req) => {
           // Fallback: try row-by-row to salvage what we can and surface precise errors.
           // Row-level resilience:
           // - Strip missing columns (schema cache mismatch)
-          // - For union_entities, if created_by references a user that doesn't exist in destination auth, null it
+          // - For union_entities, if created_by/user_id references a user that doesn't exist in destination auth, null it
+          const knownAuthUsers = new Set<string>();
+          const missingAuthUsers = new Set<string>();
+
+          const ensureAuthUserOrNull = async (record: Record<string, unknown>, field: "created_by" | "user_id") => {
+            if (tableName !== "union_entities") return;
+            const v = record[field];
+            if (typeof v !== "string" || v.length === 0) return;
+            if (knownAuthUsers.has(v) || missingAuthUsers.has(v)) {
+              if (missingAuthUsers.has(v)) record[field] = null;
+              return;
+            }
+
+            try {
+              const { data, error } = await supabaseAdmin.auth.admin.getUserById(v);
+              if (error || !data?.user) {
+                missingAuthUsers.add(v);
+                record[field] = null;
+              } else {
+                knownAuthUsers.add(v);
+              }
+            } catch {
+              missingAuthUsers.add(v);
+              record[field] = null;
+            }
+          };
+
           const upsertOneWithRowRetry = async (rec: Record<string, unknown>) => {
             let attempt = 0;
             let current = { ...rec } as Record<string, unknown>;
 
             while (attempt < 4) {
+              // Proactively null out invalid auth user references to avoid FK violations.
+              await ensureAuthUserOrNull(current, "created_by");
+              await ensureAuthUserOrNull(current, "user_id");
+
               const { error } = await supabaseAdmin
                 .from(tableName)
                 .upsert(current, { onConflict: "id", ignoreDuplicates: false });
@@ -548,6 +577,11 @@ serve(async (req) => {
             if (typeof sid === "string" && typeof did === "string" && sid !== did) {
               newIdMappings[sid] = did;
             }
+          }
+
+          // Only mark the chunk as failed if the row-level fallback still had failures.
+          if (rowFail > 0) {
+            errors.push(`Batch error: ${batchErrMsg}`);
           }
 
           totalImported += rowOk;
