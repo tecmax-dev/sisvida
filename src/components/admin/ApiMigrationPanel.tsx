@@ -98,6 +98,32 @@ export function ApiMigrationPanel() {
     }
   };
 
+  const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+  const shouldRetryInvokeError = (err: unknown): boolean => {
+    const ex = extractFunctionsError(err);
+    const rawName = (ex.raw as any)?.name;
+    return (
+      rawName === "FunctionsFetchError" ||
+      /Failed to send a request/i.test(ex.message) ||
+      /NetworkError|Failed to fetch/i.test(ex.message)
+    );
+  };
+
+  const getLimitForTable = (tableName: string, count: number): number => {
+    // Hard caps for known heavy endpoints
+    const byTable: Record<string, number> = {
+      patients: 200,
+      medical_records: 100,
+    };
+
+    const override = byTable[tableName];
+    if (override) return override;
+
+    // Default heuristic
+    return count > 20000 ? 100 : count > 5000 ? 200 : 500;
+  };
+
   const handleMigration = async () => {
     if (!sourceApiUrl.trim() || !syncKey.trim()) {
       toast.error("Preencha a URL da API e a chave de sincronização");
@@ -542,7 +568,7 @@ export function ApiMigrationPanel() {
         }));
 
         // Page size tuning to avoid CPU limits
-        const limit = table.count > 20000 ? 100 : table.count > 5000 ? 200 : 500;
+        let limit = getLimitForTable(table.table, table.count);
         let page = 0;
         let hasMore = true;
         let imported = 0;
@@ -567,9 +593,12 @@ export function ApiMigrationPanel() {
           }
 
           try {
-            const { data: tableData, error: tableError } = await supabase.functions.invoke(
-              "import-from-api",
-              {
+            let tableData: any = null;
+            let tableError: unknown = null;
+            let retries = 0;
+
+            while (true) {
+              const res = await supabase.functions.invoke("import-from-api", {
                 body: {
                   sourceApiUrl: sourceApiUrl.trim(),
                   syncKey: syncKey.trim(),
@@ -581,12 +610,36 @@ export function ApiMigrationPanel() {
                   limit,
                   maxPages: 1,
                 },
+              });
+
+              tableData = res.data;
+              tableError = res.error;
+
+              if (!tableError) break;
+
+              if (shouldRetryInvokeError(tableError) && retries < 3 && limit > 50) {
+                retries++;
+                const nextLimit = Math.max(50, Math.floor(limit / 2));
+                console.warn(
+                  `[ApiMigration] ${table.table}: FunctionsFetchError, retry ${retries} (limit ${limit} -> ${nextLimit})`
+                );
+                limit = nextLimit;
+                await sleep(900 * retries);
+                continue;
               }
-            );
+
+              break;
+            }
 
             if (tableError) {
               const msg = formatInvokeError(tableError);
-              captureDebug({ phase: "table", table: table.table, page, limit, error: extractFunctionsError(tableError) });
+              captureDebug({
+                phase: "table",
+                table: table.table,
+                page,
+                limit,
+                error: extractFunctionsError(tableError),
+              });
               tableErrors.push(msg);
               break;
             }

@@ -372,8 +372,26 @@ serve(async (req) => {
       if (!tableName) throw new Error("tableName required for table phase");
 
       const startPage = Number.isFinite(Number(requestedPage)) ? Math.max(0, Number(requestedPage)) : 0;
-      const limit = Number.isFinite(Number(requestedLimit)) ? Math.max(1, Number(requestedLimit)) : 500;
+      const rawLimit = Number.isFinite(Number(requestedLimit)) ? Math.max(1, Number(requestedLimit)) : 500;
+
+      // Hard caps per table to avoid timeouts / oversized payloads from the source API
+      const MAX_LIMIT_BY_TABLE: Record<string, number> = {
+        patients: 200,
+        medical_records: 100,
+      };
+
+      const maxLimit = MAX_LIMIT_BY_TABLE[String(tableName)] ?? 500;
+      const limit = Math.min(rawLimit, maxLimit);
       const pagesToProcess = Number.isFinite(Number(maxPages)) ? Math.min(5, Math.max(1, Number(maxPages))) : 1;
+
+      console.log("[import-from-api] Request:", {
+        phase,
+        tableName,
+        startPage,
+        requestedLimit: rawLimit,
+        effectiveLimit: limit,
+        maxPages: pagesToProcess,
+      });
 
       console.log(
         `[import-from-api] Importing table: ${tableName} (page ${startPage}, limit ${limit}, maxPages ${pagesToProcess})`
@@ -491,13 +509,26 @@ serve(async (req) => {
         // Examples:
         // - Could not find the 'logo_url' column of 'union_entities' in the schema cache
         // - column "foo" of relation "bar" does not exist
-        // - cannot insert a non-DEFAULT value into column "active_competence_key"
+        // - cannot insert a non-DEFAULT value into column "active_competence_key" (generated column)
+        // - column "remaining_sessions" is a generated column
         const m1 = message.match(/Could not find the '([^']+)' column/i);
         if (m1?.[1]) return m1[1];
+
         const m2 = message.match(/column\s+"([^"]+)"\s+of\s+relation/i);
         if (m2?.[1]) return m2[1];
-        const m3 = message.match(/cannot insert a non-DEFAULT value into column "([^"]+)"/i);
+
+        const m3 = message.match(/cannot insert a non-DEFAULT value into column\s+"([^"]+)"/i);
         if (m3?.[1]) return m3[1];
+
+        const m4 = message.match(/column\s+"([^"]+)"\s+is\s+a\s+generated\s+column/i);
+        if (m4?.[1]) return m4[1];
+
+        const m5 = message.match(/cannot insert into column\s+"([^"]+)"\s+because\s+it\s+is\s+generated/i);
+        if (m5?.[1]) return m5[1];
+
+        const m6 = message.match(/cannot update a generated column\s+"([^"]+)"/i);
+        if (m6?.[1]) return m6[1];
+
         return null;
       };
 
