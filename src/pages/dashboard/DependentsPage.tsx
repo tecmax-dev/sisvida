@@ -312,31 +312,31 @@ export default function DependentsPage() {
             <p className="text-xl font-bold text-foreground mt-1">{stats.total}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
+        <Card className="border-l-4 border-l-emerald-500 dark:border-l-emerald-400 bg-emerald-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <IdCard className="h-4 w-4 text-emerald-500" />
+              <IdCard className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
               <span className="text-xs font-medium text-muted-foreground">Com Carteirinha</span>
             </div>
-            <p className="text-xl font-bold text-emerald-600 mt-1">{stats.withCard}</p>
+            <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{stats.withCard}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-rose-500 bg-rose-500/5">
+        <Card className="border-l-4 border-l-rose-500 dark:border-l-rose-400 bg-rose-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-rose-500" />
+              <Clock className="h-4 w-4 text-rose-500 dark:text-rose-400" />
               <span className="text-xs font-medium text-muted-foreground">Vencidas</span>
             </div>
-            <p className="text-xl font-bold text-rose-600 mt-1">{stats.expiredCards}</p>
+            <p className="text-xl font-bold text-rose-600 dark:text-rose-400 mt-1">{stats.expiredCards}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-amber-500 bg-amber-500/5">
+        <Card className="border-l-4 border-l-amber-500 dark:border-l-amber-400 bg-amber-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-amber-500" />
+              <ShieldAlert className="h-4 w-4 text-amber-500 dark:text-amber-400" />
               <span className="text-xs font-medium text-muted-foreground">Sem Carteirinha</span>
             </div>
-            <p className="text-xl font-bold text-amber-600 mt-1">{stats.noCard}</p>
+            <p className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.noCard}</p>
           </CardContent>
         </Card>
       </div>

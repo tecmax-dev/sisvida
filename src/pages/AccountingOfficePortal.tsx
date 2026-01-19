@@ -116,38 +116,38 @@ const MONTHS_FULL = [
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
   pending: { 
     label: "Pendente", 
-    color: "text-amber-700", 
-    bgColor: "bg-amber-50 border-amber-200",
+    color: "text-amber-700 dark:text-amber-400", 
+    bgColor: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
     icon: <Clock className="h-3.5 w-3.5" />
   },
   paid: { 
     label: "Pago", 
-    color: "text-emerald-700", 
-    bgColor: "bg-emerald-50 border-emerald-200",
+    color: "text-emerald-700 dark:text-emerald-400", 
+    bgColor: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800",
     icon: <CheckCircle2 className="h-3.5 w-3.5" />
   },
   overdue: { 
     label: "Vencido", 
-    color: "text-red-700", 
-    bgColor: "bg-red-50 border-red-200",
+    color: "text-red-700 dark:text-red-400", 
+    bgColor: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",
     icon: <AlertCircle className="h-3.5 w-3.5" />
   },
   cancelled: { 
     label: "Cancelado", 
-    color: "text-slate-500", 
-    bgColor: "bg-slate-50 border-slate-200",
+    color: "text-slate-500 dark:text-slate-400", 
+    bgColor: "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700",
     icon: <XCircle className="h-3.5 w-3.5" />
   },
   awaiting_value: { 
     label: "Aguardando", 
-    color: "text-purple-700", 
-    bgColor: "bg-purple-50 border-purple-200",
+    color: "text-purple-700 dark:text-purple-400", 
+    bgColor: "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800",
     icon: <DollarSign className="h-3.5 w-3.5" />
   },
   negotiated: { 
     label: "Em Negociação", 
-    color: "text-indigo-700", 
-    bgColor: "bg-indigo-50 border-indigo-200",
+    color: "text-indigo-700 dark:text-indigo-400", 
+    bgColor: "bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800",
     icon: <Handshake className="h-3.5 w-3.5" />
   },
 };
@@ -750,13 +750,13 @@ export default function AccountingOfficePortal() {
             variant="ghost"
             size="sm"
             onClick={() => setActiveView("services")}
-            className="text-slate-600 hover:text-slate-900 -ml-2"
+            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 -ml-2"
           >
             <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
             Voltar aos serviços
           </Button>
 
-          <h2 className="text-lg font-semibold text-slate-800 mt-2">
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mt-2">
             Empresas Vinculadas
           </h2>
 
@@ -829,7 +829,7 @@ export default function AccountingOfficePortal() {
           variant="ghost"
           size="sm"
           onClick={() => setActiveView("services")}
-          className="text-slate-600 hover:text-slate-900 -ml-2"
+          className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 -ml-2"
         >
           <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
           Voltar aos serviços
@@ -838,65 +838,65 @@ export default function AccountingOfficePortal() {
         {/* Stats Cards - Compact style */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Card 
-            className="bg-white border border-slate-200 shadow-sm cursor-default ring-2 ring-teal-500 ring-offset-1"
+            className="bg-card border border-border shadow-sm cursor-default ring-2 ring-teal-500 dark:ring-teal-400 ring-offset-1"
           >
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-teal-100 flex items-center justify-center">
-                  <FileText className="h-4 w-4 text-teal-600" />
+                <div className="h-8 w-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center">
+                  <FileText className="h-4 w-4 text-teal-600 dark:text-teal-400" />
                 </div>
-                <span className="text-sm font-medium text-slate-600">Contribuições</span>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Contribuições</span>
               </div>
-              <p className="text-2xl font-bold text-slate-900">{contributions.length}</p>
-              <p className="text-sm text-slate-500">{formatCurrency(contributions.reduce((sum, c) => sum + (c.value || 0), 0))}</p>
+              <p className="text-2xl font-bold text-foreground">{contributions.length}</p>
+              <p className="text-sm text-muted-foreground">{formatCurrency(contributions.reduce((sum, c) => sum + (c.value || 0), 0))}</p>
             </CardContent>
           </Card>
           
           <Card 
-            className="bg-white border border-slate-200 shadow-sm cursor-pointer hover:shadow-md hover:border-blue-300 transition-all"
+            className="bg-card border border-border shadow-sm cursor-pointer hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all"
             onClick={() => setActiveView("employers")}
           >
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                  <Building className="h-4 w-4 text-blue-600" />
+                <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
+                  <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 </div>
-                <span className="text-sm font-medium text-slate-600">Empresas</span>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Empresas</span>
               </div>
-              <p className="text-2xl font-bold text-slate-900">{employers.length}</p>
-              <p className="text-sm text-slate-500">vinculadas</p>
+              <p className="text-2xl font-bold text-foreground">{employers.length}</p>
+              <p className="text-sm text-muted-foreground">vinculadas</p>
             </CardContent>
           </Card>
           
           <Card 
-            className="bg-white border border-slate-200 shadow-sm cursor-pointer hover:shadow-md hover:border-purple-300 transition-all"
+            className="bg-card border border-border shadow-sm cursor-pointer hover:shadow-md hover:border-purple-300 dark:hover:border-purple-700 transition-all"
             onClick={handlePrintEmployersList}
           >
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                  <FileCheck className="h-4 w-4 text-purple-600" />
+                <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
+                  <FileCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                 </div>
-                <span className="text-sm font-medium text-slate-600">Relatórios</span>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Relatórios</span>
               </div>
-              <p className="text-2xl font-bold text-slate-900">PDF</p>
-              <p className="text-sm text-slate-500">gerar relatório</p>
+              <p className="text-2xl font-bold text-foreground">PDF</p>
+              <p className="text-sm text-muted-foreground">gerar relatório</p>
             </CardContent>
           </Card>
           
           <Card 
-            className="bg-white border border-slate-200 shadow-sm cursor-pointer hover:shadow-md hover:border-amber-300 transition-all"
+            className="bg-card border border-border shadow-sm cursor-pointer hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700 transition-all"
             onClick={() => toast.info("Entre em contato para atualizar seus dados")}
           >
             <CardContent className="p-4">
               <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-amber-100 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-amber-600" />
+                <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                  <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                 </div>
-                <span className="text-sm font-medium text-slate-600">Dados</span>
+                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Dados</span>
               </div>
-              <p className="text-2xl font-bold text-slate-900">Atualizar</p>
-              <p className="text-sm text-slate-500">informações</p>
+              <p className="text-2xl font-bold text-foreground">Atualizar</p>
+              <p className="text-sm text-muted-foreground">informações</p>
             </CardContent>
           </Card>
         </div>

@@ -206,13 +206,13 @@ export default function UnionReconciliationPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-emerald-100 text-emerald-800">Pago</Badge>;
+        return <Badge className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">Pago</Badge>;
       case "pending":
-        return <Badge className="bg-amber-100 text-amber-800">Pendente</Badge>;
+        return <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-800">Pendente</Badge>;
       case "overdue":
-        return <Badge className="bg-rose-100 text-rose-800">Vencido</Badge>;
+        return <Badge className="bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-400 border-rose-200 dark:border-rose-800">Vencido</Badge>;
       case "cancelled":
-        return <Badge className="bg-slate-100 text-slate-800">Cancelado</Badge>;
+        return <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700">Cancelado</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -273,7 +273,7 @@ export default function UnionReconciliationPage() {
         <Card>
           <CardContent className="pt-5">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <ExternalLink className="h-4 w-4 text-blue-500" />
+              <ExternalLink className="h-4 w-4 text-blue-500 dark:text-blue-400" />
               <span className="text-sm">Total com Lytex</span>
             </div>
             <p className="text-2xl font-bold mt-1">{stats.total}</p>
@@ -283,30 +283,30 @@ export default function UnionReconciliationPage() {
         <Card>
           <CardContent className="pt-5">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+              <CheckCircle2 className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
               <span className="text-sm">Conciliados</span>
             </div>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.reconciled}</p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{stats.reconciled}</p>
           </CardContent>
         </Card>
 
-        <Card className={stats.divergent > 0 ? "border-rose-200 bg-rose-50/30" : ""}>
+        <Card className={stats.divergent > 0 ? "border-rose-200 dark:border-rose-800 bg-rose-50/30 dark:bg-rose-950/20" : ""}>
           <CardContent className="pt-5">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <AlertTriangle className="h-4 w-4 text-rose-500" />
+              <AlertTriangle className="h-4 w-4 text-rose-500 dark:text-rose-400" />
               <span className="text-sm">Com Divergência</span>
             </div>
-            <p className="text-2xl font-bold text-rose-600 mt-1">{stats.divergent}</p>
+            <p className="text-2xl font-bold text-rose-600 dark:text-rose-400 mt-1">{stats.divergent}</p>
           </CardContent>
         </Card>
 
-        <Card className={stats.pendingReconciliation > 0 ? "border-amber-200 bg-amber-50/30" : ""}>
+        <Card className={stats.pendingReconciliation > 0 ? "border-amber-200 dark:border-amber-800 bg-amber-50/30 dark:bg-amber-950/20" : ""}>
           <CardContent className="pt-5">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <AlertCircle className="h-4 w-4 text-amber-500 dark:text-amber-400" />
               <span className="text-sm">Aguardando Conciliação</span>
             </div>
-            <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pendingReconciliation}</p>
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.pendingReconciliation}</p>
           </CardContent>
         </Card>
       </div>
@@ -380,7 +380,7 @@ export default function UnionReconciliationPage() {
                 </TableRow>
               ) : (
                 filteredContributions.map((c) => (
-                  <TableRow key={c.id} className={c.has_divergence ? "bg-rose-50/50" : ""}>
+                  <TableRow key={c.id} className={c.has_divergence ? "bg-rose-50/50 dark:bg-rose-950/20" : ""}>
                     <TableCell>
                       <div>
                         <p className="font-medium text-sm">{c.employers?.name || "—"}</p>
@@ -394,7 +394,7 @@ export default function UnionReconciliationPage() {
                       <div>
                         <p className="font-medium">{formatCurrency(c.value)}</p>
                         {c.paid_value && c.paid_value !== c.value && (
-                          <p className="text-xs text-emerald-600">
+                          <p className="text-xs text-emerald-600 dark:text-emerald-400">
                             Pago: {formatCurrency(c.paid_value)}
                           </p>
                         )}
@@ -406,17 +406,17 @@ export default function UnionReconciliationPage() {
                     </TableCell>
                     <TableCell>
                       {c.is_reconciled ? (
-                        <Badge className="bg-emerald-100 text-emerald-800">
+                        <Badge className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">
                           <CheckCircle2 className="h-3 w-3 mr-1" />
                           Conciliado
                         </Badge>
                       ) : c.has_divergence ? (
-                        <Badge className="bg-rose-100 text-rose-800">
+                        <Badge className="bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-400 border-rose-200 dark:border-rose-800">
                           <XCircle className="h-3 w-3 mr-1" />
                           Divergente
                         </Badge>
                       ) : c.status === "paid" ? (
-                        <Badge className="bg-amber-100 text-amber-800">
+                        <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-800">
                           <AlertCircle className="h-3 w-3 mr-1" />
                           Pendente
                         </Badge>

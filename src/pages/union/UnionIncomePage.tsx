@@ -298,15 +298,15 @@ export default function UnionIncomePage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-emerald-100 text-emerald-800">Recebido</Badge>;
+        return <Badge className="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800">Recebido</Badge>;
       case "pending":
-        return <Badge className="bg-amber-100 text-amber-800">Pendente</Badge>;
+        return <Badge className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-400 border-amber-200 dark:border-amber-800">Pendente</Badge>;
       case "overdue":
-        return <Badge className="bg-rose-100 text-rose-800">Vencido</Badge>;
+        return <Badge className="bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-400 border-rose-200 dark:border-rose-800">Vencido</Badge>;
       case "cancelled":
-        return <Badge className="bg-slate-100 text-slate-800">Cancelado</Badge>;
+        return <Badge className="bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700">Cancelado</Badge>;
       case "reversed":
-        return <Badge className="bg-purple-100 text-purple-800">Estornado</Badge>;
+        return <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 border-purple-200 dark:border-purple-800">Estornado</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -358,12 +358,12 @@ export default function UnionIncomePage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-emerald-500" />
+              <DollarSign className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
               Total de Receitas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(totalIncome)}</p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(totalIncome)}</p>
             <p className="text-xs text-muted-foreground">
               {processedTransactions.length} lançamento(s)
             </p>
@@ -373,36 +373,36 @@ export default function UnionIncomePage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-500" />
+              <Clock className="h-4 w-4 text-amber-500 dark:text-amber-400" />
               A Receber
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-amber-600">{formatCurrency(pendingIncome)}</p>
+            <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{formatCurrency(pendingIncome)}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-rose-200 bg-rose-50/50">
+        <Card className="border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 text-rose-500" />
+              <AlertCircle className="h-4 w-4 text-rose-500 dark:text-rose-400" />
               Vencidas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-rose-600">{formatCurrency(overdueIncome)}</p>
+            <p className="text-2xl font-bold text-rose-600 dark:text-rose-400">{formatCurrency(overdueIncome)}</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-emerald-500" />
+              <CheckCircle className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
               Recebidas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-emerald-600">{formatCurrency(receivedIncome)}</p>
+            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{formatCurrency(receivedIncome)}</p>
           </CardContent>
         </Card>
       </div>
@@ -607,7 +607,7 @@ export default function UnionIncomePage() {
                           ? format(parseISO(transaction.due_date), "dd/MM/yyyy", { locale: ptBR })
                           : "-"}
                       </TableCell>
-                      <TableCell className="font-semibold text-emerald-600">
+                      <TableCell className="font-semibold text-emerald-600 dark:text-emerald-400">
                         {formatCurrency(Number(transaction.net_value || transaction.amount))}
                       </TableCell>
                       <TableCell>{getStatusBadge(transaction.effectiveStatus)}</TableCell>
