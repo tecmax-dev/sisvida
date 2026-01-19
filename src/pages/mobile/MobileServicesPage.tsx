@@ -729,7 +729,7 @@ export default function MobileServicesPage() {
   // Service detail view
   if (selectedService) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-muted flex flex-col">
         {/* Header */}
         <header className={`${selectedService.color} text-white p-4 sticky top-0 z-50`}>
           <div className="flex items-center gap-3">
@@ -760,7 +760,7 @@ export default function MobileServicesPage() {
 
   // Services list view
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-muted flex flex-col">
       {/* Header */}
       <header className="bg-emerald-600 text-white p-4 sticky top-0 z-50">
         <div className="flex items-center gap-3">

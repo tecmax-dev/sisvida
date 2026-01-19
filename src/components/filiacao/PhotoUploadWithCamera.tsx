@@ -95,15 +95,15 @@ export function PhotoUploadWithCamera({
 
   return (
     <div className={cn("space-y-2", className)}>
-      <label className="text-xs font-medium text-gray-600 block text-center">{label}</label>
+      <label className="text-xs font-medium text-muted-foreground block text-center">{label}</label>
       
       <div
         className={cn(
           "relative border-2 border-dashed rounded-xl overflow-hidden transition-all",
           "min-h-[140px] sm:min-h-[160px]",
           photoUrl 
-            ? "border-green-400 bg-green-50" 
-            : "border-gray-300 hover:border-blue-400 hover:bg-blue-50/50",
+            ? "border-green-400 bg-green-50 dark:bg-green-950/30" 
+            : "border-border hover:border-blue-400 hover:bg-blue-50/50 dark:hover:bg-blue-950/30",
           aspectRatio === "portrait" ? "aspect-[3/4]" : "aspect-square"
         )}
       >
@@ -131,14 +131,14 @@ export function PhotoUploadWithCamera({
             </div>
           </div>
         ) : uploading ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-50/50">
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-blue-50/50 dark:bg-blue-950/30">
             <Loader2 className="h-8 w-8 animate-spin text-blue-500 mb-2" />
-            <p className="text-xs text-gray-500">Enviando...</p>
+            <p className="text-xs text-muted-foreground">Enviando...</p>
           </div>
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-3">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gray-100 flex items-center justify-center mb-2">
-              <User className="h-6 w-6 sm:h-7 sm:w-7 text-gray-400" />
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-muted flex items-center justify-center mb-2">
+              <User className="h-6 w-6 sm:h-7 sm:w-7 text-muted-foreground" />
             </div>
             
             <div className="flex flex-col gap-1.5 w-full max-w-[120px] sm:max-w-[140px]">
