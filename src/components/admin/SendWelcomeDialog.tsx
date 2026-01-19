@@ -178,46 +178,38 @@ export function SendWelcomeDialog({
     try {
       // Se for novo usuário, criar primeiro
       if (mode === "new") {
-        // Criar usuário no Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password: tempPassword,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth`,
-            data: {
+        // Criar usuário via backend (Admin API) para garantir criação do profile/roles
+        const { data: createResult, error: createError } = await supabase.functions.invoke(
+          "create-clinic-user",
+          {
+            body: {
+              email,
+              password: tempPassword,
               name,
-            },
-          },
-        });
-
-        if (authError) {
-          // Se o usuário já existe, apenas enviar o email
-          if (authError.message.includes("already registered")) {
-            toast.warning("Usuário já existe. Enviando email de boas-vindas...");
-          } else {
-            throw authError;
-          }
-        }
-
-        // Se o usuário foi criado, adicionar perfil e role
-        if (authData?.user) {
-          // Atualizar perfil
-          await supabase
-            .from("profiles")
-            .upsert({
-              user_id: authData.user.id,
-              name,
-              updated_at: new Date().toISOString(),
-            });
-
-          // Adicionar role de owner para a clínica
-          await supabase
-            .from("user_roles")
-            .insert({
-              user_id: authData.user.id,
-              clinic_id: clinicId,
+              phone: null,
               role: "owner",
-            });
+              clinicId,
+              accessGroupId: null,
+              professionalId: null,
+            },
+          }
+        );
+
+        if (createError || !createResult?.success) {
+          const errorMessage =
+            (createResult as any)?.error || createError?.message || "Erro ao criar usuário";
+
+          // Se já existe, avisar (não prosseguir para evitar role/profile inconsistentes)
+          if (
+            errorMessage.includes("já está cadastrado") ||
+            errorMessage.includes("already registered") ||
+            errorMessage.includes("already been registered")
+          ) {
+            toast.error("Este email já está cadastrado no sistema");
+            return;
+          }
+
+          throw new Error(errorMessage);
         }
       }
 
