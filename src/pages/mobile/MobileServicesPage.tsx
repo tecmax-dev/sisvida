@@ -425,14 +425,56 @@ function BoletosContent() {
 
 // ============ DIRETORIA ============
 function DiretoriaContent() {
-  const [diretores] = useState([
-    { id: "1", nome: "José da Silva", cargo: "Presidente", foto: null },
-    { id: "2", nome: "Maria Santos", cargo: "Vice-Presidente", foto: null },
-    { id: "3", nome: "João Oliveira", cargo: "Secretário Geral", foto: null },
-    { id: "4", nome: "Ana Costa", cargo: "Tesoureira", foto: null },
-    { id: "5", nome: "Pedro Lima", cargo: "Diretor Jurídico", foto: null },
-    { id: "6", nome: "Lucia Ferreira", cargo: "Diretora Social", foto: null },
-  ]);
+  const [diretores, setDiretores] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDiretoria();
+  }, []);
+
+  const loadDiretoria = async () => {
+    try {
+      const clinicId = localStorage.getItem('mobile_clinic_id');
+      if (!clinicId) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("union_app_content")
+        .select("*")
+        .eq("clinic_id", clinicId)
+        .eq("content_type", "diretoria")
+        .eq("is_active", true)
+        .order("order_index", { ascending: true });
+
+      if (error) throw error;
+      setDiretores(data || []);
+    } catch (err) {
+      console.error("Error loading diretoria:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  if (diretores.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground">
+          Nenhum membro da diretoria cadastrado.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -444,11 +486,21 @@ function DiretoriaContent() {
         {diretores.map((diretor) => (
           <Card key={diretor.id} className="border shadow-sm">
             <CardContent className="p-4 text-center">
-              <div className="w-16 h-16 mx-auto bg-emerald-100 rounded-full flex items-center justify-center mb-2">
-                <Users className="h-8 w-8 text-emerald-600" />
-              </div>
-              <h4 className="font-semibold text-sm">{diretor.nome}</h4>
-              <p className="text-xs text-muted-foreground">{diretor.cargo}</p>
+              {diretor.image_url ? (
+                <div className="w-16 h-16 mx-auto rounded-full overflow-hidden mb-2">
+                  <img 
+                    src={diretor.image_url} 
+                    alt={diretor.title} 
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="w-16 h-16 mx-auto bg-emerald-100 rounded-full flex items-center justify-center mb-2">
+                  <Users className="h-8 w-8 text-emerald-600" />
+                </div>
+              )}
+              <h4 className="font-semibold text-sm">{diretor.title}</h4>
+              <p className="text-xs text-muted-foreground">{diretor.description}</p>
             </CardContent>
           </Card>
         ))}
