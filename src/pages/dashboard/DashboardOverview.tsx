@@ -358,11 +358,12 @@ export default function DashboardOverview() {
       subtitle: "Evoluções Registradas",
       buttonText: "Ver prontuários",
       buttonLink: "/dashboard/medical-records",
-      bgColor: "bg-purple-50",
-      borderColor: "border-purple-100",
+      bgColor: "bg-purple-50 dark:bg-purple-950/50",
+      borderColor: "border-purple-100 dark:border-purple-800",
       icon: FileText,
-      iconBg: "bg-purple-100",
-      iconColor: "text-purple-500",
+      iconBg: "bg-purple-100 dark:bg-purple-900/50",
+      iconColor: "text-purple-500 dark:text-purple-400",
+      valueColor: "text-purple-700 dark:text-purple-300",
     },
     {
       title: "TAXA DE PRESENÇA",
@@ -370,11 +371,12 @@ export default function DashboardOverview() {
       subtitle: "Taxa Realização",
       buttonText: "Ver registros",
       buttonLink: "/dashboard/reports",
-      bgColor: "bg-amber-50",
-      borderColor: "border-amber-100",
+      bgColor: "bg-amber-50 dark:bg-amber-950/50",
+      borderColor: "border-amber-100 dark:border-amber-800",
       icon: TrendingUp,
-      iconBg: "bg-amber-100",
-      iconColor: "text-amber-600",
+      iconBg: "bg-amber-100 dark:bg-amber-900/50",
+      iconColor: "text-amber-600 dark:text-amber-400",
+      valueColor: "text-amber-700 dark:text-amber-300",
     },
     {
       title: "AÇÃO",
@@ -383,11 +385,12 @@ export default function DashboardOverview() {
       subtitle: "Nova Evolução",
       buttonText: "Registrar nova",
       buttonLink: "/dashboard/medical-records",
-      bgColor: "bg-rose-50",
-      borderColor: "border-rose-100",
+      bgColor: "bg-rose-50 dark:bg-rose-950/50",
+      borderColor: "border-rose-100 dark:border-rose-800",
       icon: Plus,
-      iconBg: "bg-rose-100",
-      iconColor: "text-rose-500",
+      iconBg: "bg-rose-100 dark:bg-rose-900/50",
+      iconColor: "text-rose-500 dark:text-rose-400",
+      valueColor: "text-rose-700 dark:text-rose-300",
     },
   ];
 
@@ -446,7 +449,7 @@ export default function DashboardOverview() {
                       <Plus className={`h-8 w-8 ${card.iconColor}`} />
                     </div>
                   ) : (
-                    <p className="text-4xl font-bold text-foreground">{card.value}</p>
+                    <p className={`text-4xl font-bold ${card.valueColor || 'text-foreground'}`}>{card.value}</p>
                   )}
                   <p className="text-sm text-muted-foreground">{card.subtitle}</p>
                 </div>
