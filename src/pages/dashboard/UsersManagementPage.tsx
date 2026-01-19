@@ -249,40 +249,40 @@ export default function UsersManagementPage() {
             <p className="text-xl font-bold text-foreground mt-1">{stats.total}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-emerald-500 bg-emerald-500/5">
+        <Card className="border-l-4 border-l-emerald-500 dark:border-l-emerald-400 bg-emerald-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <CheckCircle className="h-4 w-4 text-emerald-500" />
+              <CheckCircle className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
               <span className="text-xs font-medium text-muted-foreground">Confirmados</span>
             </div>
-            <p className="text-xl font-bold text-emerald-600 mt-1">{stats.confirmed}</p>
+            <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">{stats.confirmed}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-amber-500 bg-amber-500/5">
+        <Card className="border-l-4 border-l-amber-500 dark:border-l-amber-400 bg-amber-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <Clock className="h-4 w-4 text-amber-500" />
+              <Clock className="h-4 w-4 text-amber-500 dark:text-amber-400" />
               <span className="text-xs font-medium text-muted-foreground">Pendentes</span>
             </div>
-            <p className="text-xl font-bold text-amber-600 mt-1">{stats.pending}</p>
+            <p className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">{stats.pending}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-purple-500 bg-purple-500/5">
+        <Card className="border-l-4 border-l-purple-500 dark:border-l-purple-400 bg-purple-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <Shield className="h-4 w-4 text-purple-500" />
+              <Shield className="h-4 w-4 text-purple-500 dark:text-purple-400" />
               <span className="text-xs font-medium text-muted-foreground">Admins</span>
             </div>
-            <p className="text-xl font-bold text-purple-600 mt-1">{stats.admins}</p>
+            <p className="text-xl font-bold text-purple-600 dark:text-purple-400 mt-1">{stats.admins}</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-blue-500 bg-blue-500/5">
+        <Card className="border-l-4 border-l-blue-500 dark:border-l-blue-400 bg-blue-500/5">
           <CardContent className="p-3">
             <div className="flex items-center gap-2">
-              <Briefcase className="h-4 w-4 text-blue-500" />
+              <Briefcase className="h-4 w-4 text-blue-500 dark:text-blue-400" />
               <span className="text-xs font-medium text-muted-foreground">Profissionais</span>
             </div>
-            <p className="text-xl font-bold text-blue-600 mt-1">{stats.professionals}</p>
+            <p className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">{stats.professionals}</p>
           </CardContent>
         </Card>
       </div>

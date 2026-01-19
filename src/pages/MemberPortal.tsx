@@ -79,38 +79,38 @@ interface PatientCard {
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
   pending: { 
     label: "Pendente", 
-    color: "text-amber-700", 
-    bgColor: "bg-amber-50 border-amber-200",
+    color: "text-amber-700 dark:text-amber-400", 
+    bgColor: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
     icon: <Clock className="h-3.5 w-3.5" />
   },
   paid: { 
     label: "Pago", 
-    color: "text-emerald-700", 
-    bgColor: "bg-emerald-50 border-emerald-200",
+    color: "text-emerald-700 dark:text-emerald-400", 
+    bgColor: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800",
     icon: <CheckCircle2 className="h-3.5 w-3.5" />
   },
   overdue: { 
     label: "Vencido", 
-    color: "text-red-700", 
-    bgColor: "bg-red-50 border-red-200",
+    color: "text-red-700 dark:text-red-400", 
+    bgColor: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",
     icon: <AlertCircle className="h-3.5 w-3.5" />
   },
   cancelled: { 
     label: "Cancelado", 
-    color: "text-slate-500", 
-    bgColor: "bg-slate-50 border-slate-200",
+    color: "text-slate-500 dark:text-slate-400", 
+    bgColor: "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700",
     icon: <XCircle className="h-3.5 w-3.5" />
   },
   awaiting_value: { 
     label: "Aguardando", 
-    color: "text-purple-700", 
-    bgColor: "bg-purple-50 border-purple-200",
+    color: "text-purple-700 dark:text-purple-400", 
+    bgColor: "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800",
     icon: <DollarSign className="h-3.5 w-3.5" />
   },
   negotiated: { 
     label: "Em Negociação", 
-    color: "text-indigo-700", 
-    bgColor: "bg-indigo-50 border-indigo-200",
+    color: "text-indigo-700 dark:text-indigo-400", 
+    bgColor: "bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800",
     icon: <Handshake className="h-3.5 w-3.5" />
   },
 };
@@ -471,41 +471,41 @@ export default function MemberPortal() {
 
         {/* Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="border-l-4 border-l-amber-500">
+          <Card className="border-l-4 border-l-amber-500 dark:border-l-amber-400">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Pendentes</p>
-                  <p className="text-2xl font-bold text-amber-600">{metrics.pendingCount}</p>
+                  <p className="text-2xl font-bold text-amber-600 dark:text-amber-400">{metrics.pendingCount}</p>
                   <p className="text-sm text-muted-foreground">{formatCurrency(metrics.pendingValue)}</p>
                 </div>
-                <Clock className="h-8 w-8 text-amber-500/30" />
+                <Clock className="h-8 w-8 text-amber-500/30 dark:text-amber-400/30" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-red-500">
+          <Card className="border-l-4 border-l-red-500 dark:border-l-red-400">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Vencidas</p>
-                  <p className="text-2xl font-bold text-red-600">{metrics.overdueCount}</p>
+                  <p className="text-2xl font-bold text-red-600 dark:text-red-400">{metrics.overdueCount}</p>
                   <p className="text-sm text-muted-foreground">{formatCurrency(metrics.overdueValue)}</p>
                 </div>
-                <AlertCircle className="h-8 w-8 text-red-500/30" />
+                <AlertCircle className="h-8 w-8 text-red-500/30 dark:text-red-400/30" />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-emerald-500">
+          <Card className="border-l-4 border-l-emerald-500 dark:border-l-emerald-400">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">Pagas</p>
-                  <p className="text-2xl font-bold text-emerald-600">{metrics.paidCount}</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{metrics.paidCount}</p>
                   <p className="text-sm text-muted-foreground">{formatCurrency(metrics.paidValue)}</p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-emerald-500/30" />
+                <CheckCircle2 className="h-8 w-8 text-emerald-500/30 dark:text-emerald-400/30" />
               </div>
             </CardContent>
           </Card>
@@ -584,7 +584,7 @@ export default function MemberPortal() {
               return (
                 <Card key={key}>
                   <CardContent className="p-4">
-                    <h3 className="font-semibold text-lg mb-3 text-slate-700">
+                    <h3 className="font-semibold text-lg mb-3 text-slate-700 dark:text-slate-200">
                       {formatCompetence(month, year)}
                     </h3>
                     <div className="space-y-2">
