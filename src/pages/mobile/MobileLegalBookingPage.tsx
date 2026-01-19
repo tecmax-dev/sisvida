@@ -598,7 +598,7 @@ export default function MobileLegalBookingPage() {
           </p>
           <Button 
             className="mt-6 bg-emerald-600 hover:bg-emerald-700"
-            onClick={() => navigate("/app/appointments")}
+            onClick={() => navigate("/app/agendamentos")}
           >
             Ver meus agendamentos
           </Button>
