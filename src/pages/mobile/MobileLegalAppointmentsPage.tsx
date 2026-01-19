@@ -167,10 +167,9 @@ export default function MobileLegalAppointmentsPage() {
 
       const { error } = await (supabase.from("homologacao_appointments") as any)
         .update({
+          // RLS para app móvel permite apenas a transição de status para 'cancelled'
+          // Campos como cancelled_at/updated_at são preenchidos por triggers no backend
           status: "cancelled",
-          cancellation_reason: "Cancelado pelo associado via app",
-          cancelled_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         })
         .eq("id", selectedAppointment.id)
         .eq("clinic_id", clinicId);
