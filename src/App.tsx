@@ -128,6 +128,8 @@ import HomologacaoBloqueiosPage from "./pages/dashboard/homologacao/HomologacaoB
 import HomologacaoConfigPage from "./pages/dashboard/homologacao/HomologacaoConfigPage";
 // Union Module pages
 import { UnionModuleLayout } from "./components/union/UnionModuleLayout";
+// Mobile App Layout (força modo claro)
+import { MobileAppLayout } from "./components/mobile/MobileAppLayout";
 import UnionDashboard from "./pages/union/UnionDashboard";
 import UnionPlansPage from "./pages/union/UnionPlansPage";
 import UnionEmployersPage from "./pages/union/UnionEmployersPage";
@@ -503,27 +505,29 @@ const App = () => (
                   <Route path="homologacao/config" element={<HomologacaoConfigPage />} />
                   <Route path="conteudo-app" element={<UnionAppContentPage />} />
                 </Route>
-                {/* Mobile App Routes */}
-                <Route path="/app" element={<MobileWelcomePage />} />
-                <Route path="/app/login" element={<MobileAuthPage />} />
-                <Route path="/app/home" element={<MobileHomePage />} />
-                <Route path="/app/home-publico" element={<MobilePublicHomePage />} />
-                <Route path="/app/agendamentos" element={<MobileAppointmentsPage />} />
-                <Route path="/app/agendar" element={<MobileBookingPage />} />
-                <Route path="/app/perfil" element={<MobileProfilePage />} />
-                <Route path="/app/recuperar-senha" element={<MobilePasswordResetPage />} />
-                <Route path="/app/primeiro-acesso" element={<MobileFirstAccessPage />} />
-                <Route path="/app/dependentes" element={<MobileDependentsPage />} />
-                <Route path="/app/alterar-senha" element={<MobileChangePasswordPage />} />
-                <Route path="/app/carteirinha" element={<MobileCardPage />} />
-                <Route path="/app/servicos" element={<MobileServicesPage />} />
-                <Route path="/app/servicos/:serviceId" element={<MobileServicesPage />} />
-                <Route path="/app/comunicacao" element={<MobileCommunicationPage />} />
-                <Route path="/app/comunicacao/:mediaType" element={<MobileCommunicationPage />} />
-                <Route path="/app/ajuda" element={<MobileHelpPage />} />
-                <Route path="/app/faq" element={<MobileFAQPage />} />
-                <Route path="/app/sobre" element={<MobileAboutPage />} />
-                <Route path="/app/filiacao" element={<MobileFiliacaoPage />} />
+                {/* Mobile App Routes - sempre modo claro */}
+                <Route path="/app" element={<MobileAppLayout />}>
+                  <Route index element={<MobileWelcomePage />} />
+                  <Route path="login" element={<MobileAuthPage />} />
+                  <Route path="home" element={<MobileHomePage />} />
+                  <Route path="home-publico" element={<MobilePublicHomePage />} />
+                  <Route path="agendamentos" element={<MobileAppointmentsPage />} />
+                  <Route path="agendar" element={<MobileBookingPage />} />
+                  <Route path="perfil" element={<MobileProfilePage />} />
+                  <Route path="recuperar-senha" element={<MobilePasswordResetPage />} />
+                  <Route path="primeiro-acesso" element={<MobileFirstAccessPage />} />
+                  <Route path="dependentes" element={<MobileDependentsPage />} />
+                  <Route path="alterar-senha" element={<MobileChangePasswordPage />} />
+                  <Route path="carteirinha" element={<MobileCardPage />} />
+                  <Route path="servicos" element={<MobileServicesPage />} />
+                  <Route path="servicos/:serviceId" element={<MobileServicesPage />} />
+                  <Route path="comunicacao" element={<MobileCommunicationPage />} />
+                  <Route path="comunicacao/:mediaType" element={<MobileCommunicationPage />} />
+                  <Route path="ajuda" element={<MobileHelpPage />} />
+                  <Route path="faq" element={<MobileFAQPage />} />
+                  <Route path="sobre" element={<MobileAboutPage />} />
+                  <Route path="filiacao" element={<MobileFiliacaoPage />} />
+                </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
               </Suspense>
