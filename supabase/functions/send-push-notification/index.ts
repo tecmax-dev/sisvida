@@ -191,68 +191,150 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get Firebase Service Account
-    const serviceAccountJson = Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
-    if (!serviceAccountJson) {
+    const serviceAccountSecret = Deno.env.get('FIREBASE_SERVICE_ACCOUNT');
+    if (!serviceAccountSecret) {
       console.error('FIREBASE_SERVICE_ACCOUNT not configured');
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'FIREBASE_SERVICE_ACCOUNT not configured',
-          message: 'Please configure the Firebase Service Account JSON in your project secrets.'
+          message: 'Please configure the Firebase Service Account JSON in your project secrets.',
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
+    function extractFirstJsonObject(input: string): string | null {
+      const s = input.replace(/^\uFEFF/, '');
+      const start = s.indexOf('{');
+      if (start < 0) return null;
+
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+
+      for (let i = start; i < s.length; i++) {
+        const ch = s[i];
+
+        if (escaped) {
+          escaped = false;
+          continue;
+        }
+
+        if (ch === '\\') {
+          if (inString) escaped = true;
+          continue;
+        }
+
+        if (ch === '"') {
+          inString = !inString;
+          continue;
+        }
+
+        if (!inString) {
+          if (ch === '{') depth++;
+          if (ch === '}') depth--;
+          if (depth === 0) {
+            return s.slice(start, i + 1);
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function parseServiceAccountSecret(raw: string): ServiceAccount {
+      // Accept:
+      // 1) raw JSON object string: {"type":...}
+      // 2) JSON string containing JSON (double-encoded): "{...}"
+      // 3) Base64-encoded JSON
+      // 4) Secrets that contain extra prefix/suffix text (we extract the first JSON object)
+      const trimmed = raw.trim();
+
+      // Attempt #0: extract first JSON object from any text
+      const extracted = extractFirstJsonObject(trimmed);
+      if (extracted) {
+        return JSON.parse(extracted);
+      }
+
+      // Attempt #1: direct JSON
+      if (trimmed.startsWith('{')) {
+        return JSON.parse(trimmed);
+      }
+
+      // Attempt #2: double-encoded JSON string
+      try {
+        const maybeString = JSON.parse(trimmed);
+        if (typeof maybeString === 'string') {
+          const innerExtracted = extractFirstJsonObject(maybeString.trim());
+          if (innerExtracted) return JSON.parse(innerExtracted);
+        }
+      } catch {
+        // ignore
+      }
+
+      // Attempt #3: base64 JSON
+      try {
+        const decoded = atob(trimmed).trim();
+        const decodedExtracted = extractFirstJsonObject(decoded);
+        if (decodedExtracted) return JSON.parse(decodedExtracted);
+      } catch {
+        // ignore
+      }
+
+      throw new Error('Invalid service account JSON');
+    }
+
     let serviceAccount: ServiceAccount;
     try {
-      serviceAccount = JSON.parse(serviceAccountJson);
-      
+      serviceAccount = parseServiceAccountSecret(serviceAccountSecret);
+
       // Validate required fields
       if (!serviceAccount.private_key) {
         console.error('Service account missing private_key');
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             error: 'Invalid service account configuration',
-            message: 'The FIREBASE_SERVICE_ACCOUNT is missing the private_key field. Please ensure you copied the full service account JSON.'
+            message:
+              'The FIREBASE_SERVICE_ACCOUNT is missing the private_key field. Please ensure you copied the full service account JSON.',
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       if (!serviceAccount.client_email) {
         console.error('Service account missing client_email');
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             error: 'Invalid service account configuration',
-            message: 'The FIREBASE_SERVICE_ACCOUNT is missing the client_email field.'
+            message: 'The FIREBASE_SERVICE_ACCOUNT is missing the client_email field.',
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       if (!serviceAccount.project_id) {
         console.error('Service account missing project_id');
         return new Response(
-          JSON.stringify({ 
+          JSON.stringify({
             error: 'Invalid service account configuration',
-            message: 'The FIREBASE_SERVICE_ACCOUNT is missing the project_id field.'
+            message: 'The FIREBASE_SERVICE_ACCOUNT is missing the project_id field.',
           }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       console.log('Service account validated:', {
         project_id: serviceAccount.project_id,
         client_email: serviceAccount.client_email,
-        has_private_key: !!serviceAccount.private_key
+        has_private_key: !!serviceAccount.private_key,
       });
-      
     } catch (parseError) {
       console.error('Failed to parse service account JSON:', parseError);
       return new Response(
-        JSON.stringify({ 
+        JSON.stringify({
           error: 'Invalid service account JSON',
-          message: 'The FIREBASE_SERVICE_ACCOUNT secret contains invalid JSON. Make sure you copied the entire JSON file from Firebase Console.'
+          message:
+            'The FIREBASE_SERVICE_ACCOUNT secret contains invalid JSON. Paste the full JSON file contents (or, alternatively, paste a base64 of the JSON).',
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
