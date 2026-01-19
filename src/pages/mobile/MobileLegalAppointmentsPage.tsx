@@ -84,6 +84,11 @@ export default function MobileLegalAppointmentsPage() {
         return;
       }
 
+      // Normalize CPF: remove punctuation for comparison
+      const normalizedCpf = patient.cpf.replace(/\D/g, "");
+      const formattedCpf = normalizedCpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+
+      // Search with both formats since DB may have inconsistent data
       const { data, error } = await (supabase
         .from("homologacao_appointments") as any)
         .select(
@@ -94,9 +99,10 @@ export default function MobileLegalAppointmentsPage() {
         `
         )
         .eq("clinic_id", clinicId)
-        .eq("employee_cpf", patient.cpf)
+        .or(`employee_cpf.eq.${normalizedCpf},employee_cpf.eq.${formattedCpf}`)
         .order("appointment_date", { ascending: false })
         .order("start_time", { ascending: false });
+
 
       if (error) throw error;
 
