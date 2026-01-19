@@ -9,6 +9,7 @@ import illustrationDiretoria from "@/assets/mobile/illustration-diretoria.png";
 import illustrationDocumentos from "@/assets/mobile/illustration-documentos.png";
 import illustrationAtendimentos from "@/assets/mobile/illustration-atendimentos.png";
 import illustrationOuvidoria from "@/assets/mobile/illustration-ouvidoria.png";
+import illustrationJuridico from "@/assets/mobile/illustration-juridico.png";
 
 export function MobileServiceGrid() {
   const navigate = useNavigate();
@@ -20,6 +21,12 @@ export function MobileServiceGrid() {
       image: illustrationAgendamentos, 
       label: "Agendamentos", 
       onClick: () => navigate("/app/agendamentos") 
+    },
+    { 
+      key: "agendamento-juridico",
+      image: illustrationJuridico, 
+      label: "Agend. Jurídico",
+      onClick: () => navigate("/app/agendar-juridico") 
     },
     { 
       key: "convencoes",

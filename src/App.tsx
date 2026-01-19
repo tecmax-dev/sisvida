@@ -198,6 +198,7 @@ const MobileFirstAccessPage = lazy(() => import("./pages/mobile/MobileFirstAcces
 const MobileFAQPage = lazy(() => import("./pages/mobile/MobileFAQPage"));
 const MobileAboutPage = lazy(() => import("./pages/mobile/MobileAboutPage"));
 const MobileFiliacaoPage = lazy(() => import("./pages/mobile/MobileFiliacaoPage"));
+const MobileLegalBookingPage = lazy(() => import("./pages/mobile/MobileLegalBookingPage"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -527,6 +528,7 @@ const App = () => (
                   <Route path="faq" element={<MobileFAQPage />} />
                   <Route path="sobre" element={<MobileAboutPage />} />
                   <Route path="filiacao" element={<MobileFiliacaoPage />} />
+                  <Route path="agendar-juridico" element={<MobileLegalBookingPage />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
