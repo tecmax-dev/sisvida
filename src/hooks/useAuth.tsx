@@ -102,7 +102,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Hook de timeout de sessão
+  // Verifica se está no app mobile - desabilita timeout para manter sessão persistente
+  const isMobileApp = location.pathname.startsWith('/app');
+
+  // Hook de timeout de sessão (desabilitado para mobile app)
   const {
     saveLoginTime,
     clearSessionData,
@@ -114,7 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     inactivityTimeout: 30,   // 30 minutos
     warningTime: 5,          // 5 minutos de aviso
     onExpire: handleSignOut,
-    enabled: !!user
+    enabled: !!user && !isMobileApp // Desabilitado para mobile app
   });
 
   // Função de renovar sessão com redirecionamento para o dashboard
