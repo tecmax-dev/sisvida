@@ -56,15 +56,22 @@ export function CctCategoriesManagement() {
   });
 
   const loadCategories = async () => {
-    if (!currentClinic?.id) return;
+    console.log("CctCategoriesManagement: loadCategories called, clinic:", currentClinic?.id);
+    if (!currentClinic?.id) {
+      console.log("CctCategoriesManagement: No clinic ID, skipping load");
+      setLoading(false);
+      return;
+    }
     
     try {
+      console.log("CctCategoriesManagement: Fetching categories for clinic:", currentClinic.id);
       const { data, error } = await (supabase
         .from("union_cct_categories" as any)
         .select("*")
         .eq("clinic_id", currentClinic.id)
         .order("order_index") as any);
 
+      console.log("CctCategoriesManagement: Query result:", { data, error });
       if (error) throw error;
       setCategories((data || []) as CctCategory[]);
     } catch (err) {
