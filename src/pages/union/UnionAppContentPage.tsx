@@ -214,17 +214,19 @@ export default function UnionAppContentPage() {
     );
   }
 
-  const filteredContent =
-    activeTab !== "ouvidoria" && activeTab !== "push" && activeTab !== "tabs"
-      ? allContent?.filter((c) => c.content_type === activeTab) || []
-      : [];
+  const isContentTab = (tab: TabType): tab is ContentType =>
+    Object.prototype.hasOwnProperty.call(CONTENT_TYPE_LABELS, tab);
+
+  const filteredContent = isContentTab(activeTab)
+    ? allContent?.filter((c) => c.content_type === activeTab) || []
+    : [];
 
   const handleOpenCreate = () => {
-    if (activeTab === "ouvidoria" || activeTab === "push" || activeTab === "tabs") return;
+    if (!isContentTab(activeTab)) return;
     setEditingContent(null);
     setFormData({
       ...defaultFormData,
-      content_type: activeTab as ContentType,
+      content_type: activeTab,
       order_index: filteredContent.length,
     });
     setIsDialogOpen(true);
@@ -336,10 +338,10 @@ export default function UnionAppContentPage() {
           Gerencie banners, convênios, convenções, declarações, diretoria, documentos e interações da ouvidoria
           </p>
         </div>
-        {activeTab !== "ouvidoria" && activeTab !== "push" && activeTab !== "tabs" && (
+        {isContentTab(activeTab) && (
           <Button onClick={handleOpenCreate} className="gap-2">
             <Plus className="h-4 w-4" />
-            Novo {CONTENT_TYPE_LABELS[activeTab as ContentType].slice(0, -1)}
+            Novo {CONTENT_TYPE_LABELS[activeTab].slice(0, -1)}
           </Button>
         )}
       </div>
