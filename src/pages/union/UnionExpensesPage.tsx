@@ -315,15 +315,15 @@ export default function UnionExpensesPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "paid":
-        return <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-200 text-xs px-2 py-0.5">Pago</Badge>;
+        return <Badge className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 text-xs px-2 py-0.5">Pago</Badge>;
       case "pending":
-        return <Badge className="bg-amber-500/10 text-amber-700 border-amber-200 text-xs px-2 py-0.5">Pendente</Badge>;
+        return <Badge className="bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800 text-xs px-2 py-0.5">Pendente</Badge>;
       case "overdue":
-        return <Badge className="bg-rose-500/10 text-rose-700 border-rose-200 text-xs px-2 py-0.5">Vencido</Badge>;
+        return <Badge className="bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-800 text-xs px-2 py-0.5">Vencido</Badge>;
       case "cancelled":
-        return <Badge className="bg-slate-500/10 text-slate-600 border-slate-200 text-xs px-2 py-0.5">Cancelado</Badge>;
+        return <Badge className="bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 text-xs px-2 py-0.5">Cancelado</Badge>;
       case "reversed":
-        return <Badge className="bg-purple-500/10 text-purple-700 border-purple-200 text-xs px-2 py-0.5">Estornado</Badge>;
+        return <Badge className="bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800 text-xs px-2 py-0.5">Estornado</Badge>;
       default:
         return <Badge variant="secondary" className="text-xs px-2 py-0.5">{status}</Badge>;
     }
@@ -381,63 +381,63 @@ export default function UnionExpensesPage() {
 
       {/* Compact Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Card className="border-l-4 border-l-slate-400 bg-gradient-to-r from-slate-50/80 to-transparent">
+        <Card className="border-l-4 border-l-slate-400 dark:border-l-slate-500 bg-gradient-to-r from-slate-50/80 dark:from-slate-900/50 to-transparent">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-slate-600 uppercase tracking-wide">Total</p>
-                <p className="text-lg font-bold text-slate-700">{formatCurrency(totalExpenses)}</p>
+                <p className="text-xs font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">Total</p>
+                <p className="text-lg font-bold text-slate-700 dark:text-slate-200">{formatCurrency(totalExpenses)}</p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-slate-100 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-slate-500" />
+              <div className="h-9 w-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                <DollarSign className="h-5 w-5 text-slate-500 dark:text-slate-400" />
               </div>
             </div>
-            <p className="text-xs text-slate-500 mt-1">{processedTransactions.length} lançamentos</p>
+            <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">{processedTransactions.length} lançamentos</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-amber-400 bg-gradient-to-r from-amber-50/80 to-transparent">
+        <Card className="border-l-4 border-l-amber-400 dark:border-l-amber-500 bg-gradient-to-r from-amber-50/80 dark:from-amber-950/30 to-transparent">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-amber-600 uppercase tracking-wide">Pendentes</p>
-                <p className="text-lg font-bold text-amber-700">{formatCurrency(pendingExpenses)}</p>
+                <p className="text-xs font-medium text-amber-600 dark:text-amber-400 uppercase tracking-wide">Pendentes</p>
+                <p className="text-lg font-bold text-amber-700 dark:text-amber-300">{formatCurrency(pendingExpenses)}</p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-amber-100 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-amber-500" />
+              <div className="h-9 w-9 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
+                <Clock className="h-5 w-5 text-amber-500 dark:text-amber-400" />
               </div>
             </div>
-            <p className="text-xs text-amber-600 mt-1">{pendingCount} despesas</p>
+            <p className="text-xs text-amber-600 dark:text-amber-500 mt-1">{pendingCount} despesas</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-rose-400 bg-gradient-to-r from-rose-50/80 to-transparent">
+        <Card className="border-l-4 border-l-rose-400 dark:border-l-rose-500 bg-gradient-to-r from-rose-50/80 dark:from-rose-950/30 to-transparent">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-rose-600 uppercase tracking-wide">Vencidas</p>
-                <p className="text-lg font-bold text-rose-700">{formatCurrency(overdueExpenses)}</p>
+                <p className="text-xs font-medium text-rose-600 dark:text-rose-400 uppercase tracking-wide">Vencidas</p>
+                <p className="text-lg font-bold text-rose-700 dark:text-rose-300">{formatCurrency(overdueExpenses)}</p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-rose-100 flex items-center justify-center">
-                <AlertCircle className="h-5 w-5 text-rose-500" />
+              <div className="h-9 w-9 rounded-lg bg-rose-100 dark:bg-rose-900/50 flex items-center justify-center">
+                <AlertCircle className="h-5 w-5 text-rose-500 dark:text-rose-400" />
               </div>
             </div>
-            <p className="text-xs text-rose-600 mt-1">{overdueCount} despesas</p>
+            <p className="text-xs text-rose-600 dark:text-rose-500 mt-1">{overdueCount} despesas</p>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-emerald-400 bg-gradient-to-r from-emerald-50/80 to-transparent">
+        <Card className="border-l-4 border-l-emerald-400 dark:border-l-emerald-500 bg-gradient-to-r from-emerald-50/80 dark:from-emerald-950/30 to-transparent">
           <CardContent className="p-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-emerald-600 uppercase tracking-wide">Pagas</p>
-                <p className="text-lg font-bold text-emerald-700">{formatCurrency(paidExpenses)}</p>
+                <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Pagas</p>
+                <p className="text-lg font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(paidExpenses)}</p>
               </div>
-              <div className="h-9 w-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-emerald-500" />
+              <div className="h-9 w-9 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5 text-emerald-500 dark:text-emerald-400" />
               </div>
             </div>
-            <p className="text-xs text-emerald-600 mt-1">{paidCount} despesas</p>
+            <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-1">{paidCount} despesas</p>
           </CardContent>
         </Card>
       </div>
@@ -610,7 +610,7 @@ export default function UnionExpensesPage() {
                     key={transaction.id}
                     className={cn(
                       "grid grid-cols-12 gap-2 px-3 py-2 hover:bg-muted/30 transition-colors items-center text-sm",
-                      transaction.effectiveStatus === "overdue" && "bg-rose-50/30"
+                      transaction.effectiveStatus === "overdue" && "bg-rose-50/30 dark:bg-rose-950/20"
                     )}
                   >
                     {/* Descrição */}
@@ -661,7 +661,7 @@ export default function UnionExpensesPage() {
                         <Calendar className="h-3 w-3 text-muted-foreground" />
                         <span className={cn(
                           "text-xs",
-                          transaction.effectiveStatus === "overdue" && "text-rose-600 font-medium"
+                          transaction.effectiveStatus === "overdue" && "text-rose-600 dark:text-rose-400 font-medium"
                         )}>
                           {transaction.due_date
                             ? format(parseISO(transaction.due_date), "dd/MM/yy", { locale: ptBR })
@@ -674,7 +674,7 @@ export default function UnionExpensesPage() {
                     <div className="col-span-2 text-right">
                       <span className={cn(
                         "font-semibold",
-                        transaction.effectiveStatus === "paid" ? "text-emerald-600" : "text-rose-600"
+                        transaction.effectiveStatus === "paid" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"
                       )}>
                         {formatCurrency(Number(transaction.net_value || transaction.amount))}
                       </span>
