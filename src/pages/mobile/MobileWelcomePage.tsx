@@ -1,16 +1,31 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
+import { MobileFiliacaoForm } from "@/components/mobile/MobileFiliacaoForm";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function MobileWelcomePage() {
   const navigate = useNavigate();
+  const [showFiliacao, setShowFiliacao] = useState(false);
   
   // Apply PWA branding (favicon, manifest, meta tags) for the clinic
   useDynamicPWA();
 
-  const handleCadastro = () => {
-    navigate("/app/filiacao");
-  };
+  if (showFiliacao) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <ScrollArea className="h-screen">
+          <MobileFiliacaoForm 
+            onBack={() => setShowFiliacao(false)}
+            onSuccess={() => {
+              // Opcional: pode redirecionar após sucesso
+            }}
+          />
+        </ScrollArea>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-emerald-600 flex flex-col relative overflow-hidden">
@@ -69,7 +84,7 @@ export default function MobileWelcomePage() {
         {/* Buttons */}
         <div className="space-y-3">
           <Button
-            onClick={handleCadastro}
+            onClick={() => setShowFiliacao(true)}
             className="w-full py-6 text-lg font-semibold bg-white text-emerald-700 hover:bg-gray-100 rounded-full shadow-lg"
           >
             Cadastrar-se agora
