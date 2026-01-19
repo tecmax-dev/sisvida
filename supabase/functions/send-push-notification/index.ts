@@ -203,6 +203,15 @@ serve(async (req) => {
       );
     }
 
+    // Debug: log secret metadata (not the actual secret)
+    console.log('Secret metadata:', {
+      length: serviceAccountSecret.length,
+      firstChars: serviceAccountSecret.substring(0, 20),
+      lastChars: serviceAccountSecret.substring(serviceAccountSecret.length - 20),
+      startsWithBrace: serviceAccountSecret.trim().startsWith('{'),
+      endsWithBrace: serviceAccountSecret.trim().endsWith('}'),
+    });
+
     function extractFirstJsonObject(input: string): string | null {
       const s = input.replace(/^\uFEFF/, '');
       const start = s.indexOf('{');
