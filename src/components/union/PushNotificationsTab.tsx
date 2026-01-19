@@ -274,12 +274,12 @@ export function PushNotificationsTab() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Android</CardTitle>
-            <Badge variant="secondary" className="bg-green-100 text-green-800">
+            <Badge variant="secondary" className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
               {loadingStats ? "..." : tokenStats?.android || 0}
             </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               {loadingStats ? "..." : tokenStats?.android || 0}
             </div>
           </CardContent>
@@ -288,12 +288,12 @@ export function PushNotificationsTab() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">iOS</CardTitle>
-            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
               {loadingStats ? "..." : tokenStats?.ios || 0}
             </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
               {loadingStats ? "..." : tokenStats?.ios || 0}
             </div>
           </CardContent>
@@ -302,12 +302,12 @@ export function PushNotificationsTab() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Web</CardTitle>
-            <Badge variant="secondary" className="bg-purple-100 text-purple-800">
+            <Badge variant="secondary" className="bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
               {loadingStats ? "..." : tokenStats?.web || 0}
             </Badge>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
+            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
               {loadingStats ? "..." : tokenStats?.web || 0}
             </div>
           </CardContent>
@@ -424,7 +424,7 @@ export function PushNotificationsTab() {
               <ScrollArea className="h-[300px]">
                 <div className="space-y-4">
                   {history.map((item) => (
-                    <div key={item.id} className="border rounded-lg p-3 space-y-2">
+                    <div key={item.id} className="border dark:border-border rounded-lg p-3 space-y-2">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h4 className="font-medium text-sm">{item.title}</h4>
