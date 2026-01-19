@@ -206,12 +206,53 @@ serve(async (req) => {
     let serviceAccount: ServiceAccount;
     try {
       serviceAccount = JSON.parse(serviceAccountJson);
+      
+      // Validate required fields
+      if (!serviceAccount.private_key) {
+        console.error('Service account missing private_key');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid service account configuration',
+            message: 'The FIREBASE_SERVICE_ACCOUNT is missing the private_key field. Please ensure you copied the full service account JSON.'
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (!serviceAccount.client_email) {
+        console.error('Service account missing client_email');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid service account configuration',
+            message: 'The FIREBASE_SERVICE_ACCOUNT is missing the client_email field.'
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (!serviceAccount.project_id) {
+        console.error('Service account missing project_id');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Invalid service account configuration',
+            message: 'The FIREBASE_SERVICE_ACCOUNT is missing the project_id field.'
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      console.log('Service account validated:', {
+        project_id: serviceAccount.project_id,
+        client_email: serviceAccount.client_email,
+        has_private_key: !!serviceAccount.private_key
+      });
+      
     } catch (parseError) {
       console.error('Failed to parse service account JSON:', parseError);
       return new Response(
         JSON.stringify({ 
           error: 'Invalid service account JSON',
-          message: 'The FIREBASE_SERVICE_ACCOUNT secret contains invalid JSON.'
+          message: 'The FIREBASE_SERVICE_ACCOUNT secret contains invalid JSON. Make sure you copied the entire JSON file from Firebase Console.'
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
