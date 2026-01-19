@@ -17,6 +17,7 @@ export interface UnionAppContent {
   order_index: number;
   is_active: boolean;
   metadata: Record<string, unknown> | null;
+  cct_category_id: string | null;
   created_at: string;
   updated_at: string;
   created_by: string | null;
@@ -107,6 +108,7 @@ export function useCreateUnionAppContent() {
           order_index: content.order_index,
           is_active: content.is_active,
           metadata: content.metadata ? JSON.parse(JSON.stringify(content.metadata)) : null,
+          cct_category_id: content.cct_category_id || null,
           clinic_id: currentClinic.id,
           created_by: user?.id || null,
         })
@@ -154,6 +156,7 @@ export function useUpdateUnionAppContent() {
       if (updates.order_index !== undefined) updateData.order_index = updates.order_index;
       if (updates.is_active !== undefined) updateData.is_active = updates.is_active;
       if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
+      if (updates.cct_category_id !== undefined) updateData.cct_category_id = updates.cct_category_id;
 
       const { error } = await supabase
         .from("union_app_content")

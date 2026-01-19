@@ -64,16 +64,24 @@ const services: ServiceConfig[] = [
   { id: "ouvidoria", title: "Ouvidoria", icon: MessageCircle, description: "Fale conosco, envie sugestões ou reclamações", color: "bg-orange-500" },
 ];
 
-// ============ CONVENÇÕES - DINÂMICO ============
+// ============ CONVENÇÕES - DINÂMICO COM ABAS ============
+interface CctCategory {
+  id: string;
+  name: string;
+  color: string;
+}
+
 function ConvencoesContent() {
   const [convencoes, setConvencoes] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CctCategory[]>([]);
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadConvencoes();
+    loadData();
   }, []);
 
-  const loadConvencoes = async () => {
+  const loadData = async () => {
     try {
       const clinicId = localStorage.getItem('mobile_clinic_id');
       if (!clinicId) {
@@ -81,6 +89,15 @@ function ConvencoesContent() {
         return;
       }
 
+      // Fetch CCT categories
+      const { data: catData } = await supabase
+        .from("union_cct_categories")
+        .select("id, name, color")
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true)
+        .order("order_index", { ascending: true });
+
+      // Fetch convenções
       const { data, error } = await supabase
         .from("union_app_content")
         .select("*")
@@ -90,7 +107,14 @@ function ConvencoesContent() {
         .order("order_index", { ascending: true });
 
       if (error) throw error;
+      
+      setCategories(catData || []);
       setConvencoes(data || []);
+      
+      // Set first category as active if categories exist
+      if (catData && catData.length > 0) {
+        setActiveCategory(catData[0].id);
+      }
     } catch (err) {
       console.error("Error loading convencoes:", err);
     } finally {
@@ -117,39 +141,112 @@ function ConvencoesContent() {
     );
   }
 
+  // Filter convenções by active category
+  const filteredConvencoes = activeCategory 
+    ? convencoes.filter(conv => conv.cct_category_id === activeCategory)
+    : convencoes;
+
+  // If no categories, show all conventions in simple list
+  if (categories.length === 0) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Consulte as Convenções Coletivas de Trabalho (CCT) e Acordos Coletivos vigentes para sua categoria.
+        </p>
+        <div className="space-y-3">
+          {convencoes.map((conv) => (
+            <Card key={conv.id} className="border shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm">{conv.title}</h4>
+                    {conv.description && (
+                      <p className="text-xs text-muted-foreground mt-1">{conv.description}</p>
+                    )}
+                    {conv.metadata?.vigencia && (
+                      <Badge variant="secondary" className="mt-2 text-xs">{conv.metadata.vigencia}</Badge>
+                    )}
+                  </div>
+                  {conv.file_url && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="ml-2"
+                      onClick={() => window.open(conv.file_url, '_blank')}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         Consulte as Convenções Coletivas de Trabalho (CCT) e Acordos Coletivos vigentes para sua categoria.
       </p>
+      
+      {/* Category Tabs */}
+      <div className="flex overflow-x-auto gap-1 pb-2 -mx-1 px-1 scrollbar-hide">
+        {categories.map((cat) => (
+          <button
+            key={cat.id}
+            onClick={() => setActiveCategory(cat.id)}
+            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-md transition-all flex-shrink-0 ${
+              activeCategory === cat.id
+                ? "bg-emerald-700 text-white shadow-sm"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            {cat.name}
+          </button>
+        ))}
+      </div>
+
+      {/* Convenções List */}
       <div className="space-y-3">
-        {convencoes.map((conv) => (
-          <Card key={conv.id} className="border shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h4 className="font-semibold text-sm">{conv.title}</h4>
-                  {conv.description && (
-                    <p className="text-xs text-muted-foreground mt-1">{conv.description}</p>
-                  )}
-                  {conv.metadata?.vigencia && (
-                    <Badge variant="secondary" className="mt-2 text-xs">{conv.metadata.vigencia}</Badge>
+        {filteredConvencoes.length > 0 ? (
+          filteredConvencoes.map((conv) => (
+            <Card key={conv.id} className="border shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm">{conv.title}</h4>
+                    {conv.description && (
+                      <p className="text-xs text-muted-foreground mt-1">{conv.description}</p>
+                    )}
+                    {conv.metadata?.vigencia && (
+                      <Badge variant="secondary" className="mt-2 text-xs">{conv.metadata.vigencia}</Badge>
+                    )}
+                  </div>
+                  {conv.file_url && (
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      className="ml-2"
+                      onClick={() => window.open(conv.file_url, '_blank')}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
                   )}
                 </div>
-                {conv.file_url && (
-                  <Button 
-                    size="sm" 
-                    variant="outline" 
-                    className="ml-2"
-                    onClick={() => window.open(conv.file_url, '_blank')}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <div className="text-center py-6">
+            <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Nenhuma convenção nesta categoria.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -10080,6 +10080,7 @@ export type Database = {
       }
       union_app_content: {
         Row: {
+          cct_category_id: string | null
           clinic_id: string
           content_type: string
           created_at: string
@@ -10097,6 +10098,7 @@ export type Database = {
           updated_by: string | null
         }
         Insert: {
+          cct_category_id?: string | null
           clinic_id: string
           content_type: string
           created_at?: string
@@ -10114,6 +10116,7 @@ export type Database = {
           updated_by?: string | null
         }
         Update: {
+          cct_category_id?: string | null
           clinic_id?: string
           content_type?: string
           created_at?: string
@@ -10131,6 +10134,13 @@ export type Database = {
           updated_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "union_app_content_cct_category_id_fkey"
+            columns: ["cct_category_id"]
+            isOneToOne: false
+            referencedRelation: "union_cct_categories"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "union_app_content_clinic_id_fkey"
             columns: ["clinic_id"]
@@ -10366,6 +10376,50 @@ export type Database = {
             columns: ["to_register_id"]
             isOneToOne: false
             referencedRelation: "union_cash_registers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_cct_categories: {
+        Row: {
+          clinic_id: string
+          color: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          order_index: number | null
+          updated_at: string
+        }
+        Insert: {
+          clinic_id: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          order_index?: number | null
+          updated_at?: string
+        }
+        Update: {
+          clinic_id?: string
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          order_index?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_cct_categories_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
             referencedColumns: ["id"]
           },
         ]
