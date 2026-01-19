@@ -59,14 +59,14 @@ export function CctCategoriesManagement() {
     if (!currentClinic?.id) return;
     
     try {
-      const { data, error } = await supabase
-        .from("union_cct_categories")
+      const { data, error } = await (supabase
+        .from("union_cct_categories" as any)
         .select("*")
         .eq("clinic_id", currentClinic.id)
-        .order("order_index");
+        .order("order_index") as any);
 
       if (error) throw error;
-      setCategories(data || []);
+      setCategories((data || []) as CctCategory[]);
     } catch (err) {
       console.error("Error loading CCT categories:", err);
       toast({
@@ -111,15 +111,15 @@ export function CctCategoriesManagement() {
     setSaving(true);
     try {
       if (editingCategory) {
-        const { error } = await supabase
-          .from("union_cct_categories")
+        const { error } = await (supabase
+          .from("union_cct_categories" as any)
           .update({
             name: formData.name,
             description: formData.description || null,
             color: formData.color,
             is_active: formData.is_active,
           })
-          .eq("id", editingCategory.id);
+          .eq("id", editingCategory.id) as any);
 
         if (error) throw error;
         toast({
@@ -127,8 +127,8 @@ export function CctCategoriesManagement() {
           description: "Categoria atualizada com sucesso!",
         });
       } else {
-        const { error } = await supabase
-          .from("union_cct_categories")
+        const { error } = await (supabase
+          .from("union_cct_categories" as any)
           .insert({
             name: formData.name,
             description: formData.description || null,
@@ -136,7 +136,7 @@ export function CctCategoriesManagement() {
             is_active: formData.is_active,
             order_index: categories.length,
             clinic_id: currentClinic.id,
-          });
+          }) as any);
 
         if (error) throw error;
         toast({
@@ -163,10 +163,10 @@ export function CctCategoriesManagement() {
     if (!deletingCategoryId) return;
 
     try {
-      const { error } = await supabase
-        .from("union_cct_categories")
+      const { error } = await (supabase
+        .from("union_cct_categories" as any)
         .delete()
-        .eq("id", deletingCategoryId);
+        .eq("id", deletingCategoryId) as any);
 
       if (error) throw error;
       
@@ -191,15 +191,15 @@ export function CctCategoriesManagement() {
     if (index === 0) return;
     const prevCategory = categories[index - 1];
     
-    await supabase
-      .from("union_cct_categories")
+    await (supabase
+      .from("union_cct_categories" as any)
       .update({ order_index: prevCategory.order_index })
-      .eq("id", category.id);
+      .eq("id", category.id) as any);
       
-    await supabase
-      .from("union_cct_categories")
+    await (supabase
+      .from("union_cct_categories" as any)
       .update({ order_index: category.order_index })
-      .eq("id", prevCategory.id);
+      .eq("id", prevCategory.id) as any);
       
     loadCategories();
   };
@@ -208,24 +208,24 @@ export function CctCategoriesManagement() {
     if (index === categories.length - 1) return;
     const nextCategory = categories[index + 1];
     
-    await supabase
-      .from("union_cct_categories")
+    await (supabase
+      .from("union_cct_categories" as any)
       .update({ order_index: nextCategory.order_index })
-      .eq("id", category.id);
+      .eq("id", category.id) as any);
       
-    await supabase
-      .from("union_cct_categories")
+    await (supabase
+      .from("union_cct_categories" as any)
       .update({ order_index: category.order_index })
-      .eq("id", nextCategory.id);
+      .eq("id", nextCategory.id) as any);
       
     loadCategories();
   };
 
   const handleToggleActive = async (category: CctCategory) => {
-    await supabase
-      .from("union_cct_categories")
+    await (supabase
+      .from("union_cct_categories" as any)
       .update({ is_active: !category.is_active })
-      .eq("id", category.id);
+      .eq("id", category.id) as any);
     loadCategories();
   };
 
