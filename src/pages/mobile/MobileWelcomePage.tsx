@@ -1,16 +1,38 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 import { MobileFiliacaoForm } from "@/components/mobile/MobileFiliacaoForm";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Loader2 } from "lucide-react";
 
 export default function MobileWelcomePage() {
   const navigate = useNavigate();
   const [showFiliacao, setShowFiliacao] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
   
   // Apply PWA branding (favicon, manifest, meta tags) for the clinic
   useDynamicPWA();
+
+  // Check if user already has a valid session
+  useEffect(() => {
+    const patientId = localStorage.getItem('mobile_patient_id');
+    if (patientId) {
+      // User is already logged in, redirect to home
+      navigate("/app/home", { replace: true });
+    } else {
+      setCheckingSession(false);
+    }
+  }, [navigate]);
+
+  // Show loading while checking session
+  if (checkingSession) {
+    return (
+      <div className="min-h-screen bg-emerald-600 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      </div>
+    );
+  }
 
   if (showFiliacao) {
     return (
