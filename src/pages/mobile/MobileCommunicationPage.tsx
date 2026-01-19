@@ -99,7 +99,7 @@ function GaleriaContent() {
                 {album.fotos.slice(0, 3).map((foto, idx) => (
                   <div
                     key={foto.id}
-                    className="aspect-square bg-gray-100 rounded cursor-pointer overflow-hidden"
+                    className="aspect-square bg-muted rounded cursor-pointer overflow-hidden"
                     onClick={() => setSelectedImage(foto)}
                   >
                     <img src={foto.url} alt={foto.descricao} className="w-full h-full object-cover" />
@@ -153,7 +153,7 @@ function JornaisContent() {
           <Card key={jornal.id} className="border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="w-12 h-16 bg-slate-100 rounded flex items-center justify-center flex-shrink-0">
+                <div className="w-12 h-16 bg-muted rounded flex items-center justify-center flex-shrink-0">
                   <Newspaper className="h-6 w-6 text-slate-600" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -262,7 +262,7 @@ function VideosContent() {
           <Card key={video.id} className="border shadow-sm overflow-hidden">
             <CardContent className="p-0">
               <div className="flex gap-3 p-3">
-                <div className="w-32 h-20 bg-gray-100 rounded overflow-hidden flex-shrink-0 relative">
+                <div className="w-32 h-20 bg-muted rounded overflow-hidden flex-shrink-0 relative">
                   <img src={video.thumbnail} alt={video.titulo} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                     <div className="w-10 h-10 bg-white/90 rounded-full flex items-center justify-center">
@@ -327,7 +327,7 @@ export default function MobileCommunicationPage() {
   // Media detail view
   if (selectedMedia) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
+      <div className="min-h-screen bg-muted flex flex-col">
         {/* Header */}
         <header className={`${selectedMedia.color} text-white p-4 sticky top-0 z-50`}>
           <div className="flex items-center gap-3">
@@ -358,7 +358,7 @@ export default function MobileCommunicationPage() {
 
   // Media types list view
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-muted flex flex-col">
       {/* Header */}
       <header className="bg-emerald-600 text-white p-4 sticky top-0 z-50">
         <div className="flex items-center gap-3">

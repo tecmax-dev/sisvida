@@ -175,13 +175,13 @@ export default function MobileChangePasswordPage() {
       {/* Content */}
       <form onSubmit={handleSubmit} className="p-4 space-y-6">
         {/* Security Info */}
-        <Card className="bg-blue-50 border-blue-100">
+        <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-100 dark:border-blue-900">
           <CardContent className="p-4">
             <div className="flex gap-3">
-              <ShieldCheck className="h-5 w-5 text-blue-600 flex-shrink-0" />
+              <ShieldCheck className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
               <div>
-                <h4 className="font-medium text-blue-900 text-sm mb-1">Segurança da conta</h4>
-                <p className="text-xs text-blue-700">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 text-sm mb-1">Segurança da conta</h4>
+                <p className="text-xs text-blue-700 dark:text-blue-300">
                   Escolha uma senha forte que você não use em outros sites. A senha deve ter no
                   mínimo 8 caracteres.
                 </p>
@@ -206,7 +206,7 @@ export default function MobileChangePasswordPage() {
             <button
               type="button"
               onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             >
               {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -229,7 +229,7 @@ export default function MobileChangePasswordPage() {
             <button
               type="button"
               onClick={() => setShowNewPassword(!showNewPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             >
               {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -265,7 +265,7 @@ export default function MobileChangePasswordPage() {
             <button
               type="button"
               onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
             >
               {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
@@ -289,11 +289,11 @@ export default function MobileChangePasswordPage() {
         </div>
 
         {/* Warning */}
-        <Card className="bg-amber-50 border-amber-100">
+        <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900">
           <CardContent className="p-4">
             <div className="flex gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
-              <p className="text-xs text-amber-700">
+              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+              <p className="text-xs text-amber-700 dark:text-amber-300">
                 Após alterar sua senha, você precisará usar a nova senha para acessar o aplicativo.
                 Certifique-se de memorizá-la ou guardá-la em local seguro.
               </p>
@@ -328,11 +328,11 @@ function PasswordRule({ valid, text }: { valid: boolean; text: string }) {
   return (
     <div className="flex items-center gap-2">
       {valid ? (
-        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
       ) : (
-        <XCircle className="h-3.5 w-3.5 text-gray-300" />
+        <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
       )}
-      <span className={`text-xs ${valid ? "text-emerald-600" : "text-muted-foreground"}`}>
+      <span className={`text-xs ${valid ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground"}`}>
         {text}
       </span>
     </div>

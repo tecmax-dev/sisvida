@@ -7,13 +7,13 @@ export function MobileHelpSection() {
 
   return (
     <section className="px-4 py-4">
-      <h3 className="text-sm font-bold text-gray-800 tracking-wide mb-3">PRECISA DE AJUDA?</h3>
+      <h3 className="text-sm font-bold text-foreground tracking-wide mb-3">PRECISA DE AJUDA?</h3>
       
       <div 
-        className="bg-gray-50 rounded-xl p-5 flex items-center justify-between border border-gray-200"
+        className="bg-muted rounded-xl p-5 flex items-center justify-between border border-border"
       >
         <div className="flex-1">
-          <h4 className="font-bold text-gray-800 text-lg mb-3">Como chegar até nós?</h4>
+          <h4 className="font-bold text-foreground text-lg mb-3">Como chegar até nós?</h4>
           <Button 
             onClick={() => navigate("/app/ajuda")}
             className="bg-emerald-600 hover:bg-emerald-700 text-white rounded-full px-6"

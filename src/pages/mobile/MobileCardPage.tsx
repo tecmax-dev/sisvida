@@ -128,10 +128,10 @@ export default function MobileCardPage() {
 
   const getCardStatus = () => {
     if (!cardData) {
-      return { status: "not_issued", label: "Não emitida", color: "bg-gray-500" };
+      return { status: "not_issued", label: "Não emitida", color: "bg-muted-foreground" };
     }
     if (!cardData.is_active) {
-      return { status: "inactive", label: "Inativa", color: "bg-gray-500" };
+      return { status: "inactive", label: "Inativa", color: "bg-muted-foreground" };
     }
     if (cardData.expires_at) {
       const expiresAt = parseISO(cardData.expires_at);
@@ -253,7 +253,7 @@ export default function MobileCardPage() {
             <CardContent className="p-4 space-y-4">
               {/* Photo and Name */}
               <div className="flex items-center gap-4">
-                <div className="w-20 h-24 bg-gray-100 rounded-lg overflow-hidden flex-shrink-0 border-2 border-emerald-200">
+                <div className="w-20 h-24 bg-muted rounded-lg overflow-hidden flex-shrink-0 border-2 border-emerald-200 dark:border-emerald-800">
                   {patient?.photo_url ? (
                     <img
                       src={patient.photo_url}
@@ -373,13 +373,13 @@ export default function MobileCardPage() {
         )}
 
         {/* Info Card */}
-        <Card className="bg-blue-50 border-blue-100 max-w-[360px] mx-auto">
+        <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-100 dark:border-blue-900 max-w-[360px] mx-auto">
           <CardContent className="p-4">
             <div className="flex gap-3">
-              <QrCode className="h-5 w-5 text-blue-600 flex-shrink-0" />
+              <QrCode className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
               <div>
-                <h4 className="font-medium text-blue-900 text-sm mb-1">Como usar</h4>
-                <p className="text-xs text-blue-700">
+                <h4 className="font-medium text-blue-900 dark:text-blue-100 text-sm mb-1">Como usar</h4>
+                <p className="text-xs text-blue-700 dark:text-blue-300">
                   Apresente o QR Code da sua carteirinha digital em estabelecimentos conveniados ou
                   no próprio sindicato para validação do seu status de associado.
                 </p>

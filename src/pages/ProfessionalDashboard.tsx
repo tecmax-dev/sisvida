@@ -87,14 +87,14 @@ const getDisplayName = (apt: Appointment) => {
 };
 
 const statusConfig: Record<string, { icon: any; color: string; bgColor: string; label: string }> = {
-  scheduled: { icon: AlertCircle, color: "text-amber-600", bgColor: "bg-amber-100", label: "A confirmar" },
-  confirmed: { icon: CheckCircle2, color: "text-blue-600", bgColor: "bg-blue-100", label: "Confirmado" },
-  arrived: { icon: UserCheck, color: "text-green-600", bgColor: "bg-green-100", label: "Chegou" },
-  in_progress: { icon: Play, color: "text-purple-600", bgColor: "bg-purple-100", label: "Em atendimento" },
-  completed: { icon: CheckCircle2, color: "text-gray-500", bgColor: "bg-gray-100", label: "Concluído" },
-  cancelled: { icon: XCircle, color: "text-red-600", bgColor: "bg-red-100", label: "Cancelado" },
-  no_show: { icon: XCircle, color: "text-orange-600", bgColor: "bg-orange-100", label: "Faltou" },
-  blocked: { icon: Ban, color: "text-slate-600", bgColor: "bg-slate-200", label: "Bloqueado" },
+  scheduled: { icon: AlertCircle, color: "text-amber-600 dark:text-amber-400", bgColor: "bg-amber-100 dark:bg-amber-900/30", label: "A confirmar" },
+  confirmed: { icon: CheckCircle2, color: "text-blue-600 dark:text-blue-400", bgColor: "bg-blue-100 dark:bg-blue-900/30", label: "Confirmado" },
+  arrived: { icon: UserCheck, color: "text-green-600 dark:text-green-400", bgColor: "bg-green-100 dark:bg-green-900/30", label: "Chegou" },
+  in_progress: { icon: Play, color: "text-purple-600 dark:text-purple-400", bgColor: "bg-purple-100 dark:bg-purple-900/30", label: "Em atendimento" },
+  completed: { icon: CheckCircle2, color: "text-muted-foreground", bgColor: "bg-muted", label: "Concluído" },
+  cancelled: { icon: XCircle, color: "text-red-600 dark:text-red-400", bgColor: "bg-red-100 dark:bg-red-900/30", label: "Cancelado" },
+  no_show: { icon: XCircle, color: "text-orange-600 dark:text-orange-400", bgColor: "bg-orange-100 dark:bg-orange-900/30", label: "Faltou" },
+  blocked: { icon: Ban, color: "text-slate-600 dark:text-slate-400", bgColor: "bg-slate-200 dark:bg-slate-800", label: "Bloqueado" },
 };
 
 const typeLabels: Record<string, string> = {

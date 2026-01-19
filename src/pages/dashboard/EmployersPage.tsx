@@ -952,7 +952,7 @@ export default function EmployersPage() {
                               variant="secondary" 
                               className={`text-xs ${
                                 (employer.patients?.length || 0) > 0 
-                                  ? "bg-blue-50 text-blue-700" 
+                                  ? "bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300" 
                                   : "bg-muted text-muted-foreground"
                               }`}
                             >
@@ -987,7 +987,7 @@ export default function EmployersPage() {
                                         <Button
                                           variant="ghost"
                                           size="icon"
-                                          className="h-7 w-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                          className="h-7 w-7 text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:hover:bg-amber-950"
                                           onClick={() => handleGenerateAccessCode(employer)}
                                           disabled={generatingCode === employer.id}
                                         >
@@ -1007,7 +1007,7 @@ export default function EmployersPage() {
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                      className="h-7 w-7 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:hover:bg-blue-950"
                                       onClick={() => handleOpenDialog(employer)}
                                     >
                                       <Pencil className="h-3.5 w-3.5" />

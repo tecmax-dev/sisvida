@@ -227,7 +227,7 @@ export function CnpjEmployerSearch({
     <div className={cn("space-y-3", className)}>
       <div className="relative">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={inputRef}
             value={value}
@@ -235,12 +235,12 @@ export function CnpjEmployerSearch({
             onFocus={() => value.length >= 3 && setShowDropdown(true)}
             placeholder="Digite o CNPJ ou nome da empresa"
             className={cn(
-              "pl-10 pr-10 h-9 text-sm border-gray-300",
-              selectedEmployer && "border-green-500 bg-green-50/50"
+              "pl-10 pr-10 h-9 text-sm",
+              selectedEmployer && "border-green-500 bg-green-50/50 dark:bg-green-950/30"
             )}
           />
           {loading && (
-            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 animate-spin" />
+            <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground animate-spin" />
           )}
           {selectedEmployer && !loading && (
             <button
@@ -248,7 +248,7 @@ export function CnpjEmployerSearch({
               onClick={handleClear}
               className="absolute right-3 top-1/2 -translate-y-1/2"
             >
-              <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+              <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
             </button>
           )}
         </div>
@@ -256,26 +256,26 @@ export function CnpjEmployerSearch({
         {showDropdown && suggestions.length > 0 && (
           <div
             ref={dropdownRef}
-            className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-auto"
+            className="absolute z-50 mt-1 w-full bg-popover border border-border rounded-lg shadow-lg max-h-64 overflow-auto"
           >
             {suggestions.map((employer) => (
               <button
                 key={employer.id}
                 type="button"
                 onClick={() => handleSelect(employer)}
-                className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors border-b border-gray-100 last:border-0"
+                className="w-full px-4 py-3 text-left hover:bg-accent transition-colors border-b border-border last:border-0"
               >
                 <div className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <Building2 className="w-4 h-4 text-blue-600" />
+                  <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0 mt-0.5">
+                    <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm text-gray-900 truncate">
+                    <p className="font-medium text-sm text-foreground truncate">
                       {employer.trade_name || employer.name}
                     </p>
-                    <p className="text-xs text-gray-500 truncate">{employer.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">{employer.name}</p>
                     {employer.cnpj && (
-                      <p className="text-xs text-blue-600 font-mono">
+                      <p className="text-xs text-blue-600 dark:text-blue-400 font-mono">
                         {formatCNPJ(employer.cnpj)}
                       </p>
                     )}
@@ -303,18 +303,18 @@ export function CnpjEmployerSearch({
 
       {/* Empresa selecionada */}
       {selectedEmployer && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+        <div className="bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg p-3">
           <div className="flex items-start gap-2">
-            <Check className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+            <Check className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="font-medium text-sm text-green-800">
+              <p className="font-medium text-sm text-green-800 dark:text-green-200">
                 {selectedEmployer.trade_name || selectedEmployer.name}
               </p>
               {selectedEmployer.trade_name && (
-                <p className="text-xs text-green-700">{selectedEmployer.name}</p>
+                <p className="text-xs text-green-700 dark:text-green-300">{selectedEmployer.name}</p>
               )}
               {selectedEmployer.address && (
-                <p className="text-xs text-green-600 mt-1">{selectedEmployer.address}</p>
+                <p className="text-xs text-green-600 dark:text-green-400 mt-1">{selectedEmployer.address}</p>
               )}
             </div>
           </div>
@@ -323,8 +323,8 @@ export function CnpjEmployerSearch({
 
       {/* Cadastro manual */}
       {manualMode && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
-          <p className="text-sm text-amber-800 font-medium">
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-3">
+          <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
             {notFound ? "CNPJ não encontrado. Preencha manualmente:" : "Cadastrar empresa manualmente:"}
           </p>
           <Input

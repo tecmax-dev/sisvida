@@ -94,16 +94,16 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
       {dependents.length > 0 && (
         <div className="space-y-2">
           {dependents.map((dep) => (
-            <Card key={dep.id} className="bg-gray-50 border-gray-200">
+            <Card key={dep.id} className="bg-muted border-border">
               <CardContent className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center">
-                      <Users className="w-4 h-4 text-purple-600" />
+                    <div className="w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+                      <Users className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                     </div>
                     <div>
-                      <p className="font-medium text-sm text-gray-800">{dep.nome}</p>
-                      <p className="text-xs text-gray-500">
+                      <p className="font-medium text-sm text-foreground">{dep.nome}</p>
+                      <p className="text-xs text-muted-foreground">
                         {getParentescoLabel(dep.grau_parentesco)} • 
                         {new Date(dep.data_nascimento + "T12:00:00").toLocaleDateString("pt-BR")}
                       </p>
@@ -127,13 +127,13 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
 
       {/* Formulário de adição */}
       {showForm ? (
-        <Card className="border-dashed border-2 border-blue-300 bg-blue-50/50">
+        <Card className="border-dashed border-2 border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-950/30">
           <CardContent className="p-4 space-y-3">
-            <p className="text-sm font-medium text-blue-800">Novo Dependente</p>
+            <p className="text-sm font-medium text-blue-800 dark:text-blue-200">Novo Dependente</p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">
+                <label className="text-xs font-medium text-muted-foreground">
                   Nome Completo <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -145,7 +145,7 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
               </div>
               
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">
+                <label className="text-xs font-medium text-muted-foreground">
                   Grau de Parentesco <span className="text-red-500">*</span>
                 </label>
                 <Select
@@ -166,7 +166,7 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">
+                <label className="text-xs font-medium text-muted-foreground">
                   Data de Nascimento <span className="text-red-500">*</span>
                 </label>
                 <Input
@@ -178,7 +178,7 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium text-gray-600">CPF</label>
+                <label className="text-xs font-medium text-muted-foreground">CPF</label>
                 <Input
                   placeholder="000.000.000-00"
                   value={newDependent.cpf}

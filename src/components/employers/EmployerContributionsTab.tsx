@@ -47,32 +47,32 @@ function formatCurrency(cents: number): string {
 const STATUS_CONFIG = {
   paid: {
     label: "Pago",
-    color: "bg-emerald-100 text-emerald-800 border-emerald-200",
+    color: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200 border-emerald-200 dark:border-emerald-800",
     icon: CheckCircle2,
   },
   pending: {
     label: "Pendente",
-    color: "bg-amber-100 text-amber-800 border-amber-200",
+    color: "bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border-amber-200 dark:border-amber-800",
     icon: Clock,
   },
   overdue: {
     label: "Vencido",
-    color: "bg-rose-100 text-rose-800 border-rose-200",
+    color: "bg-rose-100 dark:bg-rose-900/30 text-rose-800 dark:text-rose-200 border-rose-200 dark:border-rose-800",
     icon: AlertTriangle,
   },
   cancelled: {
     label: "Cancelado",
-    color: "bg-gray-100 text-gray-800 border-gray-200",
+    color: "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700",
     icon: XCircle,
   },
   awaiting_value: {
     label: "Aguardando",
-    color: "bg-purple-100 text-purple-800 border-purple-200",
+    color: "bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-200 border-purple-200 dark:border-purple-800",
     icon: DollarSign,
   },
   processing: {
     label: "Processando",
-    color: "bg-blue-100 text-blue-800 border-blue-200",
+    color: "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-800",
     icon: Loader2,
   },
   negotiated: {
