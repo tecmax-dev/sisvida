@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 
-export type ContentType = 'banner' | 'convenio' | 'convencao' | 'declaracao' | 'diretoria' | 'documento';
+export type ContentType = 'banner' | 'convenio' | 'convencao' | 'declaracao' | 'diretoria' | 'documento' | 'galeria' | 'jornal' | 'radio' | 'video' | 'faq' | 'atendimento' | 'sobre';
 
 export interface UnionAppContent {
   id: string;
@@ -30,6 +30,13 @@ export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   declaracao: 'Declarações',
   diretoria: 'Diretoria',
   documento: 'Documentos',
+  galeria: 'Galeria de Fotos',
+  jornal: 'Jornais',
+  radio: 'Rádios/Podcasts',
+  video: 'Vídeos',
+  faq: 'Perguntas Frequentes',
+  atendimento: 'Atendimentos',
+  sobre: 'Sobre',
 };
 
 export const CONTENT_TYPE_ICONS: Record<ContentType, string> = {
@@ -39,6 +46,13 @@ export const CONTENT_TYPE_ICONS: Record<ContentType, string> = {
   declaracao: 'FileCheck',
   diretoria: 'Users',
   documento: 'File',
+  galeria: 'Images',
+  jornal: 'Newspaper',
+  radio: 'Radio',
+  video: 'Video',
+  faq: 'HelpCircle',
+  atendimento: 'Headphones',
+  sobre: 'Info',
 };
 
 export function useUnionAppContent(contentType?: ContentType) {
