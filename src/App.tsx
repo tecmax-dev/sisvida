@@ -288,6 +288,9 @@ const App = () => (
                 <Suspense fallback={<LoadingFallback />}>
               <Routes>
                 <Route path="/" element={<Index />} />
+                {/* Aliases para evitar 404 por URLs antigas/alternativas */}
+                <Route path="/agendar-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
+                <Route path="/agendamento-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
                 <Route path="/sindical" element={<SindicalLandingPage />} />
                 <Route path="/sistema-sindical" element={<SindicalLandingPage />} />
                 <Route path="/sindical/filiacao/:sindicatoSlug" element={<SindicalFiliacaoPage />} />
@@ -529,6 +532,8 @@ const App = () => (
                   <Route path="sobre" element={<MobileAboutPage />} />
                   <Route path="filiacao" element={<MobileFiliacaoPage />} />
                   <Route path="agendar-juridico" element={<MobileLegalBookingPage />} />
+                  {/* Alias para evitar 404 por diferença de nomenclatura */}
+                  <Route path="agendamento-juridico" element={<Navigate to="/app/agendar-juridico" replace />} />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
