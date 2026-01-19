@@ -54,17 +54,12 @@ import {
 import {
   Plus,
   Loader2,
-  Pencil,
-  Trash2,
-  ArrowUp,
-  ArrowDown,
   Image,
   Handshake,
   FileText,
   FileCheck,
   Users,
   File,
-  ExternalLink,
   Smartphone,
   AlertTriangle,
   MessageCircle,
@@ -78,12 +73,13 @@ import {
   Headphones,
   Info,
 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { OuvidoriaMessagesTab } from "@/components/union/OuvidoriaMessagesTab";
 import { PushNotificationsTab } from "@/components/union/PushNotificationsTab";
 import { ConveniosManagementTab } from "@/components/union/ConveniosManagementTab";
 import { MobileAppTabsManagement } from "@/components/union/MobileAppTabsManagement";
 import { CctCategoriesManagement } from "@/components/union/CctCategoriesManagement";
+import { UnionContentList } from "@/components/union/UnionContentList";
 import { supabase } from "@/integrations/supabase/client";
 
 interface EmployerCategory {
@@ -348,190 +344,93 @@ export default function UnionAppContentPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)}>
-        <TabsList className="grid w-full grid-cols-4 lg:grid-cols-9 h-auto">
-          {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
+        <ScrollArea className="w-full whitespace-nowrap">
+          <TabsList className="inline-flex h-12 items-center justify-start gap-1 bg-muted/50 p-1 rounded-lg">
+            {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
+              <TabsTrigger
+                key={type}
+                value={type}
+                className="inline-flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+              >
+                {contentTypeIcons[type]}
+                <span>{CONTENT_TYPE_LABELS[type]}</span>
+                <Badge variant="secondary" className="ml-1 h-5 min-w-5 px-1.5">
+                  {allContent?.filter(c => c.content_type === type).length || 0}
+                </Badge>
+              </TabsTrigger>
+            ))}
+            <div className="w-px h-6 bg-border mx-2" />
             <TabsTrigger
-              key={type}
-              value={type}
-              className="flex items-center gap-2 py-2"
+              value="ouvidoria"
+              className="inline-flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
             >
-              {contentTypeIcons[type]}
-              <span className="hidden sm:inline">{CONTENT_TYPE_LABELS[type]}</span>
-              <Badge variant="secondary" className="ml-1">
-                {allContent?.filter(c => c.content_type === type).length || 0}
-              </Badge>
+              <MessageCircle className="h-4 w-4" />
+              <span>Ouvidoria</span>
             </TabsTrigger>
-          ))}
-          <TabsTrigger
-            value="ouvidoria"
-            className="flex items-center gap-2 py-2"
-          >
-            <MessageCircle className="h-4 w-4" />
-            <span className="hidden sm:inline">Ouvidoria</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="push"
-            className="flex items-center gap-2 py-2"
-          >
-            <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Push</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="tabs"
-            className="flex items-center gap-2 py-2"
-          >
-            <Smartphone className="h-4 w-4" />
-            <span className="hidden sm:inline">Abas App</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="cct-categories"
-            className="flex items-center gap-2 py-2"
-          >
-            <FileText className="h-4 w-4" />
-            <span className="hidden sm:inline">Cat. CCT</span>
-          </TabsTrigger>
-        </TabsList>
+            <TabsTrigger
+              value="push"
+              className="inline-flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+            >
+              <Bell className="h-4 w-4" />
+              <span>Push</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="tabs"
+              className="inline-flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+            >
+              <Smartphone className="h-4 w-4" />
+              <span>Abas App</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="cct-categories"
+              className="inline-flex items-center gap-2 px-4 py-2 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-md"
+            >
+              <FileText className="h-4 w-4" />
+              <span>Cat. CCT</span>
+            </TabsTrigger>
+          </TabsList>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
 
-        <TabsContent value="cct-categories" className="mt-4">
+        <TabsContent value="cct-categories" className="mt-6">
           <CctCategoriesManagement />
         </TabsContent>
 
         {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
-          <TabsContent key={type} value={type} className="mt-4">
+          <TabsContent key={type} value={type} className="mt-6">
             {type === "convenio" ? (
               <ConveniosManagementTab />
-            ) : filteredContent.length === 0 ? (
-              <Card className="border-dashed">
-                <CardContent className="py-12 text-center">
-                  <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                    {contentTypeIcons[type]}
-                  </div>
-                  <h3 className="font-medium mb-1">Nenhum conteúdo encontrado</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Adicione seu primeiro {CONTENT_TYPE_LABELS[type].toLowerCase().slice(0, -1)}
-                  </p>
-                  <Button onClick={handleOpenCreate} variant="outline" size="sm">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Adicionar
-                  </Button>
-                </CardContent>
-              </Card>
             ) : (
-              <div className="grid gap-4">
-                {filteredContent.map((content, index) => (
-                  <Card key={content.id} className={!content.is_active ? "opacity-60" : ""}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start gap-4">
-                        {content.image_url && (
-                          <div className="w-20 h-20 rounded-lg overflow-hidden bg-muted flex-shrink-0">
-                            <img
-                              src={content.image_url}
-                              alt={content.title}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2">
-                            <div>
-                              <h3 className="font-medium truncate">{content.title}</h3>
-                              {content.description && (
-                                <p className="text-sm text-muted-foreground line-clamp-2 mt-1">
-                                  {content.description}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 flex-shrink-0">
-                              <Badge variant={content.is_active ? "default" : "secondary"}>
-                                {content.is_active ? "Ativo" : "Inativo"}
-                              </Badge>
-                            </div>
-                          </div>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {content.external_link && (
-                              <a
-                                href={content.external_link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-primary hover:underline flex items-center gap-1"
-                              >
-                                <ExternalLink className="h-3 w-3" />
-                                Link externo
-                              </a>
-                            )}
-                            {content.file_url && (
-                              <a
-                                href={content.file_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-xs text-primary hover:underline flex items-center gap-1"
-                              >
-                                <File className="h-3 w-3" />
-                                Arquivo
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1 flex-shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleMoveUp(content, index)}
-                            disabled={index === 0}
-                          >
-                            <ArrowUp className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleMoveDown(content, index)}
-                            disabled={index === filteredContent.length - 1}
-                          >
-                            <ArrowDown className="h-4 w-4" />
-                          </Button>
-                          <Switch
-                            checked={content.is_active}
-                            onCheckedChange={() => handleToggleActive(content)}
-                          />
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleOpenEdit(content)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setDeletingContentId(content.id);
-                              setIsDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+              <UnionContentList
+                content={filteredContent}
+                contentType={type}
+                onOpenCreate={handleOpenCreate}
+                onOpenEdit={handleOpenEdit}
+                onDelete={(id) => {
+                  setDeletingContentId(id);
+                  setIsDeleteDialogOpen(true);
+                }}
+                onToggleActive={handleToggleActive}
+                onMoveUp={handleMoveUp}
+                onMoveDown={handleMoveDown}
+                cctCategories={cctCategories}
+              />
             )}
           </TabsContent>
         ))}
 
         {/* Ouvidoria Tab */}
-        <TabsContent value="ouvidoria" className="mt-4">
+        <TabsContent value="ouvidoria" className="mt-6">
           <OuvidoriaMessagesTab />
         </TabsContent>
 
         {/* Push Notifications Tab */}
-        <TabsContent value="push" className="mt-4">
+        <TabsContent value="push" className="mt-6">
           <PushNotificationsTab />
         </TabsContent>
 
         {/* App Tabs Management */}
-        <TabsContent value="tabs" className="mt-4">
+        <TabsContent value="tabs" className="mt-6">
           <MobileAppTabsManagement />
         </TabsContent>
       </Tabs>
