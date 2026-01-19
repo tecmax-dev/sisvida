@@ -83,11 +83,18 @@ import { OuvidoriaMessagesTab } from "@/components/union/OuvidoriaMessagesTab";
 import { PushNotificationsTab } from "@/components/union/PushNotificationsTab";
 import { ConveniosManagementTab } from "@/components/union/ConveniosManagementTab";
 import { MobileAppTabsManagement } from "@/components/union/MobileAppTabsManagement";
+import { CctCategoriesManagement } from "@/components/union/CctCategoriesManagement";
 import { supabase } from "@/integrations/supabase/client";
 
 interface EmployerCategory {
   id: string;
   name: string;
+}
+
+interface CctCategory {
+  id: string;
+  name: string;
+  color: string;
 }
 
 const contentTypeIcons: Record<ContentType, React.ReactNode> = {
@@ -116,6 +123,7 @@ interface FormData {
   order_index: number;
   is_active: boolean;
   metadata: Record<string, unknown>;
+  cct_category_id: string | null;
 }
 
 const defaultFormData: FormData = {
@@ -128,9 +136,10 @@ const defaultFormData: FormData = {
   order_index: 0,
   is_active: true,
   metadata: {},
+  cct_category_id: null,
 };
 
-type TabType = ContentType | "ouvidoria" | "push" | "tabs";
+type TabType = ContentType | "ouvidoria" | "push" | "tabs" | "cct-categories";
 
 export default function UnionAppContentPage() {
   const navigate = useNavigate();
@@ -145,6 +154,7 @@ export default function UnionAppContentPage() {
   const [formData, setFormData] = useState<FormData>(defaultFormData);
   const [isUploading, setIsUploading] = useState(false);
   const [categories, setCategories] = useState<EmployerCategory[]>([]);
+  const [cctCategories, setCctCategories] = useState<CctCategory[]>([]);
 
   const { data: allContent, isLoading } = useUnionAppContent();
   const createContent = useCreateUnionAppContent();
@@ -153,7 +163,7 @@ export default function UnionAppContentPage() {
   const uploadFile = useUploadContentFile();
   const { currentClinic } = useAuth();
 
-  // Load employer categories for CCT filtering
+  // Load employer categories for portal CCT filtering
   useEffect(() => {
     const loadCategories = async () => {
       if (!currentClinic?.id) return;
@@ -166,6 +176,21 @@ export default function UnionAppContentPage() {
       if (data) setCategories(data);
     };
     loadCategories();
+  }, [currentClinic?.id]);
+
+  // Load CCT categories for app tab organization
+  useEffect(() => {
+    const loadCctCategories = async () => {
+      if (!currentClinic?.id) return;
+      const { data } = await supabase
+        .from("union_cct_categories")
+        .select("id, name, color")
+        .eq("clinic_id", currentClinic.id)
+        .eq("is_active", true)
+        .order("order_index");
+      if (data) setCctCategories(data);
+    };
+    loadCctCategories();
   }, [currentClinic?.id]);
 
   // Check if user has admin access
@@ -217,6 +242,7 @@ export default function UnionAppContentPage() {
       order_index: content.order_index,
       is_active: content.is_active,
       metadata: (content.metadata as Record<string, unknown>) || {},
+      cct_category_id: content.cct_category_id || null,
     });
     setIsDialogOpen(true);
   };
@@ -355,7 +381,18 @@ export default function UnionAppContentPage() {
             <Smartphone className="h-4 w-4" />
             <span className="hidden sm:inline">Abas App</span>
           </TabsTrigger>
+          <TabsTrigger
+            value="cct-categories"
+            className="flex items-center gap-2 py-2"
+          >
+            <FileText className="h-4 w-4" />
+            <span className="hidden sm:inline">Cat. CCT</span>
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="cct-categories" className="mt-4">
+          <CctCategoriesManagement />
+        </TabsContent>
 
         {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
           <TabsContent key={type} value={type} className="mt-4">
@@ -614,12 +651,49 @@ export default function UnionAppContentPage() {
                 </div>
               )}
 
-              {/* Category Selection - for CCT only */}
+              {/* CCT Category Selection for App Tabs - for CCT only */}
+              {formData.content_type === 'convencao' && (
+                <div className="space-y-2">
+                  <Label className="flex items-center gap-2">
+                    <Smartphone className="h-4 w-4" />
+                    Aba no App (Categoria CCT)
+                  </Label>
+                  <Select
+                    value={formData.cct_category_id || "none"}
+                    onValueChange={(v) => setFormData(prev => ({ 
+                      ...prev, 
+                      cct_category_id: v === "none" ? null : v
+                    }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a aba..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem categoria (todas as abas)</SelectItem>
+                      {cctCategories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>
+                          {cat.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Organiza as CCTs em abas no aplicativo mobile.
+                  </p>
+                  {cctCategories.length === 0 && (
+                    <p className="text-xs text-amber-600">
+                      Nenhuma categoria CCT cadastrada. Adicione em "Categorias CCT".
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Portal Category Selection - for CCT only */}
               {formData.content_type === 'convencao' && (
                 <div className="space-y-2">
                   <Label className="flex items-center gap-2">
                     <Building2 className="h-4 w-4" />
-                    Categoria de Empresas
+                    Categoria de Empresas (Portal)
                   </Label>
                   <Select
                     value={(formData.metadata.target_category_id as string) || "all"}
