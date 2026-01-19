@@ -38,6 +38,7 @@ interface PatientData {
 interface CardData {
   id: string;
   card_number: string;
+  qr_code_token: string;
   issued_at: string;
   expires_at: string | null;
   is_active: boolean;
@@ -93,7 +94,7 @@ export default function MobileCardPage() {
       // Fetch card data
       const { data: cardInfo, error: cardError } = await supabase
         .from("patient_cards")
-        .select("*")
+        .select("id, card_number, qr_code_token, issued_at, expires_at, is_active, notes")
         .eq("patient_id", patientId)
         .eq("is_active", true)
         .order("created_at", { ascending: false })
@@ -160,7 +161,7 @@ export default function MobileCardPage() {
     const shareData = {
       title: "Carteirinha Digital SECMI",
       text: `Carteirinha de ${patient.name} - Matrícula: ${patient.registration_number || cardData.card_number}`,
-      url: `${window.location.origin}/card/${patient.id}`,
+      url: `${window.location.origin}/card/${cardData.qr_code_token}`,
     };
 
     try {
@@ -321,7 +322,7 @@ export default function MobileCardPage() {
               <div className="flex flex-col items-center py-4">
                 <div className="bg-white p-3 rounded-xl border shadow-sm">
                   <QRCodeSVG
-                    value={`${window.location.origin}/card/${patient?.id}`}
+                    value={`${window.location.origin}/card/${cardData?.qr_code_token}`}
                     size={140}
                     level="H"
                     includeMargin={false}
