@@ -135,17 +135,47 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Upsert profile with name and phone
-    const { error: profileError } = await supabaseAdmin
+    // Create or update profile with name and phone
+    // First try to get existing profile
+    const { data: existingProfile } = await supabaseAdmin
       .from("profiles")
-      .upsert({
-        user_id: userId,
-        name: name,
-        phone: phone || null,
-      }, { onConflict: 'user_id' });
+      .select("id")
+      .eq("user_id", userId)
+      .single();
 
-    if (profileError) {
-      console.error("Error upserting profile:", profileError);
+    if (existingProfile) {
+      // Update existing profile
+      const { error: updateError } = await supabaseAdmin
+        .from("profiles")
+        .update({
+          name: name,
+          phone: phone || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", userId);
+
+      if (updateError) {
+        console.error("Error updating profile:", updateError);
+      } else {
+        console.log(`Profile updated for user ${userId} with name: ${name}`);
+      }
+    } else {
+      // Insert new profile
+      const { error: insertError } = await supabaseAdmin
+        .from("profiles")
+        .insert({
+          user_id: userId,
+          name: name,
+          phone: phone || null,
+        });
+
+      if (insertError) {
+        console.error("Error inserting profile:", insertError);
+        // Try to clean up the created user if profile creation fails
+        console.error("Profile creation failed, but user was created. Manual intervention may be needed.");
+      } else {
+        console.log(`Profile created for user ${userId} with name: ${name}`);
+      }
     }
 
     // Auto-create professional record when role is 'professional'
