@@ -135,12 +135,17 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Update profile with phone if provided
-    if (phone) {
-      await supabaseAdmin
-        .from("profiles")
-        .update({ phone })
-        .eq("user_id", userId);
+    // Upsert profile with name and phone
+    const { error: profileError } = await supabaseAdmin
+      .from("profiles")
+      .upsert({
+        user_id: userId,
+        name: name,
+        phone: phone || null,
+      }, { onConflict: 'user_id' });
+
+    if (profileError) {
+      console.error("Error upserting profile:", profileError);
     }
 
     // Auto-create professional record when role is 'professional'
