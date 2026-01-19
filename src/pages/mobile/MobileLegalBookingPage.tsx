@@ -79,6 +79,8 @@ export default function MobileLegalBookingPage() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [patientBlocked, setPatientBlocked] = useState(false);
+  const [isDependent, setIsDependent] = useState(false);
+  const [monthlyLimitReached, setMonthlyLimitReached] = useState(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -106,12 +108,61 @@ export default function MobileLegalBookingPage() {
       // Check if patient is active
       const { data: patientData, error: patientError } = await supabase
         .from("patients")
-        .select("is_active")
+        .select("id, is_active, cpf")
         .eq("id", patientId)
         .single();
 
       if (patientError || !patientData?.is_active) {
         setPatientBlocked(true);
+        setLoading(false);
+        return;
+      }
+
+      // Check if this is a dependent (if patient_id exists in patient_dependents table)
+      // Dependents don't have direct access to legal appointments - only titular
+      const { data: dependentCheck } = await supabase
+        .from("patient_dependents")
+        .select("id")
+        .eq("clinic_id", clinicId)
+        .eq("cpf", patientData.cpf)
+        .eq("is_active", true)
+        .limit(1);
+
+      // If the CPF exists in dependents table and matches the patient, check if titular
+      // A patient in the patients table is always a titular, dependents are in patient_dependents
+      // But we need to verify the login wasn't done with a dependent's CPF
+      const { data: asTitular } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("cpf", patientData.cpf)
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true)
+        .single();
+
+      // If patient logged in but their CPF also exists as a dependent of another patient
+      // they should still be allowed as they are a titular. Only block if they're ONLY a dependent.
+      if (!asTitular && dependentCheck && dependentCheck.length > 0) {
+        setIsDependent(true);
+        setLoading(false);
+        return;
+      }
+
+      // Check monthly limit: 1 appointment per month for legal services
+      const now = new Date();
+      const firstDayOfMonth = format(new Date(now.getFullYear(), now.getMonth(), 1), "yyyy-MM-dd");
+      const lastDayOfMonth = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), "yyyy-MM-dd");
+
+      const { data: monthlyAppts, error: monthlyError } = await supabase
+        .from("homologacao_appointments")
+        .select("id")
+        .eq("clinic_id", clinicId)
+        .eq("employee_cpf", patientData.cpf)
+        .gte("appointment_date", firstDayOfMonth)
+        .lte("appointment_date", lastDayOfMonth)
+        .not("status", "eq", "cancelled");
+
+      if (!monthlyError && monthlyAppts && monthlyAppts.length >= 1) {
+        setMonthlyLimitReached(true);
         setLoading(false);
         return;
       }
@@ -378,6 +429,64 @@ export default function MobileLegalBookingPage() {
             onClick={() => navigate("/app/home")}
           >
             Voltar ao início
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (isDependent) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4">
+          <button onClick={() => navigate("/app/home")} className="p-1">
+            <ArrowLeft className="h-6 w-6" />
+          </button>
+          <h1 className="text-lg font-semibold flex-1 text-center pr-8">Agendamento Jurídico</h1>
+        </div>
+        <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+          <User className="h-16 w-16 text-amber-500 mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2 text-center">Acesso Restrito</h2>
+          <p className="text-muted-foreground text-center">
+            O agendamento jurídico está disponível apenas para titulares.
+          </p>
+          <p className="text-sm text-muted-foreground text-center mt-2">
+            Se você é titular, faça login com suas credenciais.
+          </p>
+          <Button 
+            className="mt-6 bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => navigate("/app/home")}
+          >
+            Voltar ao início
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (monthlyLimitReached) {
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4">
+          <button onClick={() => navigate("/app/home")} className="p-1">
+            <ArrowLeft className="h-6 w-6" />
+          </button>
+          <h1 className="text-lg font-semibold flex-1 text-center pr-8">Agendamento Jurídico</h1>
+        </div>
+        <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+          <Calendar className="h-16 w-16 text-amber-500 mb-4" />
+          <h2 className="text-xl font-semibold text-foreground mb-2 text-center">Limite Mensal Atingido</h2>
+          <p className="text-muted-foreground text-center">
+            Você já possui um agendamento jurídico neste mês.
+          </p>
+          <p className="text-sm text-muted-foreground text-center mt-2">
+            O limite é de 1 atendimento por mês.
+          </p>
+          <Button 
+            className="mt-6 bg-emerald-600 hover:bg-emerald-700"
+            onClick={() => navigate("/app/appointments")}
+          >
+            Ver meus agendamentos
           </Button>
         </div>
       </div>
