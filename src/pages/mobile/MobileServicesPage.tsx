@@ -64,13 +64,58 @@ const services: ServiceConfig[] = [
   { id: "ouvidoria", title: "Ouvidoria", icon: MessageCircle, description: "Fale conosco, envie sugestões ou reclamações", color: "bg-orange-500" },
 ];
 
-// ============ CONVENÇÕES ============
+// ============ CONVENÇÕES - DINÂMICO ============
 function ConvencoesContent() {
-  const [convencoes] = useState([
-    { id: "1", title: "CCT 2024/2025 - Comércio", vigencia: "01/05/2024 a 30/04/2025", categoria: "Comerciários", downloadUrl: "#" },
-    { id: "2", title: "CCT 2024/2025 - Serviços", vigencia: "01/03/2024 a 28/02/2025", categoria: "Trabalhadores em Serviços", downloadUrl: "#" },
-    { id: "3", title: "ACT 2024 - Empresa XYZ", vigencia: "01/01/2024 a 31/12/2024", categoria: "Acordo Coletivo", downloadUrl: "#" },
-  ]);
+  const [convencoes, setConvencoes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadConvencoes();
+  }, []);
+
+  const loadConvencoes = async () => {
+    try {
+      const clinicId = localStorage.getItem('mobile_clinic_id');
+      if (!clinicId) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("union_app_content")
+        .select("*")
+        .eq("clinic_id", clinicId)
+        .eq("content_type", "convencao")
+        .eq("is_active", true)
+        .order("order_index", { ascending: true });
+
+      if (error) throw error;
+      setConvencoes(data || []);
+    } catch (err) {
+      console.error("Error loading convencoes:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  if (convencoes.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground">
+          Nenhuma convenção coletiva cadastrada.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -84,12 +129,23 @@ function ConvencoesContent() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <h4 className="font-semibold text-sm">{conv.title}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">Vigência: {conv.vigencia}</p>
-                  <Badge variant="secondary" className="mt-2 text-xs">{conv.categoria}</Badge>
+                  {conv.description && (
+                    <p className="text-xs text-muted-foreground mt-1">{conv.description}</p>
+                  )}
+                  {conv.metadata?.vigencia && (
+                    <Badge variant="secondary" className="mt-2 text-xs">{conv.metadata.vigencia}</Badge>
+                  )}
                 </div>
-                <Button size="sm" variant="outline" className="ml-2">
-                  <Download className="h-4 w-4" />
-                </Button>
+                {conv.file_url && (
+                  <Button 
+                    size="sm" 
+                    variant="outline" 
+                    className="ml-2"
+                    onClick={() => window.open(conv.file_url, '_blank')}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -99,17 +155,41 @@ function ConvencoesContent() {
   );
 }
 
-// ============ DECLARAÇÕES ============
+// ============ DECLARAÇÕES - DINÂMICO ============
 function DeclaracoesContent() {
+  const [declaracoes, setDeclaracoes] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [solicitando, setSolicitando] = useState(false);
   const { toast } = useToast();
 
-  const tiposDeclaracao = [
-    { id: "filiacao", title: "Declaração de Filiação", descricao: "Comprova que você é associado ao sindicato", prazo: "1 dia útil" },
-    { id: "contribuicao", title: "Declaração de Contribuições", descricao: "Comprovante de pagamento das contribuições", prazo: "2 dias úteis" },
-    { id: "negativa", title: "Certidão Negativa", descricao: "Atesta inexistência de débitos", prazo: "1 dia útil" },
-    { id: "tempo_servico", title: "Declaração para Tempo de Serviço", descricao: "Para fins de aposentadoria", prazo: "5 dias úteis" },
-  ];
+  useEffect(() => {
+    loadDeclaracoes();
+  }, []);
+
+  const loadDeclaracoes = async () => {
+    try {
+      const clinicId = localStorage.getItem('mobile_clinic_id');
+      if (!clinicId) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("union_app_content")
+        .select("*")
+        .eq("clinic_id", clinicId)
+        .eq("content_type", "declaracao")
+        .eq("is_active", true)
+        .order("order_index", { ascending: true });
+
+      if (error) throw error;
+      setDeclaracoes(data || []);
+    } catch (err) {
+      console.error("Error loading declaracoes:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSolicitar = (tipo: string) => {
     setSolicitando(true);
@@ -122,27 +202,50 @@ function DeclaracoesContent() {
     }, 1500);
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  if (declaracoes.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <ClipboardList className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground">
+          Nenhum tipo de declaração cadastrado.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
         Solicite declarações e certidões de forma rápida e prática. Os documentos serão enviados para seu e-mail cadastrado.
       </p>
       <div className="space-y-3">
-        {tiposDeclaracao.map((tipo) => (
-          <Card key={tipo.id} className="border shadow-sm">
+        {declaracoes.map((dec) => (
+          <Card key={dec.id} className="border shadow-sm">
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h4 className="font-semibold text-sm">{tipo.title}</h4>
-                  <p className="text-xs text-muted-foreground mt-1">{tipo.descricao}</p>
-                  <div className="flex items-center gap-1 mt-2">
-                    <Clock className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground">Prazo: {tipo.prazo}</span>
-                  </div>
+                  <h4 className="font-semibold text-sm">{dec.title}</h4>
+                  {dec.description && (
+                    <p className="text-xs text-muted-foreground mt-1">{dec.description}</p>
+                  )}
+                  {dec.metadata?.prazo && (
+                    <div className="flex items-center gap-1 mt-2">
+                      <Clock className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Prazo: {dec.metadata.prazo}</span>
+                    </div>
+                  )}
                 </div>
                 <Button
                   size="sm"
-                  onClick={() => handleSolicitar(tipo.id)}
+                  onClick={() => handleSolicitar(dec.id)}
                   disabled={solicitando}
                   className="ml-2 bg-emerald-600 hover:bg-emerald-700"
                 >
@@ -157,7 +260,7 @@ function DeclaracoesContent() {
   );
 }
 
-// ============ CONVÊNIOS ============
+// ============ CONVÊNIOS - DINÂMICO ============
 interface ConvenioCategory {
   id: string;
   nome: string;
@@ -184,6 +287,7 @@ function ConveniosContent() {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [categorias, setCategorias] = useState<ConvenioCategory[]>([]);
   const [convenios, setConvenios] = useState<Convenio[]>([]);
+  const [appConvenios, setAppConvenios] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -194,6 +298,8 @@ function ConveniosContent() {
     try {
       setLoading(true);
       
+      const clinicId = localStorage.getItem('mobile_clinic_id');
+      
       // Fetch categories
       const { data: catData } = await supabase
         .from('union_convenio_categories')
@@ -201,12 +307,24 @@ function ConveniosContent() {
         .eq('is_active', true)
         .order('order_index');
       
-      // Fetch convenios
+      // Fetch convenios from dedicated table
       const { data: convData } = await supabase
         .from('union_convenios')
         .select('*')
         .eq('is_active', true)
         .order('order_index');
+
+      // Fetch convenios from app content (if any)
+      if (clinicId) {
+        const { data: appData } = await supabase
+          .from("union_app_content")
+          .select("*")
+          .eq("clinic_id", clinicId)
+          .eq("content_type", "convenio")
+          .eq("is_active", true)
+          .order("order_index", { ascending: true });
+        setAppConvenios(appData || []);
+      }
 
       if (catData) setCategorias(catData);
       if (convData) setConvenios(convData);
@@ -227,6 +345,41 @@ function ConveniosContent() {
     return (
       <div className="flex items-center justify-center py-8">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Se não há categorias, mostrar lista de convênios do app content
+  if (categorias.length === 0 && appConvenios.length > 0) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Aproveite descontos exclusivos em nossos parceiros conveniados.
+        </p>
+        <div className="space-y-3">
+          {appConvenios.map((conv) => (
+            <Card key={conv.id} className="border shadow-sm">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  {conv.image_url && (
+                    <div className="w-12 h-12 rounded-lg overflow-hidden flex-shrink-0">
+                      <img src={conv.image_url} alt={conv.title} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-sm">{conv.title}</h4>
+                    {conv.description && (
+                      <p className="text-xs text-muted-foreground">{conv.description}</p>
+                    )}
+                  </div>
+                  <Badge className="bg-emerald-100 text-emerald-700 text-xs shrink-0">
+                    Conveniado
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
     );
   }
@@ -279,6 +432,17 @@ function ConveniosContent() {
             </Card>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (categorias.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <Building className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground">
+          Nenhum convênio cadastrado.
+        </p>
       </div>
     );
   }
@@ -423,7 +587,7 @@ function BoletosContent() {
   );
 }
 
-// ============ DIRETORIA ============
+// ============ DIRETORIA - DINÂMICO ============
 function DiretoriaContent() {
   const [diretores, setDiretores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -509,15 +673,58 @@ function DiretoriaContent() {
   );
 }
 
-// ============ DOCUMENTOS ============
+// ============ DOCUMENTOS - DINÂMICO ============
 function DocumentosContent() {
-  const [documentos] = useState([
-    { id: "1", titulo: "Estatuto Social", tipo: "PDF", tamanho: "2.5 MB" },
-    { id: "2", titulo: "Regimento Interno", tipo: "PDF", tamanho: "1.2 MB" },
-    { id: "3", titulo: "Formulário de Filiação", tipo: "PDF", tamanho: "150 KB" },
-    { id: "4", titulo: "Guia do Associado", tipo: "PDF", tamanho: "3.8 MB" },
-    { id: "5", titulo: "Tabela Salarial 2024", tipo: "PDF", tamanho: "500 KB" },
-  ]);
+  const [documentos, setDocumentos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadDocumentos();
+  }, []);
+
+  const loadDocumentos = async () => {
+    try {
+      const clinicId = localStorage.getItem('mobile_clinic_id');
+      if (!clinicId) {
+        setLoading(false);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("union_app_content")
+        .select("*")
+        .eq("clinic_id", clinicId)
+        .eq("content_type", "documento")
+        .eq("is_active", true)
+        .order("order_index", { ascending: true });
+
+      if (error) throw error;
+      setDocumentos(data || []);
+    } catch (err) {
+      console.error("Error loading documentos:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <Loader2 className="h-6 w-6 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  if (documentos.length === 0) {
+    return (
+      <div className="text-center py-8">
+        <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground">
+          Nenhum documento cadastrado.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -535,13 +742,21 @@ function DocumentosContent() {
                     <FileText className="h-5 w-5 text-red-600" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm">{doc.titulo}</h4>
-                    <p className="text-xs text-muted-foreground">{doc.tipo} • {doc.tamanho}</p>
+                    <h4 className="font-semibold text-sm">{doc.title}</h4>
+                    {doc.description && (
+                      <p className="text-xs text-muted-foreground">{doc.description}</p>
+                    )}
                   </div>
                 </div>
-                <Button size="sm" variant="ghost">
-                  <Download className="h-4 w-4" />
-                </Button>
+                {doc.file_url && (
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    onClick={() => window.open(doc.file_url, '_blank')}
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

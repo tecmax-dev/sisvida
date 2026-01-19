@@ -70,6 +70,13 @@ import {
   MessageCircle,
   Bell,
   Building2,
+  Images,
+  Newspaper,
+  Radio,
+  Video,
+  HelpCircle,
+  Headphones,
+  Info,
 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { OuvidoriaMessagesTab } from "@/components/union/OuvidoriaMessagesTab";
@@ -90,6 +97,13 @@ const contentTypeIcons: Record<ContentType, React.ReactNode> = {
   declaracao: <FileCheck className="h-4 w-4" />,
   diretoria: <Users className="h-4 w-4" />,
   documento: <File className="h-4 w-4" />,
+  galeria: <Images className="h-4 w-4" />,
+  jornal: <Newspaper className="h-4 w-4" />,
+  radio: <Radio className="h-4 w-4" />,
+  video: <Video className="h-4 w-4" />,
+  faq: <HelpCircle className="h-4 w-4" />,
+  atendimento: <Headphones className="h-4 w-4" />,
+  sobre: <Info className="h-4 w-4" />,
 };
 
 interface FormData {
