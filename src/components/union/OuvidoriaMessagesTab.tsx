@@ -135,8 +135,8 @@ export function OuvidoriaMessagesTab() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-yellow-100">
-                <Clock className="h-5 w-5 text-yellow-700" />
+              <div className="p-2 rounded-lg bg-yellow-100 dark:bg-yellow-900/30">
+                <Clock className="h-5 w-5 text-yellow-700 dark:text-yellow-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{pendingCount}</p>
@@ -148,8 +148,8 @@ export function OuvidoriaMessagesTab() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-100">
-                <MessageCircle className="h-5 w-5 text-blue-700" />
+              <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                <MessageCircle className="h-5 w-5 text-blue-700 dark:text-blue-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{inProgressCount}</p>
@@ -161,8 +161,8 @@ export function OuvidoriaMessagesTab() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-100">
-                <CheckCircle className="h-5 w-5 text-green-700" />
+              <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                <CheckCircle className="h-5 w-5 text-green-700 dark:text-green-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">
@@ -176,8 +176,8 @@ export function OuvidoriaMessagesTab() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-gray-100">
-                <XCircle className="h-5 w-5 text-gray-700" />
+              <div className="p-2 rounded-lg bg-gray-100 dark:bg-gray-800/50">
+                <XCircle className="h-5 w-5 text-gray-700 dark:text-gray-400" />
               </div>
               <div>
                 <p className="text-2xl font-bold">
@@ -367,7 +367,7 @@ export function OuvidoriaMessagesTab() {
                 {/* Message */}
                 <div className="space-y-2">
                   <Label>Mensagem</Label>
-                  <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap">
+                  <div className="p-4 bg-muted rounded-lg text-sm whitespace-pre-wrap border dark:border-border">
                     {selectedMessage.message}
                   </div>
                 </div>

@@ -69,8 +69,8 @@ export function MobileAppTabsManagement() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-100 rounded-lg">
-              <Smartphone className="h-5 w-5 text-emerald-600" />
+            <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg">
+              <Smartphone className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             </div>
             <div>
               <CardTitle className="text-lg">Gerenciar Abas do App</CardTitle>
@@ -86,7 +86,7 @@ export function MobileAppTabsManagement() {
         <Card key={category}>
           <CardHeader className="pb-3">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-slate-100 rounded-lg">
+              <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg">
                 {icon}
               </div>
               <div>
@@ -100,14 +100,14 @@ export function MobileAppTabsManagement() {
               {groupedTabs[category]?.map((tab) => (
                 <div
                   key={tab.id}
-                  className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border"
+                  className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800/50 rounded-lg border dark:border-slate-700"
                 >
                   <div className="flex items-center gap-3">
                     <Settings className="h-4 w-4 text-muted-foreground" />
                     <div>
                       <p className="font-medium text-sm">{tab.tab_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        Chave: <code className="bg-slate-200 px-1 rounded">{tab.tab_key}</code>
+                        Chave: <code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">{tab.tab_key}</code>
                       </p>
                     </div>
                   </div>
