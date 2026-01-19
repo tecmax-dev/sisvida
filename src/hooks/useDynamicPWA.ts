@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+// Target clinic for this mobile app (Sindicato Comerciários)
+const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
+
 interface ClinicBranding {
   name: string;
   logo_url: string | null;
@@ -17,10 +20,13 @@ export function useDynamicPWA() {
 
   useEffect(() => {
     const loadClinicBranding = async () => {
-      const clinicId = localStorage.getItem("mobile_clinic_id");
+      // Get clinic ID from localStorage or use target clinic
+      let clinicId = localStorage.getItem("mobile_clinic_id");
+      
+      // If no clinic ID in localStorage, set the target clinic
       if (!clinicId) {
-        setIsLoading(false);
-        return;
+        clinicId = TARGET_CLINIC_ID;
+        localStorage.setItem("mobile_clinic_id", clinicId);
       }
 
       try {

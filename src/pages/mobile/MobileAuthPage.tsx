@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Eye, EyeOff, Building2 } from "lucide-react";
+import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 
 // Função para formatar CPF
 const formatCPF = (value: string) => {
@@ -58,6 +59,9 @@ export default function MobileAuthPage() {
   const [logoError, setLogoError] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Apply PWA branding for the clinic
+  useDynamicPWA();
 
   // Load clinic data for branding
   useEffect(() => {
