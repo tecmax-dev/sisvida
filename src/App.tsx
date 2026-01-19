@@ -199,6 +199,7 @@ const MobileFAQPage = lazy(() => import("./pages/mobile/MobileFAQPage"));
 const MobileAboutPage = lazy(() => import("./pages/mobile/MobileAboutPage"));
 const MobileFiliacaoPage = lazy(() => import("./pages/mobile/MobileFiliacaoPage"));
 const MobileLegalBookingPage = lazy(() => import("./pages/mobile/MobileLegalBookingPage"));
+const MobileLegalAppointmentsPage = lazy(() => import("./pages/mobile/MobileLegalAppointmentsPage"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -516,6 +517,7 @@ const App = () => (
                   <Route path="home" element={<MobileHomePage />} />
                   <Route path="home-publico" element={<MobilePublicHomePage />} />
                   <Route path="agendamentos" element={<MobileAppointmentsPage />} />
+                  <Route path="agendamentos-juridicos" element={<MobileLegalAppointmentsPage />} />
                   <Route path="agendar" element={<MobileBookingPage />} />
                   <Route path="perfil" element={<MobileProfilePage />} />
                   <Route path="recuperar-senha" element={<MobilePasswordResetPage />} />
