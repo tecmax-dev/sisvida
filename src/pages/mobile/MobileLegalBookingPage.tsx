@@ -18,9 +18,15 @@ import {
   Clock,
   CalendarDays,
   CheckCircle2,
+  CreditCard,
+  Upload,
+  FileText,
+  X,
 } from "lucide-react";
-import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, addDays } from "date-fns";
+import { format, parseISO, addMinutes, isBefore, startOfDay, isSameDay, addDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface LegalProfessional {
   id: string;
@@ -81,6 +87,12 @@ export default function MobileLegalBookingPage() {
   const [patientBlocked, setPatientBlocked] = useState(false);
   const [isDependent, setIsDependent] = useState(false);
   const [monthlyLimitReached, setMonthlyLimitReached] = useState(false);
+  const [cardExpired, setCardExpired] = useState(false);
+  const [cardInfo, setCardInfo] = useState<{ id: string; expires_at: string | null; card_number: string } | null>(null);
+  const [hasPendingPayslip, setHasPendingPayslip] = useState(false);
+  const [uploadingPayslip, setUploadingPayslip] = useState(false);
+  const [payslipFile, setPayslipFile] = useState<File | null>(null);
+  const [payslipSubmitted, setPayslipSubmitted] = useState(false);
   
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -165,6 +177,42 @@ export default function MobileLegalBookingPage() {
         setMonthlyLimitReached(true);
         setLoading(false);
         return;
+      }
+
+      // Check if patient has valid (non-expired) card
+      const { data: cardData } = await supabase
+        .from("patient_cards")
+        .select("id, expires_at, card_number")
+        .eq("patient_id", patientId)
+        .eq("clinic_id", clinicId)
+        .eq("is_active", true)
+        .order("expires_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (cardData) {
+        setCardInfo(cardData);
+        
+        // Check if card is expired
+        if (cardData.expires_at && isPast(new Date(cardData.expires_at))) {
+          setCardExpired(true);
+          
+          // Check if there's already a pending payslip request
+          const { data: pendingRequest } = await supabase
+            .from("payslip_requests")
+            .select("id, status")
+            .eq("patient_id", patientId)
+            .eq("card_id", cardData.id)
+            .in("status", ["pending", "received"])
+            .limit(1);
+          
+          if (pendingRequest && pendingRequest.length > 0) {
+            setHasPendingPayslip(true);
+          }
+          
+          setLoading(false);
+          return;
+        }
       }
 
       // Load legal professionals
@@ -403,6 +451,72 @@ export default function MobileLegalBookingPage() {
       .toUpperCase();
   };
 
+  const handlePayslipUpload = async () => {
+    if (!payslipFile || !cardInfo) return;
+
+    setUploadingPayslip(true);
+
+    try {
+      const patientId = localStorage.getItem('mobile_patient_id');
+      const clinicId = localStorage.getItem('mobile_clinic_id');
+
+      if (!patientId || !clinicId) {
+        throw new Error("Sessão inválida");
+      }
+
+      // Generate unique file path
+      const fileExt = payslipFile.name.split('.').pop()?.toLowerCase() || 'pdf';
+      const fileName = `${patientId}/${Date.now()}_contracheque.${fileExt}`;
+
+      // Upload file to storage
+      const { error: uploadError } = await supabase.storage
+        .from('patient-attachments')
+        .upload(fileName, payslipFile, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        console.error("Upload error:", uploadError);
+        throw new Error("Erro ao fazer upload do arquivo");
+      }
+
+      // Create payslip request record
+      const { error: requestError } = await supabase
+        .from('payslip_requests')
+        .insert({
+          clinic_id: clinicId,
+          patient_id: patientId,
+          card_id: cardInfo.id,
+          status: 'received',
+          received_at: new Date().toISOString(),
+          attachment_path: fileName,
+          notes: 'Enviado via app mobile - Agendamento Jurídico',
+        });
+
+      if (requestError) {
+        console.error("Request error:", requestError);
+        throw new Error("Erro ao registrar solicitação");
+      }
+
+      toast({
+        title: "Contracheque enviado!",
+        description: "Seu documento foi enviado para análise.",
+      });
+
+      setPayslipSubmitted(true);
+    } catch (err: any) {
+      console.error("Error uploading payslip:", err);
+      toast({
+        title: "Erro ao enviar",
+        description: err.message || "Não foi possível enviar o contracheque.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingPayslip(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -488,6 +602,177 @@ export default function MobileLegalBookingPage() {
           >
             Ver meus agendamentos
           </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Card expired - show payslip upload screen
+  if (cardExpired) {
+    // If payslip was just submitted successfully
+    if (payslipSubmitted) {
+      return (
+        <div className="min-h-screen bg-background">
+          <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4">
+            <button onClick={() => navigate("/app/home")} className="p-1">
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+            <h1 className="text-lg font-semibold flex-1 text-center pr-8">Agendamento Jurídico</h1>
+          </div>
+          <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+            <CheckCircle2 className="h-16 w-16 text-emerald-500 mb-4" />
+            <h2 className="text-xl font-semibold text-foreground mb-2 text-center">Contracheque Enviado!</h2>
+            <p className="text-muted-foreground text-center">
+              Seu contracheque foi enviado para análise.
+            </p>
+            <p className="text-sm text-muted-foreground text-center mt-2">
+              Você será notificado quando sua carteira for renovada.
+            </p>
+            <Button 
+              className="mt-6 bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => navigate("/app/home")}
+            >
+              Voltar ao início
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // If there's already a pending payslip request
+    if (hasPendingPayslip) {
+      return (
+        <div className="min-h-screen bg-background">
+          <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4">
+            <button onClick={() => navigate("/app/home")} className="p-1">
+              <ArrowLeft className="h-6 w-6" />
+            </button>
+            <h1 className="text-lg font-semibold flex-1 text-center pr-8">Agendamento Jurídico</h1>
+          </div>
+          <div className="p-6 flex flex-col items-center justify-center min-h-[60vh]">
+            <Clock className="h-16 w-16 text-amber-500 mb-4" />
+            <h2 className="text-xl font-semibold text-foreground mb-2 text-center">Aguardando Análise</h2>
+            <p className="text-muted-foreground text-center">
+              Você já enviou seu contracheque e ele está em análise.
+            </p>
+            <p className="text-sm text-muted-foreground text-center mt-2">
+              Aguarde a renovação da sua carteira para agendar.
+            </p>
+            <Button 
+              className="mt-6 bg-emerald-600 hover:bg-emerald-700"
+              onClick={() => navigate("/app/home")}
+            >
+              Voltar ao início
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
+    // Show upload form for payslip
+    return (
+      <div className="min-h-screen bg-background">
+        <div className="bg-emerald-600 text-white px-4 py-4 flex items-center gap-4">
+          <button onClick={() => navigate("/app/home")} className="p-1">
+            <ArrowLeft className="h-6 w-6" />
+          </button>
+          <h1 className="text-lg font-semibold flex-1 text-center pr-8">Agendamento Jurídico</h1>
+        </div>
+        <div className="p-6">
+          <div className="flex flex-col items-center mb-6">
+            <CreditCard className="h-16 w-16 text-amber-500 mb-4" />
+            <h2 className="text-xl font-semibold text-foreground mb-2 text-center">Carteira Vencida</h2>
+            <p className="text-muted-foreground text-center">
+              Sua carteira venceu em {cardInfo?.expires_at ? format(new Date(cardInfo.expires_at), "dd/MM/yyyy", { locale: ptBR }) : "data não informada"}.
+            </p>
+          </div>
+
+          <Card className="border-amber-200 bg-amber-50 mb-6">
+            <CardContent className="p-4">
+              <p className="text-sm text-amber-800">
+                Para renovar sua carteira e acessar os serviços, envie seu contracheque mais recente para análise.
+              </p>
+            </CardContent>
+          </Card>
+
+          <div className="space-y-4">
+            <Label htmlFor="payslip-upload" className="text-foreground font-medium">
+              Enviar Contracheque
+            </Label>
+            
+            {!payslipFile ? (
+              <div 
+                className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-emerald-400 transition-colors"
+                onClick={() => document.getElementById('payslip-upload')?.click()}
+              >
+                <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground mb-1">
+                  Toque para selecionar o arquivo
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  PDF, JPG ou PNG (máx. 10MB)
+                </p>
+                <Input
+                  id="payslip-upload"
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      if (file.size > 10 * 1024 * 1024) {
+                        toast({
+                          title: "Arquivo muito grande",
+                          description: "O arquivo deve ter no máximo 10MB.",
+                          variant: "destructive",
+                        });
+                        return;
+                      }
+                      setPayslipFile(file);
+                    }
+                  }}
+                />
+              </div>
+            ) : (
+              <Card className="border-emerald-200 bg-emerald-50">
+                <CardContent className="p-4 flex items-center gap-3">
+                  <FileText className="h-10 w-10 text-emerald-600 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-sm truncate">{payslipFile.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(payslipFile.size / 1024 / 1024).toFixed(2)} MB
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="flex-shrink-0"
+                    onClick={() => setPayslipFile(null)}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            <Button
+              className="w-full bg-emerald-600 hover:bg-emerald-700"
+              disabled={!payslipFile || uploadingPayslip}
+              onClick={handlePayslipUpload}
+            >
+              {uploadingPayslip ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Enviar Contracheque
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     );
