@@ -37,8 +37,8 @@ export function MobileLayout({ children, showBottomNav = true }: MobileLayoutPro
   // Initialize push notifications
   usePushNotifications({ patientId, clinicId });
 
-  // Update favicon/icons to clinic logo
-  useDynamicFavicon(clinic?.logo_url);
+  // Update favicon/icons to clinic logo and name
+  useDynamicFavicon(clinic?.logo_url, clinic?.name);
 
   useEffect(() => {
     loadPatientData();
