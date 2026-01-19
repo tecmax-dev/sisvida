@@ -40,6 +40,7 @@ interface CctCategory {
 export function CctCategoriesManagement() {
   const { currentClinic } = useAuth();
   const { toast } = useToast();
+  const db = supabase as any;
   
   const [categories, setCategories] = useState<CctCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,22 +57,18 @@ export function CctCategoriesManagement() {
   });
 
   const loadCategories = async () => {
-    console.log("CctCategoriesManagement: loadCategories called, clinic:", currentClinic?.id);
     if (!currentClinic?.id) {
-      console.log("CctCategoriesManagement: No clinic ID, skipping load");
       setLoading(false);
       return;
     }
-    
+
     try {
-      console.log("CctCategoriesManagement: Fetching categories for clinic:", currentClinic.id);
-      const { data, error } = await (supabase
-        .from("union_cct_categories" as any)
+      const { data, error } = await db
+        .from("union_cct_categories")
         .select("*")
         .eq("clinic_id", currentClinic.id)
-        .order("order_index") as any);
+        .order("order_index");
 
-      console.log("CctCategoriesManagement: Query result:", { data, error });
       if (error) throw error;
       setCategories((data || []) as CctCategory[]);
     } catch (err) {
@@ -118,15 +115,15 @@ export function CctCategoriesManagement() {
     setSaving(true);
     try {
       if (editingCategory) {
-        const { error } = await (supabase
-          .from("union_cct_categories" as any)
+        const { error } = await db
+          .from("union_cct_categories")
           .update({
             name: formData.name,
             description: formData.description || null,
             color: formData.color,
             is_active: formData.is_active,
           })
-          .eq("id", editingCategory.id) as any);
+          .eq("id", editingCategory.id);
 
         if (error) throw error;
         toast({
@@ -134,16 +131,14 @@ export function CctCategoriesManagement() {
           description: "Categoria atualizada com sucesso!",
         });
       } else {
-        const { error } = await (supabase
-          .from("union_cct_categories" as any)
-          .insert({
-            name: formData.name,
-            description: formData.description || null,
-            color: formData.color,
-            is_active: formData.is_active,
-            order_index: categories.length,
-            clinic_id: currentClinic.id,
-          }) as any);
+        const { error } = await db.from("union_cct_categories").insert({
+          name: formData.name,
+          description: formData.description || null,
+          color: formData.color,
+          is_active: formData.is_active,
+          order_index: categories.length,
+          clinic_id: currentClinic.id,
+        });
 
         if (error) throw error;
         toast({
@@ -170,10 +165,10 @@ export function CctCategoriesManagement() {
     if (!deletingCategoryId) return;
 
     try {
-      const { error } = await (supabase
-        .from("union_cct_categories" as any)
+      const { error } = await db
+        .from("union_cct_categories")
         .delete()
-        .eq("id", deletingCategoryId) as any);
+        .eq("id", deletingCategoryId);
 
       if (error) throw error;
       
@@ -198,15 +193,15 @@ export function CctCategoriesManagement() {
     if (index === 0) return;
     const prevCategory = categories[index - 1];
     
-    await (supabase
-      .from("union_cct_categories" as any)
+    await db
+      .from("union_cct_categories")
       .update({ order_index: prevCategory.order_index })
-      .eq("id", category.id) as any);
+      .eq("id", category.id);
       
-    await (supabase
-      .from("union_cct_categories" as any)
+    await db
+      .from("union_cct_categories")
       .update({ order_index: category.order_index })
-      .eq("id", prevCategory.id) as any);
+      .eq("id", prevCategory.id);
       
     loadCategories();
   };
@@ -215,24 +210,24 @@ export function CctCategoriesManagement() {
     if (index === categories.length - 1) return;
     const nextCategory = categories[index + 1];
     
-    await (supabase
-      .from("union_cct_categories" as any)
+    await db
+      .from("union_cct_categories")
       .update({ order_index: nextCategory.order_index })
-      .eq("id", category.id) as any);
+      .eq("id", category.id);
       
-    await (supabase
-      .from("union_cct_categories" as any)
+    await db
+      .from("union_cct_categories")
       .update({ order_index: category.order_index })
-      .eq("id", nextCategory.id) as any);
+      .eq("id", nextCategory.id);
       
     loadCategories();
   };
 
   const handleToggleActive = async (category: CctCategory) => {
-    await (supabase
-      .from("union_cct_categories" as any)
+    await db
+      .from("union_cct_categories")
       .update({ is_active: !category.is_active })
-      .eq("id", category.id) as any);
+      .eq("id", category.id);
     loadCategories();
   };
 
