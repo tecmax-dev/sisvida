@@ -12561,7 +12561,9 @@ export type Database = {
           is_valid: boolean
         }[]
       }
-      is_super_admin: { Args: { _user_id: string }; Returns: boolean }
+      is_super_admin:
+        | { Args: never; Returns: boolean }
+        | { Args: { _user_id: string }; Returns: boolean }
       is_union_context: { Args: { p_user_id: string }; Returns: boolean }
       log_reconciliation_action: {
         Args: {

@@ -43,8 +43,14 @@ export function ProtectedRoute({ children, requireSuperAdmin = false }: Protecte
   }
 
   // If user has no clinic, redirect to setup (unless super admin)
+  // Super admin without clinic should go to /admin, not /clinic-setup
   if (userRoles.length === 0 && !isSuperAdmin && location.pathname !== "/clinic-setup") {
     return <Navigate to="/clinic-setup" replace />;
+  }
+
+  // Super admin without clinic trying to access non-admin routes should go to admin
+  if (isSuperAdmin && userRoles.length === 0 && !location.pathname.startsWith("/admin")) {
+    return <Navigate to="/admin" replace />;
   }
 
   // Redirect professional-only users directly to their calendar
