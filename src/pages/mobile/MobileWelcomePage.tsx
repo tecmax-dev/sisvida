@@ -1,8 +1,12 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useDynamicPWA } from "@/hooks/useDynamicPWA";
 
 export default function MobileWelcomePage() {
   const navigate = useNavigate();
+  
+  // Apply PWA branding (favicon, manifest, meta tags) for the clinic
+  useDynamicPWA();
 
   const handleCadastro = () => {
     navigate("/app/filiacao");
