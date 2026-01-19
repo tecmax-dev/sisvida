@@ -164,14 +164,14 @@ export default function MobileLegalBookingPage() {
       const firstDayOfMonth = format(new Date(now.getFullYear(), now.getMonth(), 1), "yyyy-MM-dd");
       const lastDayOfMonth = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), "yyyy-MM-dd");
 
-      const { data: monthlyAppts, error: monthlyError } = await supabase
-        .from("homologacao_appointments")
+      const { data: monthlyAppts, error: monthlyError } = await (supabase
+        .from("homologacao_appointments") as any)
         .select("id")
         .eq("clinic_id", clinicId)
         .eq("employee_cpf", patientData.cpf)
         .gte("appointment_date", firstDayOfMonth)
         .lte("appointment_date", lastDayOfMonth)
-        .not("status", "eq", "cancelled");
+        .neq("status", "cancelled");
 
       if (!monthlyError && monthlyAppts && monthlyAppts.length >= 1) {
         setMonthlyLimitReached(true);
@@ -312,12 +312,12 @@ export default function MobileLegalBookingPage() {
       }
 
       // Get existing appointments for this day
-      const { data: existingAppts } = await supabase
-        .from("homologacao_appointments")
+      const { data: existingAppts } = await (supabase
+        .from("homologacao_appointments") as any)
         .select("id, appointment_date, start_time, end_time, status, professional_id")
         .eq("professional_id", selectedProfessionalId)
         .eq("appointment_date", dateStr)
-        .not("status", "in", '("cancelled")');
+        .neq("status", "cancelled");
 
       setExistingAppointments((existingAppts || []) as LegalAppointment[]);
 
