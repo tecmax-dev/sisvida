@@ -16,6 +16,7 @@ import {
   MessageCircle,
   FileText,
   Link2,
+  FileArchive,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { UnionMemberLinkDialog } from "@/components/union/members/UnionMemberLinkDialog";
 import { UnionMemberBadge } from "@/components/union/members/UnionMemberBadge";
+import { BulkFiliacaoGeneratorDialog } from "@/components/union/members/BulkFiliacaoGeneratorDialog";
 
 interface UnionMember {
   id: string;
@@ -92,7 +94,7 @@ export default function UnionMembersListPage() {
   
   // Dialog states
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  
+  const [bulkFiliacaoDialogOpen, setBulkFiliacaoDialogOpen] = useState(false);
   // Stats
   const [stats, setStats] = useState({
     total: 0,
@@ -247,10 +249,20 @@ export default function UnionMembersListPage() {
           </p>
         </div>
         {canManageMembers() && (
-          <Button onClick={() => setLinkDialogOpen(true)} className="gap-2">
-            <UserPlus className="h-4 w-4" />
-            Incluir Novo Associado
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setBulkFiliacaoDialogOpen(true)} 
+              className="gap-2"
+            >
+              <FileArchive className="h-4 w-4" />
+              <span className="hidden sm:inline">Gerar Fichas</span>
+            </Button>
+            <Button onClick={() => setLinkDialogOpen(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              Incluir Novo Associado
+            </Button>
+          </div>
         )}
       </div>
 
@@ -483,6 +495,15 @@ export default function UnionMembersListPage() {
         onOpenChange={setLinkDialogOpen}
         onSuccess={handleMemberLinked}
       />
+
+      {/* Bulk Filiacao Dialog */}
+      {currentClinic && (
+        <BulkFiliacaoGeneratorDialog
+          open={bulkFiliacaoDialogOpen}
+          onOpenChange={setBulkFiliacaoDialogOpen}
+          clinicId={currentClinic.id}
+        />
+      )}
     </div>
   );
 }
