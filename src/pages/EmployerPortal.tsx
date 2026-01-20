@@ -58,7 +58,7 @@ interface Employer {
 
 interface Contribution {
   id: string;
-  amount: number;
+  value: number;
   due_date: string;
   status: string;
   competence_month: number;
@@ -264,7 +264,7 @@ export default function EmployerPortal() {
         
         const overdue = data.contributions.filter((c: Contribution) => c.status === "overdue");
         if (overdue.length > 0) {
-          const overdueCents = overdue.reduce((sum: number, c: Contribution) => sum + (c.amount || 0), 0);
+          const overdueCents = overdue.reduce((sum: number, c: Contribution) => sum + (c.value || 0), 0);
           setAlertMessage(`Você possui ${overdue.length} boleto(s) vencido(s) totalizando ${formatCurrency(overdueCents)}. Regularize sua situação.`);
           setShowAlertDialog(true);
         }
@@ -389,7 +389,7 @@ export default function EmployerPortal() {
             cnpj: employer.cnpj,
             name: employer.name,
           },
-          value: contrib.amount,
+          value: contrib.value,
           dueDate: contrib.due_date,
           description: `${contrib.contribution_type?.name || "Contribuição"} - ${formatCompetence(contrib.competence_month, contrib.competence_year)}`,
           enableBoleto: true,
@@ -478,9 +478,9 @@ export default function EmployerPortal() {
     paid: contributions.filter(c => c.status === "paid").length,
     pending: contributions.filter(c => c.status === "pending").length,
     overdue: contributions.filter(c => c.status === "overdue").length,
-    totalValue: contributions.filter(c => c.status !== "cancelled" && c.status !== "paid").reduce((sum, c) => sum + (c.amount || 0), 0),
-    paidValue: contributions.filter(c => c.status === "paid").reduce((sum, c) => sum + (c.amount || 0), 0),
-    overdueValue: contributions.filter(c => c.status === "overdue").reduce((sum, c) => sum + (c.amount || 0), 0),
+    totalValue: contributions.filter(c => c.status !== "cancelled" && c.status !== "paid").reduce((sum, c) => sum + (c.value || 0), 0),
+    paidValue: contributions.filter(c => c.status === "paid").reduce((sum, c) => sum + (c.value || 0), 0),
+    overdueValue: contributions.filter(c => c.status === "overdue").reduce((sum, c) => sum + (c.value || 0), 0),
   }), [contributions]);
 
   const hasActiveFilters = (statusFilter !== "all" && statusFilter !== "hide_cancelled") || typeFilter !== "all" || yearFilter !== "all" || searchTerm;
@@ -550,7 +550,7 @@ export default function EmployerPortal() {
             <DialogDescription>
               {selectedContribution && (
                 <span className="text-slate-600">
-                  {formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)} • {formatCurrency(selectedContribution.amount || 0)}
+                  {formatCompetence(selectedContribution.competence_month, selectedContribution.competence_year)} • {formatCurrency(selectedContribution.value || 0)}
                 </span>
               )}
             </DialogDescription>
