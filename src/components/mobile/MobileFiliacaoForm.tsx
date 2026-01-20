@@ -11,7 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Loader2, CheckCircle2, AlertCircle, User, Briefcase, MapPin, Phone, CreditCard, FileText, Users, Shield, ArrowLeft } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle, User, Briefcase, MapPin, Phone, CreditCard, FileText, Users, Shield, ArrowLeft, UserCircle } from "lucide-react";
+import { CpfInputCard } from "@/components/ui/cpf-input-card";
 import { CnpjEmployerSearch } from "@/components/filiacao/CnpjEmployerSearch";
 import { DependentsList, Dependent } from "@/components/filiacao/DependentsList";
 import { PhotoUploadWithCamera } from "@/components/filiacao/PhotoUploadWithCamera";
@@ -451,6 +452,30 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           
+          {/* CPF DESTACADO - PRIMEIRO CAMPO */}
+          <FormField
+            control={form.control}
+            name="cpf"
+            render={({ field }) => (
+              <FormItem>
+                <CpfInputCard
+                  value={field.value}
+                  onChange={(value) => {
+                    field.onChange(value);
+                    if (value.replace(/\D/g, "").length === 11) {
+                      checkCpf(value);
+                    }
+                  }}
+                  label="Digite seu CPF para começar"
+                  required
+                  loading={cpfChecking}
+                  error={cpfExists ? "CPF já possui cadastro" : undefined}
+                  className="border-emerald-400 bg-emerald-50/80"
+                />
+              </FormItem>
+            )}
+          />
+
           <Card className="shadow-sm">
             <CardContent className="p-4 space-y-6">
               
@@ -474,31 +499,6 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                   <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={form.control}
-                      name="cpf"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-xs">CPF *</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder="000.000.000-00"
-                              className="text-sm"
-                              onChange={(e) => {
-                                const formatted = formatCpf(e.target.value);
-                                field.onChange(formatted);
-                              }}
-                              onBlur={() => checkCpf(field.value)}
-                            />
-                          </FormControl>
-                          {cpfChecking && <span className="text-xs text-gray-500">Verificando...</span>}
-                          {cpfExists && <span className="text-xs text-red-500">CPF já cadastrado</span>}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
                       name="rg"
                       render={({ field }) => (
                         <FormItem>
@@ -509,9 +509,7 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                         </FormItem>
                       )}
                     />
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={form.control}
                       name="data_nascimento"
@@ -525,7 +523,9 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                         </FormItem>
                       )}
                     />
+                  </div>
 
+                  <div className="grid grid-cols-2 gap-3">
                     <FormField
                       control={form.control}
                       name="sexo"
@@ -547,31 +547,31 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                         </FormItem>
                       )}
                     />
-                  </div>
 
-                  <FormField
-                    control={form.control}
-                    name="estado_civil"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-xs">Estado Civil</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="text-sm">
-                              <SelectValue placeholder="Selecione" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="solteiro">Solteiro(a)</SelectItem>
-                            <SelectItem value="casado">Casado(a)</SelectItem>
-                            <SelectItem value="divorciado">Divorciado(a)</SelectItem>
-                            <SelectItem value="viuvo">Viúvo(a)</SelectItem>
-                            <SelectItem value="uniao_estavel">União Estável</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
-                  />
+                    <FormField
+                      control={form.control}
+                      name="estado_civil"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs">Estado Civil</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="text-sm">
+                                <SelectValue placeholder="Selecione" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="solteiro">Solteiro(a)</SelectItem>
+                              <SelectItem value="casado">Casado(a)</SelectItem>
+                              <SelectItem value="divorciado">Divorciado(a)</SelectItem>
+                              <SelectItem value="viuvo">Viúvo(a)</SelectItem>
+                              <SelectItem value="uniao_estavel">União Estável</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
 
                   <FormField
                     control={form.control}
