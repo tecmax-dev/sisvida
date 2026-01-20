@@ -63,10 +63,19 @@ export function HomologacaoProtocolReceipt({
   
   const protocolNumber = appointment.protocol_number || `HOM-${appointment.id.slice(0, 8).toUpperCase()}`;
   const validationUrl = `${window.location.origin}/protocolo/${appointment.confirmation_token}`;
-  const address = professional.address || clinic?.address;
-  const city = professional.city || clinic?.city;
-  const stateCode = professional.state_code || clinic?.state_code;
-  const clinicPhone = professional.phone || clinic?.phone;
+  
+  // Default homologacao location
+  const defaultAddress = "Rua Coronel Paiva, 99, Centro";
+  const defaultAddressComplement = "Ao lado da Sorveteria Chiquinho";
+  const defaultCity = "Ilhéus";
+  const defaultStateCode = "BA";
+  const defaultPhone = "(73) 3231-1784";
+  
+  const address = professional.address || clinic?.address || defaultAddress;
+  const addressComplement = defaultAddressComplement;
+  const city = professional.city || clinic?.city || defaultCity;
+  const stateCode = professional.state_code || clinic?.state_code || defaultStateCode;
+  const clinicPhone = professional.phone || clinic?.phone || defaultPhone;
 
   // Generate PDF for thermal printer (80mm width = ~226.77 points at 72 DPI)
   const generatePDF = () => {
@@ -145,7 +154,17 @@ export function HomologacaoProtocolReceipt({
       const addressText = `${address}${city ? `, ${city}` : ''}${stateCode ? ` - ${stateCode}` : ''}`;
       const addressLines = pdf.splitTextToSize(addressText, contentWidth);
       pdf.text(addressLines, marginX, y);
-      y += 4 * addressLines.length + 3;
+      y += 4 * addressLines.length;
+      if (addressComplement) {
+        const complementLines = pdf.splitTextToSize(addressComplement, contentWidth);
+        pdf.text(complementLines, marginX, y);
+        y += 4 * complementLines.length;
+      }
+      if (clinicPhone) {
+        pdf.text(`Tel: ${clinicPhone}`, marginX, y);
+        y += 4;
+      }
+      y += 3;
     }
 
     // QR Code placeholder (would need canvas for actual QR)
@@ -328,6 +347,7 @@ export function HomologacaoProtocolReceipt({
                 <MapPin className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                 <div>
                   <p>{address}</p>
+                  {addressComplement && <p className="text-muted-foreground text-xs">{addressComplement}</p>}
                   {city && <p>{city}{stateCode && ` - ${stateCode}`}</p>}
                 </div>
               </div>
