@@ -23,7 +23,6 @@ import {
   DollarSign,
   AlertTriangle,
   Loader2,
-  TrendingUp,
   ChevronRight,
   Handshake,
   Users
@@ -630,79 +629,84 @@ export default function EmployerPortal() {
           variant="amber"
         />
 
-        {/* Quick Stats Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <Card className={`bg-white border-0 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "pending" ? "ring-2 ring-amber-500" : ""}`} onClick={() => { setActiveView("contributions"); setStatusFilter("pending"); }}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase">Pendentes</p>
-                  <p className="text-2xl font-bold text-amber-600 mt-1">{stats.pending}</p>
+        {/* Quick Stats Cards - Clean Modern Design */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Pendentes */}
+          <Card 
+            className={`bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "pending" ? "ring-2 ring-amber-500 ring-offset-2" : ""}`} 
+            onClick={() => { setActiveView("contributions"); setStatusFilter("pending"); }}
+          >
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-amber-600" />
                 </div>
-                <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                  <Clock className="h-5 w-5 text-amber-600" />
+                <div>
+                  <p className="text-sm font-medium text-slate-500">Pendentes</p>
+                  <p className="text-3xl font-bold text-slate-900">{stats.pending}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
           
-          <Card className={`bg-white border-0 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "overdue" ? "ring-2 ring-red-500" : ""}`} onClick={() => { setActiveView("contributions"); setStatusFilter("overdue"); }}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase">Vencidos</p>
-                  <p className="text-2xl font-bold text-red-600 mt-1">{stats.overdue}</p>
+          {/* Vencidos - Só exibe se houver vencidos a partir de Dez/2025 */}
+          {stats.overdue > 0 && contributions.some(c => c.status === "overdue" && (c.competence_year > 2025 || (c.competence_year === 2025 && c.competence_month >= 12))) && (
+            <Card 
+              className={`bg-white border border-red-100 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "overdue" ? "ring-2 ring-red-500 ring-offset-2" : ""}`} 
+              onClick={() => { setActiveView("contributions"); setStatusFilter("overdue"); }}
+            >
+              <CardContent className="p-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center">
+                    <AlertCircle className="h-6 w-6 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-red-600">Vencidos</p>
+                    <p className="text-3xl font-bold text-red-700">{stats.overdue}</p>
+                  </div>
                 </div>
-                <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center">
-                  <AlertCircle className="h-5 w-5 text-red-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className={`bg-white border-0 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "paid" ? "ring-2 ring-emerald-500" : ""}`} onClick={() => { setActiveView("contributions"); setStatusFilter("paid"); }}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-slate-500 uppercase">Pagos</p>
-                  <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.paid}</p>
-                </div>
-                <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
           
-          <Card className="bg-gradient-to-br from-amber-500 to-orange-600 border-0 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-white/80 uppercase">A Pagar</p>
-                  <p className="text-lg font-bold text-white mt-1">{formatCurrency(stats.totalValue)}</p>
+          {/* Total A Pagar - Destaque */}
+          <Card className="bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 border-0 shadow-lg">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
                 </div>
-                <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-white" />
+                <div>
+                  <p className="text-sm font-medium text-white/80">Total Pendente</p>
+                  <p className="text-2xl font-bold text-white">{formatCurrency(stats.totalValue)}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Overdue Alert */}
-        {stats.overdue > 0 && (
-          <div className="flex items-center gap-3 p-4 rounded-xl bg-red-50 border border-red-200">
-            <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-              <Bell className="h-5 w-5 text-red-600" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-medium text-red-800">Você possui {stats.overdue} boleto(s) em atraso</p>
-              <p className="text-sm text-red-600">Total: {formatCurrency(stats.overdueValue)}</p>
-            </div>
-            <Button size="sm" variant="outline" className="border-red-300 text-red-700 hover:bg-red-100 flex-shrink-0" onClick={() => { setActiveView("contributions"); setStatusFilter("overdue"); }}>
-              Ver boletos
-            </Button>
-          </div>
+        {/* Overdue Alert - Só exibe se houver vencidos a partir de Dez/2025 */}
+        {stats.overdue > 0 && contributions.some(c => c.status === "overdue" && (c.competence_year > 2025 || (c.competence_year === 2025 && c.competence_month >= 12))) && (
+          <Card className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 shadow-sm">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <Bell className="h-6 w-6 text-red-600" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-red-800">Atenção: boleto(s) em atraso</p>
+                  <p className="text-sm text-red-600 mt-0.5">{stats.overdue} pendência(s) • Total: {formatCurrency(stats.overdueValue)}</p>
+                </div>
+                <Button 
+                  size="sm" 
+                  className="bg-red-600 hover:bg-red-700 text-white flex-shrink-0 shadow-sm" 
+                  onClick={() => { setActiveView("contributions"); setStatusFilter("overdue"); }}
+                >
+                  Ver boletos
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Services Section */}

@@ -25,7 +25,6 @@ import {
   CheckCircle2,
   XCircle,
   Filter,
-  TrendingUp,
   ChevronRight,
   Handshake,
   X,
@@ -593,85 +592,75 @@ export default function AccountingOfficePortal() {
             variant="teal"
           />
 
-          {/* Quick Stats */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            <Card className="bg-white border-0 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Empresas</p>
-                    <p className="text-2xl font-bold text-slate-900 mt-1">{employers.length}</p>
+          {/* Quick Stats - Clean Modern Design */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Empresas */}
+            <Card 
+              className="bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+              onClick={() => setActiveView("employers")}
+            >
+              <CardContent className="p-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center">
+                    <Building className="h-6 w-6 text-blue-600" />
                   </div>
-                  <div className="h-10 w-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                    <Building className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm font-medium text-slate-500">Empresas</p>
+                    <p className="text-3xl font-bold text-slate-900">{employers.length}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="bg-white border-0 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
+            {/* Pendentes */}
+            <Card 
+              className="bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+              onClick={() => { setFilterStatus("pending"); setActiveView("contributions"); }}
+            >
+              <CardContent className="p-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
+                    <Clock className="h-6 w-6 text-amber-600" />
+                  </div>
                   <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Vencidos</p>
-                    <p className="text-2xl font-bold text-red-600 mt-1">{stats.overdue}</p>
-                  </div>
-                  <div className="h-10 w-10 rounded-xl bg-red-50 flex items-center justify-center">
-                    <AlertCircle className="h-5 w-5 text-red-600" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="bg-white border-0 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">Pagos</p>
-                    <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.paid}</p>
-                  </div>
-                  <div className="h-10 w-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    <p className="text-sm font-medium text-slate-500">Pendentes</p>
+                    <p className="text-3xl font-bold text-slate-900">{stats.pending}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
             
-            <Card className="bg-gradient-to-br from-teal-500 to-cyan-600 border-0 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-medium text-white/80 uppercase tracking-wide">Total Pendente</p>
-                    <p className="text-xl font-bold text-white mt-1">{formatCurrency(stats.totalValue)}</p>
+            {/* Total Pendente - Destaque */}
+            <Card className="bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 border-0 shadow-lg">
+              <CardContent className="p-5">
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-white" />
                   </div>
-                  <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-white" />
+                  <div>
+                    <p className="text-sm font-medium text-white/80">Total Pendente</p>
+                    <p className="text-2xl font-bold text-white">{formatCurrency(stats.totalValue)}</p>
                   </div>
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Overdue Alert */}
-          {stats.overdue > 0 && (
-            <Card className="bg-gradient-to-r from-red-50 to-orange-50 border-red-200">
+          {/* Vencidos Alert - Só exibe se houver vencidos a partir de Dez/2025 */}
+          {stats.overdue > 0 && contributions.some(c => c.status === "overdue" && (c.competence_year > 2025 || (c.competence_year === 2025 && c.competence_month >= 12))) && (
+            <Card className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 shadow-sm">
               <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-red-100 flex items-center justify-center flex-shrink-0">
-                    <AlertCircle className="h-5 w-5 text-red-600" />
+                <div className="flex items-center gap-4">
+                  <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0">
+                    <AlertCircle className="h-6 w-6 text-red-600" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium text-red-800">
-                      {stats.overdue} contribuições vencidas
-                    </p>
-                    <p className="text-sm text-red-600">
-                      Valor total em atraso: {formatCurrency(stats.overdueValue)}
-                    </p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-red-800">Atenção: contribuições vencidas</p>
+                    <p className="text-sm text-red-600 mt-0.5">{stats.overdue} pendência(s) • Total: {formatCurrency(stats.overdueValue)}</p>
                   </div>
                   <Button
                     size="sm"
-                    variant="outline"
-                    className="border-red-300 text-red-700 hover:bg-red-100"
+                    className="bg-red-600 hover:bg-red-700 text-white flex-shrink-0 shadow-sm"
                     onClick={() => {
                       setFilterStatus("overdue");
                       setActiveView("contributions");
@@ -835,68 +824,53 @@ export default function AccountingOfficePortal() {
           Voltar aos serviços
         </Button>
 
-        {/* Stats Cards - Compact style */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <Card 
-            className="bg-card border border-border shadow-sm cursor-default ring-2 ring-teal-500 dark:ring-teal-400 ring-offset-1"
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-teal-100 dark:bg-teal-900/50 flex items-center justify-center">
-                  <FileText className="h-4 w-4 text-teal-600 dark:text-teal-400" />
+        {/* Stats Cards - Simplified and cleaner */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Contribuições */}
+          <Card className="bg-card border border-teal-200 dark:border-teal-800 shadow-sm ring-2 ring-teal-500/50 dark:ring-teal-400/50">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-teal-100 to-teal-50 dark:from-teal-900/50 dark:to-teal-800/30 flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-teal-600 dark:text-teal-400" />
                 </div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Contribuições</span>
+                <div>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Contribuições</p>
+                  <p className="text-3xl font-bold text-foreground">{contributions.length}</p>
+                </div>
               </div>
-              <p className="text-2xl font-bold text-foreground">{contributions.length}</p>
-              <p className="text-sm text-muted-foreground">{formatCurrency(contributions.reduce((sum, c) => sum + (c.value || 0), 0))}</p>
             </CardContent>
           </Card>
           
+          {/* Empresas */}
           <Card 
             className="bg-card border border-border shadow-sm cursor-pointer hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all"
             onClick={() => setActiveView("employers")}
           >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center">
-                  <Building className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/50 dark:to-blue-800/30 flex items-center justify-center">
+                  <Building className="h-6 w-6 text-blue-600 dark:text-blue-400" />
                 </div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Empresas</span>
+                <div>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Empresas</p>
+                  <p className="text-3xl font-bold text-foreground">{employers.length}</p>
+                </div>
               </div>
-              <p className="text-2xl font-bold text-foreground">{employers.length}</p>
-              <p className="text-sm text-muted-foreground">vinculadas</p>
             </CardContent>
           </Card>
           
-          <Card 
-            className="bg-card border border-border shadow-sm cursor-pointer hover:shadow-md hover:border-purple-300 dark:hover:border-purple-700 transition-all"
-            onClick={handlePrintEmployersList}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-purple-100 dark:bg-purple-900/50 flex items-center justify-center">
-                  <FileCheck className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+          {/* Total Pendente - Destaque */}
+          <Card className="bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 border-0 shadow-lg">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <DollarSign className="h-6 w-6 text-white" />
                 </div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Relatórios</span>
-              </div>
-              <p className="text-2xl font-bold text-foreground">PDF</p>
-              <p className="text-sm text-muted-foreground">gerar relatório</p>
-            </CardContent>
-          </Card>
-          
-          <Card 
-            className="bg-card border border-border shadow-sm cursor-pointer hover:shadow-md hover:border-amber-300 dark:hover:border-amber-700 transition-all"
-            onClick={() => toast.info("Entre em contato para atualizar seus dados")}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="h-8 w-8 rounded-lg bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                  <Users className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                <div>
+                  <p className="text-sm font-medium text-white/80">Total Pendente</p>
+                  <p className="text-2xl font-bold text-white">{formatCurrency(stats.totalValue)}</p>
                 </div>
-                <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Dados</span>
               </div>
-              <p className="text-2xl font-bold text-foreground">Atualizar</p>
-              <p className="text-sm text-muted-foreground">informações</p>
             </CardContent>
           </Card>
         </div>
