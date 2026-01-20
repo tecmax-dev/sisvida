@@ -24,11 +24,18 @@ async function sendWhatsAppWithImage(
     if (!formattedPhone.startsWith('55')) {
       formattedPhone = '55' + formattedPhone;
     }
-    // Fix Brazilian mobile: add 9 after DDD if missing
+    
+    // Only add 9 for Brazilian mobile numbers that are missing it
+    // Brazilian mobiles have 9 digits (starting with 9), landlines have 8 digits
+    // Format: 55 + DDD (2 digits) + number (8 or 9 digits)
+    // If total is 12 digits (55 + DDD + 8), check if it's a mobile needing the 9
     if (formattedPhone.length === 12 && formattedPhone.startsWith('55')) {
       const ddd = formattedPhone.substring(2, 4);
       const number = formattedPhone.substring(4);
-      if (!number.startsWith('9')) {
+      // Only add 9 if the first digit suggests it's a mobile (6, 7, 8, 9 in old format)
+      // but NOT if it starts with digits typical of landlines (2, 3, 4, 5)
+      const firstDigit = number.charAt(0);
+      if (['6', '7', '8', '9'].includes(firstDigit)) {
         formattedPhone = `55${ddd}9${number}`;
       }
     }
