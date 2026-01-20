@@ -148,8 +148,8 @@ export function PortalContributionsList({
       // Employer filter (external)
       if (filterEmployerId && c.employer_id !== filterEmployerId) return false;
 
-      // Tab filter
-      if (activeTab === "pending" && c.status !== "pending") return false;
+      // Tab filter - "pending" tab includes both pending and awaiting_value (contributions with or without value)
+      if (activeTab === "pending" && c.status !== "pending" && c.status !== "awaiting_value") return false;
       if (activeTab === "overdue" && c.status !== "overdue") return false;
       if (activeTab === "paid" && c.status !== "paid") return false;
       if (activeTab === "awaiting" && c.status !== "awaiting_value") return false;

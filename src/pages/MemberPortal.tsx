@@ -306,7 +306,14 @@ export default function MemberPortal() {
 
   const filteredContributions = useMemo(() => {
     return contributions.filter(c => {
-      if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      // When filtering by "pending", include both pending and awaiting_value
+      if (statusFilter !== "all") {
+        if (statusFilter === "pending") {
+          if (c.status !== "pending" && c.status !== "awaiting_value") return false;
+        } else if (c.status !== statusFilter) {
+          return false;
+        }
+      }
       if (yearFilter !== "all" && c.competence_year !== parseInt(yearFilter)) return false;
       return true;
     });
