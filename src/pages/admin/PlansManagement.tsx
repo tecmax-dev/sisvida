@@ -669,6 +669,20 @@ export default function PlansManagement() {
                             </div>
                           ))}
                         </div>
+                        
+                        <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                          <div className="space-y-2">
+                            <Label htmlFor="maxMessagesSindicato">Mensagens/Mês (WhatsApp)</Label>
+                            <Input
+                              id="maxMessagesSindicato"
+                              type="number"
+                              min="0"
+                              value={formMaxMessages}
+                              onChange={(e) => setFormMaxMessages(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">0 = ilimitado</p>
+                          </div>
+                        </div>
                       </div>
                     )}
 
