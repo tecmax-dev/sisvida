@@ -201,7 +201,7 @@ export function UnionCreateMemberDialog({
       status: "ativo",
       category_id: "",
       contribution_value: "",
-      payment_method: "pix",
+      payment_method: "desconto_folha",
       observations: "",
     },
   });
