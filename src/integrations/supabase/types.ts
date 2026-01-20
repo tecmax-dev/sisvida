@@ -3509,6 +3509,7 @@ export type Database = {
           created_by: string | null
           employee_cpf: string | null
           employee_name: string
+          employee_prior_notice_date: string | null
           end_time: string
           id: string
           notes: string | null
@@ -3538,6 +3539,7 @@ export type Database = {
           created_by?: string | null
           employee_cpf?: string | null
           employee_name: string
+          employee_prior_notice_date?: string | null
           end_time: string
           id?: string
           notes?: string | null
@@ -3567,6 +3569,7 @@ export type Database = {
           created_by?: string | null
           employee_cpf?: string | null
           employee_name?: string
+          employee_prior_notice_date?: string | null
           end_time?: string
           id?: string
           notes?: string | null
