@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     
     const { data, error } = await supabase
       .from('patients')
-      .select('id, name, phone, email, birth_date, gender, is_active, inactivation_reason, union_status, union_card_expires_at')
+      .select('id, name, phone, email, birth_date, gender, is_active, inactivation_reason')
       .eq('clinic_id', clinicId)
       .or(`cpf.eq.${cleanCpf},cpf.eq.${formattedCpf}`)
       .maybeSingle();
