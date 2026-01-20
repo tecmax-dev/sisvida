@@ -197,8 +197,8 @@ serve(async (req) => {
       );
     }
 
-    const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://eclini.lovable.app';
-    const logoUrl = settings?.logo_url || clinic?.whatsapp_header_image_url || clinic?.logo_url || 'https://eclini.lovable.app/eclini-whatsapp-header.jpg';
+    const baseUrl = Deno.env.get('APP_BASE_URL') || 'https://sisvida.lovable.app';
+    const logoUrl = settings?.logo_url || clinic?.whatsapp_header_image_url || clinic?.logo_url || 'https://sisvida.lovable.app/logo.png';
 
     // Format appointment date (timezone-safe)
     const dateOnly = (appointment.appointment_date || "").slice(0, 10);
@@ -223,8 +223,9 @@ serve(async (req) => {
       professional?.state_code
     ].filter(Boolean).join(', ') || 'Endereço não informado';
 
-    const protocolLink = appointment.public_token 
-      ? `${baseUrl}/protocolo/${appointment.public_token}`
+    // Use confirmation_token if available, fallback to appointment id
+    const protocolLink = appointment.confirmation_token 
+      ? `${baseUrl}/protocolo/${appointment.confirmation_token}`
       : `${baseUrl}/protocolo/${appointment.id}`;
 
     const messageData = {

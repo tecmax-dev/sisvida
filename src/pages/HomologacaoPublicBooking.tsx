@@ -367,6 +367,9 @@ export default function HomologacaoPublicBooking() {
         console.error("Protocol generation error:", protocolError);
       }
 
+      // Generate a unique confirmation token
+      const confirmationToken = crypto.randomUUID();
+
       const appointmentData = {
         clinic_id: professional.clinic_id,
         professional_id: professional.id,
@@ -385,6 +388,7 @@ export default function HomologacaoPublicBooking() {
         notes: formData.notes || null,
         status: 'scheduled',
         protocol_number: protocolData || null,
+        confirmation_token: confirmationToken,
       };
 
       const { data, error } = await supabase
