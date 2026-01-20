@@ -506,8 +506,14 @@ export default function EmployerContributionsTab({
                 </CollapsibleTrigger>
                 <CollapsibleContent>
                   <CardContent className="pt-0">
-                    <ScrollArea className="max-h-[300px] pr-3">
-                      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                    {overdueContributions.length > 6 && (
+                      <div className="text-xs text-rose-500 mb-2 flex items-center gap-1">
+                        <span>↕</span>
+                        <span>Role para ver todas as {overdueContributions.length} contribuições</span>
+                      </div>
+                    )}
+                    <ScrollArea className="h-[400px] pr-4">
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 pb-2">
                         {overdueContributions.map(contrib => {
                           const isEligible = !!(contrib.lytex_invoice_id && contrib.status !== "paid" && contrib.status !== "cancelled");
                           return (
