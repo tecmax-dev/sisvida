@@ -3,20 +3,14 @@ import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { 
   Building2, 
   FileText, 
-  Search, 
   DollarSign,
-  ExternalLink,
   Building,
   Loader2,
   RefreshCw,
@@ -24,27 +18,25 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  Filter,
-  ChevronRight,
   Handshake,
-  X,
-  FileCheck,
-  Users,
+  Barcode,
+  FolderOpen,
+  Sun,
   Mail
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  PortalHeader, 
-  PortalWelcomeBanner, 
-  PortalServiceCard, 
-  PortalContainer, 
-  PortalMain 
-} from "@/components/portal/PortalLayout";
+  SindSystemHeader,
+  SindSystemContainer,
+  SindSystemMain,
+  SindSystemPageHeader,
+  SindSystemServiceCard,
+  SindSystemBackButton
+} from "@/components/portal/SindSystemLayout";
+import { SindSystemEmployersTable } from "@/components/portal/SindSystemEmployersTable";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
 import { PortalConventionsSection, PortalHomologacaoCard } from "@/components/portal/PortalServicesSection";
 import { PortalContributionsList } from "@/components/portal/PortalContributionsList";
-import { PortalLinkedEmployersList } from "@/components/portal/PortalLinkedEmployersList";
 import { PortalHomologacaoBooking } from "@/components/portal/PortalHomologacaoBooking";
 import { formatCompetence } from "@/lib/competence-format";
 
@@ -63,6 +55,9 @@ interface Employer {
   registration_number?: string | null;
   phone?: string | null;
   email?: string | null;
+  city?: string | null;
+  state?: string | null;
+  is_active?: boolean;
 }
 
 interface Contribution {
@@ -102,54 +97,10 @@ interface Clinic {
   logo_url?: string;
 }
 
-const MONTHS = [
-  "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
-  "Jul", "Ago", "Set", "Out", "Nov", "Dez"
-];
-
 const MONTHS_FULL = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
 ];
-
-const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string; icon: React.ReactNode }> = {
-  pending: { 
-    label: "Pendente", 
-    color: "text-amber-700 dark:text-amber-400", 
-    bgColor: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800",
-    icon: <Clock className="h-3.5 w-3.5" />
-  },
-  paid: { 
-    label: "Pago", 
-    color: "text-emerald-700 dark:text-emerald-400", 
-    bgColor: "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800",
-    icon: <CheckCircle2 className="h-3.5 w-3.5" />
-  },
-  overdue: { 
-    label: "Vencido", 
-    color: "text-red-700 dark:text-red-400", 
-    bgColor: "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800",
-    icon: <AlertCircle className="h-3.5 w-3.5" />
-  },
-  cancelled: { 
-    label: "Cancelado", 
-    color: "text-slate-500 dark:text-slate-400", 
-    bgColor: "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700",
-    icon: <XCircle className="h-3.5 w-3.5" />
-  },
-  awaiting_value: { 
-    label: "Aguardando", 
-    color: "text-purple-700 dark:text-purple-400", 
-    bgColor: "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800",
-    icon: <DollarSign className="h-3.5 w-3.5" />
-  },
-  negotiated: { 
-    label: "Em Negociação", 
-    color: "text-indigo-700 dark:text-indigo-400", 
-    bgColor: "bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800",
-    icon: <Handshake className="h-3.5 w-3.5" />
-  },
-};
 
 export default function AccountingOfficePortal() {
   const { clinicSlug } = useParams<{ clinicSlug: string }>();
@@ -166,21 +117,11 @@ export default function AccountingOfficePortal() {
   const [contributions, setContributions] = useState<Contribution[]>([]);
   const [clinic, setClinic] = useState<Clinic | null>(null);
   
-  // Filtros
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterStatus, setFilterStatus] = useState<string>("hide_cancelled");
-  const [filterEmployer, setFilterEmployer] = useState<string>("all");
-  const [filterMonth, setFilterMonth] = useState<string>(() => {
-    const currentMonth = new Date().getMonth();
-    return currentMonth === 0 ? "12" : String(currentMonth);
-  });
-  const [filterYear, setFilterYear] = useState<string>(() => {
-    const now = new Date();
-    return now.getMonth() === 0 ? String(now.getFullYear() - 1) : String(now.getFullYear());
-  });
+  // Views
+  const [activeView, setActiveView] = useState<"home" | "boletos" | "employers" | "documents" | "homologacao">("home");
   
-  // Views - added homologacao view
-  const [activeView, setActiveView] = useState<"services" | "contributions" | "employers" | "homologacao">("services");
+  // Filters
+  const [filterEmployer, setFilterEmployer] = useState<string>("all");
   
   // Dialog de segunda via
   const [showReissueDialog, setShowReissueDialog] = useState(false);
@@ -193,7 +134,7 @@ export default function AccountingOfficePortal() {
   const [newValue, setNewValue] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
 
-  // Employer selecionado para homologação (view embutida)
+  // Employer selecionado para homologação
   const [selectedEmployerForHomologacao, setSelectedEmployerForHomologacao] = useState<Employer | null>(null);
 
   // Restaurar sessão do sessionStorage
@@ -300,7 +241,7 @@ export default function AccountingOfficePortal() {
     setContributions([]);
     setEmail("");
     setAccessCode("");
-    setActiveView("services");
+    setActiveView("home");
   };
 
   const formatCurrency = (valueInCents: number) => {
@@ -314,11 +255,6 @@ export default function AccountingOfficePortal() {
   const formatCNPJ = (cnpj: string) => {
     if (!cnpj) return "";
     return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
-  };
-
-  const parseISODateToLocalNoon = (isoDate: string) => {
-    const [y, m, d] = isoDate.split("-").map(Number);
-    return new Date(y, (m || 1) - 1, d || 1, 12, 0, 0);
   };
 
   const formatDateForInput = (date: Date) => {
@@ -426,7 +362,7 @@ export default function AccountingOfficePortal() {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
     
-    doc.setFillColor(15, 23, 42);
+    doc.setFillColor(44, 82, 130);
     doc.rect(0, 0, pageWidth, 40, "F");
     
     doc.setFontSize(18);
@@ -465,7 +401,7 @@ export default function AccountingOfficePortal() {
       body: tableData,
       theme: "striped",
       headStyles: { 
-        fillColor: [15, 23, 42],
+        fillColor: [44, 82, 130],
         fontSize: 10,
         fontStyle: "bold"
       },
@@ -498,51 +434,6 @@ export default function AccountingOfficePortal() {
     toast.success("Relatório gerado com sucesso!");
   };
 
-  const clearFilters = () => {
-    setSearchTerm("");
-    setFilterStatus("hide_cancelled");
-    setFilterEmployer("all");
-    setFilterMonth("all");
-    setFilterYear("all");
-  };
-
-  const hasActiveFilters = (filterStatus !== "hide_cancelled") || filterEmployer !== "all" || filterMonth !== "all" || filterYear !== "all" || searchTerm;
-
-  const currentYear = new Date().getFullYear();
-  const availableYears = useMemo(() => {
-    return [...new Set([currentYear, ...contributions.map(c => c.competence_year)])].sort((a, b) => b - a);
-  }, [contributions, currentYear]);
-
-  const filteredContributions = useMemo(() => {
-    return contributions.filter(contrib => {
-      const matchesSearch = searchTerm === "" || 
-        contrib.employer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        contrib.employer?.cnpj?.includes(searchTerm.replace(/\D/g, "")) ||
-        contrib.employer?.registration_number?.includes(searchTerm);
-      
-      // When filtering by "pending", include both pending and awaiting_value
-      const matchesStatus = filterStatus === "all" || 
-        (filterStatus === "hide_cancelled" ? contrib.status !== "cancelled" : 
-         filterStatus === "pending" ? (contrib.status === "pending" || contrib.status === "awaiting_value") :
-         contrib.status === filterStatus);
-      const matchesEmployer = filterEmployer === "all" || contrib.employer_id === filterEmployer;
-      const matchesMonth = filterMonth === "all" || contrib.competence_month === parseInt(filterMonth);
-      const matchesYear = filterYear === "all" || contrib.competence_year === parseInt(filterYear);
-      
-      return matchesSearch && matchesStatus && matchesEmployer && matchesMonth && matchesYear;
-    });
-  }, [contributions, searchTerm, filterStatus, filterEmployer, filterMonth, filterYear]);
-
-  const stats = useMemo(() => ({
-    total: contributions.length,
-    pending: contributions.filter(c => c.status === "pending").length,
-    overdue: contributions.filter(c => c.status === "overdue").length,
-    paid: contributions.filter(c => c.status === "paid").length,
-    totalValue: contributions.filter(c => c.status !== "cancelled" && c.status !== "paid").reduce((sum, c) => sum + (c.value || 0), 0),
-    paidValue: contributions.filter(c => c.status === "paid").reduce((sum, c) => sum + (c.value || 0), 0),
-    overdueValue: contributions.filter(c => c.status === "overdue").reduce((sum, c) => sum + (c.value || 0), 0),
-  }), [contributions]);
-
   // Login Screen
   if (!isAuthenticated) {
     return (
@@ -572,220 +463,131 @@ export default function AccountingOfficePortal() {
     );
   }
 
-  // Services View
-  if (activeView === "services") {
+  // Home View - 3 Cards (SindSystem layout)
+  if (activeView === "home") {
     return (
-      <PortalContainer>
-        <PortalHeader
+      <SindSystemContainer>
+        <SindSystemHeader
           logoUrl={clinic?.logo_url}
-          clinicName={clinic?.name}
           entityName={accountingOffice?.name || "Escritório"}
-          entitySubtitle={accountingOffice?.email}
+          entityEmail={accountingOffice?.email}
           onLogout={handleLogout}
-          onRefresh={() => accountingOffice && loadData(accountingOffice.id)}
-          onPrint={handlePrintEmployersList}
-          variant="teal"
         />
         
-        <PortalMain>
-          {/* Welcome Banner */}
-          <PortalWelcomeBanner
-            logoUrl={clinic?.logo_url}
-            clinicName={clinic?.name}
-            entityName={accountingOffice?.name || "Escritório"}
-            variant="teal"
+        <SindSystemMain>
+          <SindSystemPageHeader
+            icon={<Sun className="h-6 w-6" />}
+            title="Olá, Bem-vindo de volta."
+            subtitle="Gerenciamento e consultas."
           />
 
-          {/* Quick Stats - Clean Modern Design */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Empresas */}
-            <Card 
-              className="bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
+          {/* 3 Service Cards - SindSystem style */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+            <SindSystemServiceCard
+              icon={<Barcode className="h-12 w-12" />}
+              title="BOLETOS"
+              description="Gerenciamento de boletos."
+              onClick={() => setActiveView("boletos")}
+              color="green"
+            />
+            <SindSystemServiceCard
+              icon={<Building2 className="h-12 w-12" />}
+              title="EMPRESAS"
+              description="Gerenciamento de Empresas."
               onClick={() => setActiveView("employers")}
-            >
-              <CardContent className="p-5">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center">
-                    <Building className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">Empresas</p>
-                    <p className="text-3xl font-bold text-slate-900">{employers.length}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Pendentes */}
-            <Card 
-              className="bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer"
-              onClick={() => { setFilterStatus("pending"); setActiveView("contributions"); }}
-            >
-              <CardContent className="p-5">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-amber-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">Pendentes</p>
-                    <p className="text-3xl font-bold text-slate-900">{stats.pending}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Total Pendente - Destaque */}
-            <Card className="bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 border-0 shadow-lg">
-              <CardContent className="p-5">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                    <DollarSign className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-white/80">Total Pendente</p>
-                    <p className="text-2xl font-bold text-white">{formatCurrency(stats.totalValue)}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              color="blue"
+            />
+            <SindSystemServiceCard
+              icon={<FolderOpen className="h-12 w-12" />}
+              title="DOCUMENTOS COLETIVOS"
+              description="Listagem de documentos coletivos."
+              onClick={() => setActiveView("documents")}
+              color="orange"
+            />
           </div>
-
-          {/* Vencidos Alert - Só exibe se houver vencidos a partir de Dez/2025 */}
-          {stats.overdue > 0 && contributions.some(c => c.status === "overdue" && (c.competence_year > 2025 || (c.competence_year === 2025 && c.competence_month >= 12))) && (
-            <Card className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 shadow-sm">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0">
-                    <AlertCircle className="h-6 w-6 text-red-600" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-red-800">Atenção: contribuições vencidas</p>
-                    <p className="text-sm text-red-600 mt-0.5">{stats.overdue} pendência(s) • Total: {formatCurrency(stats.overdueValue)}</p>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="bg-red-600 hover:bg-red-700 text-white flex-shrink-0 shadow-sm"
-                    onClick={() => {
-                      setFilterStatus("overdue");
-                      setActiveView("contributions");
-                    }}
-                  >
-                    Ver detalhes
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Services Grid */}
-          <div>
-            <h2 className="text-lg font-semibold text-slate-800 mb-4">Serviços</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <PortalServiceCard
-                icon={<FileText className="h-6 w-6" />}
-                title="Contribuições"
-                description="Gerencie boletos e pagamentos"
-                onClick={() => setActiveView("contributions")}
-                color="teal"
-                badge={stats.overdue > 0 ? `${stats.overdue}` : undefined}
-              />
-              <PortalServiceCard
-                icon={<Building className="h-6 w-6" />}
-                title="Empresas Vinculadas"
-                description={`${employers.length} empresa(s) sob gestão`}
-                onClick={() => setActiveView("employers")}
-                color="blue"
-              />
-              <PortalServiceCard
-                icon={<FileCheck className="h-6 w-6" />}
-                title="Relatórios"
-                description="Imprima relatórios das empresas"
-                onClick={handlePrintEmployersList}
-                color="purple"
-              />
-              <PortalServiceCard
-                icon={<Users className="h-6 w-6" />}
-                title="Atualizar Dados"
-                description="Atualize informações do escritório"
-                onClick={() => toast.info("Entre em contato para atualizar seus dados")}
-                color="amber"
-              />
-            </div>
-          </div>
-
-          {/* Homologação Card */}
-          <PortalHomologacaoCard clinicSlug={clinicSlug} />
-
-          {/* Convenções Coletivas */}
-          <PortalConventionsSection clinicId={clinic?.id} />
-        </PortalMain>
-      </PortalContainer>
+        </SindSystemMain>
+      </SindSystemContainer>
     );
   }
 
-  // Employers View
+  // Employers View - SindSystem table layout
   if (activeView === "employers") {
     return (
-      <PortalContainer>
-        <PortalHeader
+      <SindSystemContainer>
+        <SindSystemHeader
           logoUrl={clinic?.logo_url}
-          clinicName={clinic?.name}
           entityName={accountingOffice?.name || "Escritório"}
-          entitySubtitle={accountingOffice?.email}
+          entityEmail={accountingOffice?.email}
           onLogout={handleLogout}
-          onRefresh={() => accountingOffice && loadData(accountingOffice.id)}
-          variant="teal"
         />
         
-        <PortalMain>
-          {/* Back button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setActiveView("services")}
-            className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 -ml-2"
-          >
-            <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
-            Voltar aos serviços
-          </Button>
+        <SindSystemMain>
+          <SindSystemPageHeader
+            icon={<Building2 className="h-6 w-6 text-blue-500" />}
+            title="Gerenciamento de Empresas."
+            subtitle="Gerenciamento e consulta de Empresas."
+            onBack={() => setActiveView("home")}
+          />
 
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-200 mt-2">
-            Empresas Vinculadas
-          </h2>
-
-          <PortalLinkedEmployersList
+          <SindSystemEmployersTable
             employers={employers}
-            accountingOfficeName={accountingOffice?.name || "Escritório"}
-            clinicName={clinic?.name}
             onViewContributions={(employerId) => {
               setFilterEmployer(employerId);
-              setActiveView("contributions");
-            }}
-            onScheduleHomologacao={(employer) => {
-              setSelectedEmployerForHomologacao(employer);
-              setActiveView("homologacao");
+              setActiveView("boletos");
             }}
           />
-        </PortalMain>
-      </PortalContainer>
+
+          <div className="mt-6">
+            <SindSystemBackButton onClick={() => setActiveView("home")} />
+          </div>
+        </SindSystemMain>
+      </SindSystemContainer>
     );
   }
 
-  // Homologacao Booking View (embutida)
-  if (activeView === "homologacao" && selectedEmployerForHomologacao && clinic?.id) {
+  // Documents View - Convenções Coletivas
+  if (activeView === "documents") {
     return (
-      <PortalContainer>
-        <PortalHeader
+      <SindSystemContainer>
+        <SindSystemHeader
           logoUrl={clinic?.logo_url}
-          clinicName={clinic?.name}
           entityName={accountingOffice?.name || "Escritório"}
-          entitySubtitle={accountingOffice?.email}
+          entityEmail={accountingOffice?.email}
           onLogout={handleLogout}
-          onRefresh={() => accountingOffice && loadData(accountingOffice.id)}
-          variant="teal"
         />
         
-        <PortalMain>
+        <SindSystemMain>
+          <SindSystemPageHeader
+            icon={<FolderOpen className="h-6 w-6 text-amber-500" />}
+            title="Documentos Coletivos."
+            subtitle="Listagem de documentos coletivos."
+            onBack={() => setActiveView("home")}
+          />
+
+          <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+            <PortalConventionsSection clinicId={clinic?.id} />
+          </div>
+
+          <div className="mt-6">
+            <SindSystemBackButton onClick={() => setActiveView("home")} />
+          </div>
+        </SindSystemMain>
+      </SindSystemContainer>
+    );
+  }
+
+  // Homologacao Booking View
+  if (activeView === "homologacao" && selectedEmployerForHomologacao && clinic?.id) {
+    return (
+      <SindSystemContainer>
+        <SindSystemHeader
+          logoUrl={clinic?.logo_url}
+          entityName={accountingOffice?.name || "Escritório"}
+          entityEmail={accountingOffice?.email}
+          onLogout={handleLogout}
+        />
+        
+        <SindSystemMain>
           <PortalHomologacaoBooking
             employer={selectedEmployerForHomologacao}
             clinicId={clinic.id}
@@ -798,108 +600,55 @@ export default function AccountingOfficePortal() {
               setActiveView("employers");
             }}
           />
-        </PortalMain>
-      </PortalContainer>
+        </SindSystemMain>
+      </SindSystemContainer>
     );
   }
 
-  // Contributions View
+  // Boletos View
   return (
-    <PortalContainer>
-      <PortalHeader
+    <SindSystemContainer>
+      <SindSystemHeader
         logoUrl={clinic?.logo_url}
-        clinicName={clinic?.name}
         entityName={accountingOffice?.name || "Escritório"}
-        entitySubtitle={accountingOffice?.email}
+        entityEmail={accountingOffice?.email}
         onLogout={handleLogout}
-        onRefresh={() => accountingOffice && loadData(accountingOffice.id)}
-        variant="teal"
       />
       
-      <PortalMain>
-        {/* Back button */}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => setActiveView("services")}
-          className="text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 -ml-2"
-        >
-          <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
-          Voltar aos serviços
-        </Button>
+      <SindSystemMain>
+        <SindSystemPageHeader
+          icon={<Barcode className="h-6 w-6 text-emerald-500" />}
+          title="Gerenciamento de Boletos."
+          subtitle="Gerenciamento e consulta de boletos."
+          onBack={() => setActiveView("home")}
+        />
 
-        {/* Stats Cards - Simplified and cleaner */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Contribuições */}
-          <Card className="bg-card border border-teal-200 dark:border-teal-800 shadow-sm ring-2 ring-teal-500/50 dark:ring-teal-400/50">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-teal-100 to-teal-50 dark:from-teal-900/50 dark:to-teal-800/30 flex items-center justify-center">
-                  <FileText className="h-6 w-6 text-teal-600 dark:text-teal-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Contribuições</p>
-                  <p className="text-3xl font-bold text-foreground">{contributions.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Empresas */}
-          <Card 
-            className="bg-card border border-border shadow-sm cursor-pointer hover:shadow-md hover:border-blue-300 dark:hover:border-blue-700 transition-all"
-            onClick={() => setActiveView("employers")}
-          >
-            <CardContent className="p-5">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-50 dark:from-blue-900/50 dark:to-blue-800/30 flex items-center justify-center">
-                  <Building className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Empresas</p>
-                  <p className="text-3xl font-bold text-foreground">{employers.length}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Total Pendente - Destaque */}
-          <Card className="bg-gradient-to-br from-teal-500 via-teal-600 to-cyan-600 border-0 shadow-lg">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-white/80">Total Pendente</p>
-                  <p className="text-2xl font-bold text-white">{formatCurrency(stats.totalValue)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="bg-white rounded-lg shadow-sm border border-slate-200 p-6">
+          <PortalContributionsList
+            contributions={contributions.map(c => ({
+              ...c,
+              value: c.value,
+              amount: c.value,
+            }))}
+            isLoading={isLoadingData}
+            showEmployerInfo={true}
+            filterEmployerId={filterEmployer !== "all" ? filterEmployer : undefined}
+            onClearEmployerFilter={() => setFilterEmployer("all")}
+            onReissue={(contrib) => {
+              setSelectedContribution(contrib as any);
+              setShowReissueDialog(true);
+            }}
+            onSetValue={(contrib) => {
+              setSelectedContribution(contrib as any);
+              setShowSetValueDialog(true);
+            }}
+          />
         </div>
 
-        {/* Contributions List - New Component */}
-        <PortalContributionsList
-          contributions={contributions.map(c => ({
-            ...c,
-            value: c.value,
-            amount: c.value,
-          }))}
-          isLoading={isLoadingData}
-          showEmployerInfo={true}
-          filterEmployerId={filterEmployer !== "all" ? filterEmployer : undefined}
-          onClearEmployerFilter={() => setFilterEmployer("all")}
-          onReissue={(contrib) => {
-            setSelectedContribution(contrib as any);
-            setShowReissueDialog(true);
-          }}
-          onSetValue={(contrib) => {
-            setSelectedContribution(contrib as any);
-            setShowSetValueDialog(true);
-          }}
-        />
-      </PortalMain>
+        <div className="mt-6">
+          <SindSystemBackButton onClick={() => setActiveView("home")} />
+        </div>
+      </SindSystemMain>
 
       {/* Dialog de Segunda Via */}
       <Dialog open={showReissueDialog} onOpenChange={(open) => {
@@ -1038,6 +787,6 @@ export default function AccountingOfficePortal() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PortalContainer>
+    </SindSystemContainer>
   );
 }
