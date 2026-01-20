@@ -194,6 +194,8 @@ export default function NewNegotiationDialog({
       }));
 
       setContributions(normalized);
+      // Reset selection when (re)loading employer contributions
+      setSelectedContributions([]);
     } catch (error) {
       console.error("Error fetching contributions:", error);
       toast.error("Erro ao carregar contribuições");
