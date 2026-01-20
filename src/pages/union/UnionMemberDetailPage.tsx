@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, Loader2, Users, UserX, UserCheck, Save } from "lucide-react";
+import { ArrowLeft, Loader2, Users, UserX, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -27,6 +27,7 @@ import { UnionMemberBadge } from "@/components/union/members/UnionMemberBadge";
 // Import reusable patient components (excluding medical records)
 import { PatientCardsModal } from "@/components/patients/modals/PatientCardsModal";
 import { DependentsPanel } from "@/components/patients/DependentsPanel";
+import { MemberFiliacaoShareCard } from "@/components/union/members/MemberFiliacaoShareCard";
 
 interface UnionMember {
   id: string;
@@ -366,15 +367,17 @@ export default function UnionMemberDetailPage() {
         </TabsContent>
 
         <TabsContent value="sindical" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Users className="h-5 w-5 text-purple-500" />
-                Dados Sindicais
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Users className="h-5 w-5 text-purple-500" />
+                    Dados Sindicais
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Status da Filiação</Label>
                   <Select
@@ -469,20 +472,36 @@ export default function UnionMemberDetailPage() {
                 />
               </div>
 
-              {canManageMembers() && (
-                <div className="flex justify-end">
-                  <Button onClick={handleSaveUnionData} disabled={saving}>
-                    {saving ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4 mr-2" />
-                    )}
-                    Salvar Alterações
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  {canManageMembers() && (
+                    <div className="flex justify-end">
+                      <Button onClick={handleSaveUnionData} disabled={saving}>
+                        {saving ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : (
+                          <Save className="h-4 w-4 mr-2" />
+                        )}
+                        Salvar Alterações
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Ficha de Filiação Share Card */}
+            <div className="lg:col-span-1">
+              <MemberFiliacaoShareCard
+                member={{
+                  id: member.id,
+                  name: member.name,
+                  email: member.email,
+                  phone: member.phone,
+                  cpf: member.cpf,
+                }}
+                clinicId={member.clinic_id}
+              />
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="dependentes">
