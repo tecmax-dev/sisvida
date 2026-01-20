@@ -19,7 +19,7 @@ import {
   Share2,
   ExternalLink,
 } from "lucide-react";
-import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf";
+import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf-generator";
 import { sendWhatsAppDocument } from "@/lib/whatsapp";
 
 interface MemberData {

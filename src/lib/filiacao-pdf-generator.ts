@@ -6,7 +6,7 @@ import { ptBR } from "date-fns/locale";
 // Brand Colors
 const COLORS = {
   primary: [15, 23, 42] as [number, number, number],
-  accent: [16, 185, 129] as [number, number, number], // Emerald
+  accent: [16, 185, 129] as [number, number, number],
   purple: [147, 51, 234] as [number, number, number],
   muted: [100, 116, 139] as [number, number, number],
   light: [248, 250, 252] as [number, number, number],
@@ -83,11 +83,11 @@ async function loadImageAsBase64(url: string): Promise<string | null> {
   }
 }
 
-export async function generateFichaFiliacaoPDF(
+async function buildFiliacaoPDF(
   filiacao: Filiacao,
   dependents: Dependent[],
   sindicato?: Sindicato | null
-): Promise<void> {
+): Promise<jsPDF> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
@@ -131,6 +131,21 @@ export async function generateFichaFiliacaoPDF(
 
   let yPos = 52;
 
+  // CPF Highlight Card - FIRST AND PROMINENT
+  doc.setFillColor(239, 246, 255); // Light blue background
+  doc.roundedRect(14, yPos, pageWidth - 28, 16, 2, 2, "F");
+  doc.setFillColor(59, 130, 246); // Blue accent
+  doc.rect(14, yPos, 4, 16, "F");
+  
+  doc.setFontSize(10);
+  doc.setTextColor(30, 64, 175); // Dark blue
+  doc.setFont("helvetica", "bold");
+  doc.text("CPF:", 22, yPos + 10);
+  doc.setFontSize(14);
+  doc.text(formatCPF(filiacao.cpf), 40, yPos + 10);
+  
+  yPos += 22;
+
   // Member name card
   doc.setFillColor(...COLORS.light);
   doc.roundedRect(14, yPos, pageWidth - 28, 18, 2, 2, "F");
@@ -140,12 +155,7 @@ export async function generateFichaFiliacaoPDF(
   doc.setFontSize(14);
   doc.setTextColor(...COLORS.primary);
   doc.setFont("helvetica", "bold");
-  doc.text(filiacao.nome, 22, yPos + 8);
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.setTextColor(...COLORS.muted);
-  doc.text(`CPF: ${formatCPF(filiacao.cpf)}`, 22, yPos + 14);
+  doc.text(filiacao.nome, 22, yPos + 12);
 
   yPos += 26;
 
@@ -346,7 +356,30 @@ export async function generateFichaFiliacaoPDF(
     );
   }
 
-  // Save
+  return doc;
+}
+
+/**
+ * Generate a Filiacao PDF and return as Blob (for bulk generation)
+ */
+export async function generateFiliacaoPDFBlob(
+  filiacao: Filiacao,
+  dependents: Dependent[],
+  sindicato?: Sindicato | null
+): Promise<Blob> {
+  const doc = await buildFiliacaoPDF(filiacao, dependents, sindicato);
+  return doc.output("blob");
+}
+
+/**
+ * Generate a Filiacao PDF and trigger download
+ */
+export async function generateFichaFiliacaoPDF(
+  filiacao: Filiacao,
+  dependents: Dependent[],
+  sindicato?: Sindicato | null
+): Promise<void> {
+  const doc = await buildFiliacaoPDF(filiacao, dependents, sindicato);
   const fileName = `ficha-filiacao-${filiacao.nome.replace(/[^a-zA-Z0-9]/g, "_").substring(0, 30)}.pdf`;
   doc.save(fileName);
 }
