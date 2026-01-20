@@ -909,46 +909,59 @@ export default function EmployerPortal() {
                                 )}
                               </TableCell>
                               <TableCell className="text-center">
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                      <MoreHorizontal className="h-4 w-4" />
+                                <div className="flex items-center justify-center gap-1">
+                                  {invoiceUrl && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 text-[#2c5282] hover:text-[#2c5282] hover:bg-[#2c5282]/10"
+                                      onClick={() => window.open(invoiceUrl, "_blank")}
+                                      title="Ver Boleto"
+                                    >
+                                      <ExternalLink className="h-4 w-4" />
                                     </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    {invoiceUrl && (
-                                      <DropdownMenuItem onClick={() => window.open(invoiceUrl, "_blank")}>
-                                        <ExternalLink className="h-4 w-4 mr-2" />
-                                        Abrir Boleto
-                                      </DropdownMenuItem>
-                                    )}
-                                    {!invoiceUrl && contrib.status !== "paid" && contrib.status !== "cancelled" && value > 0 && (
-                                      <DropdownMenuItem 
-                                        onClick={() => handleGenerateInvoice(contrib)}
-                                        disabled={generatingInvoiceId === contrib.id}
-                                      >
-                                        {generatingInvoiceId === contrib.id ? (
-                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        ) : (
-                                          <FileText className="h-4 w-4 mr-2" />
-                                        )}
-                                        Emitir Boleto
-                                      </DropdownMenuItem>
-                                    )}
-                                    {contrib.status !== "paid" && contrib.status !== "cancelled" && (
-                                      <DropdownMenuItem 
-                                        onClick={() => {
-                                          setSelectedContribution(contrib);
-                                          setShowReissueDialog(true);
-                                        }}
-                                        disabled={(contrib.portal_reissue_count || 0) >= 2}
-                                      >
-                                        <RefreshCw className="h-4 w-4 mr-2" />
-                                        Gerar 2ª Via
-                                      </DropdownMenuItem>
-                                    )}
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                  )}
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end" className="bg-white border shadow-lg z-50">
+                                      {invoiceUrl && (
+                                        <DropdownMenuItem onClick={() => window.open(invoiceUrl, "_blank")}>
+                                          <ExternalLink className="h-4 w-4 mr-2" />
+                                          Abrir Boleto
+                                        </DropdownMenuItem>
+                                      )}
+                                      {!invoiceUrl && contrib.status !== "paid" && contrib.status !== "cancelled" && value > 0 && (
+                                        <DropdownMenuItem 
+                                          onClick={() => handleGenerateInvoice(contrib)}
+                                          disabled={generatingInvoiceId === contrib.id}
+                                        >
+                                          {generatingInvoiceId === contrib.id ? (
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                          ) : (
+                                            <FileText className="h-4 w-4 mr-2" />
+                                          )}
+                                          Emitir Boleto
+                                        </DropdownMenuItem>
+                                      )}
+                                      {contrib.status !== "paid" && contrib.status !== "cancelled" && (
+                                        <DropdownMenuItem 
+                                          onClick={() => {
+                                            setSelectedContribution(contrib);
+                                            setShowReissueDialog(true);
+                                          }}
+                                          disabled={(contrib.portal_reissue_count || 0) >= 2}
+                                        >
+                                          <RefreshCw className="h-4 w-4 mr-2" />
+                                          Gerar 2ª Via
+                                        </DropdownMenuItem>
+                                      )}
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                </div>
                               </TableCell>
                             </TableRow>
                           );
