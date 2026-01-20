@@ -75,6 +75,7 @@ interface TimeSlot {
 interface FormData {
   employee_name: string;
   employee_cpf: string;
+  employee_prior_notice_date: string;
   company_name: string;
   company_cnpj: string;
   company_phone: string;
@@ -207,6 +208,7 @@ export default function HomologacaoPublicBooking() {
   const [formData, setFormData] = useState<FormData>({
     employee_name: '',
     employee_cpf: '',
+    employee_prior_notice_date: '',
     company_name: prefillCompanyName,
     company_cnpj: prefillCompanyCnpj,
     company_phone: prefillCompanyPhone,
@@ -754,6 +756,15 @@ export default function HomologacaoPublicBooking() {
                       onChange={(e) => setFormData({ ...formData, employee_name: e.target.value })}
                       placeholder="Nome do funcionário"
                       required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="employee_prior_notice_date">Data do Aviso Prévio</Label>
+                    <Input
+                      id="employee_prior_notice_date"
+                      type="date"
+                      value={formData.employee_prior_notice_date}
+                      onChange={(e) => setFormData({ ...formData, employee_prior_notice_date: e.target.value })}
                     />
                   </div>
                 </div>
