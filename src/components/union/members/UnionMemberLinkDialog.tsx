@@ -80,6 +80,7 @@ export function UnionMemberLinkDialog({
   const [unionStatus, setUnionStatus] = useState("pendente");
   const [unionCategoryId, setUnionCategoryId] = useState("");
   const [unionContribution, setUnionContribution] = useState("");
+  const [unionPaymentMethod, setUnionPaymentMethod] = useState("desconto_folha");
   const [unionObservations, setUnionObservations] = useState("");
 
   useEffect(() => {
@@ -98,6 +99,7 @@ export function UnionMemberLinkDialog({
       setUnionStatus("pendente");
       setUnionCategoryId("");
       setUnionContribution("");
+      setUnionPaymentMethod("desconto_folha");
       setUnionObservations("");
     }
   }, [open]);
@@ -196,6 +198,7 @@ export function UnionMemberLinkDialog({
           union_category_id: unionCategoryId || null,
           union_joined_at: new Date().toISOString(),
           union_contribution_value: unionContribution ? parseFloat(unionContribution) : 0,
+          union_payment_method: unionPaymentMethod || null,
           union_observations: unionObservations || null,
         })
         .eq("id", selectedPatient.id);
@@ -212,6 +215,7 @@ export function UnionMemberLinkDialog({
           union_member_status: unionStatus,
           union_category_id: unionCategoryId,
           union_contribution_value: unionContribution,
+          union_payment_method: unionPaymentMethod,
         },
         performed_by: user.id,
         module_origin: "sindical",
@@ -471,6 +475,24 @@ export function UnionMemberLinkDialog({
                         onChange={(e) => setUnionContribution(e.target.value)}
                         placeholder="0,00"
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Forma de Pagamento</Label>
+                      <Select value={unionPaymentMethod} onValueChange={setUnionPaymentMethod}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="desconto_folha">Desconto em Folha</SelectItem>
+                          <SelectItem value="pix">PIX</SelectItem>
+                          <SelectItem value="boleto">Boleto Bancário</SelectItem>
+                          <SelectItem value="debito_automatico">Débito Automático</SelectItem>
+                          <SelectItem value="cash">Dinheiro</SelectItem>
+                          <SelectItem value="debit_card">Cartão de Débito</SelectItem>
+                          <SelectItem value="credit_card">Cartão de Crédito</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
 
