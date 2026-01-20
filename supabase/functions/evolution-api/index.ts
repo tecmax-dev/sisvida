@@ -62,19 +62,28 @@ serve(async (req) => {
     // 4. Create service role client for RPC call
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 5. Verify user is admin of this clinic (not just has access)
-    const { data: isAdmin, error: adminError } = await supabase.rpc('is_clinic_admin', {
-      _user_id: user.id,
-      _clinic_id: clinicId
+    // 5. First check if user is super admin
+    const { data: isSuperAdmin } = await supabase.rpc('is_super_admin', {
+      _user_id: user.id
     });
 
-    if (adminError || !isAdmin) {
-      console.error(`[evolution-api] User ${user.id} is not admin of clinic ${clinicId}`);
-      return new Response(
-        JSON.stringify({ success: false, error: 'Apenas administradores podem gerenciar o WhatsApp' }),
-        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    // If not super admin, verify user is admin of this clinic
+    if (!isSuperAdmin) {
+      const { data: isAdmin, error: adminError } = await supabase.rpc('is_clinic_admin', {
+        _user_id: user.id,
+        _clinic_id: clinicId
+      });
+
+      if (adminError || !isAdmin) {
+        console.error(`[evolution-api] User ${user.id} is not admin of clinic ${clinicId}`);
+        return new Response(
+          JSON.stringify({ success: false, error: 'Apenas administradores podem gerenciar o WhatsApp' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
     }
+
+    console.log(`[evolution-api] Access granted for user ${user.id} (superAdmin: ${isSuperAdmin})`)
 
     // 6. Fetch Evolution config for this clinic
     const { data: config, error: configError } = await supabase
