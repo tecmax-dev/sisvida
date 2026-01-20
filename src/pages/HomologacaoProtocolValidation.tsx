@@ -136,9 +136,17 @@ export default function HomologacaoProtocolValidation() {
   const StatusIcon = statusInfo.icon;
   const professional = appointment.professional as any;
   const clinic = appointment.clinic as any;
-  const address = professional?.address || clinic?.address;
-  const city = professional?.city || clinic?.city;
-  const stateCode = professional?.state_code || clinic?.state_code;
+  
+  // Default homologacao location
+  const defaultAddress = "Rua Coronel Paiva, 99, Centro";
+  const defaultAddressComplement = "Ao lado da Sorveteria Chiquinho";
+  const defaultCity = "Ilhéus";
+  const defaultStateCode = "BA";
+  const defaultPhone = "(73) 3231-1784";
+  
+  const address = professional?.address || clinic?.address || defaultAddress;
+  const city = professional?.city || clinic?.city || defaultCity;
+  const stateCode = professional?.state_code || clinic?.state_code || defaultStateCode;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-white flex items-center justify-center p-4">
@@ -230,18 +238,18 @@ export default function HomologacaoProtocolValidation() {
               </div>
             </div>
 
-            {address && (
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <MapPin className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Local</p>
-                  <p className="font-medium">{address}</p>
-                  {city && <p className="text-sm text-muted-foreground">{city}{stateCode && ` - ${stateCode}`}</p>}
-                </div>
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <MapPin className="w-5 h-5 text-primary" />
               </div>
-            )}
+              <div>
+                <p className="text-sm text-muted-foreground">Local</p>
+                <p className="font-medium">{address}</p>
+                <p className="text-xs text-muted-foreground">{defaultAddressComplement}</p>
+                <p className="text-sm text-muted-foreground">{city} - {stateCode}</p>
+                <p className="text-sm text-muted-foreground">Tel: {defaultPhone}</p>
+              </div>
+            </div>
           </div>
 
           {/* Cancellation reason */}
