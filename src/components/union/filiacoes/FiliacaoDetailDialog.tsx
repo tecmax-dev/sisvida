@@ -29,7 +29,7 @@ import {
   Pen,
   Users,
 } from "lucide-react";
-import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf";
+import { generateFichaFiliacaoPDF } from "@/lib/filiacao-pdf-generator";
 
 interface FiliacaoFull {
   id: string;
