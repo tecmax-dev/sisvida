@@ -24,21 +24,25 @@ interface DependentsListProps {
   allowedRelationshipTypes?: string[] | null;
 }
 
-// Lista completa de opções de parentesco
+// Lista de opções de parentesco (apenas tipos permitidos)
 const ALL_PARENTESCO_OPTIONS: ParentescoOption[] = [
-  { value: "conjuge", label: "Cônjuge" },
-  { value: "filho", label: "Filho(a)" },
+  { value: "conjuge", label: "Cônjuge / Esposo(a)" },
+  { value: "filho", label: "Filho(a) - até 21 anos" },
   { value: "pai", label: "Pai" },
   { value: "mae", label: "Mãe" },
-  { value: "irmao", label: "Irmão(ã)" },
-  { value: "neto", label: "Neto(a)" },
-  { value: "enteado", label: "Enteado(a)" },
-  { value: "sobrinho", label: "Sobrinho(a)" },
-  { value: "avo", label: "Avô/Avó" },
-  { value: "tio", label: "Tio(a)" },
-  { value: "primo", label: "Primo(a)" },
-  { value: "outro", label: "Outro" },
 ];
+
+// Função para calcular idade a partir da data de nascimento
+const calculateAge = (birthDate: string): number => {
+  const today = new Date();
+  const birth = new Date(birthDate + "T12:00:00");
+  let age = today.getFullYear() - birth.getFullYear();
+  const monthDiff = today.getMonth() - birth.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return age;
+};
 
 const formatCpf = (value: string) => {
   const numbers = value.replace(/\D/g, "").slice(0, 11);
@@ -62,10 +66,23 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
     ? ALL_PARENTESCO_OPTIONS.filter(opt => allowedRelationshipTypes.includes(opt.value))
     : ALL_PARENTESCO_OPTIONS;
 
+  const [ageError, setAgeError] = useState<string | null>(null);
+
   const addDependent = () => {
     if (!newDependent.nome || !newDependent.grau_parentesco || !newDependent.data_nascimento) {
       return;
     }
+
+    // Validação de idade para filhos (até 21 anos)
+    if (newDependent.grau_parentesco === "filho") {
+      const age = calculateAge(newDependent.data_nascimento);
+      if (age > 21) {
+        setAgeError("Filhos devem ter até 21 anos de idade.");
+        return;
+      }
+    }
+
+    setAgeError(null);
 
     const dependent: Dependent = {
       id: crypto.randomUUID(),
@@ -188,6 +205,13 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
               </div>
             </div>
 
+            {/* Mensagem de erro de idade */}
+            {ageError && (
+              <p className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
+                ⚠️ {ageError}
+              </p>
+            )}
+
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"
@@ -195,6 +219,7 @@ export function DependentsList({ dependents, onChange, allowedRelationshipTypes 
                 size="sm"
                 onClick={() => {
                   setShowForm(false);
+                  setAgeError(null);
                   setNewDependent({ nome: "", grau_parentesco: "", data_nascimento: "", cpf: "" });
                 }}
               >
