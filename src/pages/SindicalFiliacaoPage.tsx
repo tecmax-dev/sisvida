@@ -75,10 +75,15 @@ interface UnionEntity {
   razao_social: string;
   nome_fantasia?: string | null;
   cnpj: string;
-  logo_url?: string | null;
   entity_type: string;
   clinic_id?: string | null;
   allowed_relationship_types?: unknown;
+}
+
+interface ClinicData {
+  id: string;
+  name: string;
+  logo_url?: string | null;
 }
 
 interface PaymentMethod {
@@ -88,7 +93,7 @@ interface PaymentMethod {
   description?: string | null;
 }
 
-const EXCLUSIVE_PAYMENT_METHODS = ["desconto_contracheque"];
+const EXCLUSIVE_PAYMENT_METHODS = ["desconto_folha", "desconto_contracheque"];
 
 interface EmployerData {
   employer_id?: string;
@@ -222,6 +227,7 @@ export default function SindicalFiliacaoPage() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [sindicato, setSindicato] = useState<UnionEntity | null>(null);
+  const [clinicData, setClinicData] = useState<ClinicData | null>(null);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [cpfChecking, setCpfChecking] = useState(false);
   const [cpfExists, setCpfExists] = useState(false);
@@ -302,6 +308,19 @@ export default function SindicalFiliacaoPage() {
         }
 
         setSindicato(sindicatoData);
+
+        // Buscar dados da clínica (para a logo)
+        if (sindicatoData.clinic_id) {
+          const { data: clinicInfo } = await supabase
+            .from("clinics")
+            .select("id, name, logo_url")
+            .eq("id", sindicatoData.clinic_id)
+            .single();
+
+          if (clinicInfo) {
+            setClinicData(clinicInfo);
+          }
+        }
 
         const { data: methodsData } = await supabase
           .from("sindical_payment_methods")
@@ -501,9 +520,9 @@ export default function SindicalFiliacaoPage() {
           </div>
           
           {/* Logo */}
-          {sindicato.logo_url ? (
+          {clinicData?.logo_url ? (
             <img 
-              src={sindicato.logo_url} 
+              src={clinicData.logo_url} 
               alt={sindicato.razao_social} 
               className="h-20 w-auto object-contain mx-auto mb-6"
             />
@@ -563,9 +582,9 @@ export default function SindicalFiliacaoPage() {
           <div className="flex items-center gap-4">
             {/* Logo Container */}
             <div className="relative">
-              {sindicato.logo_url ? (
+              {clinicData?.logo_url ? (
                 <img 
-                  src={sindicato.logo_url} 
+                  src={clinicData.logo_url} 
                   alt={sindicato.razao_social} 
                   className="h-14 w-auto object-contain"
                 />
@@ -1168,15 +1187,21 @@ export default function SindicalFiliacaoPage() {
                     control={form.control}
                     name="forma_pagamento"
                     render={({ field }) => {
-                      const shouldPreSelect = paymentMethods.length === 1 &&
-                        paymentMethods[0].code === "desconto_contracheque";
-
-                      if (shouldPreSelect && !field.value) {
-                        field.onChange(paymentMethods[0].code);
+                      // Pré-selecionar "Desconto em Folha" como padrão
+                      const payrollMethod = paymentMethods.find(m => 
+                        m.code === "desconto_folha" || m.code === "desconto_contracheque"
+                      );
+                      
+                      // Auto-select if only payroll deduction is available OR if it's the default
+                      const shouldPreSelect = payrollMethod && !field.value;
+                      
+                      if (shouldPreSelect) {
+                        field.onChange(payrollMethod.code);
                       }
 
                       const selectedMethod = paymentMethods.find(m => m.code === field.value);
-                      const isPayrollDeduction = selectedMethod?.code === "desconto_contracheque";
+                      const isPayrollDeduction = selectedMethod?.code === "desconto_folha" || 
+                        selectedMethod?.code === "desconto_contracheque";
 
                       return (
                         <FormItem>
