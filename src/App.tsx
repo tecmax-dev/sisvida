@@ -60,6 +60,7 @@ const LgpdPolicy = lazy(() => import("./pages/LgpdPolicy"));
 const EmployerPortal = lazy(() => import("./pages/EmployerPortal"));
 const AccountingOfficePortal = lazy(() => import("./pages/AccountingOfficePortal"));
 const HomologacaoPublicBooking = lazy(() => import("./pages/HomologacaoPublicBooking"));
+const HomologacaoClinicBooking = lazy(() => import("./pages/HomologacaoClinicBooking"));
 const HomologacaoProtocolValidation = lazy(() => import("./pages/HomologacaoProtocolValidation"));
 const PublicContributionValue = lazy(() => import("./pages/PublicContributionValue"));
 const PortalAccessPage = lazy(() => import("./pages/public/PortalAccessPage"));
@@ -367,7 +368,7 @@ const App = () => (
                 <Route path="/contribuicao/:token" element={<PublicContributionValue />} />
                 {/* Homologação Public Routes */}
                 <Route path="/agendamento/profissional/:slug" element={<HomologacaoPublicBooking />} />
-                <Route path="/homologacao/:slug" element={<HomologacaoPublicBooking />} />
+                <Route path="/homologacao/:slug" element={<HomologacaoClinicBooking />} />
                 <Route path="/protocolo/:token" element={<HomologacaoProtocolValidation />} />
                 <Route
                   path="/clinic-setup"
