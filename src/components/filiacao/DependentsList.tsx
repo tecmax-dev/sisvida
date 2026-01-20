@@ -26,7 +26,9 @@ interface DependentsListProps {
 
 // Lista de opções de parentesco (apenas tipos permitidos)
 const ALL_PARENTESCO_OPTIONS: ParentescoOption[] = [
-  { value: "conjuge", label: "Cônjuge / Esposo(a)" },
+  { value: "esposo", label: "Esposo" },
+  { value: "esposa", label: "Esposa" },
+  { value: "conjuge", label: "Cônjuge" },
   { value: "filho", label: "Filho(a) - até 21 anos" },
   { value: "pai", label: "Pai" },
   { value: "mae", label: "Mãe" },
