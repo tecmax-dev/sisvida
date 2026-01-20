@@ -67,7 +67,7 @@ export function HomologacaoProfessionalScheduleDialog({
   const [hasChanges, setHasChanges] = useState(false);
 
   // Buscar horários existentes
-  const { data: existingSchedules, isLoading } = useQuery({
+  const { data: existingSchedules, isLoading, refetch } = useQuery({
     queryKey: ["homologacao-schedules", professional?.id],
     queryFn: async () => {
       if (!professional?.id) return [];
@@ -82,7 +82,16 @@ export function HomologacaoProfessionalScheduleDialog({
       return data || [];
     },
     enabled: open && !!professional?.id,
+    staleTime: 0, // Always fetch fresh data when dialog opens
+    refetchOnMount: "always",
   });
+
+  // Refetch when dialog opens
+  useEffect(() => {
+    if (open && professional?.id) {
+      refetch();
+    }
+  }, [open, professional?.id, refetch]);
 
   // Inicializar schedules quando dados carregarem
   useEffect(() => {
