@@ -70,6 +70,9 @@ interface PaymentMethod {
   description?: string | null;
 }
 
+// Payment methods that are exclusive (cannot be combined with others)
+const EXCLUSIVE_PAYMENT_METHODS = ["desconto_contracheque"];
+
 interface EmployerData {
   employer_id?: string;
   cnpj: string;
@@ -856,37 +859,49 @@ export default function SindicalFiliacaoPage() {
                 </FormSection>
 
                 {/* FORMA DE PAGAMENTO */}
-                <FormSection icon={CreditCard} title="Forma de Pagamento">
-                  <FormField
-                    control={form.control}
-                    name="forma_pagamento"
-                    render={({ field }) => (
-                      <FormFieldInput label="Como deseja pagar a contribuição?">
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <SelectTrigger className="h-9 text-sm max-w-md">
-                            <SelectValue placeholder="Selecione a forma de pagamento..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {paymentMethods.length > 0 ? (
-                              paymentMethods.map((method) => (
-                                <SelectItem key={method.id} value={method.code}>
-                                  {method.name}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              <>
-                                <SelectItem value="desconto_folha">Desconto em Folha</SelectItem>
-                                <SelectItem value="boleto">Boleto Bancário</SelectItem>
-                                <SelectItem value="pix">PIX</SelectItem>
-                                <SelectItem value="debito_automatico">Débito Automático</SelectItem>
-                              </>
+                {paymentMethods.length > 0 && (
+                  <FormSection icon={CreditCard} title="Forma de Pagamento da Contribuição">
+                    <FormField
+                      control={form.control}
+                      name="forma_pagamento"
+                      render={({ field }) => {
+                        // If only one payment method and it's desconto_contracheque, pre-select it
+                        const shouldPreSelect = paymentMethods.length === 1 && 
+                          paymentMethods[0].code === "desconto_contracheque";
+                        
+                        // Auto-select if should pre-select and no value set
+                        if (shouldPreSelect && !field.value) {
+                          field.onChange(paymentMethods[0].code);
+                        }
+
+                        const selectedMethod = paymentMethods.find(m => m.code === field.value);
+                        const isPayrollDeduction = selectedMethod?.code === "desconto_contracheque";
+                        
+                        return (
+                          <FormFieldInput label="Como deseja pagar a contribuição?">
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <SelectTrigger className="h-9 text-sm max-w-md">
+                                <SelectValue placeholder="Selecione a forma de pagamento..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {paymentMethods.map((method) => (
+                                  <SelectItem key={method.id} value={method.code}>
+                                    {method.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            {isPayrollDeduction && (
+                              <p className="text-xs text-amber-600 mt-2">
+                                Ao selecionar esta opção, o valor será descontado diretamente do seu contracheque/folha de pagamento.
+                              </p>
                             )}
-                          </SelectContent>
-                        </Select>
-                      </FormFieldInput>
-                    )}
-                  />
-                </FormSection>
+                          </FormFieldInput>
+                        );
+                      }}
+                    />
+                  </FormSection>
+                )}
 
               </CardContent>
             </Card>
