@@ -263,7 +263,7 @@ export default function HomologacaoPublicBooking() {
     enabled: !!professional?.clinic_id,
   });
 
-  // Fetch schedules
+  // Fetch schedules - sempre buscar dados frescos para agendamento
   const { data: schedules } = useQuery({
     queryKey: ["homologacao-schedules-public", professional?.id],
     queryFn: async () => {
@@ -278,6 +278,8 @@ export default function HomologacaoPublicBooking() {
       return data as Schedule[];
     },
     enabled: !!professional?.id,
+    staleTime: 0, // Sempre buscar dados atualizados
+    gcTime: 0, // Não manter cache
   });
 
   // Fetch service types
