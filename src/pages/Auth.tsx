@@ -189,17 +189,17 @@ export default function Auth() {
       // Verificar refs antes de redirecionar
       if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
       
-      // Verificar se é super admin
-      const { data: superAdminData } = await supabase
-        .from('super_admins')
-        .select('id')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Verificar se é super admin usando a função RPC que é SECURITY DEFINER
+      const { data: isSuperAdmin, error: saError } = await supabase
+        .rpc('is_super_admin', { _user_id: userId });
+      
+      console.log("[Auth] Super admin check:", { userId, isSuperAdmin, error: saError?.message });
       
       // Verificar refs novamente após a query assíncrona
       if (isRecoveryFlowRef.current || isFirstAccessFlowRef.current) return;
       
-      if (superAdminData) {
+      if (isSuperAdmin === true) {
+        console.log("[Auth] Redirecting super admin to /admin");
         navigate("/admin");
         return;
       }
