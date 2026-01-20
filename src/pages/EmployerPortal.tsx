@@ -335,8 +335,16 @@ export default function EmployerPortal() {
         },
       });
 
-      if (error || data.error) {
-        toast.error(data?.error || "Erro ao definir valor");
+      if (error) {
+        // Extrair mensagem de erro detalhada do edge function
+        const errorMessage = error.message || "Erro ao emitir boleto";
+        console.error("[EmployerPortal] Set value error:", error);
+        toast.error(`Erro ao emitir boleto: ${errorMessage}`);
+        return;
+      }
+      
+      if (data?.error) {
+        toast.error(data.error);
         return;
       }
 

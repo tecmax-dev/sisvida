@@ -268,9 +268,13 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { contribution_id, value, portal_type, portal_id } = await req.json();
+    const body = await req.json();
+    console.log("[SetValue] Request body:", JSON.stringify(body));
+    
+    const { contribution_id, value, portal_type, portal_id } = body;
 
     if (!contribution_id || value === undefined || value === null) {
+      console.error("[SetValue] Missing required fields:", { contribution_id, value });
       return new Response(
         JSON.stringify({ error: "contribution_id e value são obrigatórios" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
