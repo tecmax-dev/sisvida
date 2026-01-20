@@ -63,7 +63,7 @@ interface Contribution {
   status: string;
   competence_month: number;
   competence_year: number;
-  lytex_url: string | null;
+  lytex_invoice_url: string | null;
   lytex_invoice_id: string | null;
   paid_at: string | null;
   contribution_type: { id: string; name: string } | null;
@@ -616,12 +616,12 @@ export default function MemberPortal() {
                             </div>
                             <div className="text-right">
                               <p className="font-bold">{formatCurrency(contrib.amount)}</p>
-                              {contrib.lytex_url && contrib.status !== "paid" && (
+                              {contrib.lytex_invoice_url && contrib.status !== "paid" && (
                                 <Button
                                   variant="link"
                                   size="sm"
                                   className="h-auto p-0 text-emerald-600"
-                                  onClick={() => window.open(contrib.lytex_url!, "_blank")}
+                                  onClick={() => window.open(contrib.lytex_invoice_url!, "_blank")}
                                 >
                                   <ExternalLink className="h-3 w-3 mr-1" />
                                   Ver Boleto
