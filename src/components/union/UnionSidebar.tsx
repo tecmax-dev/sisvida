@@ -184,6 +184,15 @@ const unionNavTree: NavCategory[] = [
     items: [
       { href: "/union/conteudo-app", icon: Smartphone, label: "Conteúdo do App", permission: "union_module_access" },
     ]
+  },
+  {
+    id: "configuracoes",
+    label: "Configurações",
+    icon: Settings,
+    color: "homologacao",
+    items: [
+      { href: "/union/configuracoes", icon: Settings, label: "Geral", permission: "union_module_access" },
+    ]
   }
 ];
 
