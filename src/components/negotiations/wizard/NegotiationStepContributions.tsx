@@ -147,6 +147,15 @@ export default function NegotiationStepContributions({
                     <Badge variant="outline" className="text-xs">
                       {formatCompetence(contribution.competence_month, contribution.competence_year)}
                     </Badge>
+                    {contribution.status === "overdue" ? (
+                      <Badge variant="destructive" className="text-xs">
+                        Vencida
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        Pendente
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-sm text-muted-foreground">
                     Vencimento: {format(dueDate, "dd/MM/yyyy")}
@@ -154,7 +163,7 @@ export default function NegotiationStepContributions({
                 </div>
                 <div className="text-right">
                   <p className="font-semibold">{formatCurrency(contribution.value)}</p>
-                  {daysOverdue > 0 && (
+                  {contribution.status === "overdue" && daysOverdue > 0 && (
                     <div className="flex items-center gap-1 text-xs text-destructive">
                       <AlertTriangle className="h-3 w-3" />
                       {daysOverdue} dias de atraso
