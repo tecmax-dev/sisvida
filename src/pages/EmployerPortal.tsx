@@ -448,7 +448,8 @@ export default function EmployerPortal() {
     let filtered = contributions.filter(c => c.status !== "cancelled");
     
     if (activeTab === "pending") {
-      filtered = contributions.filter(c => c.status === "pending");
+      // Include both pending and awaiting_value in "A Vencer" tab
+      filtered = contributions.filter(c => c.status === "pending" || c.status === "awaiting_value");
     } else if (activeTab === "overdue") {
       filtered = contributions.filter(c => c.status === "overdue");
     } else if (activeTab === "paid") {

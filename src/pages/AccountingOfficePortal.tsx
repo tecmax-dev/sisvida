@@ -520,7 +520,11 @@ export default function AccountingOfficePortal() {
         contrib.employer?.cnpj?.includes(searchTerm.replace(/\D/g, "")) ||
         contrib.employer?.registration_number?.includes(searchTerm);
       
-      const matchesStatus = filterStatus === "all" || (filterStatus === "hide_cancelled" ? contrib.status !== "cancelled" : contrib.status === filterStatus);
+      // When filtering by "pending", include both pending and awaiting_value
+      const matchesStatus = filterStatus === "all" || 
+        (filterStatus === "hide_cancelled" ? contrib.status !== "cancelled" : 
+         filterStatus === "pending" ? (contrib.status === "pending" || contrib.status === "awaiting_value") :
+         contrib.status === filterStatus);
       const matchesEmployer = filterEmployer === "all" || contrib.employer_id === filterEmployer;
       const matchesMonth = filterMonth === "all" || contrib.competence_month === parseInt(filterMonth);
       const matchesYear = filterYear === "all" || contrib.competence_year === parseInt(filterYear);
