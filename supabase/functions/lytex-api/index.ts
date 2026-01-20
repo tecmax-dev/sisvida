@@ -916,11 +916,29 @@ Deno.serve(async (req) => {
           throw new Error("Não foi possível cancelar: dados da contribuição incompletos");
         }
 
-        await cancelInvoice({
-          invoiceId: params.invoiceId,
-          dueDate: contrib.due_date,
-          value: typeof contrib.value === "number" ? contrib.value : undefined,
-        });
+        try {
+          await cancelInvoice({
+            invoiceId: params.invoiceId,
+            dueDate: contrib.due_date,
+            value: typeof contrib.value === "number" ? contrib.value : undefined,
+          });
+        } catch (cancelError: any) {
+          const errorMessage = (cancelError?.message || "").toLowerCase();
+          
+          // Se boleto em processamento, retornar resposta especial para o frontend tratar
+          if (errorMessage.includes("processamento") || errorMessage.includes("30 minuto") || errorMessage.includes("registrado há menos")) {
+            console.warn("[Lytex] Boleto em processamento no cancelamento");
+            return new Response(JSON.stringify({ 
+              error: "BOLETO_EM_PROCESSAMENTO",
+              canForceLocal: true,
+              message: "Boleto em processamento na Lytex (aguarde 30 min após criação)."
+            }), {
+              status: 409,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          throw cancelError;
+        }
 
         // Atualizar status no banco
         const { error: updateError } = await supabase
@@ -1326,14 +1344,22 @@ Deno.serve(async (req) => {
               errorMessage.includes("404")
             ) {
               console.warn("[Lytex] Boleto já cancelado ou não encontrado, prosseguindo com exclusão");
-            } else if (errorMessage.includes("processamento") || errorMessage.includes("30 minuto")) {
+            } else if (errorMessage.includes("processamento") || errorMessage.includes("30 minuto") || errorMessage.includes("registrado há menos")) {
               // Boleto em processamento - permitir forçar exclusão local
               lytexCancelFailed = true;
-              lytexErrorMessage = "Boleto em processamento na Lytex (aguarde 30 min após criação). Deseja excluir apenas localmente?";
+              lytexErrorMessage = "BOLETO_EM_PROCESSAMENTO";
               console.warn("[Lytex] Boleto em processamento, pode ser forçado com forceLocal");
               
               if (!forceLocal) {
-                throw new Error(lytexErrorMessage);
+                // Retornar resposta especial que indica que pode forçar exclusão local
+                return new Response(JSON.stringify({ 
+                  error: lytexErrorMessage,
+                  canForceLocal: true,
+                  message: "Boleto em processamento na Lytex (aguarde 30 min após criação). Deseja excluir apenas localmente?"
+                }), {
+                  status: 409, // Conflict - indica que pode ser resolvido com ação adicional
+                  headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
               }
               console.log("[Lytex] forceLocal=true, prosseguindo com exclusão local apenas");
             } else {

@@ -279,14 +279,49 @@ export default function ContributionDialogs({
           },
         });
 
+        // Verificar se é o caso de boleto em processamento
+        if (data?.error === "BOLETO_EM_PROCESSAMENTO" || data?.canForceLocal) {
+          toast.error(
+            "Boleto em processamento na Lytex (aguarde 30 min após criação). Cancelando apenas no sistema local.",
+            { duration: 6000 }
+          );
+          // Cancelar localmente mesmo assim
+          await supabase
+            .from("employer_contributions")
+            .update({ status: "cancelled" })
+            .eq("id", selectedContribution.id);
+          
+          toast.success("Contribuição cancelada localmente");
+          setCancelDialogOpen(false);
+          onViewDialogChange(false);
+          onRefresh();
+          return;
+        }
+
         if (error) {
           console.error("Edge function error:", error);
-          throw new Error(error.message || "Erro ao cancelar na Lytex");
+          const errMsg = error?.message || (typeof error === 'string' ? error : "Erro ao cancelar na Lytex");
+          
+          // Se erro de processamento, cancelar localmente
+          if (errMsg.includes("processamento") || errMsg.includes("30 min")) {
+            await supabase
+              .from("employer_contributions")
+              .update({ status: "cancelled" })
+              .eq("id", selectedContribution.id);
+            
+            toast.success("Contribuição cancelada localmente (boleto pode permanecer ativo na Lytex por alguns minutos)");
+            setCancelDialogOpen(false);
+            onViewDialogChange(false);
+            onRefresh();
+            return;
+          }
+          
+          throw new Error(errMsg);
         }
 
         if (data?.error) {
           console.error("Lytex API error:", data.error);
-          throw new Error(data.error);
+          throw new Error(data.message || data.error);
         }
       } else {
         await supabase
@@ -301,7 +336,7 @@ export default function ContributionDialogs({
       onRefresh();
     } catch (error: any) {
       console.error("Error cancelling:", error);
-      toast.error(error.message || "Erro ao cancelar contribuição");
+      toast.error(error?.message || "Erro ao cancelar contribuição");
     }
   };
 
@@ -451,16 +486,30 @@ export default function ContributionDialogs({
         },
       });
 
+      // Verificar se é o caso de boleto em processamento (pode forçar exclusão local)
+      if (data?.error === "BOLETO_EM_PROCESSAMENTO" || data?.canForceLocal) {
+        console.log("Boleto em processamento, habilitando opção de exclusão local");
+        toast.error(
+          "Boleto em processamento na Lytex (aguarde 30 min após criação). Clique em 'Forçar exclusão local' para excluir apenas do sistema.",
+          { duration: 8000 }
+        );
+        setForceDeleteLocal(true);
+        setDeleting(false);
+        return;
+      }
+
       // Verificar erro da Edge Function
       if (error) {
         console.error("Edge function error:", error);
-        throw new Error(error.message || "Erro ao excluir contribuição");
+        // Tentar extrair mensagem do erro
+        const errMsg = error?.message || (typeof error === 'string' ? error : "Erro ao excluir contribuição");
+        throw new Error(errMsg);
       }
 
       // Verificar erro retornado no body
       if (data?.error) {
         console.error("Lytex API error:", data.error);
-        throw new Error(data.error);
+        throw new Error(data.message || data.error);
       }
 
       toast.success(forceLocal 
@@ -468,19 +517,19 @@ export default function ContributionDialogs({
         : "Contribuição e boleto excluídos com sucesso"
       );
       setDeleteDialogOpen(false);
+      setForceDeleteLocal(false);
       onViewDialogChange(false);
       onRefresh();
     } catch (error: any) {
       console.error("Error deleting:", error);
-      const msg = error.message || "";
+      const msg = error?.message || "";
       
       // Detectar erro de "em processamento" e oferecer forçar exclusão local
-      if ((msg.includes("processamento") || msg.includes("30 min")) && !forceLocal) {
+      if ((msg.includes("processamento") || msg.includes("30 min") || msg.includes("BOLETO_EM_PROCESSAMENTO")) && !forceLocal) {
         toast.error(
-          "Boleto em processamento na Lytex. Aguarde 30 min ou clique novamente para forçar exclusão local.",
-          { duration: 6000 }
+          "Boleto em processamento na Lytex. Clique em 'Forçar exclusão local' para excluir apenas do sistema.",
+          { duration: 8000 }
         );
-        // Permitir que o próximo clique force a exclusão
         setForceDeleteLocal(true);
       } else {
         toast.error(msg || "Falha ao excluir. O boleto pode ainda estar ativo na Lytex.");
@@ -956,25 +1005,46 @@ export default function ContributionDialogs({
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteDialogOpen} onOpenChange={(open) => {
+        setDeleteDialogOpen(open);
+        if (!open) setForceDeleteLocal(false);
+      }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Contribuição</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
-              <span>Tem certeza que deseja excluir esta contribuição permanentemente?</span>
-              {selectedContribution?.lytex_invoice_id && (
-                <span className="block mt-2 text-amber-600 dark:text-amber-500 font-medium">
-                  ⚠️ O boleto correspondente também será cancelado na Lytex.
-                </span>
+              {forceDeleteLocal ? (
+                <>
+                  <span className="block text-amber-600 dark:text-amber-500 font-medium">
+                    ⚠️ O boleto foi criado há menos de 30 minutos e não pode ser cancelado na Lytex ainda.
+                  </span>
+                  <span className="block mt-2">
+                    Ao forçar a exclusão local, a contribuição será removida do sistema, mas o boleto pode permanecer ativo na Lytex por alguns minutos.
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span>Tem certeza que deseja excluir esta contribuição permanentemente?</span>
+                  {selectedContribution?.lytex_invoice_id && (
+                    <span className="block mt-2 text-amber-600 dark:text-amber-500 font-medium">
+                      ⚠️ O boleto correspondente também será cancelado na Lytex.
+                    </span>
+                  )}
+                </>
               )}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting} onClick={() => setForceDeleteLocal(false)}>Voltar</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting} onClick={() => setForceDeleteLocal(false)}>
+              Voltar
+            </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => handleDeleteContribution(forceDeleteLocal)}
               disabled={deleting}
-              className="bg-destructive hover:bg-destructive/90"
+              className={cn(
+                "bg-destructive hover:bg-destructive/90",
+                forceDeleteLocal && "bg-amber-600 hover:bg-amber-700"
+              )}
             >
               {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               {forceDeleteLocal ? "Forçar Exclusão Local" : "Confirmar Exclusão"}
