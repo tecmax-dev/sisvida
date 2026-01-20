@@ -231,6 +231,16 @@ export default function SindicalFiliacaoPage() {
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [cpfChecking, setCpfChecking] = useState(false);
   const [cpfExists, setCpfExists] = useState(false);
+  const [existingPatient, setExistingPatient] = useState<{
+    id: string;
+    name: string;
+    email?: string | null;
+    phone?: string | null;
+    birth_date?: string | null;
+    union_status?: string | null;
+    union_card_expires_at?: string | null;
+    is_expired?: boolean;
+  } | null>(null);
   const [currentStep, setCurrentStep] = useState(1);
   
   const [employerData, setEmployerData] = useState<EmployerData | null>(null);
@@ -346,15 +356,64 @@ export default function SindicalFiliacaoPage() {
     if (cleanCpf.length !== 11) return;
 
     setCpfChecking(true);
+    setExistingPatient(null);
+    
     try {
-      const { data } = await supabase
+      // 1. Verifica se já existe solicitação de filiação pendente/ativa
+      const { data: associadoData } = await supabase
         .from("sindical_associados")
         .select("id, status")
         .eq("sindicato_id", sindicato.id)
         .eq("cpf", cleanCpf)
         .maybeSingle();
 
-      setCpfExists(!!data);
+      setCpfExists(!!associadoData);
+
+      // 2. Busca na base interna de pacientes (patients) usando edge function
+      if (sindicato.clinic_id) {
+        const { data: patientSearchResult, error: searchError } = await supabase.functions.invoke(
+          "search-patient-by-cpf",
+          {
+            body: { clinicId: sindicato.clinic_id, cpf: cleanCpf },
+          }
+        );
+
+        if (!searchError && patientSearchResult?.patient) {
+          const patient = patientSearchResult.patient;
+          const cardExpiresAt = patient.union_card_expires_at ? new Date(patient.union_card_expires_at) : null;
+          const isExpired = cardExpiresAt ? cardExpiresAt < new Date() : false;
+
+          setExistingPatient({
+            id: patient.id,
+            name: patient.name,
+            email: patient.email,
+            phone: patient.phone,
+            birth_date: patient.birth_date,
+            union_status: patient.union_status,
+            union_card_expires_at: patient.union_card_expires_at,
+            is_expired: isExpired,
+          });
+
+          // Preenche o formulário com os dados existentes
+          if (patient.name) form.setValue("nome", patient.name);
+          if (patient.email) form.setValue("email", patient.email);
+          if (patient.phone) {
+            const formattedPhone = formatPhone(patient.phone.replace(/\D/g, ""));
+            form.setValue("celular", formattedPhone);
+          }
+          if (patient.birth_date) form.setValue("data_nascimento", patient.birth_date);
+          if (patient.gender) form.setValue("sexo", patient.gender);
+
+          toast({
+            title: "Cadastro encontrado",
+            description: isExpired 
+              ? "Identificamos seu cadastro com carteira vencida. Renove sua filiação."
+              : "Seus dados foram preenchidos automaticamente.",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao verificar CPF:", error);
     } finally {
       setCpfChecking(false);
     }
@@ -697,6 +756,35 @@ export default function SindicalFiliacaoPage() {
                                 <AlertCircle className="h-3 w-3" />
                                 Este CPF já possui uma solicitação
                               </p>
+                            )}
+                            {existingPatient && !cpfExists && (
+                              <div className={`mt-2 p-3 rounded-lg border ${existingPatient.is_expired ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                                <div className="flex items-start gap-2">
+                                  {existingPatient.is_expired ? (
+                                    <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                                  ) : (
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5" />
+                                  )}
+                                  <div className="flex-1">
+                                    <p className={`text-sm font-medium ${existingPatient.is_expired ? 'text-amber-800' : 'text-emerald-800'}`}>
+                                      {existingPatient.is_expired ? 'Carteira Vencida' : 'Cadastro Encontrado'}
+                                    </p>
+                                    <p className="text-xs text-gray-600 mt-0.5">
+                                      {existingPatient.name}
+                                      {existingPatient.is_expired && existingPatient.union_card_expires_at && (
+                                        <span className="block text-amber-700">
+                                          Vencida em: {new Date(existingPatient.union_card_expires_at).toLocaleDateString('pt-BR')}
+                                        </span>
+                                      )}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {existingPatient.is_expired 
+                                        ? 'Seus dados foram preenchidos. Complete para renovar sua filiação.'
+                                        : 'Dados preenchidos automaticamente. Verifique e atualize se necessário.'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
                             )}
                             <FormMessage />
                           </FormInputWrapper>
