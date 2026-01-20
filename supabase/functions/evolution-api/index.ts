@@ -151,7 +151,8 @@ serve(async (req) => {
       case 'setWebhook':
         evolutionUrl = `${api_url}/webhook/set/${instance_name}`;
         method = 'POST';
-        const webhookUrl = payload?.webhookUrl as string || `https://eahhszmbyxapxzilfdlo.functions.supabase.co/whatsapp-webhook`;
+        const defaultWebhookUrl = `${supabaseUrl}/functions/v1/whatsapp-webhook`;
+        const webhookUrl = payload?.webhookUrl as string || defaultWebhookUrl;
         body = JSON.stringify({
           webhook: {
             enabled: true,
