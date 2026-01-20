@@ -61,7 +61,7 @@ interface Contribution {
   status: string;
   competence_month: number;
   competence_year: number;
-  lytex_url: string | null;
+  lytex_invoice_url: string | null;
   lytex_invoice_id: string | null;
   paid_at: string | null;
   portal_reissue_count: number;
@@ -859,8 +859,8 @@ export default function EmployerPortal() {
                       ) : (
                         paginatedContributions.map((contrib) => {
                           const value = contrib.value || 0;
-                          const needsValue = contrib.status === "awaiting_value" || value === 0;
-                          const invoiceUrl = contrib.lytex_url;
+                          const needsValue = contrib.status === "awaiting_value" && !contrib.lytex_invoice_url;
+                          const invoiceUrl = contrib.lytex_invoice_url;
                           const dueDate = new Date(contrib.due_date + "T12:00:00");
                           
                           return (
