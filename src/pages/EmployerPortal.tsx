@@ -2,13 +2,14 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { toast } from "sonner";
 import { 
   Building2, 
@@ -18,28 +19,25 @@ import {
   Clock, 
   XCircle,
   RefreshCw,
-  Bell,
-  Calendar,
   DollarSign,
   AlertTriangle,
   Loader2,
-  ChevronRight,
   Handshake,
-  Users
+  History,
+  FileStack,
+  MoreHorizontal,
+  ExternalLink,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Sun,
+  Search,
+  Bell
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { formatCompetence } from "@/lib/competence-format";
-import { 
-  PortalHeader, 
-  PortalWelcomeBanner, 
-  PortalServiceCard, 
-  PortalContainer, 
-  PortalMain 
-} from "@/components/portal/PortalLayout";
 import { PortalLoginScreen } from "@/components/portal/PortalLoginScreen";
-import { PortalConventionsSection, PortalHomologacaoCard } from "@/components/portal/PortalServicesSection";
-import { PortalContributionsList } from "@/components/portal/PortalContributionsList";
 
 interface Clinic {
   id: string;
@@ -125,6 +123,9 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   },
 };
 
+type ActiveView = "home" | "contributions" | "documents" | "history";
+type ContributionTab = "pending" | "overdue" | "paid" | "all";
+
 export default function EmployerPortal() {
   const { clinicSlug } = useParams();
   const [cnpj, setCnpj] = useState("");
@@ -144,14 +145,11 @@ export default function EmployerPortal() {
   const [newValue, setNewValue] = useState("");
   const [isSettingValue, setIsSettingValue] = useState(false);
   const [generatingInvoiceId, setGeneratingInvoiceId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState("hide_cancelled");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [yearFilter, setYearFilter] = useState(() => {
-    const now = new Date();
-    return now.getMonth() === 0 ? String(now.getFullYear() - 1) : String(now.getFullYear());
-  });
+  const [activeView, setActiveView] = useState<ActiveView>("home");
+  const [activeTab, setActiveTab] = useState<ContributionTab>("pending");
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeView, setActiveView] = useState<"services" | "contributions">("services");
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (clinicSlug) {
@@ -190,17 +188,6 @@ export default function EmployerPortal() {
       console.error("Error loading clinic:", err);
     }
   };
-
-  const contributionTypes = useMemo(() => {
-    const types = new Set(contributions.map(c => c.contribution_type?.name).filter(Boolean));
-    return Array.from(types) as string[];
-  }, [contributions]);
-
-  const contributionYears = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    const years = new Set([currentYear, ...contributions.map(c => c.competence_year)]);
-    return Array.from(years).sort((a, b) => b - a);
-  }, [contributions]);
 
   const formatCnpj = (value: string) => {
     const numbers = value.replace(/\D/g, "");
@@ -262,10 +249,15 @@ export default function EmployerPortal() {
       if (!error && data.contributions) {
         setContributions(data.contributions);
         
-        const overdue = data.contributions.filter((c: Contribution) => c.status === "overdue");
-        if (overdue.length > 0) {
-          const overdueCents = overdue.reduce((sum: number, c: Contribution) => sum + (c.value || 0), 0);
-          setAlertMessage(`Você possui ${overdue.length} boleto(s) vencido(s) totalizando ${formatCurrency(overdueCents)}. Regularize sua situação.`);
+        // Só exibe alerta de vencidos se for a partir de Dez/2025
+        const overdueFromDec2025 = data.contributions.filter((c: Contribution) => 
+          c.status === "overdue" && 
+          (c.competence_year > 2025 || (c.competence_year === 2025 && c.competence_month >= 12))
+        );
+        
+        if (overdueFromDec2025.length > 0) {
+          const overdueCents = overdueFromDec2025.reduce((sum: number, c: Contribution) => sum + (c.value || 0), 0);
+          setAlertMessage(`Você possui ${overdueFromDec2025.length} boleto(s) vencido(s) totalizando ${formatCurrency(overdueCents)}. Regularize sua situação.`);
           setShowAlertDialog(true);
         }
       }
@@ -435,13 +427,7 @@ export default function EmployerPortal() {
     sessionStorage.removeItem("employer_session");
     setCnpj("");
     setAccessCode("");
-  };
-
-  const clearFilters = () => {
-    setStatusFilter("hide_cancelled");
-    setTypeFilter("all");
-    setYearFilter("all");
-    setSearchTerm("");
+    setActiveView("home");
   };
 
   useEffect(() => {
@@ -457,33 +443,47 @@ export default function EmployerPortal() {
     }
   }, []);
 
+  // Filtered contributions based on active tab
   const filteredContributions = useMemo(() => {
-    return contributions.filter((c) => {
-      if (statusFilter === "hide_cancelled" && c.status === "cancelled") return false;
-      if (statusFilter !== "all" && statusFilter !== "hide_cancelled" && c.status !== statusFilter) return false;
-      if (typeFilter !== "all" && c.contribution_type?.name !== typeFilter) return false;
-      if (yearFilter !== "all" && c.competence_year.toString() !== yearFilter) return false;
-      if (searchTerm) {
-        const term = searchTerm.toLowerCase();
+    let filtered = contributions.filter(c => c.status !== "cancelled");
+    
+    if (activeTab === "pending") {
+      filtered = contributions.filter(c => c.status === "pending");
+    } else if (activeTab === "overdue") {
+      filtered = contributions.filter(c => c.status === "overdue");
+    } else if (activeTab === "paid") {
+      filtered = contributions.filter(c => c.status === "paid");
+    }
+
+    // Apply search
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(c => {
+        const typeName = c.contribution_type?.name?.toLowerCase() || "";
         const competence = formatCompetence(c.competence_month, c.competence_year).toLowerCase();
-        const type = (c.contribution_type?.name || "").toLowerCase();
-        if (!competence.includes(term) && !type.includes(term)) return false;
-      }
-      return true;
-    });
-  }, [contributions, statusFilter, typeFilter, yearFilter, searchTerm]);
+        return typeName.includes(term) || competence.includes(term);
+      });
+    }
+
+    return filtered;
+  }, [contributions, activeTab, searchTerm]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredContributions.length / itemsPerPage);
+  const paginatedContributions = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredContributions.slice(start, start + itemsPerPage);
+  }, [filteredContributions, currentPage, itemsPerPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab, searchTerm, itemsPerPage]);
 
   const stats = useMemo(() => ({
-    total: contributions.length,
-    paid: contributions.filter(c => c.status === "paid").length,
     pending: contributions.filter(c => c.status === "pending").length,
     overdue: contributions.filter(c => c.status === "overdue").length,
-    totalValue: contributions.filter(c => c.status !== "cancelled" && c.status !== "paid").reduce((sum, c) => sum + (c.value || 0), 0),
-    paidValue: contributions.filter(c => c.status === "paid").reduce((sum, c) => sum + (c.value || 0), 0),
-    overdueValue: contributions.filter(c => c.status === "overdue").reduce((sum, c) => sum + (c.value || 0), 0),
+    paid: contributions.filter(c => c.status === "paid").length,
   }), [contributions]);
-
-  const hasActiveFilters = (statusFilter !== "all" && statusFilter !== "hide_cancelled") || typeFilter !== "all" || yearFilter !== "all" || searchTerm;
 
   // Login Screen
   if (!employer) {
@@ -514,9 +514,9 @@ export default function EmployerPortal() {
     );
   }
 
-  // Dashboard
+  // Main Portal Layout
   return (
-    <PortalContainer>
+    <div className="min-h-screen bg-[#f5f5f5]">
       {/* Dialogs */}
       <Dialog open={showAlertDialog} onOpenChange={setShowAlertDialog}>
         <DialogContent className="sm:max-w-md">
@@ -610,213 +610,494 @@ export default function EmployerPortal() {
         </DialogContent>
       </Dialog>
 
-      <PortalHeader
-        logoUrl={clinic?.logo_url}
-        clinicName={clinic?.name}
-        entityName={employer.name}
-        entitySubtitle={formatCnpj(employer.cnpj)}
-        onLogout={handleLogout}
-        onRefresh={() => loadContributions(employer.id)}
-        variant="amber"
-      />
-
-      <PortalMain>
-        {/* Welcome Banner */}
-        <PortalWelcomeBanner
-          logoUrl={clinic?.logo_url}
-          clinicName={clinic?.name}
-          entityName={employer.name}
-          variant="amber"
-        />
-
-        {/* Quick Stats Cards - Clean Modern Design */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Pendentes */}
-          <Card 
-            className={`bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "pending" ? "ring-2 ring-amber-500 ring-offset-2" : ""}`} 
-            onClick={() => { setActiveView("contributions"); setStatusFilter("pending"); }}
-          >
-            <CardContent className="p-5">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-50 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-amber-600" />
+      {/* Header - Blue Bar */}
+      <header className="bg-[#2c5282] text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="flex items-center justify-between h-14">
+            {/* Logo */}
+            <div className="flex items-center gap-3">
+              {clinic?.logo_url ? (
+                <img 
+                  src={clinic.logo_url} 
+                  alt={clinic.name || "Logo"} 
+                  className="h-8 object-contain brightness-0 invert"
+                />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <div className="bg-white/20 rounded-lg p-1.5">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <span className="font-semibold text-lg">{clinic?.name || "Portal"}</span>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Pendentes</p>
-                  <p className="text-3xl font-bold text-slate-900">{stats.pending}</p>
+              )}
+            </div>
+            
+            {/* Right side - Company name & actions */}
+            <div className="flex items-center gap-4">
+              <button className="p-2 hover:bg-white/10 rounded-lg transition-colors">
+                <Bell className="h-5 w-5" />
+              </button>
+              <div className="flex items-center gap-2">
+                <div className="h-8 w-8 rounded-full bg-white/20 flex items-center justify-center">
+                  <Building2 className="h-4 w-4" />
+                </div>
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-medium leading-tight truncate max-w-[200px]">{employer.name}</p>
+                  <p className="text-xs text-white/70">{formatCnpj(employer.cnpj)}</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-          
-          {/* Vencidos - Só exibe se houver vencidos a partir de Dez/2025 */}
-          {stats.overdue > 0 && contributions.some(c => c.status === "overdue" && (c.competence_year > 2025 || (c.competence_year === 2025 && c.competence_month >= 12))) && (
-            <Card 
-              className={`bg-white border border-red-100 shadow-sm hover:shadow-md transition-all cursor-pointer ${statusFilter === "overdue" ? "ring-2 ring-red-500 ring-offset-2" : ""}`} 
-              onClick={() => { setActiveView("contributions"); setStatusFilter("overdue"); }}
-            >
-              <CardContent className="p-5">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-100 to-red-50 flex items-center justify-center">
-                    <AlertCircle className="h-6 w-6 text-red-600" />
+              <button 
+                onClick={handleLogout}
+                className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+                title="Sair"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+        {activeView === "home" && (
+          <>
+            {/* Welcome Section */}
+            <div className="mb-8">
+              <div className="flex items-center gap-3 mb-2">
+                <Sun className="h-6 w-6 text-amber-500" />
+                <h1 className="text-2xl font-semibold text-slate-800">Olá, Bem-vindo de volta.</h1>
+              </div>
+              <p className="text-slate-500">Gerenciamento e consultas.</p>
+            </div>
+
+            {/* Main Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Contribuições Card */}
+              <button
+                onClick={() => setActiveView("contributions")}
+                className="group relative h-48 rounded-xl bg-[#26a69a] hover:bg-[#1e8e82] transition-all duration-300 p-6 text-white text-left shadow-lg hover:shadow-xl hover:-translate-y-1"
+              >
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <div className="flex gap-0.5">
+                    <div className="w-1.5 h-12 bg-white/80 rounded-sm" />
+                    <div className="w-1.5 h-12 bg-white/80 rounded-sm" />
+                    <div className="w-1.5 h-12 bg-white/80 rounded-sm" />
+                    <div className="w-1.5 h-12 bg-white/80 rounded-sm" />
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-red-600">Vencidos</p>
-                    <p className="text-3xl font-bold text-red-700">{stats.overdue}</p>
+                  <div className="text-center">
+                    <h3 className="text-lg font-bold uppercase tracking-wide">Contribuições</h3>
+                    <p className="text-sm text-white/80 mt-1">Gerenciamento de contribuições.</p>
+                  </div>
+                </div>
+                {stats.overdue > 0 && (
+                  <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                    {stats.overdue}
+                  </span>
+                )}
+              </button>
+
+              {/* Documentos Coletivos Card */}
+              <button
+                onClick={() => setActiveView("documents")}
+                className="group h-48 rounded-xl bg-[#e89e4c] hover:bg-[#d68f3f] transition-all duration-300 p-6 text-white text-left shadow-lg hover:shadow-xl hover:-translate-y-1"
+              >
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <FileStack className="h-14 w-14 text-white/90" />
+                  <div className="text-center">
+                    <h3 className="text-lg font-bold uppercase tracking-wide">Documentos Coletivos</h3>
+                    <p className="text-sm text-white/80 mt-1">Listagem de documentos coletivos.</p>
+                  </div>
+                </div>
+              </button>
+
+              {/* Histórico Financeiro Card */}
+              <button
+                onClick={() => setActiveView("history")}
+                className="group h-48 rounded-xl bg-[#b07eb0] hover:bg-[#9c6a9c] transition-all duration-300 p-6 text-white text-left shadow-lg hover:shadow-xl hover:-translate-y-1"
+              >
+                <div className="flex flex-col items-center justify-center h-full gap-3">
+                  <History className="h-14 w-14 text-white/90" />
+                  <div className="text-center">
+                    <h3 className="text-lg font-bold uppercase tracking-wide">Histórico Financeiro</h3>
+                    <p className="text-sm text-white/80 mt-1">Listagem de todo o seu histórico.</p>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </>
+        )}
+
+        {activeView === "contributions" && (
+          <>
+            {/* Header */}
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="flex gap-0.5">
+                  <div className="w-1 h-6 bg-[#26a69a] rounded-sm" />
+                  <div className="w-1 h-6 bg-[#26a69a] rounded-sm" />
+                  <div className="w-1 h-6 bg-[#26a69a] rounded-sm" />
+                  <div className="w-1 h-6 bg-[#26a69a] rounded-sm" />
+                </div>
+                <h1 className="text-2xl font-semibold text-slate-800">Gerenciamento de contribuições</h1>
+              </div>
+              <p className="text-slate-500">Gerenciamento de consulta e emissão de contribuições.</p>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex flex-wrap gap-2 mb-6">
+              <button
+                onClick={() => setActiveTab("pending")}
+                className={`px-8 py-3 rounded-lg font-medium text-sm transition-all ${
+                  activeTab === "pending" 
+                    ? "bg-[#26a69a] text-white shadow-md" 
+                    : "bg-[#26a69a]/10 text-[#26a69a] hover:bg-[#26a69a]/20"
+                }`}
+              >
+                A vencer
+                {stats.pending > 0 && (
+                  <Badge className="ml-2 bg-white/20 text-white border-0">{stats.pending}</Badge>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("overdue")}
+                className={`px-8 py-3 rounded-lg font-medium text-sm transition-all ${
+                  activeTab === "overdue" 
+                    ? "bg-[#e89e4c] text-white shadow-md" 
+                    : "bg-[#e89e4c]/10 text-[#e89e4c] hover:bg-[#e89e4c]/20"
+                }`}
+              >
+                Vencidas
+                {stats.overdue > 0 && (
+                  <Badge className="ml-2 bg-white/20 text-white border-0">{stats.overdue}</Badge>
+                )}
+              </button>
+              <button
+                onClick={() => setActiveTab("paid")}
+                className={`px-8 py-3 rounded-lg font-medium text-sm transition-all ${
+                  activeTab === "paid" 
+                    ? "bg-[#607d8b] text-white shadow-md" 
+                    : "bg-[#607d8b]/10 text-[#607d8b] hover:bg-[#607d8b]/20"
+                }`}
+              >
+                Pagas
+              </button>
+              <button
+                onClick={() => setActiveTab("all")}
+                className={`px-8 py-3 rounded-lg font-medium text-sm transition-all ${
+                  activeTab === "all" 
+                    ? "bg-[#2c5282] text-white shadow-md" 
+                    : "bg-transparent text-[#2c5282] hover:bg-[#2c5282]/10 border border-[#2c5282]"
+                }`}
+              >
+                Todos os boletos
+              </button>
+            </div>
+
+            {/* Table Card */}
+            <Card className="bg-white border-0 shadow-sm rounded-xl overflow-hidden">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">Listagem de contribuições.</h3>
+                
+                {/* Table Controls */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                  <div className="flex items-center gap-2">
+                    <Select value={String(itemsPerPage)} onValueChange={(v) => setItemsPerPage(Number(v))}>
+                      <SelectTrigger className="w-20 h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <span className="text-sm text-slate-500">resultados por página</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-slate-500">Pesquisar</span>
+                    <Input
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-48 h-9"
+                      placeholder="..."
+                    />
+                  </div>
+                </div>
+
+                {/* Table */}
+                <div className="border rounded-lg overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-slate-50">
+                        <TableHead className="w-24 font-medium text-slate-600">#</TableHead>
+                        <TableHead className="font-medium text-slate-600">Descrição</TableHead>
+                        <TableHead className="font-medium text-slate-600">Documento</TableHead>
+                        <TableHead className="font-medium text-slate-600">Vencimento</TableHead>
+                        <TableHead className="font-medium text-slate-600">Valor</TableHead>
+                        <TableHead className="w-20 font-medium text-slate-600 text-center">Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {paginatedContributions.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-12 text-slate-500">
+                            <FileText className="h-12 w-12 mx-auto mb-3 text-slate-300" />
+                            <p>Nenhuma contribuição encontrada</p>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        paginatedContributions.map((contrib) => {
+                          const value = contrib.value || 0;
+                          const needsValue = contrib.status === "awaiting_value" || value === 0;
+                          const invoiceUrl = contrib.lytex_url;
+                          const dueDate = new Date(contrib.due_date + "T12:00:00");
+                          
+                          return (
+                            <TableRow key={contrib.id} className="hover:bg-slate-50/50">
+                              <TableCell className="font-mono text-sm text-slate-600">
+                                {formatCompetence(contrib.competence_month, contrib.competence_year)}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-slate-700">
+                                    {contrib.lytex_invoice_id?.slice(0, 6) || "—"} - {contrib.contribution_type?.name || "Contribuição"}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-mono text-sm text-slate-600">
+                                {contrib.lytex_invoice_id?.slice(0, 8) || "—"}
+                              </TableCell>
+                              <TableCell>
+                                <Badge 
+                                  className={`font-medium ${
+                                    contrib.status === "overdue" 
+                                      ? "bg-[#26a69a] text-white border-0" 
+                                      : contrib.status === "paid"
+                                      ? "bg-emerald-100 text-emerald-700 border-emerald-200"
+                                      : "bg-[#26a69a] text-white border-0"
+                                  }`}
+                                >
+                                  {format(dueDate, "dd/MM/yyyy")}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                {needsValue ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedContribution(contrib);
+                                      setShowSetValueDialog(true);
+                                    }}
+                                    className="h-8 text-xs border-[#2c5282] text-[#2c5282] hover:bg-[#2c5282]/10"
+                                  >
+                                    Informar o valor
+                                  </Button>
+                                ) : (
+                                  <span className="font-medium text-slate-700">{formatCurrency(value)}</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                      <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {invoiceUrl && (
+                                      <DropdownMenuItem onClick={() => window.open(invoiceUrl, "_blank")}>
+                                        <ExternalLink className="h-4 w-4 mr-2" />
+                                        Abrir Boleto
+                                      </DropdownMenuItem>
+                                    )}
+                                    {!invoiceUrl && contrib.status !== "paid" && contrib.status !== "cancelled" && value > 0 && (
+                                      <DropdownMenuItem 
+                                        onClick={() => handleGenerateInvoice(contrib)}
+                                        disabled={generatingInvoiceId === contrib.id}
+                                      >
+                                        {generatingInvoiceId === contrib.id ? (
+                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        ) : (
+                                          <FileText className="h-4 w-4 mr-2" />
+                                        )}
+                                        Emitir Boleto
+                                      </DropdownMenuItem>
+                                    )}
+                                    {contrib.status !== "paid" && contrib.status !== "cancelled" && (
+                                      <DropdownMenuItem 
+                                        onClick={() => {
+                                          setSelectedContribution(contrib);
+                                          setShowReissueDialog(true);
+                                        }}
+                                        disabled={(contrib.portal_reissue_count || 0) >= 2}
+                                      >
+                                        <RefreshCw className="h-4 w-4 mr-2" />
+                                        Gerar 2ª Via
+                                      </DropdownMenuItem>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Pagination Footer */}
+                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
+                  <p className="text-sm text-slate-500">
+                    Mostrando de {Math.min((currentPage - 1) * itemsPerPage + 1, filteredContributions.length)} até {Math.min(currentPage * itemsPerPage, filteredContributions.length)} de {filteredContributions.length} registros
+                  </p>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      Anterior
+                    </Button>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map((page) => (
+                      <Button
+                        key={page}
+                        variant={currentPage === page ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setCurrentPage(page)}
+                        className={currentPage === page ? "bg-[#2c5282]" : ""}
+                      >
+                        {page}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                    >
+                      Próximo
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          )}
-          
-          {/* Total A Pagar - Destaque */}
-          <Card className="bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 border-0 shadow-lg">
-            <CardContent className="p-5">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                  <DollarSign className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-white/80">Total Pendente</p>
-                  <p className="text-2xl font-bold text-white">{formatCurrency(stats.totalValue)}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Overdue Alert - Só exibe se houver vencidos a partir de Dez/2025 */}
-        {stats.overdue > 0 && contributions.some(c => c.status === "overdue" && (c.competence_year > 2025 || (c.competence_year === 2025 && c.competence_month >= 12))) && (
-          <Card className="bg-gradient-to-r from-red-50 to-orange-50 border border-red-200 shadow-sm">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 rounded-2xl bg-red-100 flex items-center justify-center flex-shrink-0">
-                  <Bell className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-red-800">Atenção: boleto(s) em atraso</p>
-                  <p className="text-sm text-red-600 mt-0.5">{stats.overdue} pendência(s) • Total: {formatCurrency(stats.overdueValue)}</p>
-                </div>
-                <Button 
-                  size="sm" 
-                  className="bg-red-600 hover:bg-red-700 text-white flex-shrink-0 shadow-sm" 
-                  onClick={() => { setActiveView("contributions"); setStatusFilter("overdue"); }}
-                >
-                  Ver boletos
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Services Section */}
-        <div>
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Serviços</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <PortalServiceCard
-              icon={<FileText className="h-6 w-6" />}
-              title="Contribuições"
-              description="Visualize e pague seus boletos"
-              onClick={() => setActiveView("contributions")}
-              color="amber"
-              badge={stats.overdue > 0 ? String(stats.overdue) : undefined}
-            />
-            <PortalServiceCard
-              icon={<Calendar className="h-6 w-6" />}
-              title="Homologação"
-              description="Agende rescisões de contrato"
-              onClick={() => window.open(`/agendamento/profissional/`, "_blank")}
-              color="green"
-            />
-            <PortalServiceCard
-              icon={<Handshake className="h-6 w-6" />}
-              title="Convenções"
-              description="Convenções coletivas vigentes"
-              onClick={() => {}}
-              color="indigo"
-            />
-            <PortalServiceCard
-              icon={<Users className="h-6 w-6" />}
-              title="Fale Conosco"
-              description="Entre em contato"
-              onClick={() => clinic?.phone && window.open(`https://wa.me/55${clinic.phone.replace(/\D/g, "")}`, "_blank")}
-              color="teal"
-            />
-          </div>
-        </div>
-
-        {/* Homologacao & Conventions Section */}
-        {clinic?.id && (
-          <div className="grid md:grid-cols-2 gap-6">
-            <PortalHomologacaoCard clinicSlug={clinicSlug} />
-            <PortalConventionsSection clinicId={clinic.id} employerCategoryId={employer?.category_id} />
-          </div>
-        )}
-
-        {/* Contributions View */}
-        {activeView === "contributions" && (
-          <>
-            {/* Back button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setActiveView("services")}
-              className="text-slate-600 hover:text-slate-900 -ml-2"
-            >
-              <ChevronRight className="h-4 w-4 rotate-180 mr-1" />
-              Voltar aos serviços
-            </Button>
-
-            {/* Contributions List - New Component */}
-            <PortalContributionsList
-              contributions={contributions}
-              isLoading={false}
-              showEmployerInfo={false}
-              onReissue={(contrib) => {
-                setSelectedContribution(contrib as any);
-                setShowReissueDialog(true);
-              }}
-              onSetValue={(contrib) => {
-                setSelectedContribution(contrib as any);
-                setShowSetValueDialog(true);
-              }}
-              onGenerateInvoice={(contrib) => handleGenerateInvoice(contrib as any)}
-              generatingInvoiceId={generatingInvoiceId}
-            />
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              <Button className="bg-[#26a69a] hover:bg-[#1e8e82] text-white">
+                <FileStack className="h-4 w-4 mr-2" />
+                Exibir várias contribuições
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveView("home")}
+                className="border-[#607d8b] text-[#607d8b] hover:bg-[#607d8b]/10"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar
+              </Button>
+            </div>
           </>
         )}
 
-        {/* Reissue Requests */}
-        {reissueRequests.length > 0 && (
-          <Card className="bg-white border-0 shadow-sm">
-            <CardHeader className="pb-3 border-b border-slate-100">
-              <CardTitle className="text-sm font-medium text-slate-700 flex items-center gap-2">
-                <RefreshCw className="h-4 w-4 text-slate-400" />Solicitações de 2ª Via ({reissueRequests.length})
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="divide-y divide-slate-100">
-                {reissueRequests.slice(0, 3).map((request) => (
-                  <div key={request.id} className="flex items-center justify-between p-4">
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-700">{format(new Date(request.created_at), "dd/MM/yyyy HH:mm")}</p>
-                      <p className="text-xs text-slate-500 truncate">{request.reason}</p>
-                    </div>
-                    <Badge variant="outline" className={`text-xs ${
-                      request.status === "completed" ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
-                      request.status === "processing" ? "bg-blue-50 text-blue-600 border-blue-200" :
-                      request.status === "rejected" ? "bg-red-50 text-red-600 border-red-200" :
-                      "bg-amber-50 text-amber-600 border-amber-200"
-                    }`}>
-                      {request.status === "completed" ? "Concluído" : request.status === "processing" ? "Processando" : request.status === "rejected" ? "Rejeitado" : "Pendente"}
-                    </Badge>
-                  </div>
-                ))}
+        {activeView === "documents" && (
+          <>
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <FileStack className="h-6 w-6 text-[#e89e4c]" />
+                <h1 className="text-2xl font-semibold text-slate-800">Documentos Coletivos</h1>
               </div>
-            </CardContent>
-          </Card>
+              <p className="text-slate-500">Listagem de documentos coletivos disponíveis.</p>
+            </div>
+
+            <Card className="bg-white border-0 shadow-sm rounded-xl">
+              <CardContent className="p-12 text-center">
+                <FileStack className="h-16 w-16 mx-auto mb-4 text-slate-300" />
+                <p className="text-slate-500">Nenhum documento coletivo disponível no momento.</p>
+              </CardContent>
+            </Card>
+
+            <div className="flex gap-3 mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveView("home")}
+                className="border-[#607d8b] text-[#607d8b] hover:bg-[#607d8b]/10"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar
+              </Button>
+            </div>
+          </>
         )}
-      </PortalMain>
-    </PortalContainer>
+
+        {activeView === "history" && (
+          <>
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <History className="h-6 w-6 text-[#b07eb0]" />
+                <h1 className="text-2xl font-semibold text-slate-800">Histórico Financeiro</h1>
+              </div>
+              <p className="text-slate-500">Listagem de todo o seu histórico financeiro.</p>
+            </div>
+
+            <Card className="bg-white border-0 shadow-sm rounded-xl">
+              <CardContent className="p-6">
+                <h3 className="text-lg font-semibold text-slate-800 mb-4">Histórico de pagamentos</h3>
+                
+                {contributions.filter(c => c.status === "paid").length === 0 ? (
+                  <div className="text-center py-12">
+                    <History className="h-16 w-16 mx-auto mb-4 text-slate-300" />
+                    <p className="text-slate-500">Nenhum pagamento registrado.</p>
+                  </div>
+                ) : (
+                  <div className="border rounded-lg overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className="bg-slate-50">
+                          <TableHead className="font-medium text-slate-600">Competência</TableHead>
+                          <TableHead className="font-medium text-slate-600">Tipo</TableHead>
+                          <TableHead className="font-medium text-slate-600">Valor</TableHead>
+                          <TableHead className="font-medium text-slate-600">Data Pagamento</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {contributions.filter(c => c.status === "paid").slice(0, 10).map((contrib) => (
+                          <TableRow key={contrib.id}>
+                            <TableCell className="font-mono text-sm">
+                              {formatCompetence(contrib.competence_month, contrib.competence_year)}
+                            </TableCell>
+                            <TableCell>{contrib.contribution_type?.name || "Contribuição"}</TableCell>
+                            <TableCell className="font-medium">{formatCurrency(contrib.value || 0)}</TableCell>
+                            <TableCell>
+                              {contrib.paid_at ? format(new Date(contrib.paid_at), "dd/MM/yyyy") : "—"}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="flex gap-3 mt-6">
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveView("home")}
+                className="border-[#607d8b] text-[#607d8b] hover:bg-[#607d8b]/10"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Voltar
+              </Button>
+            </div>
+          </>
+        )}
+      </main>
+    </div>
   );
 }
