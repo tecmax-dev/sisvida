@@ -27,7 +27,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Accordion,
@@ -68,10 +67,6 @@ export default function BirthdayMessagesHistory() {
   const [testPhone, setTestPhone] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
 
-  // Force close dialog on mount to prevent stale state
-  useEffect(() => {
-    setSettingsOpen(false);
-  }, []);
 
   useRealtimeSubscription({
     table: 'birthday_message_logs',
@@ -380,13 +375,11 @@ Equipe {clinica}`;
             )}
             Enviar Agora
           </Button>
+          <Button variant="outline" size="sm" className="gap-2" onClick={() => setSettingsOpen(true)}>
+            <Settings className="h-4 w-4" />
+            Configurar
+          </Button>
           <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Settings className="h-4 w-4" />
-                Configurar
-              </Button>
-            </DialogTrigger>
             <DialogContent className="max-w-lg">
               <DialogHeader>
                 <DialogTitle>Configurações de Aniversário</DialogTitle>

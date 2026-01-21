@@ -54,19 +54,13 @@ export default function PendingPayslipReviews() {
   const [requests, setRequests] = useState<PayslipRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<PayslipRequest | null>(null);
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false); // Explicit state for dialog
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
   const [processing, setProcessing] = useState(false);
   const [newExpiryDate, setNewExpiryDate] = useState("");
   const [dependentsCount, setDependentsCount] = useState(0);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
-
-  // Force close dialogs on mount to prevent stale state
-  useEffect(() => {
-    setSelectedRequest(null);
-    setImageViewerOpen(false);
-    setPreviewUrl(null);
-  }, []);
 
   useEffect(() => {
     if (currentClinic) {
@@ -113,6 +107,7 @@ export default function PendingPayslipReviews() {
 
   const openReview = async (request: PayslipRequest) => {
     setSelectedRequest(request);
+    setReviewDialogOpen(true); // Explicitly open dialog
     setReviewNotes(request.notes || "");
     
     // Set default expiry date to 1 year from now
@@ -140,6 +135,7 @@ export default function PendingPayslipReviews() {
   };
 
   const closeReview = () => {
+    setReviewDialogOpen(false); // Explicitly close dialog first
     setSelectedRequest(null);
     setPreviewUrl(null);
     setReviewNotes("");
@@ -425,7 +421,7 @@ export default function PendingPayslipReviews() {
       </Card>
 
       {/* Review Dialog */}
-      <Dialog open={!!selectedRequest} onOpenChange={() => closeReview()}>
+      <Dialog open={reviewDialogOpen} onOpenChange={(open) => !open && closeReview()}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
