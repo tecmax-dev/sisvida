@@ -12,13 +12,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Building2, FileText, Calendar, DollarSign, Printer, Download } from "lucide-react";
+import { Building2, FileText, Calendar, DollarSign, Download, Link2, Check, Copy, Loader2 } from "lucide-react";
 import { format, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
+import { toast } from "sonner";
 
 interface Employer {
   id: string;
@@ -106,6 +107,9 @@ export default function NegotiationStepPreview({
 }: NegotiationStepPreviewProps) {
   const [clinic, setClinic] = useState<Clinic | null>(null);
   const [unionEntity, setUnionEntity] = useState<UnionEntity | null>(null);
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Normalize to midday to prevent timezone shifting (e.g. showing 06/01 instead of 07/01)
@@ -134,7 +138,7 @@ export default function NegotiationStepPreview({
       .eq("status", "ativa")
       .single();
 
-    if (entityData) setUnionEntity(entityData);
+    if (entityData) setUnionEntity(entityData as UnionEntity);
   };
 
   const formatCurrency = (value: number) => {
@@ -318,6 +322,97 @@ export default function NegotiationStepPreview({
     }
 
     doc.save(`espelho-negociacao-${employer.cnpj}-${format(new Date(), "yyyyMMdd")}.pdf`);
+  };
+
+  const generateAccessToken = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let result = '';
+    for (let i = 0; i < 32; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const handleGenerateLink = async () => {
+    setGeneratingLink(true);
+    try {
+      const accessToken = generateAccessToken();
+      
+      // Prepare contributions data snapshot
+      const contributionsSnapshot = calculatedItems.map(item => ({
+        contribution_id: item.contribution.id,
+        contribution_type_name: item.contribution.contribution_types?.name || "N/A",
+        competence_month: item.contribution.competence_month,
+        competence_year: item.contribution.competence_year,
+        due_date: item.contribution.due_date,
+        original_value: item.contribution.value,
+        days_overdue: item.daysOverdue,
+        interest_value: item.interestValue,
+        correction_value: item.correctionValue,
+        late_fee_value: item.lateFeeValue,
+        total_value: item.totalValue,
+      }));
+
+      // Convert custom dates to ISO strings for storage
+      const customDatesForStorage: Record<string, string> = {};
+      Object.entries(customDates).forEach(([key, date]) => {
+        customDatesForStorage[key] = format(date, "yyyy-MM-dd");
+      });
+
+      const { error } = await supabase
+        .from("negotiation_previews")
+        .insert({
+          clinic_id: clinicId,
+          employer_id: employer.id,
+          access_token: accessToken,
+          employer_name: employer.name,
+          employer_cnpj: employer.cnpj,
+          employer_trade_name: employer.trade_name,
+          interest_rate_monthly: settings.interest_rate_monthly,
+          monetary_correction_monthly: settings.monetary_correction_monthly,
+          late_fee_percentage: settings.late_fee_percentage,
+          legal_basis: settings.legal_basis || null,
+          total_original_value: totals.originalValue,
+          total_interest: totals.totalInterest,
+          total_correction: totals.totalCorrection,
+          total_late_fee: totals.totalLateFee,
+          total_negotiated_value: totals.totalNegotiated,
+          installments_count: installmentsCount,
+          installment_value: totals.installmentValue,
+          down_payment: downPayment,
+          first_due_date: format(safeFirstDueDate, "yyyy-MM-dd"),
+          contributions_data: contributionsSnapshot,
+          custom_dates: Object.keys(customDatesForStorage).length > 0 ? customDatesForStorage : null,
+        });
+
+      if (error) {
+        console.error("Error creating preview:", error);
+        toast.error("Erro ao gerar link");
+        return;
+      }
+
+      const baseUrl = window.location.origin;
+      const link = `${baseUrl}/negociacao-espelho/${accessToken}`;
+      setGeneratedLink(link);
+      toast.success("Link gerado com sucesso!");
+    } catch (err) {
+      console.error("Error generating link:", err);
+      toast.error("Erro ao gerar link");
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!generatedLink) return;
+    try {
+      await navigator.clipboard.writeText(generatedLink);
+      setCopied(true);
+      toast.success("Link copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Erro ao copiar link");
+    }
   };
 
   return (
@@ -547,12 +642,54 @@ export default function NegotiationStepPreview({
         </Card>
       )}
 
-      {/* Export Button */}
-      <div className="flex justify-center gap-2">
-        <Button variant="outline" onClick={handleExportPDF}>
-          <Download className="h-4 w-4 mr-2" />
-          Exportar PDF
-        </Button>
+      {/* Export Buttons */}
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex justify-center gap-2">
+          <Button variant="outline" onClick={handleExportPDF}>
+            <Download className="h-4 w-4 mr-2" />
+            Exportar PDF
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleGenerateLink}
+            disabled={generatingLink}
+          >
+            {generatingLink ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Link2 className="h-4 w-4 mr-2" />
+            )}
+            Gerar Link
+          </Button>
+        </div>
+        
+        {generatedLink && (
+          <div className="w-full max-w-lg p-3 bg-muted rounded-lg">
+            <p className="text-xs text-muted-foreground mb-2 text-center">
+              Link válido por 30 dias:
+            </p>
+            <div className="flex items-center gap-2">
+              <input 
+                type="text" 
+                value={generatedLink} 
+                readOnly 
+                className="flex-1 px-3 py-1.5 text-sm bg-background border rounded-md"
+              />
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleCopyLink}
+                className="shrink-0"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-green-500" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
