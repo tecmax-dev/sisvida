@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, startOfMonth, endOfMonth, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -104,7 +105,7 @@ export default function UnionLytexReportsPage() {
       originalValue: c.value,
       updatedValue: c.value,
       dueDate: c.due_date,
-      daysOverdue: c.due_date ? Math.max(0, differenceInDays(today, new Date(c.due_date))) : 0,
+      daysOverdue: c.due_date ? Math.max(0, differenceInDays(today, parseDateOnlyToLocalNoon(c.due_date))) : 0,
       status: c.status,
       competence: `${String(c.competence_month).padStart(2, "0")}/${c.competence_year}`,
       contributionType: c.contribution_types?.name || "—",
@@ -115,7 +116,7 @@ export default function UnionLytexReportsPage() {
     pending.forEach(c => {
       const key = c.employer_id;
       const existing = employerMap.get(key);
-      const daysOver = c.due_date ? Math.max(0, differenceInDays(today, new Date(c.due_date))) : 0;
+      const daysOver = c.due_date ? Math.max(0, differenceInDays(today, parseDateOnlyToLocalNoon(c.due_date))) : 0;
       if (existing) {
         existing.totalOpen += c.value;
         existing.pendingCount += 1;

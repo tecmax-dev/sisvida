@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { format, differenceInDays, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { toast } from "sonner";
 
 interface Session {
@@ -144,7 +145,7 @@ export function PackageDetailsDialog({
     if (payment.status === "cancelled") {
       return <Badge variant="outline">Cancelado</Badge>;
     }
-    if (isPast(new Date(payment.due_date))) {
+    if (isPast(parseDateOnlyToLocalNoon(payment.due_date))) {
       return <Badge variant="destructive">Vencido</Badge>;
     }
     return <Badge variant="secondary">Pendente</Badge>;
@@ -337,7 +338,7 @@ export function PackageDetailsDialog({
                           }).format(payment.amount)}
                         </TableCell>
                         <TableCell>
-                          {format(new Date(payment.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                          {format(parseDateOnlyToLocalNoon(payment.due_date), "dd/MM/yyyy", { locale: ptBR })}
                         </TableCell>
                         <TableCell>{getPaymentStatusBadge(payment)}</TableCell>
                         <TableCell className="text-right">

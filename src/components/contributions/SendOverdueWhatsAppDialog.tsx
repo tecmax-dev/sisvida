@@ -16,6 +16,7 @@ import { Loader2, Send, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ContributionItem = any;
@@ -53,7 +54,7 @@ export function SendOverdueWhatsAppDialog({
   const overdueContributions = useMemo(() => {
     return contributions
       .filter((c) => c.status === "overdue" && c.lytex_invoice_url)
-      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+      .sort((a, b) => parseDateOnlyToLocalNoon(a.due_date).getTime() - parseDateOnlyToLocalNoon(b.due_date).getTime());
   }, [contributions]);
 
   const totalOverdue = overdueContributions.reduce((acc, c) => acc + c.value, 0);
@@ -73,10 +74,10 @@ export function SendOverdueWhatsAppDialog({
     message += `Identificamos *${overdueContributions.length} contribuição(ões) em atraso* da empresa *${employerName}*:\n\n`;
 
     overdueContributions.forEach((c) => {
-      const daysLate = differenceInDays(today, new Date(c.due_date + "T12:00:00"));
+      const daysLate = differenceInDays(today, parseDateOnlyToLocalNoon(c.due_date));
       message += `📌 *${c.contribution_types?.name || "Contribuição"}*\n`;
       message += `   Competência: ${formatCompetence(c.competence_month, c.competence_year)}\n`;
-      message += `   Vencimento: ${format(new Date(c.due_date + "T12:00:00"), "dd/MM/yyyy")}\n`;
+      message += `   Vencimento: ${format(parseDateOnlyToLocalNoon(c.due_date), "dd/MM/yyyy")}\n`;
       message += `   Atraso: *${daysLate} dia(s)*\n`;
       message += `   Valor: *${formatCurrency(c.value)}*\n`;
       if (c.lytex_invoice_url) {
@@ -160,7 +161,7 @@ export function SendOverdueWhatsAppDialog({
           {/* Overdue list */}
           <div className="max-h-[180px] overflow-y-auto space-y-2">
             {overdueContributions.map((c) => {
-              const daysLate = differenceInDays(new Date(), new Date(c.due_date + "T12:00:00"));
+              const daysLate = differenceInDays(new Date(), parseDateOnlyToLocalNoon(c.due_date));
               return (
                 <div
                   key={c.id}

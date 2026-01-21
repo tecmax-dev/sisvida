@@ -39,6 +39,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
 interface CashFlowAnnualViewProps {
   clinicId: string;
@@ -79,7 +80,7 @@ export function CashFlowAnnualView({ clinicId }: CashFlowAnnualViewProps) {
 
       data?.forEach((t: any) => {
         if (!t.due_date) return;
-        const month = new Date(t.due_date).getMonth();
+        const month = parseDateOnlyToLocalNoon(t.due_date).getMonth();
         
         if (t.type === "income") {
           if (t.status === "paid") {

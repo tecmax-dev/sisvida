@@ -58,13 +58,7 @@ import { ptBR } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { formatCompetence } from "@/lib/competence-format";
 
-function parseDateOnly(value: string): Date {
-  // Handles both DATE (YYYY-MM-DD) and TIMESTAMP strings safely
-  const dateOnly = value?.slice(0, 10);
-  const d = parseISO(dateOnly);
-  d.setHours(12, 0, 0, 0);
-  return d;
-}
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { SendNegotiationWhatsAppDialog } from "./SendNegotiationWhatsAppDialog";
@@ -642,7 +636,7 @@ export default function NegotiationDetailsDialog({
     const contributionsData = items.map((item) => [
       item.contribution_type_name || "-",
       `${MONTHS_FULL[item.competence_month - 1]}/${item.competence_year}`,
-      format(new Date(item.due_date), "dd/MM/yyyy"),
+      format(parseDateOnlyToLocalNoon(item.due_date), "dd/MM/yyyy"),
       formatCurrency(item.original_value),
       `${item.days_overdue}`,
       formatCurrency(item.interest_value + item.correction_value + item.late_fee_value),
@@ -752,7 +746,7 @@ export default function NegotiationDetailsDialog({
       { label: "Entrada", value: formatCurrency(negotiation.down_payment_value || 0) },
       { label: "Parcelas", value: `${negotiation.installments_count}x` },
       { label: "Valor Parcela", value: formatCurrency(negotiation.installment_value) },
-      { label: "1º Vencimento", value: format(parseDateOnly(negotiation.first_due_date), "dd/MM/yyyy") },
+      { label: "1º Vencimento", value: format(parseDateOnlyToLocalNoon(negotiation.first_due_date), "dd/MM/yyyy") },
     ];
 
     const colWidth = (pageWidth - 44) / 4;
@@ -780,7 +774,7 @@ export default function NegotiationDetailsDialog({
 
       const scheduleData = installments.map((inst) => [
         `${inst.installment_number}ª Parcela`,
-        format(new Date(inst.due_date), "dd/MM/yyyy"),
+        format(parseDateOnlyToLocalNoon(inst.due_date), "dd/MM/yyyy"),
         formatCurrency(inst.value),
         inst.status === "paid" ? "Pago" : inst.status === "overdue" ? "Vencido" : "Pendente",
       ]);
@@ -939,7 +933,7 @@ export default function NegotiationDetailsDialog({
                     </div>
                     <div className="flex justify-between">
                       <span>Primeira Parcela</span>
-                      <span>{format(parseDateOnly(negotiation.first_due_date), "dd/MM/yyyy")}</span>
+                      <span>{format(parseDateOnlyToLocalNoon(negotiation.first_due_date), "dd/MM/yyyy")}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -1020,7 +1014,7 @@ export default function NegotiationDetailsDialog({
                     {installments.map((inst) => (
                       <TableRow key={inst.id}>
                         <TableCell>{inst.installment_number}/{negotiation.installments_count}</TableCell>
-                        <TableCell>{format(new Date(inst.due_date), "dd/MM/yyyy")}</TableCell>
+                        <TableCell>{format(parseDateOnlyToLocalNoon(inst.due_date), "dd/MM/yyyy")}</TableCell>
                         <TableCell className="text-right">{formatCurrency(inst.value)}</TableCell>
                         <TableCell>
                           <Badge

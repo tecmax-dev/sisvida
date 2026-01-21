@@ -21,6 +21,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { format, formatDistanceToNow, addYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
@@ -159,7 +160,7 @@ export default function PendingPayslipReviews() {
         .eq('patient_id', patientId)
         .eq('is_active', true);
       
-      const formattedDate = format(new Date(newExpiry), "dd/MM/yyyy");
+      const formattedDate = format(parseDateOnlyToLocalNoon(newExpiry), "dd/MM/yyyy");
       const firstName = patientName.split(' ')[0];
       
       // Build names list
@@ -244,7 +245,7 @@ export default function PendingPayslipReviews() {
 
       toast({
         title: "Contracheque aprovado",
-        description: `Carteirinha de ${selectedRequest.patient.name} atualizada até ${format(new Date(newExpiryDate), "dd/MM/yyyy")}.${dependentMsg} Notificação enviada.`,
+        description: `Carteirinha de ${selectedRequest.patient.name} atualizada até ${format(parseDateOnlyToLocalNoon(newExpiryDate), "dd/MM/yyyy")}.${dependentMsg} Notificação enviada.`,
       });
 
       closeReview();

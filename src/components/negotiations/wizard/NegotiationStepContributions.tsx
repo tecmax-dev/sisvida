@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Loader2, AlertTriangle, FileText } from "lucide-react";
 import { format, differenceInDays } from "date-fns";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
 interface Contribution {
   id: string;
@@ -121,7 +122,7 @@ export default function NegotiationStepContributions({
       {/* Contributions list */}
       <div className="space-y-2 max-h-[350px] overflow-y-auto">
         {contributions.map((contribution) => {
-          const dueDate = new Date(contribution.due_date);
+          const dueDate = parseDateOnlyToLocalNoon(contribution.due_date);
           const daysOverdue = differenceInDays(today, dueDate);
           const isSelected = selectedContributions.includes(contribution.id);
 
