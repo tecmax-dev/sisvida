@@ -5,12 +5,18 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 import { becameVisibleRecently, wasHiddenRecently, isTabInactive } from "@/lib/visibility-grace";
 
+interface AlertDialogProps extends React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Root> {
+  /** When true, bypasses focus/blur protection - use for system modals like session expiry */
+  systemModal?: boolean;
+}
+
 const AlertDialog = ({
   open: openProp,
   defaultOpen,
   onOpenChange,
+  systemModal = false,
   ...props
-}: React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Root>) => {
+}: AlertDialogProps) => {
   const isControlled = openProp !== undefined;
   const [uncontrolledOpen, setUncontrolledOpen] = React.useState<boolean>(defaultOpen ?? false);
 
@@ -18,6 +24,13 @@ const AlertDialog = ({
 
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
+      // System modals (like session expiry) bypass all focus protection
+      if (systemModal) {
+        if (!isControlled) setUncontrolledOpen(nextOpen);
+        onOpenChange?.(nextOpen);
+        return;
+      }
+
       // CRITICAL: Block any close attempt while tab is hidden or transitioning
       if (!nextOpen && document.hidden) {
         return;
@@ -31,7 +44,7 @@ const AlertDialog = ({
       if (!isControlled) setUncontrolledOpen(nextOpen);
       onOpenChange?.(nextOpen);
     },
-    [isControlled, onOpenChange],
+    [isControlled, onOpenChange, systemModal],
   );
 
   return <AlertDialogPrimitive.Root {...props} open={open} onOpenChange={handleOpenChange} />;

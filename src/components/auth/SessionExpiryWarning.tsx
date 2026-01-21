@@ -56,7 +56,7 @@ export function SessionExpiryWarning({
   };
 
   return (
-    <AlertDialog open={open}>
+    <AlertDialog open={open} systemModal>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <div className="flex items-center gap-3 mb-2">
