@@ -3,8 +3,36 @@ import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog";
 
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
+import { becameVisibleRecently, wasHiddenRecently, isTabInactive } from "@/lib/visibility-grace";
 
-const AlertDialog = AlertDialogPrimitive.Root;
+const AlertDialog = ({
+  open: openProp,
+  defaultOpen,
+  onOpenChange,
+  ...props
+}: React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Root>) => {
+  const isControlled = openProp !== undefined;
+  const [uncontrolledOpen, setUncontrolledOpen] = React.useState<boolean>(defaultOpen ?? false);
+
+  const open = isControlled ? openProp : uncontrolledOpen;
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      // CRITICAL: Prevent unintended close events when switching browser tabs or losing focus.
+      if (!nextOpen) {
+        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
+          return;
+        }
+      }
+
+      if (!isControlled) setUncontrolledOpen(nextOpen);
+      onOpenChange?.(nextOpen);
+    },
+    [isControlled, onOpenChange],
+  );
+
+  return <AlertDialogPrimitive.Root {...props} open={open} onOpenChange={handleOpenChange} />;
+};
 
 const AlertDialogTrigger = AlertDialogPrimitive.Trigger;
 
@@ -28,7 +56,7 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, onFocusOutside, ...props }, ref) => (
+>(({ className, onFocusOutside, onEscapeKeyDown, ...props }, ref) => (
   <AlertDialogPortal>
     <AlertDialogOverlay />
     <AlertDialogPrimitive.Content
@@ -39,12 +67,20 @@ const AlertDialogContent = React.forwardRef<
         className,
       )}
       onFocusOutside={(e) => {
-        if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+        // ALWAYS block focus-based dismissal for AlertDialog
+        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
           e.preventDefault();
           return;
         }
         e.preventDefault();
         onFocusOutside?.(e);
+      }}
+      onEscapeKeyDown={(e) => {
+        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
+          e.preventDefault();
+          return;
+        }
+        onEscapeKeyDown?.(e);
       }}
     />
   </AlertDialogPortal>
