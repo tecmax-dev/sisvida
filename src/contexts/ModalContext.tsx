@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
 
 type ModalType = 
   | 'patientRecords'
@@ -65,6 +65,12 @@ const ModalContext = createContext<ModalContextValue | undefined>(undefined);
 export function ModalProvider({ children }: { children: ReactNode }) {
   const [modals, setModals] = useState<Record<ModalType, ModalState>>(defaultModals);
 
+  // Debug: track provider mount/unmount
+  useEffect(() => {
+    console.log("🟢 ModalProvider mount");
+    return () => console.log("🔴 ModalProvider unmount");
+  }, []);
+
   const openModal = useCallback((type: ModalType, data: ModalData = {}) => {
     setModals(prev => ({
       ...prev,
@@ -73,6 +79,7 @@ export function ModalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const closeModal = useCallback((type: ModalType) => {
+    console.trace("🔥 closeModal chamado", type, "hasFocus:", document.hasFocus());
     // Only close if document has focus (prevents closing on tab switch)
     if (document.hasFocus()) {
       setModals(prev => ({
