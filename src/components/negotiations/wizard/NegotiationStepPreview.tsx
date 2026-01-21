@@ -12,8 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Building2, FileText, Calendar, DollarSign, Download, Link2, Check, Copy, Loader2 } from "lucide-react";
-import { format, addMonths } from "date-fns";
+import { Building2, FileText, Calendar, DollarSign, Download, Link2, Check, Copy, Loader2, Clock } from "lucide-react";
+import { format, addMonths, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
@@ -110,6 +110,7 @@ export default function NegotiationStepPreview({
   const [generatingLink, setGeneratingLink] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [linkValidityDays, setLinkValidityDays] = useState(30);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Normalize to midday to prevent timezone shifting (e.g. showing 06/01 instead of 07/01)
@@ -383,6 +384,7 @@ export default function NegotiationStepPreview({
           first_due_date: format(safeFirstDueDate, "yyyy-MM-dd"),
           contributions_data: contributionsSnapshot,
           custom_dates: Object.keys(customDatesForStorage).length > 0 ? customDatesForStorage : null,
+          expires_at: addDays(new Date(), linkValidityDays).toISOString(),
         });
 
       if (error) {
@@ -650,47 +652,79 @@ export default function NegotiationStepPreview({
             <Download className="h-4 w-4 mr-2" />
             Exportar PDF
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleGenerateLink}
-            disabled={generatingLink}
-          >
-            {generatingLink ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Link2 className="h-4 w-4 mr-2" />
-            )}
-            Gerar Link
-          </Button>
         </div>
-        
-        {generatedLink && (
-          <div className="w-full max-w-lg p-3 bg-muted rounded-lg">
-            <p className="text-xs text-muted-foreground mb-2 text-center">
-              Link válido por 30 dias:
-            </p>
-            <div className="flex items-center gap-2">
-              <input 
-                type="text" 
-                value={generatedLink} 
-                readOnly 
-                className="flex-1 px-3 py-1.5 text-sm bg-background border rounded-md"
-              />
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleCopyLink}
-                className="shrink-0"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-green-500" />
-                ) : (
-                  <Copy className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
+
+        {/* Link Generation Section */}
+        <div className="w-full max-w-lg p-4 bg-muted/50 rounded-lg border">
+          <div className="flex items-center gap-2 mb-3">
+            <Link2 className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium">Compartilhar via Link</span>
           </div>
-        )}
+          
+          {/* Validity Days Config */}
+          <div className="flex items-center gap-3 mb-3">
+            <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+              <Clock className="h-3.5 w-3.5" />
+              Validade do link:
+            </label>
+            <select
+              value={linkValidityDays}
+              onChange={(e) => setLinkValidityDays(Number(e.target.value))}
+              className="px-2 py-1 text-sm border rounded-md bg-background"
+              disabled={!!generatedLink}
+            >
+              <option value={7}>7 dias</option>
+              <option value={15}>15 dias</option>
+              <option value={30}>30 dias</option>
+              <option value={60}>60 dias</option>
+              <option value={90}>90 dias</option>
+              <option value={180}>180 dias</option>
+              <option value={365}>1 ano</option>
+            </select>
+          </div>
+
+          {!generatedLink ? (
+            <Button 
+              variant="outline" 
+              onClick={handleGenerateLink}
+              disabled={generatingLink}
+              className="w-full"
+            >
+              {generatingLink ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Link2 className="h-4 w-4 mr-2" />
+              )}
+              Gerar Link
+            </Button>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground text-center">
+                Link válido por {linkValidityDays} dias (até {format(addDays(new Date(), linkValidityDays), "dd/MM/yyyy")}):
+              </p>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  value={generatedLink} 
+                  readOnly 
+                  className="flex-1 px-3 py-1.5 text-sm bg-background border rounded-md"
+                />
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleCopyLink}
+                  className="shrink-0"
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
