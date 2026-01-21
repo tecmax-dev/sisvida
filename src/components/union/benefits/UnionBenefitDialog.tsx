@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -83,6 +83,12 @@ export function UnionBenefitDialog({ open, onOpenChange, benefit }: Props) {
   const { currentClinic, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  // DEBUG: wrap onOpenChange to trace the source
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    console.trace("🔥 UnionBenefitDialog onOpenChange", nextOpen, "hasFocus:", document.hasFocus(), "hidden:", document.hidden);
+    onOpenChange(nextOpen);
+  }, [onOpenChange]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -176,7 +182,7 @@ export function UnionBenefitDialog({ open, onOpenChange, benefit }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
