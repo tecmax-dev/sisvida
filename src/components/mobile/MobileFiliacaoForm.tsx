@@ -151,7 +151,6 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
   const [docFrenteUrl, setDocFrenteUrl] = useState<string | null>(null);
   const [docVersoUrl, setDocVersoUrl] = useState<string | null>(null);
-  const [comprovanteUrl, setComprovanteUrl] = useState<string | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
 
   const form = useForm<FiliacaoFormData>({
@@ -310,7 +309,6 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
           documento_foto_url: fotoUrl,
           documento_rg_url: docFrenteUrl,
           documento_rg_verso_url: docVersoUrl,
-          documento_comprovante_url: comprovanteUrl,
           assinatura_digital_url: signatureUrl,
           assinatura_aceite_desconto: true,
           assinatura_aceite_at: new Date().toISOString(),
@@ -363,7 +361,6 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
     setFotoUrl(null);
     setDocFrenteUrl(null);
     setDocVersoUrl(null);
-    setComprovanteUrl(null);
     setSignatureUrl(null);
     setCpfExists(false);
   };
@@ -847,18 +844,6 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                       documentUrl={docVersoUrl}
                       onUpload={setDocVersoUrl}
                       onClear={() => setDocVersoUrl(null)}
-                    />
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-medium text-gray-600 mb-2">Comprovante de Residência</p>
-                    <DocumentUpload
-                      sindicatoId={sindicato.id}
-                      label="Comprovante"
-                      type="comprovante"
-                      documentUrl={comprovanteUrl}
-                      onUpload={setComprovanteUrl}
-                      onClear={() => setComprovanteUrl(null)}
                     />
                   </div>
                 </div>
