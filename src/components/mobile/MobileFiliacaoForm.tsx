@@ -69,9 +69,11 @@ interface PaymentMethod {
 }
 
 // Payment methods that are exclusive (cannot be combined with others)
-const EXCLUSIVE_PAYMENT_METHODS = ["desconto_contracheque"];
+// Accept both code variations for payroll deduction
+const PAYROLL_DEDUCTION_CODES = ["desconto_contracheque", "desconto_folha"];
+const EXCLUSIVE_PAYMENT_METHODS = PAYROLL_DEDUCTION_CODES;
 
-// Incompatible methods when desconto_contracheque is selected
+// Incompatible methods when payroll deduction is selected
 const INCOMPATIBLE_WITH_PAYROLL = ["pix", "boleto", "dinheiro"];
 
 interface EmployerData {
@@ -762,17 +764,17 @@ export function MobileFiliacaoForm({ onBack, onSuccess }: MobileFiliacaoFormProp
                     control={form.control}
                     name="forma_pagamento"
                     render={({ field }) => {
-                      // If only one payment method and it's desconto_contracheque, pre-select it
-                      const shouldPreSelect = paymentMethods.length === 1 && 
-                        paymentMethods[0].code === "desconto_contracheque";
+                      // If only one payment method and it's payroll deduction, pre-select it
+                      const isFirstMethodPayroll = paymentMethods.length === 1 && 
+                        PAYROLL_DEDUCTION_CODES.includes(paymentMethods[0].code);
                       
                       // Auto-select if should pre-select and no value set
-                      if (shouldPreSelect && !field.value) {
+                      if (isFirstMethodPayroll && !field.value) {
                         field.onChange(paymentMethods[0].code);
                       }
 
                       const selectedMethod = paymentMethods.find(m => m.code === field.value);
-                      const isPayrollDeduction = selectedMethod?.code === "desconto_contracheque";
+                      const isPayrollDeduction = selectedMethod && PAYROLL_DEDUCTION_CODES.includes(selectedMethod.code);
                       
                       return (
                         <FormItem>

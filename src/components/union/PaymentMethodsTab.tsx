@@ -49,19 +49,23 @@ interface PaymentMethodsTabProps {
 }
 
 // Predefined payment method templates
+// Payroll deduction code variants for compatibility
+const PAYROLL_DEDUCTION_CODES = ["desconto_folha", "desconto_contracheque"];
+
 const PAYMENT_METHOD_TEMPLATES = [
   { code: "pix", name: "Pix", icon: Wallet, description: "Pagamento instantâneo via Pix" },
   { code: "boleto", name: "Boleto", icon: Receipt, description: "Boleto bancário" },
   { code: "cartao_credito", name: "Cartão de Crédito", icon: CreditCard, description: "Pagamento com cartão de crédito" },
   { code: "cartao_debito", name: "Cartão de Débito", icon: CreditCard, description: "Pagamento com cartão de débito" },
   { code: "debito_conta", name: "Débito em Conta", icon: Building, description: "Débito automático em conta bancária" },
-  { code: "desconto_contracheque", name: "Desconto em Contracheque", icon: BadgeDollarSign, description: "Desconto direto na folha de pagamento" },
+  { code: "desconto_folha", name: "Desconto em Folha", icon: BadgeDollarSign, description: "Desconto direto na folha de pagamento" },
   { code: "dinheiro", name: "Dinheiro", icon: Banknote, description: "Pagamento em espécie" },
   { code: "outros", name: "Outros", icon: CircleDollarSign, description: "Outras formas de pagamento" },
 ];
 
-// Payment methods that are incompatible with each other
+// Payment methods that are incompatible with each other (supports both code variants)
 const INCOMPATIBLE_METHODS: Record<string, string[]> = {
+  "desconto_folha": ["pix", "boleto", "dinheiro"],
   "desconto_contracheque": ["pix", "boleto", "dinheiro"],
 };
 
@@ -453,14 +457,14 @@ export function PaymentMethodsTab({ sindicatoId, onRefresh }: PaymentMethodsTabP
           <div className="flex gap-3">
             <BadgeDollarSign className="h-5 w-5 text-primary shrink-0 mt-0.5" />
             <div className="space-y-2">
-              <h4 className="font-medium">Sobre Desconto em Contracheque</h4>
+              <h4 className="font-medium">Sobre Desconto em Folha</h4>
               <p className="text-sm text-muted-foreground">
                 Quando ativo, esta opção aparecerá no formulário de filiação. 
                 Ao ser selecionada pelo sócio, outras formas de pagamento incompatíveis 
-                serão automaticamente desabilitadas (ex: Pix + Contracheque não podem ser usados juntos).
+                serão automaticamente desabilitadas (ex: Pix + Folha não podem ser usados juntos).
               </p>
               <p className="text-sm text-muted-foreground">
-                O sistema registrará a escolha como <code className="bg-muted px-1 rounded">desconto_contracheque</code> 
+                O sistema registrará a escolha como <code className="bg-muted px-1 rounded">desconto_folha</code> 
                 no cadastro do associado.
               </p>
             </div>
