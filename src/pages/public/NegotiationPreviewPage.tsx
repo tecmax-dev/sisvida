@@ -267,9 +267,9 @@ export default function NegotiationPreviewPage() {
           </div>
         </header>
 
-        {/* Empresa/Contribuinte */}
+        {/* Empresa */}
         <section className="mb-6">
-          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Contribuinte</h3>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Empresa</h3>
           <div className="bg-gray-50 rounded-lg p-4">
             <p className="font-semibold text-gray-900">{preview.employer_name}</p>
             <p className="text-sm text-gray-600 font-mono">CNPJ: {formatCNPJ(preview.employer_cnpj)}</p>
