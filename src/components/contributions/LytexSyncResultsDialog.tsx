@@ -1,10 +1,4 @@
-import { useState } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -63,9 +57,6 @@ export function LytexSyncResultsDialog({
   const hasErrors = result.errors.length > 0;
 
   const handlePrint = () => {
-    const printContent = document.getElementById("sync-results-print");
-    if (!printContent) return;
-
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
@@ -284,194 +275,192 @@ export function LytexSyncResultsDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <RefreshCw className="h-5 w-5 text-primary" />
-            Resultado da Sincronização Lytex
-          </DialogTitle>
-        </DialogHeader>
+    <PopupBase open={open} onClose={() => onOpenChange(false)} maxWidth="3xl">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <RefreshCw className="h-5 w-5 text-primary" />
+          Resultado da Sincronização Lytex
+        </PopupTitle>
+      </PopupHeader>
 
-        <div id="sync-results-print" className="space-y-4">
-          {/* Summary Cards */}
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              {format(result.syncedAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-            </div>
-            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
-              <Printer className="h-4 w-4" />
-              Imprimir
-            </Button>
+      <div id="sync-results-print" className="space-y-4">
+        {/* Summary Cards */}
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4" />
+            {format(result.syncedAt, "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
           </div>
+          <Button variant="outline" size="sm" onClick={handlePrint} className="gap-2">
+            <Printer className="h-4 w-4" />
+            Imprimir
+          </Button>
+        </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <Users className="h-5 w-5 mx-auto mb-1 text-blue-500" />
-              <p className="text-2xl font-bold">{result.clientsImported}</p>
-              <p className="text-xs text-muted-foreground">Empresas Importadas</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <Users className="h-5 w-5 mx-auto mb-1 text-green-500" />
-              <p className="text-2xl font-bold">{result.clientsUpdated}</p>
-              <p className="text-xs text-muted-foreground">Empresas Atualizadas</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <FileText className="h-5 w-5 mx-auto mb-1 text-purple-500" />
-              <p className="text-2xl font-bold">{result.invoicesImported}</p>
-              <p className="text-xs text-muted-foreground">Boletos Importados</p>
-            </div>
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <FileText className="h-5 w-5 mx-auto mb-1 text-amber-500" />
-              <p className="text-2xl font-bold">{result.invoicesUpdated}</p>
-              <p className="text-xs text-muted-foreground">Boletos Atualizados</p>
-            </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <Users className="h-5 w-5 mx-auto mb-1 text-blue-500" />
+            <p className="text-2xl font-bold">{result.clientsImported}</p>
+            <p className="text-xs text-muted-foreground">Empresas Importadas</p>
           </div>
-
-          {/* Status Summary */}
-          <div className="flex items-center gap-4 text-sm">
-            {totalImported > 0 && (
-              <Badge variant="default" className="gap-1 bg-green-500">
-                <CheckCircle2 className="h-3 w-3" />
-                {totalImported} importados
-              </Badge>
-            )}
-            {totalUpdated > 0 && (
-              <Badge variant="secondary" className="gap-1">
-                <RefreshCw className="h-3 w-3" />
-                {totalUpdated} atualizados
-              </Badge>
-            )}
-            {hasErrors && (
-              <Badge variant="destructive" className="gap-1">
-                <XCircle className="h-3 w-3" />
-                {result.errors.length} erros
-              </Badge>
-            )}
+          <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <Users className="h-5 w-5 mx-auto mb-1 text-green-500" />
+            <p className="text-2xl font-bold">{result.clientsUpdated}</p>
+            <p className="text-xs text-muted-foreground">Empresas Atualizadas</p>
           </div>
+          <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <FileText className="h-5 w-5 mx-auto mb-1 text-purple-500" />
+            <p className="text-2xl font-bold">{result.invoicesImported}</p>
+            <p className="text-xs text-muted-foreground">Boletos Importados</p>
+          </div>
+          <div className="bg-muted/50 rounded-lg p-3 text-center">
+            <FileText className="h-5 w-5 mx-auto mb-1 text-amber-500" />
+            <p className="text-2xl font-bold">{result.invoicesUpdated}</p>
+            <p className="text-xs text-muted-foreground">Boletos Atualizados</p>
+          </div>
+        </div>
 
-          <Separator />
+        {/* Status Summary */}
+        <div className="flex items-center gap-4 text-sm">
+          {totalImported > 0 && (
+            <Badge variant="default" className="gap-1 bg-green-500">
+              <CheckCircle2 className="h-3 w-3" />
+              {totalImported} importados
+            </Badge>
+          )}
+          {totalUpdated > 0 && (
+            <Badge variant="secondary" className="gap-1">
+              <RefreshCw className="h-3 w-3" />
+              {totalUpdated} atualizados
+            </Badge>
+          )}
+          {hasErrors && (
+            <Badge variant="destructive" className="gap-1">
+              <XCircle className="h-3 w-3" />
+              {result.errors.length} erros
+            </Badge>
+          )}
+        </div>
 
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-4">
-              {/* Clients Details */}
-              {result.details?.clients && result.details.clients.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-2 flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    Empresas Processadas ({result.details.clients.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {result.details.clients.map((client, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm"
+        <Separator />
+
+        <ScrollArea className="h-[400px] pr-4">
+          <div className="space-y-4">
+            {/* Clients Details */}
+            {result.details?.clients && result.details.clients.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  Empresas Processadas ({result.details.clients.length})
+                </h3>
+                <div className="space-y-2">
+                  {result.details.clients.map((client, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm"
+                    >
+                      <div>
+                        <p className="font-medium">{client.name}</p>
+                        <p className="text-xs text-muted-foreground">{client.cnpj}</p>
+                      </div>
+                      <Badge
+                        variant={client.action === "imported" ? "default" : "secondary"}
+                        className={client.action === "imported" ? "bg-green-500" : ""}
                       >
-                        <div>
-                          <p className="font-medium">{client.name}</p>
-                          <p className="text-xs text-muted-foreground">{client.cnpj}</p>
-                        </div>
+                        {client.action === "imported" ? "Importado" : "Atualizado"}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Invoices Details */}
+            {result.details?.invoices && result.details.invoices.length > 0 && (
+              <div>
+                <h3 className="font-semibold mb-2 flex items-center gap-2">
+                  <FileText className="h-4 w-4" />
+                  Boletos Processados ({result.details.invoices.length})
+                </h3>
+                <div className="space-y-2">
+                  {result.details.invoices.map((invoice, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm"
+                    >
+                      <div className="flex-1">
+                        <p className="font-medium">{invoice.employerName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Competência: {invoice.competence} • R${" "}
+                          {invoice.value.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <Badge
-                          variant={client.action === "imported" ? "default" : "secondary"}
-                          className={client.action === "imported" ? "bg-green-500" : ""}
+                          variant={
+                            invoice.status === "paid"
+                              ? "default"
+                              : invoice.status === "overdue"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                          className={invoice.status === "paid" ? "bg-green-500" : ""}
                         >
-                          {client.action === "imported" ? "Importado" : "Atualizado"}
+                          {invoice.status === "paid"
+                            ? "Pago"
+                            : invoice.status === "overdue"
+                            ? "Vencido"
+                            : invoice.status === "pending"
+                            ? "Pendente"
+                            : invoice.status}
+                        </Badge>
+                        <Badge
+                          variant={invoice.action === "imported" ? "default" : "outline"}
+                          className={invoice.action === "imported" ? "bg-blue-500" : ""}
+                        >
+                          {invoice.action === "imported" ? "Novo" : "Atualizado"}
                         </Badge>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Errors */}
+            {hasErrors && (
+              <div>
+                <h3 className="font-semibold mb-2 flex items-center gap-2 text-destructive">
+                  <AlertTriangle className="h-4 w-4" />
+                  Erros ({result.errors.length})
+                </h3>
+                <div className="space-y-1">
+                  {result.errors.map((err, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2 bg-destructive/10 rounded-lg text-sm text-destructive"
+                    >
+                      {err}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Empty State */}
+            {totalImported === 0 &&
+              totalUpdated === 0 &&
+              !hasErrors && (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-2 text-green-500" />
+                  <p>Nenhum dado novo encontrado na Lytex</p>
+                  <p className="text-sm">Todos os registros estão atualizados</p>
                 </div>
               )}
-
-              {/* Invoices Details */}
-              {result.details?.invoices && result.details.invoices.length > 0 && (
-                <div>
-                  <h3 className="font-semibold mb-2 flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Boletos Processados ({result.details.invoices.length})
-                  </h3>
-                  <div className="space-y-2">
-                    {result.details.invoices.map((invoice, idx) => (
-                      <div
-                        key={idx}
-                        className="flex items-center justify-between p-2 bg-muted/30 rounded-lg text-sm"
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium">{invoice.employerName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Competência: {invoice.competence} • R${" "}
-                            {invoice.value.toLocaleString("pt-BR", {
-                              minimumFractionDigits: 2,
-                            })}
-                          </p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Badge
-                            variant={
-                              invoice.status === "paid"
-                                ? "default"
-                                : invoice.status === "overdue"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                            className={invoice.status === "paid" ? "bg-green-500" : ""}
-                          >
-                            {invoice.status === "paid"
-                              ? "Pago"
-                              : invoice.status === "overdue"
-                              ? "Vencido"
-                              : invoice.status === "pending"
-                              ? "Pendente"
-                              : invoice.status}
-                          </Badge>
-                          <Badge
-                            variant={invoice.action === "imported" ? "default" : "outline"}
-                            className={invoice.action === "imported" ? "bg-blue-500" : ""}
-                          >
-                            {invoice.action === "imported" ? "Novo" : "Atualizado"}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Errors */}
-              {hasErrors && (
-                <div>
-                  <h3 className="font-semibold mb-2 flex items-center gap-2 text-destructive">
-                    <AlertTriangle className="h-4 w-4" />
-                    Erros ({result.errors.length})
-                  </h3>
-                  <div className="space-y-1">
-                    {result.errors.map((err, idx) => (
-                      <div
-                        key={idx}
-                        className="p-2 bg-destructive/10 rounded-lg text-sm text-destructive"
-                      >
-                        {err}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Empty State */}
-              {totalImported === 0 &&
-                totalUpdated === 0 &&
-                !hasErrors && (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <CheckCircle2 className="h-12 w-12 mx-auto mb-2 text-green-500" />
-                    <p>Nenhum dado novo encontrado na Lytex</p>
-                    <p className="text-sm">Todos os registros estão atualizados</p>
-                  </div>
-                )}
-            </div>
-          </ScrollArea>
-        </div>
-      </DialogContent>
-    </Dialog>
+          </div>
+        </ScrollArea>
+      </div>
+    </PopupBase>
   );
 }

@@ -4,13 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import {
   Select,
   SelectContent,
@@ -139,161 +133,155 @@ export function UploadDialog({
     : null;
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Enviar Anexos</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
-          <div
-            className={cn(
-              "border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer",
-              isDragging
-                ? "border-primary bg-primary/5"
-                : "border-muted-foreground/25 hover:border-primary/50"
-            )}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => document.getElementById("file-input")?.click()}
-          >
-            <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
-            <p className="text-sm font-medium">
-              Arraste arquivos aqui ou clique para selecionar
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              PDF, imagens, documentos (máx. 10MB por arquivo)
-            </p>
-            <Input
-              id="file-input"
-              type="file"
-              multiple
-              className="hidden"
-              onChange={handleFileSelect}
-              accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx"
-            />
-          </div>
-
-          {files.length > 0 && (
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {files.map((file, index) => (
-                <div
-                  key={`${file.name}-${index}`}
-                  className="flex items-center gap-2 p-2 bg-muted rounded-md"
-                >
-                  <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                  <span className="text-sm flex-1 truncate">{file.name}</span>
-                  <span className="text-xs text-muted-foreground">
-                    {formatFileSize(file.size)}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={() => removeFile(index)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
+    <PopupBase open={open} onClose={handleClose} maxWidth="lg" title="Enviar Anexos">
+      <div className="space-y-4">
+        <div
+          className={cn(
+            "border-2 border-dashed rounded-lg p-8 text-center transition-colors cursor-pointer",
+            isDragging
+              ? "border-primary bg-primary/5"
+              : "border-muted-foreground/25 hover:border-primary/50"
           )}
-
-          {/* Folder Selection */}
-          <div className="space-y-2">
-            <Label>Pasta de destino</Label>
-            <div className="flex gap-2">
-              <Select
-                value={selectedFolderId || "root"}
-                onValueChange={(value) => setSelectedFolderId(value === "root" ? null : value)}
-              >
-                <SelectTrigger className="flex-1">
-                  <SelectValue>
-                    <span className="flex items-center gap-2">
-                      <Folder className="h-4 w-4" />
-                      {selectedFolderName || "Raiz (sem pasta)"}
-                    </span>
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="root">
-                    <span className="flex items-center gap-2">
-                      <Folder className="h-4 w-4" />
-                      Raiz (sem pasta)
-                    </span>
-                  </SelectItem>
-                  {folders.map((folder) => (
-                    <SelectItem key={folder.id} value={folder.id}>
-                      <span className="flex items-center gap-2">
-                        <Folder className="h-4 w-4" />
-                        {folder.name}
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {onCreateFolder && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setShowNewFolder(!showNewFolder)}
-                  title="Nova pasta"
-                >
-                  <FolderPlus className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-
-            {/* New Folder Input */}
-            {showNewFolder && onCreateFolder && (
-              <div className="flex gap-2 mt-2">
-                <Input
-                  placeholder="Nome da nova pasta"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      handleCreateFolder();
-                    }
-                  }}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  onClick={handleCreateFolder}
-                  disabled={!newFolderName.trim() || creatingFolder}
-                >
-                  {creatingFolder ? "Criando..." : "Criar"}
-                </Button>
-              </div>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="description">Descrição (opcional)</Label>
-            <Textarea
-              id="description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Adicione uma descrição para os arquivos..."
-              className="mt-1.5"
-              rows={2}
-            />
-          </div>
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+          onClick={() => document.getElementById("file-input")?.click()}
+        >
+          <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+          <p className="text-sm font-medium">
+            Arraste arquivos aqui ou clique para selecionar
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">
+            PDF, imagens, documentos (máx. 10MB por arquivo)
+          </p>
+          <Input
+            id="file-input"
+            type="file"
+            multiple
+            className="hidden"
+            onChange={handleFileSelect}
+            accept=".pdf,.jpg,.jpeg,.png,.gif,.doc,.docx,.xls,.xlsx"
+          />
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={handleClose} disabled={uploading}>
-            Cancelar
-          </Button>
-          <Button onClick={handleUpload} disabled={files.length === 0 || uploading}>
-            {uploading ? "Enviando..." : `Enviar ${files.length} arquivo(s)`}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {files.length > 0 && (
+          <div className="space-y-2 max-h-40 overflow-y-auto">
+            {files.map((file, index) => (
+              <div
+                key={`${file.name}-${index}`}
+                className="flex items-center gap-2 p-2 bg-muted rounded-md"
+              >
+                <File className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <span className="text-sm flex-1 truncate">{file.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {formatFileSize(file.size)}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  onClick={() => removeFile(index)}
+                >
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Folder Selection */}
+        <div className="space-y-2">
+          <Label>Pasta de destino</Label>
+          <div className="flex gap-2">
+            <Select
+              value={selectedFolderId || "root"}
+              onValueChange={(value) => setSelectedFolderId(value === "root" ? null : value)}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue>
+                  <span className="flex items-center gap-2">
+                    <Folder className="h-4 w-4" />
+                    {selectedFolderName || "Raiz (sem pasta)"}
+                  </span>
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="root">
+                  <span className="flex items-center gap-2">
+                    <Folder className="h-4 w-4" />
+                    Raiz (sem pasta)
+                  </span>
+                </SelectItem>
+                {folders.map((folder) => (
+                  <SelectItem key={folder.id} value={folder.id}>
+                    <span className="flex items-center gap-2">
+                      <Folder className="h-4 w-4" />
+                      {folder.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {onCreateFolder && (
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setShowNewFolder(!showNewFolder)}
+                title="Nova pasta"
+              >
+                <FolderPlus className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* New Folder Input */}
+          {showNewFolder && onCreateFolder && (
+            <div className="flex gap-2 mt-2">
+              <Input
+                placeholder="Nome da nova pasta"
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleCreateFolder();
+                  }
+                }}
+              />
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleCreateFolder}
+                disabled={!newFolderName.trim() || creatingFolder}
+              >
+                {creatingFolder ? "Criando..." : "Criar"}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <Label htmlFor="description">Descrição (opcional)</Label>
+          <Textarea
+            id="description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Adicione uma descrição para os arquivos..."
+            className="mt-1.5"
+            rows={2}
+          />
+        </div>
+      </div>
+
+      <PopupFooter>
+        <Button variant="outline" onClick={handleClose} disabled={uploading}>
+          Cancelar
+        </Button>
+        <Button onClick={handleUpload} disabled={files.length === 0 || uploading}>
+          {uploading ? "Enviando..." : `Enviar ${files.length} arquivo(s)`}
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }
