@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => ({
         short_name: "Sindicato",
         description: "App oficial do Sindicato Comerciários",
         theme_color: "#16a394",
-        background_color: "#ffffff",
+        background_color: "#16a394",
         display: "standalone",
         orientation: "portrait",
         scope: "/",
