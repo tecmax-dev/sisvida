@@ -5704,6 +5704,7 @@ export type Database = {
           late_fee_percentage: number
           legal_basis: string | null
           monetary_correction_monthly: number
+          negotiation_id: string | null
           total_correction: number
           total_interest: number
           total_late_fee: number
@@ -5733,6 +5734,7 @@ export type Database = {
           late_fee_percentage: number
           legal_basis?: string | null
           monetary_correction_monthly: number
+          negotiation_id?: string | null
           total_correction: number
           total_interest: number
           total_late_fee: number
@@ -5762,6 +5764,7 @@ export type Database = {
           late_fee_percentage?: number
           legal_basis?: string | null
           monetary_correction_monthly?: number
+          negotiation_id?: string | null
           total_correction?: number
           total_interest?: number
           total_late_fee?: number
@@ -5783,6 +5786,13 @@ export type Database = {
             columns: ["employer_id"]
             isOneToOne: false
             referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_previews_negotiation_id_fkey"
+            columns: ["negotiation_id"]
+            isOneToOne: false
+            referencedRelation: "debt_negotiations"
             referencedColumns: ["id"]
           },
         ]

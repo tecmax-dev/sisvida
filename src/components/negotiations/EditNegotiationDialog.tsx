@@ -254,6 +254,7 @@ export default function EditNegotiationDialog({
       const { error } = await supabase.from("negotiation_previews").insert({
         clinic_id: clinicId,
         employer_id: negotiation.employer_id,
+        negotiation_id: negotiation.id,
         access_token: accessToken,
         employer_name: negotiation.employers?.name || "",
         employer_cnpj: negotiation.employers?.cnpj || "",
