@@ -61,6 +61,21 @@ interface UnionEntity {
   cnpj: string | null;
 }
 
+// Helper function to check for cancelled negotiations by CNPJ
+// Using explicit typing to avoid TypeScript deep instantiation issues
+async function checkCancelledByCnpj(cnpj: string): Promise<boolean> {
+  // Cast to any to avoid TS2589 error with deeply nested Supabase types
+  const client = supabase as any;
+  const { data, error } = await client
+    .from("debt_negotiations")
+    .select("id")
+    .eq("employer_cnpj", cnpj)
+    .eq("status", "cancelled")
+    .limit(1);
+  
+  return !error && Array.isArray(data) && data.length > 0;
+}
+
 export default function NegotiationPreviewPage() {
   const { token } = useParams<{ token: string }>();
   const [preview, setPreview] = useState<NegotiationPreview | null>(null);
@@ -96,7 +111,7 @@ export default function NegotiationPreviewPage() {
         return;
       }
 
-      // Se tem negotiation_id, verificar se a negociação não foi cancelada
+      // Verificar se a negociação foi cancelada
       if (data.negotiation_id) {
         const { data: negotiation } = await supabase
           .from("debt_negotiations")
@@ -105,6 +120,14 @@ export default function NegotiationPreviewPage() {
           .single();
 
         if (negotiation?.status === "cancelled") {
+          setError("Esta negociação foi cancelada e não está mais disponível.");
+          setLoading(false);
+          return;
+        }
+      } else if (data.employer_cnpj) {
+        // Para previews antigos sem negotiation_id, verificar pelo employer_cnpj
+        const hasCancelled = await checkCancelledByCnpj(data.employer_cnpj);
+        if (hasCancelled) {
           setError("Esta negociação foi cancelada e não está mais disponível.");
           setLoading(false);
           return;
