@@ -1,12 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +50,8 @@ export function PaymentReceiptDialog({
   const [whatsappPhone, setWhatsappPhone] = useState("");
   const [showWhatsAppForm, setShowWhatsAppForm] = useState(false);
   const [receiptNumber] = useState(() => formatReceiptNumber(clinicId));
+
+  const handleClose = () => onOpenChange(false);
 
   // Fetch clinic data
   const { data: clinic } = useQuery({
@@ -243,123 +240,119 @@ export function PaymentReceiptDialog({
 
   if (!clinic) {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Recibo de Pagamento</DialogTitle>
-          </DialogHeader>
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PopupBase open={open} onClose={handleClose} maxWidth="3xl">
+        <PopupHeader>
+          <PopupTitle>Recibo de Pagamento</PopupTitle>
+        </PopupHeader>
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </PopupBase>
     );
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh]">
-        <DialogHeader>
-          <DialogTitle>Recibo de Pagamento</DialogTitle>
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="3xl" className="max-h-[90vh] flex flex-col">
+      <PopupHeader>
+        <PopupTitle>Recibo de Pagamento</PopupTitle>
+      </PopupHeader>
 
-        <ScrollArea className="max-h-[60vh]">
-          <PaymentReceiptPreview
-            clinic={{
-              name: clinic.name,
-              address: clinic.address,
-              phone: clinic.phone,
-              cnpj: clinic.cnpj,
-            }}
-            patient={
-              patient
-                ? {
-                    name: patient.name,
-                    cpf: patient.cpf,
-                  }
-                : undefined
-            }
-            transaction={{
-              description: transaction.description,
-              amount: Number(transaction.amount),
-              payment_method: transaction.payment_method,
-              paid_date: transaction.paid_date,
-              procedure_name: procedure?.name,
-              professional_name: professional?.name,
-            }}
-            receiptNumber={receiptNumber}
-          />
-        </ScrollArea>
+      <ScrollArea className="flex-1 max-h-[60vh]">
+        <PaymentReceiptPreview
+          clinic={{
+            name: clinic.name,
+            address: clinic.address,
+            phone: clinic.phone,
+            cnpj: clinic.cnpj,
+          }}
+          patient={
+            patient
+              ? {
+                  name: patient.name,
+                  cpf: patient.cpf,
+                }
+              : undefined
+          }
+          transaction={{
+            description: transaction.description,
+            amount: Number(transaction.amount),
+            payment_method: transaction.payment_method,
+            paid_date: transaction.paid_date,
+            procedure_name: procedure?.name,
+            professional_name: professional?.name,
+          }}
+          receiptNumber={receiptNumber}
+        />
+      </ScrollArea>
 
-        <Separator className="my-4" />
+      <Separator className="my-4" />
 
-        {showWhatsAppForm ? (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="whatsapp-phone">Número do WhatsApp</Label>
-              <Input
-                id="whatsapp-phone"
-                value={whatsappPhone}
-                onChange={(e) => setWhatsappPhone(e.target.value)}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowWhatsAppForm(false)}
-                className="flex-1"
-              >
-                Cancelar
-              </Button>
-              <Button
-                onClick={handleSendWhatsApp}
-                disabled={isSending || !whatsappPhone}
-                className="flex-1"
-              >
-                {isSending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Enviando...
-                  </>
-                ) : (
-                  <>
-                    <MessageCircle className="h-4 w-4 mr-2" />
-                    Enviar
-                  </>
-                )}
-              </Button>
-            </div>
+      {showWhatsAppForm ? (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="whatsapp-phone">Número do WhatsApp</Label>
+            <Input
+              id="whatsapp-phone"
+              value={whatsappPhone}
+              onChange={(e) => setWhatsappPhone(e.target.value)}
+              placeholder="(00) 00000-0000"
+            />
           </div>
-        ) : (
           <div className="flex gap-2">
-            <Button variant="outline" onClick={handlePrint} className="flex-1">
-              <Printer className="h-4 w-4 mr-2" />
-              Imprimir
-            </Button>
             <Button
               variant="outline"
-              onClick={handleDownload}
-              disabled={isGenerating}
+              onClick={() => setShowWhatsAppForm(false)}
               className="flex-1"
             >
-              {isGenerating ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Download className="h-4 w-4 mr-2" />
-              )}
-              Exportar PDF
+              Cancelar
             </Button>
             <Button
-              onClick={() => setShowWhatsAppForm(true)}
+              onClick={handleSendWhatsApp}
+              disabled={isSending || !whatsappPhone}
               className="flex-1"
             >
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Enviar WhatsApp
+              {isSending ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  Enviar
+                </>
+              )}
             </Button>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+        </div>
+      ) : (
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handlePrint} className="flex-1">
+            <Printer className="h-4 w-4 mr-2" />
+            Imprimir
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleDownload}
+            disabled={isGenerating}
+            className="flex-1"
+          >
+            {isGenerating ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            Exportar PDF
+          </Button>
+          <Button
+            onClick={() => setShowWhatsAppForm(true)}
+            className="flex-1"
+          >
+            <MessageCircle className="h-4 w-4 mr-2" />
+            Enviar WhatsApp
+          </Button>
+        </div>
+      )}
+    </PopupBase>
   );
 }

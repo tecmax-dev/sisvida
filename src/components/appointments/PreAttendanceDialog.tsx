@@ -1,11 +1,5 @@
 import { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +56,8 @@ export function PreAttendanceDialog({
     notes: "",
   });
 
+  const handleClose = () => onOpenChange(false);
+
   useEffect(() => {
     if (open && appointmentId) {
       fetchExistingData();
@@ -116,7 +112,6 @@ export function PreAttendanceDialog({
   const handleSave = async () => {
     if (!currentClinic || !user) return;
 
-    // Validate blood pressure - both fields must be filled together
     if (
       (formData.blood_pressure_systolic && !formData.blood_pressure_diastolic) ||
       (!formData.blood_pressure_systolic && formData.blood_pressure_diastolic)
@@ -190,162 +185,159 @@ export function PreAttendanceDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5 text-primary" />
-            Pré-Atendimento
-          </DialogTitle>
-          <DialogDescription>
-            Registrar sinais vitais de {patientName}
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="lg">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <Activity className="h-5 w-5 text-primary" />
+          Pré-Atendimento
+        </PopupTitle>
+        <PopupDescription>
+          Registrar sinais vitais de {patientName}
+        </PopupDescription>
+      </PopupHeader>
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Blood Pressure */}
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Heart className="h-4 w-4 text-red-500" />
-                Pressão Arterial (mmHg)
-              </Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="number"
-                  placeholder="Sistólica"
-                  value={formData.blood_pressure_systolic ?? ""}
-                  onChange={(e) => updateField("blood_pressure_systolic", e.target.value)}
-                  className="text-center"
-                />
-                <span className="text-muted-foreground">/</span>
-                <Input
-                  type="number"
-                  placeholder="Diastólica"
-                  value={formData.blood_pressure_diastolic ?? ""}
-                  onChange={(e) => updateField("blood_pressure_diastolic", e.target.value)}
-                  className="text-center"
-                />
-              </div>
-            </div>
-
-            {/* Heart Rate & O2 */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Activity className="h-4 w-4 text-pink-500" />
-                  Freq. Cardíaca (bpm)
-                </Label>
-                <Input
-                  type="number"
-                  placeholder="Ex: 72"
-                  value={formData.heart_rate ?? ""}
-                  onChange={(e) => updateField("heart_rate", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Droplets className="h-4 w-4 text-blue-500" />
-                  Saturação O₂ (%)
-                </Label>
-                <Input
-                  type="number"
-                  placeholder="Ex: 98"
-                  value={formData.oxygen_saturation ?? ""}
-                  onChange={(e) => updateField("oxygen_saturation", e.target.value)}
-                  min={0}
-                  max={100}
-                />
-              </div>
-            </div>
-
-            {/* Temperature & Glucose */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Thermometer className="h-4 w-4 text-orange-500" />
-                  Temperatura (°C)
-                </Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  placeholder="Ex: 36.5"
-                  value={formData.temperature ?? ""}
-                  onChange={(e) => updateField("temperature", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Droplets className="h-4 w-4 text-purple-500" />
-                  Glicemia (mg/dL)
-                </Label>
-                <Input
-                  type="number"
-                  placeholder="Ex: 100"
-                  value={formData.glucose ?? ""}
-                  onChange={(e) => updateField("glucose", e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Weight & Height */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Weight className="h-4 w-4 text-green-500" />
-                  Peso (kg)
-                </Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  placeholder="Ex: 70.5"
-                  value={formData.weight ?? ""}
-                  onChange={(e) => updateField("weight", e.target.value)}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="flex items-center gap-2">
-                  <Ruler className="h-4 w-4 text-cyan-500" />
-                  Altura (cm)
-                </Label>
-                <Input
-                  type="number"
-                  step="0.1"
-                  placeholder="Ex: 175"
-                  value={formData.height ?? ""}
-                  onChange={(e) => updateField("height", e.target.value)}
-                />
-              </div>
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea
-                placeholder="Observações adicionais do pré-atendimento..."
-                value={formData.notes}
-                onChange={(e) => updateField("notes", e.target.value)}
-                rows={3}
+      {loading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Blood Pressure */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Heart className="h-4 w-4 text-red-500" />
+              Pressão Arterial (mmHg)
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                placeholder="Sistólica"
+                value={formData.blood_pressure_systolic ?? ""}
+                onChange={(e) => updateField("blood_pressure_systolic", e.target.value)}
+                className="text-center"
+              />
+              <span className="text-muted-foreground">/</span>
+              <Input
+                type="number"
+                placeholder="Diastólica"
+                value={formData.blood_pressure_diastolic ?? ""}
+                onChange={(e) => updateField("blood_pressure_diastolic", e.target.value)}
+                className="text-center"
               />
             </div>
+          </div>
 
-            {/* Actions */}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSave} disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Salvar
-              </Button>
+          {/* Heart Rate & O2 */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Activity className="h-4 w-4 text-pink-500" />
+                Freq. Cardíaca (bpm)
+              </Label>
+              <Input
+                type="number"
+                placeholder="Ex: 72"
+                value={formData.heart_rate ?? ""}
+                onChange={(e) => updateField("heart_rate", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Droplets className="h-4 w-4 text-blue-500" />
+                Saturação O₂ (%)
+              </Label>
+              <Input
+                type="number"
+                placeholder="Ex: 98"
+                value={formData.oxygen_saturation ?? ""}
+                onChange={(e) => updateField("oxygen_saturation", e.target.value)}
+                min={0}
+                max={100}
+              />
             </div>
           </div>
-        )}
-      </DialogContent>
-    </Dialog>
+
+          {/* Temperature & Glucose */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Thermometer className="h-4 w-4 text-orange-500" />
+                Temperatura (°C)
+              </Label>
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="Ex: 36.5"
+                value={formData.temperature ?? ""}
+                onChange={(e) => updateField("temperature", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Droplets className="h-4 w-4 text-purple-500" />
+                Glicemia (mg/dL)
+              </Label>
+              <Input
+                type="number"
+                placeholder="Ex: 100"
+                value={formData.glucose ?? ""}
+                onChange={(e) => updateField("glucose", e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Weight & Height */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Weight className="h-4 w-4 text-green-500" />
+                Peso (kg)
+              </Label>
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="Ex: 70.5"
+                value={formData.weight ?? ""}
+                onChange={(e) => updateField("weight", e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Ruler className="h-4 w-4 text-cyan-500" />
+                Altura (cm)
+              </Label>
+              <Input
+                type="number"
+                step="0.1"
+                placeholder="Ex: 175"
+                value={formData.height ?? ""}
+                onChange={(e) => updateField("height", e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <Label>Observações</Label>
+            <Textarea
+              placeholder="Observações adicionais do pré-atendimento..."
+              value={formData.notes}
+              onChange={(e) => updateField("notes", e.target.value)}
+              rows={3}
+            />
+          </div>
+        </div>
+      )}
+
+      <PopupFooter>
+        <Button variant="outline" onClick={handleClose}>
+          Cancelar
+        </Button>
+        <Button onClick={handleSave} disabled={saving || loading}>
+          {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Salvar
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }
