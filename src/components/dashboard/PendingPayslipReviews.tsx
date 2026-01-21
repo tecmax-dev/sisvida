@@ -61,6 +61,13 @@ export default function PendingPayslipReviews() {
   const [dependentsCount, setDependentsCount] = useState(0);
   const [imageViewerOpen, setImageViewerOpen] = useState(false);
 
+  // Force close dialogs on mount to prevent stale state
+  useEffect(() => {
+    setSelectedRequest(null);
+    setImageViewerOpen(false);
+    setPreviewUrl(null);
+  }, []);
+
   useEffect(() => {
     if (currentClinic) {
       fetchPendingRequests();
