@@ -248,7 +248,6 @@ export default function SindicalFiliacaoPage() {
   const [fotoUrl, setFotoUrl] = useState<string | null>(null);
   const [docFrenteUrl, setDocFrenteUrl] = useState<string | null>(null);
   const [docVersoUrl, setDocVersoUrl] = useState<string | null>(null);
-  const [comprovanteUrl, setComprovanteUrl] = useState<string | null>(null);
   const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
 
   const form = useForm<FiliacaoFormData>({
@@ -491,7 +490,6 @@ export default function SindicalFiliacaoPage() {
           documento_foto_url: fotoUrl,
           documento_rg_url: docFrenteUrl,
           documento_rg_verso_url: docVersoUrl,
-          documento_comprovante_url: comprovanteUrl,
           assinatura_digital_url: signatureUrl,
           assinatura_aceite_desconto: true,
           assinatura_aceite_at: new Date().toISOString(),
@@ -1246,22 +1244,6 @@ export default function SindicalFiliacaoPage() {
                         onClear={() => setDocVersoUrl(null)}
                         label="Documento (Verso)"
                         type="rg_verso"
-                      />
-                    </div>
-
-                    {/* Comprovante Residência */}
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-cyan-600" />
-                        Comprovante de Residência
-                      </label>
-                      <DocumentUpload
-                        sindicatoId={sindicato.id}
-                        documentUrl={comprovanteUrl}
-                        onUpload={setComprovanteUrl}
-                        onClear={() => setComprovanteUrl(null)}
-                        label="Comprovante"
-                        type="comprovante"
                       />
                     </div>
                   </div>
