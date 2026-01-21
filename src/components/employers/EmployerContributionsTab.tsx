@@ -30,6 +30,7 @@ import {
   ChevronUp,
   Calendar,
   FileText,
+  Handshake,
 } from "lucide-react";
 import { format } from "date-fns";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
@@ -130,6 +131,7 @@ interface EmployerContributionsTabProps {
   onOpenOverdueDialog: () => void;
   onViewContribution: (contrib: Contribution) => void;
   onGenerateInvoice: (contrib: Contribution) => void;
+  onOpenNegotiationDialog?: () => void;
 }
 
 function formatCompetence(month: number, year: number): string {
@@ -289,10 +291,15 @@ export default function EmployerContributionsTab({
   onOpenOverdueDialog,
   onViewContribution,
   onGenerateInvoice,
+  onOpenNegotiationDialog,
 }: EmployerContributionsTabProps) {
   const [filteredContributions, setFilteredContributions] = useState<Contribution[]>([]);
   const [overdueCollapsed, setOverdueCollapsed] = useState(false);
 
+  // Check if there are overdue or pending contributions for negotiation
+  const hasNegotiableContributions = useMemo(() => {
+    return contributions.some(c => c.status === "overdue" || c.status === "pending");
+  }, [contributions]);
   const displayContributions = filteredContributions.length > 0 ? filteredContributions : contributions;
 
   // Separate contributions by status
@@ -434,6 +441,17 @@ export default function EmployerContributionsTab({
               </Badge>
             )}
           </Button>
+          {onOpenNegotiationDialog && hasNegotiableContributions && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={onOpenNegotiationDialog}
+              className="text-indigo-600 border-indigo-300 hover:bg-indigo-50"
+            >
+              <Handshake className="h-4 w-4 mr-1" />
+              Negociar Débitos
+            </Button>
+          )}
           <Button size="sm" onClick={onOpenCreateDialog}>
             <Plus className="h-4 w-4 mr-1" />
             Nova

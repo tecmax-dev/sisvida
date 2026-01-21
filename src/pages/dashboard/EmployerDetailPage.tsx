@@ -79,6 +79,7 @@ import {
   Mail,
 } from "lucide-react";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
+import NewNegotiationDialog from "@/components/negotiations/NewNegotiationDialog";
 import { SendBoletoWhatsAppDialog } from "@/components/contributions/SendBoletoWhatsAppDialog";
 import { SendBoletoEmailDialog } from "@/components/contributions/SendBoletoEmailDialog";
 import { SendOverdueWhatsAppDialog } from "@/components/contributions/SendOverdueWhatsAppDialog";
@@ -191,6 +192,7 @@ export default function EmployerDetailPage() {
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
+  const [negotiationDialogOpen, setNegotiationDialogOpen] = useState(false);
   const [filteredContributions, setFilteredContributions] = useState<Contribution[]>([]);
   const [selectedContributionIds, setSelectedContributionIds] = useState<Set<string>>(new Set());
 
@@ -869,6 +871,7 @@ export default function EmployerDetailPage() {
               setViewContribDialogOpen(true);
             }}
             onGenerateInvoice={(contrib: any) => handleGenerateInvoice(contrib as Contribution)}
+            onOpenNegotiationDialog={() => setNegotiationDialogOpen(true)}
           />
         </TabsContent>
 
@@ -1668,6 +1671,26 @@ export default function EmployerDetailPage() {
         preSelectedIds={selectedContributionIds}
         defaultEmail={employer?.email || ""}
         defaultName={employer?.name || ""}
+      />
+
+      {/* Negotiation Dialog */}
+      <NewNegotiationDialog
+        open={negotiationDialogOpen}
+        onOpenChange={setNegotiationDialogOpen}
+        employers={employer ? [{
+          id: employer.id,
+          name: employer.name,
+          cnpj: employer.cnpj,
+          trade_name: employer.trade_name,
+          registration_number: employer.registration_number,
+        }] : []}
+        clinicId={currentClinic?.id || ""}
+        userId={session?.user.id || ""}
+        onSuccess={() => {
+          setNegotiationDialogOpen(false);
+          fetchData();
+        }}
+        initialEmployerId={employer?.id}
       />
     </div>
   );
