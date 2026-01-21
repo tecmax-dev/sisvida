@@ -262,7 +262,7 @@ export default function NegotiationPreviewPage() {
             <span>Emitido em: {format(new Date(preview.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
-              Válido até {format(new Date(preview.expires_at), "dd/MM/yyyy", { locale: ptBR })}
+              Condições válidas até {format(new Date(preview.expires_at), "dd/MM/yyyy", { locale: ptBR })}
             </span>
           </div>
         </header>

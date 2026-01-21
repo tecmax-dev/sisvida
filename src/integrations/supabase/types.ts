@@ -2231,6 +2231,7 @@ export type Database = {
           total_negotiated_value: number
           total_original_value: number
           updated_at: string
+          validity_expires_at: string | null
         }
         Insert: {
           applied_correction_rate: number
@@ -2263,6 +2264,7 @@ export type Database = {
           total_negotiated_value: number
           total_original_value: number
           updated_at?: string
+          validity_expires_at?: string | null
         }
         Update: {
           applied_correction_rate?: number
@@ -2295,6 +2297,7 @@ export type Database = {
           total_negotiated_value?: number
           total_original_value?: number
           updated_at?: string
+          validity_expires_at?: string | null
         }
         Relationships: [
           {
@@ -12523,6 +12526,7 @@ export type Database = {
         Args: { p_appointment_id: string; p_employee_cpf: string }
         Returns: boolean
       }
+      cancel_expired_negotiations: { Args: never; Returns: number }
       check_patient_first_access: {
         Args: { p_cpf: string; p_email: string }
         Returns: {
