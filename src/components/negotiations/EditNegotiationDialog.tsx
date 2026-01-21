@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Save, Calculator, Link2, Copy, Check } from "lucide-react";
-import { format, addMonths } from "date-fns";
+import { Loader2, Save, Calculator, Link2, Copy, Check, Clock } from "lucide-react";
+import { format, addMonths, addDays } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 
 interface Employer {
@@ -64,6 +64,7 @@ export default function EditNegotiationDialog({
   const [generatingLink, setGeneratingLink] = useState(false);
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [linkValidityDays, setLinkValidityDays] = useState(30);
 
   // Editable fields
   const [installmentsCount, setInstallmentsCount] = useState(negotiation.installments_count);
@@ -274,6 +275,7 @@ export default function EditNegotiationDialog({
         first_due_date: firstDueDate,
         contributions_data: contributionsSnapshot,
         custom_dates: null,
+        expires_at: addDays(new Date(), linkValidityDays).toISOString(),
       });
 
       if (error) {
@@ -436,33 +438,63 @@ export default function EditNegotiationDialog({
             </div>
           </div>
 
-          {generatedLink && (
-            <div className="rounded-lg bg-muted p-3">
-              <p className="text-xs text-muted-foreground mb-2 text-center">
-                Link válido por 30 dias:
-              </p>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={generatedLink}
-                  readOnly
-                  className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded-md"
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCopyLink}
-                  className="shrink-0"
-                >
-                  {copied ? (
-                    <Check className="h-4 w-4" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
+          {/* Link Generation Section */}
+          <div className="rounded-lg bg-muted/50 p-4 border space-y-3">
+            <div className="flex items-center gap-2">
+              <Link2 className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium">Compartilhar via Link</span>
             </div>
-          )}
+            
+            {/* Validity Days Config */}
+            <div className="flex items-center gap-3">
+              <label className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                Validade do link:
+              </label>
+              <select
+                value={linkValidityDays}
+                onChange={(e) => setLinkValidityDays(Number(e.target.value))}
+                className="px-2 py-1 text-sm border rounded-md bg-background"
+                disabled={!!generatedLink}
+              >
+                <option value={7}>7 dias</option>
+                <option value={15}>15 dias</option>
+                <option value={30}>30 dias</option>
+                <option value={60}>60 dias</option>
+                <option value={90}>90 dias</option>
+                <option value={180}>180 dias</option>
+                <option value={365}>1 ano</option>
+              </select>
+            </div>
+
+            {generatedLink && (
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground text-center">
+                  Link válido por {linkValidityDays} dias (até {format(addDays(new Date(), linkValidityDays), "dd/MM/yyyy")}):
+                </p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={generatedLink}
+                    readOnly
+                    className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded-md"
+                  />
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyLink}
+                    className="shrink-0"
+                  >
+                    {copied ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <DialogFooter>
