@@ -62,6 +62,13 @@ interface Clinic {
   address: string | null;
   city: string | null;
   state_code: string | null;
+  logo_url: string | null;
+}
+
+interface UnionEntity {
+  id: string;
+  razao_social: string;
+  cnpj: string | null;
 }
 
 interface NegotiationStepPreviewProps {
@@ -97,6 +104,7 @@ export default function NegotiationStepPreview({
   customDates = {},
 }: NegotiationStepPreviewProps) {
   const [clinic, setClinic] = useState<Clinic | null>(null);
+  const [unionEntity, setUnionEntity] = useState<UnionEntity | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
   // Normalize to midday to prevent timezone shifting (e.g. showing 06/01 instead of 07/01)
@@ -104,17 +112,28 @@ export default function NegotiationStepPreview({
   safeFirstDueDate.setHours(12, 0, 0, 0);
 
   useEffect(() => {
-    fetchClinic();
+    fetchClinicAndEntity();
   }, [clinicId]);
 
-  const fetchClinic = async () => {
-    const { data } = await supabase
+  const fetchClinicAndEntity = async () => {
+    // Fetch clinic with logo
+    const { data: clinicData } = await supabase
       .from("clinics")
-      .select("id, name, cnpj, address, city, state_code")
+      .select("id, name, cnpj, address, city, state_code, logo_url")
       .eq("id", clinicId)
       .single();
 
-    if (data) setClinic(data);
+    if (clinicData) setClinic(clinicData);
+
+    // Fetch union entity linked to this clinic
+    const { data: entityData } = await supabase
+      .from("union_entities")
+      .select("id, razao_social, cnpj")
+      .eq("clinic_id", clinicId)
+      .eq("status", "ativa")
+      .single();
+
+    if (entityData) setUnionEntity(entityData);
   };
 
   const formatCurrency = (value: number) => {
@@ -144,48 +163,86 @@ export default function NegotiationStepPreview({
     });
   }
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    
+    let startY = 20;
+    
+    // Add logo if available (from clinic)
+    if (clinic?.logo_url) {
+      try {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => resolve();
+          img.onerror = () => reject();
+          img.src = clinic.logo_url!;
+        });
+        
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0);
+        const imgData = canvas.toDataURL("image/png");
+        
+        // Center logo at top
+        const logoWidth = 40;
+        const logoHeight = (img.height / img.width) * logoWidth;
+        doc.addImage(imgData, "PNG", (pageWidth - logoWidth) / 2, 10, logoWidth, logoHeight);
+        startY = 15 + logoHeight + 5;
+      } catch (error) {
+        console.error("Error loading logo for PDF:", error);
+      }
+    }
     
     // Header
     doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("ESPELHO DE NEGOCIAÇÃO DE CONTRIBUIÇÕES SINDICAIS", pageWidth / 2, 20, { align: "center" });
+    doc.text("ESPELHO DE NEGOCIAÇÃO DE CONTRIBUIÇÕES SINDICAIS", pageWidth / 2, startY, { align: "center" });
     
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.text("Simulação de Negociação - Aguardando Aprovação", pageWidth / 2, 28, { align: "center" });
-    doc.text(`Data: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, 34, { align: "center" });
+    doc.text("Simulação de Negociação - Aguardando Aprovação", pageWidth / 2, startY + 8, { align: "center" });
+    doc.text(`Data: ${format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}`, pageWidth / 2, startY + 14, { align: "center" });
 
+    const entityStartY = startY + 28;
+    
     // Entidade Sindical
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("ENTIDADE SINDICAL", 14, 48);
+    doc.text("ENTIDADE SINDICAL", 14, entityStartY);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text(`Nome: ${clinic?.name || "-"}`, 14, 55);
-    doc.text(`CNPJ: ${clinic?.cnpj ? formatCNPJ(clinic.cnpj) : "-"}`, 14, 61);
+    const entityName = unionEntity?.razao_social || clinic?.name || "-";
+    const entityCnpj = unionEntity?.cnpj || clinic?.cnpj;
+    doc.text(`Nome: ${entityName}`, 14, entityStartY + 7);
+    doc.text(`CNPJ: ${entityCnpj ? formatCNPJ(entityCnpj) : "-"}`, 14, entityStartY + 13);
     if (clinic?.address) {
-      doc.text(`Endereço: ${clinic.address}${clinic.city ? `, ${clinic.city}` : ""}${clinic.state_code ? ` - ${clinic.state_code}` : ""}`, 14, 67);
+      doc.text(`Endereço: ${clinic.address}${clinic.city ? `, ${clinic.city}` : ""}${clinic.state_code ? ` - ${clinic.state_code}` : ""}`, 14, entityStartY + 19);
     }
 
+    const contribuinteStartY = entityStartY + (clinic?.address ? 32 : 26);
+    
     // Contribuinte
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("CONTRIBUINTE", 14, 80);
+    doc.text("CONTRIBUINTE", 14, contribuinteStartY);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
-    doc.text(`Razão Social: ${employer.name}`, 14, 87);
-    doc.text(`CNPJ: ${formatCNPJ(employer.cnpj)}`, 14, 93);
+    doc.text(`Razão Social: ${employer.name}`, 14, contribuinteStartY + 7);
+    doc.text(`CNPJ: ${formatCNPJ(employer.cnpj)}`, 14, contribuinteStartY + 13);
     if (employer.trade_name) {
-      doc.text(`Nome Fantasia: ${employer.trade_name}`, 14, 99);
+      doc.text(`Nome Fantasia: ${employer.trade_name}`, 14, contribuinteStartY + 19);
     }
 
+    const contribTableStartY = contribuinteStartY + (employer.trade_name ? 32 : 26);
+    
     // Contribuições
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("CONTRIBUIÇÕES NEGOCIADAS", 14, 112);
+    doc.text("CONTRIBUIÇÕES NEGOCIADAS", 14, contribTableStartY);
 
     const contributionsData = calculatedItems.map((item) => [
       item.contribution.contribution_types?.name || "-",
@@ -198,7 +255,7 @@ export default function NegotiationStepPreview({
     ]);
 
     autoTable(doc, {
-      startY: 116,
+      startY: contribTableStartY + 4,
       head: [["Tipo", "Competência", "Vencimento", "Original", "Atraso", "Encargos", "Total"]],
       body: contributionsData,
       theme: "striped",
@@ -264,15 +321,26 @@ export default function NegotiationStepPreview({
 
   return (
     <div className="space-y-6" ref={printRef}>
-      {/* Header */}
-      <div className="text-center space-y-2">
-        <h2 className="text-xl font-bold">Espelho de Negociação de Contribuições Sindicais</h2>
-        <Badge variant="outline" className="bg-purple-500/15 text-purple-700">
-          Simulação - Aguardando Aprovação
-        </Badge>
-        <p className="text-sm text-muted-foreground">
-          Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-        </p>
+      {/* Header with Logo */}
+      <div className="text-center space-y-4">
+        {clinic?.logo_url && (
+          <div className="flex justify-center">
+            <img 
+              src={clinic.logo_url} 
+              alt={unionEntity?.razao_social || clinic?.name || "Logo da Entidade"} 
+              className="h-16 w-auto object-contain"
+            />
+          </div>
+        )}
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold">Espelho de Negociação de Contribuições Sindicais</h2>
+          <Badge variant="outline" className="bg-purple-500/15 text-purple-700">
+            Simulação - Aguardando Aprovação
+          </Badge>
+          <p className="text-sm text-muted-foreground">
+            Gerado em {format(new Date(), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+          </p>
+        </div>
       </div>
 
       {/* Entidade Sindical */}
@@ -287,11 +355,11 @@ export default function NegotiationStepPreview({
           <div className="grid gap-2 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">Nome</span>
-              <span className="font-medium">{clinic?.name || "-"}</span>
+              <span className="font-medium">{unionEntity?.razao_social || clinic?.name || "-"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">CNPJ</span>
-              <span className="font-mono">{clinic?.cnpj ? formatCNPJ(clinic.cnpj) : "-"}</span>
+              <span className="font-mono">{(unionEntity?.cnpj || clinic?.cnpj) ? formatCNPJ(unionEntity?.cnpj || clinic?.cnpj || "") : "-"}</span>
             </div>
             {clinic?.address && (
               <div className="flex justify-between">
