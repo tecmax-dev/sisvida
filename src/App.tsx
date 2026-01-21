@@ -372,6 +372,8 @@ const App = () => (
                 <Route path="/card/:token" element={<CardValidation />} />
                 {/* Public Contribution Value */}
                 <Route path="/contribuicao/:token" element={<PublicContributionValue />} />
+                {/* Public Authorization Validation */}
+                <Route path="/autorizacao/:hash" element={<AuthorizationValidationPage />} />
                 {/* Homologação Public Routes */}
                 <Route path="/agendamento/profissional/:slug" element={<HomologacaoPublicBooking />} />
                 <Route path="/homologacao/:slug" element={<HomologacaoClinicBooking />} />
