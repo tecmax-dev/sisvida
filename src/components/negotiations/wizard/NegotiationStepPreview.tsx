@@ -225,10 +225,10 @@ export default function NegotiationStepPreview({
 
     const contribuinteStartY = entityStartY + (clinic?.address ? 32 : 26);
     
-    // Contribuinte
+    // Empresa
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("CONTRIBUINTE", 14, contribuinteStartY);
+    doc.text("EMPRESA", 14, contribuinteStartY);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
     doc.text(`Razão Social: ${employer.name}`, 14, contribuinteStartY + 7);
@@ -371,12 +371,12 @@ export default function NegotiationStepPreview({
         </CardContent>
       </Card>
 
-      {/* Contribuinte */}
+      {/* Empresa */}
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Building2 className="h-4 w-4" />
-            Contribuinte
+            Empresa
           </CardTitle>
         </CardHeader>
         <CardContent>
