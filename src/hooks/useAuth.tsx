@@ -3,6 +3,7 @@ import { User, Session } from "@supabase/supabase-js";
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionTimeout } from "./useSessionTimeout";
+import { useSessionExpiryModal } from "@/contexts/SystemModalContext";
 import { SessionExpiryWarning } from "@/components/auth/SessionExpiryWarning";
 
 interface Profile {
@@ -110,8 +111,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     saveLoginTime,
     clearSessionData,
     renewSession: baseRenewSession,
-    showWarning,
-    timeRemaining,
   } = useSessionTimeout({
     maxSessionDuration: 480, // 8 horas
     inactivityTimeout: 30,   // 30 minutos
@@ -119,6 +118,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     onExpire: handleSignOut,
     enabled: !!user && !isMobileApp // Desabilitado para mobile app
   });
+
+  // Obter estado do modal de sessão do contexto de sistema separado
+  const sessionModal = useSessionExpiryModal();
 
   // Função de renovar sessão com redirecionamento para o dashboard
   const handleRenewSession = useCallback(() => {
@@ -456,8 +458,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }}>
       {children}
       <SessionExpiryWarning
-        open={showWarning}
-        timeRemaining={timeRemaining}
+        open={sessionModal.isOpen}
+        timeRemaining={sessionModal.data.timeRemaining ?? 0}
         onRenew={handleRenewSession}
         onLogout={signOut}
       />
