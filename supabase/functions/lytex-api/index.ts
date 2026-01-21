@@ -1370,6 +1370,38 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Antes de excluir, limpar referências em negotiation_items de negociações canceladas
+        const { error: clearRefError } = await supabase
+          .from("negotiation_items")
+          .update({ contribution_id: null })
+          .eq("contribution_id", params.contributionId)
+          .filter("negotiation_id", "in", `(SELECT id FROM negotiations WHERE status = 'cancelled')`);
+
+        // Se falhar com subquery, tentar método alternativo
+        if (clearRefError) {
+          console.log("[Lytex] Tentando limpar referências via query direta...");
+          // Buscar negociações canceladas que referenciam esta contribuição
+          const { data: itemsToUpdate } = await supabase
+            .from("negotiation_items")
+            .select("id, negotiation_id, negotiations!inner(status)")
+            .eq("contribution_id", params.contributionId);
+          
+          if (itemsToUpdate && itemsToUpdate.length > 0) {
+            const cancelledItems = itemsToUpdate.filter((item: any) => 
+              item.negotiations?.status === "cancelled"
+            );
+            
+            if (cancelledItems.length > 0) {
+              const itemIds = cancelledItems.map((item: any) => item.id);
+              await supabase
+                .from("negotiation_items")
+                .update({ contribution_id: null })
+                .in("id", itemIds);
+              console.log(`[Lytex] Limpas ${cancelledItems.length} referências de negociações canceladas`);
+            }
+          }
+        }
+
         // Excluir do banco SOMENTE após sucesso do cancelamento
         const { error: deleteError } = await supabase
           .from("employer_contributions")
@@ -1380,7 +1412,7 @@ Deno.serve(async (req) => {
           console.error("[Lytex] Erro ao excluir contribuição:", deleteError);
           // Verificar se é erro de FK (contribuição usada em negociação)
           if (deleteError.code === "23503") {
-            throw new Error("Esta contribuição está vinculada a uma negociação e não pode ser excluída. Remova primeiro a negociação ou desvincule a contribuição.");
+            throw new Error("Esta contribuição está vinculada a uma negociação ativa e não pode ser excluída. Cancele ou remova a negociação primeiro.");
           }
           throw new Error("Erro ao excluir contribuição");
         }
