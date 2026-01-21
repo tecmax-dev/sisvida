@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -60,85 +60,89 @@ Atenciosamente.`;
     window.open(bookingUrl, '_blank');
   };
 
+  const handleClose = () => {
+    setPhone("");
+    setCustomMessage("");
+    onOpenChange(false);
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Compartilhar Link de Agendamento</DialogTitle>
-          <DialogDescription>
-            Compartilhe o link da página pública de agendamento do profissional
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="md">
+      <PopupHeader>
+        <PopupTitle>Compartilhar Link de Agendamento</PopupTitle>
+        <PopupDescription>
+          Compartilhe o link da página pública de agendamento do profissional
+        </PopupDescription>
+      </PopupHeader>
 
-        <div className="space-y-4">
-          {/* Link display */}
-          <div className="space-y-2">
-            <Label>Link de Agendamento</Label>
-            <div className="flex items-center gap-2">
-              <Input 
-                value={bookingUrl} 
-                readOnly 
-                className="font-mono text-sm"
-              />
-              <Button variant="outline" size="icon" onClick={handleCopyLink}>
-                <Copy className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="icon" onClick={handleOpenLink}>
-                <ExternalLink className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
-            </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                ou envie via WhatsApp
-              </span>
-            </div>
-          </div>
-
-          {/* WhatsApp share */}
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phone">Telefone de Destino</Label>
-              <Input
-                id="phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(00) 00000-0000"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="message">Mensagem (opcional)</Label>
-              <Textarea
-                id="message"
-                value={customMessage}
-                onChange={(e) => setCustomMessage(e.target.value)}
-                placeholder={defaultMessage}
-                rows={6}
-                className="text-sm"
-              />
-              <p className="text-xs text-muted-foreground">
-                Deixe em branco para usar a mensagem padrão
-              </p>
-            </div>
+      <div className="space-y-4">
+        {/* Link display */}
+        <div className="space-y-2">
+          <Label>Link de Agendamento</Label>
+          <div className="flex items-center gap-2">
+            <Input 
+              value={bookingUrl} 
+              readOnly 
+              className="font-mono text-sm"
+            />
+            <Button variant="outline" size="icon" onClick={handleCopyLink}>
+              <Copy className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="icon" onClick={handleOpenLink}>
+              <ExternalLink className="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button onClick={handleShareWhatsApp} className="bg-emerald-600 hover:bg-emerald-700">
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Enviar via WhatsApp
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center">
+            <span className="w-full border-t" />
+          </div>
+          <div className="relative flex justify-center text-xs uppercase">
+            <span className="bg-background px-2 text-muted-foreground">
+              ou envie via WhatsApp
+            </span>
+          </div>
+        </div>
+
+        {/* WhatsApp share */}
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="phone">Telefone de Destino</Label>
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(00) 00000-0000"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="message">Mensagem (opcional)</Label>
+            <Textarea
+              id="message"
+              value={customMessage}
+              onChange={(e) => setCustomMessage(e.target.value)}
+              placeholder={defaultMessage}
+              rows={6}
+              className="text-sm"
+            />
+            <p className="text-xs text-muted-foreground">
+              Deixe em branco para usar a mensagem padrão
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <PopupFooter>
+        <Button variant="outline" onClick={handleClose}>
+          Cancelar
+        </Button>
+        <Button onClick={handleShareWhatsApp} className="bg-emerald-600 hover:bg-emerald-700">
+          <MessageCircle className="w-4 h-4 mr-2" />
+          Enviar via WhatsApp
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }
