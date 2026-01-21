@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -12,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Building2, FileText, Calendar, DollarSign, AlertTriangle, Clock } from "lucide-react";
+import { AlertTriangle, Clock } from "lucide-react";
 import { format, addMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
@@ -141,31 +140,29 @@ export default function NegotiationPreviewPage() {
   };
 
   const formatCNPJ = (cnpj: string) => {
-    return cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
+    const cleaned = cnpj.replace(/\D/g, '');
+    if (cleaned.length !== 14) return cnpj;
+    return cleaned.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, "$1.$2.$3/$4-$5");
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-600"></div>
       </div>
     );
   }
 
   if (error || !preview) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <Card className="max-w-md mx-4">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-4">
-              <AlertTriangle className="h-12 w-12 text-destructive mx-auto" />
-              <h2 className="text-xl font-semibold">Link Inválido</h2>
-              <p className="text-muted-foreground">
-                {error || "Este espelho de negociação não existe ou expirou."}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center">
+          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Link Inválido</h2>
+          <p className="text-gray-600">
+            {error || "Este espelho de negociação não existe ou expirou."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -190,236 +187,192 @@ export default function NegotiationPreviewPage() {
     });
   }
 
+  const entityName = unionEntity?.razao_social || clinic?.name || "";
+  const entityCnpj = unionEntity?.cnpj || clinic?.cnpj || "";
+
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header with Logo */}
-        <div className="text-center space-y-4">
-          {clinic?.logo_url && (
-            <div className="flex justify-center">
+    <div className="min-h-screen bg-white">
+      {/* Main Content */}
+      <div className="max-w-3xl mx-auto px-6 py-8">
+        
+        {/* Header */}
+        <header className="border-b pb-6 mb-6">
+          <div className="flex items-start gap-4">
+            {clinic?.logo_url && (
               <img 
                 src={clinic.logo_url} 
-                alt={unionEntity?.razao_social || clinic?.name || "Logo da Entidade"} 
-                className="h-20 w-auto object-contain"
+                alt={entityName} 
+                className="h-16 w-16 object-contain flex-shrink-0"
               />
+            )}
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-bold text-gray-900 leading-tight">
+                {entityName}
+              </h1>
+              {entityCnpj && (
+                <p className="text-sm text-gray-500 font-mono mt-0.5">
+                  CNPJ: {formatCNPJ(entityCnpj)}
+                </p>
+              )}
             </div>
-          )}
-          <div className="space-y-2">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Espelho de Negociação de Contribuições Sindicais
-            </h1>
-            <Badge variant="outline" className="bg-purple-500/15 text-purple-700">
-              Simulação - Aguardando Aprovação
-            </Badge>
-            <p className="text-sm text-muted-foreground">
-              Gerado em {format(new Date(preview.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-            </p>
-            <p className="text-xs text-muted-foreground flex items-center justify-center gap-1">
+            <div className="text-right flex-shrink-0">
+              <h2 className="text-base font-semibold text-gray-900">ESPELHO DE NEGOCIAÇÃO</h2>
+              <Badge variant="outline" className="mt-1 text-xs bg-amber-50 text-amber-700 border-amber-200">
+                Aguardando Aprovação
+              </Badge>
+            </div>
+          </div>
+          
+          <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+            <span>Emitido em: {format(new Date(preview.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
+            <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
               Válido até {format(new Date(preview.expires_at), "dd/MM/yyyy", { locale: ptBR })}
-            </p>
+            </span>
           </div>
-        </div>
+        </header>
 
-        {/* Entidade Sindical */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Entidade Sindical
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Nome</span>
-                <span className="font-medium">{unionEntity?.razao_social || clinic?.name || "-"}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">CNPJ</span>
-                <span className="font-mono">
-                  {(unionEntity?.cnpj || clinic?.cnpj) ? formatCNPJ(unionEntity?.cnpj || clinic?.cnpj || "") : "-"}
-                </span>
-              </div>
-              {clinic?.address && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Endereço</span>
-                  <span>{clinic.address}{clinic.city ? `, ${clinic.city}` : ""}{clinic.state_code ? ` - ${clinic.state_code}` : ""}</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+        {/* Empresa/Contribuinte */}
+        <section className="mb-6">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Contribuinte</h3>
+          <div className="bg-gray-50 rounded-lg p-4">
+            <p className="font-semibold text-gray-900">{preview.employer_name}</p>
+            <p className="text-sm text-gray-600 font-mono">CNPJ: {formatCNPJ(preview.employer_cnpj)}</p>
+            {preview.employer_trade_name && (
+              <p className="text-sm text-gray-500 mt-1">{preview.employer_trade_name}</p>
+            )}
+          </div>
+        </section>
 
-        {/* Empresa */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Empresa
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Razão Social</span>
-                <span className="font-medium">{preview.employer_name}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">CNPJ</span>
-                <span className="font-mono">{formatCNPJ(preview.employer_cnpj)}</span>
-              </div>
-              {preview.employer_trade_name && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Nome Fantasia</span>
-                  <span>{preview.employer_trade_name}</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Contribuições Detalhadas */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Contribuições Negociadas
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Competência</TableHead>
-                    <TableHead className="text-right">Original</TableHead>
-                    <TableHead className="text-center">Atraso</TableHead>
-                    <TableHead className="text-right">Encargos</TableHead>
-                    <TableHead className="text-right">Total</TableHead>
+        {/* Contribuições */}
+        <section className="mb-6">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Contribuições Negociadas</h3>
+          <div className="border rounded-lg overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-gray-50">
+                  <TableHead className="text-xs font-semibold">Tipo</TableHead>
+                  <TableHead className="text-xs font-semibold">Competência</TableHead>
+                  <TableHead className="text-xs font-semibold text-right">Original</TableHead>
+                  <TableHead className="text-xs font-semibold text-center">Atraso</TableHead>
+                  <TableHead className="text-xs font-semibold text-right">Encargos</TableHead>
+                  <TableHead className="text-xs font-semibold text-right">Total</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {contributionsData.map((item: any, index: number) => (
+                  <TableRow key={index} className="text-sm">
+                    <TableCell className="py-2">{item.contribution_type_name}</TableCell>
+                    <TableCell className="py-2">
+                      {formatCompetence(item.competence_month, item.competence_year)}
+                    </TableCell>
+                    <TableCell className="py-2 text-right tabular-nums">{formatCurrency(item.original_value)}</TableCell>
+                    <TableCell className="py-2 text-center">
+                      <span className="text-xs text-gray-500">{item.days_overdue}d</span>
+                    </TableCell>
+                    <TableCell className="py-2 text-right tabular-nums text-gray-600">
+                      {formatCurrency(item.interest_value + item.correction_value + item.late_fee_value)}
+                    </TableCell>
+                    <TableCell className="py-2 text-right tabular-nums font-medium">{formatCurrency(item.total_value)}</TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {contributionsData.map((item: any, index: number) => (
-                    <TableRow key={index}>
-                      <TableCell className="text-sm">{item.contribution_type_name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {formatCompetence(item.competence_month, item.competence_year)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{formatCurrency(item.original_value)}</TableCell>
-                      <TableCell className="text-center">
-                        <Badge variant="destructive" className="text-xs">{item.days_overdue}d</Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-sm">
-                        {formatCurrency(item.interest_value + item.correction_value + item.late_fee_value)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(item.total_value)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </section>
 
         {/* Resumo Financeiro */}
-        <Card className="bg-gradient-to-br from-primary/5 to-primary/10">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <DollarSign className="h-4 w-4" />
-              Resumo Financeiro
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span>Valor Original Total</span>
-                <span>{formatCurrency(preview.total_original_value)}</span>
-              </div>
-              <div className="flex justify-between text-amber-600">
-                <span>Juros ({preview.interest_rate_monthly}% a.m.)</span>
-                <span>+{formatCurrency(preview.total_interest)}</span>
-              </div>
-              <div className="flex justify-between text-blue-600">
-                <span>Correção Monetária ({preview.monetary_correction_monthly}% a.m.)</span>
-                <span>+{formatCurrency(preview.total_correction)}</span>
-              </div>
-              <div className="flex justify-between text-red-600">
-                <span>Multa Moratória ({preview.late_fee_percentage}%)</span>
-                <span>+{formatCurrency(preview.total_late_fee)}</span>
-              </div>
-              <Separator />
-              <div className="flex justify-between text-lg font-bold">
-                <span>Valor Total Negociado</span>
-                <span className="text-primary">{formatCurrency(preview.total_negotiated_value)}</span>
-              </div>
+        <section className="mb-6">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Resumo Financeiro</h3>
+          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Valor Original Total</span>
+              <span className="tabular-nums">{formatCurrency(preview.total_original_value)}</span>
             </div>
-          </CardContent>
-        </Card>
+            {preview.total_interest > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Juros ({preview.interest_rate_monthly}% a.m.)</span>
+                <span className="tabular-nums text-amber-600">+{formatCurrency(preview.total_interest)}</span>
+              </div>
+            )}
+            {preview.total_correction > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Correção Monetária ({preview.monetary_correction_monthly}% a.m.)</span>
+                <span className="tabular-nums text-blue-600">+{formatCurrency(preview.total_correction)}</span>
+              </div>
+            )}
+            {preview.total_late_fee > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Multa Moratória ({preview.late_fee_percentage}%)</span>
+                <span className="tabular-nums text-red-600">+{formatCurrency(preview.total_late_fee)}</span>
+              </div>
+            )}
+            <Separator className="my-2" />
+            <div className="flex justify-between font-semibold text-base">
+              <span>Valor Total Negociado</span>
+              <span className="tabular-nums text-gray-900">{formatCurrency(preview.total_negotiated_value)}</span>
+            </div>
+          </div>
+        </section>
 
         {/* Condições do Parcelamento */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Condições do Parcelamento
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2 text-sm">
-                {preview.down_payment > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Entrada</span>
-                    <span className="font-medium">{formatCurrency(preview.down_payment)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Parcelas</span>
-                  <span className="font-medium">{preview.installments_count}x de {formatCurrency(preview.installment_value)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Primeiro Vencimento</span>
-                  <span className="font-medium">{format(firstDueDate, "dd/MM/yyyy")}</span>
-                </div>
-              </div>
-            </div>
+        <section className="mb-6">
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Condições do Parcelamento</h3>
+          <div className="border rounded-lg overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50">
+                  {preview.down_payment > 0 && <th className="px-4 py-2 text-left font-semibold text-xs">Entrada</th>}
+                  <th className="px-4 py-2 text-left font-semibold text-xs">Parcelas</th>
+                  <th className="px-4 py-2 text-left font-semibold text-xs">Valor Parcela</th>
+                  <th className="px-4 py-2 text-left font-semibold text-xs">1º Vencimento</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  {preview.down_payment > 0 && <td className="px-4 py-3 font-medium tabular-nums">{formatCurrency(preview.down_payment)}</td>}
+                  <td className="px-4 py-3 font-medium">{preview.installments_count}x</td>
+                  <td className="px-4 py-3 font-medium tabular-nums">{formatCurrency(preview.installment_value)}</td>
+                  <td className="px-4 py-3 font-medium">{format(firstDueDate, "dd/MM/yyyy")}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
-            <Separator className="my-4" />
-
-            <div className="space-y-2">
-              <h4 className="font-medium text-sm">Cronograma de Parcelas</h4>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-sm">
+          {/* Cronograma */}
+          {installmentsSchedule.length > 1 && (
+            <div className="mt-3">
+              <p className="text-xs text-gray-500 mb-2">Cronograma de vencimentos:</p>
+              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1 text-xs">
                 {installmentsSchedule.map((inst) => (
-                  <div key={inst.number} className="flex justify-between p-2 bg-muted/50 rounded">
-                    <span className="text-muted-foreground">{inst.number}ª</span>
-                    <span>{format(inst.date, "dd/MM/yyyy")}</span>
+                  <div key={inst.number} className="bg-gray-100 rounded px-2 py-1 text-center">
+                    <span className="text-gray-500">{inst.number}ª</span>{" "}
+                    <span className="font-medium">{format(inst.date, "dd/MM")}</span>
                   </div>
                 ))}
               </div>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </section>
 
         {/* Legal Basis */}
         {preview.legal_basis && (
-          <Card>
-            <CardContent className="pt-4">
-              <p className="text-xs text-muted-foreground italic">
-                <strong>Fundamentação:</strong> {preview.legal_basis}
-              </p>
-            </CardContent>
-          </Card>
+          <section className="mb-6">
+            <p className="text-xs text-gray-500 italic leading-relaxed">
+              <strong>Fundamentação:</strong> {preview.legal_basis}
+            </p>
+          </section>
         )}
 
         {/* Footer */}
-        <div className="text-center text-xs text-muted-foreground pt-4">
-          <p>Este documento é uma simulação de negociação e não representa um acordo formalizado.</p>
-          <p>Para formalizar, entre em contato com a entidade sindical.</p>
-        </div>
+        <footer className="border-t pt-4 mt-8">
+          <p className="text-xs text-gray-400 text-center">
+            Este documento é uma simulação de negociação e não representa um acordo formalizado.
+          </p>
+          <p className="text-xs text-gray-400 text-center mt-1">
+            {entityName} • {format(new Date(preview.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+          </p>
+        </footer>
       </div>
     </div>
   );
