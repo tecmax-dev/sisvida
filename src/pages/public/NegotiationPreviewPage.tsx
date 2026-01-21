@@ -163,7 +163,7 @@ export default function NegotiationPreviewPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 [color-scheme:light]">
         <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-600"></div>
       </div>
     );
@@ -178,8 +178,8 @@ export default function NegotiationPreviewPage() {
           : "Link Inválido";
 
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4 [color-scheme:light]">
+        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center text-gray-900">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-900 mb-2">{title}</h2>
           {unavailableReason === "cancelled" && (
@@ -221,7 +221,7 @@ export default function NegotiationPreviewPage() {
   const entityCnpj = unionEntity?.cnpj || clinic?.cnpj || "";
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white text-gray-900 [color-scheme:light]">
       {/* Main Content */}
       <div className="max-w-3xl mx-auto px-6 py-8">
         
