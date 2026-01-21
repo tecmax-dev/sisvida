@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Printer } from "lucide-react";
 import { PageNumber } from "@/components/print/PageNumber";
@@ -15,8 +16,15 @@ export default function PresentationPage() {
     window.print();
   };
 
+  // Force light mode for this public page
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+    document.documentElement.classList.add("light");
+    document.documentElement.style.colorScheme = "light";
+  }, []);
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white text-gray-900" data-theme="light">
       {/* Print Controls - Hidden when printing */}
       <div className="print:hidden fixed top-4 right-4 z-50 flex gap-2">
         <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700">

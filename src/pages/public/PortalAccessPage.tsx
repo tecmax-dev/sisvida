@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Building2 } from "lucide-react";
+import { PublicPageWrapper } from "@/components/layout/PublicLayout";
 
 const TARGET_CLINIC_ID = "89e7585e-7bce-4e58-91fa-c37080d1170d";
 
@@ -45,6 +46,7 @@ const PortalAccessPage = () => {
   ];
 
   return (
+    <PublicPageWrapper>
     <div className="min-h-screen flex flex-col">
       {/* Header com fundo azul e pattern */}
       <div 
@@ -137,6 +139,7 @@ const PortalAccessPage = () => {
         </div>
       </footer>
     </div>
+    </PublicPageWrapper>
   );
 };
 
