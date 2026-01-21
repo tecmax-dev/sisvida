@@ -43,6 +43,8 @@ interface NegotiationPreview {
   view_count: number;
   clinic_id: string;
   negotiation_id: string | null;
+  is_cancelled: boolean;
+  cancelled_at: string | null;
 }
 
 interface Clinic {
@@ -62,21 +64,6 @@ interface UnionEntity {
 }
 
 type UnavailableReason = "not_found" | "expired" | "cancelled";
-
-// Helper function to check for cancelled negotiations by CNPJ
-// The CNPJ is stored in the employers table, so we need to join
-async function checkCancelledByCnpj(cnpj: string): Promise<boolean> {
-  // Cast to any to avoid TS2589 error with deeply nested Supabase types
-  const client = supabase as any;
-  const { data, error } = await client
-    .from("debt_negotiations")
-    .select("id, employers!inner(cnpj)")
-    .eq("employers.cnpj", cnpj)
-    .eq("status", "cancelled")
-    .limit(1);
-  
-  return !error && Array.isArray(data) && data.length > 0;
-}
 
 export default function NegotiationPreviewPage() {
   const { token } = useParams<{ token: string }>();
@@ -116,29 +103,12 @@ export default function NegotiationPreviewPage() {
         return;
       }
 
-      // Verificar se a negociação foi cancelada
-      if (data.negotiation_id) {
-        const { data: negotiation } = await supabase
-          .from("debt_negotiations")
-          .select("status")
-          .eq("id", data.negotiation_id)
-          .single();
-
-        if (negotiation?.status === "cancelled") {
-          setUnavailableReason("cancelled");
-          setError("Esta negociação foi cancelada e não está mais disponível.");
-          setLoading(false);
-          return;
-        }
-      } else if (data.employer_cnpj) {
-        // Para previews antigos sem negotiation_id, verificar pelo employer_cnpj
-        const hasCancelled = await checkCancelledByCnpj(data.employer_cnpj);
-        if (hasCancelled) {
-          setUnavailableReason("cancelled");
-          setError("Esta negociação foi cancelada e não está mais disponível.");
-          setLoading(false);
-          return;
-        }
+      // Check if preview was marked as cancelled (via trigger on debt_negotiations)
+      if (data.is_cancelled) {
+        setUnavailableReason("cancelled");
+        setError("Esta negociação foi cancelada e não está mais disponível.");
+        setLoading(false);
+        return;
       }
 
       setPreview(data as NegotiationPreview);
