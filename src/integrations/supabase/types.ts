@@ -10327,6 +10327,195 @@ export type Database = {
           },
         ]
       }
+      union_authorizations: {
+        Row: {
+          authorization_number: string
+          benefit_id: string
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          dependent_id: string | null
+          id: string
+          is_for_dependent: boolean
+          issued_at: string
+          last_viewed_at: string | null
+          notes: string | null
+          patient_id: string
+          printed_at: string | null
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          status: string
+          union_entity_id: string | null
+          updated_at: string
+          valid_from: string
+          valid_until: string
+          validation_hash: string
+          view_count: number
+        }
+        Insert: {
+          authorization_number: string
+          benefit_id: string
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          dependent_id?: string | null
+          id?: string
+          is_for_dependent?: boolean
+          issued_at?: string
+          last_viewed_at?: string | null
+          notes?: string | null
+          patient_id: string
+          printed_at?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          union_entity_id?: string | null
+          updated_at?: string
+          valid_from?: string
+          valid_until: string
+          validation_hash: string
+          view_count?: number
+        }
+        Update: {
+          authorization_number?: string
+          benefit_id?: string
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          dependent_id?: string | null
+          id?: string
+          is_for_dependent?: boolean
+          issued_at?: string
+          last_viewed_at?: string | null
+          notes?: string | null
+          patient_id?: string
+          printed_at?: string | null
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          status?: string
+          union_entity_id?: string | null
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string
+          validation_hash?: string
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_authorizations_benefit_id_fkey"
+            columns: ["benefit_id"]
+            isOneToOne: false
+            referencedRelation: "union_benefits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_authorizations_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_authorizations_dependent_id_fkey"
+            columns: ["dependent_id"]
+            isOneToOne: false
+            referencedRelation: "patient_dependents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_authorizations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_authorizations_union_entity_id_fkey"
+            columns: ["union_entity_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_benefits: {
+        Row: {
+          category: string | null
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          partner_address: string | null
+          partner_cnpj: string | null
+          partner_email: string | null
+          partner_name: string | null
+          partner_phone: string | null
+          union_entity_id: string | null
+          updated_at: string
+          validity_days: number | null
+        }
+        Insert: {
+          category?: string | null
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          partner_address?: string | null
+          partner_cnpj?: string | null
+          partner_email?: string | null
+          partner_name?: string | null
+          partner_phone?: string | null
+          union_entity_id?: string | null
+          updated_at?: string
+          validity_days?: number | null
+        }
+        Update: {
+          category?: string | null
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          partner_address?: string | null
+          partner_cnpj?: string | null
+          partner_email?: string | null
+          partner_name?: string | null
+          partner_phone?: string | null
+          union_entity_id?: string | null
+          updated_at?: string
+          validity_days?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_benefits_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_benefits_union_entity_id_fkey"
+            columns: ["union_entity_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       union_cash_flow_history: {
         Row: {
           amount: number
@@ -11247,6 +11436,72 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "union_suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      union_president_signatures: {
+        Row: {
+          clinic_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          president_cpf: string | null
+          president_name: string
+          president_title: string | null
+          signature_data: string | null
+          signature_url: string | null
+          union_entity_id: string | null
+          updated_at: string
+          valid_from: string | null
+          valid_until: string | null
+        }
+        Insert: {
+          clinic_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          president_cpf?: string | null
+          president_name: string
+          president_title?: string | null
+          signature_data?: string | null
+          signature_url?: string | null
+          union_entity_id?: string | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Update: {
+          clinic_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          president_cpf?: string | null
+          president_name?: string
+          president_title?: string | null
+          signature_data?: string | null
+          signature_url?: string | null
+          union_entity_id?: string | null
+          updated_at?: string
+          valid_from?: string | null
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "union_president_signatures_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "union_president_signatures_union_entity_id_fkey"
+            columns: ["union_entity_id"]
+            isOneToOne: false
+            referencedRelation: "union_entities"
             referencedColumns: ["id"]
           },
         ]
@@ -12561,6 +12816,11 @@ export type Database = {
           token: string
         }[]
       }
+      generate_authorization_hash: { Args: never; Returns: string }
+      generate_authorization_number: {
+        Args: { p_clinic_id: string }
+        Returns: string
+      }
       generate_card_number:
         | { Args: { p_clinic_id: string }; Returns: string }
         | {
@@ -12760,6 +13020,7 @@ export type Database = {
         Returns: number
       }
       unaccent: { Args: { "": string }; Returns: string }
+      update_expired_authorizations: { Args: never; Returns: undefined }
       update_overdue_contributions: { Args: never; Returns: undefined }
       user_has_permission: {
         Args: { _clinic_id: string; _permission_key: string; _user_id: string }
