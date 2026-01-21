@@ -69,6 +69,7 @@ const ClinicPresentationPage = lazy(() => import("./pages/public/ClinicPresentat
 const NegotiationPreviewPage = lazy(() => import("./pages/public/NegotiationPreviewPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 
+
 // Portal do Profissional
 const ProfessionalDashboard = lazy(() => import("./pages/ProfessionalDashboard"));
 const ProfessionalAppointment = lazy(() => import("./pages/ProfessionalAppointment"));
@@ -158,6 +159,9 @@ import UnionPaymentHistoryPage from "./pages/union/UnionPaymentHistoryPage";
 import UnionAppContentPage from "./pages/union/UnionAppContentPage";
 import UnionFiliacoesPage from "./pages/union/UnionFiliacoesPage";
 import UnionConfigPage from "./pages/union/UnionConfigPage";
+import UnionBenefitsPage from "./pages/union/UnionBenefitsPage";
+import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
+const AuthorizationValidationPage = lazy(() => import("./pages/AuthorizationValidationPage"));
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
 import ClinicsManagement from "./pages/admin/ClinicsManagement";
@@ -514,6 +518,8 @@ const App = () => (
                   <Route path="homologacao/bloqueios" element={<HomologacaoBloqueiosPage />} />
                   <Route path="homologacao/config" element={<HomologacaoConfigPage />} />
                   <Route path="conteudo-app" element={<UnionAppContentPage />} />
+                  <Route path="beneficios" element={<UnionBenefitsPage />} />
+                  <Route path="autorizacoes" element={<UnionAuthorizationsPage />} />
                   <Route path="configuracoes" element={<UnionConfigPage />} />
                 </Route>
                 {/* Mobile App Routes - sempre modo claro */}
