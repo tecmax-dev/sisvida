@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { addMonths, format } from "date-fns";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import {
   Dialog,
   DialogContent,
@@ -239,7 +240,7 @@ export default function NewNegotiationDialog({
       const today = new Date();
       
       const calculated = selected.map((contribution) => {
-        const dueDate = new Date(contribution.due_date);
+        const dueDate = parseDateOnlyToLocalNoon(contribution.due_date);
         const diffTime = today.getTime() - dueDate.getTime();
         const daysOverdue = Math.max(0, Math.floor(diffTime / (1000 * 60 * 60 * 24)));
         const monthsOverdue = daysOverdue / 30;

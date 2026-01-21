@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
 interface BankTransaction {
   id: string;
@@ -290,7 +291,7 @@ export function UnionManualReconciliationDialog({
                             {tx.description}
                           </TableCell>
                           <TableCell>
-                            {format(new Date(tx.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                            {format(parseDateOnlyToLocalNoon(tx.due_date), "dd/MM/yyyy", { locale: ptBR })}
                           </TableCell>
                           <TableCell>
                             {tx.check_number ? (

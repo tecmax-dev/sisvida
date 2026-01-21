@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { parseDateOnlyToLocalNoon } from '@/lib/date';
 
 // ==================== TYPES ====================
 
@@ -145,7 +146,8 @@ const formatCurrencyValue = (value: number) =>
 
 const formatDate = (date: string | Date) => {
   if (!date) return "—";
-  return format(new Date(date), "dd/MM/yyyy", { locale: ptBR });
+  const d = typeof date === "string" ? parseDateOnlyToLocalNoon(date) : date;
+  return format(d, "dd/MM/yyyy", { locale: ptBR });
 };
 
 const formatCNPJ = (cnpj: string) => {

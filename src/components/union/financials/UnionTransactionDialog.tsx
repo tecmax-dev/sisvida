@@ -32,6 +32,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { cn } from "@/lib/utils";
 import { UnionSupplierCombobox } from "./UnionSupplierCombobox";
 import { UnionSupplierDialog } from "./UnionSupplierDialog";
@@ -231,8 +232,8 @@ export function UnionTransactionDialog({
         interest_value: transaction.interest_value?.toString() || "",
         discount_value: transaction.discount_value?.toString() || "",
       });
-      setDueDate(transaction.due_date ? new Date(transaction.due_date) : new Date());
-      setPaidDate(transaction.paid_date ? new Date(transaction.paid_date) : undefined);
+      setDueDate(transaction.due_date ? parseDateOnlyToLocalNoon(transaction.due_date) : new Date());
+      setPaidDate(transaction.paid_date ? parseDateOnlyToLocalNoon(transaction.paid_date) : undefined);
       // Open values section if there are decomposed values
       if (transaction.fine_value || transaction.interest_value || transaction.discount_value) {
         setValuesOpen(true);

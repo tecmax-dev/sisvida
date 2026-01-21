@@ -26,6 +26,7 @@ import { ReversalDialog } from "./ReversalDialog";
 import { exportTransactions, TransactionData } from "@/lib/financialExportUtils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useRealtimeSubscription } from "@/hooks/useRealtimeSubscription";
@@ -183,7 +184,7 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
 
   const handleExport = (exportFormat: 'pdf' | 'excel') => {
     const exportData: TransactionData[] = (filteredTransactions || []).map(t => ({
-      date: t.due_date ? format(new Date(t.due_date), "dd/MM/yyyy", { locale: ptBR }) : "-",
+      date: t.due_date ? format(parseDateOnlyToLocalNoon(t.due_date), "dd/MM/yyyy", { locale: ptBR }) : "-",
       description: t.description,
       category: (t.financial_categories as any)?.name || "-",
       patient: (t.patients as any)?.name || "-",
@@ -260,7 +261,7 @@ export function TransactionTable({ clinicId, filterType }: TransactionTableProps
                 <TableRow key={transaction.id}>
                   <TableCell>
                     {transaction.due_date
-                      ? format(new Date(transaction.due_date), "dd/MM/yyyy", {
+                      ? format(parseDateOnlyToLocalNoon(transaction.due_date), "dd/MM/yyyy", {
                           locale: ptBR,
                         })
                       : "-"}

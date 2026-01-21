@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Loader2, FileStack, Building2, CheckCircle2, Tag, Mail, Send, MessageCircle } from "lucide-react";
 import { format, addDays } from "date-fns";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useSessionValidator } from "@/hooks/useSessionValidator";
@@ -536,7 +537,7 @@ export default function BulkContributionDialog({
         `Foi gerada uma contribuição para sua empresa.\n\n` +
         `📋 *Tipo:* ${selectedType?.name || "Contribuição"}\n` +
         `📅 *Competência:* ${month.toString().padStart(2, "0")}/${year}\n` +
-        `⏳ *Vencimento:* ${format(new Date(dueDate), "dd/MM/yyyy")}\n\n` +
+        `⏳ *Vencimento:* ${format(parseDateOnlyToLocalNoon(dueDate), "dd/MM/yyyy")}\n\n` +
         `Para informar o valor e gerar o boleto, acesse o link abaixo:\n\n` +
         `🔗 ${publicLink}\n\n` +
         `Atenciosamente,\n${clinicName || "Sindicato"}`;
@@ -595,7 +596,7 @@ export default function BulkContributionDialog({
       `Foi gerada uma contribuição para sua empresa.\n\n` +
       `📋 *Tipo:* ${selectedType?.name || "Contribuição"}\n` +
       `📅 *Competência:* ${month.toString().padStart(2, "0")}/${year}\n` +
-      `⏳ *Vencimento:* ${format(new Date(dueDate), "dd/MM/yyyy")}\n\n` +
+      `⏳ *Vencimento:* ${format(parseDateOnlyToLocalNoon(dueDate), "dd/MM/yyyy")}\n\n` +
       `Para informar o valor e gerar o boleto, acesse o link abaixo:\n\n` +
       `🔗 ${publicLink}\n\n` +
       `Atenciosamente,\n${clinicName || "Sindicato"}`;

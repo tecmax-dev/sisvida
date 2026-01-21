@@ -71,12 +71,7 @@ interface NegotiationInstallmentsTabProps {
 
 const ITEMS_PER_PAGE = 15;
 
-function parseDateOnly(value: string): Date {
-  const dateOnly = value?.slice(0, 10);
-  const d = parseISO(dateOnly);
-  d.setHours(12, 0, 0, 0);
-  return d;
-}
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
 const STATUS_CONFIG = {
   pending: { 
@@ -169,7 +164,7 @@ export default function NegotiationInstallmentsTab({
 
   const filteredInstallments = useMemo(() => {
     return installments.filter((inst) => {
-      const dueYear = new Date(inst.due_date).getFullYear();
+      const dueYear = parseDateOnlyToLocalNoon(inst.due_date).getFullYear();
       const matchesYear = dueYear === internalYearFilter;
       
       const searchLower = searchTerm.toLowerCase();
@@ -205,7 +200,7 @@ export default function NegotiationInstallmentsTab({
   }, [filteredInstallments]);
 
   const years = useMemo(() => {
-    const uniqueYears = new Set(installments.map(i => new Date(i.due_date).getFullYear()));
+    const uniqueYears = new Set(installments.map(i => parseDateOnlyToLocalNoon(i.due_date).getFullYear()));
     return Array.from(uniqueYears).sort((a, b) => b - a);
   }, [installments]);
 
@@ -357,7 +352,7 @@ export default function NegotiationInstallmentsTab({
                         {inst.installment_number}/{totalInstallments}
                       </TableCell>
                       <TableCell>
-                        {format(parseDateOnly(inst.due_date), "dd/MM/yyyy")}
+                        {format(parseDateOnlyToLocalNoon(inst.due_date), "dd/MM/yyyy")}
                       </TableCell>
                       <TableCell className="text-right font-medium">
                         {formatCurrency(Number(inst.value))}

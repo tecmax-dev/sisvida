@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
 /**
  * Hook para buscar a configuração de ocultação de pendências antigas
@@ -26,7 +27,7 @@ export function useHidePendingDate() {
           .single();
 
         if (!error && data?.hide_pending_before_date) {
-          setHidePendingBeforeDate(new Date(data.hide_pending_before_date));
+          setHidePendingBeforeDate(parseDateOnlyToLocalNoon(data.hide_pending_before_date));
         } else {
           setHidePendingBeforeDate(null);
         }
@@ -54,7 +55,7 @@ export function useHidePendingDate() {
     // Apenas ocultar pendentes e vencidas
     if (status !== "pending" && status !== "overdue") return true;
 
-    const dueDateObj = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
+    const dueDateObj = typeof dueDate === "string" ? parseDateOnlyToLocalNoon(dueDate) : dueDate;
     return dueDateObj >= hidePendingBeforeDate;
   };
 

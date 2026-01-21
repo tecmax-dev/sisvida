@@ -298,7 +298,7 @@ export default function EmployerContributionsTab({
   // Separate contributions by status
   const { activeContributions, overdueContributions } = useMemo(() => {
     const overdue = displayContributions.filter(c => c.status === "overdue").sort(
-      (a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime()
+      (a, b) => parseDateOnlyToLocalNoon(a.due_date).getTime() - parseDateOnlyToLocalNoon(b.due_date).getTime()
     );
     const active = displayContributions.filter(c => c.status !== "overdue");
     return { activeContributions: active, overdueContributions: overdue };
