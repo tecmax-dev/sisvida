@@ -5685,6 +5685,7 @@ export type Database = {
       negotiation_previews: {
         Row: {
           access_token: string
+          cancelled_at: string | null
           clinic_id: string
           contributions_data: Json
           created_at: string
@@ -5701,6 +5702,7 @@ export type Database = {
           installment_value: number
           installments_count: number
           interest_rate_monthly: number
+          is_cancelled: boolean
           late_fee_percentage: number
           legal_basis: string | null
           monetary_correction_monthly: number
@@ -5715,6 +5717,7 @@ export type Database = {
         }
         Insert: {
           access_token: string
+          cancelled_at?: string | null
           clinic_id: string
           contributions_data: Json
           created_at?: string
@@ -5731,6 +5734,7 @@ export type Database = {
           installment_value: number
           installments_count: number
           interest_rate_monthly: number
+          is_cancelled?: boolean
           late_fee_percentage: number
           legal_basis?: string | null
           monetary_correction_monthly: number
@@ -5745,6 +5749,7 @@ export type Database = {
         }
         Update: {
           access_token?: string
+          cancelled_at?: string | null
           clinic_id?: string
           contributions_data?: Json
           created_at?: string
@@ -5761,6 +5766,7 @@ export type Database = {
           installment_value?: number
           installments_count?: number
           interest_rate_monthly?: number
+          is_cancelled?: boolean
           late_fee_percentage?: number
           legal_basis?: string | null
           monetary_correction_monthly?: number
