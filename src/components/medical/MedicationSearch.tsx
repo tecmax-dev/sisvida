@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Search, Plus, Pill, Loader2 } from "lucide-react";
+import { Search, Plus, Pill, Loader2, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
@@ -251,81 +251,79 @@ export function MedicationSearch({ onSelectMedication, disabled }: MedicationSea
         </div>
       ) : null}
 
-      {/* Add Medication Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Cadastrar Medicamento</DialogTitle>
-          </DialogHeader>
+      {/* Add Medication Popup */}
+      <PopupBase open={showAddDialog} onClose={() => setShowAddDialog(false)}>
+        <PopupHeader>
+          <PopupTitle>Cadastrar Medicamento</PopupTitle>
+        </PopupHeader>
+        
+        <div className="space-y-4">
+          <div>
+            <Label>Nome *</Label>
+            <Input
+              value={newMedication.name}
+              onChange={(e) => setNewMedication({ ...newMedication, name: e.target.value })}
+              placeholder="Ex: Dipirona"
+            />
+          </div>
           
-          <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Nome *</Label>
+              <Label>Dosagem</Label>
               <Input
-                value={newMedication.name}
-                onChange={(e) => setNewMedication({ ...newMedication, name: e.target.value })}
-                placeholder="Ex: Dipirona"
+                value={newMedication.dosage}
+                onChange={(e) => setNewMedication({ ...newMedication, dosage: e.target.value })}
+                placeholder="Ex: 500mg"
               />
             </div>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Dosagem</Label>
-                <Input
-                  value={newMedication.dosage}
-                  onChange={(e) => setNewMedication({ ...newMedication, dosage: e.target.value })}
-                  placeholder="Ex: 500mg"
-                />
-              </div>
-              <div>
-                <Label>Forma</Label>
-                <Input
-                  value={newMedication.form}
-                  onChange={(e) => setNewMedication({ ...newMedication, form: e.target.value })}
-                  placeholder="Ex: Comprimido"
-                />
-              </div>
-            </div>
-            
             <div>
-              <Label>Princípio Ativo</Label>
+              <Label>Forma</Label>
               <Input
-                value={newMedication.active_ingredient}
-                onChange={(e) => setNewMedication({ ...newMedication, active_ingredient: e.target.value })}
-                placeholder="Ex: Dipirona Sódica"
-              />
-            </div>
-            
-            <div>
-              <Label>Posologia Padrão</Label>
-              <Textarea
-                value={newMedication.instructions}
-                onChange={(e) => setNewMedication({ ...newMedication, instructions: e.target.value })}
-                placeholder="Ex: Tomar 1 comprimido de 6 em 6 horas"
-                rows={2}
-              />
-            </div>
-            
-            <div className="flex items-center justify-between">
-              <Label>Medicamento Controlado</Label>
-              <Switch
-                checked={newMedication.is_controlled}
-                onCheckedChange={(checked) => setNewMedication({ ...newMedication, is_controlled: checked })}
+                value={newMedication.form}
+                onChange={(e) => setNewMedication({ ...newMedication, form: e.target.value })}
+                placeholder="Ex: Comprimido"
               />
             </div>
           </div>
           
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSaveNewMedication} disabled={saving || !newMedication.name.trim()}>
-              {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
-              Cadastrar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div>
+            <Label>Princípio Ativo</Label>
+            <Input
+              value={newMedication.active_ingredient}
+              onChange={(e) => setNewMedication({ ...newMedication, active_ingredient: e.target.value })}
+              placeholder="Ex: Dipirona Sódica"
+            />
+          </div>
+          
+          <div>
+            <Label>Posologia Padrão</Label>
+            <Textarea
+              value={newMedication.instructions}
+              onChange={(e) => setNewMedication({ ...newMedication, instructions: e.target.value })}
+              placeholder="Ex: Tomar 1 comprimido de 6 em 6 horas"
+              rows={2}
+            />
+          </div>
+          
+          <div className="flex items-center justify-between">
+            <Label>Medicamento Controlado</Label>
+            <Switch
+              checked={newMedication.is_controlled}
+              onCheckedChange={(checked) => setNewMedication({ ...newMedication, is_controlled: checked })}
+            />
+          </div>
+        </div>
+        
+        <PopupFooter>
+          <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSaveNewMedication} disabled={saving || !newMedication.name.trim()}>
+            {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />}
+            Cadastrar
+          </Button>
+        </PopupFooter>
+      </PopupBase>
     </div>
   );
 }
