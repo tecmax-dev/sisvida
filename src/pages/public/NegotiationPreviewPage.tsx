@@ -62,14 +62,14 @@ interface UnionEntity {
 }
 
 // Helper function to check for cancelled negotiations by CNPJ
-// Using explicit typing to avoid TypeScript deep instantiation issues
+// The CNPJ is stored in the employers table, so we need to join
 async function checkCancelledByCnpj(cnpj: string): Promise<boolean> {
   // Cast to any to avoid TS2589 error with deeply nested Supabase types
   const client = supabase as any;
   const { data, error } = await client
     .from("debt_negotiations")
-    .select("id")
-    .eq("employer_cnpj", cnpj)
+    .select("id, employers!inner(cnpj)")
+    .eq("employers.cnpj", cnpj)
     .eq("status", "cancelled")
     .limit(1);
   
