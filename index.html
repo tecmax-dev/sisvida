@@ -19,10 +19,18 @@
     
     <!-- PWA iOS -->
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Sindicato" />
     <meta name="application-name" content="Sindicato Comerciários" />
     <!-- Manifest injetado automaticamente pelo vite-plugin-pwa -->
+    
+    <!-- Splash Screen Background Color for PWA -->
+    <style>
+      html, body, #root {
+        background-color: #16a394 !important;
+      }
+    </style>
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -70,8 +78,8 @@
     </script>
   </head>
 
-  <body>
-    <div id="root"></div>
+  <body style="background-color: #16a394;">
+    <div id="root" style="background-color: #16a394; min-height: 100vh;"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
