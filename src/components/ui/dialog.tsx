@@ -3,7 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { becameVisibleRecently } from "@/lib/visibility-grace";
+import { becameVisibleRecently, wasHiddenRecently, isTabInactive } from "@/lib/visibility-grace";
 
 const Dialog = ({
   open: openProp,
@@ -18,13 +18,21 @@ const Dialog = ({
 
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
-      // Prevent unintended close events when switching browser tabs / losing focus.
-      // Note: Radix can fire a dismiss on focus restoration; we guard a short grace window.
-      if (
-        !nextOpen &&
-        (document.hidden || document.visibilityState === "hidden" || !document.hasFocus() || becameVisibleRecently(600))
-      ) {
-        return;
+      // CRITICAL: Prevent unintended close events when switching browser tabs or losing focus.
+      // Radix UI fires dismiss events on focus restoration - we block these entirely.
+      if (!nextOpen) {
+        // Block close if tab is currently inactive
+        if (isTabInactive()) {
+          return;
+        }
+        // Block close if tab just became visible (user returning from another tab)
+        if (becameVisibleRecently(1500)) {
+          return;
+        }
+        // Block close if tab was hidden recently (transition period)
+        if (wasHiddenRecently(1500)) {
+          return;
+        }
       }
 
       if (!isControlled) setUncontrolledOpen(nextOpen);
@@ -70,34 +78,44 @@ const DialogContent = React.forwardRef<
         className,
       )}
       onFocusOutside={(e) => {
-        if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+        // ALWAYS prevent focus-based dismissal - only allow explicit user actions
+        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
           e.preventDefault();
           return;
         }
+        // Still prevent by default but allow custom handler
         e.preventDefault();
         onFocusOutside?.(e);
       }}
       onInteractOutside={(e) => {
-        if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+        // Block all interactions when tab is inactive or transitioning
+        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
           e.preventDefault();
           return;
         }
+        // Block focus-related events entirely
         const originalEvent = e.detail?.originalEvent;
-        if (originalEvent instanceof FocusEvent || originalEvent?.type === "focusout" || originalEvent?.type === "blur") {
+        if (
+          originalEvent instanceof FocusEvent || 
+          originalEvent?.type === "focusout" || 
+          originalEvent?.type === "blur" ||
+          originalEvent?.type === "focus"
+        ) {
           e.preventDefault();
           return;
         }
+        // Allow pointer-based interactions (user clicking outside)
         onInteractOutside?.(e);
       }}
       onPointerDownOutside={(e) => {
-        if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
           e.preventDefault();
           return;
         }
         onPointerDownOutside?.(e);
       }}
       onEscapeKeyDown={(e) => {
-        if (document.hidden || document.visibilityState === "hidden" || !document.hasFocus()) {
+        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
           e.preventDefault();
           return;
         }
