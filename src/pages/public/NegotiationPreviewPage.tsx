@@ -228,19 +228,31 @@ export default function NegotiationPreviewPage() {
   return (
     <PublicPageWrapper>
       {/* Main Content */}
-      <div className="max-w-3xl mx-auto px-6 py-8">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         
         {/* Header */}
-        <header className="border-b pb-6 mb-6">
-          <div className="flex items-start gap-4">
-            {clinic?.logo_url && (
-              <img 
-                src={clinic.logo_url} 
-                alt={entityName} 
-                className="h-16 w-16 object-contain flex-shrink-0"
-              />
-            )}
-            <div className="flex-1 min-w-0">
+        <header className="border-b pb-4 sm:pb-6 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              {clinic?.logo_url && (
+                <img 
+                  src={clinic.logo_url} 
+                  alt={entityName} 
+                  className="h-12 w-12 sm:h-16 sm:w-16 object-contain flex-shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0 sm:hidden">
+                <h1 className="text-base font-bold text-gray-900 leading-tight">
+                  {entityName}
+                </h1>
+                {entityCnpj && (
+                  <p className="text-xs text-gray-500 font-mono mt-0.5">
+                    CNPJ: {formatCNPJ(entityCnpj)}
+                  </p>
+                )}
+              </div>
+            </div>
+            <div className="hidden sm:block flex-1 min-w-0">
               <h1 className="text-lg font-bold text-gray-900 leading-tight">
                 {entityName}
               </h1>
@@ -250,15 +262,15 @@ export default function NegotiationPreviewPage() {
                 </p>
               )}
             </div>
-            <div className="text-right flex-shrink-0">
-              <h2 className="text-base font-semibold text-gray-900">ESPELHO DE NEGOCIAÇÃO</h2>
+            <div className="text-left sm:text-right flex-shrink-0">
+              <h2 className="text-sm sm:text-base font-semibold text-gray-900">ESPELHO DE NEGOCIAÇÃO</h2>
               <Badge variant="outline" className="mt-1 text-xs bg-amber-50 text-amber-700 border-amber-200">
                 Aguardando Aprovação
               </Badge>
             </div>
           </div>
           
-          <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+          <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 text-xs text-gray-500">
             <span>Emitido em: {format(new Date(preview.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</span>
             <span className="flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -280,9 +292,42 @@ export default function NegotiationPreviewPage() {
         </section>
 
         {/* Contribuições */}
-        <section className="mb-6">
+        <section className="mb-4 sm:mb-6">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Contribuições Negociadas</h3>
-          <div className="border rounded-lg overflow-hidden">
+          
+          {/* Mobile: Card layout */}
+          <div className="sm:hidden space-y-2">
+            {contributionsData.map((item: any, index: number) => (
+              <div key={index} className="border rounded-lg p-3 bg-white">
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{item.contribution_type_name}</p>
+                    <p className="text-xs text-gray-500">{formatCompetence(item.competence_month, item.competence_year)}</p>
+                  </div>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">{item.days_overdue}d</span>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <p className="text-gray-500">Original</p>
+                    <p className="font-medium tabular-nums">{formatCurrency(item.original_value)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-500">Encargos</p>
+                    <p className="font-medium tabular-nums text-amber-600">
+                      {formatCurrency(item.interest_value + item.correction_value + item.late_fee_value)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-gray-500">Total</p>
+                    <p className="font-semibold tabular-nums">{formatCurrency(item.total_value)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop: Table layout */}
+          <div className="hidden sm:block border rounded-lg overflow-hidden">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50">
@@ -317,43 +362,63 @@ export default function NegotiationPreviewPage() {
         </section>
 
         {/* Resumo Financeiro */}
-        <section className="mb-6">
+        <section className="mb-4 sm:mb-6">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Resumo Financeiro</h3>
-          <div className="bg-gray-50 rounded-lg p-4 space-y-2">
-            <div className="flex justify-between text-sm">
+          <div className="bg-gray-50 rounded-lg p-3 sm:p-4 space-y-2">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span className="text-gray-600">Valor Original Total</span>
               <span className="tabular-nums">{formatCurrency(preview.total_original_value)}</span>
             </div>
             {preview.total_interest > 0 && (
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-gray-600">Juros ({preview.interest_rate_monthly}% a.m.)</span>
                 <span className="tabular-nums text-amber-600">+{formatCurrency(preview.total_interest)}</span>
               </div>
             )}
             {preview.total_correction > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Correção Monetária ({preview.monetary_correction_monthly}% a.m.)</span>
-                <span className="tabular-nums text-blue-600">+{formatCurrency(preview.total_correction)}</span>
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-gray-600 truncate mr-2">Correção ({preview.monetary_correction_monthly}% a.m.)</span>
+                <span className="tabular-nums text-blue-600 flex-shrink-0">+{formatCurrency(preview.total_correction)}</span>
               </div>
             )}
             {preview.total_late_fee > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Multa Moratória ({preview.late_fee_percentage}%)</span>
+              <div className="flex justify-between text-xs sm:text-sm">
+                <span className="text-gray-600">Multa ({preview.late_fee_percentage}%)</span>
                 <span className="tabular-nums text-red-600">+{formatCurrency(preview.total_late_fee)}</span>
               </div>
             )}
             <Separator className="my-2" />
-            <div className="flex justify-between font-semibold text-base">
-              <span>Valor Total Negociado</span>
+            <div className="flex justify-between font-semibold text-sm sm:text-base">
+              <span>Valor Total</span>
               <span className="tabular-nums text-gray-900">{formatCurrency(preview.total_negotiated_value)}</span>
             </div>
           </div>
         </section>
 
         {/* Condições do Parcelamento */}
-        <section className="mb-6">
+        <section className="mb-4 sm:mb-6">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Condições do Parcelamento</h3>
-          <div className="border rounded-lg overflow-hidden">
+          
+          {/* Mobile: Stacked layout */}
+          <div className="sm:hidden bg-white border rounded-lg p-3 space-y-3">
+            {preview.down_payment > 0 && (
+              <div className="flex justify-between">
+                <span className="text-xs text-gray-500">Entrada</span>
+                <span className="text-sm font-medium tabular-nums">{formatCurrency(preview.down_payment)}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-xs text-gray-500">Parcelas</span>
+              <span className="text-sm font-medium">{preview.installments_count}x de {formatCurrency(preview.installment_value)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-gray-500">1º Vencimento</span>
+              <span className="text-sm font-medium">{format(firstDueDate, "dd/MM/yyyy")}</span>
+            </div>
+          </div>
+
+          {/* Desktop: Table layout */}
+          <div className="hidden sm:block border rounded-lg overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50">
@@ -378,7 +443,7 @@ export default function NegotiationPreviewPage() {
           {installmentsSchedule.length > 1 && (
             <div className="mt-3">
               <p className="text-xs text-gray-500 mb-2">Cronograma de vencimentos:</p>
-              <div className="grid grid-cols-4 sm:grid-cols-6 gap-1 text-xs">
+              <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 text-xs">
                 {installmentsSchedule.map((inst) => (
                   <div key={inst.number} className="bg-gray-100 rounded px-2 py-1 text-center">
                     <span className="text-gray-500">{inst.number}ª</span>{" "}
@@ -400,11 +465,11 @@ export default function NegotiationPreviewPage() {
         )}
 
         {/* Footer */}
-        <footer className="border-t pt-4 mt-8">
-          <p className="text-xs text-gray-400 text-center">
+        <footer className="border-t pt-3 sm:pt-4 mt-6 sm:mt-8">
+          <p className="text-[10px] sm:text-xs text-gray-400 text-center px-2">
             Este documento é uma simulação de negociação e não representa um acordo formalizado.
           </p>
-          <p className="text-xs text-gray-400 text-center mt-1">
+          <p className="text-[10px] sm:text-xs text-gray-400 text-center mt-1">
             {entityName} • {format(new Date(preview.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
           </p>
         </footer>
