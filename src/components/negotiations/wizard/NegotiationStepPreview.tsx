@@ -391,8 +391,9 @@ export default function NegotiationStepPreview({
         return;
       }
 
-      const baseUrl = window.location.origin;
-      const link = `${baseUrl}/negociacao-espelho/${accessToken}`;
+      // Use production domain if available, otherwise fallback to current origin
+      const productionUrl = "https://sisvida.lovable.app";
+      const link = `${productionUrl}/negociacao-espelho/${accessToken}`;
       setGeneratedLink(link);
       toast.success("Link gerado com sucesso!");
     } catch (err) {
