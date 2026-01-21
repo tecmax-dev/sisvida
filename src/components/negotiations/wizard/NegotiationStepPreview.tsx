@@ -391,8 +391,8 @@ export default function NegotiationStepPreview({
         return;
       }
 
-      // Use production domain if available, otherwise fallback to current origin
-      const productionUrl = "https://sisvida.lovable.app";
+      // Use custom domain for production links
+      const productionUrl = "https://app.eclini.com.br";
       const link = `${productionUrl}/negociacao-espelho/${accessToken}`;
       setGeneratedLink(link);
       toast.success("Link gerado com sucesso!");
