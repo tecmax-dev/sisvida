@@ -18,7 +18,10 @@ const Dialog = ({
 
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
-      // Prevent unintended close events when switching browser tabs or losing focus.
+      // CRITICAL: Block any close attempt while tab is hidden or transitioning
+      if (!nextOpen && document.hidden) {
+        return;
+      }
       if (!nextOpen) {
         if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
           return;
