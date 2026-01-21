@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 
 type ModalType = 
   | 'patientRecords'
@@ -65,11 +65,6 @@ const ModalContext = createContext<ModalContextValue | undefined>(undefined);
 export function ModalProvider({ children }: { children: ReactNode }) {
   const [modals, setModals] = useState<Record<ModalType, ModalState>>(defaultModals);
 
-  // Debug: track provider mount/unmount
-  useEffect(() => {
-    console.log("🟢 ModalProvider mount");
-    return () => console.log("🔴 ModalProvider unmount");
-  }, []);
 
   const openModal = useCallback((type: ModalType, data: ModalData = {}) => {
     setModals(prev => ({

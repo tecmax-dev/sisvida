@@ -18,33 +18,9 @@ const Dialog = ({
 
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
-      // DEBUG: Log every close attempt
+      // Prevent unintended close events when switching browser tabs or losing focus.
       if (!nextOpen) {
-        console.trace("🔥 Dialog onOpenChange(false)", {
-          isTabInactive: isTabInactive(),
-          becameVisibleRecently: becameVisibleRecently(1500),
-          wasHiddenRecently: wasHiddenRecently(1500),
-          documentHidden: document.hidden,
-          hasFocus: document.hasFocus(),
-        });
-      }
-
-      // CRITICAL: Prevent unintended close events when switching browser tabs or losing focus.
-      // Radix UI fires dismiss events on focus restoration - we block these entirely.
-      if (!nextOpen) {
-        // Block close if tab is currently inactive
-        if (isTabInactive()) {
-          console.log("🛡️ Dialog: blocked - tab inactive");
-          return;
-        }
-        // Block close if tab just became visible (user returning from another tab)
-        if (becameVisibleRecently(1500)) {
-          console.log("🛡️ Dialog: blocked - became visible recently");
-          return;
-        }
-        // Block close if tab was hidden recently (transition period)
-        if (wasHiddenRecently(1500)) {
-          console.log("🛡️ Dialog: blocked - was hidden recently");
+        if (isTabInactive() || becameVisibleRecently(1500) || wasHiddenRecently(1500)) {
           return;
         }
       }
@@ -82,7 +58,7 @@ const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, onFocusOutside, onInteractOutside, onPointerDownOutside, onEscapeKeyDown, ...props }, ref) => (
-  <DialogPortal>
+  <DialogPortal forceMount>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}

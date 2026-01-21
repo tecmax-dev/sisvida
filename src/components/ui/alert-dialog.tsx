@@ -57,7 +57,7 @@ const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
 >(({ className, onFocusOutside, onEscapeKeyDown, ...props }, ref) => (
-  <AlertDialogPortal>
+  <AlertDialogPortal forceMount>
     <AlertDialogOverlay />
     <AlertDialogPrimitive.Content
       ref={ref}
