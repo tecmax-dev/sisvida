@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent } from "@/components/ui/card";
+import { CpfInputCard } from "@/components/ui/cpf-input-card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { 
@@ -704,6 +705,59 @@ export default function SindicalFiliacaoPage() {
             <Card className="shadow-lg border-0">
               <CardContent className="p-6 md:p-8 space-y-10">
                 
+                {/* CPF DESTACADO - PRIMEIRO CAMPO */}
+                <FormField
+                  control={form.control}
+                  name="cpf"
+                  render={({ field }) => (
+                    <FormItem>
+                      <CpfInputCard
+                        value={field.value}
+                        onChange={(value) => {
+                          field.onChange(value);
+                          if (value.replace(/\D/g, "").length === 11) {
+                            checkCpf(value);
+                          }
+                        }}
+                        label="Digite seu CPF para começar"
+                        required
+                        loading={cpfChecking}
+                        error={cpfExists ? "CPF já possui cadastro" : undefined}
+                        className="border-emerald-400 bg-emerald-50/80"
+                      />
+                      {existingPatient && !cpfExists && (
+                        <div className={`mt-3 p-4 rounded-xl border ${existingPatient.is_expired ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
+                          <div className="flex items-start gap-3">
+                            {existingPatient.is_expired ? (
+                              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                            ) : (
+                              <CheckCircle2 className="h-5 w-5 text-emerald-600 mt-0.5" />
+                            )}
+                            <div className="flex-1">
+                              <p className={`text-sm font-medium ${existingPatient.is_expired ? 'text-amber-800' : 'text-emerald-800'}`}>
+                                {existingPatient.is_expired ? 'Carteira Vencida' : 'Cadastro Encontrado'}
+                              </p>
+                              <p className="text-sm text-gray-600 mt-0.5">
+                                {existingPatient.name}
+                                {existingPatient.is_expired && existingPatient.union_card_expires_at && (
+                                  <span className="block text-amber-700">
+                                    Vencida em: {new Date(existingPatient.union_card_expires_at).toLocaleDateString('pt-BR')}
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                {existingPatient.is_expired 
+                                  ? 'Seus dados foram preenchidos. Complete para renovar sua filiação.'
+                                  : 'Dados preenchidos automaticamente. Verifique e atualize se necessário.'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </FormItem>
+                  )}
+                />
+
                 {/* DADOS PESSOAIS */}
                 <FormSection icon={User} title="Dados Pessoais" subtitle="Conte-nos sobre você" accentColor="emerald">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -720,70 +774,6 @@ export default function SindicalFiliacaoPage() {
                                 {...field} 
                               />
                             </FormControl>
-                            <FormMessage />
-                          </FormInputWrapper>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="cpf"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormInputWrapper label="CPF" required>
-                            <div className="relative">
-                              <FormControl>
-                                <Input 
-                                  placeholder="000.000.000-00" 
-                                  className={`h-11 rounded-xl border-gray-200 focus:border-emerald-500 focus:ring-emerald-500/20 ${cpfExists ? 'border-rose-500 bg-rose-50' : ''}`}
-                                  value={field.value}
-                                  onChange={(e) => field.onChange(formatCpf(e.target.value))}
-                                  onBlur={(e) => checkCpf(e.target.value)}
-                                />
-                              </FormControl>
-                              {cpfChecking && (
-                                <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-gray-400" />
-                              )}
-                              {!cpfChecking && !cpfExists && field.value.length === 14 && (
-                                <Check className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-500" />
-                              )}
-                            </div>
-                            {cpfExists && (
-                              <p className="text-xs text-rose-600 flex items-center gap-1 mt-1">
-                                <AlertCircle className="h-3 w-3" />
-                                Este CPF já possui uma solicitação
-                              </p>
-                            )}
-                            {existingPatient && !cpfExists && (
-                              <div className={`mt-2 p-3 rounded-lg border ${existingPatient.is_expired ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-200'}`}>
-                                <div className="flex items-start gap-2">
-                                  {existingPatient.is_expired ? (
-                                    <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
-                                  ) : (
-                                    <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5" />
-                                  )}
-                                  <div className="flex-1">
-                                    <p className={`text-sm font-medium ${existingPatient.is_expired ? 'text-amber-800' : 'text-emerald-800'}`}>
-                                      {existingPatient.is_expired ? 'Carteira Vencida' : 'Cadastro Encontrado'}
-                                    </p>
-                                    <p className="text-xs text-gray-600 mt-0.5">
-                                      {existingPatient.name}
-                                      {existingPatient.is_expired && existingPatient.union_card_expires_at && (
-                                        <span className="block text-amber-700">
-                                          Vencida em: {new Date(existingPatient.union_card_expires_at).toLocaleDateString('pt-BR')}
-                                        </span>
-                                      )}
-                                    </p>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      {existingPatient.is_expired 
-                                        ? 'Seus dados foram preenchidos. Complete para renovar sua filiação.'
-                                        : 'Dados preenchidos automaticamente. Verifique e atualize se necessário.'}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
                             <FormMessage />
                           </FormInputWrapper>
                         </FormItem>
