@@ -68,6 +68,11 @@ export default function BirthdayMessagesHistory() {
   const [testPhone, setTestPhone] = useState("");
   const [sendingTest, setSendingTest] = useState(false);
 
+  // Force close dialog on mount to prevent stale state
+  useEffect(() => {
+    setSettingsOpen(false);
+  }, []);
+
   useRealtimeSubscription({
     table: 'birthday_message_logs',
     filter: currentClinic ? { column: 'clinic_id', value: currentClinic.id } : undefined,
