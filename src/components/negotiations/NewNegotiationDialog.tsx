@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { addMonths, format } from "date-fns";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
@@ -130,17 +130,27 @@ export default function NewNegotiationDialog({
     }
   }, [open, clinicId]);
 
+  // Track whether initial employer was already processed to prevent re-runs
+  const initialEmployerProcessedRef = useRef(false);
+
   // Auto-select employer and fetch contributions when initialEmployerId is provided
   useEffect(() => {
-    if (open && initialEmployerId && employers.length > 0) {
+    // Only run once when dialog opens with an initial employer
+    if (open && initialEmployerId && employers.length > 0 && !initialEmployerProcessedRef.current) {
       const employer = employers.find(e => e.id === initialEmployerId);
       if (employer) {
+        initialEmployerProcessedRef.current = true;
         setSelectedEmployer(employer);
         fetchContributions(employer.id).then(() => {
           // Skip to contributions step after fetching
           setCurrentStep("contributions");
         });
       }
+    }
+    
+    // Reset the flag when dialog closes
+    if (!open) {
+      initialEmployerProcessedRef.current = false;
     }
   }, [open, initialEmployerId, employers]);
 
