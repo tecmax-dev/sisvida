@@ -1378,6 +1378,10 @@ Deno.serve(async (req) => {
 
         if (deleteError) {
           console.error("[Lytex] Erro ao excluir contribuição:", deleteError);
+          // Verificar se é erro de FK (contribuição usada em negociação)
+          if (deleteError.code === "23503") {
+            throw new Error("Esta contribuição está vinculada a uma negociação e não pode ser excluída. Remova primeiro a negociação ou desvincule a contribuição.");
+          }
           throw new Error("Erro ao excluir contribuição");
         }
 
