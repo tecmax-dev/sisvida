@@ -457,12 +457,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshProfile
     }}>
       {children}
+      {/* Modal de sessão expirada desabilitado temporariamente
       <SessionExpiryWarning
         open={sessionModal.isOpen}
         timeRemaining={sessionModal.data.timeRemaining ?? 0}
         onRenew={handleRenewSession}
         onLogout={signOut}
       />
+      */}
     </AuthContext.Provider>
   );
 }
