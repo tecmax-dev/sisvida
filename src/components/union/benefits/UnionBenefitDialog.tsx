@@ -90,6 +90,44 @@ export function UnionBenefitDialog({ open, onOpenChange, benefit }: Props) {
     onOpenChange(nextOpen);
   }, [onOpenChange]);
 
+  // DEBUG: Monitor DOM changes on dialog portal when tab visibility changes
+  useEffect(() => {
+    if (!open) return;
+
+    const checkPortalVisibility = () => {
+      const portals = document.querySelectorAll('[data-radix-portal]');
+      const overlays = document.querySelectorAll('[data-state]');
+      console.log('🔍 Portal check:', {
+        portalsCount: portals.length,
+        overlaysCount: overlays.length,
+        documentHidden: document.hidden,
+        hasFocus: document.hasFocus(),
+        portals: Array.from(portals).map(p => ({
+          display: getComputedStyle(p).display,
+          visibility: getComputedStyle(p).visibility,
+          opacity: getComputedStyle(p).opacity,
+        })),
+        overlays: Array.from(overlays).slice(0, 3).map(o => ({
+          state: o.getAttribute('data-state'),
+          display: getComputedStyle(o).display,
+          visibility: getComputedStyle(o).visibility,
+          opacity: getComputedStyle(o).opacity,
+        })),
+      });
+    };
+
+    const handleVisibility = () => {
+      console.log('👁️ Visibility changed:', document.visibilityState);
+      // Check immediately and after a delay
+      checkPortalVisibility();
+      setTimeout(checkPortalVisibility, 100);
+      setTimeout(checkPortalVisibility, 500);
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [open]);
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
