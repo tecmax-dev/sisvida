@@ -42,6 +42,7 @@ interface NegotiationPreview {
   expires_at: string;
   view_count: number;
   clinic_id: string;
+  negotiation_id: string | null;
 }
 
 interface Clinic {
@@ -93,6 +94,21 @@ export default function NegotiationPreviewPage() {
         setError("Este espelho de negociação expirou.");
         setLoading(false);
         return;
+      }
+
+      // Se tem negotiation_id, verificar se a negociação não foi cancelada
+      if (data.negotiation_id) {
+        const { data: negotiation } = await supabase
+          .from("debt_negotiations")
+          .select("status")
+          .eq("id", data.negotiation_id)
+          .single();
+
+        if (negotiation?.status === "cancelled") {
+          setError("Esta negociação foi cancelada e não está mais disponível.");
+          setLoading(false);
+          return;
+        }
       }
 
       setPreview(data as NegotiationPreview);
