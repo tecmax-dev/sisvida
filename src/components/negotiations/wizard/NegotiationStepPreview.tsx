@@ -665,7 +665,7 @@ export default function NegotiationStepPreview({
           <div className="flex items-center gap-3 mb-3">
             <label className="text-sm text-muted-foreground flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
-              Validade do link:
+              Validade da negociação:
             </label>
             <select
               value={linkValidityDays}
@@ -700,7 +700,7 @@ export default function NegotiationStepPreview({
           ) : (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground text-center">
-                Link válido por {linkValidityDays} dias (até {format(addDays(new Date(), linkValidityDays), "dd/MM/yyyy")}):
+                Condições válidas até {format(addDays(new Date(), linkValidityDays), "dd/MM/yyyy")} (após esta data a negociação será cancelada automaticamente):
               </p>
               <div className="flex items-center gap-2">
                 <input 

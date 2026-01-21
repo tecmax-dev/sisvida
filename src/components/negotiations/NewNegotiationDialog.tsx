@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { addMonths, format } from "date-fns";
+import { addMonths, addDays, format } from "date-fns";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import {
   Dialog,
@@ -106,6 +106,7 @@ export default function NewNegotiationDialog({
   const [downPayment, setDownPayment] = useState(0);
   const [firstDueDate, setFirstDueDate] = useState<Date>(new Date());
   const [customInstallmentDates, setCustomInstallmentDates] = useState<Record<number, Date>>({});
+  const [validityDays, setValidityDays] = useState(30);
 
   // Reset state when dialog closes
   useEffect(() => {
@@ -120,6 +121,7 @@ export default function NewNegotiationDialog({
       setDownPayment(0);
       setFirstDueDate(new Date());
       setCustomInstallmentDates({});
+      setValidityDays(30);
     }
   }, [open]);
 
@@ -334,6 +336,7 @@ export default function NewNegotiationDialog({
           applied_correction_rate: settings.monetary_correction_monthly,
           applied_late_fee_rate: settings.late_fee_percentage,
           created_by: userId,
+          validity_expires_at: addDays(new Date(), validityDays).toISOString(),
         })
         .select()
         .single();
@@ -484,6 +487,8 @@ export default function NewNegotiationDialog({
               installmentValue={totals.installmentValue}
               customDates={customInstallmentDates}
               onCustomDatesChange={setCustomInstallmentDates}
+              validityDays={validityDays}
+              onValidityDaysChange={setValidityDays}
             />
           )}
 

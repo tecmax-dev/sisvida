@@ -6,8 +6,8 @@ import { Separator } from "@/components/ui/separator";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
-import { CalendarIcon, AlertCircle, RotateCcw, Edit2 } from "lucide-react";
-import { format, addMonths } from "date-fns";
+import { CalendarIcon, AlertCircle, RotateCcw, Edit2, Clock } from "lucide-react";
+import { format, addMonths, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -32,6 +32,8 @@ interface NegotiationStepInstallmentsProps {
   installmentValue: number;
   customDates?: Record<number, Date>;
   onCustomDatesChange?: (dates: Record<number, Date>) => void;
+  validityDays: number;
+  onValidityDaysChange: (days: number) => void;
 }
 
 export default function NegotiationStepInstallments({
@@ -46,6 +48,8 @@ export default function NegotiationStepInstallments({
   installmentValue,
   customDates = {},
   onCustomDatesChange,
+  validityDays,
+  onValidityDaysChange,
 }: NegotiationStepInstallmentsProps) {
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
@@ -108,6 +112,41 @@ export default function NegotiationStepInstallments({
 
   return (
     <div className="space-y-6">
+      {/* Validity Period */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            Validade da Negociação
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-sm text-muted-foreground">
+            Após este período, a negociação será cancelada automaticamente se não for formalizada.
+          </p>
+          <div className="flex items-center gap-3">
+            <Label htmlFor="validity">Válida por:</Label>
+            <select
+              id="validity"
+              value={validityDays}
+              onChange={(e) => onValidityDaysChange(Number(e.target.value))}
+              className="px-3 py-2 text-sm border rounded-md bg-background"
+            >
+              <option value={7}>7 dias</option>
+              <option value={15}>15 dias</option>
+              <option value={30}>30 dias</option>
+              <option value={60}>60 dias</option>
+              <option value={90}>90 dias</option>
+              <option value={180}>180 dias</option>
+              <option value={365}>1 ano</option>
+            </select>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Condições válidas até: <span className="font-medium">{format(addDays(new Date(), validityDays), "dd/MM/yyyy", { locale: ptBR })}</span>
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Down Payment */}
       <Card>
         <CardHeader className="pb-3">
