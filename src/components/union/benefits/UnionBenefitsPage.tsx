@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus, Search, Edit, Trash2, ToggleLeft, ToggleRight, Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,11 +57,8 @@ export function UnionBenefitsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [benefitToDelete, setBenefitToDelete] = useState<Benefit | null>(null);
 
-  // DEBUG: Track mount/unmount to diagnose modal closing on tab switch
-  useEffect(() => {
-    console.log("🟢 UnionBenefitsPage mount");
-    return () => console.log("🔴 UnionBenefitsPage unmount");
-  }, []);
+
+
 
   const { data: benefits = [], isLoading } = useQuery({
     queryKey: ["union-benefits", currentClinic?.id],

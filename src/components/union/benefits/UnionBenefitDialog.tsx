@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -83,50 +83,6 @@ export function UnionBenefitDialog({ open, onOpenChange, benefit }: Props) {
   const { currentClinic, user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-
-  // DEBUG: wrap onOpenChange to trace the source
-  const handleOpenChange = useCallback((nextOpen: boolean) => {
-    console.trace("🔥 UnionBenefitDialog onOpenChange", nextOpen, "hasFocus:", document.hasFocus(), "hidden:", document.hidden);
-    onOpenChange(nextOpen);
-  }, [onOpenChange]);
-
-  // DEBUG: Monitor DOM changes on dialog portal when tab visibility changes
-  useEffect(() => {
-    if (!open) return;
-
-    const checkPortalVisibility = () => {
-      const portals = document.querySelectorAll('[data-radix-portal]');
-      const overlays = document.querySelectorAll('[data-state]');
-      console.log('🔍 Portal check:', {
-        portalsCount: portals.length,
-        overlaysCount: overlays.length,
-        documentHidden: document.hidden,
-        hasFocus: document.hasFocus(),
-        portals: Array.from(portals).map(p => ({
-          display: getComputedStyle(p).display,
-          visibility: getComputedStyle(p).visibility,
-          opacity: getComputedStyle(p).opacity,
-        })),
-        overlays: Array.from(overlays).slice(0, 3).map(o => ({
-          state: o.getAttribute('data-state'),
-          display: getComputedStyle(o).display,
-          visibility: getComputedStyle(o).visibility,
-          opacity: getComputedStyle(o).opacity,
-        })),
-      });
-    };
-
-    const handleVisibility = () => {
-      console.log('👁️ Visibility changed:', document.visibilityState);
-      // Check immediately and after a delay
-      checkPortalVisibility();
-      setTimeout(checkPortalVisibility, 100);
-      setTimeout(checkPortalVisibility, 500);
-    };
-
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [open]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -220,7 +176,7 @@ export function UnionBenefitDialog({ open, onOpenChange, benefit }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>

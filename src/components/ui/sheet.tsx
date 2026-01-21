@@ -77,7 +77,7 @@ interface SheetContentProps
 
 const SheetContent = React.forwardRef<React.ElementRef<typeof SheetPrimitive.Content>, SheetContentProps>(
   ({ side = "right", className, children, onFocusOutside, onInteractOutside, onPointerDownOutside, onEscapeKeyDown, ...props }, ref) => (
-    <SheetPortal>
+    <SheetPortal forceMount>
       <SheetOverlay />
       <SheetPrimitive.Content
         ref={ref}
