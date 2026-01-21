@@ -1,5 +1,6 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useSessionExpiryModal } from '@/contexts/SystemModalContext';
 
 interface SessionTimeoutOptions {
   maxSessionDuration?: number; // Tempo máximo de sessão (em minutos)
@@ -24,11 +25,9 @@ export function useSessionTimeout(options: SessionTimeoutOptions) {
   } = options;
 
   const { toast } = useToast();
+  const sessionModal = useSessionExpiryModal();
   const checkIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const inactivityTimerRef = useRef<NodeJS.Timeout | null>(null);
   const warningShownRef = useRef(false);
-  const [showWarning, setShowWarning] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState<number>(0);
 
   // Salvar timestamp de login
   const saveLoginTime = useCallback(() => {
@@ -46,20 +45,20 @@ export function useSessionTimeout(options: SessionTimeoutOptions) {
   const updateLastActivity = useCallback(() => {
     localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
     warningShownRef.current = false;
-    setShowWarning(false);
-  }, []);
+    sessionModal.close();
+  }, [sessionModal]);
 
   // Renovar sessão (resetar todos os timers)
   const renewSession = useCallback(() => {
     localStorage.setItem(SESSION_LOGIN_TIME_KEY, Date.now().toString());
     localStorage.setItem(LAST_ACTIVITY_KEY, Date.now().toString());
     warningShownRef.current = false;
-    setShowWarning(false);
+    sessionModal.close();
     toast({
       title: "Sessão renovada",
       description: "Sua sessão foi estendida com sucesso.",
     });
-  }, [toast]);
+  }, [toast, sessionModal]);
 
   // Verificar expiração
   const checkExpiry = useCallback(() => {
@@ -87,14 +86,12 @@ export function useSessionTimeout(options: SessionTimeoutOptions) {
     // Pegar o menor tempo até expirar
     const timeUntilExpiry = Math.min(timeUntilMaxExpiry, timeUntilInactivityExpiry);
     const warningTimeMs = warningTime * 60 * 1000;
-
-    // Atualizar tempo restante
-    setTimeRemaining(Math.max(0, Math.floor(timeUntilExpiry / 1000)));
+    const timeRemainingSec = Math.max(0, Math.floor(timeUntilExpiry / 1000));
 
     // Sessão expirada
     if (timeUntilExpiry <= 0) {
       clearSessionData();
-      setShowWarning(false);
+      sessionModal.close();
       onExpire();
       toast({
         title: "Sessão expirada",
@@ -104,13 +101,16 @@ export function useSessionTimeout(options: SessionTimeoutOptions) {
       return;
     }
 
-    // Mostrar aviso
+    // Mostrar aviso usando o contexto de sistema
     if (timeUntilExpiry <= warningTimeMs && !warningShownRef.current) {
       warningShownRef.current = true;
-      setShowWarning(true);
+      sessionModal.open(timeRemainingSec);
       onWarning?.();
+    } else if (sessionModal.isOpen) {
+      // Atualizar tempo restante se modal já está aberto
+      sessionModal.updateTime(timeRemainingSec);
     }
-  }, [enabled, maxSessionDuration, inactivityTimeout, warningTime, onExpire, onWarning, clearSessionData, toast]);
+  }, [enabled, maxSessionDuration, inactivityTimeout, warningTime, onExpire, onWarning, clearSessionData, toast, sessionModal]);
 
   // Configurar detector de atividade
   useEffect(() => {
@@ -154,8 +154,5 @@ export function useSessionTimeout(options: SessionTimeoutOptions) {
     saveLoginTime,
     clearSessionData,
     renewSession,
-    showWarning,
-    timeRemaining,
-    dismissWarning: () => setShowWarning(false)
   };
 }
