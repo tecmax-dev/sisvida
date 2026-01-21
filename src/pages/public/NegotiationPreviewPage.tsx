@@ -61,6 +61,8 @@ interface UnionEntity {
   cnpj: string | null;
 }
 
+type UnavailableReason = "not_found" | "expired" | "cancelled";
+
 // Helper function to check for cancelled negotiations by CNPJ
 // The CNPJ is stored in the employers table, so we need to join
 async function checkCancelledByCnpj(cnpj: string): Promise<boolean> {
@@ -83,6 +85,7 @@ export default function NegotiationPreviewPage() {
   const [unionEntity, setUnionEntity] = useState<UnionEntity | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [unavailableReason, setUnavailableReason] = useState<UnavailableReason | null>(null);
 
   useEffect(() => {
     if (token) {
@@ -99,6 +102,7 @@ export default function NegotiationPreviewPage() {
         .single();
 
       if (fetchError || !data) {
+        setUnavailableReason("not_found");
         setError("Espelho de negociação não encontrado ou expirado.");
         setLoading(false);
         return;
@@ -106,6 +110,7 @@ export default function NegotiationPreviewPage() {
 
       // Check if expired
       if (new Date(data.expires_at) < new Date()) {
+        setUnavailableReason("expired");
         setError("Este espelho de negociação expirou.");
         setLoading(false);
         return;
@@ -120,6 +125,7 @@ export default function NegotiationPreviewPage() {
           .single();
 
         if (negotiation?.status === "cancelled") {
+          setUnavailableReason("cancelled");
           setError("Esta negociação foi cancelada e não está mais disponível.");
           setLoading(false);
           return;
@@ -128,6 +134,7 @@ export default function NegotiationPreviewPage() {
         // Para previews antigos sem negotiation_id, verificar pelo employer_cnpj
         const hasCancelled = await checkCancelledByCnpj(data.employer_cnpj);
         if (hasCancelled) {
+          setUnavailableReason("cancelled");
           setError("Esta negociação foi cancelada e não está mais disponível.");
           setLoading(false);
           return;
@@ -193,11 +200,25 @@ export default function NegotiationPreviewPage() {
   }
 
   if (error || !preview) {
+    const title =
+      unavailableReason === "cancelled"
+        ? "Negociação cancelada"
+        : unavailableReason === "expired"
+          ? "Link expirado"
+          : "Link Inválido";
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
         <div className="bg-white rounded-lg shadow-sm p-8 max-w-md w-full text-center">
           <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Link Inválido</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">{title}</h2>
+          {unavailableReason === "cancelled" && (
+            <div className="mb-3 flex justify-center">
+              <Badge variant="outline" className="text-xs">
+                Status: Cancelada
+              </Badge>
+            </div>
+          )}
           <p className="text-gray-600">
             {error || "Este espelho de negociação não existe ou expirou."}
           </p>
