@@ -5682,6 +5682,111 @@ export type Database = {
           },
         ]
       }
+      negotiation_previews: {
+        Row: {
+          access_token: string
+          clinic_id: string
+          contributions_data: Json
+          created_at: string
+          created_by: string | null
+          custom_dates: Json | null
+          down_payment: number
+          employer_cnpj: string
+          employer_id: string
+          employer_name: string
+          employer_trade_name: string | null
+          expires_at: string
+          first_due_date: string
+          id: string
+          installment_value: number
+          installments_count: number
+          interest_rate_monthly: number
+          late_fee_percentage: number
+          legal_basis: string | null
+          monetary_correction_monthly: number
+          total_correction: number
+          total_interest: number
+          total_late_fee: number
+          total_negotiated_value: number
+          total_original_value: number
+          view_count: number
+          viewed_at: string | null
+        }
+        Insert: {
+          access_token: string
+          clinic_id: string
+          contributions_data: Json
+          created_at?: string
+          created_by?: string | null
+          custom_dates?: Json | null
+          down_payment?: number
+          employer_cnpj: string
+          employer_id: string
+          employer_name: string
+          employer_trade_name?: string | null
+          expires_at?: string
+          first_due_date: string
+          id?: string
+          installment_value: number
+          installments_count: number
+          interest_rate_monthly: number
+          late_fee_percentage: number
+          legal_basis?: string | null
+          monetary_correction_monthly: number
+          total_correction: number
+          total_interest: number
+          total_late_fee: number
+          total_negotiated_value: number
+          total_original_value: number
+          view_count?: number
+          viewed_at?: string | null
+        }
+        Update: {
+          access_token?: string
+          clinic_id?: string
+          contributions_data?: Json
+          created_at?: string
+          created_by?: string | null
+          custom_dates?: Json | null
+          down_payment?: number
+          employer_cnpj?: string
+          employer_id?: string
+          employer_name?: string
+          employer_trade_name?: string | null
+          expires_at?: string
+          first_due_date?: string
+          id?: string
+          installment_value?: number
+          installments_count?: number
+          interest_rate_monthly?: number
+          late_fee_percentage?: number
+          legal_basis?: string | null
+          monetary_correction_monthly?: number
+          total_correction?: number
+          total_interest?: number
+          total_late_fee?: number
+          total_negotiated_value?: number
+          total_original_value?: number
+          view_count?: number
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "negotiation_previews_clinic_id_fkey"
+            columns: ["clinic_id"]
+            isOneToOne: false
+            referencedRelation: "clinics"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiation_previews_employer_id_fkey"
+            columns: ["employer_id"]
+            isOneToOne: false
+            referencedRelation: "employers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       negotiation_settings: {
         Row: {
           allow_partial_negotiation: boolean

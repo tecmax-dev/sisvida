@@ -66,6 +66,7 @@ const PublicContributionValue = lazy(() => import("./pages/PublicContributionVal
 const PortalAccessPage = lazy(() => import("./pages/public/PortalAccessPage"));
 const PresentationPage = lazy(() => import("./pages/public/PresentationPage"));
 const ClinicPresentationPage = lazy(() => import("./pages/public/ClinicPresentationPage"));
+const NegotiationPreviewPage = lazy(() => import("./pages/public/NegotiationPreviewPage"));
 const MemberPortal = lazy(() => import("./pages/MemberPortal"));
 
 // Portal do Profissional
@@ -304,6 +305,7 @@ const App = () => (
                 <Route path="/portais" element={<PortalAccessPage />} />
                 <Route path="/apresentacao" element={<PresentationPage />} />
                 <Route path="/apresentacao-clinica" element={<ClinicPresentationPage />} />
+                <Route path="/negociacao-espelho/:token" element={<NegotiationPreviewPage />} />
                 <Route path="/lgpd" element={<LgpdPolicy />} />
                 <Route path="/privacidade" element={<LgpdPolicy />} />
                 <Route path="/instalar" element={<InstallPage />} />
