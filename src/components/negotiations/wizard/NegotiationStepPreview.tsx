@@ -18,6 +18,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { parseDateOnlyToLocalNoon } from "@/lib/date";
 
 interface Employer {
   id: string;
@@ -247,7 +248,7 @@ export default function NegotiationStepPreview({
     const contributionsData = calculatedItems.map((item) => [
       item.contribution.contribution_types?.name || "-",
       formatCompetence(item.contribution.competence_month, item.contribution.competence_year),
-      format(new Date(item.contribution.due_date), "dd/MM/yyyy"),
+      format(parseDateOnlyToLocalNoon(item.contribution.due_date), "dd/MM/yyyy"),
       formatCurrency(item.contribution.value),
       `${item.daysOverdue} dias`,
       formatCurrency(item.interestValue + item.correctionValue + item.lateFeeValue),
