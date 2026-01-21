@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useSessionTimeout } from "./useSessionTimeout";
 import { useSessionExpiryModal } from "@/contexts/SystemModalContext";
+import { useModal } from "@/contexts/ModalContext";
 import { SessionExpiryWarning } from "@/components/auth/SessionExpiryWarning";
 
 interface Profile {
@@ -105,6 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Verifica se está no app mobile - desabilita timeout para manter sessão persistente
   const isMobileApp = location.pathname.startsWith('/app');
+
+  // Hook para resetar modais de UI
+  const { resetAllModals } = useModal();
 
   // Hook de timeout de sessão (desabilitado para mobile app)
   const {
@@ -353,6 +357,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Salvar tempo de login quando faz login
           if (event === 'SIGNED_IN') {
             saveLoginTime();
+            // Resetar todos os modais de UI ao fazer login
+            resetAllModals();
           }
           
           setLoading(true);
@@ -365,6 +371,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Limpar dados de sessão ao deslogar
           if (event === 'SIGNED_OUT') {
             clearSessionData();
+            // Resetar todos os modais de UI ao fazer logout
+            resetAllModals();
           }
           
           setProfile(null);
@@ -435,7 +443,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initSession();
 
     return () => subscription.unsubscribe();
-  }, [saveLoginTime, clearSessionData]);
+  }, [saveLoginTime, clearSessionData, resetAllModals]);
 
   const signOut = async () => {
     clearSessionData();

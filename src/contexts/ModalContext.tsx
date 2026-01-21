@@ -39,6 +39,7 @@ interface ModalContextValue {
   isModalOpen: (type: ModalType) => boolean;
   getModalData: (type: ModalType) => ModalData;
   updateModalData: (type: ModalType, data: Partial<ModalData>) => void;
+  resetAllModals: () => void;
 }
 
 const defaultModalState: ModalState = {
@@ -102,8 +103,12 @@ export function ModalProvider({ children }: { children: ReactNode }) {
     }));
   }, []);
 
+  const resetAllModals = useCallback(() => {
+    setModals(defaultModals);
+  }, []);
+
   return (
-    <ModalContext.Provider value={{ modals, openModal, closeModal, isModalOpen, getModalData, updateModalData }}>
+    <ModalContext.Provider value={{ modals, openModal, closeModal, isModalOpen, getModalData, updateModalData, resetAllModals }}>
       {children}
     </ModalContext.Provider>
   );
