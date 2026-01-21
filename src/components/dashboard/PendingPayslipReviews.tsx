@@ -23,7 +23,7 @@ import { format, formatDistanceToNow, addYears } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
 import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupFooter } from "@/components/ui/popup-base";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -54,7 +54,7 @@ export default function PendingPayslipReviews() {
   const [requests, setRequests] = useState<PayslipRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<PayslipRequest | null>(null);
-  const [reviewDialogOpen, setReviewDialogOpen] = useState(false); // Explicit state for dialog
+  const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [reviewNotes, setReviewNotes] = useState("");
   const [processing, setProcessing] = useState(false);
@@ -107,7 +107,7 @@ export default function PendingPayslipReviews() {
 
   const openReview = async (request: PayslipRequest) => {
     setSelectedRequest(request);
-    setReviewDialogOpen(true); // Explicitly open dialog
+    setReviewDialogOpen(true);
     setReviewNotes(request.notes || "");
     
     // Set default expiry date to 1 year from now
@@ -135,7 +135,7 @@ export default function PendingPayslipReviews() {
   };
 
   const closeReview = () => {
-    setReviewDialogOpen(false); // Explicitly close dialog first
+    setReviewDialogOpen(false);
     setSelectedRequest(null);
     setPreviewUrl(null);
     setReviewNotes("");
@@ -420,159 +420,161 @@ export default function PendingPayslipReviews() {
         </CardContent>
       </Card>
 
-      {/* Review Dialog */}
-      <Dialog open={reviewDialogOpen} onOpenChange={(open) => !open && closeReview()}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileCheck className="h-5 w-5 text-warning" />
-              Avaliar Contracheque
-            </DialogTitle>
-          </DialogHeader>
+      {/* Review Popup */}
+      <PopupBase 
+        open={reviewDialogOpen} 
+        onClose={closeReview}
+        maxWidth="2xl"
+      >
+        <PopupHeader>
+          <PopupTitle className="flex items-center gap-2">
+            <FileCheck className="h-5 w-5 text-warning" />
+            Avaliar Contracheque
+          </PopupTitle>
+        </PopupHeader>
 
-          {selectedRequest && (
-            <div className="space-y-4">
-              {/* Patient Info */}
-              <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{selectedRequest.patient.name}</span>
+        {selectedRequest && (
+          <div className="space-y-4">
+            {/* Patient Info */}
+            <div className="bg-muted/30 rounded-lg p-4 space-y-2">
+              <div className="flex items-center gap-2">
+                <User className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">{selectedRequest.patient.name}</span>
+              </div>
+              {selectedRequest.patient.cpf && (
+                <p className="text-sm text-muted-foreground">
+                  CPF: {selectedRequest.patient.cpf}
+                </p>
+              )}
+              <div className="flex items-center gap-4 text-sm">
+                <div className="flex items-center gap-1">
+                  <CreditCard className="h-4 w-4 text-muted-foreground" />
+                  <span>{selectedRequest.card?.card_number || 'N/A'}</span>
                 </div>
-                {selectedRequest.patient.cpf && (
-                  <p className="text-sm text-muted-foreground">
-                    CPF: {selectedRequest.patient.cpf}
-                  </p>
-                )}
-                <div className="flex items-center gap-4 text-sm">
-                  <div className="flex items-center gap-1">
-                    <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    <span>{selectedRequest.card?.card_number || 'N/A'}</span>
-                  </div>
-                  {selectedRequest.card?.expires_at && (
-                    <Badge variant="outline">
-                      Expira: {format(new Date(selectedRequest.card.expires_at), "dd/MM/yyyy")}
-                    </Badge>
-                  )}
-                </div>
-                {selectedRequest.received_at && (
-                  <p className="text-xs text-muted-foreground">
-                    Recebido em: {format(new Date(selectedRequest.received_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </p>
+                {selectedRequest.card?.expires_at && (
+                  <Badge variant="outline">
+                    Expira: {format(new Date(selectedRequest.card.expires_at), "dd/MM/yyyy")}
+                  </Badge>
                 )}
               </div>
-
-              {/* Image Preview */}
-              <div className="space-y-2">
-                <Label>Imagem do Contracheque</Label>
-                {previewUrl ? (
-                  <div className="space-y-2">
-                    <div className="relative rounded-lg border bg-muted/20 overflow-hidden h-[200px]">
-                      <img 
-                        src={previewUrl} 
-                        alt="Contracheque" 
-                        className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
-                        onClick={() => setImageViewerOpen(true)}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/20">
-                        <Button 
-                          variant="secondary" 
-                          size="sm" 
-                          className="gap-2"
-                          onClick={() => setImageViewerOpen(true)}
-                        >
-                          <ZoomIn className="h-4 w-4" />
-                          Ampliar e Girar
-                        </Button>
-                      </div>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="w-full gap-2"
-                      onClick={() => setImageViewerOpen(true)}
-                    >
-                      <ZoomIn className="h-4 w-4" />
-                      Visualizar com Zoom e Rotação
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="h-[200px] rounded-lg border bg-muted/20 flex items-center justify-center">
-                    <div className="text-center text-muted-foreground">
-                      <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                      <p>Imagem não disponível</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* New Expiry Date */}
-              <div className="space-y-2">
-                <Label htmlFor="expiry-date" className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Nova Data de Validade
-                </Label>
-                <Input
-                  id="expiry-date"
-                  type="date"
-                  value={newExpiryDate}
-                  onChange={(e) => setNewExpiryDate(e.target.value)}
-                  className="max-w-[200px]"
-                />
-                {dependentsCount > 0 && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
-                    <Users className="h-4 w-4" />
-                    <span>
-                      A nova validade será aplicada também para <strong>{dependentsCount}</strong> dependente(s) vinculado(s).
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* Notes */}
-              <div className="space-y-2">
-                <Label htmlFor="notes">Observações</Label>
-                <Textarea
-                  id="notes"
-                  placeholder="Adicione observações sobre a avaliação (obrigatório para rejeição)..."
-                  value={reviewNotes}
-                  onChange={(e) => setReviewNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
+              {selectedRequest.received_at && (
+                <p className="text-xs text-muted-foreground">
+                  Recebido em: {format(new Date(selectedRequest.received_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                </p>
+              )}
             </div>
-          )}
 
-          <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-2 pt-4 border-t mt-4">
+            {/* Image Preview */}
+            <div className="space-y-2">
+              <Label>Imagem do Contracheque</Label>
+              {previewUrl ? (
+                <div className="space-y-2">
+                  <div className="relative rounded-lg border bg-muted/20 overflow-hidden h-[200px]">
+                    <img 
+                      src={previewUrl} 
+                      alt="Contracheque" 
+                      className="w-full h-full object-contain cursor-pointer hover:opacity-90 transition-opacity"
+                      onClick={() => setImageViewerOpen(true)}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/20">
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        className="gap-2"
+                        onClick={() => setImageViewerOpen(true)}
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                        Ampliar e Girar
+                      </Button>
+                    </div>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full gap-2"
+                    onClick={() => setImageViewerOpen(true)}
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                    Visualizar com Zoom e Rotação
+                  </Button>
+                </div>
+              ) : (
+                <div className="h-[200px] rounded-lg border bg-muted/20 flex items-center justify-center">
+                  <div className="text-center text-muted-foreground">
+                    <ImageIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                    <p>Imagem não disponível</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* New Expiry Date */}
+            <div className="space-y-2">
+              <Label htmlFor="expiry-date" className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Nova Data de Validade
+              </Label>
+              <Input
+                id="expiry-date"
+                type="date"
+                value={newExpiryDate}
+                onChange={(e) => setNewExpiryDate(e.target.value)}
+                className="max-w-[200px]"
+              />
+              {dependentsCount > 0 && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-2 rounded">
+                  <Users className="h-4 w-4" />
+                  <span>
+                    A nova validade será aplicada também para <strong>{dependentsCount}</strong> dependente(s) vinculado(s).
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes">Observações</Label>
+              <Textarea
+                id="notes"
+                placeholder="Adicione observações sobre a avaliação (obrigatório para rejeição)..."
+                value={reviewNotes}
+                onChange={(e) => setReviewNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+        )}
+
+        <PopupFooter className="flex flex-col-reverse sm:flex-row gap-2 sm:gap-2 pt-4 border-t mt-4">
+          <Button 
+            variant="outline" 
+            onClick={closeReview}
+            disabled={processing}
+            className="w-full sm:w-auto"
+          >
+            Cancelar
+          </Button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
             <Button 
-              variant="outline" 
-              onClick={closeReview}
+              variant="destructive" 
+              onClick={handleReject}
               disabled={processing}
               className="w-full sm:w-auto"
             >
-              Cancelar
+              <XCircle className="h-4 w-4 mr-1" />
+              Rejeitar
             </Button>
-            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
-              <Button 
-                variant="destructive" 
-                onClick={handleReject}
-                disabled={processing}
-                className="w-full sm:w-auto"
-              >
-                <XCircle className="h-4 w-4 mr-1" />
-                Rejeitar
-              </Button>
-              <Button 
-                onClick={handleApprove}
-                disabled={processing}
-                className="bg-success hover:bg-success/90 w-full sm:w-auto"
-              >
-                <CheckCircle className="h-4 w-4 mr-1" />
-                Aprovar e Renovar
-              </Button>
-            </div>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <Button 
+              onClick={handleApprove}
+              disabled={processing}
+              className="bg-success hover:bg-success/90 w-full sm:w-auto"
+            >
+              <CheckCircle className="h-4 w-4 mr-1" />
+              Aprovar e Renovar
+            </Button>
+          </div>
+        </PopupFooter>
+      </PopupBase>
 
       {/* PayslipImageViewer Modal with Zoom and Rotate */}
       <PayslipImageViewer
