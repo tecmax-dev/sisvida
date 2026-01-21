@@ -1,12 +1,5 @@
 import { useState, useMemo } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { PopupBase, PopupHeader, PopupTitle, PopupDescription, PopupFooter } from "@/components/ui/popup-base";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
 import { parseDateOnlyToLocalNoon } from "@/lib/date";
+import { formatCompetence } from "@/lib/competence-format";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ContributionItem = any;
@@ -29,8 +23,6 @@ interface SendOverdueWhatsAppDialogProps {
   employerPhone: string | null;
   clinicId: string;
 }
-
-import { formatCompetence } from "@/lib/competence-format";
 
 const formatCurrency = (cents: number) => {
   return new Intl.NumberFormat("pt-BR", {
@@ -50,6 +42,8 @@ export function SendOverdueWhatsAppDialog({
   const [phone, setPhone] = useState(employerPhone || "");
   const [sending, setSending] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
+
+  const handleClose = () => onOpenChange(false);
 
   const overdueContributions = useMemo(() => {
     return contributions
@@ -130,95 +124,93 @@ export function SendOverdueWhatsAppDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-500" />
-            Cobrar Contribuições Vencidas
-          </DialogTitle>
-          <DialogDescription>
-            Envie uma cobrança via WhatsApp para {employerName}
-          </DialogDescription>
-        </DialogHeader>
+    <PopupBase open={open} onClose={handleClose} maxWidth="lg">
+      <PopupHeader>
+        <PopupTitle className="flex items-center gap-2">
+          <AlertTriangle className="h-5 w-5 text-amber-500" />
+          Cobrar Contribuições Vencidas
+        </PopupTitle>
+        <PopupDescription>
+          Envie uma cobrança via WhatsApp para {employerName}
+        </PopupDescription>
+      </PopupHeader>
 
-        <div className="space-y-4">
-          {/* Summary */}
-          <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-amber-800">
-                  {overdueContributions.length} boleto(s) vencido(s)
-                </p>
-                <p className="text-xs text-amber-600">
-                  Total: {formatCurrency(totalOverdue)}
-                </p>
-              </div>
-              <Badge className="bg-amber-500">Vencidos</Badge>
+      <div className="space-y-4">
+        {/* Summary */}
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-amber-800">
+                {overdueContributions.length} boleto(s) vencido(s)
+              </p>
+              <p className="text-xs text-amber-600">
+                Total: {formatCurrency(totalOverdue)}
+              </p>
             </div>
-          </div>
-
-          {/* Overdue list */}
-          <div className="max-h-[180px] overflow-y-auto space-y-2">
-            {overdueContributions.map((c) => {
-              const daysLate = differenceInDays(new Date(), parseDateOnlyToLocalNoon(c.due_date));
-              return (
-                <div
-                  key={c.id}
-                  className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm"
-                >
-                  <div>
-                    <p className="font-medium">{c.contribution_types?.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatCompetence(c.competence_month, c.competence_year)} • {daysLate} dias de atraso
-                    </p>
-                  </div>
-                  <span className="font-medium text-amber-600">{formatCurrency(c.value)}</span>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Phone */}
-          <div className="space-y-1">
-            <Label className="text-sm">Número WhatsApp</Label>
-            <Input
-              placeholder="(00) 00000-0000"
-              value={formatPhone(phone)}
-              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
-            />
-          </div>
-
-          {/* Custom message */}
-          <div className="space-y-1">
-            <Label className="text-sm">Mensagem adicional (opcional)</Label>
-            <Textarea
-              placeholder="Ex: Favor entrar em contato para negociação..."
-              value={customMessage}
-              onChange={(e) => setCustomMessage(e.target.value)}
-              rows={2}
-            />
+            <Badge className="bg-amber-500">Vencidos</Badge>
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancelar
-          </Button>
-          <Button
-            onClick={handleSend}
-            disabled={sending || overdueContributions.length === 0}
-            className="gap-2"
-          >
-            {sending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-            Enviar Cobrança
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {/* Overdue list */}
+        <div className="max-h-[180px] overflow-y-auto space-y-2">
+          {overdueContributions.map((c) => {
+            const daysLate = differenceInDays(new Date(), parseDateOnlyToLocalNoon(c.due_date));
+            return (
+              <div
+                key={c.id}
+                className="flex items-center justify-between p-2 bg-muted/50 rounded text-sm"
+              >
+                <div>
+                  <p className="font-medium">{c.contribution_types?.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {formatCompetence(c.competence_month, c.competence_year)} • {daysLate} dias de atraso
+                  </p>
+                </div>
+                <span className="font-medium text-amber-600">{formatCurrency(c.value)}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Phone */}
+        <div className="space-y-1">
+          <Label className="text-sm">Número WhatsApp</Label>
+          <Input
+            placeholder="(00) 00000-0000"
+            value={formatPhone(phone)}
+            onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
+          />
+        </div>
+
+        {/* Custom message */}
+        <div className="space-y-1">
+          <Label className="text-sm">Mensagem adicional (opcional)</Label>
+          <Textarea
+            placeholder="Ex: Favor entrar em contato para negociação..."
+            value={customMessage}
+            onChange={(e) => setCustomMessage(e.target.value)}
+            rows={2}
+          />
+        </div>
+      </div>
+
+      <PopupFooter>
+        <Button variant="outline" onClick={handleClose}>
+          Cancelar
+        </Button>
+        <Button
+          onClick={handleSend}
+          disabled={sending || overdueContributions.length === 0}
+          className="gap-2"
+        >
+          {sending ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+          Enviar Cobrança
+        </Button>
+      </PopupFooter>
+    </PopupBase>
   );
 }
