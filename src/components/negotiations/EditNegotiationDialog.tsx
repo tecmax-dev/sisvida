@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Loader2, Save, Calculator } from "lucide-react";
+import { Loader2, Save, Calculator, Link2, Copy, Check } from "lucide-react";
 import { format, addMonths } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -28,6 +28,7 @@ interface Negotiation {
   id: string;
   negotiation_code: string;
   status: string;
+  clinic_id?: string;
   employer_id: string;
   total_original_value: number;
   total_interest: number;
@@ -58,8 +59,11 @@ export default function EditNegotiationDialog({
   onOpenChange,
   onSuccess,
 }: EditNegotiationDialogProps) {
-  const { user } = useAuth();
+  const { user, currentClinic } = useAuth();
   const [processing, setProcessing] = useState(false);
+  const [generatingLink, setGeneratingLink] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Editable fields
   const [installmentsCount, setInstallmentsCount] = useState(negotiation.installments_count);
@@ -186,6 +190,117 @@ export default function EditNegotiationDialog({
       toast.error("Erro ao salvar alterações");
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const generateAccessToken = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+    let result = "";
+    for (let i = 0; i < 32; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const getPublicBaseUrl = () => {
+    // When testing inside preview, we still want to generate the real public domain.
+    const origin = window.location.origin;
+    return origin.includes("lovable.app") ? "https://app.eclini.com.br" : origin;
+  };
+
+  const handleGenerateLink = async () => {
+    setGeneratingLink(true);
+    try {
+      const clinicId = negotiation.clinic_id || currentClinic?.id;
+      if (!clinicId) {
+        toast.error("Não foi possível identificar a clínica para gerar o link");
+        return;
+      }
+
+      const accessToken = generateAccessToken();
+
+      // Fetch negotiation items snapshot
+      const { data: items, error: itemsError } = await supabase
+        .from("negotiation_items")
+        .select(
+          "contribution_id, contribution_type_name, competence_month, competence_year, due_date, original_value, days_overdue, interest_value, correction_value, late_fee_value, total_value"
+        )
+        .eq("negotiation_id", negotiation.id)
+        .order("due_date", { ascending: true });
+
+      if (itemsError) throw itemsError;
+
+      // Optional: legal basis from settings
+      const { data: settingsData } = await supabase
+        .from("negotiation_settings")
+        .select("legal_basis")
+        .eq("clinic_id", clinicId)
+        .maybeSingle();
+
+      const contributionsSnapshot = (items || []).map((item) => ({
+        contribution_id: item.contribution_id,
+        contribution_type_name: item.contribution_type_name,
+        competence_month: item.competence_month,
+        competence_year: item.competence_year,
+        due_date: item.due_date,
+        original_value: Number(item.original_value),
+        days_overdue: item.days_overdue,
+        interest_value: Number(item.interest_value),
+        correction_value: Number(item.correction_value),
+        late_fee_value: Number(item.late_fee_value),
+        total_value: Number(item.total_value),
+      }));
+
+      const { error } = await supabase.from("negotiation_previews").insert({
+        clinic_id: clinicId,
+        employer_id: negotiation.employer_id,
+        access_token: accessToken,
+        employer_name: negotiation.employers?.name || "",
+        employer_cnpj: negotiation.employers?.cnpj || "",
+        employer_trade_name: negotiation.employers?.trade_name || null,
+        interest_rate_monthly: negotiation.applied_interest_rate,
+        monetary_correction_monthly: negotiation.applied_correction_rate,
+        late_fee_percentage: negotiation.applied_late_fee_rate,
+        legal_basis: settingsData?.legal_basis || null,
+        total_original_value: negotiation.total_original_value,
+        total_interest: negotiation.total_interest,
+        total_correction: negotiation.total_monetary_correction,
+        total_late_fee: negotiation.total_late_fee,
+        total_negotiated_value: negotiation.total_negotiated_value,
+        installments_count: installmentsCount,
+        installment_value: calculatedInstallmentValue,
+        down_payment: downPaymentValue,
+        first_due_date: firstDueDate,
+        contributions_data: contributionsSnapshot,
+        custom_dates: null,
+      });
+
+      if (error) {
+        console.error("Error creating preview:", error);
+        toast.error("Erro ao gerar link");
+        return;
+      }
+
+      const link = `${getPublicBaseUrl()}/negociacao-espelho/${accessToken}`;
+      setGeneratedLink(link);
+      toast.success("Link gerado com sucesso!");
+    } catch (err) {
+      console.error("Error generating link:", err);
+      toast.error("Erro ao gerar link");
+    } finally {
+      setGeneratingLink(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!generatedLink) return;
+    try {
+      await navigator.clipboard.writeText(generatedLink);
+      setCopied(true);
+      toast.success("Link copiado!");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Erro ao copiar link");
     }
   };
 
@@ -319,11 +434,51 @@ export default function EditNegotiationDialog({
               </div>
             </div>
           </div>
+
+          {generatedLink && (
+            <div className="rounded-lg bg-muted p-3">
+              <p className="text-xs text-muted-foreground mb-2 text-center">
+                Link válido por 30 dias:
+              </p>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={generatedLink}
+                  readOnly
+                  className="flex-1 px-3 py-1.5 text-sm bg-background border border-border rounded-md"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCopyLink}
+                  className="shrink-0"
+                >
+                  {copied ? (
+                    <Check className="h-4 w-4" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={processing}>
             Cancelar
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleGenerateLink}
+            disabled={processing || generatingLink}
+          >
+            {generatingLink ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Link2 className="h-4 w-4 mr-2" />
+            )}
+            Gerar Link
           </Button>
           <Button onClick={handleSave} disabled={processing}>
             {processing ? (
