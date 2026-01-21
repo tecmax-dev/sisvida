@@ -70,6 +70,8 @@ interface NewNegotiationDialogProps {
   clinicId: string;
   userId: string;
   onSuccess: () => void;
+  /** Pre-select an employer and skip to contributions step */
+  initialEmployerId?: string;
 }
 
 const STEPS = ["employer", "contributions", "calculation", "installments", "preview"] as const;
@@ -82,6 +84,7 @@ export default function NewNegotiationDialog({
   clinicId,
   userId,
   onSuccess,
+  initialEmployerId,
 }: NewNegotiationDialogProps) {
   const [currentStep, setCurrentStep] = useState<Step>("employer");
   const [loading, setLoading] = useState(false);
@@ -126,6 +129,20 @@ export default function NewNegotiationDialog({
       fetchSettings();
     }
   }, [open, clinicId]);
+
+  // Auto-select employer and fetch contributions when initialEmployerId is provided
+  useEffect(() => {
+    if (open && initialEmployerId && employers.length > 0) {
+      const employer = employers.find(e => e.id === initialEmployerId);
+      if (employer) {
+        setSelectedEmployer(employer);
+        fetchContributions(employer.id).then(() => {
+          // Skip to contributions step after fetching
+          setCurrentStep("contributions");
+        });
+      }
+    }
+  }, [open, initialEmployerId, employers]);
 
   const fetchSettings = async () => {
     try {

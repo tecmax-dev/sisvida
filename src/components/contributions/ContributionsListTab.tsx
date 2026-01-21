@@ -53,6 +53,7 @@ import {
   ChevronDown,
   Link2,
   CheckSquare,
+  Handshake,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -134,6 +135,8 @@ interface ContributionsListTabProps {
   yearFilter: number;
   onYearFilterChange: (year: number) => void;
   clinicId: string;
+  /** Callback to open negotiation dialog, optionally with pre-selected employer */
+  onOpenNegotiation?: (employerId?: string) => void;
 }
 
 const ITEMS_PER_PAGE = 15;
@@ -192,6 +195,7 @@ export default function ContributionsListTab({
   yearFilter,
   onYearFilterChange,
   clinicId,
+  onOpenNegotiation,
 }: ContributionsListTabProps) {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
@@ -687,6 +691,27 @@ export default function ContributionsListTab({
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        {/* Negotiate Button - only for PJ tab */}
+        {documentTypeTab === "pj" && onOpenNegotiation && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => onOpenNegotiation()}
+                  className="text-indigo-600 border-indigo-300 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-600 dark:hover:bg-indigo-950"
+                >
+                  <Handshake className="h-4 w-4 mr-2" />
+                  Negociar Débitos
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                Criar negociação de contribuições vencidas
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
         {documentTypeTab === "pf" ? (
           <Button onClick={onOpenCreatePF}>
             <Plus className="h-4 w-4 mr-2" />

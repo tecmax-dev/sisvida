@@ -22,6 +22,7 @@ import OfflineContributionDialog from "@/components/contributions/OfflineContrib
 import CreateWithoutValueDialog from "@/components/contributions/CreateWithoutValueDialog";
 import { LytexSyncResultsDialog, LytexSyncResult } from "@/components/contributions/LytexSyncResultsDialog";
 import NegotiationInstallmentsTab from "@/components/negotiations/NegotiationInstallmentsTab";
+import NewNegotiationDialog from "@/components/negotiations/NewNegotiationDialog";
 import { LytexSyncStatusIndicator } from "@/components/contributions/LytexSyncStatusIndicator";
 import { LytexSyncProgress, LytexActionType } from "@/components/contributions/LytexSyncProgress";
 import { LytexConciliationHistoryDialog } from "@/components/contributions/LytexConciliationHistoryDialog";
@@ -134,6 +135,8 @@ export default function ContributionsPage() {
   const [syncResultsOpen, setSyncResultsOpen] = useState(false);
   const [syncResult, setSyncResult] = useState<LytexSyncResult | null>(null);
   const [currentSyncLogId, setCurrentSyncLogId] = useState<string | null>(null);
+  const [negotiationDialogOpen, setNegotiationDialogOpen] = useState(false);
+  const [negotiationEmployerId, setNegotiationEmployerId] = useState<string | undefined>(undefined);
   const [currentActionType, setCurrentActionType] = useState<LytexActionType>("import");
 
   // Detectar o ano com mais dados quando não há dados no ano atual
@@ -808,6 +811,10 @@ export default function ContributionsPage() {
             yearFilter={yearFilter}
             onYearFilterChange={setYearFilter}
             clinicId={currentClinic?.id || ""}
+            onOpenNegotiation={(employerId?: string) => {
+              setNegotiationEmployerId(employerId);
+              setNegotiationDialogOpen(true);
+            }}
           />
         </TabsContent>
 
@@ -950,6 +957,31 @@ export default function ContributionsPage() {
         onOpenChange={setBatchGenerateLytexOpen}
         onSuccess={fetchData}
         yearFilter={yearFilter}
+      />
+
+      <NewNegotiationDialog
+        open={negotiationDialogOpen}
+        onOpenChange={(open) => {
+          setNegotiationDialogOpen(open);
+          if (!open) {
+            setNegotiationEmployerId(undefined);
+          }
+        }}
+        employers={employers.map(e => ({
+          id: e.id,
+          name: e.name,
+          cnpj: e.cnpj,
+          trade_name: e.trade_name,
+          registration_number: e.registration_number,
+        }))}
+        clinicId={currentClinic?.id || ""}
+        userId={session?.user.id || ""}
+        onSuccess={() => {
+          fetchData();
+          setNegotiationDialogOpen(false);
+          setNegotiationEmployerId(undefined);
+        }}
+        initialEmployerId={negotiationEmployerId}
       />
     </div>
   );
