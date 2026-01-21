@@ -690,6 +690,29 @@ export default function ProfessionalEditPage() {
         });
         return;
       }
+      
+      // Handle duplicate professional error
+      if (error.message?.includes('PROFISSIONAL_DUPLICADO')) {
+        const match = error.message.match(/PROFISSIONAL_DUPLICADO: (.+)/);
+        toast({
+          title: "Profissional duplicado",
+          description: match ? match[1] : "Já existe um profissional vinculado a este usuário nesta clínica.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Handle unique constraint violation (user_id + clinic_id)
+      if (error.message?.includes('idx_professionals_user_clinic_unique') || 
+          error.code === '23505') {
+        toast({
+          title: "Profissional duplicado",
+          description: "Este usuário já está vinculado a outro profissional ativo nesta clínica. Por favor, edite o profissional existente.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
       toast({
         title: isCreating ? "Erro ao cadastrar" : "Erro ao atualizar",
         description: error.message || "Tente novamente.",
