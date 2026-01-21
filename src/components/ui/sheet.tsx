@@ -18,7 +18,8 @@ const Sheet = ({
 
   const handleOpenChange = React.useCallback(
     (nextOpen: boolean) => {
-      if (!nextOpen && (document.hidden || document.visibilityState === "hidden" || !document.hasFocus())) {
+      // CRITICAL: Block any close attempt while tab is hidden
+      if (!nextOpen && document.hidden) {
         return;
       }
 
