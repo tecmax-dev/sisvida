@@ -167,6 +167,7 @@ import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
 // Legal Module pages
 import UnionLegalDashboardPage from "./pages/union/legal/UnionLegalDashboardPage";
 import UnionLegalCasesPage from "./pages/union/legal/UnionLegalCasesPage";
+import UnionLegalCaseFormPage from "./pages/union/legal/UnionLegalCaseFormPage";
 import UnionLawyersPage from "./pages/union/legal/UnionLawyersPage";
 import UnionLawFirmsPage from "./pages/union/legal/UnionLawFirmsPage";
 import UnionLegalDeadlinesPage from "./pages/union/legal/UnionLegalDeadlinesPage";
@@ -540,6 +541,9 @@ const App = () => (
                   {/* Legal Module routes */}
                   <Route path="juridico" element={<UnionLegalDashboardPage />} />
                   <Route path="juridico/casos" element={<UnionLegalCasesPage />} />
+                  <Route path="juridico/casos/novo" element={<UnionLegalCaseFormPage />} />
+                  <Route path="juridico/casos/:id" element={<UnionLegalCaseFormPage />} />
+                  <Route path="juridico/casos/:id/editar" element={<UnionLegalCaseFormPage />} />
                   <Route path="juridico/advogados" element={<UnionLawyersPage />} />
                   <Route path="juridico/escritorios" element={<UnionLawFirmsPage />} />
                   <Route path="juridico/prazos" element={<UnionLegalDeadlinesPage />} />
