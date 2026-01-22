@@ -55,6 +55,13 @@ export function useUnionPermissions() {
     return hasPermission(permission as Permission);
   };
 
+  // Some union permissions must be explicitly granted (no implicit bypass for clinic admins).
+  // This is especially important for sensitive/financial visibility.
+  const hasStrictUnionPermission = (permission: UnionPermission): boolean => {
+    if (isSuperAdmin || isUnionEntityAdmin) return true;
+    return hasPermission(permission as Permission);
+  };
+
   // Module access
   const hasUnionAccess = (): boolean => {
     return hasUnionPermission("union_module_access") || isAdmin || isSuperAdmin || isUnionEntityAdmin;
@@ -78,7 +85,7 @@ export function useUnionPermissions() {
   const canViewContributionReports = (): boolean => hasUnionPermission("union_view_contribution_reports");
 
   // Financeiro
-  const canViewFinancials = (): boolean => hasUnionPermission("union_view_financials");
+  const canViewFinancials = (): boolean => hasStrictUnionPermission("union_view_financials");
   const canManageFinancials = (): boolean => hasUnionPermission("union_manage_financials");
   const canViewExpenses = (): boolean => hasUnionPermission("union_view_expenses");
   const canManageExpenses = (): boolean => hasUnionPermission("union_manage_expenses");
