@@ -9,6 +9,284 @@ const corsHeaders = {
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
+// ==========================================
+// AI INTENT ANALYSIS - HUMANIZED AGENT
+// ==========================================
+
+interface IntentAnalysis {
+  intent: 'new_boleto' | 'overdue_boleto' | 'check_status' | 'change_value' | 'resend_link' | 
+          'help' | 'confirm' | 'deny' | 'cancel' | 'menu' | 'cnpj_input' | 'number_input' | 
+          'date_input' | 'value_input' | 'competence_input' | 'unclear';
+  confidence: number;
+  extracted_cnpj?: string;
+  extracted_value?: number;
+  extracted_date?: string;
+  extracted_competence?: { month: number; year: number };
+  extracted_number?: number;
+  humanized_response?: string;
+}
+
+async function analyzeUserIntent(
+  message: string, 
+  currentState: BoletoState,
+  sessionContext: any
+): Promise<IntentAnalysis> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  
+  if (!LOVABLE_API_KEY) {
+    console.log("[boleto-flow] No LOVABLE_API_KEY, using fallback intent analysis");
+    return fallbackIntentAnalysis(message, currentState);
+  }
+
+  try {
+    const monthNames = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+    
+    const contextDescription = getStateDescription(currentState, sessionContext);
+    
+    const systemPrompt = `Você é um assistente inteligente que analisa mensagens de usuários em um fluxo de emissão de boletos sindicais via WhatsApp.
+
+CONTEXTO ATUAL: ${contextDescription}
+
+Seu trabalho é:
+1. Entender a INTENÇÃO do usuário mesmo que ele escreva de forma informal ou fora do padrão
+2. Extrair dados relevantes (CNPJ, valores, datas, competências, números de opção)
+3. Sugerir uma resposta humanizada quando apropriado
+
+EXEMPLOS DE MENSAGENS E INTENÇÕES:
+- "boletos em aberto" / "pendencias da empresa" / "quero ver os boletos vencidos" → intent: overdue_boleto
+- "preciso gerar novo boleto" / "boleto a vencer" / "criar boleto" → intent: new_boleto
+- "preciso alterar o valor" / "mudar valor do boleto" / "valor errado" → intent: change_value
+- "não recebi o link" / "manda de novo" / "cadê o boleto" / "link não chegou" → intent: resend_link
+- "qual a situação" / "como está" / "verificar status" → intent: check_status
+- "sim" / "isso" / "confirmo" / "correto" / "pode gerar" / "1" (em contexto de confirmação) → intent: confirm
+- "não" / "errado" / "outro" / "2" (em contexto de confirmação) → intent: deny
+- "sair" / "cancelar" / "desistir" → intent: cancel
+- "menu" / "voltar" / "início" / "recomeçar" → intent: menu
+- "ajuda" / "como funciona" / "não entendi" → intent: help
+- Número de 14 dígitos → intent: cnpj_input, extracted_cnpj
+- "R$ 150,00" / "150 reais" / "150,00" → intent: value_input, extracted_value (em centavos)
+- "15/02/2025" / "quinze de fevereiro" → intent: date_input, extracted_date
+- "janeiro/2025" / "01/2025" / "jan 2025" → intent: competence_input, extracted_competence
+- "1" / "2" / "3" (seleção de opção) → intent: number_input, extracted_number
+
+Responda APENAS em JSON válido:
+{
+  "intent": "string",
+  "confidence": 0.0-1.0,
+  "extracted_cnpj": "string ou null",
+  "extracted_value": number_em_centavos ou null,
+  "extracted_date": "YYYY-MM-DD ou null",
+  "extracted_competence": {"month": 1-12, "year": 2020-2030} ou null,
+  "extracted_number": number ou null,
+  "humanized_response": "resposta empática opcional para contextos de dúvida/erro"
+}`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Analise esta mensagem: "${message}"` }
+        ],
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error("[boleto-flow] AI API error:", response.status);
+      return fallbackIntentAnalysis(message, currentState);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || "";
+    
+    // Parse JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      console.log("[boleto-flow] AI intent analysis:", parsed);
+      return parsed as IntentAnalysis;
+    }
+    
+    return fallbackIntentAnalysis(message, currentState);
+  } catch (error) {
+    console.error("[boleto-flow] AI intent analysis error:", error);
+    return fallbackIntentAnalysis(message, currentState);
+  }
+}
+
+function getStateDescription(state: BoletoState, context: any): string {
+  const descriptions: Record<BoletoState, string> = {
+    'INIT': 'Usuário acabou de entrar no fluxo de boletos',
+    'SELECT_BOLETO_TYPE': 'Aguardando escolha: (1) boleto a vencer ou (2) boleto vencido',
+    'WAITING_CNPJ': 'Aguardando o CNPJ da empresa',
+    'CONFIRM_EMPLOYER': `Aguardando confirmação da empresa: ${context?.employer_name || 'N/A'}`,
+    'SELECT_CONTRIBUTION_TYPE': 'Aguardando seleção do tipo de contribuição',
+    'WAITING_COMPETENCE': 'Aguardando competência (mês/ano)',
+    'WAITING_VALUE': 'Aguardando valor do boleto',
+    'SELECT_CONTRIBUTION': 'Aguardando seleção de contribuição vencida',
+    'WAITING_NEW_DUE_DATE': 'Aguardando nova data de vencimento',
+    'CONFIRM_BOLETO': 'Aguardando confirmação final para gerar boleto',
+    'FINISHED': 'Fluxo finalizado',
+    'ERROR': 'Estado de erro'
+  };
+  return descriptions[state] || 'Estado desconhecido';
+}
+
+function fallbackIntentAnalysis(message: string, currentState: BoletoState): IntentAnalysis {
+  const text = message.trim().toLowerCase();
+  const normalized = text.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  
+  // Menu/Cancel commands
+  if (/^(menu|reiniciar|voltar|inicio|comecar|começar)$/i.test(normalized)) {
+    return { intent: 'menu', confidence: 1.0 };
+  }
+  if (/^(sair|cancelar|desistir)$/i.test(normalized)) {
+    return { intent: 'cancel', confidence: 1.0 };
+  }
+  
+  // Help
+  if (/^(ajuda|help|como funciona|nao entendi|não entendi|\?)$/i.test(normalized)) {
+    return { intent: 'help', confidence: 0.9 };
+  }
+  
+  // Natural language intents for boleto types
+  if (/boleto.*vencid|pendencia|em aberto|atrasad|divida|debito/i.test(normalized)) {
+    return { intent: 'overdue_boleto', confidence: 0.85 };
+  }
+  if (/novo boleto|a vencer|gerar boleto|criar boleto|emitir boleto/i.test(normalized)) {
+    return { intent: 'new_boleto', confidence: 0.85 };
+  }
+  if (/alterar valor|mudar valor|valor errado|corrigir valor/i.test(normalized)) {
+    return { intent: 'change_value', confidence: 0.85 };
+  }
+  if (/nao recebi|não recebi|manda de novo|reenviar|cade o link|cadê o link|link nao chegou/i.test(normalized)) {
+    return { intent: 'resend_link', confidence: 0.85 };
+  }
+  if (/status|situacao|situação|como esta|verificar/i.test(normalized)) {
+    return { intent: 'check_status', confidence: 0.8 };
+  }
+  
+  // Confirmations/Denials
+  if (/^(sim|s|yes|isso|confirmo|correto|certo|ok|pode|1)$/i.test(normalized) || 
+      /pode gerar|confirmar|ta certo|tá certo/i.test(normalized)) {
+    return { intent: 'confirm', confidence: 0.9 };
+  }
+  if (/^(nao|não|n|no|errado|outro|2)$/i.test(normalized) || 
+      /nao e essa|não é essa|empresa errada/i.test(normalized)) {
+    return { intent: 'deny', confidence: 0.9 };
+  }
+  
+  // CNPJ detection
+  const cnpjMatch = message.replace(/\D/g, '');
+  if (cnpjMatch.length === 14) {
+    return { intent: 'cnpj_input', confidence: 0.95, extracted_cnpj: cnpjMatch };
+  }
+  
+  // Simple number (option selection)
+  const numMatch = normalized.match(/^(\d+)$/);
+  if (numMatch) {
+    return { intent: 'number_input', confidence: 0.9, extracted_number: parseInt(numMatch[1]) };
+  }
+  
+  // Value detection
+  const valueMatch = normalized.match(/r?\$?\s*(\d+(?:[.,]\d{2})?)/);
+  if (valueMatch && currentState === 'WAITING_VALUE') {
+    const value = parseFloat(valueMatch[1].replace(',', '.'));
+    return { intent: 'value_input', confidence: 0.85, extracted_value: Math.round(value * 100) };
+  }
+  
+  // Date detection (DD/MM/YYYY)
+  const dateMatch = message.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (dateMatch) {
+    const [, day, month, year] = dateMatch;
+    const dateStr = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+    return { intent: 'date_input', confidence: 0.9, extracted_date: dateStr };
+  }
+  
+  // Competence detection
+  const compMatch = normalized.match(/(\d{1,2})[\/\-\s]*(\d{4})/);
+  if (compMatch && currentState === 'WAITING_COMPETENCE') {
+    const month = parseInt(compMatch[1]);
+    const year = parseInt(compMatch[2]);
+    if (month >= 1 && month <= 12) {
+      return { intent: 'competence_input', confidence: 0.85, extracted_competence: { month, year } };
+    }
+  }
+  
+  return { intent: 'unclear', confidence: 0.3 };
+}
+
+// ==========================================
+// HUMANIZED MESSAGES
+// ==========================================
+
+const HUMANIZED_MESSAGES = {
+  greeting: `👋 *Olá! Sou seu assistente para boletos.*
+
+Posso te ajudar com:
+• 📄 Gerar um *novo boleto* (a vencer)
+• 🔄 Emitir *2ª via* de boleto vencido
+• 🔍 Verificar *pendências* da empresa
+• 📨 *Reenviar* link de boleto
+
+Como posso te ajudar hoje?`,
+
+  help: `❓ *Precisa de ajuda?*
+
+Você pode me dizer de forma natural o que precisa, por exemplo:
+• "Quero ver os boletos em aberto"
+• "Preciso gerar um novo boleto"
+• "Não recebi o link do boleto"
+• "Qual a situação da empresa X?"
+
+Ou simplesmente escolha:
+1️⃣ Novo boleto (a vencer)
+2️⃣ 2ª via de vencido
+
+_Digite MENU a qualquer momento para recomeçar._`,
+
+  understanding: (intent: string) => `✅ Entendi! Você quer ${intent}.\n\nVou te ajudar com isso...`,
+  
+  askCnpjFriendly: `📋 Para continuar, preciso do *CNPJ* da empresa.
+
+Pode digitar só os números ou no formato com pontos e barras, como preferir! 😊`,
+
+  clarification: `🤔 Não consegui entender completamente.
+
+Pode reformular ou escolher uma opção:
+1️⃣ Novo boleto (a vencer)
+2️⃣ 2ª via de boleto vencido
+
+_Ou digite AJUDA para mais informações._`,
+
+  resendLinkFlow: (employerName: string) => `📨 *Reenvio de Link*
+
+Empresa: *${employerName}*
+
+Vou buscar o boleto mais recente para reenviar o link.
+Aguarde um momento... ⏳`,
+
+  noRecentBoleto: `❌ Não encontrei boletos recentes para reenviar.
+
+Deseja gerar um novo boleto?
+1️⃣ Sim, gerar novo
+2️⃣ Não, voltar ao menu`,
+
+  boletoResent: (url: string) => `✅ *Link reenviado com sucesso!*
+
+🔗 Acesse seu boleto:
+${url}
+
+Posso ajudar com mais alguma coisa? 😊`,
+};
+
 // Estados do fluxo de boleto
 type BoletoState = 
   | 'INIT'
@@ -602,6 +880,84 @@ Por favor, digite apenas o *número* da opção desejada.`,
 };
 
 // ==========================================
+// CNPJ INPUT HANDLER
+// ==========================================
+
+async function handleCnpjInput(
+  supabase: any,
+  session: BoletoSession,
+  clinicId: string,
+  phone: string,
+  cnpjInput: string
+): Promise<{ response: string; newState?: BoletoState }> {
+  const cleanCnpj = cnpjInput.replace(/\D/g, '');
+  
+  if (!validateCnpj(cleanCnpj)) {
+    return { 
+      response: `❌ *CNPJ inválido*\n\nO número informado não parece ser um CNPJ válido.\n\nPor favor, verifique e digite novamente os *14 números* do CNPJ.\n\n_Exemplo: 12345678000199_` 
+    };
+  }
+
+  // Search for employer
+  const { data: employer } = await supabase
+    .from('employers')
+    .select('id, name, cnpj, email, phone')
+    .eq('clinic_id', clinicId)
+    .or(`cnpj.eq.${cleanCnpj},cnpj.eq.${formatCnpj(cleanCnpj)}`)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (!employer) {
+    await logAction(supabase, session.id, clinicId, phone, 'cnpj_not_found', 
+      { cnpj: cleanCnpj }, false, 'Employer not found');
+    return { response: MESSAGES.employerNotFound(cleanCnpj) };
+  }
+
+  await updateSession(supabase, session.id, {
+    state: 'CONFIRM_EMPLOYER',
+    employer_id: employer.id,
+    employer_cnpj: cleanCnpj,
+    employer_name: employer.name,
+    flow_context: { ...session.flow_context, employer }
+  });
+
+  await logAction(supabase, session.id, clinicId, phone, 'employer_found', 
+    { employer_id: employer.id, name: employer.name }, true);
+
+  // Check if in resend mode
+  if (session.flow_context?.resend_mode) {
+    // Look for recent boleto to resend
+    const { data: recentContrib } = await supabase
+      .from('employer_contributions')
+      .select('id, lytex_invoice_url, lytex_pix_code, competence_month, competence_year, value, due_date')
+      .eq('employer_id', employer.id)
+      .eq('clinic_id', clinicId)
+      .not('lytex_invoice_url', 'is', null)
+      .in('status', ['pending', 'overdue'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (recentContrib?.lytex_invoice_url) {
+      const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+      const compStr = `${monthNames[recentContrib.competence_month - 1]}/${recentContrib.competence_year}`;
+      
+      await updateSession(supabase, session.id, { state: 'FINISHED' });
+      
+      return { 
+        response: `✅ *Boleto Encontrado!*\n\n🏢 Empresa: *${employer.name}*\n📅 Competência: *${compStr}*\n💰 Valor: *${formatCurrency(recentContrib.value)}*\n📆 Vencimento: *${formatDate(recentContrib.due_date)}*\n\n🔗 *Link do boleto:*\n${recentContrib.lytex_invoice_url}\n\n${recentContrib.lytex_pix_code ? `📱 *PIX:* \`${recentContrib.lytex_pix_code}\`\n\n` : ''}Precisa de mais alguma coisa? Digite *MENU* para ver as opções. 😊`,
+        newState: 'FINISHED' 
+      };
+    }
+  }
+
+  return { 
+    response: `✅ *Empresa identificada!*\n\n🏢 *${employer.name}*\n📋 CNPJ: ${formatCnpj(cleanCnpj)}\n\nÉ essa a empresa correta?\n\n1️⃣ *Sim, continuar*\n2️⃣ *Não, informar outro CNPJ*`, 
+    newState: 'CONFIRM_EMPLOYER' 
+  };
+}
+
+// ==========================================
 // FLOW STATE HANDLERS
 // ==========================================
 
@@ -621,11 +977,17 @@ async function handleBoletoFlow(
   
   console.log(`[boleto-flow] State: ${session.state}, Message: "${messageText}"`);
 
-  // MENU should restart the boleto flow (not cancel it)
-  const isMenuCommand = /^(menu|reiniciar|voltar|inicio|comecar|começar)$/i.test(normalizedText);
-  const isCancelCommand = /^(sair|cancelar)$/i.test(normalizedText);
+  // Use AI to analyze intent for better understanding
+  const intent = await analyzeUserIntent(messageText, session.state, {
+    employer_name: session.employer_name,
+    boleto_type: session.boleto_type,
+    available_contributions: session.available_contributions?.length || 0
+  });
+  
+  console.log(`[boleto-flow] AI Intent: ${intent.intent} (confidence: ${intent.confidence})`);
 
-  if (isMenuCommand) {
+  // Handle global commands based on intent
+  if (intent.intent === 'menu') {
     await updateSession(supabase, session.id, {
       state: 'SELECT_BOLETO_TYPE',
       employer_id: null,
@@ -641,75 +1003,95 @@ async function handleBoletoFlow(
       available_contributions: null,
       flow_context: null,
     });
-
-    return { response: MESSAGES.welcome, newState: 'SELECT_BOLETO_TYPE' };
+    return { response: HUMANIZED_MESSAGES.greeting, newState: 'SELECT_BOLETO_TYPE' };
   }
 
-  if (isCancelCommand) {
+  if (intent.intent === 'cancel') {
     await updateSession(supabase, session.id, { state: 'FINISHED' });
     return { response: MESSAGES.cancelled, newState: 'FINISHED' };
   }
 
-  switch (session.state) {
-    case 'INIT':
-    case 'SELECT_BOLETO_TYPE': {
-      if (text === '1' || /a\s*vencer/i.test(text)) {
-        await updateSession(supabase, session.id, { 
-          state: 'WAITING_CNPJ', 
-          boleto_type: 'a_vencer' 
-        });
-        return { response: MESSAGES.askCnpj, newState: 'WAITING_CNPJ' };
-      } else if (text === '2' || /vencid[oa]/i.test(text)) {
-        await updateSession(supabase, session.id, { 
-          state: 'WAITING_CNPJ', 
-          boleto_type: 'vencido' 
-        });
-        return { response: MESSAGES.askCnpj, newState: 'WAITING_CNPJ' };
-      }
-      return { response: MESSAGES.invalidOption };
-    }
+  if (intent.intent === 'help') {
+    return { response: HUMANIZED_MESSAGES.help };
+  }
 
-    case 'WAITING_CNPJ': {
-      const cleanCnpj = messageText.replace(/\D/g, '');
-      
-      if (!validateCnpj(cleanCnpj)) {
-        return { response: MESSAGES.invalidCnpj };
-      }
-
-      // Search for employer
-      const { data: employer } = await supabase
-        .from('employers')
-        .select('id, name, cnpj, email, phone')
-        .eq('clinic_id', clinicId)
-        .or(`cnpj.eq.${cleanCnpj},cnpj.eq.${formatCnpj(cleanCnpj)}`)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      if (!employer) {
-        await logAction(supabase, session.id, clinicId, phone, 'cnpj_not_found', 
-          { cnpj: cleanCnpj }, false, 'Employer not found');
-        return { response: MESSAGES.employerNotFound(cleanCnpj) };
-      }
-
-      await updateSession(supabase, session.id, {
-        state: 'CONFIRM_EMPLOYER',
-        employer_id: employer.id,
-        employer_cnpj: cleanCnpj,
-        employer_name: employer.name,
-        flow_context: { employer }
+  // Handle natural language intents at INIT or SELECT_BOLETO_TYPE
+  if (session.state === 'INIT' || session.state === 'SELECT_BOLETO_TYPE') {
+    // Handle resend link request
+    if (intent.intent === 'resend_link' || intent.intent === 'check_status') {
+      await updateSession(supabase, session.id, { 
+        state: 'WAITING_CNPJ', 
+        boleto_type: 'vencido',
+        flow_context: { ...session.flow_context, resend_mode: true }
       });
-
-      await logAction(supabase, session.id, clinicId, phone, 'employer_found', 
-        { employer_id: employer.id, name: employer.name }, true);
-
       return { 
-        response: MESSAGES.confirmEmployer(employer.name, cleanCnpj), 
-        newState: 'CONFIRM_EMPLOYER' 
+        response: `📨 *Reenvio/Consulta de Boleto*\n\n${HUMANIZED_MESSAGES.askCnpjFriendly}`, 
+        newState: 'WAITING_CNPJ' 
       };
     }
 
+    // Handle change value request
+    if (intent.intent === 'change_value') {
+      await updateSession(supabase, session.id, { 
+        state: 'WAITING_CNPJ', 
+        boleto_type: 'vencido',
+        flow_context: { ...session.flow_context, change_value_mode: true }
+      });
+      return { 
+        response: `💰 *Alteração de Valor*\n\nVou te ajudar a alterar o valor do boleto.\n\n${HUMANIZED_MESSAGES.askCnpjFriendly}`, 
+        newState: 'WAITING_CNPJ' 
+      };
+    }
+
+    // Natural language for boleto types
+    if (intent.intent === 'new_boleto' || text === '1' || /a\s*vencer/i.test(text)) {
+      await updateSession(supabase, session.id, { 
+        state: 'WAITING_CNPJ', 
+        boleto_type: 'a_vencer' 
+      });
+      return { response: HUMANIZED_MESSAGES.askCnpjFriendly, newState: 'WAITING_CNPJ' };
+    }
+    
+    if (intent.intent === 'overdue_boleto' || text === '2' || /vencid[oa]/i.test(text)) {
+      await updateSession(supabase, session.id, { 
+        state: 'WAITING_CNPJ', 
+        boleto_type: 'vencido' 
+      });
+      return { response: HUMANIZED_MESSAGES.askCnpjFriendly, newState: 'WAITING_CNPJ' };
+    }
+
+    // If CNPJ was provided directly, process it
+    if (intent.intent === 'cnpj_input' && intent.extracted_cnpj) {
+      await updateSession(supabase, session.id, { 
+        state: 'WAITING_CNPJ', 
+        boleto_type: 'vencido' // Default to checking overdue when CNPJ provided directly
+      });
+      // Re-process with CNPJ
+      return handleCnpjInput(supabase, session, clinicId, phone, intent.extracted_cnpj);
+    }
+
+    // Unclear intent - show friendly help
+    if (intent.confidence < 0.5) {
+      return { response: HUMANIZED_MESSAGES.clarification };
+    }
+    
+    return { response: HUMANIZED_MESSAGES.greeting };
+  }
+
+  // Continue with state-specific handling, using extracted data when available
+  switch (session.state) {
+    case 'WAITING_CNPJ': {
+      // Use extracted CNPJ from AI or parse from message
+      const cnpjToUse = intent.extracted_cnpj || messageText.replace(/\D/g, '');
+      return handleCnpjInput(supabase, session, clinicId, phone, cnpjToUse);
+    }
+
     case 'CONFIRM_EMPLOYER': {
-      if (text === '1' || /^sim/i.test(text)) {
+      // Use AI intent for natural confirmations
+      const isConfirm = intent.intent === 'confirm' || text === '1' || /^sim/i.test(text);
+      const isDeny = intent.intent === 'deny' || text === '2' || /^n[aã]o/i.test(text);
+      
+      if (isConfirm) {
         if (session.boleto_type === 'vencido') {
           // Search for overdue contributions
           const today = new Date().toISOString().split('T')[0];
@@ -727,7 +1109,9 @@ async function handleBoletoFlow(
             .limit(10);
 
           if (!contributions || contributions.length === 0) {
-            return { response: MESSAGES.noOverdueContributions };
+            return { 
+              response: `ℹ️ *Nenhuma pendência encontrada!*\n\nNão encontramos contribuições vencidas para *${session.employer_name}*.\n\n✨ Ótimo! A empresa está em dia.\n\nSe deseja gerar um novo boleto, digite *MENU* e escolha a opção 1.` 
+            };
           }
 
           await updateSession(supabase, session.id, {
@@ -736,12 +1120,11 @@ async function handleBoletoFlow(
           });
 
           return { 
-            response: MESSAGES.selectContribution(contributions), 
+            response: `📋 *Contribuições Pendentes*\n\nEncontramos ${contributions.length} contribuição(ões) vencida(s):\n\n${MESSAGES.selectContribution(contributions)}`, 
             newState: 'SELECT_CONTRIBUTION' 
           };
         } else {
           // New boleto - ask for contribution type
-          // Filter only allowed types for WhatsApp: exact names only
           const allowedNames = [
             '124 - MENSALIDADE SINDICAL',
             '125 - TAXA NEGOCIAL (MERCADOS)',
@@ -753,12 +1136,12 @@ async function handleBoletoFlow(
             .select('id, name')
             .eq('clinic_id', clinicId)
             .eq('is_active', true)
-            .in('name', allowedNames)
-            const types = allTypes || [];
+            .in('name', allowedNames);
+          const types = allTypes || [];
 
           if (!types || types.length === 0) {
             return { 
-              response: '❌ Nenhum tipo de contribuição cadastrado. Entre em contato com o sindicato.' 
+              response: '❌ Nenhum tipo de contribuição disponível no momento.\n\nEntre em contato com o sindicato para mais informações.' 
             };
           }
 
@@ -768,28 +1151,35 @@ async function handleBoletoFlow(
           });
 
           return { 
-            response: MESSAGES.selectContributionType(types), 
+            response: `📝 *Tipo de Contribuição*\n\nQual contribuição deseja gerar?\n\n${MESSAGES.selectContributionType(types)}`, 
             newState: 'SELECT_CONTRIBUTION_TYPE' 
           };
         }
-      } else if (text === '2' || /^n[aã]o/i.test(text)) {
+      } else if (isDeny) {
         await updateSession(supabase, session.id, {
           state: 'WAITING_CNPJ',
           employer_id: null,
           employer_cnpj: null,
           employer_name: null
         });
-        return { response: MESSAGES.askCnpj, newState: 'WAITING_CNPJ' };
+        return { response: `Ok! Vamos tentar novamente.\n\n${HUMANIZED_MESSAGES.askCnpjFriendly}`, newState: 'WAITING_CNPJ' };
       }
-      return { response: MESSAGES.invalidOption };
+      
+      // Unclear response
+      return { 
+        response: `🤔 Não consegui entender sua resposta.\n\nA empresa *${session.employer_name}* está correta?\n\n1️⃣ Sim\n2️⃣ Não` 
+      };
     }
 
     case 'SELECT_CONTRIBUTION_TYPE': {
       const types = session.flow_context?.contribution_types || [];
-      const optionNum = parseInt(text);
+      // Use AI-extracted number or parse from text
+      const optionNum = intent.extracted_number || parseInt(text);
       
       if (isNaN(optionNum) || optionNum < 1 || optionNum > types.length) {
-        return { response: MESSAGES.invalidOption };
+        return { 
+          response: `❌ Opção inválida.\n\nPor favor, escolha um número de 1 a ${types.length}.` 
+        };
       }
 
       const selectedType = types[optionNum - 1];
@@ -799,14 +1189,20 @@ async function handleBoletoFlow(
         flow_context: { ...session.flow_context, selected_type: selectedType }
       });
 
-      return { response: MESSAGES.askCompetence, newState: 'WAITING_COMPETENCE' };
+      return { 
+        response: `✅ *${selectedType.name}*\n\n📅 Agora informe a *competência* (período) do boleto:\n\n_Exemplos: 01/2025, Janeiro/2025, jan/2025_`, 
+        newState: 'WAITING_COMPETENCE' 
+      };
     }
 
     case 'WAITING_COMPETENCE': {
-      const competence = parseCompetence(messageText);
+      // Use AI-extracted competence or parse manually
+      const competence = intent.extracted_competence || parseCompetence(messageText);
       
       if (!competence) {
-        return { response: MESSAGES.invalidCompetence };
+        return { 
+          response: `❌ Não consegui entender a competência.\n\nPor favor, informe no formato *mês/ano*.\n\n_Exemplos: 01/2025, Janeiro/2025, jan/2025_` 
+        };
       }
 
       // Check if there's already a pending contribution for this employer/type/competence
