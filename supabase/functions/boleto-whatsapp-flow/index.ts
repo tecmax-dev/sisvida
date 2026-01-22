@@ -873,7 +873,7 @@ async function handleBoletoFlow(
           const description = `${typeName} - ${monthNames[session.competence_month! - 1]}/${session.competence_year}`;
 
           if (isReissue) {
-            // Cancel old invoice if exists
+            // Cancel old invoice if exists (in Lytex)
             const oldContribution = session.flow_context?.selected_contribution;
             if (oldContribution?.lytex_invoice_id) {
               try {
@@ -883,34 +883,36 @@ async function handleBoletoFlow(
               }
             }
 
-            // Update old contribution to cancelled
-            await supabase
+            // For reissue: UPDATE the existing contribution with new due_date
+            // This avoids unique constraint violation on active_competence_key
+            const { data: updatedContrib, error: updateError } = await supabase
               .from('employer_contributions')
-              .update({ status: 'cancelled' })
-              .eq('id', session.contribution_id);
-
-            // Create new contribution
-            const { data: newContrib, error: newContribError } = await supabase
-              .from('employer_contributions')
-              .insert({
-                employer_id: session.employer_id,
-                clinic_id: clinicId,
-                contribution_type_id: session.contribution_type_id,
-                competence_month: session.competence_month,
-                competence_year: session.competence_year,
-                value: session.value_cents,
+              .update({
                 due_date: session.new_due_date,
+                value: session.value_cents, // In case value was also updated
+                lytex_invoice_id: null, // Clear old Lytex data
+                lytex_invoice_url: null,
+                lytex_boleto_barcode: null,
+                lytex_boleto_digitable_line: null,
+                lytex_pix_code: null,
+                lytex_pix_qrcode: null,
                 status: 'pending',
-                notes: `2ª via via WhatsApp. Original: ${session.contribution_id}`,
-                origin: 'whatsapp'
+                notes: (oldContribution?.notes || '') + ` | 2ª via emitida via WhatsApp em ${new Date().toLocaleDateString('pt-BR')}`,
+                portal_reissue_count: (oldContribution?.portal_reissue_count || 0) + 1
               })
+              .eq('id', session.contribution_id)
               .select()
               .single();
 
-            if (newContribError) throw new Error('Erro ao criar contribuição');
-            contributionId = newContrib.id;
+            if (updateError) {
+              console.error('[boleto-flow] Error updating contribution:', updateError);
+              throw new Error('Erro ao atualizar contribuição');
+            }
+            
+            contributionId = updatedContrib.id;
+            console.log(`[boleto-flow] Updated contribution ${contributionId} with new due_date: ${session.new_due_date}`);
           } else {
-            // Create new contribution
+            // Create new contribution (boleto a vencer)
             const { data: newContrib, error: newContribError } = await supabase
               .from('employer_contributions')
               .insert({
@@ -928,7 +930,10 @@ async function handleBoletoFlow(
               .select()
               .single();
 
-            if (newContribError) throw new Error('Erro ao criar contribuição');
+            if (newContribError) {
+              console.error('[boleto-flow] Error creating contribution:', newContribError);
+              throw new Error('Erro ao criar contribuição');
+            }
             contributionId = newContrib.id;
           }
 
