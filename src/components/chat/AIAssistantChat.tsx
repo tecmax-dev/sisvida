@@ -27,6 +27,7 @@ const WELCOME_MESSAGE = `Olá, tudo bem? 👋 Sou LIA, assistente virtual SECMI.
 4️⃣ Dia do Comerciário
 5️⃣ Outros Assuntos
 6️⃣ Agendar Consultas
+7️⃣ 2ª via Boleto Empresa
 
 Digite o número da opção desejada:`;
 
