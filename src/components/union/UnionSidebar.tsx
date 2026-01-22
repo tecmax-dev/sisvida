@@ -95,6 +95,12 @@ const categoryColors: Record<string, { bg: string; text: string; border: string;
     text: "text-pink-200",
     border: "border-pink-400/30",
     accent: "bg-pink-500/30"
+  },
+  juridico: {
+    bg: "bg-indigo-500/20",
+    text: "text-indigo-200",
+    border: "border-indigo-400/30",
+    accent: "bg-indigo-500/30"
   }
 };
 
@@ -187,6 +193,20 @@ const unionNavTree: NavCategory[] = [
     color: "conteudoapp",
     items: [
       { href: "/union/conteudo-app", icon: Smartphone, label: "Conteúdo do App", permission: "union_module_access" },
+    ]
+  },
+  {
+    id: "juridico",
+    label: "Jurídico",
+    icon: Scale,
+    color: "juridico",
+    items: [
+      { href: "/union/juridico", icon: Scale, label: "Dashboard", permission: "union_module_access" },
+      { href: "/union/juridico/casos", icon: FileText, label: "Processos", permission: "union_module_access" },
+      { href: "/union/juridico/advogados", icon: Users, label: "Advogados", permission: "union_module_access" },
+      { href: "/union/juridico/escritorios", icon: Building, label: "Escritórios", permission: "union_module_access" },
+      { href: "/union/juridico/prazos", icon: Calendar, label: "Prazos", permission: "union_module_access" },
+      { href: "/union/juridico/despesas", icon: DollarSign, label: "Despesas", permission: "union_module_access" },
     ]
   },
   {

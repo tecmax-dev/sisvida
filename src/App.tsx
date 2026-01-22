@@ -164,6 +164,13 @@ import UnionFiliacoesPage from "./pages/union/UnionFiliacoesPage";
 import UnionConfigPage from "./pages/union/UnionConfigPage";
 import UnionBenefitsPage from "./pages/union/UnionBenefitsPage";
 import UnionAuthorizationsPage from "./pages/union/UnionAuthorizationsPage";
+// Legal Module pages
+import UnionLegalDashboardPage from "./pages/union/legal/UnionLegalDashboardPage";
+import UnionLegalCasesPage from "./pages/union/legal/UnionLegalCasesPage";
+import UnionLawyersPage from "./pages/union/legal/UnionLawyersPage";
+import UnionLawFirmsPage from "./pages/union/legal/UnionLawFirmsPage";
+import UnionLegalDeadlinesPage from "./pages/union/legal/UnionLegalDeadlinesPage";
+import UnionLegalExpensesPage from "./pages/union/legal/UnionLegalExpensesPage";
 const AuthorizationValidationPage = lazy(() => import("./pages/AuthorizationValidationPage"));
 // Admin pages - carregamento imediato
 import SuperAdminDashboard from "./pages/admin/SuperAdminDashboard";
@@ -530,6 +537,13 @@ const App = () => (
                   <Route path="conteudo-app" element={<UnionAppContentPage />} />
                   <Route path="beneficios" element={<UnionBenefitsPage />} />
                   <Route path="autorizacoes" element={<UnionAuthorizationsPage />} />
+                  {/* Legal Module routes */}
+                  <Route path="juridico" element={<UnionLegalDashboardPage />} />
+                  <Route path="juridico/casos" element={<UnionLegalCasesPage />} />
+                  <Route path="juridico/advogados" element={<UnionLawyersPage />} />
+                  <Route path="juridico/escritorios" element={<UnionLawFirmsPage />} />
+                  <Route path="juridico/prazos" element={<UnionLegalDeadlinesPage />} />
+                  <Route path="juridico/despesas" element={<UnionLegalExpensesPage />} />
                   <Route path="configuracoes" element={<UnionConfigPage />} />
                 </Route>
                 {/* Mobile App Routes - sempre modo claro */}
