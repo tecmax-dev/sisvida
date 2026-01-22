@@ -38,6 +38,16 @@ import jsPDF from "jspdf";
 import { toast } from "sonner";
 import ecliniLogo from "@/assets/eclini-logo.png";
 
+// Import illustrations
+import ilustracaoEmpresas from "@/assets/illustrations/tutorial-empresas.png";
+import ilustracaoSocios from "@/assets/illustrations/tutorial-socios.png";
+import ilustracaoContribuicoes from "@/assets/illustrations/tutorial-contribuicoes.png";
+import ilustracaoFinanceiro from "@/assets/illustrations/tutorial-financeiro.png";
+import ilustracaoNegociacoes from "@/assets/illustrations/tutorial-negociacoes.png";
+import ilustracaoJuridico from "@/assets/illustrations/tutorial-juridico.png";
+import ilustracaoHomologacao from "@/assets/illustrations/tutorial-homologacao.png";
+import ilustracaoApp from "@/assets/illustrations/tutorial-app.png";
+
 const TutorialSindicatoPage = () => {
   const [generating, setGenerating] = useState(false);
   const [logoBase64, setLogoBase64] = useState<string | null>(null);
@@ -68,6 +78,7 @@ const TutorialSindicatoPage = () => {
     desc: string;
     color: string;
     bg: string;
+    illustration: string;
     fullContent: {
       overview: string;
       features: string[];
@@ -88,12 +99,13 @@ const TutorialSindicatoPage = () => {
   }
 
   const modules: ModuleContent[] = [
-    { 
+    {
       icon: Building2, 
       title: "Empresas", 
       desc: "Gestão de empresas e escritórios", 
       color: "text-amber-500", 
       bg: "bg-amber-500/10",
+      illustration: ilustracaoEmpresas,
       fullContent: {
         overview: "O módulo de Empresas permite o cadastro e gestão completa de todas as empresas associadas ao sindicato, incluindo seus escritórios contábeis vinculados.",
         features: [
@@ -117,11 +129,12 @@ const TutorialSindicatoPage = () => {
       }
     },
     { 
-      icon: Users, 
+      icon: Users,
       title: "Sócios", 
       desc: "Cadastro e benefícios", 
       color: "text-violet-500", 
       bg: "bg-violet-500/10",
+      illustration: ilustracaoSocios,
       fullContent: {
         overview: "Gerencie todos os trabalhadores filiados ao sindicato, seus benefícios, autorizações e histórico de participação.",
         features: [
@@ -144,12 +157,13 @@ const TutorialSindicatoPage = () => {
         ]
       }
     },
-    { 
+    {
       icon: Receipt, 
       title: "Contribuições", 
       desc: "Controle de pagamentos", 
       color: "text-emerald-500", 
       bg: "bg-emerald-500/10",
+      illustration: ilustracaoContribuicoes,
       fullContent: {
         overview: "Controle completo das contribuições sindicais, mensalidades e taxas, com gestão de inadimplência e emissão de boletos.",
         features: [
@@ -173,11 +187,12 @@ const TutorialSindicatoPage = () => {
       }
     },
     { 
-      icon: DollarSign, 
-      title: "Financeiro", 
+      icon: DollarSign,
+      title: "Financeiro",
       desc: "Receitas, despesas e fluxo", 
       color: "text-blue-500", 
       bg: "bg-blue-500/10",
+      illustration: ilustracaoFinanceiro,
       fullContent: {
         overview: "Gestão financeira completa com controle de receitas, despesas, fluxo de caixa e conciliação bancária automatizada.",
         features: [
@@ -202,10 +217,11 @@ const TutorialSindicatoPage = () => {
     },
     { 
       icon: Handshake, 
-      title: "Negociações", 
-      desc: "Acordos e parcelamentos", 
+      title: "Negociações",
+      desc: "Acordos e parcelamentos",
       color: "text-purple-500", 
       bg: "bg-purple-500/10",
+      illustration: ilustracaoNegociacoes,
       fullContent: {
         overview: "Gerencie negociações de dívidas, acordos de parcelamento e renegociações com empresas e sócios inadimplentes.",
         features: [
@@ -231,9 +247,10 @@ const TutorialSindicatoPage = () => {
     { 
       icon: Scale, 
       title: "Jurídico", 
-      desc: "Processos e prazos", 
+      desc: "Processos e prazos",
       color: "text-indigo-500", 
       bg: "bg-indigo-500/10",
+      illustration: ilustracaoJuridico,
       fullContent: {
         overview: "Acompanhe processos judiciais, controle prazos processuais e gerencie a relação com advogados e escritórios parceiros.",
         features: [
@@ -259,9 +276,10 @@ const TutorialSindicatoPage = () => {
     { 
       icon: Stethoscope, 
       title: "Homologação", 
-      desc: "Agenda médica", 
+      desc: "Agenda médica",
       color: "text-teal-500", 
       bg: "bg-teal-500/10",
+      illustration: ilustracaoHomologacao,
       fullContent: {
         overview: "Módulo dedicado à gestão de homologações, agenda médica e atendimentos de profissionais de saúde vinculados ao sindicato.",
         features: [
@@ -288,8 +306,9 @@ const TutorialSindicatoPage = () => {
       icon: Smartphone, 
       title: "App Mobile", 
       desc: "Gestão de conteúdo", 
-      color: "text-pink-500", 
+      color: "text-pink-500",
       bg: "bg-pink-500/10",
+      illustration: ilustracaoApp,
       fullContent: {
         overview: "Gerencie o conteúdo e funcionalidades do aplicativo mobile disponível para os sócios do sindicato.",
         features: [
@@ -315,7 +334,7 @@ const TutorialSindicatoPage = () => {
   ];
 
   const learningTopics: TopicContent[] = [
-    { 
+    {
       icon: Play, 
       title: "Primeiros Passos", 
       desc: "Como acessar e navegar no sistema",
@@ -1073,18 +1092,26 @@ const TutorialSindicatoPage = () => {
               </p>
             </div>
             
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
               {modules.map((mod, i) => (
                 <Card 
                   key={i} 
-                  className="border-border/50 hover:border-primary/50 transition-all cursor-pointer hover:shadow-lg hover:-translate-y-1"
+                  className="border-border/50 hover:border-primary/50 transition-all cursor-pointer hover:shadow-xl hover:-translate-y-2 overflow-hidden group"
                   onClick={() => setSelectedModule(mod)}
                 >
-                  <CardContent className="p-4 text-center">
-                    <div className={`w-12 h-12 rounded-xl ${mod.bg} flex items-center justify-center mx-auto mb-3`}>
-                      <mod.icon className={`h-6 w-6 ${mod.color}`} />
+                  <div className="relative h-32 overflow-hidden bg-gradient-to-br from-muted/50 to-muted">
+                    <img 
+                      src={mod.illustration} 
+                      alt={mod.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+                    <div className={`absolute bottom-3 left-3 w-10 h-10 rounded-lg ${mod.bg} flex items-center justify-center backdrop-blur-sm`}>
+                      <mod.icon className={`h-5 w-5 ${mod.color}`} />
                     </div>
-                    <h3 className="font-semibold text-foreground text-sm">{mod.title}</h3>
+                  </div>
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-foreground">{mod.title}</h3>
                     <p className="text-xs text-muted-foreground mt-1">{mod.desc}</p>
                   </CardContent>
                 </Card>
@@ -1128,13 +1155,17 @@ const TutorialSindicatoPage = () => {
         {/* Medical Section */}
         <section className="py-16 bg-gradient-to-r from-purple-500/10 via-primary/5 to-teal-500/10">
           <div className="container mx-auto px-4">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-5xl mx-auto">
               <div className="flex flex-col md:flex-row items-center gap-8">
                 <div 
-                  className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500 to-teal-500 flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 transition-transform"
+                  className="w-48 h-48 rounded-2xl overflow-hidden shrink-0 cursor-pointer hover:scale-105 transition-transform shadow-xl"
                   onClick={() => setSelectedModule(modules.find(m => m.title === "Homologação") || null)}
                 >
-                  <Stethoscope className="h-12 w-12 text-white" />
+                  <img 
+                    src={ilustracaoHomologacao} 
+                    alt="Homologação médica"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
                 <div className="text-center md:text-left">
                   <h2 className="text-2xl font-bold text-foreground mb-3">
@@ -1220,6 +1251,16 @@ const TutorialSindicatoPage = () => {
               </DialogHeader>
               
               <div className="space-y-6 mt-4">
+                {/* Illustration */}
+                <div className="relative rounded-xl overflow-hidden h-48 bg-gradient-to-br from-muted/50 to-muted">
+                  <img 
+                    src={selectedModule.illustration} 
+                    alt={selectedModule.title}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent" />
+                </div>
+
                 {/* Overview */}
                 <div>
                   <p className="text-muted-foreground">{selectedModule.fullContent.overview}</p>
